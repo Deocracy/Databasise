@@ -1,0 +1,37 @@
+{
+  "status": "illustrative-only-not-a-registered-wiring",
+  "status_note": "Evidence PARTS.md ### §L.2 and ### §L.3 cite; never governing, per PARTS.md's preamble clause (b) and CONTEXT D-04. Arm patch for lightrag-base.json, mode bypass on the aquery_llm entry point only. bypass on aquery_data is NOT expressible as an arm patch of this base wiring — it is zero nodes, not a wiring, per CONTRACT.md §1's provides requirement; its disposition is client-side seam behaviour under §18.4, recorded in PARTS.md ### §L.3 and register row N10, and carries no patch file of its own.",
+  "patch_format": "RFC 6902 JSON Patch",
+  "patch_format_reason": "Subtractive — removes every node but generate — so per CONTRACT.md:182 this MUST be an RFC 6902 operation list, not an RFC 7386 merge-patch.",
+  "base": "lightrag-base.json",
+  "operations": [
+    { "op": "remove", "path": "/nodes/keywords" },
+    { "op": "remove", "path": "/nodes/embedder-query" },
+    { "op": "remove", "path": "/nodes/entity-lookup" },
+    { "op": "remove", "path": "/nodes/entity-hydrate-expand" },
+    { "op": "remove", "path": "/nodes/relation-lookup" },
+    { "op": "remove", "path": "/nodes/relation-hydrate-expand" },
+    { "op": "remove", "path": "/nodes/chunk-vector" },
+    { "op": "remove", "path": "/nodes/join-entities" },
+    { "op": "remove", "path": "/nodes/join-relations" },
+    { "op": "remove", "path": "/nodes/budget-entities" },
+    { "op": "remove", "path": "/nodes/budget-relations" },
+    { "op": "remove", "path": "/nodes/chunk-sel-kg" },
+    { "op": "remove", "path": "/nodes/join-chunks" },
+    { "op": "remove", "path": "/nodes/heading-backfill" },
+    { "op": "remove", "path": "/nodes/rerank" },
+    { "op": "remove", "path": "/nodes/assemble" },
+    { "op": "remove", "path": "/nodes/embedder-index" },
+    { "op": "replace", "path": "/nodes/generate/deps", "value": [] },
+    { "op": "replace", "path": "/nodes/generate/config", "value": {
+      "priority_class": "summary",
+      "priority_class_note": "D12 evidence: bypass calls the query role at DEFAULT_SUMMARY_PRIORITY = 8, not DEFAULT_QUERY_PRIORITY = 5 (lightrag.py:4178-4181; constants.py:628,631) — the only place on the query path requesting a different priority class. PARTS.md ## §R row D12.",
+      "prompt_template": "none - direct LLM call, no context"
+    } },
+    { "op": "replace", "path": "/recipe", "value": {} },
+    { "op": "replace", "path": "/provides", "value": ["generate"] }
+  ],
+  "resulting_node_id_set": [
+    "generate"
+  ]
+}

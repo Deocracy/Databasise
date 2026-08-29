@@ -1,0 +1,11 @@
+{
+  "components": {
+    "chunker": { "version": "1.0.0", "config_hash": "aaaa1111", "capabilities": ["build-index"] },
+    "embedder": { "version": "2.1.0", "config_hash": "bbbb2222", "capabilities": ["build-index"], "dependencies": ["chunker"] },
+    "retriever": { "version": "1.0.0", "config_hash": "cccc3333", "capabilities": ["retrieve"], "dependencies": ["embedder"] }
+  },
+  "wiring": [
+    { "from": "chunker", "to": "embedder", "semantics": "similarity" },
+    { "from": "embedder", "to": "retriever", "semantics": "similarity" }
+  ]
+}

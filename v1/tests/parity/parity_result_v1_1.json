@@ -1,0 +1,626 @@
+{
+  "schema_version": "1.1",
+  "harness": "run_substrate_parity_v1_1.py",
+  "run_timestamp": "20260625_205413",
+  "corpus_path": "D:\\Vibe Coding\\Sourcerer\\sourcerer-lightrag\\tests\\parity\\corpus\\sample.txt",
+  "query": "What contributions did Alan Turing and Grace Hopper make to computing, and how are their works related to modern computers?",
+  "query_modes": [
+    "naive",
+    "local",
+    "global",
+    "hybrid",
+    "mix"
+  ],
+  "graph_backends": [
+    "CozoGraphStorage",
+    "NetworkXStorage"
+  ],
+  "vector_backend": "FaissVectorDBStorage",
+  "kv_backend": "JsonKVStorage",
+  "doc_status_backend": "JsonDocStatusStorage",
+  "tolerances": {
+    "chunk_overlap_threshold": 0.8,
+    "top_n_chunks": 1000,
+    "rank_agreement_threshold": 0.8,
+    "min_entities": 1,
+    "min_relations": 1,
+    "graph_dependent_modes": [
+      "local",
+      "global"
+    ],
+    "prose_similarity_report_floor": 0.3,
+    "prose_gates_result": false
+  },
+  "provider_family": {
+    "llm_binding": "openai",
+    "llm_model_family": "gpt-oss-120b",
+    "llm_host": "https://api.cerebras.ai/v1",
+    "embedding_binding": "openai",
+    "embedding_model_family": "voyage-4-large",
+    "embedding_host": "https://api.voyageai.com/v1"
+  },
+  "determinism_aids": {
+    "OPENAI_LLM_TEMPERATURE": "0.0",
+    "MAX_ASYNC_LLM": "1"
+  },
+  "backend_results": {
+    "cozo": {
+      "entity_count": 41,
+      "relation_count": 34,
+      "ingest_secs": 14.09,
+      "doc_status": {
+        "failed_doc_ids": [],
+        "processed_count": 1,
+        "status_counts": {
+          "pending": 0,
+          "parsing": 0,
+          "analyzing": 0,
+          "processing": 0,
+          "preprocessed": 0,
+          "processed": 1,
+          "failed": 0
+        }
+      },
+      "entities": [
+        "A MATHEMATICAL THEORY OF COMMUNICATION",
+        "ALAN TURING",
+        "ALLIED VICTORY",
+        "ASSOCIATION FOR COMPUTING MACHINERY",
+        "BELL LABS",
+        "BELL SYSTEM TECHNICAL JOURNAL",
+        "BLETCHLEY PARK",
+        "BOMBE",
+        "CLAUDE SHANNON",
+        "COBOL",
+        "COMPUTER ARCHITECTURE",
+        "COMPUTER SCIENCE",
+        "DATA COMPRESSION ALGORITHMS",
+        "DIGITAL CIRCUIT DESIGN",
+        "DIGITAL COMMUNICATIONS",
+        "DONALD KNUTH",
+        "EDVAC",
+        "ENIGMA CIPHER",
+        "ENTROPY",
+        "FIRST DRAFT OF A REPORT ON THE EDVAC",
+        "FLOW\u2011MATIC LANGUAGE",
+        "GRACE HOPPER",
+        "HARVARD UNIVERSITY",
+        "INFORMATION THEORY",
+        "INSTITUTE FOR ADVANCED STUDY",
+        "JOHN VON NEUMANN",
+        "LINKER",
+        "MACHINE-INDEPENDENT PROGRAMMING LANGUAGES",
+        "MARK I COMPUTER",
+        "NAZI GERMANY",
+        "PRINCETON, NEW JERSEY",
+        "REMINGTON RAND",
+        "STANFORD UNIVERSITY",
+        "TEX TYPESETTING SYSTEM",
+        "THE ART OF COMPUTER PROGRAMMING",
+        "TURING AWARD",
+        "TURING MACHINE",
+        "UNITED STATES NAVY",
+        "UNIVERSITY OF CAMBRIDGE",
+        "VON NEUMANN ARCHITECTURE",
+        "WORLD WAR II"
+      ],
+      "relations": [
+        [
+          "A MATHEMATICAL THEORY OF COMMUNICATION",
+          "BELL SYSTEM TECHNICAL JOURNAL"
+        ],
+        [
+          "A MATHEMATICAL THEORY OF COMMUNICATION",
+          "CLAUDE SHANNON"
+        ],
+        [
+          "ALAN TURING",
+          "ALLIED VICTORY"
+        ],
+        [
+          "ALAN TURING",
+          "BLETCHLEY PARK"
+        ],
+        [
+          "ALAN TURING",
+          "BOMBE"
+        ],
+        [
+          "ALAN TURING",
+          "ENIGMA CIPHER"
+        ],
+        [
+          "ALAN TURING",
+          "TURING MACHINE"
+        ],
+        [
+          "ALAN TURING",
+          "UNIVERSITY OF CAMBRIDGE"
+        ],
+        [
+          "ALAN TURING",
+          "WORLD WAR II"
+        ],
+        [
+          "ASSOCIATION FOR COMPUTING MACHINERY",
+          "TURING AWARD"
+        ],
+        [
+          "BELL LABS",
+          "CLAUDE SHANNON"
+        ],
+        [
+          "BELL LABS",
+          "DIGITAL CIRCUIT DESIGN"
+        ],
+        [
+          "BOMBE",
+          "ENIGMA CIPHER"
+        ],
+        [
+          "CLAUDE SHANNON",
+          "INFORMATION THEORY"
+        ],
+        [
+          "COBOL",
+          "FLOW\u2011MATIC LANGUAGE"
+        ],
+        [
+          "COBOL",
+          "GRACE HOPPER"
+        ],
+        [
+          "COMPUTER ARCHITECTURE",
+          "JOHN VON NEUMANN"
+        ],
+        [
+          "COMPUTER SCIENCE",
+          "TURING AWARD"
+        ],
+        [
+          "DATA COMPRESSION ALGORITHMS",
+          "INFORMATION THEORY"
+        ],
+        [
+          "DIGITAL COMMUNICATIONS",
+          "INFORMATION THEORY"
+        ],
+        [
+          "DONALD KNUTH",
+          "STANFORD UNIVERSITY"
+        ],
+        [
+          "DONALD KNUTH",
+          "TEX TYPESETTING SYSTEM"
+        ],
+        [
+          "DONALD KNUTH",
+          "THE ART OF COMPUTER PROGRAMMING"
+        ],
+        [
+          "DONALD KNUTH",
+          "TURING AWARD"
+        ],
+        [
+          "ENIGMA CIPHER",
+          "NAZI GERMANY"
+        ],
+        [
+          "FIRST DRAFT OF A REPORT ON THE EDVAC",
+          "VON NEUMANN ARCHITECTURE"
+        ],
+        [
+          "FLOW\u2011MATIC LANGUAGE",
+          "GRACE HOPPER"
+        ],
+        [
+          "GRACE HOPPER",
+          "HARVARD UNIVERSITY"
+        ],
+        [
+          "GRACE HOPPER",
+          "LINKER"
+        ],
+        [
+          "GRACE HOPPER",
+          "MACHINE-INDEPENDENT PROGRAMMING LANGUAGES"
+        ],
+        [
+          "GRACE HOPPER",
+          "MARK I COMPUTER"
+        ],
+        [
+          "INSTITUTE FOR ADVANCED STUDY",
+          "JOHN VON NEUMANN"
+        ],
+        [
+          "INSTITUTE FOR ADVANCED STUDY",
+          "PRINCETON, NEW JERSEY"
+        ],
+        [
+          "JOHN VON NEUMANN",
+          "VON NEUMANN ARCHITECTURE"
+        ]
+      ],
+      "query_results": {
+        "naive": {
+          "chunk_ids": [
+            "doc-b9c73ec7aee3cbc103a29d07938b5c39-chunk-000"
+          ],
+          "answer_length": 1536,
+          "error": null
+        },
+        "local": {
+          "chunk_ids": [
+            "doc-b9c73ec7aee3cbc103a29d07938b5c39-chunk-000"
+          ],
+          "answer_length": 2351,
+          "error": null
+        },
+        "global": {
+          "chunk_ids": [
+            "doc-b9c73ec7aee3cbc103a29d07938b5c39-chunk-000"
+          ],
+          "answer_length": 2302,
+          "error": null
+        },
+        "hybrid": {
+          "chunk_ids": [
+            "doc-b9c73ec7aee3cbc103a29d07938b5c39-chunk-000"
+          ],
+          "answer_length": 2111,
+          "error": null
+        },
+        "mix": {
+          "chunk_ids": [
+            "doc-b9c73ec7aee3cbc103a29d07938b5c39-chunk-000"
+          ],
+          "answer_length": 1994,
+          "error": null
+        }
+      }
+    },
+    "networkx": {
+      "entity_count": 41,
+      "relation_count": 34,
+      "ingest_secs": 6.09,
+      "doc_status": {
+        "failed_doc_ids": [],
+        "processed_count": 1,
+        "status_counts": {
+          "pending": 0,
+          "parsing": 0,
+          "analyzing": 0,
+          "processing": 0,
+          "preprocessed": 0,
+          "processed": 1,
+          "failed": 0
+        }
+      },
+      "entities": [
+        "A MATHEMATICAL THEORY OF COMMUNICATION",
+        "ALAN TURING",
+        "ALLIED VICTORY",
+        "ASSOCIATION FOR COMPUTING MACHINERY",
+        "BELL LABS",
+        "BELL SYSTEM TECHNICAL JOURNAL",
+        "BLETCHLEY PARK",
+        "BOMBE",
+        "CLAUDE SHANNON",
+        "COBOL",
+        "COMPUTER ARCHITECTURE",
+        "COMPUTER SCIENCE",
+        "DATA COMPRESSION ALGORITHMS",
+        "DIGITAL CIRCUIT DESIGN",
+        "DIGITAL COMMUNICATIONS",
+        "DONALD KNUTH",
+        "EDVAC",
+        "ENIGMA CIPHER",
+        "ENTROPY",
+        "FIRST DRAFT OF A REPORT ON THE EDVAC",
+        "FLOW\u2011MATIC LANGUAGE",
+        "GRACE HOPPER",
+        "HARVARD UNIVERSITY",
+        "INFORMATION THEORY",
+        "INSTITUTE FOR ADVANCED STUDY",
+        "JOHN VON NEUMANN",
+        "LINKER",
+        "MACHINE-INDEPENDENT PROGRAMMING LANGUAGES",
+        "MARK I COMPUTER",
+        "NAZI GERMANY",
+        "PRINCETON, NEW JERSEY",
+        "REMINGTON RAND",
+        "STANFORD UNIVERSITY",
+        "TEX TYPESETTING SYSTEM",
+        "THE ART OF COMPUTER PROGRAMMING",
+        "TURING AWARD",
+        "TURING MACHINE",
+        "UNITED STATES NAVY",
+        "UNIVERSITY OF CAMBRIDGE",
+        "VON NEUMANN ARCHITECTURE",
+        "WORLD WAR II"
+      ],
+      "relations": [
+        [
+          "A MATHEMATICAL THEORY OF COMMUNICATION",
+          "BELL SYSTEM TECHNICAL JOURNAL"
+        ],
+        [
+          "A MATHEMATICAL THEORY OF COMMUNICATION",
+          "CLAUDE SHANNON"
+        ],
+        [
+          "ALAN TURING",
+          "ALLIED VICTORY"
+        ],
+        [
+          "ALAN TURING",
+          "BLETCHLEY PARK"
+        ],
+        [
+          "ALAN TURING",
+          "BOMBE"
+        ],
+        [
+          "ALAN TURING",
+          "ENIGMA CIPHER"
+        ],
+        [
+          "ALAN TURING",
+          "TURING MACHINE"
+        ],
+        [
+          "ALAN TURING",
+          "UNIVERSITY OF CAMBRIDGE"
+        ],
+        [
+          "ALAN TURING",
+          "WORLD WAR II"
+        ],
+        [
+          "ASSOCIATION FOR COMPUTING MACHINERY",
+          "TURING AWARD"
+        ],
+        [
+          "BELL LABS",
+          "CLAUDE SHANNON"
+        ],
+        [
+          "BELL LABS",
+          "DIGITAL CIRCUIT DESIGN"
+        ],
+        [
+          "BOMBE",
+          "ENIGMA CIPHER"
+        ],
+        [
+          "CLAUDE SHANNON",
+          "INFORMATION THEORY"
+        ],
+        [
+          "COBOL",
+          "FLOW\u2011MATIC LANGUAGE"
+        ],
+        [
+          "COBOL",
+          "GRACE HOPPER"
+        ],
+        [
+          "COMPUTER ARCHITECTURE",
+          "JOHN VON NEUMANN"
+        ],
+        [
+          "COMPUTER SCIENCE",
+          "TURING AWARD"
+        ],
+        [
+          "DATA COMPRESSION ALGORITHMS",
+          "INFORMATION THEORY"
+        ],
+        [
+          "DIGITAL COMMUNICATIONS",
+          "INFORMATION THEORY"
+        ],
+        [
+          "DONALD KNUTH",
+          "STANFORD UNIVERSITY"
+        ],
+        [
+          "DONALD KNUTH",
+          "TEX TYPESETTING SYSTEM"
+        ],
+        [
+          "DONALD KNUTH",
+          "THE ART OF COMPUTER PROGRAMMING"
+        ],
+        [
+          "DONALD KNUTH",
+          "TURING AWARD"
+        ],
+        [
+          "ENIGMA CIPHER",
+          "NAZI GERMANY"
+        ],
+        [
+          "FIRST DRAFT OF A REPORT ON THE EDVAC",
+          "VON NEUMANN ARCHITECTURE"
+        ],
+        [
+          "FLOW\u2011MATIC LANGUAGE",
+          "GRACE HOPPER"
+        ],
+        [
+          "GRACE HOPPER",
+          "HARVARD UNIVERSITY"
+        ],
+        [
+          "GRACE HOPPER",
+          "LINKER"
+        ],
+        [
+          "GRACE HOPPER",
+          "MACHINE-INDEPENDENT PROGRAMMING LANGUAGES"
+        ],
+        [
+          "GRACE HOPPER",
+          "MARK I COMPUTER"
+        ],
+        [
+          "INSTITUTE FOR ADVANCED STUDY",
+          "JOHN VON NEUMANN"
+        ],
+        [
+          "INSTITUTE FOR ADVANCED STUDY",
+          "PRINCETON, NEW JERSEY"
+        ],
+        [
+          "JOHN VON NEUMANN",
+          "VON NEUMANN ARCHITECTURE"
+        ]
+      ],
+      "query_results": {
+        "naive": {
+          "chunk_ids": [
+            "doc-b9c73ec7aee3cbc103a29d07938b5c39-chunk-000"
+          ],
+          "answer_length": 1536,
+          "error": null
+        },
+        "local": {
+          "chunk_ids": [
+            "doc-b9c73ec7aee3cbc103a29d07938b5c39-chunk-000"
+          ],
+          "answer_length": 2351,
+          "error": null
+        },
+        "global": {
+          "chunk_ids": [
+            "doc-b9c73ec7aee3cbc103a29d07938b5c39-chunk-000"
+          ],
+          "answer_length": 2302,
+          "error": null
+        },
+        "hybrid": {
+          "chunk_ids": [
+            "doc-b9c73ec7aee3cbc103a29d07938b5c39-chunk-000"
+          ],
+          "answer_length": 2111,
+          "error": null
+        },
+        "mix": {
+          "chunk_ids": [
+            "doc-b9c73ec7aee3cbc103a29d07938b5c39-chunk-000"
+          ],
+          "answer_length": 1994,
+          "error": null
+        }
+      }
+    }
+  },
+  "diff": {
+    "entity_symmetric_difference": [],
+    "entity_sym_diff_count": 0,
+    "entity_sym_diff_pass": true,
+    "cozo_only_entities": [],
+    "networkx_only_entities": [],
+    "relation_symmetric_difference": [],
+    "relation_sym_diff_count": 0,
+    "relation_sym_diff_pass": true,
+    "cozo_only_relations": [],
+    "networkx_only_relations": [],
+    "cozo_entity_count": 41,
+    "networkx_entity_count": 41,
+    "cozo_relation_count": 34,
+    "networkx_relation_count": 34,
+    "min_entities_required": 1,
+    "min_relations_required": 1,
+    "entity_floor_pass": true,
+    "relation_floor_pass": true,
+    "graph_dependent_modes": [
+      "local",
+      "global"
+    ],
+    "graph_mode_pass": true,
+    "graph_mode_failures": [],
+    "mode_diffs": {
+      "naive": {
+        "cozo_chunk_count": 1,
+        "networkx_chunk_count": 1,
+        "intersection_count": 1,
+        "union_count": 1,
+        "overlap_ratio": 1.0,
+        "rank_agreement": null,
+        "rank_pass": true,
+        "both_empty": false,
+        "overlap_pass": true,
+        "prose_similarity": 1.0,
+        "prose_above_report_floor": true,
+        "cozo_error": null,
+        "networkx_error": null
+      },
+      "local": {
+        "cozo_chunk_count": 1,
+        "networkx_chunk_count": 1,
+        "intersection_count": 1,
+        "union_count": 1,
+        "overlap_ratio": 1.0,
+        "rank_agreement": null,
+        "rank_pass": true,
+        "both_empty": false,
+        "overlap_pass": true,
+        "prose_similarity": 1.0,
+        "prose_above_report_floor": true,
+        "cozo_error": null,
+        "networkx_error": null
+      },
+      "global": {
+        "cozo_chunk_count": 1,
+        "networkx_chunk_count": 1,
+        "intersection_count": 1,
+        "union_count": 1,
+        "overlap_ratio": 1.0,
+        "rank_agreement": null,
+        "rank_pass": true,
+        "both_empty": false,
+        "overlap_pass": true,
+        "prose_similarity": 1.0,
+        "prose_above_report_floor": true,
+        "cozo_error": null,
+        "networkx_error": null
+      },
+      "hybrid": {
+        "cozo_chunk_count": 1,
+        "networkx_chunk_count": 1,
+        "intersection_count": 1,
+        "union_count": 1,
+        "overlap_ratio": 1.0,
+        "rank_agreement": null,
+        "rank_pass": true,
+        "both_empty": false,
+        "overlap_pass": true,
+        "prose_similarity": 1.0,
+        "prose_above_report_floor": true,
+        "cozo_error": null,
+        "networkx_error": null
+      },
+      "mix": {
+        "cozo_chunk_count": 1,
+        "networkx_chunk_count": 1,
+        "intersection_count": 1,
+        "union_count": 1,
+        "overlap_ratio": 1.0,
+        "rank_agreement": null,
+        "rank_pass": true,
+        "both_empty": false,
+        "overlap_pass": true,
+        "prose_similarity": 1.0,
+        "prose_above_report_floor": true,
+        "cozo_error": null,
+        "networkx_error": null
+      }
+    }
+  },
+  "reasons": [],
+  "verdict": "PASS",
+  "exit_code": 0
+}

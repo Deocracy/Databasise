@@ -1,0 +1,146 @@
+{
+  "status": "illustrative-only-not-a-registered-wiring",
+  "status_note": "Evidence PARTS.md ### §L.2 and ### §L.3 cite; never governing, per PARTS.md's preamble clause (b) and CONTEXT D-04. This is the mix base wiring — the maximal eighteen-position node set ### §L.1 publishes. No component below carries an @version suffix: §0 mints a semver only at promotion, none of these components has been promoted, and ### §L.1's own table states this explicitly.",
+  "wiring_version": "1",
+  "nodes": {
+    "keywords": {
+      "component": "lightrag/keyword-extractor",
+      "kind": "rewriter",
+      "effects": ["calls_llm"],
+      "deps": []
+    },
+    "embedder-query": {
+      "component": "lightrag/embedder-query",
+      "kind": "embedder",
+      "effects": ["calls_embedding"],
+      "deps": ["keywords"]
+    },
+    "entity-lookup": {
+      "component": "lightrag/entity-lookup",
+      "kind": "retriever",
+      "effects": ["reads_vector"],
+      "deps": ["embedder-query"]
+    },
+    "entity-hydrate-expand": {
+      "component": "lightrag/entity-hydrate-expand",
+      "kind": "retriever",
+      "effects": ["reads_graph"],
+      "config": { "cardinality_bound": "unbounded" },
+      "deps": ["entity-lookup"]
+    },
+    "relation-lookup": {
+      "component": "lightrag/relation-lookup",
+      "kind": "retriever",
+      "effects": ["reads_vector"],
+      "deps": ["embedder-query"]
+    },
+    "relation-hydrate-expand": {
+      "component": "lightrag/relation-hydrate-expand",
+      "kind": "retriever",
+      "effects": ["reads_graph"],
+      "config": { "cardinality_bound": "unbounded" },
+      "deps": ["relation-lookup"]
+    },
+    "chunk-vector": {
+      "component": "lightrag/retriever-chunk-topk",
+      "kind": "retriever",
+      "effects": ["reads_vector"],
+      "deps": ["embedder-query"]
+    },
+    "join-entities": {
+      "component": "lightrag/join-roundrobin",
+      "kind": "join",
+      "config": {
+        "socket_shape": "List[List[X]] -> List[X]",
+        "arm_precedence": "entity-hydrate-expand-emitted-first",
+        "apportionment_policy": "n/a - non-effectful join, no budget spent at this node"
+      },
+      "deps": ["entity-hydrate-expand", "relation-hydrate-expand"]
+    },
+    "join-relations": {
+      "component": "lightrag/join-roundrobin",
+      "kind": "join",
+      "config": {
+        "socket_shape": "List[List[X]] -> List[X]",
+        "arm_precedence": "order-insensitive-dedup-by-sorted-endpoint-pair",
+        "apportionment_policy": "n/a - non-effectful join, no budget spent at this node"
+      },
+      "deps": ["entity-hydrate-expand", "relation-hydrate-expand"]
+    },
+    "budget-entities": {
+      "component": "lightrag/truncator-token-budget",
+      "kind": "grader-filter",
+      "config": {
+        "apportionment_policy": "first-come-over-joined-list",
+        "apportioning_node": "budget-entities"
+      },
+      "deps": ["join-entities"]
+    },
+    "budget-relations": {
+      "component": "lightrag/truncator-token-budget",
+      "kind": "grader-filter",
+      "config": {
+        "apportionment_policy": "first-come-over-joined-list",
+        "apportioning_node": "budget-relations"
+      },
+      "deps": ["join-relations"]
+    },
+    "chunk-sel-kg": {
+      "component": "lightrag/chunk-selector-kg",
+      "kind": "retriever",
+      "effects": ["reads_kv", "reads_vector"],
+      "config": {
+        "cardinality_bound": "unbounded",
+        "pick_method": "VECTOR",
+        "fallback_pick_method": "WEIGHT"
+      },
+      "deps": ["budget-entities", "budget-relations"]
+    },
+    "join-chunks": {
+      "component": "lightrag/join-roundrobin",
+      "kind": "join",
+      "config": {
+        "socket_shape": "List[List[X]] -> List[X]",
+        "arity": 2,
+        "arm_precedence": "chunk-sel-kg-emitted-first-then-chunk-vector",
+        "apportionment_policy": "n/a - non-effectful join, no budget spent at this node"
+      },
+      "deps": ["chunk-sel-kg", "chunk-vector"]
+    },
+    "heading-backfill": {
+      "component": "lightrag/chunk-heading-backfiller",
+      "kind": "grader-filter",
+      "effects": ["reads_kv"],
+      "deps": ["join-chunks"]
+    },
+    "rerank": {
+      "component": "lightrag/reranker-cross-encoder",
+      "kind": "ranker-reranker",
+      "effects": ["calls_rerank"],
+      "deps": ["heading-backfill"]
+    },
+    "assemble": {
+      "component": "lightrag/assembler-kg-context",
+      "kind": "assembler",
+      "config": { "order_policy": "kg-template" },
+      "deps": ["rerank"]
+    },
+    "generate": {
+      "component": "lightrag/generator-llm",
+      "kind": "generator",
+      "effects": ["calls_llm"],
+      "config": { "priority_class": "query" },
+      "deps": ["assemble"]
+    },
+    "embedder-index": {
+      "component": "lightrag/embedder-index",
+      "kind": "embedder",
+      "effects": ["calls_embedding"],
+      "artifact_scope": "quarantined",
+      "deps": []
+    }
+  },
+  "recipe": { "embedding": "embedder-index" },
+  "harnesses": [],
+  "provides": ["generate"]
+}
