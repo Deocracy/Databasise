@@ -1,0 +1,1 @@
+{"content":"LlamaIndex's CitationQueryEngine returns in-line citations tied to source nodes/chunks, used for both attribution and debugging wrong answers; commonly wrapped in FastAPI for query+cite REST endpoints.","source":"web","provider":"websearch","confidence":"MEDIUM","fetched_at":"2026-08-29T22:56:18.008Z","ttl":86400000,"kind":"web"}
