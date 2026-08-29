@@ -1,0 +1,35 @@
+{
+  "status": "illustrative-only-not-a-registered-wiring",
+  "status_note": "Evidence PARTS.md ### §L.2 and ### §L.3 cite; never governing, per PARTS.md's preamble clause (b) and CONTEXT D-04. Arm patch for lightrag-base.json, mode naive. This arm's cost is CONDITIONAL under D8's corpus-split disposition — it remains a comparable arm on any fully-applied corpus and is refused only against the KG modes over a corpus straddling a coverage gap, per PARTS.md ### §L.3's naive row and CONTRACT.md §7's D8 refusal.",
+  "patch_format": "RFC 6902 JSON Patch",
+  "patch_format_reason": "Mixed arm: subtractive (removes the eleven graph-half nodes) AND additive/overriding (replaces assemble's and generate's config). CONTRACT.md:182 requires RFC 6902 for the subtractive half; RFC 6902's own replace/add operations express the overriding half in the same document, so no separate RFC 7386 merge-patch file is needed — this is the D-06 kill-condition check this plan's Task 3 runs: a mixed arm IS expressible in one file under the existing mechanism, no structural gap surfaced.",
+  "base": "lightrag-base.json",
+  "operations": [
+    { "op": "remove", "path": "/nodes/keywords" },
+    { "op": "remove", "path": "/nodes/entity-lookup" },
+    { "op": "remove", "path": "/nodes/entity-hydrate-expand" },
+    { "op": "remove", "path": "/nodes/relation-lookup" },
+    { "op": "remove", "path": "/nodes/relation-hydrate-expand" },
+    { "op": "remove", "path": "/nodes/join-entities" },
+    { "op": "remove", "path": "/nodes/join-relations" },
+    { "op": "remove", "path": "/nodes/budget-entities" },
+    { "op": "remove", "path": "/nodes/budget-relations" },
+    { "op": "remove", "path": "/nodes/chunk-sel-kg" },
+    { "op": "remove", "path": "/nodes/join-chunks" },
+    { "op": "replace", "path": "/nodes/embedder-query/deps", "value": [] },
+    { "op": "replace", "path": "/nodes/heading-backfill/deps", "value": ["chunk-vector"] },
+    { "op": "replace", "path": "/nodes/assemble/config", "value": {
+      "order_policy": "naive-template",
+      "requires_block_kinds": [],
+      "note": "no kg_context_tokens subtraction from the shared token budget — naive's chunk_token_limit does not subtract the KG lane's residual (operate.py:6465-6469 vs 5551-5559)"
+    } },
+    { "op": "replace", "path": "/nodes/generate/config", "value": {
+      "priority_class": "query",
+      "prompt_template": "naive"
+    } }
+  ],
+  "resulting_node_id_set": [
+    "embedder-query", "chunk-vector", "heading-backfill", "rerank", "assemble",
+    "generate", "embedder-index"
+  ]
+}

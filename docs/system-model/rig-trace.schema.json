@@ -1,0 +1,190 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rag-graph-vector-raw.local/architectures/rig-trace.schema.json",
+  "title": "RIG-02 run trace record",
+  "description": "D-09 form 2 — the machine-readable schema for one comparison-rig run trace. Field shapes and required/optional status match RIG.md ## §TR.1's field table exactly; a divergence between the two is a defect recorded in RIG.md ## §R, never resolved silently in the schema alone.",
+  "type": "object",
+  "$defs": {
+    "TokenAccounting": {
+      "type": "object",
+      "description": "D-14 — prompt/completion/cached-read tokens and call count recorded separately per node, never as one aggregate. counted_by is CONTRACT.md §4's own mandatory field, reused verbatim.",
+      "properties": {
+        "prompt_tokens": { "type": "integer", "minimum": 0 },
+        "completion_tokens": { "type": "integer", "minimum": 0 },
+        "cached_read_tokens": { "type": "integer", "minimum": 0 },
+        "call_count": { "type": "integer", "minimum": 0 },
+        "counted_by": {
+          "type": "string",
+          "description": "Tokenizer id + revision, per CONTRACT.md §4's token-accounting rule."
+        }
+      },
+      "required": [
+        "prompt_tokens",
+        "completion_tokens",
+        "cached_read_tokens",
+        "call_count",
+        "counted_by"
+      ],
+      "additionalProperties": false
+    },
+    "NodeTrace": {
+      "type": "object",
+      "description": "One per-node trace record, per RIG.md §TR.1's per-node field list.",
+      "properties": {
+        "node_id": { "type": "string" },
+        "instance_hash": {
+          "type": "string",
+          "description": "The (name@version, config_hash, resolved_dependency_ids) identity tuple, per CONTRACT.md §1."
+        },
+        "depth": {
+          "type": "string",
+          "enum": ["opaque", "evidence", "stage"],
+          "description": "CONTRACT.md's three-value depth vocabulary (Ruling R-1)."
+        },
+        "effective_depth": {
+          "type": "string",
+          "enum": ["opaque", "evidence", "stage"],
+          "description": "Minimum over transitive deps, computed never declared, per CONTRACT.md §3's blast-radius rule."
+        },
+        "tier": {
+          "type": "string",
+          "enum": ["T0", "T1", "T2", "T3"],
+          "description": "CONTRACT.md §4's evidence-item tier, machine-stamped from what arrived at the boundary."
+        },
+        "feed_tier": {
+          "type": "string",
+          "enum": ["T0", "T1", "T2", "T3"],
+          "description": "The tier this node's output feeds forward as, a pooling-key member alongside tier per CONTRACT.md §4."
+        },
+        "wall_clock_ms": { "type": "integer", "minimum": 0 },
+        "cache_hit": {
+          "type": "boolean",
+          "description": "Per CONTRACT.md §5's D7 repair — arm execution order and per-node cache hit/miss MUST be stamped on the run record."
+        },
+        "guards_fired": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Per CONTRACT.md §19.8 — which declared data guards fired on this node this run."
+        },
+        "budget_state": {
+          "type": "string",
+          "enum": ["within_budget", "halted", "degraded"],
+          "description": "Per CONTRACT.md §9's first-class partial/budget-halted-run rule."
+        },
+        "realised_budget_share": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Per CONTRACT.md §9's merge-side apportionment repair (D4) — this node's realised share of the budget it was apportioned."
+        },
+        "cross_process_failure_cause": {
+          "type": ["string", "null"],
+          "description": "Per CONTRACT.md §3 — cross-process invocations MUST record the placement of both endpoints and the failure cause; null where no cross-process failure occurred at this node."
+        },
+        "resumable": {
+          "type": "boolean",
+          "description": "Per CONTEXT.md D-13 — true only where this node's completed execution carries a verified-determinism stamp and no store mutation occurred; the run-lifecycle mechanics that set this flag are RIG-07's (plan 05-02), named here and not designed here."
+        },
+        "tokens": { "$ref": "#/$defs/TokenAccounting" }
+      },
+      "required": [
+        "node_id",
+        "instance_hash",
+        "depth",
+        "effective_depth",
+        "tier",
+        "feed_tier",
+        "wall_clock_ms",
+        "cache_hit",
+        "guards_fired",
+        "budget_state",
+        "realised_budget_share",
+        "cross_process_failure_cause",
+        "resumable",
+        "tokens"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "status": {
+      "type": "string",
+      "description": "Optional project-convention marker (matches every other file in wirings/): illustrative-only-not-a-registered-wiring. Not a trace field RIG-02 itself requires."
+    },
+    "status_note": {
+      "type": "string",
+      "description": "Optional project-convention prose paired with status. Not a trace field RIG-02 itself requires."
+    },
+    "run_id": { "type": "string" },
+    "wiring_id": { "type": "string" },
+    "wiring_instance_hash": { "type": "string" },
+    "arm_id": { "type": "string" },
+    "arm_execution_order": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Per CONTRACT.md §5's D7 repair — this arm's position in the run's actual execution order, so a run-order dependency on cache state is diagnosable from the trace alone."
+    },
+    "bundle_ref": { "type": "string" },
+    "corpus_snapshot_hash": { "type": "string" },
+    "executor_version": {
+      "type": "string",
+      "description": "The fifth of CONTRACT.md §10's five versioned instruments."
+    },
+    "concurrency_setting": {
+      "type": "string",
+      "description": "Per CONTRACT.md §4 — a gate-admission condition and a member of the A/A-null keying rule."
+    },
+    "determinism_setting": { "type": "string" },
+    "stop_reason": { "type": ["string", "null"] },
+    "partial": { "type": "boolean" },
+    "degraded": { "type": "boolean" },
+    "degradation_reason": { "type": ["string", "null"] },
+    "nodes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/NodeTrace" },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "run_id",
+    "wiring_id",
+    "wiring_instance_hash",
+    "arm_id",
+    "arm_execution_order",
+    "bundle_ref",
+    "corpus_snapshot_hash",
+    "executor_version",
+    "concurrency_setting",
+    "determinism_setting",
+    "stop_reason",
+    "partial",
+    "degraded",
+    "degradation_reason",
+    "nodes"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "description": "§TR.3's required-together rule: a truthy partial MUST carry a real stop_reason and degradation_reason, never leave either null.",
+      "if": { "properties": { "partial": { "const": true } } },
+      "then": {
+        "properties": {
+          "stop_reason": { "type": "string", "minLength": 1 },
+          "degradation_reason": { "type": "string", "minLength": 1 }
+        },
+        "required": ["stop_reason", "degradation_reason"]
+      }
+    },
+    {
+      "description": "§TR.3's required-together rule, degraded side: a truthy degraded MUST carry a real stop_reason and degradation_reason.",
+      "if": { "properties": { "degraded": { "const": true } } },
+      "then": {
+        "properties": {
+          "stop_reason": { "type": "string", "minLength": 1 },
+          "degradation_reason": { "type": "string", "minLength": 1 }
+        },
+        "required": ["stop_reason", "degradation_reason"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "status": "illustrative-only-not-a-registered-wiring",
+  "status_note": "Evidence PARTS.md ## §H cites; never governing, per PARTS.md's preamble clause (b) and CONTEXT D-04. This is HippoRAG 2's single base wiring — no arm files exist for this modality, per the settled 'none (single base wiring)' verdict (03-RESEARCH.md §H.5). No component below carries an @version suffix: §0 mints a semver only at promotion, and none of these components has been promoted.",
+  "wiring_version": "1",
+  "nodes": {
+    "chunk-embed": {
+      "component": "hipporag/chunker-embedder",
+      "kind": "embedder",
+      "effects": ["calls_embedding"],
+      "note": "fused chunk-store + embed, HippoRAG.py:282 — no external cut point per §19.4",
+      "deps": []
+    },
+    "openie": {
+      "component": "hipporag/openie-extractor",
+      "kind": "extractor",
+      "effects": ["calls_llm"],
+      "note": "two LLM calls per chunk (NER, then triple extraction), HippoRAG.py:299 — one fused operation, no external branch",
+      "deps": ["chunk-embed"]
+    },
+    "entity-fact-embed": {
+      "component": "hipporag/entity-fact-embedder",
+      "kind": "embedder",
+      "effects": ["calls_embedding"],
+      "config": { "namespaces": ["entities", "facts"] },
+      "deps": ["openie"]
+    },
+    "fact-edges": {
+      "component": "hipporag/fact-edge-builder",
+      "kind": "extractor",
+      "effects": [],
+      "note": "HippoRAG.py:327, :867-913 — symmetric co-occurrence weight",
+      "deps": ["openie"]
+    },
+    "passage-edges": {
+      "component": "hipporag/passage-edge-builder",
+      "kind": "extractor",
+      "effects": [],
+      "note": "HippoRAG.py:328, :915-957 — unit weight",
+      "deps": ["openie"]
+    },
+    "synonymy-edges": {
+      "component": "hipporag/synonymy-edge-builder",
+      "kind": "extractor",
+      "effects": ["reads_vector"],
+      "config": {
+        "declared_capability": "§14.2 Vector self-KNN [PARTS-02 H1]",
+        "guard": "num_new_chunks > 0"
+      },
+      "note": "HippoRAG.py:332, :959-1020 — bulk self-referential KNN over the entity namespace",
+      "deps": ["entity-fact-embed"]
+    },
+    "graph-augment-persist": {
+      "component": "hipporag/graph-materializer",
+      "kind": "extractor",
+      "note": "nearest-signature typing only — no §13.4 row names a whole-graph materialization step; HippoRAG.py:334-335, :1146-1230, save_igraph at :1225-1230",
+      "effects": [],
+      "config": {
+        "declared_capability": "§14.2 Graph bulk-export"
+      },
+      "artifact_scope": "quarantined",
+      "deps": ["fact-edges", "passage-edges", "synonymy-edges"]
+    },
+    "fact-score": {
+      "component": "hipporag/fact-scorer",
+      "kind": "retriever",
+      "effects": ["reads_vector"],
+      "config": { "declared_capability": "§14.2 score_all — exhaustive dense dot product against every fact, HippoRAG.py:461, :1427-1465, :1459" },
+      "deps": []
+    },
+    "fact-filter": {
+      "component": "hipporag/fact-filter",
+      "kind": "ranker-reranker",
+      "effects": ["calls_llm"],
+      "note": "DSPyFilter over top linking_top_k facts, HippoRAG.py:462, :1659-1707",
+      "deps": ["fact-score"]
+    },
+    "dpr-fallback": {
+      "component": "hipporag/dpr-fallback",
+      "kind": "retriever",
+      "effects": ["calls_embedding", "reads_vector"],
+      "note": "calls the same dense_passage_retrieval helper (HippoRAG.py:1467-1499) retrieve_dpr's separate top-level ablation entry point also calls; retrieve_dpr itself is never wired in this base wiring",
+      "deps": ["fact-filter"]
+    },
+    "reset-vector-join": {
+      "component": "hipporag/reset-vector-join",
+      "kind": "join",
+      "effects": ["reads_vector", "calls_embedding", "reads_kv"],
+      "config": {
+        "socket_shape": "ref-keyed vector-sum, per CONTRACT.md §13.3's H2 repair",
+        "arm_precedence": "disjoint-support sum, order-insensitive — phrase_weights/passage_weights resolve to disjoint vertex indices",
+        "apportionment_policy": "n/a - non-effectful join in the budget sense, no token spend at this node"
+      },
+      "note": "HippoRAG.py:1577-1578, :1591-1608 build the two dense arrays; :1621-1638 sums them; the dense array itself never crosses this node's port, per §13.1's part-local-projection cross-reference",
+      "deps": ["fact-filter"]
+    },
+    "ppr": {
+      "component": "hipporag/ppr-retriever",
+      "kind": "retriever",
+      "note": "nearest-signature typing — operative read is the Graph store's bulk-export sub-capability, not a pointwise query",
+      "effects": ["reads_graph"],
+      "config": {
+        "declared_capability": "§14.2 Graph bulk-export",
+        "readback": "partitioned — passage-node vertex subset only, HippoRAG.py:1709-1748, readback at :1745-1747"
+      },
+      "deps": ["reset-vector-join"]
+    },
+    "assemble-result": {
+      "component": "hipporag/result-assembler",
+      "kind": "assembler",
+      "effects": ["reads_kv"],
+      "config": { "order_policy": "hipporag-doc-score-order" },
+      "note": "HippoRAG.py:501-507",
+      "deps": ["ppr", "dpr-fallback"]
+    }
+  },
+  "recipe": { "chunker": "chunk-embed", "embedding": "chunk-embed", "extraction": "openie" },
+  "harnesses": [],
+  "provides": ["assemble-result"],
+  "guards": [
+    {
+      "guard_name": "zero_surviving_facts_dpr_fallback",
+      "declared_per": "CONTRACT.md §19.8",
+      "evaluating_node": "fact-filter",
+      "condition": "zero facts survive the LLM filter (len(top_k_facts) == 0), HippoRAG.py:467",
+      "declared_in_config_hash": true,
+      "emitted_when_not_fired": "the reset-vector-join/ppr arm's own resolved output — the normal disposition, graph_search_with_fact_entities executes",
+      "when_fired": "dpr-fallback executes instead (HippoRAG.py:468-469); per CONTRACT.md §19.8's equal-node-set rule outcome (1), this is NOT registered as a second arm — it is this base wiring's own declared, observable variant, structurally identical to LightRAG's local-to-global fall-through per PARTS.md ## §R row D10",
+      "observability": "stamped on the run record and surfaced via CONTRACT.md §18.2's existing 'any degradation path a manifest declared and the run actually took' envelope field; no new envelope field is minted, per PARTS.md ## §R row D10",
+      "gate_consequence": "CONTRACT.md §5's tenth refusal condition refuses a comparison whose compared arms differ in which guards fired, per PARTS.md ## §R row D10"
+    }
+  ]
+}
