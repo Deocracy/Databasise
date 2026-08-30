@@ -35,7 +35,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The same component wired twice with byte-identical config resolves to one instance identity and one cache partition; changing any config byte yields a different `config_hash` and a separate partition — and a wiring node id is never usable as an identity
   4. A wiring arm containing an `opaque` node writes `quarantined` and cannot reach `shared` KV; per-part graph and vector namespaces are visibly separate after a run
 
-**Plans**: 2/9 plans executed across 5 waves
+**Plans**: 6/9 plans executed across 5 waves
 
 Plans:
 **Wave 1**
@@ -48,10 +48,10 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 01-03-PLAN.md — Wave 3 · validator: SCC-condensation depth, blast-radius at load time, execution_mode refusals, spike-005 conformance set
-- [ ] 01-04-PLAN.md — Wave 3 · identity hardening, explicit part registry, four reference parts + three declaration-only entries
-- [ ] 01-05-PLAN.md — Wave 3 · namespace derivation and the SQLite KV / lexical FTS5 / content-addressed blob stores
-- [ ] 01-06-PLAN.md — Wave 3 · Cozo graph and Faiss vector adapters ported by copy, with the frozen-bug regression suite
+- [x] 01-03-PLAN.md — Wave 3 · validator: SCC-condensation depth, blast-radius at load time, execution_mode refusals, spike-005 conformance set
+- [x] 01-04-PLAN.md — Wave 3 · identity hardening, explicit part registry, four reference parts + three declaration-only entries
+- [x] 01-05-PLAN.md — Wave 3 · namespace derivation and the SQLite KV / lexical FTS5 / content-addressed blob stores
+- [x] 01-06-PLAN.md — Wave 3 · Cozo graph and Faiss vector adapters ported by copy, with the frozen-bug regression suite
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -156,7 +156,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Machine Core | 2/9 | In Progress|  |
+| 1. Machine Core | 6/9 | In Progress|  |
 | 2. Falsifier Gate | 0/TBD | Not started | - |
 | 3. LightRAG Query Side | 0/TBD | Not started | - |
 | 4. The Seam | 0/TBD | Not started | - |
