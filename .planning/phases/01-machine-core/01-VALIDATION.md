@@ -44,34 +44,35 @@ created: 2026-08-30
 | 1-01-02 | 01 | 1 | EMBED-01 | — | dependency set is the proof: 4 runtime deps, no server client | smoke | `cd databasise && uv run pytest --collect-only` | ❌ W0 | ⬜ pending |
 | 1-01-03 | 01 | 1 | MACH-06 | — | one-way gate: environment-hash input set (D-12) | checkpoint | *(blocking decision — no automated command)* | n/a | ⬜ pending |
 | 1-01-04 | 01 | 1 | MACH-05 | — | one-way gate: per-node semaphore in `config_hash` (D-09) | checkpoint | *(blocking decision — no automated command)* | n/a | ⬜ pending |
-| 1-01-05 | 01 | 1 | EMBED-01, MACH-05, MACH-06, MACH-08 | — | tracer: schema-valid run record, no listening socket | integration | `cd databasise && uv run pytest tests/test_tracer_end_to_end.py -x` | ❌ W0 | ⬜ pending |
-| 1-02-01 | 02 | 2 | MACH-05, MACH-08 | — | cycle-safe depth; all violations at once with JSON-Pointer paths | unit | `cd databasise && uv run pytest tests/validator/test_cycles_and_depth.py -x` | ❌ W0 | ⬜ pending |
-| 1-02-02 | 02 | 2 | MACH-08 | — | blast-radius refusal at load time; placement refusal by name (D-08) | unit | `cd databasise && uv run pytest tests/validator/test_blast_radius.py tests/validator/test_execution_mode.py -x` | ❌ W0 | ⬜ pending |
-| 1-02-03 | 02 | 2 | MACH-08 | — | spike-005 conformance, 12 cases, no exemptions (D-03) | unit | `cd databasise && uv run pytest tests/validator/test_taint_conformance.py -x` | ❌ W0 | ⬜ pending |
-| 1-03-01 | 03 | 2 | MACH-06 | — | int64 exclusion, int/float collapse, UTF-16 key order, no node-id identity | unit | `cd databasise && uv run pytest tests/identity/ -x` | ❌ W0 | ⬜ pending |
-| 1-03-02 | 03 | 2 | MACH-06 | — | deny-by-default reaches the part boundary, not only the validator | unit | `cd databasise && uv run pytest tests/parts/test_reference_parts.py -x` | ❌ W0 | ⬜ pending |
-| 1-03-03 | 03 | 2 | MACH-06 | — | explicit registry, no dynamic-import fallback (D-13) | unit | `cd databasise && uv run pytest tests/parts/test_registry.py -x` | ❌ W0 | ⬜ pending |
-| 1-04-01 | 04 | 2 | MACH-08 | — | namespace cannot escape store root; scope readable in directory name | unit | `cd databasise && uv run pytest tests/stores/test_namespace_derivation.py -x` | ❌ W0 | ⬜ pending |
-| 1-04-02 | 04 | 2 | EMBED-01, MACH-08 | — | bound parameters throughout; no silent `LIKE` fallback when FTS5 absent | unit | `cd databasise && uv run pytest tests/stores/test_kv.py tests/stores/test_lexical.py -x` | ❌ W0 | ⬜ pending |
-| 1-04-03 | 04 | 2 | MACH-08 | — | atomic content-addressed write; partial blob never observable | unit | `cd databasise && uv run pytest tests/stores/test_blob.py -x` | ❌ W0 | ⬜ pending |
-| 1-05-01 | 05 | 2 | EMBED-01, MACH-08 | — | Datalog metacharacters cannot alter query structure (bound params) | integration | `cd databasise && uv run pytest tests/stores/test_graph.py -x` | ❌ W0 | ⬜ pending |
-| 1-05-02 | 05 | 2 | EMBED-01 | — | four Cozo 0.7.6 silent-wrong-result bugs bound against the NEW adapter | regression | `cd databasise && uv run pytest tests/stores/test_graph_frozen_bugs.py -x` | ❌ W0 | ⬜ pending |
-| 1-05-03 | 05 | 2 | EMBED-01, MACH-08 | — | embedding-count mismatch raises before mutation; no partial write | integration | `cd databasise && uv run pytest tests/stores/test_vector.py -x` | ❌ W0 | ⬜ pending |
-| 1-06-01 | 06 | 3 | MACH-06, MACH-08 | — | registry applies its own scope filter; caller cannot disable it | integration | `cd databasise && uv run pytest tests/registry_artifact/test_index.py -x` | ❌ W0 | ⬜ pending |
-| 1-06-02 | 06 | 3 | MACH-08 | — | no route to the registry bypasses the blast-radius rule (D-02) | integration | `cd databasise && uv run pytest tests/registry_artifact/test_write_path_blast_radius.py -x` | ❌ W0 | ⬜ pending |
-| 1-06-03 | 06 | 3 | MACH-06 | — | append-only enforced by DB triggers, not by method omission | unit | `cd databasise && uv run pytest tests/ledger/test_ledger.py -x` | ❌ W0 | ⬜ pending |
-| 1-07-01 | 07 | 3 | MACH-05 | — | per-node semaphore only; no process-wide cap (D-09/D-11); stable dispatch order | integration | `cd databasise && uv run pytest tests/runner/test_scheduler.py -x` | ❌ W0 | ⬜ pending |
-| 1-07-02 | 07 | 3 | MACH-05 | — | exact integer budget split; halt is first-class and never reported clean | unit | `cd databasise && uv run pytest tests/runner/test_budget.py -x` | ❌ W0 | ⬜ pending |
-| 1-07-03 | 07 | 3 | MACH-05 | — | full §TR.1 field set; constructor refuses a confounded-as-clean record (D-10) | integration | `cd databasise && uv run pytest tests/runner/test_run_record.py -x` | ❌ W0 | ⬜ pending |
-| 1-08-01 | 08 | 4 | EMBED-01 | — | no child process, no listening socket, no silent fallback to an external store | smoke | `cd databasise && uv run pytest tests/test_embed_startup.py -x` | ❌ W0 | ⬜ pending |
-| 1-08-02 | 08 | 4 | EMBED-01 | — | v1 import boundary machine-checked in 4 syntactic forms + filesystem reach (D-14) | lint/unit | `cd databasise && uv run pytest tests/test_import_boundary.py -x` | ❌ W0 | ⬜ pending |
-| 1-08-03 | 08 | 4 | EMBED-01, MACH-05, MACH-06, MACH-08 | — | opaque arm writes quarantined, cannot reach shared KV; namespaces visibly separate | acceptance | `cd databasise && uv run pytest tests/test_phase_success_criteria.py -x` | ❌ W0 | ⬜ pending |
+| 1-02-01 | 02 | 2 | EMBED-01, MACH-05, MACH-06, MACH-08 | — | tracer: schema-valid run record, no listening socket | integration | `cd databasise && uv run pytest tests/test_tracer_end_to_end.py -x` | ❌ W0 | ⬜ pending |
+| 1-03-01 | 03 | 3 | MACH-05, MACH-08 | — | cycle-safe depth; all violations at once with JSON-Pointer paths | unit | `cd databasise && uv run pytest tests/validator/test_cycles_and_depth.py -x` | ❌ W0 | ⬜ pending |
+| 1-03-02 | 03 | 3 | MACH-08 | — | blast-radius refusal at load time; placement refusal by name (D-08) | unit | `cd databasise && uv run pytest tests/validator/test_blast_radius.py tests/validator/test_execution_mode.py -x` | ❌ W0 | ⬜ pending |
+| 1-03-03 | 03 | 3 | MACH-08 | — | spike-005 conformance, 12 cases, no exemptions (D-03) | unit | `cd databasise && uv run pytest tests/validator/test_taint_conformance.py -x` | ❌ W0 | ⬜ pending |
+| 1-04-01 | 04 | 3 | MACH-06 | — | int64 exclusion, int/float collapse, UTF-16 key order, no node-id identity | unit | `cd databasise && uv run pytest tests/identity/ -x` | ❌ W0 | ⬜ pending |
+| 1-04-02 | 04 | 3 | MACH-06 | — | deny-by-default reaches the part boundary, not only the validator | unit | `cd databasise && uv run pytest tests/parts/test_reference_parts.py -x` | ❌ W0 | ⬜ pending |
+| 1-04-03 | 04 | 3 | MACH-06 | — | explicit registry, no dynamic-import fallback (D-13) | unit | `cd databasise && uv run pytest tests/parts/test_registry.py -x` | ❌ W0 | ⬜ pending |
+| 1-05-01 | 05 | 3 | MACH-08 | — | namespace cannot escape store root; scope readable in directory name | unit | `cd databasise && uv run pytest tests/stores/test_namespace_derivation.py -x` | ❌ W0 | ⬜ pending |
+| 1-05-02 | 05 | 3 | EMBED-01, MACH-08 | — | bound parameters throughout; no silent `LIKE` fallback when FTS5 absent | unit | `cd databasise && uv run pytest tests/stores/test_kv.py tests/stores/test_lexical.py -x` | ❌ W0 | ⬜ pending |
+| 1-05-03 | 05 | 3 | MACH-08 | — | atomic content-addressed write; partial blob never observable | unit | `cd databasise && uv run pytest tests/stores/test_blob.py -x` | ❌ W0 | ⬜ pending |
+| 1-06-01 | 06 | 3 | EMBED-01, MACH-08 | — | Datalog metacharacters cannot alter query structure (bound params) | integration | `cd databasise && uv run pytest tests/stores/test_graph.py -x` | ❌ W0 | ⬜ pending |
+| 1-06-02 | 06 | 3 | EMBED-01 | — | four Cozo 0.7.6 silent-wrong-result bugs bound against the NEW adapter | regression | `cd databasise && uv run pytest tests/stores/test_graph_frozen_bugs.py -x` | ❌ W0 | ⬜ pending |
+| 1-06-03 | 06 | 3 | EMBED-01, MACH-08 | — | embedding-count mismatch raises before mutation; no partial write | integration | `cd databasise && uv run pytest tests/stores/test_vector.py -x` | ❌ W0 | ⬜ pending |
+| 1-07-01 | 07 | 4 | MACH-06, MACH-08 | — | registry applies its own scope filter; caller cannot disable it | integration | `cd databasise && uv run pytest tests/registry_artifact/test_index.py -x` | ❌ W0 | ⬜ pending |
+| 1-07-02 | 07 | 4 | MACH-08 | — | no route to the registry bypasses the blast-radius rule (D-02) | integration | `cd databasise && uv run pytest tests/registry_artifact/test_write_path_blast_radius.py -x` | ❌ W0 | ⬜ pending |
+| 1-07-03 | 07 | 4 | MACH-06 | — | append-only enforced by DB triggers, not by method omission | unit | `cd databasise && uv run pytest tests/ledger/test_ledger.py -x` | ❌ W0 | ⬜ pending |
+| 1-08-01 | 08 | 4 | MACH-05 | — | per-node semaphore only; no process-wide cap (D-09/D-11); stable dispatch order | integration | `cd databasise && uv run pytest tests/runner/test_scheduler.py -x` | ❌ W0 | ⬜ pending |
+| 1-08-02 | 08 | 4 | MACH-05 | — | exact integer budget split; halt is first-class and never reported clean | unit | `cd databasise && uv run pytest tests/runner/test_budget.py -x` | ❌ W0 | ⬜ pending |
+| 1-08-03 | 08 | 4 | MACH-05 | — | full §TR.1 field set; constructor refuses a confounded-as-clean record (D-10) | integration | `cd databasise && uv run pytest tests/runner/test_run_record.py -x` | ❌ W0 | ⬜ pending |
+| 1-09-01 | 09 | 5 | EMBED-01 | — | no child process, no listening socket, no silent fallback to an external store | smoke | `cd databasise && uv run pytest tests/test_embed_startup.py -x` | ❌ W0 | ⬜ pending |
+| 1-09-02 | 09 | 5 | EMBED-01 | — | v1 import boundary machine-checked in 4 syntactic forms + filesystem reach (D-14) | lint/unit | `cd databasise && uv run pytest tests/test_import_boundary.py -x` | ❌ W0 | ⬜ pending |
+| 1-09-03 | 09 | 5 | EMBED-01, MACH-05, MACH-06, MACH-08 | — | opaque arm writes quarantined, cannot reach shared KV; namespaces visibly separate | acceptance | `cd databasise && uv run pytest tests/test_phase_success_criteria.py -x` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
-**Sampling continuity:** no three consecutive tasks lack an automated verify. The three checkpoint
-tasks (1-01-01, 1-01-03, 1-01-04) are consecutive but are gates rather than code-producing tasks;
-the code-producing task on either side (1-01-02 and 1-01-05) each carries an automated command.
+**Sampling continuity:** no three consecutive tasks lack an automated verify. Plan 01-01's three
+checkpoint tasks are gates rather than code-producing tasks, and they never run three in a row:
+1-01-01 is followed immediately by 1-01-02, which carries an automated command, and the pair
+1-01-03 / 1-01-04 is followed immediately by 1-02-01, the tracer, which carries one too.
 
 ---
 
@@ -84,9 +85,13 @@ exists on disk yet — there is no root-level build config in this repository at
 - [ ] `databasise/.python-version` — pins the uv-managed cpython-3.12.13 rather than the system 3.13
 - [ ] Framework install — `pytest`, `pytest-asyncio`, `jsonschema`, `ruff` as dev dependencies inside `databasise/`
 - [ ] `databasise/tests/conftest.py` — shared fixtures `store_root` (per-namespace temp store directories per D-07), `rig_trace_schema` (loads `docs/system-model/rig-trace.schema.json`), `assert_valid_trace` (validates an emitted run record against it)
-- [ ] `databasise/tests/fixtures/wiring-tracer.json` — the two-node wiring the tracer test drives
 
-Ported rather than newly authored (plan 01-05 Task 2, not Wave 0 but called out because it is an
+Not Wave 0, but called out because a reader may expect it here:
+`databasise/tests/fixtures/wiring-tracer.json` — the two-node wiring the tracer drives — ships with
+its own test in plan 01-02 (wave 2), not with the harness, because no test outside
+`test_tracer_end_to_end.py` reads it.
+
+Ported rather than newly authored (plan 01-06 Task 2, not Wave 0 but called out because it is an
 adaptation rather than a fresh suite): `v1/tests/kg/test_cozo_graph_storage.py`'s frozen-bug
 regression shapes, retargeted at `databasise/stores/graph.py`.
 
