@@ -1,0 +1,20 @@
+{
+  "wiring_version": "1",
+  "nodes": {
+    "pass": {
+      "component": "core/passthrough@1.0.0",
+      "kind": "passthrough",
+      "deps": []
+    },
+    "store": {
+      "component": "core/kv-writer@1.0.0",
+      "kind": "kv-writer",
+      "effects": ["writes_kv"],
+      "config": { "max_concurrency": 2, "note": "tracer-fixture" },
+      "deps": ["pass"]
+    }
+  },
+  "recipe": {},
+  "harnesses": [],
+  "provides": ["store"]
+}
