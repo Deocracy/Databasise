@@ -9,9 +9,9 @@ signature check) that are not separately numbered in <behavior> but are required
 from __future__ import annotations
 
 import inspect
+import sqlite3
 
 import pytest
-
 from databasise.registry_artifact.index import (
     REGISTER_AUTHORIZATION,
     ArtifactRegistry,
@@ -22,21 +22,21 @@ from databasise.registry_artifact.index import (
 
 
 def _kwargs(**overrides):
-    base = dict(
-        _authorization=REGISTER_AUTHORIZATION,
-        effect="writes_artifact",
-        content_hash="a" * 64,
-        namespace="shared-abc123",
-        scope="shared",
-        sa2_chunker="chunker@1.0.0",
-        sa2_extraction="extraction@1.0.0",
-        sa2_embedding="embedding@1.0.0",
-        corpus_id="corpus-1",
-        space_id="space-1",
-        producer_instance_hash="b" * 64,
-        recipe_hash="c" * 64,
-        retention_tier="runnable",
-    )
+    base = {
+        "_authorization": REGISTER_AUTHORIZATION,
+        "effect": "writes_artifact",
+        "content_hash": "a" * 64,
+        "namespace": "shared-abc123",
+        "scope": "shared",
+        "sa2_chunker": "chunker@1.0.0",
+        "sa2_extraction": "extraction@1.0.0",
+        "sa2_embedding": "embedding@1.0.0",
+        "corpus_id": "corpus-1",
+        "space_id": "space-1",
+        "producer_instance_hash": "b" * 64,
+        "recipe_hash": "c" * 64,
+        "retention_tier": "runnable",
+    }
     base.update(overrides)
     return base
 
@@ -60,7 +60,7 @@ def test_1_registering_an_artifact_stores_every_section_7_field_and_reads_it_bac
 
 def test_2_a_scope_outside_the_three_values_is_refused_by_the_schema_itself(store_root):
     registry = ArtifactRegistry(store_root)
-    with pytest.raises(Exception):  # sqlite3.IntegrityError, raised by the CHECK constraint
+    with pytest.raises(sqlite3.IntegrityError):  # raised by the CHECK constraint
         registry.register(**_kwargs(scope="public", namespace="public-xyz"))
 
 
