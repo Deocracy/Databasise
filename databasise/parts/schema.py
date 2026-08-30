@@ -47,6 +47,13 @@ Effect = Literal[
 
 Depth = Literal["opaque", "evidence", "stage"]
 
+ArtifactScope = Literal["shared", "quarantined", "self_storage"]
+"""The three artifact scopes CONTRACT.md §3 defines — MUST NOT be flattened into two categories
+with a caveat, since the shareability difference between ``quarantined`` and ``self_storage`` is
+the entire point of the distinction. An opaque node MAY write ``quarantined`` and MUST NOT write
+``shared``.
+"""
+
 
 class _FanoutKind(BaseModel):
     kind: Literal["fanout"] = "fanout"
@@ -92,6 +99,13 @@ class Part:
     """A registered component: its name@version identity, its structural depth and declared
     effects (the registry's own capability row — CONTRACT §2's wire-time declaration), an
     optional upstream_ref lineage pointer (CONTRACT §7, D-14), and an optional executable body.
+    ``body is None`` marks a declaration-only entry (D-04): schema plus effects[] only, with no
+    executable behaviour yet — a later plan's job is to dispatch such an entry as an explicit
+    refusal, never a silent no-op.
+
+    ``artifact_scope`` is set only for a part that declares ``writes_artifact`` — CONTRACT §3's
+    three-scope table (``shared``/``quarantined``/``self_storage``) — and stays ``None`` for a
+    part that writes no artifact at all.
     """
 
     name_at_version: str
@@ -100,6 +114,7 @@ class Part:
     effects: list[Effect]
     upstream_ref: str | None
     body: Callable[[NodeContext], Any] | None = None
+    artifact_scope: ArtifactScope | None = None
 
 
 class WiringNode(BaseModel):
