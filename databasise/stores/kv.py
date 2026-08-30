@@ -7,6 +7,11 @@ buffer first (read-your-writes before flush) — the same discipline v1's Cozo a
 uses (``v1/lightrag/kg/cozo_impl.py``'s deferred-write buffer pattern) and the Cozo port in a
 later plan will need too. A failed write raises; it is never logged and continued — this
 project's house style is refusals over silent fallbacks.
+
+``PRAGMA journal_mode=WAL`` and ``PRAGMA synchronous=NORMAL`` are set at connect time: WAL keeps
+concurrent readers (e.g. a verification read from a second connection) from blocking on the
+flush transaction inside a single process tree, which is the only concurrency shape EMBED-01
+admits (no external DB server, no cross-process writers).
 """
 
 from __future__ import annotations
@@ -26,6 +31,8 @@ class SqliteKVStore(StorageNameSpace):
         self._dir.mkdir(parents=True, exist_ok=True)
         self._db_path = self._dir / "kv.sqlite3"
         self._conn = sqlite3.connect(self._db_path)
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA synchronous=NORMAL")
         self._conn.execute(
             "CREATE TABLE IF NOT EXISTS kv (id TEXT PRIMARY KEY, value TEXT NOT NULL)"
         )
