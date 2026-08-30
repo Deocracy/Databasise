@@ -35,7 +35,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The same component wired twice with byte-identical config resolves to one instance identity and one cache partition; changing any config byte yields a different `config_hash` and a separate partition — and a wiring node id is never usable as an identity
   4. A wiring arm containing an `opaque` node writes `quarantined` and cannot reach `shared` KV; per-part graph and vector namespaces are visibly separate after a run
 
-**Plans**: 6/9 plans executed across 5 waves
+**Plans**: 8/9 plans executed across 5 waves
 
 Plans:
 **Wave 1**
@@ -55,8 +55,8 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 01-07-PLAN.md — Wave 4 · artifact registry, the non-bypassable write-path blast-radius check, and the append-only ledger
-- [ ] 01-08-PLAN.md — Wave 4 · runner completion: per-node semaphore, exact budget metering, full RIG §TR.1 run record
+- [x] 01-07-PLAN.md — Wave 4 · artifact registry, the non-bypassable write-path blast-radius check, and the append-only ledger
+- [x] 01-08-PLAN.md — Wave 4 · runner completion: per-node semaphore, exact budget metering, full RIG §TR.1 run record
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
@@ -156,7 +156,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Machine Core | 6/9 | In Progress|  |
+| 1. Machine Core | 8/9 | In Progress|  |
 | 2. Falsifier Gate | 0/TBD | Not started | - |
 | 3. LightRAG Query Side | 0/TBD | Not started | - |
 | 4. The Seam | 0/TBD | Not started | - |
