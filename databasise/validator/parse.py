@@ -17,8 +17,14 @@ whether any other violation was found: a cycle is reported as data under ``repor
 treated as a violation by itself, because cyclic wirings are legal content (CONTRACT §1) and only
 the wiring author can know whether a given cycle is intended.
 
-Plan 01-03 Task 2 wires the depth/blast-radius pass (D-02's load-time call site) in here as well,
-once every node's part is known to have resolved and every dep is known to name a real node.
+The depth/blast-radius pass (``validator.depth.effective_depth`` then
+``validator.blast_radius.blast_radius_violations``, D-02's load-time call site) runs only when the
+wiring is otherwise structurally sound (no unknown component, dangling dep, invalid node schema,
+or empty-``nodes`` violation) — those checks require every node's part to have resolved and every
+dep to name a real node, and a wiring that has not cleared that bar has nothing meaningful to say
+about depth yet. A cycle does not gate this: with the SCC-condensation depth pass
+(``validator/cycles.py``), a cyclic-but-otherwise-well-formed wiring still resolves a defined
+depth for every node.
 """
 
 from __future__ import annotations
@@ -32,7 +38,9 @@ from pydantic import ValidationError
 
 from databasise.parts.registry import PartRegistry, UnknownPartError
 from databasise.parts.schema import Part, WiringNode
+from databasise.validator.blast_radius import blast_radius_violations
 from databasise.validator.cycles import strongly_connected_components
+from databasise.validator.depth import effective_depth
 from databasise.validator.errors import (
     CODE_DANGLING_DEP,
     CODE_EMPTY_WIRING,
@@ -154,4 +162,11 @@ def parse_wiring(doc: dict[str, Any], registry: PartRegistry) -> ParsedWiring:
         node_order=tuple(sorted(nodes.keys())),
         report=report,
     )
+
+    if report.ok:
+        # Every node's part resolved and every dep names a real node — the graph-dependent
+        # checks (D-02's load-time blast-radius call site) can now run safely.
+        depth_map = effective_depth(parsed)
+        report.violations.extend(blast_radius_violations(parsed, depth_map))
+
     return parsed
