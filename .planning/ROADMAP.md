@@ -35,12 +35,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The same component wired twice with byte-identical config resolves to one instance identity and one cache partition; changing any config byte yields a different `config_hash` and a separate partition — and a wiring node id is never usable as an identity
   4. A wiring arm containing an `opaque` node writes `quarantined` and cannot reach `shared` KV; per-part graph and vector namespaces are visibly separate after a run
 
-**Plans**: 9 plans across 5 waves
+**Plans**: 1/9 plans executed across 5 waves
 
 Plans:
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — Wave 1 · package scaffold, build config, test harness, and the two one-way identity gates
+- [x] 01-01-PLAN.md — Wave 1 · package scaffold, build config, test harness, and the two one-way identity gates
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -156,7 +156,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Machine Core | 0/TBD | Not started | - |
+| 1. Machine Core | 1/9 | In Progress|  |
 | 2. Falsifier Gate | 0/TBD | Not started | - |
 | 3. LightRAG Query Side | 0/TBD | Not started | - |
 | 4. The Seam | 0/TBD | Not started | - |
