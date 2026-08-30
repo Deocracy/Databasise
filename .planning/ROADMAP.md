@@ -31,17 +31,18 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Owner submits a wiring graph and the runner executes it to completion under structured concurrency, metering spend at each node's declared boundary, with the intra-node concurrency mechanism decided and written down
   3. The same component wired twice with byte-identical config resolves to one instance identity and one cache partition; changing any config byte yields a different `config_hash` and a separate partition — and a wiring node id is never usable as an identity
   4. A wiring arm containing an `opaque` node writes `quarantined` and cannot reach `shared` KV; per-part graph and vector namespaces are visibly separate after a run
-**Plans**: 8 plans across 4 waves
+**Plans**: 9 plans across 5 waves
 
 Plans:
-- [ ] 01-01-PLAN.md — Wave 1 · package + build config + one-way identity gates + end-to-end tracer slice
-- [ ] 01-02-PLAN.md — Wave 2 · validator: SCC-condensation depth, blast-radius at load time, execution_mode refusals, spike-005 conformance set
-- [ ] 01-03-PLAN.md — Wave 2 · identity hardening, explicit part registry, four reference parts + three declaration-only entries
-- [ ] 01-04-PLAN.md — Wave 2 · namespace derivation and the SQLite KV / lexical FTS5 / content-addressed blob stores
-- [ ] 01-05-PLAN.md — Wave 2 · Cozo graph and Faiss vector adapters ported by copy, with the frozen-bug regression suite
-- [ ] 01-06-PLAN.md — Wave 3 · artifact registry, the non-bypassable write-path blast-radius check, and the append-only ledger
-- [ ] 01-07-PLAN.md — Wave 3 · runner completion: per-node semaphore, exact budget metering, full RIG §TR.1 run record
-- [ ] 01-08-PLAN.md — Wave 4 · EMBED-01 smoke test, v1 import-boundary checker, four-criteria acceptance suite
+- [ ] 01-01-PLAN.md — Wave 1 · package scaffold, build config, test harness, and the two one-way identity gates
+- [ ] 01-02-PLAN.md — Wave 2 · end-to-end tracer slice: wiring in, schema-valid run record out (runs alone, before expansion)
+- [ ] 01-03-PLAN.md — Wave 3 · validator: SCC-condensation depth, blast-radius at load time, execution_mode refusals, spike-005 conformance set
+- [ ] 01-04-PLAN.md — Wave 3 · identity hardening, explicit part registry, four reference parts + three declaration-only entries
+- [ ] 01-05-PLAN.md — Wave 3 · namespace derivation and the SQLite KV / lexical FTS5 / content-addressed blob stores
+- [ ] 01-06-PLAN.md — Wave 3 · Cozo graph and Faiss vector adapters ported by copy, with the frozen-bug regression suite
+- [ ] 01-07-PLAN.md — Wave 4 · artifact registry, the non-bypassable write-path blast-radius check, and the append-only ledger
+- [ ] 01-08-PLAN.md — Wave 4 · runner completion: per-node semaphore, exact budget metering, full RIG §TR.1 run record
+- [ ] 01-09-PLAN.md — Wave 5 · EMBED-01 smoke test, v1 import-boundary checker, four-criteria acceptance suite
 
 ### Phase 2: Falsifier Gate
 **Goal**: Depth and execution mode are computed rather than declared, and the rig's own noise floor is measured — the two conditions the ratified verdict rides on
