@@ -2,19 +2,29 @@
 first, per wiring-spec-and-validation.md's validator-behaviour-as-contract rule ("The validator
 MUST return every violation from a single validation pass at once ... a one-violation-per-pass
 validator costs a full repair round trip per defect, and round trips dominate the cost of
-validation, not the pass itself").
+validation, not the pass itself"). ``parse_wiring`` never raises for an ordinary defect: every
+violation is accumulated into the returned ``ParsedWiring.report`` (a ``ValidationReport``,
+``databasise/validator/errors.py``), which the caller inspects via ``report.ok``.
 
-For the tracer the checks are: every ``component`` resolves in the registry, every entry in
-``deps`` names a node present in ``nodes``, and every declared effect is a member of the
-seventeen — the last already enforced by pydantic's ``Literal``-typed ``Effect`` field on
-``WiringNode`` itself, so an invalid effect surfaces as a per-node ``ValidationError`` this
-function turns into an accumulated violation rather than a second, separately hand-rolled check.
+The checks: every ``component`` resolves in the registry, every entry in ``deps`` names a node
+present in ``nodes``, every declared effect is a member of the seventeen (already enforced by
+pydantic's ``Literal``-typed ``Effect`` field on ``WiringNode`` itself, so an invalid effect
+surfaces as a per-node ``ValidationError`` this function turns into an accumulated violation
+rather than a second, separately hand-rolled check), and an empty ``nodes`` object.
+
+Cycle detection (``validator.cycles.strongly_connected_components``) always runs, independent of
+whether any other violation was found: a cycle is reported as data under ``report.cycles``, never
+treated as a violation by itself, because cyclic wirings are legal content (CONTRACT §1) and only
+the wiring author can know whether a given cycle is intended.
+
+Plan 01-03 Task 2 wires the depth/blast-radius pass (D-02's load-time call site) in here as well,
+once every node's part is known to have resolved and every dep is known to name a real node.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any
 
@@ -22,10 +32,22 @@ from pydantic import ValidationError
 
 from databasise.parts.registry import PartRegistry, UnknownPartError
 from databasise.parts.schema import Part, WiringNode
+from databasise.validator.cycles import strongly_connected_components
+from databasise.validator.errors import (
+    CODE_DANGLING_DEP,
+    CODE_EMPTY_WIRING,
+    CODE_INVALID_NODE_SCHEMA,
+    CODE_UNKNOWN_COMPONENT,
+    CODE_UNKNOWN_EFFECT,
+    ValidationReport,
+    Violation,
+)
 
 
 class WiringValidationError(ValueError):
-    """Every violation accumulated in one pass, each carrying a JSON-Pointer-style path."""
+    """Retained for import stability; ``parse_wiring`` no longer raises this. Every violation now
+    accumulates into the returned ``ParsedWiring.report`` instead — see the module docstring.
+    """
 
     def __init__(self, violations: list[dict[str, str]]):
         self.violations = violations
@@ -37,17 +59,42 @@ class ParsedWiring:
     """The load-frozen snapshot the runner reads. CONTRACT §11 forbids mid-run reads of mutable
     decision state, so every collection here is a read-only view (``MappingProxyType``/tuple),
     never a plain mutable dict or list a later step could quietly rewrite underneath the runner.
+
+    ``report`` carries every violation and every detected cycle from the parse pass that produced
+    this snapshot — see ``validator/errors.py``. It defaults to an empty, ``ok`` report so
+    existing call sites that construct a ``ParsedWiring`` directly (test fixtures) need not
+    thread one through when it is not the thing under test.
     """
 
     nodes: Mapping[str, WiringNode]
     parts: Mapping[str, Part]
     deps: Mapping[str, tuple[str, ...]]
     node_order: tuple[str, ...]
+    report: ValidationReport = field(default_factory=ValidationReport)
+
+
+def _classify_node_schema_error(err: dict[str, Any]) -> str:
+    """A pydantic ``ValidationError`` on a ``WiringNode`` can fail for many reasons; only the
+    ``effects`` field's ``Literal`` rejection is specifically the "unknown effect member" defect
+    the seventeen-member vocabulary names — everything else is a more general node-schema defect.
+    """
+    if "effects" in err["loc"]:
+        return CODE_UNKNOWN_EFFECT
+    return CODE_INVALID_NODE_SCHEMA
 
 
 def parse_wiring(doc: dict[str, Any], registry: PartRegistry) -> ParsedWiring:
-    violations: list[dict[str, str]] = []
+    violations: list[Violation] = []
     raw_nodes: dict[str, Any] = doc.get("nodes", {})
+
+    if not raw_nodes:
+        violations.append(
+            Violation(
+                code=CODE_EMPTY_WIRING,
+                pointer="/nodes",
+                message="a wiring's `nodes` object must not be empty",
+            )
+        )
 
     nodes: dict[str, WiringNode] = {}
     for node_id, raw in raw_nodes.items():
@@ -56,31 +103,55 @@ def parse_wiring(doc: dict[str, Any], registry: PartRegistry) -> ParsedWiring:
         except ValidationError as exc:
             for err in exc.errors():
                 field_path = "/".join(str(p) for p in err["loc"])
-                path = f"/nodes/{node_id}/{field_path}" if field_path else f"/nodes/{node_id}"
-                violations.append({"path": path, "message": err["msg"]})
+                pointer = f"/nodes/{node_id}/{field_path}" if field_path else f"/nodes/{node_id}"
+                violations.append(
+                    Violation(
+                        code=_classify_node_schema_error(err),
+                        pointer=pointer,
+                        message=err["msg"],
+                    )
+                )
 
     parts: dict[str, Part] = {}
     for node_id, node in nodes.items():
         try:
             parts[node_id] = registry.get(node.component)
         except UnknownPartError as exc:
-            violations.append({"path": f"/nodes/{node_id}/component", "message": str(exc)})
-        for dep in node.deps:
+            violations.append(
+                Violation(
+                    code=CODE_UNKNOWN_COMPONENT,
+                    pointer=f"/nodes/{node_id}/component",
+                    message=str(exc),
+                )
+            )
+        for dep_index, dep in enumerate(node.deps):
             if dep not in raw_nodes:
                 violations.append(
-                    {
-                        "path": f"/nodes/{node_id}/deps",
-                        "message": f"dependency {dep!r} is not a node in this wiring",
-                    }
+                    Violation(
+                        code=CODE_DANGLING_DEP,
+                        pointer=f"/nodes/{node_id}/deps/{dep_index}",
+                        message=f"dependency {dep!r} is not a node in this wiring",
+                    )
                 )
 
-    if violations:
-        raise WiringValidationError(violations)
-
     deps = {node_id: tuple(node.deps) for node_id, node in nodes.items()}
-    return ParsedWiring(
+
+    # Cycle detection always runs, independent of the violations above — a cycle is data, not a
+    # defect (see module docstring).
+    deps_as_sets = {node_id: set(dep_tuple) for node_id, dep_tuple in deps.items()}
+    sccs = strongly_connected_components(deps_as_sets)
+    cycles: list[list[str]] = [sorted(component) for component in sccs if len(component) > 1]
+    for node_id, dep_set in deps_as_sets.items():
+        if node_id in dep_set:  # a self-loop is a one-member SCC that is still a cycle
+            cycles.append([node_id])
+
+    report = ValidationReport(violations=violations, cycles=cycles)
+
+    parsed = ParsedWiring(
         nodes=MappingProxyType(dict(nodes)),
         parts=MappingProxyType(dict(parts)),
         deps=MappingProxyType(deps),
         node_order=tuple(sorted(nodes.keys())),
+        report=report,
     )
+    return parsed
