@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "databasise"
+version = "0.1.0"
+description = "Databasise 2.0 — the agnostic machine: fitting contract + versioned components over machine-owned primitives."
+readme = "README.md"
+requires-python = ">=3.11"
+# Floor is deliberately higher than v1's ">=3.10" (v1/pyproject.toml:14): the runner uses stdlib
+# asyncio.TaskGroup (3.11+) rather than taking an anyio dependency purely to preserve a 3.10 floor
+# nothing in this phase needs. Legitimate because D-14 makes databasise/ a separate package that
+# need not inherit v1's floor (01-RESEARCH.md Open Question 1; 01-01-PLAN.md decisions_recorded_here).
+dependencies = [
+    # Graph store primitive. Exact pin — Cozo 0.7.6 is architecture-frozen (D-05) with four known
+    # correctness bugs and no upstream fixes expected; pin, do not range.
+    "pycozo[embedded]==0.7.6",
+    # Vector store primitive. Matches v1's existing bound (v1/pyproject.toml:48, D-05).
+    "faiss-cpu>=1.7.0,<2.0.0",
+    # RFC 8785 (JCS) canonicalisation for config_hash. Package-legitimacy gate approved
+    # 2026-08-30 — see 01-01-SUMMARY.md for the recorded evidence.
+    "rfc8785==0.1.4",
+    "pydantic>=2.0,<3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2",
+    # Validates emitted run records against the frozen rig-trace.schema.json.
+    "jsonschema>=4.0",
+    "ruff",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.setuptools]
+# The `databasise` package root IS this project's own directory (pyproject.toml sits
+# beside __init__.py, not in a parent dir) — remap the "databasise" package to "." and
+# list subpackages explicitly, so setuptools' flat-layout auto-discovery doesn't mistake
+# identity/, parts/, etc. for separate top-level packages.
+package-dir = {"databasise" = "."}
+packages = [
+    "databasise",
+    "databasise.identity",
+    "databasise.parts",
+    "databasise.validator",
+    "databasise.runner",
+    "databasise.stores",
+]
