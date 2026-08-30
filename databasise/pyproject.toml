@@ -54,6 +54,7 @@ packages = [
     "databasise",
     "databasise.identity",
     "databasise.parts",
+    "databasise.parts_core",
     "databasise.validator",
     "databasise.runner",
     "databasise.stores",
