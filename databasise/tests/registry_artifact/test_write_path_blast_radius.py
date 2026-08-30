@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import pytest
-
-from databasise.registry_artifact.index import ArtifactRegistry, UnauthorizedRegisterCallError
+from databasise.registry_artifact.index import (
+    ArtifactRegistry,
+    UnauthorizedRegisterCallError,
+)
 from databasise.registry_artifact.write_path import BlastRadiusRefusal, write_artifact
 from databasise.stores.blob import FilesystemBlobStore
 from databasise.validator.blast_radius import blast_radius_violations
