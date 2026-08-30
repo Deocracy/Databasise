@@ -77,11 +77,44 @@ Audited 2026-08-29 against SYSTEM-MODEL.md, CONTRACT.md, RIG.md, PARTS.md, ANATO
 
 ## Traceability
 
-<!-- Filled by roadmap creation. Maps REQ-IDs to phases. -->
+Maps REQ-IDs to phases (see .planning/ROADMAP.md). Every v1 requirement maps to exactly one phase. Coverage: 34/34.
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| — | — | Pending roadmap |
+| GATE-01 | Phase 2 | Pending |
+| MACH-01 | Phase 2 | Pending |
+| MACH-02 | Phase 2 | Pending |
+| MACH-03 | Phase 2 | Pending |
+| MACH-04 | Phase 5 | Pending |
+| MACH-05 | Phase 1 | Pending |
+| MACH-06 | Phase 1 | Pending |
+| MACH-07 | Phase 7 | Pending |
+| MACH-08 | Phase 1 | Pending |
+| MACH-09 | Phase 2 | Pending |
+| MACH-10 | Phase 6 | Pending |
+| MACH-11 | Phase 4 | Pending |
+| MODAL-01 | Phase 3 | Pending |
+| MODAL-02 | Phase 5 | Pending |
+| MODAL-03 | Phase 5 | Pending |
+| MODAL-04 | Phase 6 | Pending |
+| MODAL-05 | Phase 6 | Pending |
+| API-01 | Phase 5 | Pending |
+| API-02 | Phase 5 | Pending |
+| API-03 | Phase 4 | Pending |
+| API-04 | Phase 4 | Pending |
+| API-05 | Phase 4 | Pending |
+| API-06 | Phase 5 | Pending |
+| API-07 | Phase 5 | Pending |
+| API-08 | Phase 6 | Pending |
+| API-09 | Phase 7 | Pending |
+| API-10 | Phase 4 | Pending |
+| API-11 | Phase 4 | Pending |
+| EMBED-01 | Phase 1 | Pending |
+| EMBED-02 | Phase 4 | Pending |
+| HARD-01 | Phase 2 | Pending |
+| HARD-02 | Phase 2 | Pending |
+| HARD-03 | Phase 5 | Pending |
+| HARD-04 | Phase 7 | Pending |
 
 ---
-*Last updated: 2026-08-29 after initialization + three-reviewer audit*
+*Last updated: 2026-08-29 after roadmap creation (traceability filled)*

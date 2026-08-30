@@ -1,0 +1,83 @@
+---
+gsd_state_version: '1.0'
+status: planning
+progress:
+  total_phases: 7
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
+---
+
+# Project State
+
+## Project Reference
+
+See: .planning/PROJECT.md (updated 2026-08-29)
+
+**Core value:** Modalities are swappable without consumers noticing — LightRAG and HippoRAG 2 both live behind one unchanging §18 envelope, comparable side-by-side on the rig.
+**Current focus:** Phase 1 — Machine Core
+
+## Current Position
+
+Phase: 1 of 7 (Machine Core)
+Plan: 0 of TBD in current phase
+Status: Ready to plan
+Last activity: 2026-08-29 — Roadmap created; 34/34 v1 requirements mapped across 7 phases
+
+Progress: [░░░░░░░░░░] 0%
+
+## Performance Metrics
+
+**Velocity:**
+- Total plans completed: 0
+- Average duration: —
+- Total execution time: 0.0 hours
+
+**By Phase:**
+
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| - | - | - | - |
+
+**Recent Trend:**
+- Last 5 plans: —
+- Trend: —
+
+*Updated after each plan completion*
+
+## Accumulated Context
+
+### Decisions
+
+Decisions are logged in PROJECT.md Key Decisions table.
+Recent decisions affecting current work:
+
+- Roadmap: 7 phases follow §BP's four rungs, with the §18 seam locked between rung 2 and rung 3 so ingest endpoints ship against a frozen envelope
+- Roadmap: rung 1 split into Machine Core (Phase 1) and Falsifier Gate (Phase 2) — the gate decision is the phase boundary, not an item buried in a foundation phase
+- Ratified 2026-08-29: §VD conditional go; D4 One Machine; SELECTION.md governs on disagreement
+
+### Pending Todos
+
+None yet.
+
+### Blockers/Concerns
+
+- **Ladder halt risk (Phase 2)**: a Falsifier 2 or Falsifier 5 failure halts the ladder outright — that is a SELECTION.md-level reversal, not a repairable defect. Phases 3-7 are conditional on Phase 2 passing.
+- **Storage decomposition stall (Phase 3)**: research pitfall 1 — 17 node positions can look extracted while every node still reaches v1's singleton `shared_storage.py`. Per-node storage-ownership audit is a Phase 3 success criterion, not an afterthought.
+- **Cozo 0.7.6 is architecture-frozen** with four known correctness bugs and no upstream fixes expected; pin and vendor the wheel (Phase 1).
+- **Open research flags**: HippoRAG 2 porting scope (Phase 6 planning), graph-aware deletion semantics for shared entities (Phase 5 planning), sealed-set sizing/MDE (Phase 2 planning).
+
+## Deferred Items
+
+Items acknowledged and carried forward from previous milestone close:
+
+| Category | Item | Status | Deferred At |
+|----------|------|--------|-------------|
+| *(none)* | | | |
+
+## Session Continuity
+
+Last session: 2026-08-29
+Stopped at: ROADMAP.md and STATE.md written; REQUIREMENTS.md traceability filled
+Resume file: None
