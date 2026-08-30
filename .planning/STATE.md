@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 1
-current_phase_name: Machine Core
+current_phase: 01
+current_phase_name: machine-core
 status: executing
 stopped_at: Phase 1 context gathered; fact-layer loss documented
-last_updated: "2026-08-30T16:31:07.599Z"
-last_activity: 2026-08-29
-last_activity_desc: Roadmap created; 34/34 v1 requirements mapped across 7 phases
+last_updated: "2026-08-30T16:34:49.229Z"
+last_activity: 2026-08-30
+last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 1
   completed_phases: 0
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-29)
 
 **Core value:** Modalities are swappable without consumers noticing — LightRAG and HippoRAG 2 both live behind one unchanging §18 envelope, comparable side-by-side on the rig.
-**Current focus:** Phase 1 — Machine Core
+**Current focus:** Phase 01 — machine-core
 
 ## Current Position
 
-Phase: 1 of 7 (Machine Core)
-Plan: 0 of TBD in current phase
-Status: Ready to execute
-Last activity: 2026-08-29 — Roadmap created; 34/34 v1 requirements mapped across 7 phases
+Phase: 01 (machine-core) — EXECUTING
+Plan: 1 of 9
+Status: Executing Phase 01
+Last activity: 2026-08-30 — Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
