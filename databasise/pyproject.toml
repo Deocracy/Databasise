@@ -58,4 +58,6 @@ packages = [
     "databasise.validator",
     "databasise.runner",
     "databasise.stores",
+    "databasise.registry_artifact",
+    "databasise.ledger",
 ]
