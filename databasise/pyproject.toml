@@ -24,7 +24,11 @@ dependencies = [
     "pydantic>=2.0,<3.0",
 ]
 
-[project.optional-dependencies]
+# PEP 735 dependency group, not [project.optional-dependencies]: uv installs the `dev`
+# group automatically for `uv run`, whereas an extra requires an explicit `--extra dev`.
+# Every plan in this phase verifies with a bare `uv run pytest`, so the tooling must be
+# present without a flag or each of those verify steps fails on a clean venv.
+[dependency-groups]
 dev = [
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2",
