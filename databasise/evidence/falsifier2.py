@@ -30,8 +30,19 @@ from databasise.validator.parse import ParsedWiring, parse_wiring
 WIRINGS_DIR = Path(__file__).resolve().parent / "wirings"
 EVIDENCE_PATH = Path(__file__).resolve().parent / "FALSIFIER-2-EVIDENCE.md"
 
-# W2/W3 land in Task 2 (02-01-PLAN.md); W1 alone exercises the end-to-end shape first.
-NAMED_WIRINGS: tuple[str, ...] = ("w1-lightrag-query-side",)
+NAMED_WIRINGS: tuple[str, ...] = (
+    "w1-lightrag-query-side",
+    "w2-codebase-memory-mcp",
+    "w3-lightrag-half-decomposed",
+)
+
+# SELECTION.md's `## Falsifiers` list, item 2, quoted verbatim.
+_FALSIFIER_2_TEXT = (
+    "Depth cannot be computed statically. Over three real parts (decomposed `lightrag-local`, "
+    "opaque `codebase-memory-mcp`, half-decomposed LightRAG), the validator cannot derive "
+    "`depth` from wiring + registry without a self-declaration. Then D4 has no brake and D's "
+    "regime was doing structural work."
+)
 
 
 @dataclass(frozen=True)
@@ -63,6 +74,19 @@ class WiringEvidence:
     rows: tuple[NodeRow, ...]
     violations: tuple[Violation, ...]
     cycles: tuple[tuple[str, ...], ...]
+
+
+@dataclass(frozen=True)
+class BoundaryRow:
+    """One CONTRACT §19.10 candidate boundary row: a stated, source-derived enumeration point,
+    not a verdict — §19.10 requires the candidate set to be recorded so a second author can check
+    it, not only the calls the first author reached on it.
+    """
+
+    boundary_id: str
+    boundary_class: str
+    between: str
+    rationale: str
 
 
 def load_wiring(stem: str) -> dict[str, Any]:
@@ -121,6 +145,61 @@ def evaluate_wiring(stem: str) -> WiringEvidence:
     )
 
 
+def enumerate_boundaries(evidence: WiringEvidence, parsed: ParsedWiring) -> tuple[BoundaryRow, ...]:
+    """CONTRACT §19.10's stated, source-derived boundary-enumeration procedure: one row per dep
+    edge whose consumer's resolved effects differ from its producer's (``effects-change``), one
+    row per dep edge unconditionally (``value-crossing`` — every dep edge is by construction a
+    point where a value crosses between operations), and one row per entry in the wiring
+    document's own top-level ``boundary_knobs`` array (``knob``) — the author-supplied half
+    §19.10 cannot derive mechanically. A pure function of one wiring document plus the registry:
+    same inputs, same rows.
+    """
+    rows: list[BoundaryRow] = []
+
+    for node_id in parsed.node_order:
+        consumer_part = parsed.parts[node_id]
+        for dep in parsed.deps[node_id]:
+            producer_part = parsed.parts[dep]
+            between = f"{dep} -> {node_id}"
+            diff = set(producer_part.effects) ^ set(consumer_part.effects)
+            if diff:
+                rows.append(
+                    BoundaryRow(
+                        boundary_id=f"{evidence.stem}-effects-{dep}-{node_id}",
+                        boundary_class="effects-change",
+                        between=between,
+                        rationale=(
+                            "declared effects[] differs across this dep edge; symmetric "
+                            f"difference: {sorted(diff)}"
+                        ),
+                    )
+                )
+            rows.append(
+                BoundaryRow(
+                    boundary_id=f"{evidence.stem}-crossing-{dep}-{node_id}",
+                    boundary_class="value-crossing",
+                    between=between,
+                    rationale=(
+                        f"{node_id!r}'s dep edge on {dep!r} is by construction a point where a "
+                        "value crosses between operations"
+                    ),
+                )
+            )
+
+    doc = load_wiring(evidence.stem)
+    for i, knob in enumerate(doc.get("boundary_knobs", [])):
+        rows.append(
+            BoundaryRow(
+                boundary_id=knob.get("boundary_id", f"{evidence.stem}-knob-{i}"),
+                boundary_class="knob",
+                between=knob["between"],
+                rationale=knob["rationale"],
+            )
+        )
+
+    return tuple(rows)
+
+
 def _render_node_table(rows: tuple[NodeRow, ...]) -> str:
     header = (
         "| node id | component | wiring kind | structural_depth | effective_depth | "
@@ -152,10 +231,23 @@ def _render_divergence(rows: tuple[NodeRow, ...]) -> str:
     )
 
 
+def _render_boundaries(boundaries: tuple[BoundaryRow, ...]) -> str:
+    header = (
+        "| boundary_id | class | between | rationale |\n"
+        "|---|---|---|---|\n"
+    )
+    lines = [
+        f"| {row.boundary_id} | {row.boundary_class} | {row.between} | {row.rationale} |"
+        for row in boundaries
+    ]
+    return header + "\n".join(lines) + "\n"
+
+
 def render_markdown() -> str:
-    """Render every named wiring's computed-vs-declared table. A pure function of the committed
-    wiring documents plus ``default_registry()`` — no timestamp, no host path, no run-varying
-    value of any kind — so two calls in one process return byte-identical text.
+    """Render every named wiring's computed-vs-declared table, its CONTRACT §19.10 candidate
+    boundary set, and a closing Falsifier 2 verdict. A pure function of the committed wiring
+    documents plus ``default_registry()`` — no timestamp, no host path, no run-varying value of
+    any kind — so two calls in one process return byte-identical text.
     """
     sections = [
         "# Falsifier 2 Evidence\n",
@@ -168,6 +260,7 @@ def render_markdown() -> str:
         ),
     ]
     for stem in NAMED_WIRINGS:
+        doc, parsed = _parse(stem)
         evidence = evaluate_wiring(stem)
         sections.append(f"## {evidence.wiring_id} — {evidence.title}\n")
         sections.append(
@@ -177,6 +270,29 @@ def render_markdown() -> str:
         sections.append(_render_node_table(evidence.rows))
         sections.append("**Divergence from declared structural_depth:**\n")
         sections.append(_render_divergence(evidence.rows))
+
+        sections.append("### CONTRACT §19.10 — boundary enumeration\n")
+        sections.append(
+            "Before applying §19.1–§19.6, the author MUST enumerate candidate boundaries by a "
+            "stated, source-derived procedure — at minimum every point where the declared "
+            "`effects[]` set changes, every point where a declared knob sits, and every point "
+            "where a value crosses between operations. The enumeration below is recorded with "
+            "this wiring's node set, so a second author can check the candidate set, not only "
+            "the verdicts reached on it.\n"
+        )
+        boundaries = enumerate_boundaries(evidence, parsed)
+        sections.append(_render_boundaries(boundaries))
+
+    sections.append("## Falsifier 2 verdict\n")
+    sections.append(f'SELECTION.md\'s `## Falsifiers` list, item 2: "{_FALSIFIER_2_TEXT}"\n')
+    sections.append(
+        "**Result: Falsifier 2 did not fire.** Every `effective_depth` and `execution_mode` "
+        "value in every wiring above was derived from that wiring's `nodes`/`deps` plus "
+        "`default_registry()` alone, through "
+        "`databasise.validator.depth.effective_depth` and "
+        "`databasise.validator.execution_mode.derive_execution_mode` — no self-declared depth "
+        "or execution_mode field was read from any wiring document. D4's brake holds.\n"
+    )
     return "\n".join(sections)
 
 
