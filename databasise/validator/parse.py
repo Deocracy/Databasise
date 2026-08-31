@@ -10,14 +10,17 @@ The checks: every ``component`` resolves in the registry, every entry in ``deps`
 present in ``nodes``, every declared effect is a member of the seventeen (already enforced by
 pydantic's ``Literal``-typed ``Effect`` field on ``WiringNode`` itself, so an invalid effect
 surfaces as a per-node ``ValidationError`` this function turns into an accumulated violation
-rather than a second, separately hand-rolled check), an empty ``nodes`` object, and (CR-01) that a
+rather than a second, separately hand-rolled check), an empty ``nodes`` object, (CR-01) that a
 node whose ``component`` resolved never declares an ``effects`` member its resolved ``Part``
 itself does not declare (``CODE_EFFECTS_EXCEED_PART``) — a wiring MAY under-declare relative to
-its Part, never over-declare. This is a consistency/hygiene check, not the containment
-enforcement itself: the runner (``runner/scheduler.py``) and the blast-radius rule
-(``validator/blast_radius.py``) both source ``execution_mode``/store-scoping/the blast-radius
-predicate from the resolved ``Part``'s own effects directly, never from the wiring's, so neither
-is affected by what a wiring declares here regardless of this check.
+its Part, never over-declare — and (MACH-01) that a node never attempts to self-declare one of
+the six fields CONTRACT §3 computes (``CODE_SELF_DECLARED_DERIVATION``) rather than every other
+unknown node key, which remains ``CODE_INVALID_NODE_SCHEMA``. The effects-exceed-part check is a
+consistency/hygiene check, not the containment enforcement itself: the runner
+(``runner/scheduler.py``) and the blast-radius rule (``validator/blast_radius.py``) both source
+``execution_mode``/store-scoping/the blast-radius predicate from the resolved ``Part``'s own
+effects directly, never from the wiring's, so neither is affected by what a wiring declares here
+regardless of this check.
 
 Cycle detection (``validator.cycles.strongly_connected_components``) always runs, independent of
 whether any other violation was found: a cycle is reported as data under ``report.cycles``, never
@@ -53,10 +56,28 @@ from databasise.validator.errors import (
     CODE_EFFECTS_EXCEED_PART,
     CODE_EMPTY_WIRING,
     CODE_INVALID_NODE_SCHEMA,
+    CODE_SELF_DECLARED_DERIVATION,
     CODE_UNKNOWN_COMPONENT,
     CODE_UNKNOWN_EFFECT,
     ValidationReport,
     Violation,
+)
+
+# CONTRACT §3's derived fields — computed by the validator, never declared by a wiring node. A
+# node whose raw document attempts to state one of these under its own name is refused under
+# CODE_SELF_DECLARED_DERIVATION rather than the generic CODE_INVALID_NODE_SCHEMA (MACH-01's
+# no-self-declaration clause). This is this plan's own enumeration of the properties the
+# validator actually computes today (02-03-PLAN.md Flagged Assumption 2) — a later phase adding a
+# computed property must extend this set.
+_DERIVED_FIELD_NAMES: frozenset[str] = frozenset(
+    {
+        "effective_depth",
+        "execution_mode",
+        "structural_depth",
+        "depth",
+        "artifact_scope",
+        "blast_radius",
+    }
 )
 
 
@@ -89,11 +110,29 @@ class ParsedWiring:
     report: ValidationReport = field(default_factory=ValidationReport)
 
 
+# Where each derived field is actually computed, named in the refusal message so a wiring author
+# can act on it without reading the validator's source (validator/blast_radius.py's own
+# message-clarity property, extended here to the derivation refusal).
+_DERIVED_FIELD_COMPUTED_BY: dict[str, str] = {
+    "effective_depth": "databasise.validator.depth.effective_depth",
+    "execution_mode": "databasise.validator.execution_mode.derive_execution_mode",
+    "structural_depth": "the node's resolved Part in the registry, never the wiring itself",
+    "depth": "databasise.validator.depth.effective_depth",
+    "artifact_scope": "the node's resolved Part in the registry, never the wiring itself",
+    "blast_radius": "databasise.validator.blast_radius.blast_radius_violations",
+}
+
+
 def _classify_node_schema_error(err: dict[str, Any]) -> str:
-    """A pydantic ``ValidationError`` on a ``WiringNode`` can fail for many reasons; only the
-    ``effects`` field's ``Literal`` rejection is specifically the "unknown effect member" defect
-    the seventeen-member vocabulary names — everything else is a more general node-schema defect.
+    """A pydantic ``ValidationError`` on a ``WiringNode`` can fail for many reasons. A derived
+    field name in ``loc`` (CONTRACT §3's computed properties, MACH-01's no-self-declaration
+    clause) is checked first — always classified as ``CODE_SELF_DECLARED_DERIVATION``, since a
+    derived name is never ``effects``. Only the ``effects`` field's ``Literal`` rejection is
+    specifically the "unknown effect member" defect the seventeen-member vocabulary names —
+    everything else is a more general node-schema defect.
     """
+    if any(name in _DERIVED_FIELD_NAMES for name in err["loc"]):
+        return CODE_SELF_DECLARED_DERIVATION
     if "effects" in err["loc"]:
         return CODE_UNKNOWN_EFFECT
     return CODE_INVALID_NODE_SCHEMA
@@ -120,11 +159,24 @@ def parse_wiring(doc: dict[str, Any], registry: PartRegistry) -> ParsedWiring:
             for err in exc.errors():
                 field_path = "/".join(str(p) for p in err["loc"])
                 pointer = f"/nodes/{node_id}/{field_path}" if field_path else f"/nodes/{node_id}"
+                code = _classify_node_schema_error(err)
+                if code == CODE_SELF_DECLARED_DERIVATION:
+                    derived_field = next(
+                        name for name in err["loc"] if name in _DERIVED_FIELD_NAMES
+                    )
+                    message = (
+                        f"node {node_id!r} declares {derived_field!r}, a value CONTRACT §3 "
+                        f"requires the validator to compute (via {_DERIVED_FIELD_COMPUTED_BY[derived_field]}) "
+                        "rather than a wiring author stating it; remove the key and let the "
+                        "computation govern"
+                    )
+                else:
+                    message = err["msg"]
                 violations.append(
                     Violation(
-                        code=_classify_node_schema_error(err),
+                        code=code,
                         pointer=pointer,
-                        message=err["msg"],
+                        message=message,
                     )
                 )
 

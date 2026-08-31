@@ -124,7 +124,12 @@ class WiringNode(BaseModel):
     author-supplied input (see identity/canon.py's own never-normalise rule).
     """
 
-    model_config = ConfigDict(extra="ignore")  # full wire-time strictness is Falsifier 2 (Phase 2)
+    # Full wire-time strictness (Falsifier 2, Phase 2): a wiring is untrusted author input, and
+    # CONTRACT §3's depth and execution_mode are computed, never declared. An unknown node key is
+    # therefore refused rather than silently discarded, so an author who writes one never believes
+    # it took effect. See validator/parse.py's derived-field check for the finer-grained refusal
+    # this enables (self-declared-derivation vs. an ordinary schema typo).
+    model_config = ConfigDict(extra="forbid")
 
     component: str
     kind: str
