@@ -19,6 +19,17 @@ the operator path, ``change_origin``, the tombstone-lifting prohibition, or the 
 repoint — those are MACH-07 and Phase 7's deliverables. Nothing in the runner calls ``append()``:
 running an arm MUST NOT append to the ledger (CONTRACT §6) — only a promotion does, and Phase 1
 does not exercise a real promotion.
+
+**WR-03, deliberate exception:** every method on ``Ledger`` is plain synchronous ``def`` — this
+module has no ``async def`` surface to dispatch off the event loop in the first place, unlike
+``stores/kv.py``/``stores/lexical.py`` (own deliberate-exception notes) or ``stores/graph.py``
+(the one that does dispatch). That is deliberate, not an oversight: per the scope fence above,
+nothing in the live Phase 1 runner path calls ``append()`` at all, so there is no event-loop-
+blocking concern to fix yet. If a later phase's promotion path calls ``append()`` from inside an
+``async def`` body, offload it (``loop.run_in_executor``) at that call site then — mirroring
+``check_same_thread=False`` and cross-thread-safety concerns already noted in
+``stores/kv.py``'s own docstring — rather than making this module async pre-emptively for a
+caller that does not exist yet.
 """
 
 from __future__ import annotations

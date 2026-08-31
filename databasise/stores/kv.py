@@ -12,6 +12,20 @@ project's house style is refusals over silent fallbacks.
 concurrent readers (e.g. a verification read from a second connection) from blocking on the
 flush transaction inside a single process tree, which is the only concurrency shape EMBED-01
 admits (no external DB server, no cross-process writers).
+
+**WR-03, deliberate exception (documented per that finding's own sanctioned alternative, not
+code-changed):** every method here calls ``self._conn.execute(...)`` synchronously inline inside
+its ``async def`` body, unlike ``stores/graph.py``'s Cozo adapter, which dispatches its client
+calls via ``loop.run_in_executor(None, ...)``. This is a stated, deliberate exception, not an
+oversight: WAL-mode SQLite writes on a local file are typically fast relative to the flush sizes
+this tracer exercises, and — critically — ``sqlite3.Connection`` objects are, by default, usable
+only from the thread that created them; dispatching these calls through the default executor's
+thread pool would first require reopening every connection with ``check_same_thread=False`` and
+re-verifying cross-thread access is actually safe under this project's single-writer discipline
+(the underlying C library's thread-safety mode is not pinned by this codebase). That is real
+surgery with real correctness risk, not a one-line change, so it is deliberately deferred rather
+than applied speculatively; if a future workload makes this store's flush size large enough to
+matter under the runner's structured concurrency, revisit alongside that connection-safety change.
 """
 
 from __future__ import annotations
