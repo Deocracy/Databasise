@@ -7,6 +7,12 @@ dominate the cost of validation, not the pass itself."
 A ``ValidationReport.cycles`` entry is data, not a defect: cyclic wirings are legal content
 (CONTRACT §1), and only the wiring author can know whether a given cycle is intended, so the
 validator reports every detected cycle without ever treating its mere presence as a violation.
+
+``CODE_SELF_DECLARED_DERIVATION`` is a wiring node's attempt to state a value CONTRACT §3
+requires the validator to compute — ``effective_depth``, ``execution_mode``, ``structural_depth``,
+``depth``, ``artifact_scope`` or ``blast_radius`` — rather than letting the machine derive it. It
+is distinguished by code from ``CODE_INVALID_NODE_SCHEMA`` (any other unknown node key), so a
+typo and an attempted self-declaration are never conflated.
 """
 
 from __future__ import annotations
@@ -21,6 +27,12 @@ CODE_INVALID_NODE_SCHEMA = "invalid-node-schema"
 CODE_EMPTY_WIRING = "empty-wiring"
 CODE_BLAST_RADIUS_REFUSAL = "blast-radius-refusal"
 CODE_EFFECTS_EXCEED_PART = "effects-exceed-part"
+CODE_SELF_DECLARED_DERIVATION = "self-declared-derivation"
+"""A wiring node attempted to state a value CONTRACT §3 requires the validator to compute
+(``effective_depth``, ``execution_mode``, ``structural_depth``, ``depth``, ``artifact_scope``,
+``blast_radius``) rather than letting the machine derive it from wiring + registry. MACH-01's
+no-self-declaration clause: the computation governs regardless of what a wiring author writes, so
+an attempt to write one of these keys is refused rather than silently ignored."""
 
 
 @dataclass(frozen=True)
