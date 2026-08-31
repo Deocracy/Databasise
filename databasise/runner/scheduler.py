@@ -396,8 +396,12 @@ async def run_wiring(
             # implements in-process hosting only, so a successful dispatch is always in-process).
             _execution_mode, output, wall_clock_ms = task.result()
             results[node_id] = output
-            node = parsed.nodes[node_id]
-            resumable = not (set(node.effects) & _STORE_MUTATING_EFFECTS)
+            # CR-01: keyed on the registry's own Part.effects, not the wiring's self-declared
+            # WiringNode.effects. The capability-scoped store view above grants access from
+            # part.effects, so a wiring that under-declares (parse_wiring permits a narrower
+            # subset) would otherwise let a node mutate a store and still be stamped resumable.
+            part = parsed.parts[node_id]
+            resumable = not (set(part.effects) & _STORE_MUTATING_EFFECTS)
             node_traces.append(
                 NodeTrace(
                     **_pending_node_trace(node_id, parsed, identities, depths),
