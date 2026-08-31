@@ -49,7 +49,12 @@ async def test_3_fake_llm_caller_declares_calls_llm_and_reports_separate_token_a
     result = await FAKE_LLM_CALLER_PART.body(ctx)
     tokens = result["tokens"]
 
-    assert FAKE_LLM_CALLER_PART.effects == ["calls_llm"]
+    # 01-10-PLAN.md Task 1 residual fix: also declares writes_kv, since the cache round trip
+    # below reads and writes ctx.stores["kv"], which only resolves under the runner's scoped
+    # store view (CR-01) when a declared effect's suffix is "kv" — see fake_llm_caller.py's
+    # module docstring for the discovery path (this Part was never dispatched through the live
+    # scheduler before 01-10-PLAN.md's Task 1 first did so).
+    assert FAKE_LLM_CALLER_PART.effects == ["calls_llm", "writes_kv"]
     assert tokens.prompt_tokens > 0
     assert tokens.completion_tokens > 0
     assert tokens.cached_read_tokens == 0  # first call: nothing cached yet
