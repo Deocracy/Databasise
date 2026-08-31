@@ -1,8 +1,8 @@
 ---
 phase: 01-machine-core
-reviewed: 2026-08-30T00:00:00Z
+reviewed: 2026-08-31T00:00:00Z
 depth: standard
-files_reviewed: 71
+files_reviewed: 73
 files_reviewed_list:
   - databasise/README.md
   - databasise/__init__.py
@@ -48,6 +48,7 @@ files_reviewed_list:
   - databasise/tests/registry_artifact/test_index.py
   - databasise/tests/registry_artifact/test_write_path_blast_radius.py
   - databasise/tests/runner/test_budget.py
+  - databasise/tests/runner/test_live_metering.py
   - databasise/tests/runner/test_run_record.py
   - databasise/tests/runner/test_scheduler.py
   - databasise/tests/stores/test_blob.py
@@ -62,6 +63,7 @@ files_reviewed_list:
   - databasise/tests/test_import_boundary.py
   - databasise/tests/test_phase_success_criteria.py
   - databasise/tests/test_tracer_end_to_end.py
+  - databasise/tests/test_trusted_source_invariant.py
   - databasise/tests/validator/test_blast_radius.py
   - databasise/tests/validator/test_cycles_and_depth.py
   - databasise/tests/validator/test_execution_mode.py
@@ -77,270 +79,240 @@ files_reviewed_list:
   - databasise/validator/parse.py
 findings:
   critical: 1
-  warning: 4
-  info: 3
-  total: 8
+  warning: 3
+  info: 1
+  total: 5
 status: issues_found
 ---
 
-# Phase 01-machine-core: Code Review Report
+# Phase 01: Machine Core Code Review Report (re-review after plan 01-10)
 
-**Reviewed:** 2026-08-30T00:00:00Z
+**Reviewed:** 2026-08-31T00:00:00Z
 **Depth:** standard
-**Files Reviewed:** 71
+**Files Reviewed:** 73 (71 from the 2026-08-30 pass, re-verified lightly; 2 new files from
+01-10: `tests/runner/test_live_metering.py`, `tests/test_trusted_source_invariant.py`)
 **Status:** issues_found
 
 ## Summary
 
-This phase implements the machine core: identity/canonicalisation, the part registry, the
-validator (parse, cycle-safe depth, blast-radius, execution-mode), the structured-concurrency
-runner, the five store adapters, the artifact registry/write-path, and the append-only ledger.
-The code is unusually well-documented — nearly every module docstring names the contract clause,
-decision id, or known gap it implements, and the test suite (spike-005 taint conformance, frozen
-Cozo-bug regressions, budget/guard unit tests, EMBED-01 process-isolation smoke tests) is broad
-and mostly exercises real behavior rather than mocks.
+This is a targeted re-review after plan 01-10 wired `runner/budget.py`'s `meter()` and
+`runner/guards.py`'s `evaluate_guards()` into `runner/scheduler.py`'s live dispatch path, closing
+both `01-VERIFICATION.md` BLOCKER gaps (Gap 1's under-declaring blast-radius bypass and Gap 2's
+unwired budget metering). Direct reading confirms the two claims this plan's summary makes about
+its own security-relevant sourcing: `runner/scheduler.py`'s `_run_node` derives
+`execution_mode`, the capability-scoped store view, `resumable`, and now `meter()`'s spend
+computation all from `parsed.parts[node_id].effects`/`.kind` (the registry's trusted `Part`),
+never from `parsed.nodes[node_id].effects`/`.kind` (the wiring's untrusted, self-declared
+fields); `validator/blast_radius.py` gates identically on `parsed.parts.items()`. The
+integer-only halt comparison (`spent <= allowance`) and the `[0, 1]`-capped float-only
+`realised_budget_share` both hold exactly as specified, `guards_fired` is stamped in declaration
+order and is never `None`, and `FAKE_LLM_CALLER_PART`'s new `writes_kv` effect does not weaken
+either the execution-mode derivation (`writes_kv` is not in `_NOT_IN_PROCESS_EFFECTS`) or the
+blast-radius rule (which keys only on `writes_artifact`).
 
-The one finding that matters most (CR-01) is structural: the runner's deny-by-default
-enforcement — `execution_mode` derivation, the capability-scoped store view, and the
-blast-radius rule — is driven by the **wiring document's self-declared** `effects[]`/`kind`
-(`WiringNode.effects`, `WiringNode.kind`) rather than by the **registry's own declared**
-`Part.effects`/`Part.kind`. Since a wiring document is explicitly treated elsewhere in this
-codebase as untrusted, author-supplied data (see `validator/cycles.py`'s own "a hostile or
-merely large wiring could declare..." framing), this lets a wiring under-declare a node's
-effects and silently bypass both containment placement and the blast-radius refusal — the exact
-property Falsifier 2 (this phase's gate) is meant to prove. Everything else found is a
-narrower robustness/consistency gap (a non-atomic two-file commit, blocking I/O inside the
-async event loop, a silent `None` instead of a named refusal, an uncaught `ValueError` on
-malformed config) rather than a wrong-answer bug in the algorithms themselves (Tarjan SCC,
-JCS canonicalisation, budget split arithmetic, and the honesty-invariant run record all read as
-correct and are well covered by their own test suites).
+One genuine, newly introduced Critical defect was found: the same 01-10 diff that dispatches
+`FaissVectorStore`'s flush off the event loop (closing the prior review's WR-03) opens an
+unguarded concurrency window in which a write landing while a flush is in flight is silently
+discarded rather than persisted — the diff's own new regression test proves the interleaving
+point it relies on for the WR-03 fix is real, but nothing protects `self._pending` across it. The
+new AST-based "trusted source" invariant test — meant to be the structural backstop against this
+exact class of regression recurring — itself has a blind spot for the for-loop binding shape,
+which happens to be the literal shape the original CR-01 bug used in `blast_radius.py`; a revert
+in that shape would slip past the new safety net undetected. A smaller inconsistency was found in
+the new `config.guards` pre-flight validation (a malformed guard entry leaks a bare `TypeError`
+rather than a named refusal, the same class of gap WR-04 fixed for `max_concurrency` in this same
+file but not extended to its sibling field), and the previously flagged second blast-radius call
+site (`registry_artifact/write_path.py`) remains an open, un-addressed carryover from
+`01-VERIFICATION.md`'s Gap-1 discussion — it was not part of 01-10's scope and was not touched.
 
 ## Critical Issues
 
-### CR-01: Deny-by-default containment and blast-radius checks trust the wiring's self-declared effects/kind, not the registry's
+### CR-01: `FaissVectorStore`'s off-loop flush silently drops a write that arrives while the flush is in flight
 
-**File:** `databasise/runner/scheduler.py:227` (also `:240`), `databasise/validator/blast_radius.py:48`
+**File:** `databasise/stores/vector.py:243-293` (`index_done_callback`), `:178-211`
+(`delete_by_ids`)
 **Issue:**
 
-`_run_node` derives the node's containment placement from the **wiring node's own** declared
-fields, not from the resolved `Part`:
+The WR-03 fix (this diff) moved `index_done_callback`'s Faiss/numpy work onto
+`loop.run_in_executor`, introducing a real `await` suspension point that did not exist before.
+The diff's own new regression test proves a sibling coroutine genuinely gets to run during that
+suspension:
 
 ```python
-node = parsed.nodes[node_id]
-part = parsed.parts[node_id]
-
-execution_mode = derive_execution_mode(node.effects, node.kind)   # WiringNode.effects / .kind
-...
-scoped_stores = _ScopedStoresView(CapabilityScopedStores(stores, node.effects), node.effects)
+# tests/stores/test_vector.py::test_flush_dispatch_does_not_block_the_event_loop
+ticker_task = asyncio.create_task(_ticker())
+await store.index_done_callback()
+await ticker_task
+assert interleaved is True
 ```
 
-and `blast_radius_violations` gates its whole rule on the same wiring-declared field:
+But `index_done_callback` snapshots the pending buffer *before* that suspension and
+unconditionally clears the live buffer *after* it, with no lock or generation check in between:
 
 ```python
-for node_id, node in parsed.nodes.items():
-    if "writes_artifact" not in node.effects:   # WiringNode.effects, not part.effects
-        continue
+pending = dict(self._pending)          # snapshot BEFORE the await
+
+def _do_flush():
+    ...  # uses the snapshot `pending`, never self._pending
+    self._persist(staging, staging_entries, next_int_id)
+    return staging, staging_entries, next_int_id
+
+loop = asyncio.get_running_loop()
+new_index, new_entries, new_next_int_id = await loop.run_in_executor(None, _do_flush)
+self._index = new_index
+self._entries = new_entries
+self._next_int_id = new_next_int_id
+self._pending.clear()                  # clears EVERYTHING live, not just the snapshot
 ```
 
-`parse_wiring` (`databasise/validator/parse.py`) never cross-checks `WiringNode.effects`/`.kind`
-against the resolved `Part.effects`/`.kind` — the only effects-related check it performs is that
-each declared effect is one of the 17 `Literal` members (a pydantic-enforced vocabulary check,
-not a Part-consistency check). `WiringNode.effects` defaults to `[]` when omitted
-(`databasise/parts/schema.py:131`).
+Concretely: if a second coroutine calls `store.upsert(["b"], [...])` while the first
+coroutine's `index_done_callback()` is suspended in `run_in_executor`, `self._pending["b"]` is
+added to the *live* dict during the suspension. `"b"` was never part of `pending` (the snapshot),
+so it is never flushed into the returned `staging`/`staging_entries`. When the flush resumes and
+reaches `self._pending.clear()`, `"b"` is wiped from the live buffer having never been persisted
+anywhere — a silent, permanent data loss with no exception, no log line, and no trace of the
+dropped write. This is the exact failure mode CONTEXT.md's own "raise, don't silently drop" house
+style (quoted verbatim in this same module's docstring) exists to prevent.
 
-Consequence: a wiring author (or a hostile/buggy wiring generator — this project's own
-`validator/cycles.py` docstring already treats a wiring document as adversarial input) can
-register a component whose registered `Part` performs `calls_llm`/`net`/`fs`/`writes_artifact`,
-then wire a node for that component while omitting (or under-declaring) `effects` on the
-`WiringNode` itself. The result:
+A second, related hazard: `delete_by_ids` (also dispatched off-loop by this same diff) and
+`index_done_callback` both snapshot `self._index`/`self._entries` *before* dispatching to the
+executor and both unconditionally reassign `self._index`/`self._entries` *after* their own
+executor call returns, with no mutual exclusion between them. Two such calls in flight
+concurrently on the same store instance (e.g. one node deleting while a sibling node's write
+triggers a flush) race on a last-writer-wins basis — whichever finishes second silently discards
+whatever the other one persisted, since both compute their staged index from the same stale
+`base_index`/`base_entries` snapshot. The two calls also both write to the *same* temp-file paths
+(`vector.faiss.tmp`, `vector.meta.json.tmp`) inside `_persist`, so two genuinely concurrent
+flush/delete calls can interleave writes to those shared temp files from two different OS threads.
 
-- `derive_execution_mode([], kind)` returns `"in-process"` instead of the placement the Part's
-  real capabilities would require — CONTRACT §3's containment rule ("only pure, non-iterative
-  nodes MAY be hosted in-process") is bypassed entirely, silently, at the one enforcement point
-  D-08 built.
-- `blast_radius_violations` never even inspects the node, because
-  `"writes_artifact" not in node.effects` short-circuits — a shared-scope write from an
-  opaque-depth Part evades CONTRACT §3's blast-radius refusal completely, with no violation, no
-  exception, no trace of the bypass.
+**Currently unreachable via the live scheduler path** — `databasise/__init__.py`'s composer wires
+only `"kv"` into `ctx.stores`, so no part body can reach `FaissVectorStore` today. That is a
+mitigating fact about today's blast radius, not a reason to treat the defect as hypothetical: it
+is a real, demonstrated bug in shipped store code (proven by the diff's own test), and the vector
+store's own docstring explicitly frames its off-loop dispatch as being *for* exactly the
+concurrent-sibling-node scenario ("the runner's structured concurrency ... can genuinely have
+sibling nodes in flight in the same batch") that this defect breaks.
 
-The direct unit tests for these mechanisms (`tests/parts/test_reference_parts.py`,
-`tests/parts_core`) pass `Part.effects` directly into `CapabilityScopedStores`, so they exercise
-correct behavior; only the live scheduler path (`runner/scheduler.py`) has this substitution, so
-the gap is easy to miss by reading the unit tests alone. `tests/test_phase_success_criteria.py`'s
-criterion-4 fixture even hand-tunes `WiringNode.kind="stage"` against `Part.structural_depth=
-"opaque"` "deliberately" to route around the placement refusal (line ~335-339) — that comment
-documents *routing around* the D-08 refusal for test-fixture convenience, but nowhere documents
-that the containment/blast-radius decision itself is sourced from the untrusted field rather than
-the trusted one.
-
-**Fix:** Derive `execution_mode`, the capability-scoped store view, and the blast-radius
-predicate from `parsed.parts[node_id].effects` / `.kind` (the registry's own declaration), not
-from `parsed.nodes[node_id].effects` / `.kind`. If a wiring is intentionally allowed to declare a
-*narrower* set (e.g., to prove it only exercises a subset of what the Part is capable of), add an
-explicit `parse_wiring` check that `set(node.effects) <= set(part.effects)` (or that the two are
-equal) and accumulate a violation otherwise — never silently let the wiring's claim override the
-registry's. Example sketch for `scheduler.py`:
-
-```python
-execution_mode = derive_execution_mode(part.effects, part.kind)
-...
-scoped_stores = _ScopedStoresView(CapabilityScopedStores(stores, part.effects), part.effects)
-```
-
-and for `blast_radius.py`:
-
-```python
-part = parsed.parts[node_id]
-if "writes_artifact" not in part.effects:
-    continue
-```
+**Fix:** Give `FaissVectorStore` an `asyncio.Lock` guarding the read-modify-write sequence across
+`upsert`/`delete_by_ids`/`index_done_callback` (cheap, since these are rare per-node calls, not a
+hot path), or re-diff the pending buffer against what changed during the flush instead of an
+unconditional `.clear()` — e.g. `self._pending = {k: v for k, v in self._pending.items() if k not
+in pending}` so only what was actually included in the flushed snapshot is removed, never
+anything added afterward.
 
 ## Warnings
 
-### WR-01: `CapabilityScopedStores.require()` returns `None` instead of refusing when a declared effect's backing store isn't wired
+### WR-01: The new AST-based "trusted source" invariant test does not catch the for-loop binding shape — the literal shape of the original CR-01 bug
 
-**File:** `databasise/parts_core/__init__.py:42-46`
-**Issue:** `require()` correctly raises `UndeclaredEffectError` when the effect itself isn't
-declared, but when the effect *is* declared and the corresponding store key is simply absent
-from the run's `stores` dict, it falls through to `self._raw_stores.get(store_key)`, which
-returns `None` rather than raising:
+**File:** `databasise/tests/test_trusted_source_invariant.py:67-113`
+**Issue:** `_wiring_node_bound_names` only records a name bound by a plain `ast.Assign` whose
+right-hand side is exactly a `parsed.nodes[node_id]` subscript (`node = parsed.nodes[node_id]`).
+It does not record a name bound by a `for` loop's target
+(`for node_id, node in parsed.nodes.items():`) — and that for-loop shape is precisely how the
+*original*, pre-fix `blast_radius_violations` read the wiring's untrusted field (quoted verbatim
+in `01-REVIEW.md`'s own CR-01 finding: `for node_id, node in parsed.nodes.items(): if
+"writes_artifact" not in node.effects:`).
 
-```python
-def require(self, effect: Effect) -> Any:
-    if effect not in self._declared_effects:
-        raise UndeclaredEffectError(effect, self._declared_effects)
-    store_key = effect.split("_", 1)[-1]
-    return self._raw_stores.get(store_key)
-```
+Verified directly: running this test's own `_wiring_node_bound_names`/`_flagged_attribute_reads`
+logic against a reconstruction of that exact original for-loop shape returns zero bound names and
+zero findings — the check would pass clean over a module that had silently regressed back to
+reading the wiring's own `effects` inside a `for ... in parsed.nodes.items():` loop, which is
+arguably the more natural (and historically the actually-used) way to iterate `parsed.nodes` in
+this codebase, more so than the single-name `assign`-then-attribute shape the test does catch (the
+shape `runner/scheduler.py`'s own `_run_node` happens to use for `part = parsed.parts[node_id]`).
 
-`databasise/__init__.py`'s composer currently wires only `"kv"` into `stores` (documented
-elsewhere as a "Known Gap"), so any node declaring `reads_vector`/`reads_graph`/`writes_lexical`/
-etc. gets a silent `None` back from `ctx.stores[...]` instead of a named error, and the part body
-fails downstream with a confusing `AttributeError: 'NoneType' object has no attribute '...'`
-instead of an actionable message. This directly contradicts the "refusals over silent fallbacks"
-house style stated repeatedly elsewhere in this codebase (e.g. `stores/lexical.py`'s FTS5
-availability check, `stores/vector.py`'s faiss-import guard).
-**Fix:** Use `self._raw_stores[store_key]` (raise `KeyError`) or raise a purpose-built
-`StoreNotWiredError(effect, store_key)` naming both the effect and the missing store key.
+This matters specifically because `01-10-SUMMARY.md`'s own stated purpose for this test is "the
+exact failure class that let the `resumable` residual survive the first CR-01 fix pass until a
+later manual inspection caught it" — i.e., this test's entire reason to exist is to catch a
+silent, easy-to-miss reintroduction of the untrusted-field read. It currently cannot catch the one
+reintroduction shape most likely to occur in `validator/blast_radius.py`, the very module whose
+historical bug it is modeled on.
 
-### WR-02: `FaissVectorStore._persist`'s two-file commit is not atomic as a pair
+**Fix:** Extend `_wiring_node_bound_names` to also record `for`-loop targets bound from
+`parsed.nodes.items()` (an `ast.For` whose `.iter` is `parsed.nodes.items()` and whose `.target`
+is an `ast.Tuple` of two `ast.Name`s — record the second). Add a regression case (mirroring the
+existing `test_the_check_does_not_trip_on_prose_describing_the_rule`) that constructs the for-loop
+shape as a temp fixture module and asserts the check flags it.
 
-**File:** `databasise/stores/vector.py:208-231`
-**Issue:** The module docstring and method docstring both claim "the index and sidecar commit
-together or neither does," but the two commits are two separate `os.replace` calls with no shared
-transaction:
+### WR-02: `_validated_guards` lets a malformed `config.guards` entry leak a bare `TypeError` instead of the module's own named refusal
 
-```python
-os.replace(tmp_index, self._index_path)
-os.replace(tmp_meta, self._meta_path)
-```
-
-The `try/except` above only guards the *write-to-temp-file* phase (and does clean up temp files
-on a Python exception there); it does not cover the window between the two `os.replace` calls. A
-process crash (SIGKILL, power loss) landing exactly between them leaves the *new* index file
-paired with the *old* metadata sidecar — a real inconsistency (new int_ids present in the index
-with no corresponding `entries` row), not merely a hypothetical one, and outside what the existing
-test (`test_index_and_sidecar_commit_together_or_neither`, which only forces a failure during the
-temp-file write) exercises.
-**Fix:** Either (a) reorder so the file whose staleness is safer to read from an old committed
-pair is renamed last and document which one that is, or (b) fold both files' commit into a single
-rename of a per-flush staging directory (git's own two-level object-store pattern already used by
-`stores/blob.py` composes cleanly with a "swap one symlink/dir" scheme), or (c) add a checksum/
-generation field to the sidecar that's cross-validated against the index at open time so a
-half-committed pair is detected and refused at the next `__init__` rather than silently used.
-
-### WR-03: Blocking, synchronous I/O runs directly inside `async def` store methods, inconsistent with the Cozo adapter's own stated rationale
-
-**File:** `databasise/stores/kv.py:87-100`, `databasise/stores/lexical.py:94-108`,
-`databasise/stores/vector.py:178-231`, `databasise/ledger/ledger.py:127-158`,
-`databasise/registry_artifact/index.py:216-269`
-**Issue:** `stores/graph.py`'s own docstring explains its `run_in_executor` dispatch exists
-specifically "so it never blocks the runner's event loop — plan 01-08's structured-concurrency
-plan depends on this." The KV, lexical, and artifact-registry stores instead call `sqlite3`
-methods synchronously inline inside `async def` bodies, and `FaissVectorStore.index_done_callback`
-/`_persist` run `np.vstack`, `faiss.add_with_ids`, and `faiss.write_index` synchronously inline
-too. Under `runner/scheduler.py`'s `asyncio.TaskGroup`-based batch dispatch, several nodes are
-genuinely scheduled concurrently in the same event loop; a slow synchronous write in one node's
-body (a large KV flush, a large Faiss index write) stalls every sibling task in that batch —
-directly working against D-11's own stated design goal, quoted in `scheduler.py`'s own docstring:
-"one arm's fan-out must never throttle an unrelated arm beside it."
-**Fix:** Either dispatch the synchronous calls via `loop.run_in_executor(None, ...)` the same way
-`stores/graph.py` does, or explicitly document (as `stores/graph.py` does) why the other four
-stores are exempt from the same concern — SQLite writes under WAL are typically fast, but this
-should be a stated, deliberate exception rather than an unstated inconsistency, especially for
-`FaissVectorStore`'s flush, which is not obviously cheap at scale.
-
-### WR-04: `max_concurrency` validation raises an uncaught `ValueError` for non-numeric config instead of the documented refusal
-
-**File:** `databasise/runner/scheduler.py:205-214`
+**File:** `databasise/runner/scheduler.py:297-306`
 **Issue:**
 
 ```python
-def _validated_max_concurrency(node_id: str, config: dict[str, Any] | None) -> int:
-    max_concurrency = 1
-    if config:
-        max_concurrency = int(config.get("max_concurrency", 1))
-    if max_concurrency < 1:
-        raise InvalidMaxConcurrencyError(node_id, max_concurrency)
-    return max_concurrency
+def _validated_guards(node_id: str, config: dict[str, Any] | None) -> list[GuardDeclaration]:
+    raw_guards = (config or {}).get("guards") or []
+    return [declare_guard(**entry) for entry in raw_guards]
 ```
 
-`int(config.get("max_concurrency", 1))` is not guarded: a wiring declaring
-`"max_concurrency": "not-a-number"` (or a list/dict) raises a bare `ValueError` from `int(...)`
-rather than the module's own `InvalidMaxConcurrencyError`, breaking this module's own documented
-"refused at validation, before any node is dispatched, naming the offending node id" contract for
-that class of malformed input.
-**Fix:** Wrap the coercion and re-raise as `InvalidMaxConcurrencyError(node_id, value)`:
+`declare_guard(name, evaluating_node, value_when_not_fired, granularity)` only guards against an
+inadmissible `granularity` value (raising `GuardDeclarationError`); a guard entry dict that is
+missing a required key (e.g. `{"name": "g", "granularity": "per-query"}`, omitting
+`evaluating_node`/`value_when_not_fired`) or carries an unexpected key raises a bare
+`TypeError: declare_guard() missing N required positional argument(s): ...` from the `**entry`
+unpacking, not `GuardDeclarationError`. This is the identical defect class WR-04 fixed for
+`config.max_concurrency` in this exact same file two commits earlier (a bare built-in exception
+leaking instead of a named, actionable refusal naming the offending node), applied to
+`max_concurrency` and `token_allowance` but not extended to `config.guards`, its sibling
+pre-flight-validated field introduced in this same diff.
+
+**Fix:** Wrap the `declare_guard(**entry)` call and re-raise a named error on `TypeError`:
 
 ```python
-raw = config.get("max_concurrency", 1)
-try:
-    max_concurrency = int(raw)
-except (TypeError, ValueError):
-    raise InvalidMaxConcurrencyError(node_id, raw) from None
+def _validated_guards(node_id: str, config: dict[str, Any] | None) -> list[GuardDeclaration]:
+    raw_guards = (config or {}).get("guards") or []
+    declared = []
+    for entry in raw_guards:
+        try:
+            declared.append(declare_guard(**entry))
+        except TypeError as exc:
+            raise GuardDeclarationError(entry.get("name", "<unnamed>"), entry) from exc
+    return declared
 ```
+
+### WR-03 (carryover, not fixed by 01-10): `registry_artifact/write_path.py`'s second blast-radius call site still takes `scope`/`effective_depth` as plain caller-supplied arguments
+
+**File:** `databasise/registry_artifact/write_path.py:49-70`
+**Issue:** `01-VERIFICATION.md`'s Gap 1 explicitly named this file as not closed by the CR-01
+fix: `write_artifact(scope=..., effective_depth=...)` still constructs an ad hoc single-node
+`WiringNode`/`Part` pair from caller-supplied `scope` (never a resolved, registry-trusted
+`Part.artifact_scope`) and a caller-supplied `effective_depth` (never the runner's own computed
+depth for a real node), then re-runs `blast_radius_violations` against that fabricated pair. The
+CR-01 fix commits (`3b05d54`, and this plan's `973592e`/01-10 work) touched
+`runner/scheduler.py`, `validator/blast_radius.py`, and `validator/parse.py`, but never this
+file — it was not in 01-10's scope and remains exactly as `01-VERIFICATION.md` described it. This
+is not a regression from 01-10, but it is a real, still-open gap directly adjacent to this
+review's focus area (the trusted-source enforcement paths) and was never re-verified or closed.
+**Fix:** Out of this review's immediate scope to design, but flagging so it is not lost: derive
+`scope`/`effective_depth` from a real resolved `Part` and the runner's own computed depth map at
+the one real call site that exists (rather than accepting them as free-form keyword arguments any
+caller can supply), or explicitly document why a caller-supplied value is considered trustworthy
+at this call site (e.g. because every current caller is itself gated by an earlier, already-
+enforced check) if that is in fact the intended design.
 
 ## Info
 
-### IN-01: `runner/budget.py`/`runner/guards.py` are fully built and tested but not wired into the live scheduler path
+### IN-01: `_validated_token_allowance` accepts a negative `config.token_allowance` with no bound check, unlike its sibling `_validated_max_concurrency`
 
-**File:** `databasise/runner/scheduler.py:380-390`
-**Issue:** Every successfully-completed node's trace hardcodes `budget_state="within_budget"`,
-`realised_budget_share=1.0`, and `guards_fired=[]` regardless of the part's real token spend or
-any declared guard — `runner/budget.py`'s `meter()` and `runner/guards.py`'s `evaluate_guards()`
-are never called from `scheduler.py`. This is called out in the code's own inline comments as a
-"Known Gap," so it isn't hidden, but `tests/test_phase_success_criteria.py`'s criterion-2 test
-only asserts the field is present and in `[0, 1]` — it cannot and does not prove metered spend is
-real, which is easy to miss when reading that test in isolation as "budget metering is covered."
-**Fix:** No action required for this phase if intentionally deferred; consider a one-line note in
-that test's docstring making the "field present, not yet metered" distinction explicit so a
-future reader doesn't mistake presence-checking for metering coverage.
-
-### IN-02: `LedgerRecord` never surfaces the `id`/`created_at` columns it stores
-
-**File:** `databasise/ledger/ledger.py:34-53`, `:118-125`
-**Issue:** The `ledger` table stores `id` (the monotonic append order) and `created_at`, but
-`LedgerRecord`'s dataclass fields don't include either, and `_row_to_record` only ever populates
-fields present in `LedgerRecord.__dataclass_fields__`. `append()` returns the raw `id` as an
-`int` at call time, but `active_pointer()`/`history()` — the two read paths — never expose it or
-`created_at` at all, so a caller reading the ledger back later has no way to recover append order
-or timestamp without a second, ad hoc SQL query.
-**Fix:** Add `id: int` and `created_at: str` to `LedgerRecord` (or a wrapping read-model type) so
-`history()`/`active_pointer()` round-trip everything the table actually stores.
-
-### IN-03: `fixpoint_body`'s zero-round edge case reports `"max_rounds_reached"` for a config that never ran a round
-
-**File:** `databasise/parts_core/fixpoint_body.py:23-39`
-**Issue:** `max_rounds = int(config.get("max_rounds", _DEFAULT_MAX_ROUNDS))` has no floor check;
-for `max_rounds<=0` the `while rounds_run < max_rounds` loop body never executes, so the part
-returns `{"rounds_run": 0, "halted_on": "max_rounds_reached"}` — a misleading label for "no round
-ever ran" rather than "the round bound was hit." Untested (no test exercises `max_rounds<=0`).
-**Fix:** Either reject `max_rounds < 1` explicitly (mirroring `scheduler.py`'s own
-`InvalidMaxConcurrencyError` pattern for `max_concurrency`), or special-case
-`halted_on = "zero_max_rounds"` when `rounds_run == 0`.
+**File:** `databasise/runner/scheduler.py:281-294`
+**Issue:** `_validated_max_concurrency` explicitly refuses any value `< 1` via
+`InvalidMaxConcurrencyError`. `_validated_token_allowance` only guards against a value `int()`
+cannot coerce at all — a wiring declaring `"token_allowance": -5` passes validation silently and
+reaches `meter()`, where `spent <= allowance` is `False` for any spend, including `spent == 0`
+(`0 <= -5` is `False`), so even a zero-spend node halts against a negative allowance. `runner/
+budget.py`'s own `Allowance` dataclass (a sibling primitive in the same subsystem, currently
+unused anywhere in the live path) explicitly rejects a negative `tokens` value via
+`__post_init__`, so the "an allowance is a non-negative integer" invariant already exists
+elsewhere in this codebase but is not enforced at the one place user/wiring input actually enters
+it. The failure mode is safe (fails closed, as an unconditional halt, never a bypass), so this is
+informational rather than a correctness defect.
+**Fix:** Either reject `token_allowance < 0` explicitly (mirroring `_validated_max_concurrency`'s
+own pattern, raising `InvalidTokenAllowanceError`), or, if a negative allowance is intentionally
+permitted as a way to force an unconditional halt, say so in `_validated_token_allowance`'s own
+docstring so a future reader does not mistake the silent acceptance for an oversight.
 
 ---
 
-_Reviewed: 2026-08-30T00:00:00Z_
+_Reviewed: 2026-08-31T00:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
