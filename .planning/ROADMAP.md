@@ -79,13 +79,13 @@ Plans:
   4. Answer-level and index-side measurement is off by default and stays off, and any fallback-ladder run is labelled `degraded` with its `degradation_reason`
   5. The gate is real, not decorative: the gate scripts fail on missing extraction instead of passing vacuously, every ANATOMY §F row points at its landed repair with stale cross-document rows reconciled, and the rung-1→rung-2 decision is recorded — a Falsifier 2 or 5 failure halts the ladder as a SELECTION.md-level reversal
 
-**Plans**: 4 plans across 3 waves
+**Plans**: 2/4 plans executed across 3 waves
 
 Plans:
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — Falsifier 2 evidence: three named wirings as committed JSON, computed depth and execution_mode rendered into a re-runnable evidence document with the §19.10 boundary enumeration
-- [ ] 02-02-PLAN.md — MACH-09 default measurement posture recorded, with a structural guard pinning the unbuilt promotion path
+- [x] 02-01-PLAN.md — Falsifier 2 evidence: three named wirings as committed JSON, computed depth and execution_mode rendered into a re-runnable evidence document with the §19.10 boundary enumeration
+- [x] 02-02-PLAN.md — MACH-09 default measurement posture recorded, with a structural guard pinning the unbuilt promotion path
 
 **Wave 2** *(blocked on 02-01)*
 
@@ -175,7 +175,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Machine Core | 10/10 | Complete    | 2026-08-31 |
-| 2. Falsifier Gate | 0/4 | Planned | - |
+| 2. Falsifier Gate | 2/4 | In Progress|  |
 | 3. LightRAG Query Side | 0/TBD | Not started | - |
 | 4. The Seam | 0/TBD | Not started | - |
 | 5. Opaque-Side Admission | 0/TBD | Not started | - |
