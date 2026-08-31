@@ -37,6 +37,7 @@ from databasise.identity.instance import cache_partition_key, instance_hash
 from databasise.namespaces import derive_namespace, gc_namespace
 from databasise.parts.registry import PartRegistry
 from databasise.parts.schema import NodeContext, Part
+from databasise.parts_core.fake_llm_caller import FAKE_LLM_CALLER_PART
 from databasise.parts_core.fake_retriever import FAKE_RETRIEVER_PART
 from databasise.registry_artifact.index import ArtifactRegistry, Pin
 from databasise.registry_artifact.write_path import BlastRadiusRefusal, write_artifact
@@ -107,17 +108,27 @@ _MULTI_ENGINE_TOUCH_PART = Part(
 
 _RETRIEVER_CONFIG = {"query": "graph databases"}
 
+# Criterion 2's own metered node (01-10-PLAN.md Task 2): the only node in this wiring declaring a
+# calling effect, so criterion 2's own acceptance test can assert real metered spend on a real
+# metered node, instead of asserting a constant every unmetered node would also satisfy.
+_LLM_CALLER_NODE_ID = "llm-caller"
+_LLM_CALLER_PROMPT = "summarise these retrieved graph database results"
+_LLM_CALLER_TOKEN_ALLOWANCE = 10_000  # generous — this node must stay within budget
+
 
 def _transparent_registry() -> PartRegistry:
     registry = PartRegistry()  # seeds core/passthrough@1.0.0 and core/kv-writer@1.0.0
     registry.register(FAKE_RETRIEVER_PART)
     registry.register(_MULTI_ENGINE_TOUCH_PART)
+    registry.register(FAKE_LLM_CALLER_PART)
     return registry
 
 
 def _transparent_wiring(store_root: Path, *, retriever_config: dict[str, Any] | None = None) -> dict[str, Any]:
     """``producer`` fans out into ``branch-a``/``branch-b`` (identically configured retrievers —
     criterion 3 needs two positions sharing one identity), which join into the multi-engine node.
+    ``llm-caller`` is an independent, unrelated fifth node (no deps, nothing depends on it)
+    declaring ``calls_llm`` — criterion 2's own metered-node coverage (see module docstring).
     """
     branch_config = retriever_config if retriever_config is not None else _RETRIEVER_CONFIG
     return {
@@ -143,6 +154,13 @@ def _transparent_wiring(store_root: Path, *, retriever_config: dict[str, Any] | 
                 "effects": ["writes_kv"],
                 "config": {"store_root": str(store_root)},
                 "deps": ["branch-a", "branch-b"],
+            },
+            _LLM_CALLER_NODE_ID: {
+                "component": FAKE_LLM_CALLER_PART.name_at_version,
+                "kind": "llm-caller",
+                "effects": list(FAKE_LLM_CALLER_PART.effects),
+                "config": {"prompt": _LLM_CALLER_PROMPT, "token_allowance": _LLM_CALLER_TOKEN_ALLOWANCE},
+                "deps": [],
             },
         }
     }
@@ -200,6 +218,16 @@ async def test_criterion_2_the_runner_executes_to_completion_with_metered_spend(
     completion under structured concurrency; every node's trace carries ``budget_state`` and
     ``realised_budget_share``; ``concurrency_setting`` records the run's setting; the record
     validates against the frozen trace schema.
+
+    The per-node budget assertions below now distinguish a metered node (``llm-caller``, the only
+    node declaring ``calls_llm``) from an unmetered one (every other node here): an unmetered
+    node's honest values are ``budget_state="within_budget"`` and ``realised_budget_share==0.0``
+    with an all-zero ``tokens`` object, while the metered node's honest values are a non-zero
+    ``tokens["prompt_tokens"]`` and a share strictly between 0.0 and 1.0. A value satisfied by a
+    hardcoded constant on every node (this test's own pre-01-10-PLAN.md shape, which asserted
+    ``realised_budget_share == 1.0`` uniformly) is no longer accepted — that hardcoded shape is
+    exactly what let the runner ship with metering never wired into the live dispatch path at all
+    (01-VERIFICATION.md's Gap 2 / MACH-05).
     """
     record = await databasise.run_wiring(
         _transparent_wiring(store_root),
@@ -213,13 +241,37 @@ async def test_criterion_2_the_runner_executes_to_completion_with_metered_spend(
     assert record["partial"] is False
     assert record["stop_reason"] is None
     assert record["concurrency_setting"] == _CONCURRENCY_SETTING
-    assert {n["node_id"] for n in record["nodes"]} == {"producer", "branch-a", "branch-b", "join"}
+    assert {n["node_id"] for n in record["nodes"]} == {
+        "producer",
+        "branch-a",
+        "branch-b",
+        "join",
+        _LLM_CALLER_NODE_ID,
+    }
+
+    nodes_by_id = _nodes_by_id(record)
+    unmetered_node_ids = {"producer", "branch-a", "branch-b", "join"}
 
     for node in record["nodes"]:
         assert node["budget_state"] in ("within_budget", "halted", "degraded")
         assert 0.0 <= node["realised_budget_share"] <= 1.0
         assert node["budget_state"] == "within_budget"  # every node ran to completion, no halt
-        assert node["realised_budget_share"] == 1.0
+
+    for node_id in unmetered_node_ids:
+        node = nodes_by_id[node_id]
+        assert node["realised_budget_share"] == 0.0
+        assert node["tokens"] == {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "cached_read_tokens": 0,
+            "call_count": 0,
+            "counted_by": "none",
+        }
+
+    llm_caller_node = nodes_by_id[_LLM_CALLER_NODE_ID]
+    assert llm_caller_node["tokens"]["prompt_tokens"] > 0
+    assert llm_caller_node["tokens"]["counted_by"] == "fixture-tokenizer@1"
+    assert 0.0 < llm_caller_node["realised_budget_share"] < 1.0
 
 
 async def test_criterion_3_identity_stability_and_separation(store_root):
