@@ -18,6 +18,8 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 - ✓ Query path already component-shaped: named 4-stage pipeline with plain-data boundaries (`v1/lightrag/operate.py`) — existing (spike 001)
 - ✓ Storage/LLM injection seam already exists one level below the modality (storages and model funcs passed in) — existing (spike 001)
 - ✓ Parity-harness precedent: `v1/tests/parity/run_substrate_parity.py` (same corpus, isolated dirs, structural diff) — existing
+- ✓ Runner, scheduler, and storage-keying designed and built (the §H1 must-decide fence) — Validated in Phase 1: Machine Core
+- ✓ Databasise embeddable in-process: Cozo (graph), Faiss (vector), SQLite (KV/lexical/registry/ledger) all in one process tree, no external DB server, no container — Validated in Phase 1: Machine Core
 
 ### Active
 
@@ -30,9 +32,7 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 - [ ] LightRAG ingest core (~1,786 lines) admitted as opaque node under `quarantined` scope (§BP rung 3)
 - [ ] codebase-memory-mcp admitted whole-engine under §17/§8's eleven conditions, run twice (machine chunks / native chunking) — **Falsifier 4**
 - [ ] HippoRAG 2 fully decomposed (13 node positions, no opaque core) and run side-by-side against LightRAG on the rig (§BP rung 4)
-- [ ] Runner, scheduler, and storage-keying designed and built (the §H1 must-decide fence — first faced at rung 1)
 - [ ] REST + MCP surface serving the §18 closed envelope: invariance rule, four selectors, tool-surface-growth rule
-- [ ] Databasise embeddable in-process (Python library; embedded stores, no external DB servers required)
 - [ ] Model-doc hardening folded in at the phase that first touches it: gate-script vacuous-pass sites, eight ANATOMY §F closure pointers, DR-04 decision
 
 ### Out of Scope
@@ -46,6 +46,8 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 - Trusting published benchmark numbers for decisions — only local measurement on the rig counts
 
 ## Context
+
+- **Current state:** Phase 1 (Machine Core) complete — 10 plans across 6 waves, 4/4 ROADMAP success criteria verified, 233 tests passing. The machine executes a wiring graph over embedded stores with stable component identity, metering real spend at each node's declared boundary. Next: Phase 2 (Falsifier Gate) — Falsifiers 2 and 5, the rung-1 gate.
 
 - **Governing documents:** `docs/system-model/` — SYSTEM-MODEL.md (entry point; §VD verdict, §BP ladder, §H1 handoff), CONTRACT.md (20 sections), ANATOMY.md (44 entries), PARTS.md (3 worked wirings), CATALOG.md (72-system roster + porting protocol), RIG.md (comparison rig, versioning, §F3 affordability), MODEL-RED-TEAM.md, D-VARIANTS/SELECTION.md (governs on disagreement). Frozen at model v1.0; contract repairs during the build are recorded, not silent.
 - **Verdict status:** §VD conditional go **ratified 2026-08-29**. Conditions: Falsifiers 2 and 5 run and pass at or within Phase 1; the ladder halts if either fires (that is a SELECTION.md-level reversal, not a repairable defect).
@@ -95,4 +97,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-29 after initialization*
+*Last updated: 2026-08-31 after Phase 1 completion*
