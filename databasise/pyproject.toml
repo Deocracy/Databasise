@@ -60,4 +60,10 @@ packages = [
     "databasise.stores",
     "databasise.registry_artifact",
     "databasise.ledger",
+    "databasise.evidence",
 ]
+
+# The wiring documents ship with the package rather than existing only in a source checkout
+# (Falsifier 2 evidence run, 02-01-PLAN.md Task 1).
+[tool.setuptools.package-data]
+"databasise.evidence" = ["wirings/*.json"]
