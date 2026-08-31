@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 from databasise.parts.schema import NodeContext
-from databasise.parts_core import CapabilityScopedStores, UndeclaredEffectError
+from databasise.parts_core import CapabilityScopedStores, StoreNotWiredError, UndeclaredEffectError
 from databasise.parts_core.fake_llm_caller import FAKE_LLM_CALLER_PART
 from databasise.parts_core.fake_retriever import FAKE_RETRIEVER_PART
 from databasise.parts_core.fixpoint_body import FIXPOINT_BODY_PART
@@ -97,3 +97,18 @@ def test_6_reference_part_cannot_reach_an_undeclared_effect():
 
     with pytest.raises(UndeclaredEffectError):
         scoped.require("reads_kv")  # undeclared — refused at the part boundary itself
+
+
+def test_7_a_declared_effect_with_no_backing_store_wired_is_a_named_refusal_not_none():
+    """WR-01 regression: the effect IS declared, but the run's ``stores`` dict simply has no
+    entry for the backing store key (e.g. a run wiring only ``"kv"`` while the part legitimately
+    declares ``reads_vector``) — this must raise :class:`StoreNotWiredError` naming both the
+    effect and the missing store key, never fall through to a silent ``None``.
+    """
+    scoped = CapabilityScopedStores({"kv": object()}, FAKE_RETRIEVER_PART.effects)  # no "vector"
+
+    with pytest.raises(StoreNotWiredError) as exc_info:
+        scoped.require("reads_vector")
+
+    assert exc_info.value.effect == "reads_vector"
+    assert exc_info.value.store_key == "vector"
