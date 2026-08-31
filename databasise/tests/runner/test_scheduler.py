@@ -110,6 +110,41 @@ async def test_3_max_concurrency_0_is_refused_at_validation_naming_the_node():
     assert ran["called"] is False  # the run never started
 
 
+async def test_3b_max_concurrency_non_numeric_is_refused_as_invalid_max_concurrency_not_value_error():
+    """WR-04 regression: a non-numeric ``max_concurrency`` (a string ``int()`` cannot coerce)
+    must raise the module's own named ``InvalidMaxConcurrencyError``, not a bare ``ValueError``
+    leaking out of ``int(...)`` — the module's own documented "refused at validation, naming the
+    offending node id" contract must hold for this class of malformed input too.
+    """
+    ran = {"called": False}
+
+    async def body(ctx: NodeContext):
+        ran["called"] = True
+        return {}
+
+    part = Part(
+        name_at_version="test/non-numeric@1.0.0",
+        kind="fanout",
+        structural_depth="stage",
+        effects=[],
+        upstream_ref=None,
+        body=body,
+    )
+    node = WiringNode(
+        component="test/non-numeric@1.0.0",
+        kind="fanout",
+        config={"max_concurrency": "not-a-number"},
+        deps=[],
+    )
+    parsed = _wiring({"bad-node": node}, {"bad-node": part}, {"bad-node": ()})
+
+    with pytest.raises(InvalidMaxConcurrencyError) as exc_info:
+        await _run(parsed)
+
+    assert "bad-node" in str(exc_info.value)
+    assert ran["called"] is False  # the run never started
+
+
 async def test_4_isolation_one_arms_fanout_never_throttles_an_unrelated_arm():
     counter_a = {"current": 0, "peak": 0}
     counter_b = {"current": 0, "peak": 0}
