@@ -16,10 +16,10 @@ Audited 2026-08-29 against SYSTEM-MODEL.md, CONTRACT.md, RIG.md, PARTS.md, ANATO
 - [ ] **MACH-02**: Eval bundle stood up per RIG §EV.1 with dev/holdout/sealed splits, containing questions, gold answers, a judge instance, a judge prompt hash, a corpus snapshot hash, and the determinism/concurrency setting; both §EV.2 target families are mandatory bundle content; versions are minted, never edited in place (opening `sealed` mints a new version); holdout-usage logging policy in force before decomposition work consults dev/holdout. Bootstrapped from a public benchmark corpus
 - [ ] **MACH-03**: First A/A calibration per RIG §AA.1: one A/A run at n questions producing n paired per-question differences, bootstrap-resampled, the resampled distribution's p95 taken as the calibrated floor at `(bundle@v, tier, metric)` inseparable from the run's declared determinism/concurrency setting; §AA.2 precondition holds (a null with unknown bypass status is not usable as a floor). **Pass criterion: per-tier null width at T1 materially narrower than T0** (SELECTION Falsifier 5) — **Falsifier 5 gate**
 - [ ] **MACH-04**: Injected-LLM-endpoint survey documented across the five sandbox-candidate engines named in the lineup (Falsifier 8, non-gating documentation pass)
-- [ ] **MACH-05**: Runner/scheduler executes wiring graphs with structured concurrency, metering spend at each node's declared boundary; the intra-node concurrency scheduling mechanism (§H1 handover, contract-settled at V-7) is decided as part of this design; **and the runner stamps the full RIG §TR.1 run-record field set the gate later reads — `determinism_setting`, `concurrency_setting`, `arm_execution_order`, per-node `cache_hit`, `realised_budget_share`, and `guards_fired` — validated against `docs/system-model/rig-trace.schema.json`**. *Run-record clause added 2026-08-30 per CONTEXT.md D-10: without these fields CONTRACT §5 can never evaluate refusal conditions 8, 10 or 11, and a confounded comparison then returns a normal verdict that looks settled rather than unsettled.*
-- [ ] **MACH-06**: Component and artifact identity per CONTRACT §0/§1: `name@version`, RFC 8785 + SHA-256 `config_hash`, content-addressed artifact registry with `upstream_ref` lineage; instance identity is `(name@version, config_hash, resolved_dependency_ids)`, never a wiring node id
+- [x] **MACH-05**: Runner/scheduler executes wiring graphs with structured concurrency, metering spend at each node's declared boundary; the intra-node concurrency scheduling mechanism (§H1 handover, contract-settled at V-7) is decided as part of this design; **and the runner stamps the full RIG §TR.1 run-record field set the gate later reads — `determinism_setting`, `concurrency_setting`, `arm_execution_order`, per-node `cache_hit`, `realised_budget_share`, and `guards_fired` — validated against `docs/system-model/rig-trace.schema.json`**. *Run-record clause added 2026-08-30 per CONTEXT.md D-10: without these fields CONTRACT §5 can never evaluate refusal conditions 8, 10 or 11, and a confounded comparison then returns a normal verdict that looks settled rather than unsettled.*
+- [x] **MACH-06**: Component and artifact identity per CONTRACT §0/§1: `name@version`, RFC 8785 + SHA-256 `config_hash`, content-addressed artifact registry with `upstream_ref` lineage; instance identity is `(name@version, config_hash, resolved_dependency_ids)`, never a wiring node id
 - [ ] **MACH-07**: Append-only promote/rollback ledger per CONTRACT §7 + RIG §PR: the §7 field set with both `change_origin` (`human_edit` | `machine_mutation` — who authored the change) and `promotion_provenance` (`gate_adjudicated` | `operator_asserted` — who adjudicated it) required on every generation record, never defaulted, never inferable by absence (the two are orthogonal per CONTRACT §7), plus non-empty `promotion_trace_ids` on operator promotions; the ledger append is the decision; alias repoint is atomic; a semver is minted at promotion and only at promotion; tombstoned losers are never lifted; the active pointer is always a derived query, never a written field
-- [ ] **MACH-08**: Storage keying per RIG §RUN: KV shared only where CONTRACT §3's `shared` scope admits it (effective depth `stage`); an arm containing an `opaque` node writes `quarantined`, never `shared`; per-part graph/vector namespaces; artifact sharing iff index-recipe hashes are identical
+- [x] **MACH-08**: Storage keying per RIG §RUN: KV shared only where CONTRACT §3's `shared` scope admits it (effective depth `stage`); an arm containing an `opaque` node writes `quarantined`, never `shared`; per-part graph/vector namespaces; artifact sharing iff index-recipe hashes are identical
 - [ ] **MACH-09**: Measurement posture for answer-level and index-side mutation classes defaults **off** per RIG §F3.2 and stays off in v1 unless §CM.3's A1–A4 cost-model inputs are replaced by measurements; fallback-ladder (degraded) runs are labelled via RIG §TR's `degraded`/`degradation_reason`
 - [ ] **MACH-10**: F-07 discharged: the snapshot/reset protocol CONTRACT §14.4 point 3 names for `mutable-store` components is defined, or the A/B exclusion is recorded as permanent
 - [ ] **MACH-11**: F-08 discharged: CONTRACT §18.2's envelope extended with the minimum seam-level event shape (`name@version`, spend, outcome) for the `mutates_store`-outside-`deps` exception class
@@ -48,7 +48,7 @@ Audited 2026-08-29 against SYSTEM-MODEL.md, CONTRACT.md, RIG.md, PARTS.md, ANATO
 
 ### Embeddable Product (EMBED)
 
-- [ ] **EMBED-01**: Databasise installs and runs as a single self-contained process tree on the local machine — importable as a Python library, embedded stores (Cozo pinned/vendored for graph, Faiss for vector, SQLite stdlib for KV/lexical/artifact-registry-index/ledger, filesystem for blob), no external DB servers, no Docker; node `execution_mode` remains derived per CONTRACT §3 (subprocess/confined-unit placements are legal inside the tree — only pure, non-iterative nodes may be hosted in-process). *Amended 2026-08-30 per CONTEXT.md D-05: the prior text named LanceDB, which was adopted from `.planning/research/STACK.md:26`'s factually wrong description of the incumbent. Cozo + Faiss are the fork's actual defaults (`v1/lightrag/lightrag.py:275-284`, `v1/lightrag/api/config.py:64-68`) and are owner-locked.*
+- [x] **EMBED-01**: Databasise installs and runs as a single self-contained process tree on the local machine — importable as a Python library, embedded stores (Cozo pinned/vendored for graph, Faiss for vector, SQLite stdlib for KV/lexical/artifact-registry-index/ledger, filesystem for blob), no external DB servers, no Docker; node `execution_mode` remains derived per CONTRACT §3 (subprocess/confined-unit placements are legal inside the tree — only pure, non-iterative nodes may be hosted in-process). *Amended 2026-08-30 per CONTEXT.md D-05: the prior text named LanceDB, which was adopted from `.planning/research/STACK.md:26`'s factually wrong description of the incumbent. Cozo + Faiss are the fork's actual defaults (`v1/lightrag/lightrag.py:275-284`, `v1/lightrag/api/config.py:64-68`) and are owner-locked.*
 - [ ] **EMBED-02**: The REST + MCP server is a thin optional layer over the same seam the embedded library exposes — one seam, two transports
 
 ### Model Hardening (HARD) — folded in at first-touch
@@ -86,10 +86,10 @@ Maps REQ-IDs to phases (see .planning/ROADMAP.md). Every v1 requirement maps to 
 | MACH-02 | Phase 2 | Pending |
 | MACH-03 | Phase 2 | Pending |
 | MACH-04 | Phase 5 | Pending |
-| MACH-05 | Phase 1 | Pending |
-| MACH-06 | Phase 1 | Pending |
+| MACH-05 | Phase 1 | Complete |
+| MACH-06 | Phase 1 | Complete |
 | MACH-07 | Phase 7 | Pending |
-| MACH-08 | Phase 1 | Pending |
+| MACH-08 | Phase 1 | Complete |
 | MACH-09 | Phase 2 | Pending |
 | MACH-10 | Phase 6 | Pending |
 | MACH-11 | Phase 4 | Pending |
@@ -109,7 +109,7 @@ Maps REQ-IDs to phases (see .planning/ROADMAP.md). Every v1 requirement maps to 
 | API-09 | Phase 7 | Pending |
 | API-10 | Phase 4 | Pending |
 | API-11 | Phase 4 | Pending |
-| EMBED-01 | Phase 1 | Pending |
+| EMBED-01 | Phase 1 | Complete |
 | EMBED-02 | Phase 4 | Pending |
 | HARD-01 | Phase 2 | Pending |
 | HARD-02 | Phase 2 | Pending |
