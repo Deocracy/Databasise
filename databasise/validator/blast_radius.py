@@ -39,16 +39,21 @@ if TYPE_CHECKING:
 
 
 def blast_radius_violations(parsed: ParsedWiring, depth_map: dict[str, str]) -> list[Violation]:
-    """A node violates iff (a) it declares ``writes_artifact`` AND (b) the artifact scope of that
-    write is ``shared`` (the explicit default when unstated) AND (c) its effective depth — read
-    from ``depth_map``, as computed by ``validator.depth.effective_depth`` — is not ``stage``.
+    """A node violates iff (a) its resolved ``Part`` declares ``writes_artifact`` AND (b) the
+    artifact scope of that write is ``shared`` (the explicit default when unstated) AND (c) its
+    effective depth — read from ``depth_map``, as computed by ``validator.depth.effective_depth``
+    — is not ``stage``. Gated on ``parsed.parts[node_id].effects``, the registry's own resolved
+    declaration, never ``parsed.nodes[node_id].effects`` (CR-01).
     """
     violations: list[Violation] = []
-    for node_id, node in parsed.nodes.items():
-        if "writes_artifact" not in node.effects:
+    for node_id, part in parsed.parts.items():
+        # CR-01: gate on the registry's own resolved Part.effects, never the wiring's
+        # self-declared WiringNode.effects — a wiring is untrusted, author-supplied input (see
+        # ``validator/cycles.py``'s own framing), and could otherwise omit ``writes_artifact`` on
+        # the node to route a real shared-scope write around this rule entirely.
+        if "writes_artifact" not in part.effects:
             continue
 
-        part = parsed.parts[node_id]
         scope = getattr(part, "artifact_scope", None) or "shared"
         if scope != "shared":
             continue
