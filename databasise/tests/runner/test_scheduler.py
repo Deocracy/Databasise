@@ -359,6 +359,12 @@ async def test_12_capability_scoped_store_view_is_sourced_from_the_parts_effects
     assert result["partial"] is False
     assert result["results"]["n1"]["kv"] == "the-real-kv-store"
 
+    # The same substitution reaches D-13's resume boundary: the node genuinely mutated a store
+    # (the Part declares writes_kv and the scoped view granted it), so it can never be stamped a
+    # safe resume point. Sourcing `resumable` from the wiring's empty effects[] would claim it is.
+    trace = next(n for n in result["nodes"] if n.node_id == "n1")
+    assert trace.resumable is False
+
 
 async def test_10_a_cyclic_wiring_returns_the_cycle_as_data_rather_than_raising():
     async def body(ctx: NodeContext):
