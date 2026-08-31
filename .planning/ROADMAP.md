@@ -35,7 +35,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The same component wired twice with byte-identical config resolves to one instance identity and one cache partition; changing any config byte yields a different `config_hash` and a separate partition — and a wiring node id is never usable as an identity
   4. A wiring arm containing an `opaque` node writes `quarantined` and cannot reach `shared` KV; per-part graph and vector namespaces are visibly separate after a run
 
-**Plans**: 9/9 plans executed across 5 waves
+**Plans**: 10 plans across 6 waves — 9/10 executed; wave 6 is gap closure for the two BLOCKER gaps in `01-VERIFICATION.md`
 
 Plans:
 **Wave 1**
@@ -61,6 +61,10 @@ Plans:
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [x] 01-09-PLAN.md — Wave 5 · EMBED-01 smoke test, v1 import-boundary checker, four-criteria acceptance suite
+
+**Wave 6** *(gap closure — the two BLOCKER gaps in `01-VERIFICATION.md`; Phase 2's Falsifier 2/5 gate is blocked on this)*
+
+- [ ] 01-10-PLAN.md — Wave 6 · wire real budget metering and guards into the live runner path (MACH-05 / Gap 2, still open), and close Gap 1's missing under-declaring blast-radius regression plus an AST pin on the registry-as-trusted-source invariant (MACH-08 / Gap 1, re-verified closed in source)
 
 ### Phase 2: Falsifier Gate
 
