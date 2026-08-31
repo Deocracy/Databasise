@@ -5,12 +5,12 @@ milestone_name: milestone
 current_phase: 2
 current_phase_name: Falsifier Gate
 status: planning
-stopped_at: Phase 1 context gathered; fact-layer loss documented
-last_updated: "2026-08-31T20:15:25.311Z"
+stopped_at: "Phase 2 context gathered (re-scoped: Falsifier 5 deferred to point of need)"
+last_updated: "2026-08-31T22:52:58.207Z"
 last_activity: 2026-08-31
 last_activity_desc: Phase 01 execution started
 progress:
-  total_phases: 1
+  total_phases: 2
   completed_phases: 1
   total_plans: 10
   completed_plans: 10
@@ -87,6 +87,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-30T03:58:39.767Z
-Stopped at: Phase 1 context gathered; fact-layer loss documented
-Resume file: .planning/phases/01-machine-core/01-CONTEXT.md
+Last session: 2026-08-31T22:52:58.195Z
+Stopped at: Phase 2 context gathered (re-scoped: Falsifier 5 deferred to point of need)
+Resume file: .planning/phases/02-falsifier-gate/02-CONTEXT.md
