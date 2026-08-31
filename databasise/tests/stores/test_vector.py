@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from databasise.stores.vector import FaissVectorStore
+from databasise.stores.vector import FaissVectorStore, VectorStoreCorruptedError
 
 
 def _vec(*values: float) -> list[float]:
@@ -111,6 +111,25 @@ async def test_index_and_sidecar_commit_together_or_neither(store_root, monkeypa
     assert not list(store._dir.glob("*.tmp"))
     # The pending buffer is untouched by the failed flush.
     assert "b" in store._pending
+
+
+async def test_a_half_committed_pair_is_detected_and_refused_at_next_open(store_root):
+    """WR-02 regression: the two ``os.replace`` calls in ``_persist`` are not one transaction, so
+    a crash landing between them can leave a *new* index paired with a *stale* sidecar (or vice
+    versa). Simulated here directly by writing an index file that does not match the checksum its
+    own sidecar records — before the fix, reopening this pair would silently succeed with a
+    corrupted store; after the fix, ``__init__`` refuses it by name.
+    """
+    store = FaissVectorStore(namespace="vec", workspace="ws", store_root=store_root)
+    await store.upsert(ids=["a"], embeddings=[_vec(1.0, 0.0)])
+    await store.index_done_callback()
+
+    # Simulate the crash window: overwrite the committed index with different bytes (as a second
+    # commit's index-write would, mid-flush) without updating the sidecar's checksum to match.
+    store._index_path.write_bytes(store._index_path.read_bytes() + b"\x00")
+
+    with pytest.raises(VectorStoreCorruptedError):
+        FaissVectorStore(namespace="vec", workspace="ws", store_root=store_root)
 
 
 async def test_two_namespaces_are_disjoint_and_both_files_present_after_commit(store_root):

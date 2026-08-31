@@ -22,9 +22,19 @@ in-process; nothing is queryable until ``index_done_callback`` flushes them. Buf
 Raise-don't-silently-drop rule (CONTEXT.md's stated house style — refusals over silent fallbacks):
 an embedding-count mismatch is validated and raised inside ``upsert`` itself, before the pending
 buffer is touched. A flush failure (index-add error or sidecar-write error) raises before either
-the index file or the metadata sidecar is renamed into place, so the two files commit together or
-neither does — a crash or exception mid-flush leaves the previously committed pair intact and the
-pending buffer untouched.
+the index file or the metadata sidecar is renamed into place, so under an ordinary Python
+exception the two files commit together or neither does.
+
+That guard covers only the write-to-temp-file phase, though: the two ``os.replace`` calls that
+actually swap the temp files into place are themselves two separate filesystem operations with no
+shared transaction, so a hard crash (SIGKILL, power loss) landing between them can still leave a
+*new* index paired with the *old* sidecar (WR-02). Since that window cannot be closed with two
+independent files on a POSIX filesystem without a heavier scheme (a staging-directory swap, or a
+symlink flip), the sidecar instead carries a SHA-256 ``index_checksum`` of the index file it was
+written to accompany; ``__init__`` recomputes that checksum against whatever index file is
+actually on disk and refuses (``VectorStoreCorruptedError``) rather than silently loading a
+half-committed pair — the crash window still exists, but a pair it produces is now detected and
+refused at the next open instead of used.
 
 Metadata sidecar: the Faiss index and a ``.meta.json`` sidecar both live inside this store's own
 namespace directory (``<store_root>/<workspace>/<namespace>/``), matching D-07's
@@ -34,6 +44,7 @@ already use.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from dataclasses import dataclass, field
@@ -50,6 +61,35 @@ except ImportError as _faiss_import_err:
     raise ImportError(
         "faiss-cpu is required for FaissVectorStore. Install with: pip install faiss-cpu"
     ) from _faiss_import_err
+
+
+class VectorStoreCorruptedError(RuntimeError):
+    """Raised at open time (WR-02) when the on-disk index file's SHA-256 does not match the
+    ``index_checksum`` its own metadata sidecar claims. This is the signature of the two-file
+    commit's known non-atomic window (two independent ``os.replace`` calls — see module
+    docstring): a crash landing exactly between them can pair a new index with a stale sidecar
+    (or vice versa). Rather than silently loading a mismatched pair, this store refuses by name so
+    the corruption is visible and actionable instead of a source of quiet, wrong query results.
+    """
+
+    def __init__(self, index_path: Path, expected: str | None, actual: str):
+        self.index_path = index_path
+        self.expected = expected
+        self.actual = actual
+        super().__init__(
+            f"vector store at {index_path!s} is corrupted: sidecar recorded index_checksum "
+            f"{expected!r}, but the on-disk index file's actual checksum is {actual!r}. This is "
+            "the signature of a crash landing between the index and sidecar's two independent "
+            "commit renames (WR-02) — the pair is refused rather than silently loaded."
+        )
+
+
+def _sha256_of(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 @dataclass
@@ -82,10 +122,15 @@ class FaissVectorStore(StorageNameSpace):
         self._next_int_id: int = 0
 
         if self._index_path.exists() and self._meta_path.exists():
-            self._index = faiss.read_index(str(self._index_path))
-            self._dim = self._index.d
             with self._meta_path.open("r", encoding="utf-8") as f:
                 meta = json.load(f)
+            expected_checksum = meta.get("index_checksum")
+            actual_checksum = _sha256_of(self._index_path)
+            if expected_checksum != actual_checksum:
+                raise VectorStoreCorruptedError(self._index_path, expected_checksum, actual_checksum)
+
+            self._index = faiss.read_index(str(self._index_path))
+            self._dim = self._index.d
             self._entries = meta["entries"]
             self._next_int_id = meta["next_int_id"]
 
@@ -208,16 +253,23 @@ class FaissVectorStore(StorageNameSpace):
     def _persist(
         self, index: Any, entries: dict[str, dict[str, Any]], next_int_id: int
     ) -> None:
-        """Write the index and sidecar to temp files, then rename both into place — the index
-        and sidecar commit together or neither does. A failure at any point leaves the
-        previously-committed pair on disk untouched and raises rather than partially writing.
+        """Write the index and sidecar to temp files, then rename both into place. An ordinary
+        Python exception during either write leaves the previously-committed pair on disk
+        untouched and raises rather than partially writing; the two ``os.replace`` calls below
+        still are not a single transaction (WR-02 — see module docstring), so the sidecar carries
+        a SHA-256 ``index_checksum`` of the index file it is written to accompany, checked back
+        against the on-disk index at the next ``__init__``.
         """
         tmp_index = self._index_path.with_suffix(self._index_path.suffix + ".tmp")
         tmp_meta = self._meta_path.with_suffix(self._meta_path.suffix + ".tmp")
         try:
             faiss.write_index(index, str(tmp_index))
+            index_checksum = _sha256_of(tmp_index)
             with tmp_meta.open("w", encoding="utf-8") as f:
-                json.dump({"next_int_id": next_int_id, "entries": entries}, f)
+                json.dump(
+                    {"next_int_id": next_int_id, "entries": entries, "index_checksum": index_checksum},
+                    f,
+                )
         except Exception:
             tmp_index.unlink(missing_ok=True)
             tmp_meta.unlink(missing_ok=True)
