@@ -89,8 +89,30 @@ Before applying §19.1–§19.6, the author MUST enumerate candidate boundaries 
 | w3-lightrag-half-decomposed-crossing-ingest-query-side | value-crossing | ingest -> query-side | 'query-side''s dep edge on 'ingest' is by construction a point where a value crosses between operations |
 | w3-knob-ingest-query-boundary | knob | ingest -> query-side | the opaque ingest core's boundary against the decomposed query side: ingest can be replaced by a different ingest implementation, or bypassed by a pre-populated store, without changing query-side's own socket |
 
+## Self-declaration probes
+
+SELECTION.md Falsifier 1 limb (b) and Falsifier 2's own no-self-declaration clause (02-CONTEXT.md D-03), demonstrated as paired refusal-and-control probes resolved against `probe_registry()` (`default_registry()` plus two probe-only parts never registered into the production registry). Every probe expecting a refusal is paired with a control that must not fire, so a check that has stopped firing surfaces as a failed probe rather than as a quietly green suite.
+
+| probe_id | wiring shape | expected code | observed code | verdict |
+|---|---|---|---|---|
+| a-effects-exceed-part | cbm:codebase-memory-mcp@0.1.0 | effects-exceed-part | effects-exceed-part | fired as expected |
+| b1-shared-write-at-stage | writer:probe/shared-artifact-writer@0.1.0 | — (control) | — | OK (no violation) |
+| b2-shared-write-at-evidence | writer:probe/evidence-writer@0.1.0 | blast-radius-refusal | blast-radius-refusal | fired as expected |
+| b3-shared-write-tainted-to-opaque | cbm:codebase-memory-mcp@0.1.0, extract:probe/shared-artifact-writer@0.1.0 | blast-radius-refusal | blast-radius-refusal | fired as expected |
+| c1-self-declared-effective-depth | ingest:lightrag/full-ingest@0.1.0, query-side:lightrag/query-side@0.1.0, assemble:parts-core/passthrough@1.0.0 | self-declared-derivation | self-declared-derivation | fired as expected |
+| c2-unknown-node-key | ingest:lightrag/full-ingest@0.1.0, query-side:lightrag/query-side@0.1.0, assemble:parts-core/passthrough@1.0.0 | invalid-node-schema | invalid-node-schema | fired as expected |
+| c3-computed-depth-governs | ingest:lightrag/full-ingest@0.1.0, query-side:lightrag/query-side@0.1.0, assemble:parts-core/passthrough@1.0.0 | — (control) | — | OK (no violation) |
+
+- **a-effects-exceed-part**: If this stopped firing, a wiring node could claim an effect its resolved part does not back — an unbounded capability claim admitted silently.
+- **b1-shared-write-at-stage**: Control. If this fired, a legitimate shared-artifact write at effective depth stage would be wrongly refused.
+- **b2-shared-write-at-evidence**: If this stopped firing, a shared-artifact write reachable only at effective depth evidence would escape the blast-radius rule.
+- **b3-shared-write-tainted-to-opaque**: SELECTION.md Falsifier 1 limb (b). If this stopped firing, an opaque node could launder a shared-scope write through a downstream extractor by hiding behind the taint rule.
+- **c1-self-declared-effective-depth**: If this stopped firing, an author's self-declared effective_depth would silently stand in for the computation MACH-01 requires.
+- **c2-unknown-node-key**: If this classified as self-declared-derivation instead of invalid-node-schema, a typo and an attempted self-declaration would be indistinguishable by code alone.
+- **c3-computed-depth-governs**: Control. If this fired, the computation itself would be broken on an ordinary wiring that carries no self-declaration at all.
+
 ## Falsifier 2 verdict
 
 SELECTION.md's `## Falsifiers` list, item 2: "Depth cannot be computed statically. Over three real parts (decomposed `lightrag-local`, opaque `codebase-memory-mcp`, half-decomposed LightRAG), the validator cannot derive `depth` from wiring + registry without a self-declaration. Then D4 has no brake and D's regime was doing structural work."
 
-**Result: Falsifier 2 did not fire.** Every `effective_depth` and `execution_mode` value in every wiring above was derived from that wiring's `nodes`/`deps` plus `default_registry()` alone, through `databasise.validator.depth.effective_depth` and `databasise.validator.execution_mode.derive_execution_mode` — no self-declared depth or execution_mode field was read from any wiring document. D4's brake holds.
+**Result: Falsifier 2 did not fire.** Every `effective_depth` and `execution_mode` value in every wiring above was derived from that wiring's `nodes`/`deps` plus `default_registry()` alone, through `databasise.validator.depth.effective_depth` and `databasise.validator.execution_mode.derive_execution_mode` — no self-declared depth or execution_mode field was read from any wiring document. D4's brake holds. All three named wirings above compute without any self-declaration, and every self-declaration and blast-radius refusal probe fired with its expected code, each paired with a control that did not fire — the computation governs regardless of what a wiring author attempts to write.

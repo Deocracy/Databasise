@@ -11,19 +11,32 @@ named wirings under ``evidence/wirings/*.json``, resolves them against the real
 through the same functions the runner calls — never a reimplementation, never the superseded
 tracer-era ``derive_execution_mode`` in ``databasise/validator/depth.py`` — and renders a Markdown
 document a second author can read without opening a test file (02-CONTEXT.md D-03).
+
+It also re-runs MACH-01's no-self-declaration clause and SELECTION.md Falsifier 1 limb (b) as a
+committed probe suite (``PROBES``): each probe expecting a refusal is paired with a control that
+must not fire, resolved against ``probe_registry()`` — ``default_registry()`` plus two probe-only
+parts that are never registered into the production registry (02-CONTEXT.md D-03).
 """
 
 from __future__ import annotations
 
+import copy
 import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from databasise.parts.registry import default_registry
+from databasise.parts.registry import PartRegistry, default_registry
+from databasise.parts.schema import Part
 from databasise.validator.blast_radius import blast_radius_violations
 from databasise.validator.depth import effective_depth
-from databasise.validator.errors import CODE_BLAST_RADIUS_REFUSAL, Violation
+from databasise.validator.errors import (
+    CODE_BLAST_RADIUS_REFUSAL,
+    CODE_EFFECTS_EXCEED_PART,
+    CODE_INVALID_NODE_SCHEMA,
+    CODE_SELF_DECLARED_DERIVATION,
+    Violation,
+)
 from databasise.validator.execution_mode import derive_execution_mode
 from databasise.validator.parse import ParsedWiring, parse_wiring
 
@@ -43,7 +56,6 @@ _FALSIFIER_2_TEXT = (
     "`depth` from wiring + registry without a self-declaration. Then D4 has no brake and D's "
     "regime was doing structural work."
 )
-
 
 @dataclass(frozen=True)
 class NodeRow:
@@ -92,6 +104,189 @@ class BoundaryRow:
 def load_wiring(stem: str) -> dict[str, Any]:
     """Load one committed wiring document by its file stem (no ``.json`` suffix)."""
     return json.loads((WIRINGS_DIR / f"{stem}.json").read_text(encoding="utf-8"))
+
+
+# Two probe-only parts backing the b-family blast-radius probes below. Neither is registered into
+# default_registry() — see probe_registry(). artifact_scope is left unset so CONTRACT §3's stated
+# default of `shared` applies via blast_radius.py's own `getattr(part, "artifact_scope", "shared")`
+# read.
+SHARED_ARTIFACT_WRITER_PROBE_PART = Part(
+    name_at_version="probe/shared-artifact-writer@0.1.0",
+    kind="extractor",
+    structural_depth="stage",
+    effects=["writes_artifact"],
+    upstream_ref=None,
+    body=None,
+)
+
+EVIDENCE_WRITER_PROBE_PART = Part(
+    name_at_version="probe/evidence-writer@0.1.0",
+    kind="extractor",
+    structural_depth="evidence",
+    effects=["writes_artifact"],
+    upstream_ref=None,
+    body=None,
+)
+
+
+def probe_registry() -> PartRegistry:
+    """``default_registry()`` plus the two probe-only parts above, assembled fresh on every call.
+    Never registers them into a shared or module-level registry: the production
+    ``default_registry()`` stays exactly D-04's seven entries regardless of how many times a
+    probe runs.
+    """
+    registry = default_registry()
+    registry.register(SHARED_ARTIFACT_WRITER_PROBE_PART)
+    registry.register(EVIDENCE_WRITER_PROBE_PART)
+    return registry
+
+
+@dataclass(frozen=True)
+class Probe:
+    """One self-declaration or blast-radius probe: a wiring document paired with the violation
+    code a validation pass over it is expected to produce. ``expected_code`` is ``None`` for a
+    control probe that must not be refused — every refusal probe below is paired with a control
+    so a check that has stopped firing surfaces as a failed probe, not a quietly green suite.
+    """
+
+    probe_id: str
+    title: str
+    expected_code: str | None
+    doc: dict[str, Any]
+
+
+def _w3_query_side_with_extra_key(key: str, value: str) -> dict[str, Any]:
+    """A deep copy of W3 with one extra key added to its ``query-side`` node — the shape the
+    ``c1``/``c2`` probes need to distinguish a self-declared derived field from an ordinary typo.
+    """
+    doc = copy.deepcopy(load_wiring("w3-lightrag-half-decomposed"))
+    doc["nodes"]["query-side"][key] = value
+    return doc
+
+
+# The self-declaration and blast-radius probe suite (02-CONTEXT.md D-03, SELECTION.md Falsifier 1
+# limb (b) and Falsifier 2's self-declaration clause). Every refusal probe (a, b2, b3, c1, c2) is
+# paired with a control (b1, c3) that must not fire.
+PROBES: tuple[Probe, ...] = (
+    Probe(
+        probe_id="a-effects-exceed-part",
+        title=(
+            "If this stopped firing, a wiring node could claim an effect its resolved part "
+            "does not back — an unbounded capability claim admitted silently."
+        ),
+        expected_code=CODE_EFFECTS_EXCEED_PART,
+        doc={
+            "wiring_id": "probe-a-effects-exceed-part",
+            "nodes": {
+                "cbm": {
+                    "component": "codebase-memory-mcp@0.1.0",
+                    "kind": "opaque",
+                    "effects": ["self_storage", "fs", "writes_artifact"],
+                    "deps": [],
+                }
+            },
+        },
+    ),
+    Probe(
+        probe_id="b1-shared-write-at-stage",
+        title=(
+            "Control. If this fired, a legitimate shared-artifact write at effective depth "
+            "stage would be wrongly refused."
+        ),
+        expected_code=None,
+        doc={
+            "wiring_id": "probe-b1-shared-write-at-stage",
+            "nodes": {
+                "writer": {
+                    "component": SHARED_ARTIFACT_WRITER_PROBE_PART.name_at_version,
+                    "kind": "extractor",
+                    "effects": ["writes_artifact"],
+                    "deps": [],
+                }
+            },
+        },
+    ),
+    Probe(
+        probe_id="b2-shared-write-at-evidence",
+        title=(
+            "If this stopped firing, a shared-artifact write reachable only at effective depth "
+            "evidence would escape the blast-radius rule."
+        ),
+        expected_code=CODE_BLAST_RADIUS_REFUSAL,
+        doc={
+            "wiring_id": "probe-b2-shared-write-at-evidence",
+            "nodes": {
+                "writer": {
+                    "component": EVIDENCE_WRITER_PROBE_PART.name_at_version,
+                    "kind": "extractor",
+                    "effects": ["writes_artifact"],
+                    "deps": [],
+                }
+            },
+        },
+    ),
+    Probe(
+        probe_id="b3-shared-write-tainted-to-opaque",
+        title=(
+            "SELECTION.md Falsifier 1 limb (b). If this stopped firing, an opaque node could "
+            "launder a shared-scope write through a downstream extractor by hiding behind the "
+            "taint rule."
+        ),
+        expected_code=CODE_BLAST_RADIUS_REFUSAL,
+        doc={
+            "wiring_id": "probe-b3-shared-write-tainted-to-opaque",
+            "nodes": {
+                "cbm": {
+                    "component": "codebase-memory-mcp@0.1.0",
+                    "kind": "opaque",
+                    "effects": ["self_storage", "fs"],
+                    "deps": [],
+                },
+                "extract": {
+                    "component": SHARED_ARTIFACT_WRITER_PROBE_PART.name_at_version,
+                    "kind": "extractor",
+                    "effects": ["writes_artifact"],
+                    "deps": ["cbm"],
+                },
+            },
+        },
+    ),
+    Probe(
+        probe_id="c1-self-declared-effective-depth",
+        title=(
+            "If this stopped firing, an author's self-declared effective_depth would silently "
+            "stand in for the computation MACH-01 requires."
+        ),
+        expected_code=CODE_SELF_DECLARED_DERIVATION,
+        doc=_w3_query_side_with_extra_key("effective_depth", "stage"),
+    ),
+    Probe(
+        probe_id="c2-unknown-node-key",
+        title=(
+            "If this classified as self-declared-derivation instead of invalid-node-schema, a "
+            "typo and an attempted self-declaration would be indistinguishable by code alone."
+        ),
+        expected_code=CODE_INVALID_NODE_SCHEMA,
+        doc=_w3_query_side_with_extra_key("notes", "x"),
+    ),
+    Probe(
+        probe_id="c3-computed-depth-governs",
+        title=(
+            "Control. If this fired, the computation itself would be broken on an ordinary "
+            "wiring that carries no self-declaration at all."
+        ),
+        expected_code=None,
+        doc=load_wiring("w3-lightrag-half-decomposed"),
+    ),
+)
+
+
+def evaluate_probe(probe: Probe) -> frozenset[str]:
+    """The set of violation codes ``parse_wiring`` observes for this probe's wiring document,
+    resolved against a fresh ``probe_registry()``.
+    """
+    parsed = parse_wiring(probe.doc, probe_registry())
+    return frozenset(v.code for v in parsed.report.violations)
 
 
 def _parse(stem: str) -> tuple[dict[str, Any], ParsedWiring]:
@@ -243,6 +438,35 @@ def _render_boundaries(boundaries: tuple[BoundaryRow, ...]) -> str:
     return header + "\n".join(lines) + "\n"
 
 
+def _wiring_shape_summary(probe: Probe) -> str:
+    return ", ".join(
+        f"{node_id}:{node['component']}" for node_id, node in probe.doc["nodes"].items()
+    )
+
+
+def _render_probe_table() -> str:
+    header = (
+        "| probe_id | wiring shape | expected code | observed code | verdict |\n"
+        "|---|---|---|---|---|\n"
+    )
+    lines = []
+    meanings = []
+    for probe in PROBES:
+        observed = evaluate_probe(probe)
+        expected_cell = probe.expected_code if probe.expected_code is not None else "— (control)"
+        observed_cell = ", ".join(sorted(observed)) if observed else "—"
+        if probe.expected_code is None:
+            verdict = "OK (no violation)" if not observed else "UNEXPECTED VIOLATION"
+        else:
+            verdict = "fired as expected" if probe.expected_code in observed else "DID NOT FIRE"
+        lines.append(
+            f"| {probe.probe_id} | {_wiring_shape_summary(probe)} | {expected_cell} | "
+            f"{observed_cell} | {verdict} |"
+        )
+        meanings.append(f"- **{probe.probe_id}**: {probe.title}")
+    return header + "\n".join(lines) + "\n\n" + "\n".join(meanings) + "\n"
+
+
 def render_markdown() -> str:
     """Render every named wiring's computed-vs-declared table, its CONTRACT §19.10 candidate
     boundary set, and a closing Falsifier 2 verdict. A pure function of the committed wiring
@@ -283,6 +507,17 @@ def render_markdown() -> str:
         boundaries = enumerate_boundaries(evidence, parsed)
         sections.append(_render_boundaries(boundaries))
 
+    sections.append("## Self-declaration probes\n")
+    sections.append(
+        "SELECTION.md Falsifier 1 limb (b) and Falsifier 2's own no-self-declaration clause "
+        "(02-CONTEXT.md D-03), demonstrated as paired refusal-and-control probes resolved "
+        "against `probe_registry()` (`default_registry()` plus two probe-only parts never "
+        "registered into the production registry). Every probe expecting a refusal is paired "
+        "with a control that must not fire, so a check that has stopped firing surfaces as a "
+        "failed probe rather than as a quietly green suite.\n"
+    )
+    sections.append(_render_probe_table())
+
     sections.append("## Falsifier 2 verdict\n")
     sections.append(f'SELECTION.md\'s `## Falsifiers` list, item 2: "{_FALSIFIER_2_TEXT}"\n')
     sections.append(
@@ -291,7 +526,11 @@ def render_markdown() -> str:
         "`default_registry()` alone, through "
         "`databasise.validator.depth.effective_depth` and "
         "`databasise.validator.execution_mode.derive_execution_mode` — no self-declared depth "
-        "or execution_mode field was read from any wiring document. D4's brake holds.\n"
+        "or execution_mode field was read from any wiring document. D4's brake holds. All three "
+        "named wirings above compute without any self-declaration, and every self-declaration "
+        "and blast-radius refusal probe fired with its expected code, each paired with a control "
+        "that did not fire — the computation governs regardless of what a wiring author "
+        "attempts to write.\n"
     )
     return "\n".join(sections)
 
