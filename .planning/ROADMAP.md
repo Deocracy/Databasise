@@ -13,7 +13,7 @@ The journey runs the four §BP rungs of SYSTEM-MODEL.md in their binding order, 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Machine Core** - Embedded stores, component identity, runner/scheduler, and storage keying — the §H1 must-decide fence
+- [x] **Phase 1: Machine Core** - Embedded stores, component identity, runner/scheduler, and storage keying — the §H1 must-decide fence (completed 2026-08-31)
 - [ ] **Phase 2: Falsifier Gate** - Computed depth/execution_mode validator, eval bundle, and A/A calibration — Falsifiers 2 and 5, the rung-1 gate
 - [ ] **Phase 3: LightRAG Query Side** - Seventeen §L.1 query positions re-cut as primitive parts with variance-banded parity (§BP rung 2)
 - [ ] **Phase 4: The Seam** - §18 closed envelope, four selectors, trace and budget reporting, in-process and REST transports
@@ -160,7 +160,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Machine Core | 10/10 | In Progress|  |
+| 1. Machine Core | 10/10 | Complete    | 2026-08-31 |
 | 2. Falsifier Gate | 0/TBD | Not started | - |
 | 3. LightRAG Query Side | 0/TBD | Not started | - |
 | 4. The Seam | 0/TBD | Not started | - |
