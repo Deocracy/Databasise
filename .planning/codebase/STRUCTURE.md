@@ -1,14 +1,19 @@
+---
+last_mapped_commit: 9160a53de8976defcfb11b138253156fd5050ecd
+last_mapped_at: 2026-08-31
+---
 # Codebase Structure
 
-**Analysis Date:** 2026-08-29
+**Analysis Date:** 2026-08-31
 
 ## Directory Layout
 
 ```
 Databasise-2.0-fully-agnostic-system/
-├── .planning/                  # Generated codebase maps (this dir)
-├── .claude/                    # Claude Code local project config
-├── .git/                       # Git repository metadata
+├── README.md                  # Repo overview, build ladder, system context
+├── .planning/                 # Generated codebase maps (this dir)
+├── .claude/                   # Claude Code local project config
+├── .git/                      # Git repository metadata
 ├── docs/
 │   └── system-model/          # v2.0 frozen architecture design (19 docs)
 │       ├── SYSTEM-MODEL.md    # Entry point, build ladder, governance
@@ -22,7 +27,88 @@ Databasise-2.0-fully-agnostic-system/
 │       └── *-check.sh         # 145-check gate scripts
 ├── reference/
 │   └── hipporag2-2502.14802.pdf  # HippoRAG 2 paper
-├── v1/                        # LightRAG v1 — active codebase
+├── databasise/                # Agnostic machine (Phase 1, new)
+│   ├── __init__.py            # Public entry point: run_wiring()
+│   ├── README.md              # Package overview
+│   ├── pyproject.toml         # Python 3.11+, 4 frozen dependencies
+│   ├── namespaces.py          # Namespace isolation for later phases
+│   │
+│   ├── identity/              # Deterministic identity & canonicalisation (D-12)
+│   │   ├── __init__.py
+│   │   ├── canon.py           # JCS (RFC 8785) canonicalisation of wiring JSON
+│   │   ├── env.py             # Environment-based identity derivation
+│   │   └── instance.py        # Instance-hash generation
+│   │
+│   ├── parts/                 # Part registry & schema (D-13)
+│   │   ├── __init__.py
+│   │   ├── registry.py        # PartRegistry: dispatch to part implementations
+│   │   └── schema.py          # NodeKind tagged sum, Effect vocabulary, WiringNode schema
+│   │
+│   ├── parts_core/            # Reference part implementations (proof of concept)
+│   │   ├── __init__.py        # CapabilityScopedStores view
+│   │   ├── declared_only.py   # Stub for declaration-only validation
+│   │   ├── passthrough.py     # Identity transformation (input → output)
+│   │   ├── fake_llm_caller.py # Stub LLM for rig testing
+│   │   ├── fake_retriever.py  # Stub retriever for rig testing
+│   │   └── fixpoint_body.py   # Fixed-point iteration for later phases
+│   │
+│   ├── validator/             # Wiring validation (pre-execution checks)
+│   │   ├── parse.py           # Parse wiring JSON, schema validation
+│   │   ├── cycles.py          # Cycle detection (Tarjan SCC)
+│   │   ├── depth.py           # Effective depth derivation (opaque/evidence/stage)
+│   │   ├── execution_mode.py  # Execution mode derivation (host placement)
+│   │   ├── blast_radius.py    # Impact analysis for errors
+│   │   └── errors.py          # Custom exception types
+│   │
+│   ├── runner/                # Wiring execution & tracing
+│   │   ├── __init__.py
+│   │   ├── scheduler.py       # TopologicalSorter + TaskGroup executor (D-09)
+│   │   ├── trace.py           # RunRecord schema & tracing
+│   │   ├── budget.py          # Token/time budget enforcement
+│   │   └── guards.py          # Pre-flight validation guards
+│   │
+│   ├── stores/                # Machine-owned primitives (frozen, embedded)
+│   │   ├── __init__.py
+│   │   ├── base.py            # StoreLifecycle base class
+│   │   ├── graph.py           # Cozo graph DB adapter (Datalog queries)
+│   │   ├── vector.py          # Faiss vector DB adapter (cosine similarity)
+│   │   ├── kv.py              # SQLite KV store adapter (blob + metadata)
+│   │   ├── lexical.py         # Lexical search index
+│   │   └── blob.py            # Binary blob storage interface
+│   │
+│   ├── ledger/                # Persistent ledger (later phases)
+│   │   ├── __init__.py
+│   │   └── ledger.py          # Run ledger persistence
+│   │
+│   ├── registry_artifact/     # Artifact indexing (later phases)
+│   │   ├── __init__.py
+│   │   ├── write_path.py      # Artifact path derivation
+│   │   └── index.py           # Artifact index generation
+│   │
+│   ├── tools/                 # CLI utilities
+│   │   ├── __init__.py
+│   │   └── check_import_boundary.py # Verify no v1 imports (D-14 gate)
+│   │
+│   └── tests/                 # Comprehensive test suite (pytest)
+│       ├── conftest.py        # Shared fixtures (store_root, rig_trace_schema)
+│       ├── test_conftest_fixtures.py # Fixture validation
+│       ├── test_tracer_end_to_end.py # Full run_wiring() path
+│       ├── test_embed_startup.py     # Embedding initialization
+│       ├── test_import_boundary.py   # D-14 boundary check (no v1 imports)
+│       ├── test_phase_success_criteria.py # Phase 1 success gates
+│       ├── fixtures/          # Test data
+│       ├── identity/          # identity/ module tests
+│       ├── parts/             # parts/ module tests
+│       │   └── test_reference_parts.py # Reference part behavior
+│       ├── validator/         # validator/ module tests
+│       ├── runner/            # runner/ module tests
+│       │   ├── test_budget.py
+│       │   └── test_run_record.py
+│       ├── stores/            # stores/ module tests
+│       ├── ledger/            # ledger/ module tests
+│       └── registry_artifact/ # registry_artifact/ module tests
+│
+├── v1/                        # LightRAG v1 — active codebase (Databasise 1.0)
 │   ├── .github/
 │   │   ├── workflows/         # CI/CD pipelines
 │   │   ├── ISSUE_TEMPLATE/    # PR/issue templates
@@ -258,19 +344,32 @@ Databasise-2.0-fully-agnostic-system/
 │   │   └── samples/           # Example prompts
 │   │
 │   └── README*.md             # v1 README (EN, ZH, JA)
-
-README.md                       # Repo overview, build ladder, components
 ```
 
 ## Directory Purposes
 
 **Root level:**
+
 - `.planning/codebase/`: Generated analysis documents (ARCHITECTURE.md, STRUCTURE.md, etc.)
+- `README.md`: Repo overview, build ladder, system context (Databasise 1.0 vs agnostic machine)
 - `docs/system-model/`: v2.0 frozen design (19 docs, read-only reference for Phase 1)
 - `reference/`: External papers & reference implementations
+- `databasise/`: Agnostic machine (Phase 1 deliverable, independent package)
 - `v1/`: Active codebase (LightRAG v1.5.4 + Cozo plugin + Databasise refinements)
 
+**databasise/ (agnostic machine):**
+
+- Core: `__init__.py` (run_wiring entry), `namespaces.py` (workspace isolation for later phases)
+- Validation: `validator/` (parse, cycles, depth, execution_mode, blast_radius, errors)
+- Execution: `runner/` (scheduler, trace, budget, guards)
+- Components: `parts/` (registry, schema), `parts_core/` (reference parts: passthrough, fake LLM caller, etc.)
+- Primitives: `stores/` (Cozo graph, Faiss vector, SQLite KV, lexical index)
+- Identity: `identity/` (JCS canonicalisation, config_hash, instance_hash)
+- Persistence: `ledger/` (run ledger), `registry_artifact/` (artifact indexing)
+- Testing: `tests/` (end-to-end, fixtures, conftest, module-specific tests)
+
 **v1/lightrag/ (core engine):**
+
 - Query execution: `operate.py` (4-stage pipeline), `lightrag.py` (facade)
 - Storage: `base.py` (interfaces), `kg/` (11 backends), pluggable via factory
 - LLM: `llm/` (18 provider integrations), role-based config in `llm_roles.py`
@@ -279,32 +378,76 @@ README.md                       # Repo overview, build ladder, components
 - Utilities: `utils.py` (tokenizer, embedding, logging), `prompt.py` (templates), `rerank.py` (ranking)
 
 **v1/lightrag_webui/ (frontend):**
+
 - React/TypeScript single-page app for query, graph visualization, document upload
 - Communicates with API server over HTTP
 
 **v1/examples/ & v1/reproduce/:**
+
 - Standalone Python scripts demonstrating LightRAG usage
 - Each example shows different LLM provider + storage backend combo
 - `reproduce/` steps are reproducible parity tests
 
 **v1/tests/ (150+ test files):**
+
 - Co-located with implementations (e.g., `tests/kg/neo4j_impl/` tests `lightrag/kg/neo4j_impl.py`)
 - Comprehensive: unit tests, integration tests, parity tests, regression tests
 - CI runs all tests on each commit
 
 **v1/k8s-deploy/ & docs/:**
+
 - Production deployment guides (Docker, K8s, Helm)
 - Configuration for all 11+ backends
 
 ## Key File Locations
 
+### Databasise Machine
+
 **Entry Points:**
+
+- Wiring executor: `databasise/__init__.py:run_wiring()` — parse, validate, execute, trace one wiring
+- Scheduler: `databasise/runner/scheduler.py:run_wiring()` — lower-level scheduler access for advanced use
+- Part registry: `databasise/parts/registry.py:PartRegistry` — register custom modality parts (future phases)
+
+**Configuration & Schema:**
+
+- Wiring schema: `databasise/parts/schema.py` (NodeKind tagged sum, Effect vocabulary, WiringNode)
+- Part implementation: `databasise/parts/registry.py` (Part class, dispatch logic)
+- Validation config: `databasise/validator/parse.py` (pydantic schemas)
+
+**Core Logic:**
+
+- Wiring parsing: `databasise/validator/parse.py` (schema validation)
+- Cycle detection: `databasise/validator/cycles.py` (Tarjan SCC algorithm)
+- Depth derivation: `databasise/validator/depth.py` (opaque/evidence/stage classification)
+- Execution scheduling: `databasise/runner/scheduler.py` (topological sort + TaskGroup dispatch)
+- Run tracing: `databasise/runner/trace.py` (RunRecord schema, per-node timestamps)
+
+**Storage Primitives:**
+
+- Graph DB: `databasise/stores/graph.py` (Cozo adapter, Datalog queries)
+- Vector DB: `databasise/stores/vector.py` (Faiss adapter, cosine similarity)
+- KV store: `databasise/stores/kv.py` (SQLite adapter, blob + metadata)
+- Lexical index: `databasise/stores/lexical.py` (search functionality)
+
+**Testing:**
+
+- Fixtures: `databasise/tests/conftest.py` (store_root, rig_trace_schema, assert_valid_trace)
+- End-to-end: `databasise/tests/test_tracer_end_to_end.py` (full run_wiring() path)
+- Boundary check: `databasise/tests/test_import_boundary.py` (verify no v1 imports — D-14 gate)
+- Success criteria: `databasise/tests/test_phase_success_criteria.py` (Phase 1 gates)
+
+### LightRAG v1
+
+**Entry Points:**
+
 - API server: `v1/lightrag/api/lightrag_server.py`
 - Python library: `v1/lightrag/lightrag.py` (main `LightRAG` class)
 - CLI examples: `v1/examples/*.py`
 - Interactive setup: `v1/scripts/setup/setup.sh`
 
 **Configuration:**
+
 - Environment vars: `.env` (not in repo, use `.env.example` template)
 - LLM role config: `v1/lightrag/llm_roles.py`, `v1/lightrag/addon_params.py`
 - Prompt templates: `v1/lightrag/prompt.py`, `v1/lightrag/prompt_multimodal.py`
@@ -312,12 +455,14 @@ README.md                       # Repo overview, build ladder, components
 - Parser routing: `v1/lightrag/parser/routing.py`
 
 **Core Logic:**
+
 - Query pipeline: `v1/lightrag/operate.py` (3800+ lines, 4 stages)
 - Ingestion pipeline: `v1/lightrag/pipeline.py` (2900+ lines, async workers)
 - Storage abstraction: `v1/lightrag/base.py`, `v1/lightrag/kg/factory.py`
 - LLM integrations: `v1/lightrag/llm/*.py` (18 providers)
 
 **Testing:**
+
 - Fixtures & setup: `v1/tests/conftest.py`
 - API tests: `v1/tests/api/routes/*.py`
 - Storage tests: `v1/tests/kg/` (matches backends in `kg/`)
@@ -325,37 +470,94 @@ README.md                       # Repo overview, build ladder, components
 
 ## Naming Conventions
 
+### Databasise Machine
+
 **Files:**
+
+- Core modules: snake_case (e.g., `scheduler.py`, `trace.py`, `depth.py`)
+- Adapter implementations: `{storage_type}.py` (e.g., `graph.py`, `vector.py`, `kv.py`)
+- Test files: `test_*.py` (e.g., `test_tracer_end_to_end.py`)
+
+**Directories:**
+
+- Functional subsystems: lowercase (e.g., `validator/`, `runner/`, `stores/`)
+- Module groupings: plural nouns (e.g., `parts/`, `parts_core/`, `tests/`)
+
+**Classes:**
+
+- Base classes: `{Concept}Lifecycle` or `{Concept}Base` (e.g., `StoreLifecycle`)
+- Implementations: `{Backend}{Concept}Store` (e.g., `CozoGraphStore`, `FaissVectorStore`)
+- Schemas: `{Concept}` or `{Concept}Schema` (e.g., `WiringNode`, `RunRecord`, `Part`)
+- Exceptions: `{Issue}Error` or `{Issue}Exception` (e.g., `DeclarationOnlyPartError`, `PlacementError`)
+
+**Functions & Methods:**
+
+- Async entry points: `run_*` (e.g., `run_wiring()`)
+- Validation: `validate_*` or `check_*` (e.g., `validate_wiring()`)
+- Dispatch: `dispatch()` or `resolve_*` (e.g., `dispatch()`, `resolve_identities()`)
+- Derivation: `derive_*` (e.g., `derive_execution_mode()`, `derive_depth()`)
+
+### LightRAG v1
+
+**Files:**
+
 - Core modules: snake_case (e.g., `operate.py`, `llm_roles.py`)
 - Implementation classes: `{Storage|LLM|Parser}*Impl` (e.g., `cozo_impl.py`, `openai.py`)
 - Test files: `test_*.py` (e.g., `test_entity_extraction.py`)
 - Examples: descriptive names (e.g., `lightrag_openai_demo.py`)
 
 **Directories:**
+
 - Core subsystems: plural nouns (e.g., `llm/`, `chunker/`, `parser/`)
 - Implementation groups: named by backend (e.g., `kg/neo4j_impl/` tests, `llm/openai.py` impl)
 - Test dirs: mirror source structure (e.g., `tests/kg/`, `tests/llm/`)
 
 **Classes:**
+
 - Storage: `Base{Graph|Vector|KV}Storage`, `{Backend}Storage` (e.g., `Neo4jGraphStorage`)
 - LLM: `{Provider}LLM` (e.g., `OpenAILLM`, `GeminiLLM`)
 - Parsers: `{Format}Parser` (e.g., `MarkdownParser`, `DocxParser`)
 - Chunkers: `{Strategy}Chunker` (e.g., `SemanticVectorChunker`)
 
 **Functions:**
+
 - Query stages: `get_keywords_from_query()`, `_build_query_context()`, `_perform_kg_search()`, `_apply_token_truncation()`
 - Utilities: `compute_mdhash_id()`, `sanitize_text_for_encoding()`, `truncate_list_by_token_size()`
 - Async operations: prefix with `async` in function name or comment
 
 ## Where to Add New Code
 
+### Databasise Machine (Phase 1)
+
+**New Reference Part (for testing):**
+
+1. Implementation: `databasise/parts_core/{part_name}.py` — async def body(ctx: NodeContext) -> dict
+2. Tests: `databasise/tests/parts/test_{part_name}.py`
+3. Registration: Add to `databasise/parts/registry.py:REFERENCE_PARTS` dict
+
+**New Store Adapter (for later phases):**
+
+1. Implementation: `databasise/stores/{store_type}.py` — subclass `StoreLifecycle`
+2. Tests: `databasise/tests/stores/test_{store_type}.py`
+3. Exposure: Add to `databasise/stores/__init__.py:StoreRegistry`
+
+**New Validator Module (for enhancement):**
+
+1. Implementation: `databasise/validator/{check_name}.py` — define validation function
+2. Tests: `databasise/tests/validator/test_{check_name}.py`
+3. Integration: Call from `databasise/validator/parse.py:parse_wiring()` during validation flow
+
+### LightRAG v1
+
 **New LLM Provider:**
+
 1. Implementation: `v1/lightrag/llm/{provider_name}.py` — subclass `BaseEmbeddingFunc` and/or `BaseLLM`
 2. Tests: `v1/tests/llm/{provider_name}_impl/test_*.py`
 3. Export: Add to `v1/lightrag/llm/__init__.py`
 4. Example: `v1/examples/lightrag_{provider_name}_demo.py`
 
 **New Graph Storage Backend:**
+
 1. Implementation: `v1/lightrag/kg/{backend_name}_impl.py` — subclass `BaseGraphStorage`
 2. Tests: `v1/tests/kg/{backend_name}_impl/test_*.py`
 3. Registration: Add case in `v1/lightrag/kg/factory.py` dispatch logic
@@ -363,24 +565,28 @@ README.md                       # Repo overview, build ladder, components
 5. Example: `v1/examples/lightrag_openai_{backend_name}_demo.py`
 
 **New Chunker:**
+
 1. Implementation: `v1/lightrag/chunker/{strategy_name}.py` — subclass or define `async def chunk()` function
 2. Export: Add to `v1/lightrag/chunker/__init__.py`
 3. Tests: `v1/tests/chunker/test_{strategy_name}.py`
 4. Configuration: Add to `DEFAULT_CHUNKER` logic in `lightrag.py`
 
 **New Query Mode:**
+
 1. Function: `v1/lightrag/operate.py` — new `async def {mode}_query()` following 4-stage pattern
 2. Dispatch: Add case in `LightRAG.query()` method
 3. Tests: `v1/tests/pipeline/test_query_{mode}.py`
 4. Documentation: Update `v1/docs/LightRAG-API-Server.md`
 
 **Utility Helper:**
+
 1. If domain-agnostic: `v1/lightrag/utils.py`
 2. If query-specific: `v1/lightrag/utils_graph.py`
 3. If pipeline-specific: `v1/lightrag/utils_pipeline.py`
 4. Test: co-located `test_utils*.py`
 
 **Prompt/Template:**
+
 1. Add to `v1/lightrag/prompt.py` or `v1/lightrag/prompt_multimodal.py`
 2. Register in `PROMPTS` dict with unique key
 3. Reference from `operate.py` via key lookup (avoid string concatenation)
@@ -388,26 +594,52 @@ README.md                       # Repo overview, build ladder, components
 
 ## Special Directories
 
+### Databasise Machine
+
+**databasise/.env (not in repo):**
+
+- Purpose: Development environment (future phases; Phase 1 uses no env config)
+- Generated: No (template not present in Phase 1)
+- Committed: No
+
+**databasise/tests/fixtures/:**
+
+- Purpose: Test data (wiring examples, schema samples)
+- Generated: No (hand-written)
+- Committed: Yes
+
+**databasise/.codebase-memory/ (optional):**
+
+- Purpose: Compressed codebase-memory graph artifact (if persistence enabled)
+- Generated: Yes (by codebase-memory-mcp)
+- Committed: Optional (for team knowledge sharing)
+
+### LightRAG v1
+
 **v1/lightrag/api/static/:**
+
 - Purpose: SwaggerUI dist (excluded from repo, built at deploy time)
 - Generated: By `npm install && npm build` in vite.config.ts
 - Committed: No (added to `.gitignore`; served at runtime from `lightrag/api/static/`)
 
 **v1/tests/conftest.py:**
+
 - Purpose: Shared pytest fixtures (storage instances, mocked LLMs, test data)
 - Generated: No (hand-written, versioned)
 - Scope: Conftest fixtures available to all test files; fixtures in specific test subdir conftest override
 
 **v1/.codebase-memory/:**
+
 - Purpose: Compressed codebase-memory graph artifact (if persistence enabled)
 - Generated: Yes (by codebase-memory-mcp)
 - Committed: Optional (for team knowledge sharing, not required)
 
 **v1/lightrag/tools/lightrag_visualizer/:**
+
 - Purpose: Interactive graph visualization UI
 - Generated: No (hand-written, includes HTML + CSS + JS)
 - Deployed: Standalone or embedded in webui
 
 ---
 
-*Structure analysis: 2026-08-29*
+*Structure analysis: 2026-08-31*
