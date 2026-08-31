@@ -1,0 +1,48 @@
+{
+  "wiring_id": "w1-lightrag-query-side",
+  "title": "Decomposed lightrag-local query side",
+  "nodes": {
+    "retrieve": {
+      "component": "parts-core/fake-retriever@1.0.0",
+      "kind": "retriever",
+      "effects": ["reads_vector"],
+      "deps": []
+    },
+    "refine": {
+      "component": "parts-core/fixpoint-body@1.0.0",
+      "kind": "fixpoint",
+      "effects": [],
+      "deps": ["retrieve"]
+    },
+    "query-side": {
+      "component": "lightrag/query-side@0.1.0",
+      "kind": "subgraph",
+      "effects": ["reads_kv", "reads_vector", "reads_graph", "calls_llm", "calls_embedding"],
+      "deps": ["retrieve", "refine"]
+    },
+    "generate": {
+      "component": "parts-core/fake-llm-caller@1.0.0",
+      "kind": "llm-caller",
+      "effects": ["calls_llm", "writes_kv"],
+      "deps": ["query-side"]
+    },
+    "assemble": {
+      "component": "parts-core/passthrough@1.0.0",
+      "kind": "passthrough",
+      "effects": [],
+      "deps": ["generate"]
+    }
+  },
+  "boundary_knobs": [
+    {
+      "boundary_id": "w1-knob-retriever",
+      "between": "retrieve -> refine",
+      "rationale": "the retriever is a genuine substitution point: a different retrieval implementation (dense/sparse/hybrid) can replace parts-core/fake-retriever@1.0.0 without changing any other node's socket"
+    },
+    {
+      "boundary_id": "w1-knob-llm-caller",
+      "between": "query-side -> generate",
+      "rationale": "the LLM caller is a genuine substitution point: a different model/provider can replace parts-core/fake-llm-caller@1.0.0 without changing any other node's socket"
+    }
+  ]
+}

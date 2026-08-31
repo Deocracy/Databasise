@@ -1,0 +1,31 @@
+{
+  "wiring_id": "w3-lightrag-half-decomposed",
+  "title": "Half-decomposed full LightRAG",
+  "nodes": {
+    "ingest": {
+      "component": "lightrag/full-ingest@0.1.0",
+      "kind": "opaque",
+      "effects": ["calls_llm", "writes_artifact", "reads_kv", "reads_graph"],
+      "deps": []
+    },
+    "query-side": {
+      "component": "lightrag/query-side@0.1.0",
+      "kind": "subgraph",
+      "effects": ["reads_kv", "reads_vector", "reads_graph", "calls_llm", "calls_embedding"],
+      "deps": ["ingest"]
+    },
+    "assemble": {
+      "component": "parts-core/passthrough@1.0.0",
+      "kind": "passthrough",
+      "effects": [],
+      "deps": ["query-side"]
+    }
+  },
+  "boundary_knobs": [
+    {
+      "boundary_id": "w3-knob-ingest-query-boundary",
+      "between": "ingest -> query-side",
+      "rationale": "the opaque ingest core's boundary against the decomposed query side: ingest can be replaced by a different ingest implementation, or bypassed by a pre-populated store, without changing query-side's own socket"
+    }
+  ]
+}
