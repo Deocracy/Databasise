@@ -135,11 +135,12 @@ class WiringRefusedError(ValueError):
 
 
 class InvalidMaxConcurrencyError(ValueError):
-    """A node declared ``config.max_concurrency`` below 1. Refused at validation, before any
-    node is dispatched, naming the offending node id (D-09).
+    """A node declared ``config.max_concurrency`` below 1, OR (WR-04) a value ``int()`` cannot
+    coerce at all (a string, a list, a dict, ...). Refused at validation, before any node is
+    dispatched, naming the offending node id (D-09).
     """
 
-    def __init__(self, node_id: str, value: int):
+    def __init__(self, node_id: str, value: Any):
         self.node_id = node_id
         self.value = value
         super().__init__(
@@ -220,11 +221,19 @@ def _resolve_identities(parsed: ParsedWiring) -> dict[str, dict[str, str]]:
 
 def _validated_max_concurrency(node_id: str, config: dict[str, Any] | None) -> int:
     """Extract and validate ``config.max_concurrency`` (D-09), defaulting to 1 when absent.
-    Raises :class:`InvalidMaxConcurrencyError`, naming ``node_id``, for a declared value below 1.
+    Raises :class:`InvalidMaxConcurrencyError`, naming ``node_id``, for a declared value below 1
+    OR (WR-04) for a declared value ``int()`` cannot coerce at all (a string, a list, a dict, ...)
+    — this module's own documented "refused at validation, before any node is dispatched, naming
+    the offending node id" contract must hold for that class of malformed input too, not just an
+    in-range-but-negative one.
     """
     max_concurrency = 1
     if config:
-        max_concurrency = int(config.get("max_concurrency", 1))
+        raw = config.get("max_concurrency", 1)
+        try:
+            max_concurrency = int(raw)
+        except (TypeError, ValueError):
+            raise InvalidMaxConcurrencyError(node_id, raw) from None
     if max_concurrency < 1:
         raise InvalidMaxConcurrencyError(node_id, max_concurrency)
     return max_concurrency
