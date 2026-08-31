@@ -1,14 +1,20 @@
 """The blast-radius rule (CONTRACT §3): a node MAY write a shared artifact namespace only at
-effective depth ``stage``. Covers plan 01-03 Task 2's blast-radius <behavior> (Tests 1-7).
+effective depth ``stage``. Covers plan 01-03 Task 2's blast-radius <behavior> (Tests 1-7), plus
+01-10-PLAN.md Task 3's regression (the third ``missing:`` bullet in ``01-VERIFICATION.md``'s Gap
+1 finding): unlike Tests 1-7 above, which construct a ``ParsedWiring`` directly, the new test
+below goes through ``parse_wiring`` end to end, so it exercises the real component-resolution
+path a hostile wiring would actually have to go through.
 """
 
 from __future__ import annotations
 
 from types import MappingProxyType
 
-from databasise.parts.schema import Part, WiringNode
+from databasise.parts.registry import PartRegistry
+from databasise.parts.schema import NodeContext, Part, WiringNode
 from databasise.validator.blast_radius import blast_radius_violations
-from databasise.validator.parse import ParsedWiring
+from databasise.validator.errors import CODE_BLAST_RADIUS_REFUSAL
+from databasise.validator.parse import ParsedWiring, parse_wiring
 
 
 def _single_node_parsed(effects: list[str], scope: str | None) -> ParsedWiring:
@@ -98,3 +104,76 @@ def test_unstated_artifact_scope_defaults_to_shared_in_both_directions():
 
     permitted = blast_radius_violations(parsed, {"n": "stage"})
     assert permitted == []
+
+
+async def _shared_writer_body(ctx: NodeContext) -> dict:
+    return {}
+
+
+def _opaque_shared_writer_part(structural_depth: str) -> Part:
+    return Part(
+        name_at_version="test/opaque-shared-writer@1.0.0",
+        kind="stage",
+        structural_depth=structural_depth,
+        effects=["writes_artifact"],
+        upstream_ref=None,
+        artifact_scope="shared",
+        body=_shared_writer_body,
+    )
+
+
+def test_under_declaring_wiring_cannot_route_a_shared_artifact_write_around_the_rule():
+    """01-VERIFICATION.md's third Gap-1 ``missing:`` bullet: a Part declaring
+    ``writes_artifact``/scope ``shared``/depth ``opaque``, wired with its ``effects`` key omitted
+    entirely (legal under ``parse_wiring``'s subset rule — ``WiringNode.effects`` defaults to an
+    empty list), must still trip the blast-radius refusal through the real ``parse_wiring`` path.
+    Against a tree where ``blast_radius_violations`` gated on the wiring node's own declared
+    effects instead of the registry's resolved ``Part.effects`` (CR-01), this wiring would clear
+    validation with zero violations — that is the fail-without-the-fix condition this test proves
+    against by construction (the real ``blast_radius.py`` gates on ``parsed.parts.items()``, never
+    ``parsed.nodes[...].effects``; see ``tests/test_trusted_source_invariant.py`` for the
+    structural pin on that sourcing).
+    """
+    registry = PartRegistry(seed_tracer_parts=False)
+    registry.register(_opaque_shared_writer_part("opaque"))
+    doc = {
+        "nodes": {
+            "writer": {
+                "component": "test/opaque-shared-writer@1.0.0",
+                "kind": "stage",
+                # "effects" deliberately omitted — WiringNode.effects defaults to [], a strict
+                # under-declaration relative to the Part's own real ["writes_artifact"].
+                "deps": [],
+            }
+        }
+    }
+
+    parsed = parse_wiring(doc, registry)
+
+    assert parsed.report.ok is False
+    blast_radius_refusals = [v for v in parsed.report.violations if v.code == CODE_BLAST_RADIUS_REFUSAL]
+    assert len(blast_radius_refusals) == 1
+    assert "writer" in blast_radius_refusals[0].message
+    assert "opaque" in blast_radius_refusals[0].message
+
+
+def test_under_declaring_wiring_at_stage_depth_is_permitted_proving_the_rule_discriminates():
+    """The discriminating sibling case to the refusal above: the identical Part construction at
+    ``structural_depth="stage"`` (a legal shared-write depth) yields a clean report — proving the
+    rule above discriminates on depth rather than always refusing an under-declared wiring.
+    """
+    registry = PartRegistry(seed_tracer_parts=False)
+    registry.register(_opaque_shared_writer_part("stage"))
+    doc = {
+        "nodes": {
+            "writer": {
+                "component": "test/opaque-shared-writer@1.0.0",
+                "kind": "stage",
+                "deps": [],
+            }
+        }
+    }
+
+    parsed = parse_wiring(doc, registry)
+
+    assert parsed.report.ok is True
