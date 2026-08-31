@@ -25,6 +25,13 @@ from databasise.stores.base import StorageNameSpace
 
 
 class SqliteKVStore(StorageNameSpace):
+    # D-14/CONTRACT §7: the module docstring above has always claimed this provenance in prose
+    # ("Reproduces v1's BaseKVStorage method signatures by copy") but never encoded it as the
+    # machine-readable class attribute databasise/tools/check_import_boundary.py's provenance
+    # check (01-09) reads — a record that only lived in prose was not a record this checker, or
+    # any later reader, could verify resolves.
+    upstream_ref = "v1/lightrag/base.py"
+
     def __init__(self, namespace: str, workspace: str, store_root: str | Path) -> None:
         super().__init__(namespace=namespace, workspace=workspace)
         self._dir = Path(store_root) / workspace / namespace
