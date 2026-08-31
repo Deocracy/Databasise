@@ -261,6 +261,70 @@ async def test_9_a_placement_refusal_stamps_the_derived_placement_without_suppre
     assert "long-lived-service" in net_node_trace.cross_process_failure_cause
 
 
+async def test_11_placement_is_sourced_from_the_parts_effects_not_the_wirings_underdeclared_ones():
+    """CR-01 regression. The wiring node deliberately under-declares ``effects=[]`` (looks pure
+    and hostable), while its resolved ``Part`` declares ``net`` — a real capability that must
+    derive ``long-lived-service`` (unhosted in Phase 1, D-08) regardless of what the wiring
+    claims. A wiring document is untrusted, author-supplied input (see
+    ``databasise/validator/cycles.py``'s own "a hostile or merely large wiring could declare..."
+    framing); before the fix, ``derive_execution_mode`` read ``WiringNode.effects``/``.kind`` and
+    would have derived ``in-process`` here instead, silently bypassing D-08's containment rule.
+    This test bypasses ``parse_wiring`` (as every test in this module does — see module
+    docstring) so it can construct the adversarial node/part pair directly; the equivalent
+    document-validation-layer refusal (``CODE_EFFECTS_EXCEED_PART``) is covered separately in
+    ``tests/validator/test_cycles_and_depth.py``.
+    """
+
+    async def body(ctx: NodeContext):
+        return {}  # never reached — placement is refused before dispatch
+
+    part = Part(
+        name_at_version="test/underdeclared-net@1.0.0",
+        kind="stage",
+        structural_depth="stage",
+        effects=["net"],  # the Part's real, registered capability
+        upstream_ref=None,
+        body=body,
+    )
+    node = WiringNode(component="test/underdeclared-net@1.0.0", kind="stage", effects=[], deps=[])
+    parsed = _wiring({"n1": node}, {"n1": part}, {"n1": ()})
+
+    result = await _run(parsed)
+
+    assert result["partial"] is True
+    trace = next(n for n in result["nodes"] if n.node_id == "n1")
+    assert "long-lived-service" in trace.cross_process_failure_cause
+
+
+async def test_12_capability_scoped_store_view_is_sourced_from_the_parts_effects_not_the_wirings():
+    """CR-01 regression. The wiring node under-declares ``effects=[]`` while its resolved ``Part``
+    declares ``writes_kv`` — the actual capability the body needs to reach ``ctx.stores["kv"]``.
+    Before the fix, ``CapabilityScopedStores`` was built from ``WiringNode.effects`` (empty here),
+    so this exact body would have raised ``UndeclaredEffectError`` and failed the node even though
+    the Part is genuinely entitled to the store. The store view must be scoped by the Part's own
+    declaration, not the wiring's under-declared one.
+    """
+
+    async def body(ctx: NodeContext):
+        return {"kv": ctx.stores["kv"]}
+
+    part = Part(
+        name_at_version="test/underdeclared-kv@1.0.0",
+        kind="stage",
+        structural_depth="stage",
+        effects=["writes_kv"],
+        upstream_ref=None,
+        body=body,
+    )
+    node = WiringNode(component="test/underdeclared-kv@1.0.0", kind="stage", effects=[], deps=[])
+    parsed = _wiring({"n1": node}, {"n1": part}, {"n1": ()})
+
+    result = await _run(parsed, stores={"kv": "the-real-kv-store"})
+
+    assert result["partial"] is False
+    assert result["results"]["n1"]["kv"] == "the-real-kv-store"
+
+
 async def test_10_a_cyclic_wiring_returns_the_cycle_as_data_rather_than_raising():
     async def body(ctx: NodeContext):
         return {}

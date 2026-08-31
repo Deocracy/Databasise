@@ -1,6 +1,12 @@
 """Cycle-safe depth: Tarjan SCC condensation (Tests 1-6, ``strongly_connected_components`` and
 ``effective_depth`` directly), and ``parse_wiring``'s one-pass violation accumulation plus
 cycle-as-data reporting (Tests 7-9). Covers plan 01-03 Task 1's <behavior> in full.
+
+Also covers CR-01's ``parse_wiring`` consistency check: a wiring node's declared ``effects`` must
+be a subset of its resolved Part's own declared ``effects`` (``CODE_EFFECTS_EXCEED_PART``) — see
+``databasise/runner/scheduler.py``'s and ``databasise/validator/blast_radius.py``'s own CR-01
+notes for the containment/blast-radius enforcement this check is a document-validation-layer
+complement to.
 """
 
 from __future__ import annotations
@@ -11,7 +17,7 @@ from databasise.parts.registry import PartRegistry
 from databasise.parts.schema import Part, WiringNode
 from databasise.validator.cycles import strongly_connected_components
 from databasise.validator.depth import effective_depth
-from databasise.validator.errors import CODE_EMPTY_WIRING
+from databasise.validator.errors import CODE_EFFECTS_EXCEED_PART, CODE_EMPTY_WIRING
 from databasise.validator.parse import ParsedWiring, parse_wiring
 
 
@@ -155,6 +161,46 @@ def test_empty_wiring_is_one_violation_and_a_single_clean_node_yields_one_depth(
     assert single_parsed.report.ok
     depths = effective_depth(single_parsed)
     assert len(depths) == 1
+
+
+def test_wiring_node_declaring_an_effect_its_part_does_not_is_refused():
+    """CR-01: a wiring node claiming ``writes_kv`` while its resolved Part (``core/passthrough``,
+    declared ``effects=[]``) does not declare it at all is refused by name
+    (``CODE_EFFECTS_EXCEED_PART``), naming the offending node and both effect sets — a wiring's
+    own declaration must never claim more than its registered Part actually backs.
+    """
+    doc = {
+        "nodes": {
+            "over-declared": {
+                "component": "core/passthrough@1.0.0",
+                "kind": "stage",
+                "effects": ["writes_kv"],
+                "deps": [],
+            }
+        }
+    }
+    parsed = parse_wiring(doc, PartRegistry())
+    assert not parsed.report.ok
+    violations = [v for v in parsed.report.violations if v.code == CODE_EFFECTS_EXCEED_PART]
+    assert len(violations) == 1
+    assert violations[0].pointer == "/nodes/over-declared/effects"
+    assert "over-declared" in violations[0].message
+    assert "writes_kv" in violations[0].message
+
+
+def test_wiring_node_declaring_a_narrower_effects_set_than_its_part_is_permitted():
+    """CR-01: a wiring MAY declare fewer effects than its Part is capable of (to prove it
+    exercises only a subset of what the Part can do) — only a BROADER declaration is refused.
+    ``core/kv-writer@1.0.0`` declares ``effects=["writes_kv"]``; a wiring node for it declaring no
+    effects at all validates clean.
+    """
+    doc = {
+        "nodes": {
+            "under-declared": {"component": "core/kv-writer@1.0.0", "kind": "stage", "deps": []}
+        }
+    }
+    parsed = parse_wiring(doc, PartRegistry())
+    assert parsed.report.ok
 
 
 def test_unintended_cycle_is_reported_as_data_not_raised():

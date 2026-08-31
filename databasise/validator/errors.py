@@ -20,6 +20,7 @@ CODE_UNKNOWN_EFFECT = "unknown-effect"
 CODE_INVALID_NODE_SCHEMA = "invalid-node-schema"
 CODE_EMPTY_WIRING = "empty-wiring"
 CODE_BLAST_RADIUS_REFUSAL = "blast-radius-refusal"
+CODE_EFFECTS_EXCEED_PART = "effects-exceed-part"
 
 
 @dataclass(frozen=True)

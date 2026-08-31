@@ -239,20 +239,39 @@ def test_transient_effects_added_to_case_6_change_nothing():
     """D-03 repair 2: adding each of writes_kv/writes_vector/writes_graph/writes_lexical to case
     6's opaque node leaves the violation set at {"ingest"} — no additional violation appears for
     the transient writes themselves, because they sit outside the blast-radius rule by design.
+
+    CR-01: the added transient effect must be declared on BOTH the wiring node and its resolved
+    Part — ``parse_wiring`` now refuses (``CODE_EFFECTS_EXCEED_PART``) a wiring node whose
+    declared effects are not a subset of its Part's registered effects, so a per-iteration Part
+    fixture (rather than the shared, unmutated module-level ``lightrag-ingest@1.5.4`` registry
+    entry) is built here with the same transient effect added.
     """
     base_effects = list(FIXTURE_COMPONENTS["lightrag-ingest@1.5.4"]["effects"])  # type: ignore[arg-type]
     for transient_effect in ("writes_kv", "writes_vector", "writes_graph", "writes_lexical"):
+        effects = [*base_effects, transient_effect]
+        part = Part(
+            name_at_version="lightrag-ingest@1.5.4",
+            kind="opaque",
+            structural_depth="opaque",
+            effects=effects,
+            upstream_ref=SPIKE_SOURCE_PATH,
+        )
         doc = {
             "nodes": {
                 "ingest": {
                     "component": "lightrag-ingest@1.5.4",
                     "kind": "primitive",
-                    "effects": [*base_effects, transient_effect],
+                    "effects": effects,
                     "deps": [],
                 }
             }
         }
-        got = _blast_radius_node_ids(doc)
+        parsed = parse_wiring(doc, _FixtureRegistry({"lightrag-ingest@1.5.4": part}))
+        got = frozenset(
+            v.pointer.split("/")[2]
+            for v in parsed.report.violations
+            if v.code == CODE_BLAST_RADIUS_REFUSAL
+        )
         assert got == frozenset({"ingest"}), transient_effect
 
 

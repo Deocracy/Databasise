@@ -10,7 +10,14 @@ The checks: every ``component`` resolves in the registry, every entry in ``deps`
 present in ``nodes``, every declared effect is a member of the seventeen (already enforced by
 pydantic's ``Literal``-typed ``Effect`` field on ``WiringNode`` itself, so an invalid effect
 surfaces as a per-node ``ValidationError`` this function turns into an accumulated violation
-rather than a second, separately hand-rolled check), and an empty ``nodes`` object.
+rather than a second, separately hand-rolled check), an empty ``nodes`` object, and (CR-01) that a
+node whose ``component`` resolved never declares an ``effects`` member its resolved ``Part``
+itself does not declare (``CODE_EFFECTS_EXCEED_PART``) — a wiring MAY under-declare relative to
+its Part, never over-declare. This is a consistency/hygiene check, not the containment
+enforcement itself: the runner (``runner/scheduler.py``) and the blast-radius rule
+(``validator/blast_radius.py``) both source ``execution_mode``/store-scoping/the blast-radius
+predicate from the resolved ``Part``'s own effects directly, never from the wiring's, so neither
+is affected by what a wiring declares here regardless of this check.
 
 Cycle detection (``validator.cycles.strongly_connected_components``) always runs, independent of
 whether any other violation was found: a cycle is reported as data under ``report.cycles``, never
@@ -43,6 +50,7 @@ from databasise.validator.cycles import strongly_connected_components
 from databasise.validator.depth import effective_depth
 from databasise.validator.errors import (
     CODE_DANGLING_DEP,
+    CODE_EFFECTS_EXCEED_PART,
     CODE_EMPTY_WIRING,
     CODE_INVALID_NODE_SCHEMA,
     CODE_UNKNOWN_COMPONENT,
@@ -123,7 +131,7 @@ def parse_wiring(doc: dict[str, Any], registry: PartRegistry) -> ParsedWiring:
     parts: dict[str, Part] = {}
     for node_id, node in nodes.items():
         try:
-            parts[node_id] = registry.get(node.component)
+            part = registry.get(node.component)
         except UnknownPartError as exc:
             violations.append(
                 Violation(
@@ -132,6 +140,29 @@ def parse_wiring(doc: dict[str, Any], registry: PartRegistry) -> ParsedWiring:
                     message=str(exc),
                 )
             )
+        else:
+            parts[node_id] = part
+            # CR-01: the runner sources execution_mode/store-scoping/blast-radius from this
+            # resolved Part's own effects, never the wiring's self-declared WiringNode.effects
+            # (see runner/scheduler.py and validator/blast_radius.py). A wiring MAY declare a
+            # narrower effects set than the Part is capable of (to prove it exercises only a
+            # subset of what the Part can do), but never a broader one — a broader declaration
+            # would be a claim the registry does not back, and is refused here rather than
+            # silently accepted.
+            extra_effects = set(node.effects) - set(part.effects)
+            if extra_effects:
+                violations.append(
+                    Violation(
+                        code=CODE_EFFECTS_EXCEED_PART,
+                        pointer=f"/nodes/{node_id}/effects",
+                        message=(
+                            f"node {node_id!r} declares effects {sorted(extra_effects)} not "
+                            f"declared by its resolved part {part.name_at_version!r} "
+                            f"(part effects: {sorted(part.effects)}); a wiring node's effects "
+                            "must be a subset of its part's registered effects"
+                        ),
+                    )
+                )
         for dep_index, dep in enumerate(node.deps):
             if dep not in raw_nodes:
                 violations.append(

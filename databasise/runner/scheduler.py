@@ -32,11 +32,12 @@ the runner already sized for it, though nothing requires a body to use it.
    which raises ``DeclarationOnlyPartError`` naming the part rather than the previous silent
    ``inputs`` passthrough for a ``body is None`` Part.
 2. Every node's ``ctx.stores`` is now a capability-scoped view built from
-   ``databasise.parts_core.CapabilityScopedStores`` (deny-by-default, keyed by the node's own
-   declared ``effects``), wrapped by this module's ``_ScopedStoresView`` so existing bodies
-   written against plain ``dict``-style subscript access (``ctx.stores["kv"]``) keep working
-   while gaining the underlying deny-by-default enforcement — see ``_ScopedStoresView``'s own
-   docstring for the exact mapping rule.
+   ``databasise.parts_core.CapabilityScopedStores`` (deny-by-default, keyed by the **registry's
+   own** declared ``effects`` — ``parsed.parts[node_id].effects``, never the wiring's
+   self-declared ``WiringNode.effects``; see CR-01 below), wrapped by this module's
+   ``_ScopedStoresView`` so existing bodies written against plain ``dict``-style subscript access
+   (``ctx.stores["kv"]``) keep working while gaining the underlying deny-by-default enforcement —
+   see ``_ScopedStoresView``'s own docstring for the exact mapping rule.
 
 **Placement (D-08).** ``execution_mode`` is now derived via
 ``databasise.validator.execution_mode.derive_execution_mode`` (plan 01-03's hardened version,
@@ -45,6 +46,21 @@ in ``databasise.validator.depth`` — the two modules independently define a fun
 this module intentionally uses the 01-03 one because it is the one that ships a real hosting
 refusal. ``validator.depth.derive_execution_mode`` is left untouched (out of this plan's lane;
 ``tests/parts/test_reference_parts.py`` still imports it and is unaffected by this switch).
+
+**CR-01 fix (containment/blast-radius must trust the registry, not the wiring).** A wiring
+document is untrusted, author-supplied input (``validator/cycles.py``'s own "a hostile or merely
+large wiring could declare..." framing). ``derive_execution_mode`` and the capability-scoped
+store view below both read ``parsed.parts[node_id].effects``/``.kind`` — the resolved ``Part``'s
+own registered declaration — never ``parsed.nodes[node_id].effects``/``.kind`` (the wiring's own,
+self-declared, unverified fields). Reading the wiring's fields here would let an under-declaring
+wiring silently route a node into ``in-process`` hosting, or grant it a store view scoped to
+fewer effects than the wiring's node claims, and would let ``blast_radius_violations`` (see
+``validator/blast_radius.py``) skip a node entirely by omitting ``writes_artifact`` on the node
+while the registered Part still performs it — exactly the containment/blast-radius bypass
+Falsifier 2 (this phase's gate) is meant to rule out. ``validator/parse.py``'s ``parse_wiring``
+additionally refuses (``CODE_EFFECTS_EXCEED_PART``) any wiring node whose declared ``effects`` is
+not a subset of its resolved Part's declared ``effects`` — a wiring MAY declare a narrower set
+than the Part is capable of, but never a broader one.
 
 **Cycles are data, not an exception (Test 10, closing a real bug).** The tracer-era code wrapped
 only ``effective_depth()`` in a ``try/except graphlib.CycleError`` — but ``validator.depth``'s
@@ -224,7 +240,7 @@ async def _run_node(
     node = parsed.nodes[node_id]
     part = parsed.parts[node_id]
 
-    execution_mode = derive_execution_mode(node.effects, node.kind)
+    execution_mode = derive_execution_mode(part.effects, part.kind)
     try:
         host(execution_mode)  # succeeds for in-process; raises by name for the other three (D-08)
     except UnimplementedPlacementError as exc:
@@ -237,7 +253,7 @@ async def _run_node(
     semaphore = asyncio.Semaphore(max_concurrency)
 
     inputs = {dep: results[dep] for dep in parsed.deps.get(node_id, ())}
-    scoped_stores = _ScopedStoresView(CapabilityScopedStores(stores, node.effects), node.effects)
+    scoped_stores = _ScopedStoresView(CapabilityScopedStores(stores, part.effects), part.effects)
     ctx = NodeContext(node_id=node_id, config=node.config, inputs=inputs, stores=scoped_stores)
     ctx._semaphore = semaphore  # type: ignore[attr-defined]  # scheduler-owned extension, see module docstring
 
