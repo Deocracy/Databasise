@@ -126,3 +126,12 @@ None - no external service configuration required.
 ---
 *Phase: 02-falsifier-gate*
 *Completed: 2026-08-31*
+
+## Self-Check: PASSED
+
+- FOUND: .planning/phases/02-falsifier-gate/02-MACH-09-POSTURE.md
+- FOUND: databasise/tests/runner/test_measurement_posture.py
+- FOUND: .planning/phases/02-falsifier-gate/02-02-SUMMARY.md
+- FOUND commit: 4db12bc (Task 1)
+- FOUND commit: 3a71e8f (Task 2)
+- FOUND commit: bb842f3 (SUMMARY metadata)
