@@ -84,6 +84,21 @@ starts at all (an empty ``nodes`` object or any other accumulated parse violatio
 ``max_concurrency`` below 1) are the one case that DOES raise, before any node is dispatched,
 because there is no partial progress to preserve at that point — "the run does not start" is
 exactly that: nothing ran, so there is nothing to trace as a partial result.
+
+**Metering is wired into the live dispatch path (Gap 2 / MACH-05, 01-10-PLAN.md).** The successful
+dispatch path now meters through ``runner/budget.py``'s ``meter()`` at each node's own declared
+boundary, reading the registry's own resolved ``Part.effects`` (``parsed.parts[node_id].effects``)
+— never the wiring's self-declared ``WiringNode.effects`` — for the same CR-01 reason this module
+already sources ``execution_mode`` and the capability-scoped store view: an under-declaring wiring
+must not be able to meter a real LLM/rerank/embedding spend as zero. A node's own ``TokenAccounting``
+and ``cache_hit`` are read from its body's own return value (``_body_report``), never assumed.
+Declared data guards (``config.guards``) are validated pre-flight via ``runner/guards.py``'s
+``declare_guard`` and evaluated post-dispatch via ``evaluate_guards``, stamping ``NodeTrace
+.guards_fired`` in declaration order. A node whose realised spend exceeds its ``config
+.token_allowance`` (DEC-A/DEC-B: an ordinary field on the node's own wiring ``config``, defaulting
+to ``DEFAULT_TOKEN_ALLOWANCE=0`` when absent — a branch cannot spend what it was not handed,
+CONTRACT §9) is stamped ``budget_state="halted"`` and the run is returned as a traced
+``stop_reason="budget_halt"`` partial run — never a clean record, never a raised exception.
 """
 
 from __future__ import annotations
@@ -91,6 +106,7 @@ from __future__ import annotations
 import asyncio
 import graphlib
 import time
+from collections.abc import Mapping
 from typing import Any
 
 from databasise.identity.canon import config_hash
@@ -99,6 +115,8 @@ from databasise.identity.instance import instance_hash
 from databasise.parts.registry import PartRegistry, dispatch
 from databasise.parts.schema import NodeContext
 from databasise.parts_core import CapabilityScopedStores, UndeclaredEffectError
+from databasise.runner.budget import meter, realised_share
+from databasise.runner.guards import GuardDeclaration, declare_guard, evaluate_guards
 from databasise.runner.trace import NodeTrace, TokenAccounting
 from databasise.validator.depth import effective_depth
 from databasise.validator.execution_mode import (
@@ -107,6 +125,11 @@ from databasise.validator.execution_mode import (
     host,
 )
 from databasise.validator.parse import ParsedWiring
+
+# DEC-B: an absent config.token_allowance means an allowance of 0, not an unbounded one — CONTRACT
+# §9's "a branch cannot spend what it was not handed" (see this module's docstring's "Metering is
+# wired into the live dispatch path" paragraph).
+DEFAULT_TOKEN_ALLOWANCE = 0
 
 # Transient store-write members plus writes_artifact/mutates_store: per D-13's rule, a node
 # carrying one of these has mutated a store on the completed portion of the run, so it can never
@@ -145,6 +168,22 @@ class InvalidMaxConcurrencyError(ValueError):
         self.value = value
         super().__init__(
             f"node {node_id!r} declares config.max_concurrency={value!r}; must be >= 1"
+        )
+
+
+class InvalidTokenAllowanceError(ValueError):
+    """A node declared ``config.token_allowance`` that ``int()`` cannot coerce at all (a string,
+    a list, a dict, ...) — mirrors ``InvalidMaxConcurrencyError``'s constructor and message shape
+    (the WR-04 lesson: a bare ``ValueError`` leaking out of ``int(...)`` is not this module's own
+    named, actionable refusal). Refused at validation, before any node is dispatched, naming the
+    offending node id.
+    """
+
+    def __init__(self, node_id: str, value: Any):
+        self.node_id = node_id
+        self.value = value
+        super().__init__(
+            f"node {node_id!r} declares config.token_allowance={value!r}; must be coercible to int"
         )
 
 
@@ -239,6 +278,54 @@ def _validated_max_concurrency(node_id: str, config: dict[str, Any] | None) -> i
     return max_concurrency
 
 
+def _validated_token_allowance(node_id: str, config: dict[str, Any] | None) -> int:
+    """Extract and validate ``config.token_allowance`` (DEC-A), defaulting to
+    ``DEFAULT_TOKEN_ALLOWANCE`` (DEC-B) when absent. Raises :class:`InvalidTokenAllowanceError`,
+    naming ``node_id``, for a declared value ``int()`` cannot coerce at all — refused at
+    validation, before any node is dispatched, mirroring ``_validated_max_concurrency``'s own
+    WR-04-lesson shape for this sibling field.
+    """
+    raw = DEFAULT_TOKEN_ALLOWANCE
+    if config:
+        raw = config.get("token_allowance", DEFAULT_TOKEN_ALLOWANCE)
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        raise InvalidTokenAllowanceError(node_id, raw) from None
+
+
+def _validated_guards(node_id: str, config: dict[str, Any] | None) -> list[GuardDeclaration]:
+    """``config.guards`` (absent or falsy -> ``[]``) for ``node_id``, each entry constructed via
+    ``declare_guard(**entry)``, letting :class:`~databasise.runner.guards.GuardDeclarationError`
+    propagate — a malformed guard declaration (an inadmissible ``granularity``) refuses the run
+    before any node is dispatched, the same pre-flight contract this module already gives
+    ``max_concurrency`` and ``token_allowance`` (``node_id`` names the offending node in that
+    propagated error via ``GuardDeclarationError``'s own ``guard_name``/``granularity`` fields).
+    """
+    raw_guards = (config or {}).get("guards") or []
+    return [declare_guard(**entry) for entry in raw_guards]
+
+
+def _body_report(output: Any) -> tuple[TokenAccounting, bool]:
+    """The body's own self-reported ``TokenAccounting`` and cache-hit flag, read from its return
+    value rather than assumed. When ``output`` is a ``Mapping`` and ``output.get("tokens")`` is
+    genuinely a ``TokenAccounting`` instance, that object is returned as-is (the body owns it — no
+    deep copy); otherwise a fresh, all-zero ``TokenAccounting()`` is returned. ``cache_hit`` is
+    ``bool(output.get("cache_hit"))`` when ``output`` is a ``Mapping``, else ``False``. Guarded
+    with ``isinstance`` on both checks — a body returning a list, a string, or ``None`` must not
+    raise here.
+    """
+    if isinstance(output, Mapping):
+        tokens = output.get("tokens")
+        if not isinstance(tokens, TokenAccounting):
+            tokens = TokenAccounting()
+        cache_hit = bool(output.get("cache_hit"))
+    else:
+        tokens = TokenAccounting()
+        cache_hit = False
+    return tokens, cache_hit
+
+
 async def _run_node(
     node_id: str,
     parsed: ParsedWiring,
@@ -322,11 +409,19 @@ async def run_wiring(
     if parsed.report.cycles:
         return {"cycle": [sorted(c) for c in parsed.report.cycles]}
 
-    # Pre-flight: every node's max_concurrency is validated before any node is dispatched, so a
-    # defect discovered on, say, the fifth node of ten does not leave the first four already run.
+    # Pre-flight: every node's max_concurrency/token_allowance/guards is validated before any node
+    # is dispatched, so a defect discovered on, say, the fifth node of ten does not leave the
+    # first four already run.
     max_concurrencies = {
         node_id: _validated_max_concurrency(node_id, node.config)
         for node_id, node in parsed.nodes.items()
+    }
+    token_allowances = {
+        node_id: _validated_token_allowance(node_id, node.config)
+        for node_id, node in parsed.nodes.items()
+    }
+    guards_by_node: dict[str, list[GuardDeclaration]] = {
+        node_id: _validated_guards(node_id, node.config) for node_id, node in parsed.nodes.items()
     }
 
     depths = effective_depth(parsed)
@@ -339,6 +434,7 @@ async def run_wiring(
     node_traces: list[NodeTrace] = []
     partial = False
     stop_reason: str | None = None
+    budget_halted = False
 
     while ts.is_active():
         ready = sorted(ts.get_ready())
@@ -399,30 +495,40 @@ async def run_wiring(
             # CR-01: keyed on the registry's own Part.effects, not the wiring's self-declared
             # WiringNode.effects. The capability-scoped store view above grants access from
             # part.effects, so a wiring that under-declares (parse_wiring permits a narrower
-            # subset) would otherwise let a node mutate a store and still be stamped resumable.
+            # subset) would otherwise let a node mutate a store and still be stamped resumable —
+            # and (Gap 2 fix) would otherwise let it meter a real LLM/rerank/embedding spend as
+            # zero, which is the same bypass class CR-01 already closed for placement and store
+            # scoping. meter() is therefore handed part.effects, never node.effects.
             part = parsed.parts[node_id]
             resumable = not (set(part.effects) & _STORE_MUTATING_EFFECTS)
+            tokens, cache_hit = _body_report(output)
+            token = meter(node_id, part.effects, token_allowances[node_id], tokens)
+            guards_fired = evaluate_guards(guards_by_node[node_id], results)
+            if token.state == "halted":
+                budget_halted = True
+                partial = True
+                stop_reason = stop_reason or "budget_halt"  # RIG §LC.1's own vocabulary value
             node_traces.append(
                 NodeTrace(
                     **_pending_node_trace(node_id, parsed, identities, depths),
                     wall_clock_ms=wall_clock_ms,
-                    cache_hit=False,  # real value: Phase 1 has no cache to hit yet
-                    guards_fired=[],  # real value: no data guards declared/fired in this tracer
-                    budget_state="within_budget",  # real value: no budget halt occurred
-                    realised_budget_share=1.0,  # real value: no budget cap wired into the live
-                    # runner path yet (runner/budget.py, this same plan, standalone module —
-                    # see 01-08-SUMMARY.md "Known Gaps") — every node ran to completion
+                    cache_hit=cache_hit,
+                    guards_fired=guards_fired,
+                    budget_state=token.state,
+                    realised_budget_share=realised_share(token.spent, token.allowance),
                     cross_process_failure_cause=None,  # in-process only, no crossing failed
                     resumable=resumable,
-                    tokens=TokenAccounting(),  # real zeros: no LLM/embedding/rerank call metered
-                    # into the live path yet — see the same "Known Gaps" note above
+                    tokens=tokens,
                 )
             )
             ts.done(node_id)
 
-        if node_failures:
+        if node_failures or budget_halted:
             # Partial outcomes are never discarded (CONTRACT §9) — return what was traced so far
-            # rather than continuing to schedule further batches past a batch-internal failure.
+            # rather than continuing to schedule further batches past a batch-internal failure or
+            # a budget halt. The already-completed nodes in this same batch (processed above,
+            # including the halted one itself) already got their trace and ts.done(node_id); only
+            # scheduling of further batches stops here.
             break
 
     return {
