@@ -7,6 +7,7 @@ deletion consistency, durability across reopen, and the no-fallback-vector-store
 
 from __future__ import annotations
 
+import asyncio
 import subprocess
 import sys
 import textwrap
@@ -111,6 +112,30 @@ async def test_index_and_sidecar_commit_together_or_neither(store_root, monkeypa
     assert not list(store._dir.glob("*.tmp"))
     # The pending buffer is untouched by the failed flush.
     assert "b" in store._pending
+
+
+async def test_flush_dispatch_does_not_block_the_event_loop(store_root):
+    """WR-03 regression, mirroring ``tests/stores/test_graph.py``'s own
+    ``test_query_dispatch_does_not_block_the_event_loop``: ``index_done_callback`` now dispatches
+    ``np.vstack``/``faiss.add_with_ids``/``faiss.write_index`` via ``loop.run_in_executor`` (the
+    same pattern ``stores/graph.py`` already uses), so a sibling coroutine gets a chance to run
+    while the flush is in flight rather than the whole event loop stalling until it returns.
+    """
+    store = FaissVectorStore(namespace="vec", workspace="ws", store_root=store_root)
+    await store.upsert(ids=["a"], embeddings=[_vec(1.0, 0.0)])
+
+    interleaved = False
+
+    async def _ticker() -> None:
+        nonlocal interleaved
+        await asyncio.sleep(0)
+        interleaved = True
+
+    ticker_task = asyncio.create_task(_ticker())
+    await store.index_done_callback()
+    await ticker_task
+
+    assert interleaved is True
 
 
 async def test_a_half_committed_pair_is_detected_and_refused_at_next_open(store_root):

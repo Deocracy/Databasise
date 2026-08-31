@@ -19,6 +19,14 @@ FTS5 availability is verified at construction, not lazily at first query: a SQLi
 FTS5 compiled in raises ``Fts5UnavailableError`` naming FTS5 explicitly, rather than silently
 falling back to a ``LIKE`` scan — a silent fallback would make the lexical primitive quietly not
 be one.
+
+**WR-03, deliberate exception:** this adapter's SQLite calls run synchronously inline inside their
+``async def`` bodies, the same deliberate (documented, not code-changed) exception
+``stores/kv.py``'s own module docstring records and gives its full rationale for — WAL-mode writes
+here are typically fast, and dispatching through ``run_in_executor`` would first require
+reopening the connection with ``check_same_thread=False`` and re-verifying cross-thread safety
+under this project's single-writer discipline, which is real surgery deliberately deferred rather
+than applied speculatively.
 """
 
 from __future__ import annotations

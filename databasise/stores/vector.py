@@ -45,6 +45,7 @@ already use.
 from __future__ import annotations
 
 import hashlib
+import asyncio
 import json
 import os
 from dataclasses import dataclass, field
@@ -176,18 +177,37 @@ class FaissVectorStore(StorageNameSpace):
 
     async def delete_by_ids(self, ids: list[str]) -> None:
         """Remove entries immediately (not deferred): the index and sidecar are written together
-        via the same two-phase persist helper ``upsert``'s flush uses, so they stay consistent."""
+        via the same two-phase persist helper ``upsert``'s flush uses, so they stay consistent.
+        Dispatched off the event loop (WR-03): ``faiss.clone_index``/``remove_ids`` plus the
+        index+sidecar write are not obviously cheap at scale, and the runner's structured
+        concurrency (``runner/scheduler.py``) can genuinely have sibling nodes in flight in the
+        same batch — see ``stores/graph.py``'s own docstring for why this dispatch exists. The
+        actual ``self._index``/``self._entries`` reassignment happens back on the event-loop
+        thread, after the executor call returns, never inside the worker thread itself — so a
+        concurrent ``query()`` (which reads those attributes with no lock of its own) never
+        observes a mutation racing in from another OS thread.
+        """
         self._pending = {k: v for k, v in self._pending.items() if k not in ids}
         to_remove = [i for i in ids if i in self._entries]
         if not to_remove or self._index is None:
             return
 
-        staging = faiss.clone_index(self._index)
-        int_ids = np.array([self._entries[i]["int_id"] for i in to_remove], dtype="int64")
-        staging.remove_ids(int_ids)
-        staging_entries = {k: v for k, v in self._entries.items() if k not in to_remove}
+        base_index = self._index
+        base_entries = self._entries
+        next_int_id = self._next_int_id
 
-        self._persist(staging, staging_entries, self._next_int_id)
+        def _do_delete() -> tuple[Any, dict[str, dict[str, Any]]]:
+            staging = faiss.clone_index(base_index)
+            int_ids = np.array([base_entries[i]["int_id"] for i in to_remove], dtype="int64")
+            staging.remove_ids(int_ids)
+            staging_entries = {k: v for k, v in base_entries.items() if k not in to_remove}
+            self._persist(staging, staging_entries, next_int_id)
+            return staging, staging_entries
+
+        loop = asyncio.get_running_loop()
+        new_index, new_entries = await loop.run_in_executor(None, _do_delete)
+        self._index = new_index
+        self._entries = new_entries
 
     # ------------------------------------------------------------------ #
     # Reads — only committed (flushed) data is queryable                  #
@@ -221,6 +241,15 @@ class FaissVectorStore(StorageNameSpace):
     # ------------------------------------------------------------------ #
 
     async def index_done_callback(self) -> None:
+        """Flush the pending buffer into the index and sidecar, off-loop (WR-03): ``np.vstack``,
+        ``faiss.add_with_ids``, and ``faiss.write_index`` are not obviously cheap at scale, and
+        under the runner's structured concurrency (``runner/scheduler.py``'s ``asyncio.TaskGroup``
+        batch dispatch) a slow flush here would otherwise stall every sibling node in the same
+        batch — the exact concern ``stores/graph.py``'s own docstring names for its own
+        ``run_in_executor`` dispatch. ``self._index``/``self._entries``/``self._next_int_id`` are
+        reassigned only after the executor call returns, on the event-loop thread, so a concurrent
+        ``query()`` never races a worker-thread mutation of those attributes.
+        """
         if not self._pending:
             return
 
@@ -228,26 +257,39 @@ class FaissVectorStore(StorageNameSpace):
             self._dim = next(iter(self._pending.values())).vector.shape[0]
             self._index = faiss.IndexIDMap2(faiss.IndexFlatIP(self._dim))
 
-        staging = faiss.clone_index(self._index)
-        staging_entries = dict(self._entries)
-        next_int_id = self._next_int_id
+        base_index = self._index
+        base_entries = dict(self._entries)
+        base_next_int_id = self._next_int_id
+        pending = dict(self._pending)
 
-        vectors: list[np.ndarray] = []
-        int_ids: list[int] = []
-        for doc_id, pending in self._pending.items():
-            if doc_id in staging_entries:
-                staging.remove_ids(np.array([staging_entries[doc_id]["int_id"]], dtype="int64"))
-            int_id = next_int_id
-            next_int_id += 1
-            vectors.append(pending.vector)
-            int_ids.append(int_id)
-            staging_entries[doc_id] = {"int_id": int_id, "metadata": pending.metadata}
+        def _do_flush() -> tuple[Any, dict[str, dict[str, Any]], int]:
+            staging = faiss.clone_index(base_index)
+            staging_entries = dict(base_entries)
+            next_int_id = base_next_int_id
 
-        if vectors:
-            matrix = np.vstack(vectors).astype("float32")
-            staging.add_with_ids(matrix, np.array(int_ids, dtype="int64"))
+            vectors: list[np.ndarray] = []
+            int_ids: list[int] = []
+            for doc_id, doc in pending.items():
+                if doc_id in staging_entries:
+                    staging.remove_ids(np.array([staging_entries[doc_id]["int_id"]], dtype="int64"))
+                int_id = next_int_id
+                next_int_id += 1
+                vectors.append(doc.vector)
+                int_ids.append(int_id)
+                staging_entries[doc_id] = {"int_id": int_id, "metadata": doc.metadata}
 
-        self._persist(staging, staging_entries, next_int_id)
+            if vectors:
+                matrix = np.vstack(vectors).astype("float32")
+                staging.add_with_ids(matrix, np.array(int_ids, dtype="int64"))
+
+            self._persist(staging, staging_entries, next_int_id)
+            return staging, staging_entries, next_int_id
+
+        loop = asyncio.get_running_loop()
+        new_index, new_entries, new_next_int_id = await loop.run_in_executor(None, _do_flush)
+        self._index = new_index
+        self._entries = new_entries
+        self._next_int_id = new_next_int_id
         self._pending.clear()
 
     def _persist(
@@ -259,6 +301,12 @@ class FaissVectorStore(StorageNameSpace):
         still are not a single transaction (WR-02 — see module docstring), so the sidecar carries
         a SHA-256 ``index_checksum`` of the index file it is written to accompany, checked back
         against the on-disk index at the next ``__init__``.
+
+        Deliberately does not assign ``self._index``/``self._entries``/``self._next_int_id`` —
+        both callers (``index_done_callback``, ``delete_by_ids``) dispatch this method itself off
+        the event loop (WR-03), and assigning here would mutate this store's own instance state
+        from a worker thread; both callers instead assign those attributes back on the event-loop
+        thread once their ``run_in_executor`` call returns.
         """
         tmp_index = self._index_path.with_suffix(self._index_path.suffix + ".tmp")
         tmp_meta = self._meta_path.with_suffix(self._meta_path.suffix + ".tmp")
@@ -277,10 +325,6 @@ class FaissVectorStore(StorageNameSpace):
 
         os.replace(tmp_index, self._index_path)
         os.replace(tmp_meta, self._meta_path)
-
-        self._index = index
-        self._entries = entries
-        self._next_int_id = next_int_id
 
     async def drop_pending_index_ops(self) -> None:
         self._pending.clear()

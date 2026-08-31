@@ -22,6 +22,20 @@ bypass by accident" actually needs. This plan's own ``tests/registry_artifact/te
 imports the sentinel to exercise ``register()`` directly, exactly as ``write_path.py`` does;
 ``tests/registry_artifact/test_write_path_blast_radius.py`` (Task 2) proves the refusal fires
 for a caller that does not.
+
+**WR-03, deliberate exception:** ``ArtifactRegistry``'s methods (``register``/``discover``/
+``overlaps``/``delete``) are plain synchronous ``def``, called synchronously from
+``registry_artifact/write_path.py``'s own plain-sync ``write_artifact()`` — which IS, in turn,
+reachable from inside an async node body (this tracer's test fixtures call it exactly that way;
+see ``tests/test_phase_success_criteria.py``'s ``_arm_writer_body``). Unlike ``stores/kv.py``/
+``stores/lexical.py`` (own deliberate-exception notes, both genuinely ``async def``), making
+*this* module's SQLite calls off-loop would mean either (a) converting this whole public API to
+``async def`` — a breaking signature change for every existing caller, sync and async, in and out
+of this phase, not a contained fix — or (b) offloading only inside ``write_artifact()`` at its one
+current async call site. Both are real, riskier surgery than this pass's scope; Phase 1's own
+write-path call volume is small (one artifact write per node, not a bulk flush), so this is
+deliberately deferred rather than applied speculatively — revisit if a later phase's real node
+bodies write artifacts at meaningful scale under the runner's structured concurrency.
 """
 
 from __future__ import annotations
