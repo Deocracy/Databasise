@@ -2,6 +2,18 @@
 real ``TokenAccounting`` object with the five §TR.2 members recorded separately. Routes its
 result through ``cache_partition_key`` (identity/instance.py) against the run's own KV store, so
 a second identical call is a genuine cache hit the runner can stamp — not a simulated one.
+
+**Effects (01-10-PLAN.md Task 1 residual fix).** Also declares ``writes_kv``: the cache round trip
+below reads AND writes ``ctx.stores["kv"]``, which only resolves under the runner's
+``_ScopedStoresView`` (``runner/scheduler.py``, CR-01) when this Part's own declared ``effects``
+carries a member whose suffix is ``kv`` (``reads_kv``/``writes_kv``). This Part was previously
+declared with ``effects=["calls_llm"]`` alone and had never been dispatched through the live
+scheduler path (only invoked as a bare body against a raw, unscoped ``stores`` dict in
+``tests/parts/test_reference_parts.py`` and ``tests/runner/test_run_record.py``) — the missing
+declaration surfaced only when 01-10-PLAN.md's Task 1 first ran it end to end through
+``databasise.run_wiring``, where ``ctx.stores["kv"]`` raised ``UndeclaredEffectError`` before the
+body could reach its own cache check. ``writes_kv`` (rather than ``reads_kv``) because the body
+also unconditionally ``upsert``s the cache entry.
 """
 
 from __future__ import annotations
@@ -55,7 +67,7 @@ FAKE_LLM_CALLER_PART = Part(
     name_at_version=_NAME_AT_VERSION,
     kind="llm-caller",
     structural_depth="stage",
-    effects=["calls_llm"],
+    effects=["calls_llm", "writes_kv"],
     upstream_ref=None,
     body=_fake_llm_caller_body,
 )

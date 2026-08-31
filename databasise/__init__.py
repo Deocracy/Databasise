@@ -6,6 +6,14 @@ concurrency_setting)``. This is the seam every later plan and every consumer cal
 ``validator.depth`` and ``identity`` internally) -> ``runner.trace.RunRecord``, then stamps the
 run-level fields this module owns (``run_id``, ``wiring_id``, ``wiring_instance_hash``,
 ``arm_id``, ``arm_execution_order``) before returning the schema-valid run-record dict.
+
+**Honesty fields, composer-threaded (01-10-PLAN.md Task 1).** ``partial``, ``degraded``,
+``stop_reason`` and ``degradation_reason`` are threaded straight from ``scheduler.run_wiring``'s
+own result dict into the ``RunRecord(...)`` call below — this is required, not cosmetic:
+``RunRecord.__post_init__``'s honesty invariant (``runner/trace.py``) raises ``ValueError`` the
+moment any node reports a halted budget state while the run itself is not marked partial, and a
+scheduler-level node failure or budget halt must reach the consumer as a traced partial run
+rather than a clean-looking record (CONTRACT §9's "MUST NOT be discarded").
 """
 
 from __future__ import annotations
@@ -88,5 +96,9 @@ async def run_wiring(
         concurrency_setting=concurrency_setting,
         determinism_setting=determinism_setting,
         nodes=scheduled["nodes"],
+        partial=scheduled["partial"],
+        degraded=scheduled["degraded"],
+        stop_reason=scheduled["stop_reason"],
+        degradation_reason=scheduled["degradation_reason"],
     )
     return record.to_dict()
