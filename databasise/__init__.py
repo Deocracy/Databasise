@@ -47,8 +47,15 @@ async def run_wiring(
     registry: PartRegistry | None = None,
     determinism_setting: str,
     concurrency_setting: str,
+    clients: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Parse, validate, resolve identity, execute and trace one wiring run."""
+    """Parse, validate, resolve identity, execute and trace one wiring run.
+
+    ``clients`` (D-06) is forwarded straight through to ``_scheduler.run_wiring`` unchanged — a
+    real LLM/embedding/rerank wiring for a parity run is plan 03-02's job and belongs in the
+    harness, not in this composer's hardcoded tracer-namespace ``stores`` assembly below, which is
+    deliberately left untouched.
+    """
     if registry is None:
         registry = PartRegistry()
 
@@ -66,6 +73,7 @@ async def run_wiring(
         stores,
         determinism_setting=determinism_setting,
         concurrency_setting=concurrency_setting,
+        clients=clients,
     )
 
     if "cycle" in scheduled:

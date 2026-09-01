@@ -20,7 +20,7 @@ fanout/join/fixpoint/subgraph/opaque structural-kind dispatch actually gets buil
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -84,14 +84,18 @@ NodeKind = Annotated[
 @dataclass
 class NodeContext:
     """The calling convention every ``Part.body`` receives: its own node id, the wiring-declared
-    config (possibly ``None``), the already-computed outputs of its direct dependencies, and the
-    stores dict the runner assembled for this run.
+    config (possibly ``None``), the already-computed outputs of its direct dependencies, the
+    stores dict the runner assembled for this run, and the clients dict the runner assembled for
+    this run (D-06) — scoped the same deny-by-default way ``stores`` is. Defaults to an empty
+    dict so every existing construction site and every existing test that builds a
+    ``NodeContext`` by keyword keeps working unchanged.
     """
 
     node_id: str
     config: dict[str, Any] | None
     inputs: dict[str, Any]
     stores: dict[str, Any]
+    clients: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

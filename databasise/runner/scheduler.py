@@ -109,6 +109,7 @@ import time
 from collections.abc import Mapping
 from typing import Any
 
+from databasise.clients import CLIENT_EFFECT_TO_KEY, CapabilityScopedClients
 from databasise.identity.canon import config_hash
 from databasise.identity.env import environment_hash
 from databasise.identity.instance import instance_hash
@@ -236,6 +237,32 @@ class _ScopedStoresView:
         raise UndeclaredEffectError(f"*_{store_key}", self._declared_effects)
 
 
+class _ScopedClientsView:
+    """Wraps :class:`databasise.clients.CapabilityScopedClients` (deny-by-default,
+    ``.require(effect)``) so a part body written against plain ``dict``-style subscript access —
+    ``ctx.clients["llm"]`` — routes through the underlying deny-by-default check, mirroring
+    ``_ScopedStoresView``'s shape for the clients side (D-06).
+
+    The mapping rule differs from ``_ScopedStoresView``'s own suffix-split rule: a subscript key
+    (a client name, e.g. ``"llm"``) resolves against the node's own declared ``effects`` via the
+    explicit ``CLIENT_EFFECT_TO_KEY`` dict imported from ``databasise.clients`` — not restated
+    here — because the store side's ``effect.split("_", 1)[-1]`` suffix trick only works by
+    coincidence of spelling and does not transfer to ``calls_embedding``/``calls_rerank``. A
+    client key with no matching declared effect raises :class:`UndeclaredEffectError`, exactly as
+    calling ``.require()`` directly with an undeclared effect would.
+    """
+
+    def __init__(self, scoped: CapabilityScopedClients, declared_effects: list[str]) -> None:
+        self._scoped = scoped
+        self._declared_effects = list(declared_effects)
+
+    def __getitem__(self, client_key: str) -> Any:
+        for effect in self._declared_effects:
+            if CLIENT_EFFECT_TO_KEY.get(effect) == client_key:
+                return self._scoped.require(effect)
+        raise UndeclaredEffectError(f"calls_{client_key}", self._declared_effects)
+
+
 def _resolve_identities(parsed: ParsedWiring) -> dict[str, dict[str, str]]:
     """Bottom-up ``(name@version, config_hash, resolved_dependency_ids)`` per node.
 
@@ -332,6 +359,7 @@ async def _run_node(
     stores: dict[str, Any],
     results: dict[str, Any],
     max_concurrency: int,
+    clients: dict[str, Any] | None = None,
 ) -> tuple[str, Any, int]:
     node = parsed.nodes[node_id]
     part = parsed.parts[node_id]
@@ -350,7 +378,16 @@ async def _run_node(
 
     inputs = {dep: results[dep] for dep in parsed.deps.get(node_id, ())}
     scoped_stores = _ScopedStoresView(CapabilityScopedStores(stores, part.effects), part.effects)
-    ctx = NodeContext(node_id=node_id, config=node.config, inputs=inputs, stores=scoped_stores)
+    scoped_clients = _ScopedClientsView(
+        CapabilityScopedClients(clients or {}, part.effects), part.effects
+    )
+    ctx = NodeContext(
+        node_id=node_id,
+        config=node.config,
+        inputs=inputs,
+        stores=scoped_stores,
+        clients=scoped_clients,
+    )
     ctx._semaphore = semaphore  # type: ignore[attr-defined]  # scheduler-owned extension, see module docstring
 
     start = time.monotonic()
@@ -385,6 +422,7 @@ async def run_wiring(
     *,
     determinism_setting: str,
     concurrency_setting: str,
+    clients: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Drive readiness with ``graphlib.TopologicalSorter``; each ready batch is sorted by node id
     before dispatch (the stated tie-break — see module docstring), then runs inside one
@@ -396,6 +434,8 @@ async def run_wiring(
     ``validator.parse.parse_wiring``, so the registry itself is not re-queried during execution.
     ``determinism_setting``/``concurrency_setting`` are threaded through for the caller (the
     public composer in ``databasise/__init__.py``) to stamp on the run-level record.
+    ``clients`` (D-06) defaults to ``None`` — treated identically to an empty dict — so a run that
+    passes no ``clients`` argument at all behaves exactly as before for every existing part.
 
     Returns a dict always carrying ``results``, ``nodes``, ``partial``, ``stop_reason``,
     ``degraded`` and ``degradation_reason`` — or, for a cyclic wiring, ``{"cycle": [...]}`` as
@@ -444,7 +484,14 @@ async def run_wiring(
             async with asyncio.TaskGroup() as tg:
                 tasks = {
                     node_id: tg.create_task(
-                        _run_node(node_id, parsed, stores, results, max_concurrencies[node_id])
+                        _run_node(
+                            node_id,
+                            parsed,
+                            stores,
+                            results,
+                            max_concurrencies[node_id],
+                            clients,
+                        )
                     )
                     for node_id in ready
                 }
