@@ -107,7 +107,39 @@ Plans:
   5. Owner runs one A/A calibration and reads a bootstrap-resampled p95 floor keyed to `(bundle@v, tier, metric)` inseparable from the run's declared determinism/concurrency setting, with T1's null width materially narrower than T0's — Falsifier 5
   6. Until the A/A floor exists, parity is checked at the retrieval level with deterministic, zero-token comparisons of retrieved chunk sets and rankings between the original and the decomposed query side, plus human spot-checks of answers (D-05 substitute gate)
 
-**Plans**: TBD
+**Plans**: 9 plans across 7 waves
+
+Plans:
+
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — machine-owned LLM/embedding/rerank client primitive, `NodeContext.clients`, scheduler threading, and the two gated package installs
+- [ ] 03-03-PLAN.md — MACH-02/MACH-03 amendment record, ROADMAP/REQUIREMENTS propagation, and the external model API coverage matrix
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 03-02-PLAN.md — v1's pinned environment, the hashed corpus snapshot, the one v1-built index, and its verified import into the v2 stores
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 03-04-PLAN.md — tracer: the `naive` arm end to end — committed wirings, RFC 6902 arm resolution, seven ported parts, one run record
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 03-05-PLAN.md — the graph half: `get_node_edges` plus keyword extraction and the entity/relation lookup and hydrate-expand positions
+
+**Wave 5** *(blocked on Wave 4)*
+
+- [ ] 03-06-PLAN.md — the transform half: round-robin joins, token-budget truncators, the KG chunk selector; base and all five arms parse and conform
+
+**Wave 6** *(blocked on Wave 5)*
+
+- [ ] 03-07-PLAN.md — the parity harness: pinned-subprocess original arm, keyword pinning, N-run variance band, deterministic retrieval-level diff
+- [ ] 03-08-PLAN.md — per-node storage-ownership audit, extended import-boundary proof, stub retirement with Falsifier 2's verdict intact
+
+**Wave 7** *(blocked on Wave 6)*
+
+- [ ] 03-09-PLAN.md — the recorded parity evidence, the declared-deviation record, the filled-in validation map, and the owner's spot-check
 
 ### Phase 4: The Seam
 
