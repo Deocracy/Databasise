@@ -15,14 +15,15 @@ from databasise.parts.registry import (
 from databasise.parts.schema import NodeContext
 
 
-def test_default_registry_holds_exactly_fourteen_entries():
+def test_default_registry_holds_exactly_seventeen_entries():
     """D-04's seven Phase-1 entries (four executable ``parts_core`` reference parts, three
     declaration-only Falsifier-2 wiring placeholders) plus 03-04-PLAN.md Task 2's seven ported
-    LightRAG parts — this count grows again once plan 03-05/03-06 ports the remaining eight
-    base-wiring positions, per design, not a regression.
+    LightRAG parts plus 03-05-PLAN.md Task 2's three graph-half parts (``keywords``,
+    ``entity-lookup``, ``relation-lookup``) — this count grows again once this plan's Task 3 and
+    plan 03-06 port the remaining base-wiring positions, per design, not a regression.
     """
     registry = default_registry()
-    assert len(registry.keys()) == 14
+    assert len(registry.keys()) == 17
 
 
 def test_get_on_an_unknown_key_raises_with_the_requested_key_quoted_in_the_message():
