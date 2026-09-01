@@ -77,6 +77,12 @@ def _load_env_file(path: Path) -> dict[str, str]:
     intentionally not ``python-dotenv``: that package is not one of
     ``databasise/pyproject.toml``'s approved runtime dependencies, and this format needs nothing
     more than stdlib string splitting.
+
+    IN-01: deliberately duplicated in ``databasise/parity/v1_arm.py``'s own ``_load_env_file``
+    rather than imported — see that copy's docstring for why — but this copy raises on an absent
+    file while the sibling copy returns ``{}``; that asymmetry is deliberate (this copy is always
+    called first in the normal ``compare_arm_on_query`` flow, so it is the one whose refusal a
+    caller actually sees).
     """
     if not path.exists():
         raise MissingParityEnvError(path)
