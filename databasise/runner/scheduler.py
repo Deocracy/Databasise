@@ -99,6 +99,19 @@ Declared data guards (``config.guards``) are validated pre-flight via ``runner/g
 to ``DEFAULT_TOKEN_ALLOWANCE=0`` when absent — a branch cannot spend what it was not handed,
 CONTRACT §9) is stamped ``budget_state="halted"`` and the run is returned as a traced
 ``stop_reason="budget_halt"`` partial run — never a clean record, never a raised exception.
+
+**Optional per-node touch recording (03-08-PLAN.md Task 1, D-15's storage-ownership audit).**
+``run_wiring``/``_run_node`` accept an optional ``recorder`` callable, threaded to
+``_ScopedStoresView``/``_ScopedClientsView`` — the two places that know both the requesting node
+id and the requested store/client key, which is why recording belongs here and not in a proxy
+wrapped around the raw ``stores``/``clients`` dicts (a raw-store proxy cannot attribute a call to
+a node). On each successful resolution (``.require(effect)`` already succeeded — an undeclared
+effect never reaches the recorder, since it raises first) the view calls
+``recorder(node_id, kind, key)`` with ``kind`` one of ``"store"``/``"client"``. ``recorder``
+defaults to ``None``, and both views skip the callback entirely when it is ``None`` — the default
+path allocates nothing new and adds one cheap ``is not None`` branch, so no existing test's
+behaviour changes. ``databasise/parity/storage_audit.py`` is the one caller that passes a real
+recorder.
 """
 
 from __future__ import annotations
@@ -106,7 +119,7 @@ from __future__ import annotations
 import asyncio
 import graphlib
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 
 from databasise.clients import CLIENT_EFFECT_TO_KEY, CapabilityScopedClients
@@ -131,6 +144,11 @@ from databasise.validator.parse import ParsedWiring
 # §9's "a branch cannot spend what it was not handed" (see this module's docstring's "Metering is
 # wired into the live dispatch path" paragraph).
 DEFAULT_TOKEN_ALLOWANCE = 0
+
+# D-15: a touch recorder is any callable of this shape — (node_id, kind, key) -> None, where kind
+# is "store" or "client". Passed to run_wiring/_run_node and threaded to _ScopedStoresView/
+# _ScopedClientsView (see module docstring's "Optional per-node touch recording" paragraph).
+TouchRecorder = Callable[[str, str, str], None]
 
 # Transient store-write members plus writes_artifact/mutates_store: per D-13's rule, a node
 # carrying one of these has mutated a store on the completed portion of the run, so it can never
@@ -226,14 +244,25 @@ class _ScopedStoresView:
     undeclared effect would.
     """
 
-    def __init__(self, scoped: CapabilityScopedStores, declared_effects: list[str]) -> None:
+    def __init__(
+        self,
+        scoped: CapabilityScopedStores,
+        declared_effects: list[str],
+        node_id: str | None = None,
+        recorder: TouchRecorder | None = None,
+    ) -> None:
         self._scoped = scoped
         self._declared_effects = list(declared_effects)
+        self._node_id = node_id
+        self._recorder = recorder
 
     def __getitem__(self, store_key: str) -> Any:
         for effect in self._declared_effects:
             if effect.split("_", 1)[-1] == store_key:
-                return self._scoped.require(effect)
+                handle = self._scoped.require(effect)
+                if self._recorder is not None:
+                    self._recorder(self._node_id, "store", store_key)
+                return handle
         raise UndeclaredEffectError(f"*_{store_key}", self._declared_effects)
 
 
@@ -252,14 +281,25 @@ class _ScopedClientsView:
     calling ``.require()`` directly with an undeclared effect would.
     """
 
-    def __init__(self, scoped: CapabilityScopedClients, declared_effects: list[str]) -> None:
+    def __init__(
+        self,
+        scoped: CapabilityScopedClients,
+        declared_effects: list[str],
+        node_id: str | None = None,
+        recorder: TouchRecorder | None = None,
+    ) -> None:
         self._scoped = scoped
         self._declared_effects = list(declared_effects)
+        self._node_id = node_id
+        self._recorder = recorder
 
     def __getitem__(self, client_key: str) -> Any:
         for effect in self._declared_effects:
             if CLIENT_EFFECT_TO_KEY.get(effect) == client_key:
-                return self._scoped.require(effect)
+                handle = self._scoped.require(effect)
+                if self._recorder is not None:
+                    self._recorder(self._node_id, "client", client_key)
+                return handle
         raise UndeclaredEffectError(f"calls_{client_key}", self._declared_effects)
 
 
@@ -360,6 +400,7 @@ async def _run_node(
     results: dict[str, Any],
     max_concurrency: int,
     clients: dict[str, Any] | None = None,
+    recorder: TouchRecorder | None = None,
 ) -> tuple[str, Any, int]:
     node = parsed.nodes[node_id]
     part = parsed.parts[node_id]
@@ -377,9 +418,11 @@ async def _run_node(
     semaphore = asyncio.Semaphore(max_concurrency)
 
     inputs = {dep: results[dep] for dep in parsed.deps.get(node_id, ())}
-    scoped_stores = _ScopedStoresView(CapabilityScopedStores(stores, part.effects), part.effects)
+    scoped_stores = _ScopedStoresView(
+        CapabilityScopedStores(stores, part.effects), part.effects, node_id, recorder
+    )
     scoped_clients = _ScopedClientsView(
-        CapabilityScopedClients(clients or {}, part.effects), part.effects
+        CapabilityScopedClients(clients or {}, part.effects), part.effects, node_id, recorder
     )
     ctx = NodeContext(
         node_id=node_id,
@@ -423,6 +466,7 @@ async def run_wiring(
     determinism_setting: str,
     concurrency_setting: str,
     clients: dict[str, Any] | None = None,
+    recorder: TouchRecorder | None = None,
 ) -> dict[str, Any]:
     """Drive readiness with ``graphlib.TopologicalSorter``; each ready batch is sorted by node id
     before dispatch (the stated tie-break — see module docstring), then runs inside one
@@ -436,6 +480,8 @@ async def run_wiring(
     public composer in ``databasise/__init__.py``) to stamp on the run-level record.
     ``clients`` (D-06) defaults to ``None`` — treated identically to an empty dict — so a run that
     passes no ``clients`` argument at all behaves exactly as before for every existing part.
+    ``recorder`` (D-15) defaults to ``None`` — a run that passes none behaves exactly as before;
+    see module docstring's "Optional per-node touch recording" paragraph.
 
     Returns a dict always carrying ``results``, ``nodes``, ``partial``, ``stop_reason``,
     ``degraded`` and ``degradation_reason`` — or, for a cyclic wiring, ``{"cycle": [...]}`` as
@@ -491,6 +537,7 @@ async def run_wiring(
                             results,
                             max_concurrencies[node_id],
                             clients,
+                            recorder,
                         )
                     )
                     for node_id in ready
