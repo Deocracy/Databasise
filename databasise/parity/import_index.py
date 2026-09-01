@@ -307,11 +307,7 @@ async def _v2_vector_pairs(store_root: Path, workspace: str, kind: str) -> list[
     if not (store_dir / "vector.faiss").exists():
         return []
     store = FaissVectorStore(namespace=kind, workspace=workspace, store_root=store_root)
-    pairs = []
-    for doc_id, entry in store._entries.items():
-        vec = store._index.reconstruct(entry["int_id"])
-        pairs.append((doc_id, _quantized_vector_bytes(vec)))
-    return pairs
+    return [(doc_id, _quantized_vector_bytes(vec)) for doc_id, vec in store.iter_vectors()]
 
 
 def _vector_set_hash(pairs: list[tuple[str, bytes]]) -> str:
