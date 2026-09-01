@@ -120,17 +120,18 @@ async def dispatch(part: Part, ctx: NodeContext) -> Any:
 
 
 def default_registry() -> PartRegistry:
-    """A registry preloaded with exactly D-04's seven Phase-1 entries: the four executable
-    ``parts_core`` reference parts plus the three declaration-only Falsifier-2 wiring
-    placeholders — no tracer-only parts.
+    """A registry preloaded with D-04's four executable ``parts_core`` reference parts, the three
+    declaration-only Falsifier-2 wiring placeholders, and (03-04-PLAN.md Task 2) the seven ported
+    LightRAG parts the ``naive``/``bypass`` arms need — no tracer-only parts.
     """
     # Local import: parts_core imports Part/Effect from parts.schema (not this module), so
     # importing it here keeps the registry/parts_core dependency direction one-way and obvious
     # at the one call site that needs it, rather than at every import of this module.
     from databasise.parts_core import PARTS
     from databasise.parts_core.declared_only import DECLARED_ONLY_PARTS
+    from databasise.parts_core.lightrag import LIGHTRAG_PARTS
 
     registry = PartRegistry(seed_tracer_parts=False)
-    for part in (*PARTS, *DECLARED_ONLY_PARTS):
+    for part in (*PARTS, *DECLARED_ONLY_PARTS, *LIGHTRAG_PARTS):
         registry.register(part)
     return registry
