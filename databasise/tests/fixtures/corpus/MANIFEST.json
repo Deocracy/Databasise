@@ -1,0 +1,112 @@
+{
+  "corpus_hash": "ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd",
+  "document_count": 20,
+  "documents": {
+    "a_kiss_for_corliss": {
+      "sha256": "604ba6e6859b31562f060594637658d31ba4fe022f4ccdaee35aa6877cbe619f",
+      "title": "A Kiss for Corliss"
+    },
+    "adam_collis": {
+      "sha256": "f3e1da1f551a23469db38bc030426b2d92f3abd0bdb3446fb836a0307027f654",
+      "title": "Adam Collis"
+    },
+    "charles_craft": {
+      "sha256": "9494b03a506365be96f00da5ce5df1b58a3f91c7bdf7bded85f11a7737df9818",
+      "title": "Charles Craft"
+    },
+    "conrad_brooks": {
+      "sha256": "bc54e83fad0fdf47d9aea241073741a77bd26d36a4dd97e1ee050d15b07d3803",
+      "title": "Conrad Brooks"
+    },
+    "deliver_us_from_evil_2014_film": {
+      "sha256": "c289ef0f14aa45099d75d90972259010ba19c69d112527a54c76933e28cb4b8c",
+      "title": "Deliver Us from Evil (2014 film)"
+    },
+    "doctor_strange_2016_film": {
+      "sha256": "3ec6981f2d4325a2502d52b1342ad56e703a2424b0eb5961ffe432ae2be34409",
+      "title": "Doctor Strange (2016 film)"
+    },
+    "ed_wood": {
+      "sha256": "0b3b5f430498408729b3ddb10271ef102138014031dc4c3160b56b9237b39682",
+      "title": "Ed Wood"
+    },
+    "ed_wood_film": {
+      "sha256": "77cdcccb4868544f9e15ed6e5300470b8972c4313620d64da92e0668e30988cc",
+      "title": "Ed Wood (film)"
+    },
+    "janet_waldo": {
+      "sha256": "3c9d81c95dc3d2c86e3a5ae62fa524ce825a5ca20b57d4333d85e15fb23f2f52",
+      "title": "Janet Waldo"
+    },
+    "kiss_and_tell_1945_film": {
+      "sha256": "362b38f89d39cadceb173b4db37bb228bb781638d2c38d8254361dddb0699379",
+      "title": "Kiss and Tell (1945 film)"
+    },
+    "lord_high_treasurer": {
+      "sha256": "0c3757086da96cb8151f6e9ce8ab55ac001f0b21429e5c2c4e0ea020c8ad8aa4",
+      "title": "Lord High Treasurer"
+    },
+    "meet_corliss_archer": {
+      "sha256": "b3770c6f10a9c77090f3c6e67b852105b3b8df36f36e3d0b870b91e12a300224",
+      "title": "Meet Corliss Archer"
+    },
+    "meet_corliss_archer_tv_series": {
+      "sha256": "905f1bf185936a0c1c7a949004694022093f420d6b05880a35d4de3320119efb",
+      "title": "Meet Corliss Archer (TV series)"
+    },
+    "scott_derrickson": {
+      "sha256": "6ad58dfd39fb57ef9f063100fdf851a26b066dc9fb6c07828997f90db8beef3f",
+      "title": "Scott Derrickson"
+    },
+    "secretary_of_state_for_constitutional_affairs": {
+      "sha256": "2ccd64d33d9c067b6c9dba2b9f8a34f0cb61407db79756959e5f393382970e71",
+      "title": "Secretary of State for Constitutional Affairs"
+    },
+    "shirley_temple": {
+      "sha256": "190438e97c90649e456bbe0f400387c3d8bc7ff90ee75b0872cd0d9993a42733",
+      "title": "Shirley Temple"
+    },
+    "sinister_film": {
+      "sha256": "d45ca92e94b4a910d8e15f992c80dd233a68b883c63b205aa9e621d4e1df8e12",
+      "title": "Sinister (film)"
+    },
+    "tyler_bates": {
+      "sha256": "c42224d6d9529835518e8cfe812cf56dc89fff6399c72f0e8a63b9f8c05e88ea",
+      "title": "Tyler Bates"
+    },
+    "village_accountant": {
+      "sha256": "ba1d27a16f716150260ab84e3ffcc23f8dc87656fcba6234fcc822ceef99fefa",
+      "title": "Village accountant"
+    },
+    "woodson_arkansas": {
+      "sha256": "ba23e3271303bec9133f29d55b51319889f054b953f3229755bd789b97e1cebe",
+      "title": "Woodson, Arkansas"
+    }
+  },
+  "queries": [
+    {
+      "answer": "yes",
+      "gold_document_ids": [
+        "scott_derrickson",
+        "ed_wood"
+      ],
+      "id": "q1",
+      "question": "Were Scott Derrickson and Ed Wood of the same nationality?"
+    },
+    {
+      "answer": "Chief of Protocol",
+      "gold_document_ids": [
+        "kiss_and_tell_1945_film",
+        "shirley_temple"
+      ],
+      "id": "q2",
+      "question": "What government position was held by the woman who portrayed Corliss Archer in the film Kiss and Tell?"
+    }
+  ],
+  "queries_hash": "1ac2a0b42d376eb0768d45eb81557fc0d2394e2bee09bbb6adada8421cde1dbd",
+  "source": {
+    "config": "distractor",
+    "dataset": "hotpotqa/hotpot_qa",
+    "split": "validation"
+  }
+}
