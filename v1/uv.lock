@@ -793,6 +793,18 @@ wheels = [
 ]
 
 [[package]]
+name = "cozo-embedded"
+version = "0.7.6"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d3/17/e4a139cad601150303095532c51ab981b7b1ee9f6278188bedfe551c46e2/cozo_embedded-0.7.6-cp37-abi3-macosx_10_14_x86_64.whl", hash = "sha256:d146e76736beb5e14e0cf73dc8babefadfbbc358b325c94c64a51b6d5b0031e9", size = 9542067, upload-time = "2023-12-11T09:26:43.639Z" },
+    { url = "https://files.pythonhosted.org/packages/65/3b/92fe8c7c7b2b83974ae051c92697d92e860625326cfc06cb4c54222c2fc0/cozo_embedded-0.7.6-cp37-abi3-macosx_11_0_arm64.whl", hash = "sha256:7341fa266369181bbc19ad9e68820b51900b0fe1c947318a3d860b570dca6e09", size = 8325766, upload-time = "2023-12-11T09:26:46.776Z" },
+    { url = "https://files.pythonhosted.org/packages/15/bf/19020af2645d8ea398e719bce8fcf7a91c341467aed9804c6d5f6ac878c2/cozo_embedded-0.7.6-cp37-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:80de79554138628967d4fd2636fc0a0a8dcca1c0c3bb527e638f1ee6cb763d7d", size = 10515504, upload-time = "2023-12-30T04:42:08.422Z" },
+    { url = "https://files.pythonhosted.org/packages/db/a7/3c96a4077520ee3179b5eaeba350132a854b3aca34d1168f335bfcd0038d/cozo_embedded-0.7.6-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7571f6521041c13b7e9ca8ab8809cf9c8eaad929726ed6190ffc25a5a3ab57a7", size = 11135792, upload-time = "2023-12-11T09:26:51.499Z" },
+    { url = "https://files.pythonhosted.org/packages/58/f7/5c6ec98d3983968df1d6709f1faa88a44b8c0fa7cd80994bc7f7d6b10293/cozo_embedded-0.7.6-cp37-abi3-win_amd64.whl", hash = "sha256:c945ab7b350d0b79d3e643b68ebc8343fc02d223a02ab929eb0fb8e4e0df3542", size = 9532612, upload-time = "2023-12-11T09:26:57.844Z" },
+]
+
+[[package]]
 name = "cryptography"
 version = "48.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2062,6 +2074,7 @@ source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
     { name = "configparser" },
+    { name = "faiss-cpu" },
     { name = "google-api-core" },
     { name = "google-genai" },
     { name = "json-repair" },
@@ -2073,6 +2086,7 @@ dependencies = [
     { name = "packaging" },
     { name = "pandas" },
     { name = "pipmaster" },
+    { name = "pycozo", extra = ["embedded"] },
     { name = "pydantic" },
     { name = "pypinyin" },
     { name = "python-dotenv" },
@@ -2343,6 +2357,7 @@ requires-dist = [
     { name = "datasets", marker = "extra == 'evaluation'", specifier = ">=4.3.0" },
     { name = "defusedxml", marker = "extra == 'api'", specifier = ">=0.7.0,<1.0.0" },
     { name = "distro", marker = "extra == 'api'" },
+    { name = "faiss-cpu", specifier = ">=1.7.0,<2.0.0" },
     { name = "faiss-cpu", marker = "extra == 'offline-storage'", specifier = ">=1.7.0,<2.0.0" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.108" },
     { name = "google-api-core", specifier = ">=2.0.0,<3.0.0" },
@@ -2386,6 +2401,7 @@ requires-dist = [
     { name = "pre-commit", marker = "extra == 'pytest'" },
     { name = "pre-commit", marker = "extra == 'test'" },
     { name = "psutil", marker = "extra == 'api'" },
+    { name = "pycozo", extras = ["embedded"] },
     { name = "pycryptodome", marker = "extra == 'api'", specifier = ">=3.0.0,<4.0.0" },
     { name = "pydantic" },
     { name = "pydantic", marker = "extra == 'api'" },
@@ -3969,6 +3985,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e9/e6/78ebbb10a8c8e4b61a59249394a4a594c1a7af95593dc933a349c8d00964/pyasn1_modules-0.4.2.tar.gz", hash = "sha256:677091de870a80aae844b1ca6134f54652fa2c8c5a52aa396440ac3106e941e6", size = 307892, upload-time = "2025-03-28T02:41:22.17Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/47/8d/d529b5d697919ba8c11ad626e835d4039be708a35b0d22de83a269a6682c/pyasn1_modules-0.4.2-py3-none-any.whl", hash = "sha256:29253a9207ce32b64c3ac6600edc75368f98473906e8fd1043bd6b5b1de2c14a", size = 181259, upload-time = "2025-03-28T02:41:19.028Z" },
+]
+
+[[package]]
+name = "pycozo"
+version = "0.7.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/92/18/dc0dd2db0f1661e2cf17a653da59b6812f30ddc976a66b7972fd5d2809bc/pycozo-0.7.6.tar.gz", hash = "sha256:e4be9a091ba71e9d4465179bbf7557d47af84c8114d4889bd5fa13c731d57a95", size = 19091, upload-time = "2023-12-11T09:27:40.435Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a1/e9/47ccff69e94bc80388c67e12b3c25244198fcfb1d3fad96489ed436a8e3f/pycozo-0.7.6-py3-none-any.whl", hash = "sha256:8930de5f82277d6481998a585c79aa898991cfb0692e168bde8b0a4558d579cf", size = 18977, upload-time = "2023-12-11T09:27:38.171Z" },
+]
+
+[package.optional-dependencies]
+embedded = [
+    { name = "cozo-embedded" },
 ]
 
 [[package]]
