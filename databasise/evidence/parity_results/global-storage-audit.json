@@ -1,0 +1,11 @@
+{
+  "arm": "global",
+  "command": "uv run python -m databasise.parity.storage_audit --arm global",
+  "exit_code": 1,
+  "status": "inconclusive",
+  "outcome": "environment_precondition_failed",
+  "reason": "MissingParityEnvError: v1/.env.parity not found at <worktree>/v1/.env.parity — see v1/README-PARITY.md to recreate it, or pass an explicit clients= mapping to run_arm() to bypass real-client construction",
+  "note": "The path in the raised error is worktree-local (this executor's checkout under .claude/worktrees/); it will read as the real repo path on whichever machine runs this for real. No node rows, no matched/no-touch/over-declared counts were produced — the audit never reached the scheduler because client construction failed first. This is a precondition gate refusal, not an audit finding.",
+  "harmless_stderr_noise": "pycozo's own CozoClient.__init__ logs a caught ModuleNotFoundError for pandas (pandas is deliberately not a dependency — see 03-04-SUMMARY.md); unrelated to this refusal.",
+  "rerun_command_once_artifacts_exist": "cd databasise && uv run python -m databasise.parity.storage_audit --arm global"
+}
