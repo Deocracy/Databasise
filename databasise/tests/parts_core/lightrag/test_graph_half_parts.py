@@ -11,12 +11,22 @@ from __future__ import annotations
 import json
 from typing import Any
 
+import pytest
 from databasise.clients.base import ChatResult
 from databasise.parts.schema import NodeContext
+from databasise.parts_core import CapabilityScopedStores, UndeclaredEffectError
+from databasise.parts_core.lightrag.entity_hydrate_expand import (
+    LIGHTRAG_ENTITY_HYDRATE_EXPAND_PART,
+)
 from databasise.parts_core.lightrag.entity_lookup import LIGHTRAG_ENTITY_LOOKUP_PART
 from databasise.parts_core.lightrag.keywords import LIGHTRAG_KEYWORD_EXTRACTOR_PART
+from databasise.parts_core.lightrag.relation_hydrate_expand import (
+    LIGHTRAG_RELATION_HYDRATE_EXPAND_PART,
+)
 from databasise.parts_core.lightrag.relation_lookup import LIGHTRAG_RELATION_LOOKUP_PART
+from databasise.runner.scheduler import _ScopedStoresView
 from databasise.runner.trace import TokenAccounting
+from databasise.stores.graph import CozoGraphStore
 from databasise.stores.vector import FaissVectorStore
 
 
@@ -170,3 +180,155 @@ async def test_relation_lookup_returns_items_ordered_by_descending_score_with_en
     assert [(item["src_id"], item["tgt_id"]) for item in result["items"]] == [("C", "D"), ("A", "B")]
     scores = [item["score"] for item in result["items"]]
     assert scores == sorted(scores, reverse=True)
+
+
+# --------------------------------------------------------------------------------------------- #
+# entity-hydrate-expand / relation-hydrate-expand
+# --------------------------------------------------------------------------------------------- #
+
+
+async def test_entity_hydrate_expand_hydrates_seeds_and_expands_to_neighbour_relations(store_root):
+    graph = CozoGraphStore(namespace="chunk_entity_relation", workspace="ws", store_root=store_root)
+    await graph.upsert_node("Alice", {"entity_type": "person", "description": "a person"})
+    await graph.upsert_node("Bob", {"entity_type": "person", "description": "another person"})
+    await graph.upsert_edge("Alice", "Bob", {"weight": "1.0", "description": "knows"})
+    await graph.index_done_callback()
+
+    ctx = _ctx(
+        "entity-hydrate-expand",
+        inputs={"entity-lookup": {"items": [{"id": "ent-alice", "score": 0.9, "entity_name": "Alice"}]}},
+        stores={"graph": graph},
+    )
+
+    result = await LIGHTRAG_ENTITY_HYDRATE_EXPAND_PART.body(ctx)
+
+    assert len(result["entities"]) == 1
+    hydrated = result["entities"][0]
+    assert hydrated["entity_name"] == "Alice"
+    assert hydrated["description"] == "a person"
+    assert hydrated["rank"] == 1
+    assert hydrated["derived_from"] == ["ent-alice"]
+
+    assert len(result["relations"]) == 1
+    relation = result["relations"][0]
+    assert set(relation["src_tgt"]) == {"Alice", "Bob"}
+    assert relation["description"] == "knows"
+    assert relation["derived_from"] == ["Alice"]
+    assert result["missing_seeds"] == []
+    await graph.finalize()
+
+
+async def test_entity_hydrate_expand_reports_a_missing_seed_rather_than_dropping_it(store_root):
+    graph = CozoGraphStore(namespace="chunk_entity_relation", workspace="ws", store_root=store_root)
+    ctx = _ctx(
+        "entity-hydrate-expand",
+        inputs={
+            "entity-lookup": {
+                "items": [{"id": "ent-ghost", "score": 0.5, "entity_name": "Ghost"}]
+            }
+        },
+        stores={"graph": graph},
+    )
+
+    result = await LIGHTRAG_ENTITY_HYDRATE_EXPAND_PART.body(ctx)
+
+    assert result["entities"] == []
+    assert len(result["missing_seeds"]) == 1
+    assert result["missing_seeds"][0]["entity_name"] == "Ghost"
+    assert result["missing_seeds"][0]["missing"] is True
+    await graph.finalize()
+
+
+async def test_entity_hydrate_expand_cannot_reach_the_vector_store(store_root):
+    graph = CozoGraphStore(namespace="chunk_entity_relation", workspace="ws", store_root=store_root)
+    vector = FaissVectorStore(namespace="entities", workspace="ws", store_root=store_root)
+    declared_effects = LIGHTRAG_ENTITY_HYDRATE_EXPAND_PART.effects
+    scoped_stores = _ScopedStoresView(
+        CapabilityScopedStores({"graph": graph, "vector": vector}, declared_effects), declared_effects
+    )
+    ctx = _ctx(
+        "entity-hydrate-expand",
+        inputs={"entity-lookup": {"items": []}},
+        stores=scoped_stores,
+    )
+
+    with pytest.raises(UndeclaredEffectError):
+        ctx.stores["vector"]
+
+    await graph.finalize()
+    await vector.finalize()
+
+
+async def test_relation_hydrate_expand_hydrates_seeds_and_expands_to_endpoint_entities(store_root):
+    graph = CozoGraphStore(namespace="chunk_entity_relation", workspace="ws", store_root=store_root)
+    await graph.upsert_node("Alice", {"entity_type": "person"})
+    await graph.upsert_node("Bob", {"entity_type": "person"})
+    await graph.upsert_edge("Alice", "Bob", {"weight": "1.0", "description": "knows"})
+    await graph.index_done_callback()
+
+    ctx = _ctx(
+        "relation-hydrate-expand",
+        inputs={
+            "relation-lookup": {
+                "items": [{"id": "rel-ab", "score": 0.8, "src_id": "Alice", "tgt_id": "Bob"}]
+            }
+        },
+        stores={"graph": graph},
+    )
+
+    result = await LIGHTRAG_RELATION_HYDRATE_EXPAND_PART.body(ctx)
+
+    assert len(result["relations"]) == 1
+    relation = result["relations"][0]
+    assert relation["src_id"] == "Alice"
+    assert relation["tgt_id"] == "Bob"
+    assert relation["description"] == "knows"
+    assert relation["derived_from"] == ["rel-ab"]
+
+    assert {e["entity_name"] for e in result["entities"]} == {"Alice", "Bob"}
+    assert result["missing_seeds"] == []
+    await graph.finalize()
+
+
+async def test_relation_hydrate_expand_reports_a_missing_seed_rather_than_dropping_it(store_root):
+    graph = CozoGraphStore(namespace="chunk_entity_relation", workspace="ws", store_root=store_root)
+    await graph.upsert_node("Alice", {"entity_type": "person"})
+    await graph.index_done_callback()
+
+    ctx = _ctx(
+        "relation-hydrate-expand",
+        inputs={
+            "relation-lookup": {
+                "items": [{"id": "rel-ghost", "score": 0.4, "src_id": "Alice", "tgt_id": "Nobody"}]
+            }
+        },
+        stores={"graph": graph},
+    )
+
+    result = await LIGHTRAG_RELATION_HYDRATE_EXPAND_PART.body(ctx)
+
+    assert result["relations"] == []
+    assert len(result["missing_seeds"]) == 1
+    assert result["missing_seeds"][0]["missing"] is True
+    await graph.finalize()
+
+
+async def test_relation_hydrate_expand_cannot_reach_the_kv_store(store_root):
+    from databasise.stores.kv import SqliteKVStore
+
+    graph = CozoGraphStore(namespace="chunk_entity_relation", workspace="ws", store_root=store_root)
+    kv = SqliteKVStore(namespace="text_chunks", workspace="ws", store_root=store_root)
+    declared_effects = LIGHTRAG_RELATION_HYDRATE_EXPAND_PART.effects
+    scoped_stores = _ScopedStoresView(
+        CapabilityScopedStores({"graph": graph, "kv": kv}, declared_effects), declared_effects
+    )
+    ctx = _ctx(
+        "relation-hydrate-expand",
+        inputs={"relation-lookup": {"items": []}},
+        stores=scoped_stores,
+    )
+
+    with pytest.raises(UndeclaredEffectError):
+        ctx.stores["kv"]
+
+    await graph.finalize()
