@@ -18,11 +18,37 @@ from __future__ import annotations
 
 import pytest
 from databasise.parity.import_index import VerificationResult, Violation
-from databasise.parity.run_comparison import compare_arm_on_query, diff_ranked_ids
+from databasise.parity.run_comparison import (
+    _no_retrieval_to_compare_note,
+    compare_arm_on_query,
+    diff_ranked_ids,
+)
+from databasise.wirings.resolve import resolve_arm
 
 # --------------------------------------------------------------------------------------------- #
 # Deterministic group — no venv, no index, no network
 # --------------------------------------------------------------------------------------------- #
+
+
+def test_an_arm_with_a_chunk_source_node_gets_no_retrieval_note():
+    assert _no_retrieval_to_compare_note("hybrid", has_chunk_node=True) is None
+
+
+def test_an_arm_with_no_chunk_source_node_gets_a_distinct_note_not_a_computed_diff():
+    note = _no_retrieval_to_compare_note("bypass", has_chunk_node=False)
+
+    assert note is not None
+    assert "bypass" in note
+    assert "no retrieval" in note
+
+
+def test_the_bypass_arms_resolved_node_set_actually_has_no_chunk_source_node():
+    """Regression guard for the fact ``_no_retrieval_to_compare_note`` depends on: if a future
+    wiring change ever adds a ``rerank`` node to ``bypass``, this test — not a silent perfect-
+    agreement diff — is what should fail first.
+    """
+    resolved = resolve_arm("bypass")
+    assert "rerank" not in resolved.get("nodes", {})
 
 
 def test_identical_ranked_lists_report_zero_symmetric_difference_and_full_agreement():
