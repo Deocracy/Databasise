@@ -122,9 +122,15 @@ class CozoGraphStore(StorageNameSpace):
         ):
             try:
                 self._client.run(script, {})
-            except Exception as exc:  # idempotent :create; only "already exists" is expected
+            except Exception as exc:
+                # Idempotent :create on reopen. Cozo's actual re-create message is "Stored
+                # relation <name> conflicts with an existing one" (observed via pycozo's
+                # QueryException, not "already exists") — narrowed to that exact phrase rather
+                # than a bare "relation" substring, which previously also swallowed unrelated
+                # errors (a malformed schema, a corrupted RocksDB file, a permissions error)
+                # that happen to mention "relation" at all (WR-01).
                 message = str(exc).lower()
-                if "already exists" not in message and "relation" not in message:
+                if "already exists" not in message and "conflicts with an existing" not in message:
                     raise
 
     async def _run(self, script: str, params: dict[str, Any] | None = None) -> list[list]:
