@@ -8,11 +8,11 @@ Audited 2026-08-29 against SYSTEM-MODEL.md, CONTRACT.md, RIG.md, PARTS.md, ANATO
 
 ### Build Gates (GATE)
 
-- [ ] **GATE-01**: Rung ordering is enforced: the phase implementing §BP rung N+1 never starts before rung N's gate passes. A Falsifier 2 or Falsifier 5 failure **halts the ladder** — it is a SELECTION.md-level reversal, not a repairable defect (SYSTEM-MODEL §BP Phase 1 gate)
+- [x] **GATE-01**: Rung ordering is enforced: the phase implementing §BP rung N+1 never starts before rung N's gate passes. A Falsifier 2 or Falsifier 5 failure **halts the ladder** — it is a SELECTION.md-level reversal, not a repairable defect (SYSTEM-MODEL §BP Phase 1 gate)
 
 ### Machine Core (MACH)
 
-- [ ] **MACH-01**: Static validator implements CONTRACT §19's depth/execution_mode derivations from wiring + registry — `effective_depth` computed as the minimum over transitive deps, `execution_mode` derived from declared `effects[]`, with no self-declaration standing in for the computation — demonstrated on the three named wirings (decomposed lightrag-local query side, opaque codebase-memory-mcp, half-decomposed full LightRAG); the §19.10 boundary enumeration is recorded with the node set — **Falsifier 2 gate**
+- [x] **MACH-01**: Static validator implements CONTRACT §19's depth/execution_mode derivations from wiring + registry — `effective_depth` computed as the minimum over transitive deps, `execution_mode` derived from declared `effects[]`, with no self-declaration standing in for the computation — demonstrated on the three named wirings (decomposed lightrag-local query side, opaque codebase-memory-mcp, half-decomposed full LightRAG); the §19.10 boundary enumeration is recorded with the node set — **Falsifier 2 gate**
 - [ ] **MACH-02**: Eval bundle stood up per RIG §EV.1 with dev/holdout/sealed splits, containing questions, gold answers, a judge instance, a judge prompt hash, a corpus snapshot hash, and the determinism/concurrency setting; both §EV.2 target families are mandatory bundle content; versions are minted, never edited in place (opening `sealed` mints a new version); holdout-usage logging policy in force before decomposition work consults dev/holdout. Bootstrapped from a public benchmark corpus [Amended 2026-08-31: moved to Phase 3, point of first need Phase 3's parity comparison, superseding this requirement's original rung-1 timing per `.planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md`]
 - [ ] **MACH-03**: First A/A calibration per RIG §AA.1: one A/A run at n questions producing n paired per-question differences, bootstrap-resampled, the resampled distribution's p95 taken as the calibrated floor at `(bundle@v, tier, metric)` inseparable from the run's declared determinism/concurrency setting; §AA.2 precondition holds (a null with unknown bypass status is not usable as a floor). **Pass criterion: per-tier null width at T1 materially narrower than T0** (SELECTION Falsifier 5) — **Falsifier 5 gate** [Amended 2026-08-31: moved to Phase 3, point of first need Phase 3's parity comparison, superseding this requirement's original rung-1 timing per `.planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md`]
 - [ ] **MACH-04**: Injected-LLM-endpoint survey documented across the five sandbox-candidate engines named in the lineup (Falsifier 8, non-gating documentation pass)
@@ -20,7 +20,7 @@ Audited 2026-08-29 against SYSTEM-MODEL.md, CONTRACT.md, RIG.md, PARTS.md, ANATO
 - [x] **MACH-06**: Component and artifact identity per CONTRACT §0/§1: `name@version`, RFC 8785 + SHA-256 `config_hash`, content-addressed artifact registry with `upstream_ref` lineage; instance identity is `(name@version, config_hash, resolved_dependency_ids)`, never a wiring node id
 - [ ] **MACH-07**: Append-only promote/rollback ledger per CONTRACT §7 + RIG §PR: the §7 field set with both `change_origin` (`human_edit` | `machine_mutation` — who authored the change) and `promotion_provenance` (`gate_adjudicated` | `operator_asserted` — who adjudicated it) required on every generation record, never defaulted, never inferable by absence (the two are orthogonal per CONTRACT §7), plus non-empty `promotion_trace_ids` on operator promotions; the ledger append is the decision; alias repoint is atomic; a semver is minted at promotion and only at promotion; tombstoned losers are never lifted; the active pointer is always a derived query, never a written field
 - [x] **MACH-08**: Storage keying per RIG §RUN: KV shared only where CONTRACT §3's `shared` scope admits it (effective depth `stage`); an arm containing an `opaque` node writes `quarantined`, never `shared`; per-part graph/vector namespaces; artifact sharing iff index-recipe hashes are identical
-- [ ] **MACH-09**: Measurement posture for answer-level and index-side mutation classes defaults **off** per RIG §F3.2 and stays off in v1 unless §CM.3's A1–A4 cost-model inputs are replaced by measurements; fallback-ladder (degraded) runs are labelled via RIG §TR's `degraded`/`degradation_reason`
+- [x] **MACH-09**: Measurement posture for answer-level and index-side mutation classes defaults **off** per RIG §F3.2 and stays off in v1 unless §CM.3's A1–A4 cost-model inputs are replaced by measurements; fallback-ladder (degraded) runs are labelled via RIG §TR's `degraded`/`degradation_reason`
 - [ ] **MACH-10**: F-07 discharged: the snapshot/reset protocol CONTRACT §14.4 point 3 names for `mutable-store` components is defined, or the A/B exclusion is recorded as permanent
 - [ ] **MACH-11**: F-08 discharged: CONTRACT §18.2's envelope extended with the minimum seam-level event shape (`name@version`, spend, outcome) for the `mutates_store`-outside-`deps` exception class
 
@@ -81,8 +81,8 @@ Maps REQ-IDs to phases (see .planning/ROADMAP.md). Every v1 requirement maps to 
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| GATE-01 | Phase 2 | Pending |
-| MACH-01 | Phase 2 | Pending |
+| GATE-01 | Phase 2 | Complete |
+| MACH-01 | Phase 2 | Complete |
 | MACH-02 | Phase 3 | Pending |
 | MACH-03 | Phase 3 | Pending |
 | MACH-04 | Phase 5 | Pending |
@@ -90,7 +90,7 @@ Maps REQ-IDs to phases (see .planning/ROADMAP.md). Every v1 requirement maps to 
 | MACH-06 | Phase 1 | Complete |
 | MACH-07 | Phase 7 | Pending |
 | MACH-08 | Phase 1 | Complete |
-| MACH-09 | Phase 2 | Pending |
+| MACH-09 | Phase 2 | Complete |
 | MACH-10 | Phase 6 | Pending |
 | MACH-11 | Phase 4 | Pending |
 | MODAL-01 | Phase 3 | Pending |
