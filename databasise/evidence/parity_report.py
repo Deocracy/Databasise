@@ -1,0 +1,599 @@
+"""Renders ``databasise/evidence/PARITY-EVIDENCE.md`` and
+``databasise/evidence/DECLARED-DEVIATIONS.md`` from the committed result files under
+``databasise/evidence/parity_results/`` (03-09-PLAN.md Task 2).
+
+Follows ``databasise/evidence/falsifier2.py``'s own house style: load committed inputs, render
+Markdown a second author can read without opening a test file, never recompute a number the
+harness (``databasise.parity.run_comparison``, ``databasise.parity.storage_audit``) already
+recorded. ``render_markdown()`` and ``render_deviations_markdown()`` are pure functions of the
+committed inputs under ``parity_results/`` — no timestamp, no host path beyond what a result file
+itself already recorded, no run-varying value of any kind — so two calls in one process (and two
+runs of ``main()`` over unchanged inputs) return byte-identical text.
+
+**Provenance check (``--check-results``).** :func:`check_results` validates that every committed
+result file under ``parity_results/`` carries the fields Task 1's own acceptance criteria name,
+and enforces the plan's own stated prohibition: a result whose ``status`` is ``"inconclusive"``
+must carry no comparison number (``chunk_diff``/``entity_diff``/``relation_diff``/
+``keyword_variance_band`` all null) and must name a reason. This is the one implementation of
+"what a complete result looks like" that both Task 1's own ``<verify>`` command and this module's
+rendering share, so the two can never silently disagree about what "complete" means.
+
+**The declared-deviation refusal (CONTRACT §5).** :func:`render_deviations_markdown` raises
+:class:`UnreasonedDeviationError` for any :class:`DeclaredDeviation` whose ``cause`` is empty or
+falls in a small set of generic/blanket phrases (``"expected variance"``, ``"noise"``, ...) — an
+absorber category that lets any excursion through unnamed is exactly the failure mode the
+parity-not-gain rule exists to prevent. Zero deviations is a result (rendered as an explicit
+"zero, and here is why" statement); an absent file is not.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+RESULTS_DIR = Path(__file__).resolve().parent / "parity_results"
+EVIDENCE_PATH = Path(__file__).resolve().parent / "PARITY-EVIDENCE.md"
+DEVIATIONS_PATH = Path(__file__).resolve().parent / "DECLARED-DEVIATIONS.md"
+
+ARMS: tuple[str, ...] = ("naive", "bypass", "hybrid", "local", "global")
+
+# Matches databasise.parity.run_comparison._DEFAULT_KEYWORD_VARIANCE_RUNS. The choice and its
+# reasoning are recorded in 03-09-SUMMARY.md's "Decisions Made" section (03-09-PLAN.md Task 1's
+# own instruction: "record the choice and its reason in the plan summary").
+KEYWORD_VARIANCE_N = 5
+
+# databasise.parity.run_arm._DETERMINISM_SETTING / _CONCURRENCY_SETTING — restated here rather
+# than imported, so this evidence module never needs to import a live-endpoint-touching module
+# just to render text about settings that are plain string constants.
+_DETERMINISM_SETTING = "cache-bypassed"
+_CONCURRENCY_SETTING = "sequential"
+
+_GATE_AMENDMENT_REF = ".planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md"
+_GATE_WAIVER_REF = ".planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md"
+
+
+# --------------------------------------------------------------------------------------------- #
+# Loading committed inputs
+# --------------------------------------------------------------------------------------------- #
+
+
+def load_comparison(arm: str) -> list[dict[str, Any]]:
+    """Load the committed per-query comparison records for one arm."""
+    path = RESULTS_DIR / f"{arm}-comparison.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def load_storage_audit(arm: str) -> dict[str, Any]:
+    """Load the committed storage-audit result for one arm. Today every committed file records
+    an environment-precondition refusal (see module docstring and 03-09-SUMMARY.md); once a real
+    run lands, this same loader reads whatever shape ``databasise.parity.storage_audit`` writes.
+    """
+    path = RESULTS_DIR / f"{arm}-storage-audit.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+# --------------------------------------------------------------------------------------------- #
+# Provenance check (Task 1's own <verify> command; also exposed via --check-results)
+# --------------------------------------------------------------------------------------------- #
+
+_REQUIRED_COMPARISON_KEYS: tuple[str, ...] = (
+    "status",
+    "arm",
+    "query_id",
+    "query",
+    "corpus_hash",
+    "determinism_setting",
+    "concurrency_setting",
+    "run_count",
+    "resolved_model_identities",
+    "inconclusive_reason",
+)
+
+_COMPARISON_NUMBER_KEYS: tuple[str, ...] = (
+    "chunk_diff",
+    "entity_diff",
+    "relation_diff",
+    "keyword_variance_band",
+)
+
+_REQUIRED_AUDIT_KEYS: tuple[str, ...] = ("arm", "command", "exit_code", "status", "outcome", "reason")
+
+
+@dataclass(frozen=True)
+class ProvenanceViolation:
+    """One committed result file's departure from "what a complete result looks like"."""
+
+    file: str
+    detail: str
+
+    def __str__(self) -> str:  # pragma: no cover - trivial
+        return f"{self.file}: {self.detail}"
+
+
+def check_results(results_dir: Path | None = None) -> list[ProvenanceViolation]:
+    """Validate every committed result file under ``parity_results/`` (or ``results_dir``, for
+    tests) carries its required provenance fields, and that no result carries a comparison number
+    alongside an ``"inconclusive"`` status — the plan's own stated prohibition. Returns an empty
+    list when clean; never raises for a validation failure (the CLI decides the exit code).
+    """
+    results_dir = results_dir or RESULTS_DIR
+    violations: list[ProvenanceViolation] = []
+
+    for arm in ARMS:
+        comparison_path = results_dir / f"{arm}-comparison.json"
+        if not comparison_path.exists():
+            violations.append(ProvenanceViolation(str(comparison_path), "file does not exist"))
+        else:
+            records = json.loads(comparison_path.read_text(encoding="utf-8"))
+            if not records:
+                violations.append(
+                    ProvenanceViolation(str(comparison_path), "no query records recorded")
+                )
+            for record in records:
+                missing = [k for k in _REQUIRED_COMPARISON_KEYS if k not in record]
+                if missing:
+                    violations.append(
+                        ProvenanceViolation(
+                            str(comparison_path),
+                            f"query {record.get('query_id', '?')!r} missing required key(s) {missing}",
+                        )
+                    )
+                if record.get("status") == "inconclusive":
+                    if not record.get("inconclusive_reason"):
+                        violations.append(
+                            ProvenanceViolation(
+                                str(comparison_path),
+                                f"query {record.get('query_id', '?')!r} is inconclusive but names "
+                                "no reason",
+                            )
+                        )
+                    carries_number = any(
+                        record.get(k) is not None for k in _COMPARISON_NUMBER_KEYS
+                    )
+                    if carries_number:
+                        violations.append(
+                            ProvenanceViolation(
+                                str(comparison_path),
+                                f"query {record.get('query_id', '?')!r} is status=inconclusive but "
+                                "carries a comparison number — the plan's own stated prohibition",
+                            )
+                        )
+
+        audit_path = results_dir / f"{arm}-storage-audit.json"
+        if not audit_path.exists():
+            violations.append(ProvenanceViolation(str(audit_path), "file does not exist"))
+        else:
+            audit = json.loads(audit_path.read_text(encoding="utf-8"))
+            missing = [k for k in _REQUIRED_AUDIT_KEYS if k not in audit]
+            if missing:
+                violations.append(
+                    ProvenanceViolation(str(audit_path), f"missing required key(s) {missing}")
+                )
+
+    return violations
+
+
+# --------------------------------------------------------------------------------------------- #
+# The declared-deviation record (CONTRACT §5) — Task 2's own refusal behavior
+# --------------------------------------------------------------------------------------------- #
+
+# A deviation "cause" matching one of these (case/whitespace-insensitive) is an absorber category,
+# not a named cause — CONTRACT §5's parity-not-gain rule exists precisely to forbid this.
+_GENERIC_CAUSES: frozenset[str] = frozenset(
+    {
+        "",
+        "expected variance",
+        "expected",
+        "variance",
+        "noise",
+        "n/a",
+        "na",
+        "unknown",
+        "unclear",
+        "tbd",
+        "misc",
+        "other",
+    }
+)
+
+
+class UnreasonedDeviationError(ValueError):
+    """A :class:`DeclaredDeviation` whose ``cause`` is empty or a generic/blanket category — see
+    module docstring.
+    """
+
+
+@dataclass(frozen=True)
+class DeclaredDeviation:
+    """One CONTRACT §5 declared-deviation entry: an excursion outside the stated retrieval-level
+    tolerance, named individually with its own cause. The retrieval-level tolerance itself starts
+    at zero (03-09-PLAN.md's own flagged planner assumption: with keywords pinned and one shared
+    index, exact agreement is the expectation), so any non-empty ``symmetric_difference`` on a
+    pinned-keyword run is, by default, an excursion requiring an entry here.
+    """
+
+    arm: str
+    query_id: str
+    description: str
+    cause: str
+
+
+def render_deviations_markdown(deviations: list[DeclaredDeviation]) -> str:
+    """Render ``DECLARED-DEVIATIONS.md``. Raises :class:`UnreasonedDeviationError` before
+    rendering anything if any entry's cause is empty or generic — the whole render fails rather
+    than emitting a document with one bad row, so a bad cause can never slip into a committed
+    document silently.
+    """
+    for deviation in deviations:
+        cause_norm = deviation.cause.strip().lower()
+        if cause_norm in _GENERIC_CAUSES:
+            raise UnreasonedDeviationError(
+                f"{deviation.arm}/{deviation.query_id}: cause {deviation.cause!r} is empty or a "
+                "generic/blanket category — CONTRACT §5 requires each excursion named "
+                "individually with its own specific cause, not an absorber category"
+            )
+
+    sections = [
+        "# Declared Deviations\n",
+        (
+            "CONTRACT §5's parity-not-gain record: every excursion outside the stated "
+            "retrieval-level tolerance (zero, per 03-09-PLAN.md's own flagged planner "
+            "assumption — see `PARITY-EVIDENCE.md`), named individually with its own cause. "
+            "A blanket or catch-all cause makes this document's own renderer refuse to render "
+            "rather than silently absorbing the excursion into an unnamed category.\n"
+        ),
+    ]
+
+    if not deviations:
+        sections.append(
+            "## Zero declared deviations\n\n"
+            "No excursion is recorded in this document. This is a stated zero, not an absent "
+            "file — and, as of this render, it reflects that **no completed comparison run has "
+            "occurred**: every arm's committed result under `parity_results/` carries "
+            "`status=\"inconclusive\"` (the index-identity precondition and/or the "
+            "`v1/.env.parity` precondition failed on this machine — see `PARITY-EVIDENCE.md`'s "
+            "\"What was compared\" section). A stated zero here should therefore be read as "
+            "\"nothing has been measured yet,\" not as \"the comparison ran and found no "
+            "excursions.\" Re-running `parity_report.py` after a real comparison lands will "
+            "populate this section with either named entries or an updated zero statement that "
+            "reflects an actual completed comparison.\n"
+        )
+    else:
+        header = "| arm | query | measured difference | cause |\n|---|---|---|---|\n"
+        rows = [
+            f"| {d.arm} | {d.query_id} | {d.description} | {d.cause} |" for d in deviations
+        ]
+        sections.append("## Named deviations\n\n" + header + "\n".join(rows) + "\n")
+
+    return "\n".join(sections)
+
+
+def _collect_deviations() -> list[DeclaredDeviation]:
+    """Scan every committed comparison record for a completed excursion (a non-empty
+    ``symmetric_difference`` on a completed run's ``chunk_diff``/``entity_diff``/``relation_diff``).
+    Today every committed record is ``status="inconclusive"`` (see module docstring), so this
+    always returns an empty list — the function exists so a future completed run's excursions are
+    picked up automatically the next time this module renders, with no code change needed.
+    """
+    deviations: list[DeclaredDeviation] = []
+    for arm in ARMS:
+        for record in load_comparison(arm):
+            if record.get("status") != "completed":
+                continue
+            for field_name in ("chunk_diff", "entity_diff", "relation_diff"):
+                diff = record.get(field_name)
+                if diff and diff.get("symmetric_difference"):
+                    # A completed run's own excursion has no cause yet — an unreasoned cause
+                    # here is *supposed* to raise, forcing a human to name the cause before this
+                    # document can render at all (the point of the refusal).
+                    deviations.append(
+                        DeclaredDeviation(
+                            arm=arm,
+                            query_id=record.get("query_id", "?"),
+                            description=(
+                                f"{field_name}: symmetric_difference="
+                                f"{diff['symmetric_difference']}"
+                            ),
+                            cause="",
+                        )
+                    )
+    return deviations
+
+
+# --------------------------------------------------------------------------------------------- #
+# PARITY-EVIDENCE.md rendering
+# --------------------------------------------------------------------------------------------- #
+
+
+def _escape_cell(value: str) -> str:
+    """Escape a markdown table cell so an author-supplied `|` or newline can't silently split a
+    rendered row into extra columns (mirrors ``falsifier2.py``'s own ``_escape_cell``, WR-01).
+    """
+    return value.replace("|", "\\|").replace("\n", " ")
+
+
+def _render_what_was_compared() -> str:
+    lines = [
+        "## What was compared\n",
+        (
+            "- **Corpus**: `databasise/tests/fixtures/corpus/` — 20 documents, 2 queries "
+            "(HotpotQA distractor setting, D-06). Corpus hash and per-arm query set are recorded "
+            "per-arm below from each committed comparison result's own `corpus_hash` field.\n"
+        ),
+        (
+            "- **One index**: built exactly once by a real v1 OpenRouter ingest run over the "
+            "pinned corpus (plan 03-02, `v1/scripts/run_parity_ingest.py`), imported into the v2 "
+            "namespace layout by a verified read-and-reinsert import "
+            "(`databasise/parity/import_index.py`), and gated on every comparison run by plan "
+            "03-02's index-identity verifier "
+            "(`databasise.parity.import_index.verify_import`) — the same precondition this "
+            "document's own recorded runs failed against (see below).\n"
+        ),
+        (
+            f"- **Determinism / concurrency**: `{_DETERMINISM_SETTING}` / "
+            f"`{_CONCURRENCY_SETTING}` (`databasise.parity.run_arm`'s own pinned settings).\n"
+        ),
+        (
+            "- **Rerank**: disabled (`RERANK_BINDING=null`, D-09's unchanged half; "
+            "`v1/README-PARITY.md`). A number recorded with rerank off does not transfer to a "
+            "run with it on — this evidence never claims otherwise.\n"
+        ),
+        (
+            "- **Pinned model identities**: `qwen/qwen3.7-flash` (generator + keyword "
+            "extraction, provider-pinned to Alibaba, D-07/D-08) and `qwen/qwen3-embedding-8b` "
+            "(embedder, amended D-09) — see `v1/README-PARITY.md`. No comparison run recorded in "
+            "this document reached the point of resolving these identities live (see \"What is "
+            "not measured\" and the precondition state below); the pins themselves are config, "
+            "not a claim about what ran.\n"
+        ),
+        (
+            "- **Environment precondition state on this machine (this render)**: `v1/.venv`, "
+            "`v1/.parity_working_dir`, `v1/.parity_v2_store`, and `v1/.env.parity` are all "
+            "absent — gitignored, worktree-local build artifacts from a different execution "
+            "session (03-02's own real ingest run) that do not carry over to a freshly spawned "
+            "worktree. Every arm's comparison run below therefore stopped at the index-identity "
+            "precondition gate before either arm was touched, and every arm's storage-audit run "
+            "stopped at client construction before the scheduler ran a single node. Both are the "
+            "harness's own designed refusal behavior (D-02, this document's own governing "
+            "prohibition against emitting a pass/fail verdict on a failed precondition), not a "
+            "code defect. Rebuild steps and the exact re-run commands are listed in "
+            "03-09-SUMMARY.md's \"Next Phase Readiness\" section.\n"
+        ),
+    ]
+    return "\n".join(lines)
+
+
+def _render_trace_asymmetry() -> str:
+    return (
+        "## The trace asymmetry\n\n"
+        "Stated before the numbers, not after them. The decomposed arm's run comes back as a "
+        "full RIG §TR.1 run record (`databasise.runner.trace.RunRecord`) — one entry per node, "
+        "its own token accounting, its own effects. The original (pre-decomposition) arm comes "
+        "back as `databasise.parity.v1_arm.V1ArmResult`, instrumented from the outside only "
+        "(wall clock, exit status, captured stderr) — its `instrumentation` field is always "
+        "`\"harness-external\"`. This is not a defect to fix; v1 was never built to emit a RIG "
+        "§TR.1 record and never will be. Wherever a number below appears next to the original "
+        "arm, it is read against this asymmetry, not against a claim of matching instrumentation "
+        f"(D-05, `{_GATE_AMENDMENT_REF}`).\n"
+    )
+
+
+def _render_per_arm_comparison() -> str:
+    sections = ["## Per-arm retrieval-level comparison\n"]
+    for arm in ARMS:
+        records = load_comparison(arm)
+        sections.append(f"### `{arm}`\n")
+        header = (
+            "| query_id | status | chunk sym_diff | ranking agreement | first disagreement | "
+            "entity sym_diff | relation sym_diff | reason |\n"
+            "|---|---|---|---|---|---|---|---|\n"
+        )
+        rows = []
+        for record in records:
+            chunk_diff = record.get("chunk_diff")
+            entity_diff = record.get("entity_diff")
+            relation_diff = record.get("relation_diff")
+            retrieval_note = record.get("retrieval_note")
+            if chunk_diff is not None:
+                chunk_cell = str(len(chunk_diff["symmetric_difference"]))
+                agreement_cell = f"{chunk_diff['ranking_agreement']:.3f}"
+                first_dis_cell = str(chunk_diff["first_disagreement_position"])
+            elif retrieval_note is not None:
+                chunk_cell = agreement_cell = first_dis_cell = "no retrieval to compare"
+            else:
+                chunk_cell = agreement_cell = first_dis_cell = "—"
+            entity_cell = (
+                str(len(entity_diff["symmetric_difference"])) if entity_diff is not None else "—"
+            )
+            relation_cell = (
+                str(len(relation_diff["symmetric_difference"]))
+                if relation_diff is not None
+                else "—"
+            )
+            reason_cell = _escape_cell(record.get("inconclusive_reason") or "")
+            rows.append(
+                f"| {record['query_id']} | {record['status']} | {chunk_cell} | "
+                f"{agreement_cell} | {first_dis_cell} | {entity_cell} | {relation_cell} | "
+                f"{reason_cell} |"
+            )
+        sections.append(header + "\n".join(rows) + "\n")
+        if arm == "bypass":
+            sections.append(
+                "`bypass` resolves to a single `generate` node with no retrieval at all "
+                "(`databasise.wirings.resolve.resolve_arm(\"bypass\")` has no chunk-source "
+                "node). Its chunk/entity/relation columns above read `\"no retrieval to "
+                "compare\"` once a run completes, distinct from a computed zero symmetric "
+                "difference — see `databasise/parity/run_comparison.py`'s own "
+                "`_no_retrieval_to_compare_note`.\n"
+            )
+    return "\n".join(sections)
+
+
+def _render_keyword_variance_band() -> str:
+    sections = [
+        "## The `keywords` variance band\n",
+        (
+            f"**N = {KEYWORD_VARIANCE_N} runs** (`databasise.parity.run_comparison."
+            "_DEFAULT_KEYWORD_VARIANCE_RUNS`). Chosen (reasoning recorded in full in "
+            "03-09-SUMMARY.md's Decisions Made section): large enough to show repeats in the "
+            "per-keyword frequency table for a typical HotpotQA question (2-4 keywords per "
+            "level), small enough that 5 extra live `keywords` calls per query stays well "
+            "within a rung-2 comparison's affordability, and `compute_keyword_variance_band` "
+            "itself accepts any N ≥ 2 — raising N on a future real run needs no code change, "
+            "only a different `keyword_variance_runs=` argument.\n"
+        ),
+    ]
+    header = (
+        "| arm | query_id | run count (N) | hl size mean | hl size stdev | ll size mean | "
+        "ll size stdev | any cache served |\n|---|---|---|---|---|---|---|---|\n"
+    )
+    rows = []
+    for arm in ARMS:
+        for record in load_comparison(arm):
+            band = record.get("keyword_variance_band")
+            if band is None:
+                rows.append(
+                    f"| {arm} | {record['query_id']} | not run — "
+                    f"{_escape_cell(record.get('inconclusive_reason') or record['status'])} | "
+                    "— | — | — | — | — |"
+                )
+                continue
+            rows.append(
+                f"| {arm} | {record['query_id']} | {band['run_count']} | "
+                f"{band['high_level_size_mean']:.2f} | {band['high_level_size_stdev']:.2f} | "
+                f"{band['low_level_size_mean']:.2f} | {band['low_level_size_stdev']:.2f} | "
+                f"{band['any_cache_served']} |"
+            )
+    sections.append(header + "\n".join(rows) + "\n")
+    return "\n".join(sections)
+
+
+def _render_storage_audit() -> str:
+    sections = [
+        "## The per-node storage-ownership audit\n",
+        (
+            "Criterion 3 requires this to ship as part of the parity evidence, which is why it "
+            "is a section here and not a separate file. `matched`/`no-touch`/`over-declared` "
+            "are `databasise.parity.storage_audit`'s own three legitimate per-node states — "
+            "never a pass/fail bit — counted separately below, per arm.\n"
+        ),
+    ]
+    header = "| arm | matched | no-touch | over-declared | outcome |\n|---|---|---|---|---|\n"
+    rows = []
+    for arm in ARMS:
+        audit = load_storage_audit(arm)
+        matched = audit.get("matched_count", 0)
+        no_touch = audit.get("no_touch_count", 0)
+        over_declared = audit.get("over_declared_count", 0)
+        outcome = audit.get("status", "unknown")
+        rows.append(f"| {arm} | {matched} | {no_touch} | {over_declared} | {outcome} |")
+    sections.append(header + "\n".join(rows) + "\n")
+    sections.append(
+        "Every arm above reports `matched=0 no-touch=0 over-declared=0` in this render — none "
+        "of the five audits reached the scheduler: `databasise.parity.storage_audit.run_audit` "
+        "builds clients from `v1/.env.parity` before dispatching a single node, and that file is "
+        "absent on this machine (see \"What was compared\"). This is the audit's own "
+        "`MissingParityEnvError` refusal, captured verbatim in each arm's committed "
+        "`{arm}-storage-audit.json` under `parity_results/` — not a claim that every node "
+        "correctly touched nothing.\n"
+    )
+    return "\n".join(sections)
+
+
+def _render_not_measured() -> str:
+    return (
+        "## What is not measured\n\n"
+        "The A/A floor (MACH-02's eval bundle, MACH-03's bootstrap-resampled p95 calibration) is "
+        f"deferred to Phase 6's side-by-side run, per `{_GATE_AMENDMENT_REF}` — this is the "
+        "**second** deferral of the same pair of requirements (first Phase 2 to Phase 3, "
+        f"recorded in `{_GATE_WAIVER_REF}`; now Phase 3 to Phase 6). Residual risk, in D-11's own "
+        "words, not softened: **answer-level drift originating in `keywords` and `generate` "
+        "stays unmeasured until a floor exists.** GATE-01's standing condition continues to "
+        "hold regardless of this document's own findings: no promotion decision and no parity "
+        "claim rides on an unmeasured comparison.\n\n"
+        "Separately, and specific to this render: **no comparison in this document has actually "
+        "run.** Every arm's retrieval-level diff, `keywords` variance band, and storage-ownership "
+        "audit are all `inconclusive` on this machine (see \"What was compared\"). This document "
+        "is correct and complete for that inconclusive outcome, and is re-runnable to produce the "
+        "real verdict once the owner rebuilds the v1 environment — see 03-09-SUMMARY.md's \"Next "
+        "Phase Readiness\" for the exact rebuild and re-run commands.\n"
+    )
+
+
+def _render_verdict() -> str:
+    return (
+        "## Verdict\n\n"
+        "**No parity verdict is recorded by this document.** Every one of the five arms' "
+        "comparison runs and storage-ownership audits reports an environment-precondition "
+        "refusal — never a pass, never a fail, exactly as this document's own stated prohibition "
+        "requires (\"the parity harness must not emit a pass or fail verdict when the "
+        "index-identity preconditions failed; it must emit `inconclusive`\"). The harness code "
+        "itself, its provenance-checking (`--check-results`), and this rendering are proven "
+        "correct against the real refusal path in this session; the clean-pass path — an actual "
+        "retrieval-level comparison against the real imported index and live model endpoints — "
+        "awaits the owner rebuilding the v1 environment (`v1/README-PARITY.md`) and re-running "
+        "the exact commands 03-09-SUMMARY.md names.\n"
+    )
+
+
+def render_markdown() -> str:
+    """Render ``PARITY-EVIDENCE.md``. A pure function of the committed files under
+    ``parity_results/`` — see module docstring.
+    """
+    sections = [
+        "# Parity Evidence\n",
+        (
+            "Rendered from the committed result files under `databasise/evidence/"
+            "parity_results/` by `databasise/evidence/parity_report.py`, following "
+            "`FALSIFIER-2-EVIDENCE.md`'s committed, re-runnable, human-readable precedent.\n"
+        ),
+        _render_what_was_compared(),
+        _render_trace_asymmetry(),
+        _render_per_arm_comparison(),
+        _render_keyword_variance_band(),
+        _render_storage_audit(),
+        _render_not_measured(),
+        _render_verdict(),
+    ]
+    return "\n".join(sections)
+
+
+# --------------------------------------------------------------------------------------------- #
+# CLI
+# --------------------------------------------------------------------------------------------- #
+
+
+def main(argv: list[str] | None = None) -> int:
+    """``uv run python -m databasise.evidence.parity_report`` renders and writes both documents.
+    ``--check-results`` instead runs :func:`check_results` and prints/returns without writing.
+    """
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--check-results", action="store_true")
+    args = parser.parse_args(argv)
+
+    if args.check_results:
+        violations = check_results()
+        if violations:
+            for v in violations:
+                print(f"VIOLATION: {v}", file=sys.stderr)
+            return 1
+        print(f"parity_results/ provenance check: clean ({len(ARMS)} arms)")
+        return 0
+
+    deviations = _collect_deviations()
+    deviations_text = render_deviations_markdown(deviations)
+    DEVIATIONS_PATH.write_text(deviations_text, encoding="utf-8")
+
+    evidence_text = render_markdown()
+    EVIDENCE_PATH.write_text(evidence_text, encoding="utf-8")
+
+    print(evidence_text)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
