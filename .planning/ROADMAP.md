@@ -77,7 +77,7 @@ Plans:
   2. Answer-level and index-side measurement is off by default and stays off, and any fallback-ladder run is labelled `degraded` with its `degradation_reason`
   3. The gate decision is recorded: the rung-1→rung-2 decision is written down, and a Falsifier 2 failure halts the ladder as a SELECTION.md-level reversal (`.planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md`)
 
-**Plans**: 3/4 plans executed across 3 waves
+**Plans**: 4/4 plans executed across 3 waves
 
 Plans:
 **Wave 1**
@@ -91,7 +91,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 02-04-PLAN.md — GATE-01 waiver record amending the ratified §VD condition, and the ROADMAP/REQUIREMENTS re-scope it authorises
+- [x] 02-04-PLAN.md — GATE-01 waiver record amending the ratified §VD condition, and the ROADMAP/REQUIREMENTS re-scope it authorises
 
 ### Phase 3: LightRAG Query Side
 
@@ -177,7 +177,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Machine Core | 10/10 | Complete    | 2026-08-31 |
-| 2. Falsifier Gate | 3/4 | In Progress|  |
+| 2. Falsifier Gate | 4/4 | In Progress|  |
 | 3. LightRAG Query Side | 0/TBD | Not started | - |
 | 4. The Seam | 0/TBD | Not started | - |
 | 5. Opaque-Side Admission | 0/TBD | Not started | - |
