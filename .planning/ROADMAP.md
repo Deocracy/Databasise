@@ -2,7 +2,7 @@
 
 ## Overview
 
-The journey runs the four §BP rungs of SYSTEM-MODEL.md in their binding order, with the product surface fitted around them where dependencies allow. Rung 1 builds the machine that everything else stands on — embedded stores, identity, runner, storage keying — and then puts the verdict's decisive falsifier on the table: the computed depth/execution_mode validator (Falsifier 2). Failing it halts the ladder. The calibrated A/A noise floor (Falsifier 5) stands up at its point of first need, Phase 3's parity comparison, per the GATE-01 waiver record (`.planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md`). Rung 2 re-cuts LightRAG's query side into primitive parts and proves parity inside that measured floor — the query side first, because spike 005 measured the ingest side as the entangled one. With a real decomposed query path to serve, the §18 seam is locked next: one closed envelope, four selectors, refusals instead of silent fallbacks, reachable in-process and over REST. Rung 3 then admits the two opaque things — LightRAG's ~1,786-line ingest core and codebase-memory-mcp whole-engine — and hangs the ingest, delete, and status surface off them. Rung 4 decomposes HippoRAG 2 with no opaque core left and runs both modalities side by side on one corpus, which is the milestone's actual proof: the caller sees two arms keyed by their own selectors and no envelope field moves. The last phase makes the outcome actionable — an append-only ledger and an operator-invoked promote/rollback path, with the owner's own corpus in the eval bundle before any promotion decision rides on it.
+The journey runs the four §BP rungs of SYSTEM-MODEL.md in their binding order, with the product surface fitted around them where dependencies allow. Rung 1 builds the machine that everything else stands on — embedded stores, identity, runner, storage keying — and then puts the verdict's decisive falsifier on the table: the computed depth/execution_mode validator (Falsifier 2). Failing it halts the ladder. The calibrated A/A noise floor (Falsifier 5) stands up at its point of first need, Phase 6's cross-modality run, per the GATE-01 waiver record (`.planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md`) and its second deferral in `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`. Rung 2 re-cuts LightRAG's query side into primitive parts and proves parity inside that measured floor — the query side first, because spike 005 measured the ingest side as the entangled one. With a real decomposed query path to serve, the §18 seam is locked next: one closed envelope, four selectors, refusals instead of silent fallbacks, reachable in-process and over REST. Rung 3 then admits the two opaque things — LightRAG's ~1,786-line ingest core and codebase-memory-mcp whole-engine — and hangs the ingest, delete, and status surface off them. Rung 4 decomposes HippoRAG 2 with no opaque core left and runs both modalities side by side on one corpus, which is the milestone's actual proof: the caller sees two arms keyed by their own selectors and no envelope field moves. The last phase makes the outcome actionable — an append-only ledger and an operator-invoked promote/rollback path, with the owner's own corpus in the eval bundle before any promotion decision rides on it.
 
 ## Phases
 
@@ -97,14 +97,14 @@ Plans:
 
 **Goal**: LightRAG's query path runs as fitted primitive parts and its parity against the original is measured, not asserted (§BP rung 2)
 **Depends on**: Phase 2 (rung-1 gate: Falsifier 2 passed, Falsifier 5 deferred per `.planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md`)
-**Requirements**: MODAL-01, MACH-02, MACH-03
+**Requirements**: MODAL-01
 **Success Criteria** (what must be TRUE):
 
   1. Seventeen of the eighteen §L.1 query-side positions run as fitted primitive-part nodes, with the eighteenth (`embedder-index`) authored by the port and identified as its one index-recipe node
-  2. Owner runs the same corpus through the decomposed query side and the pre-decomposition original and reads an N-run variance band rather than a single diff — the band sits inside this phase's own calibrated A/A floor (criterion 5), or every excursion outside it is a named declared deviation under CONTRACT §5's parity-not-gain rule
+  2. Owner runs the same corpus through the decomposed query side and the pre-decomposition original and reads an N-run variance band rather than a single diff — the band sits inside criterion 6's deterministic retrieval-level substitute gate (the A/A floor itself is deferred to Phase 6, per criteria 4/5's amendment below), or every excursion outside it is a named declared deviation under CONTRACT §5's parity-not-gain rule
   3. Every fitted node reaches storage through a machine primitive only — no node holds a direct reference to v1's singleton store or a process-wide lock, and the per-node ownership audit ships as part of the parity evidence
-  4. Owner mints an eval bundle with dev/holdout/sealed splits carrying questions, gold answers, judge instance, judge prompt hash, corpus snapshot hash, determinism/concurrency setting, and both §EV.2 target families — and cannot edit a minted version in place; opening `sealed` mints a new version and every holdout consultation is logged before any decomposition work reads it
-  5. Owner runs one A/A calibration and reads a bootstrap-resampled p95 floor keyed to `(bundle@v, tier, metric)` inseparable from the run's declared determinism/concurrency setting, with T1's null width materially narrower than T0's — Falsifier 5
+  4. Owner mints an eval bundle with dev/holdout/sealed splits carrying questions, gold answers, judge instance, judge prompt hash, corpus snapshot hash, determinism/concurrency setting, and both §EV.2 target families — and cannot edit a minted version in place; opening `sealed` mints a new version and every holdout consultation is logged before any decomposition work reads it *(amended 2026-08-31 per `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`: deferred to Phase 6's cross-modality run — the point of first need where no retrieval-level identity exists to lean on)*
+  5. Owner runs one A/A calibration and reads a bootstrap-resampled p95 floor keyed to `(bundle@v, tier, metric)` inseparable from the run's declared determinism/concurrency setting, with T1's null width materially narrower than T0's — Falsifier 5 *(amended 2026-08-31 per `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`: deferred to Phase 6's cross-modality run, same reason as criterion 4)*
   6. Until the A/A floor exists, parity is checked at the retrieval level with deterministic, zero-token comparisons of retrieved chunk sets and rankings between the original and the decomposed query side, plus human spot-checks of answers (D-05 substitute gate)
 
 **Plans**: 9 plans across 7 waves
@@ -175,7 +175,7 @@ Plans:
 
 **Goal**: Two modalities answer the same corpus behind the same seam and the caller sees both at once — the milestone's proof of swappability (§BP rung 4)
 **Depends on**: Phase 5 (rung-3 admission complete)
-**Requirements**: MODAL-04, MODAL-05, API-08, MACH-10
+**Requirements**: MODAL-04, MODAL-05, API-08, MACH-10, MACH-02, MACH-03
 **Success Criteria** (what must be TRUE):
 
   1. HippoRAG 2 runs as thirteen fitted node positions with no opaque core left behind, whole-graph PPR reached through §14.2's Graph bulk-export declared capability into the native igraph/prpack call, with OpenIE and reset-vector-join scaling carried as node internals and index-side effective depth staying `opaque` under the taint rule until its parity is shown
@@ -183,6 +183,7 @@ Plans:
   3. Caller sends one query against two or more modalities and receives per-arm results keyed by the selectors they supplied, never by arm id, wiring name, node id, or modality name; comparison returns per-arm outputs, traces, and scores with no verdict, and a single arm comes back as a run rather than a comparison
   4. The first genuine seam call records F-14's outcome either way: no consumer-visible envelope field changed across the modality swap, or the field that did is named
   5. Mutable-store components either have a defined snapshot/reset protocol or are recorded as permanently excluded from A/B — F-07 discharged rather than left open
+  6. Owner mints an eval bundle with dev/holdout/sealed splits carrying questions, gold answers, judge instance, judge prompt hash, corpus snapshot hash, determinism/concurrency setting, and both §EV.2 target families (MACH-02), then runs one A/A calibration and reads a bootstrap-resampled p95 floor keyed to `(bundle@v, tier, metric)` with T1's null width materially narrower than T0's — Falsifier 5, MACH-03, carried forward from Phase 3 per `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`
 
 **Plans**: TBD
 
@@ -224,10 +225,10 @@ Every v1 requirement maps to exactly one phase. 34/34 mapped.
 |-------|--------------|-------|
 | 1. Machine Core | EMBED-01, MACH-05, MACH-06, MACH-08 | 4 |
 | 2. Falsifier Gate | GATE-01, MACH-01, MACH-09 | 3 |
-| 3. LightRAG Query Side | MODAL-01, MACH-02, MACH-03 | 3 |
+| 3. LightRAG Query Side | MODAL-01 | 1 |
 | 4. The Seam | API-03, API-04, API-05, API-10, API-11, EMBED-02, MACH-11 | 7 |
 | 5. Opaque-Side Admission | MODAL-02, MODAL-03, MACH-04, API-01, API-02, API-06, API-07, HARD-03 | 8 |
-| 6. HippoRAG 2 & Side-by-Side | MODAL-04, MODAL-05, API-08, MACH-10 | 4 |
+| 6. HippoRAG 2 & Side-by-Side | MODAL-04, MODAL-05, API-08, MACH-10, MACH-02, MACH-03 | 6 |
 | 7. Promotion & Rollback | MACH-07, API-09, HARD-04, HARD-01, HARD-02 | 5 |
 
 ## Ordering Constraints
@@ -238,5 +239,5 @@ These are binding, not preferences:
 - **Spike-005 decomposition order**: the query side decomposes first (Phase 3), the ingest side stays opaque longest (Phase 5). Any plan assuming a clean ingest lane arrives first is falsified reasoning.
 - **Envelope before endpoints**: Phase 4 locks the §18.2 envelope shape (including MACH-11's seam-level event extension) before Phase 5 ships ingest, delete, and status endpoints.
 - **Rig before comparison surface**: API-08's comparison endpoint lands in Phase 6 with the side-by-side rig, not earlier. API-09's promotion path lands in Phase 7 with the ledger, not earlier.
-- **Eval infrastructure at point of need**: the bundle and A/A floor stand up at Phase 3's parity comparison, before any promotion or parity claim rides on a measured number, per `.planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md`.
+- **Eval infrastructure at point of need**: the bundle and A/A floor stand up at Phase 6's cross-modality run, before any promotion or parity claim rides on a measured number, per `.planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md` and its second deferral in `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`. Phase 3's parity comparison uses the deterministic retrieval-level substitute gate instead (D-05).
 - **HARD-04 before promotion**: the owner's corpus is in the bundle before any promotion decision rides on it (Phase 7).
