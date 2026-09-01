@@ -127,12 +127,16 @@ def _build_stores(store_root: Path, workspace: str) -> dict[str, Any]:
 
 def _inject_query(resolved: dict[str, Any], query: str) -> dict[str, Any]:
     """Stamp the user's query text onto every resolved node whose config reads one
-    (``embedder-query``, ``generate`` — see those modules' own docstrings for why each needs its
-    own copy rather than reading a sibling node's output). A no-op for a node the resolved arm
-    does not contain (e.g. ``bypass`` removes ``embedder-query``).
+    (``keywords``, ``embedder-query``, ``generate`` — see those modules' own docstrings for why
+    each needs its own copy rather than reading a sibling node's output). ``keywords`` was missing
+    from this list before CR-01's fix: its own ``_keywords_body`` reads ``config.get("query", "")``
+    directly, so without this stamp the query text it extracts keywords from (and — post CR-01 —
+    the ``"query"`` it hands to ``embedder-query``) was always the empty string in every real run,
+    not just when ``keywords`` is pinned. A no-op for a node the resolved arm does not contain
+    (e.g. ``bypass`` removes ``embedder-query``, ``naive``/``bypass`` remove ``keywords``).
     """
     nodes = resolved.get("nodes", {})
-    for node_id in ("embedder-query", "generate"):
+    for node_id in ("keywords", "embedder-query", "generate"):
         if node_id not in nodes:
             continue
         config = dict(nodes[node_id].get("config") or {})

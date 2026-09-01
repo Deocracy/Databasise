@@ -111,6 +111,11 @@ async def _keywords_body(ctx: NodeContext) -> dict[str, Any]:
         return {
             "high_level_keywords": _normalize_keyword_list(pinned_output.get("high_level_keywords")),
             "low_level_keywords": _normalize_keyword_list(pinned_output.get("low_level_keywords")),
+            # CR-01: embedder-query's own _query_text reads this node's "query" key when
+            # `keywords` is one of its deps (hybrid/local/global) — never emitted before this
+            # fix, so embedder-query silently embedded "" for those three arms. Emit the raw
+            # query text here so it survives both the pinned-replay and live-call branches.
+            "query": query,
             "tokens": TokenAccounting(counted_by="pinned-replay"),
         }
 
@@ -126,6 +131,7 @@ async def _keywords_body(ctx: NodeContext) -> dict[str, Any]:
     return {
         "high_level_keywords": hl_keywords,
         "low_level_keywords": ll_keywords,
+        "query": query,  # CR-01: same reasoning as the pinned-replay branch above.
         "tokens": result.tokens,
         "resolved_model_identity": result.resolved_model_identity,
     }

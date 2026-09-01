@@ -17,7 +17,9 @@ import numpy as np
 import pytest
 from databasise.clients.base import ChatResult, EmbeddingResult
 from databasise.parts.registry import default_registry
-from databasise.parity.run_arm import run_arm
+from databasise.parity.run_arm import _inject_query, run_arm
+from databasise.parity.run_comparison import _inject_pinned_keywords
+from databasise.runner import scheduler
 from databasise.runner.trace import TokenAccounting
 from databasise.stores.kv import SqliteKVStore
 from databasise.stores.vector import FaissVectorStore
@@ -181,6 +183,64 @@ async def test_naive_arm_full_run_against_a_synthetic_store_with_stub_clients(
     assert by_id["generate"]["tokens"]["prompt_tokens"] + by_id["generate"]["tokens"]["completion_tokens"] > 0
 
     assert result["provided"]["generate"]["completion"]
+
+
+# --------------------------------------------------------------------------------------------- #
+# CR-01 regression: embedder-query embeds the real query text for the hybrid arm's scheduler run
+# --------------------------------------------------------------------------------------------- #
+
+
+class _SpyEmbeddingClient:
+    """Records every text list it is asked to embed, for CR-01's non-empty/query-text assertion."""
+
+    def __init__(self, vector: list[float]):
+        self.vector = vector
+        self.calls: list[list[str]] = []
+
+    async def embed(self, texts, **kwargs):
+        self.calls.append(list(texts))
+        return EmbeddingResult(
+            vectors=[self.vector for _ in texts],
+            tokens=TokenAccounting(prompt_tokens=len(texts), call_count=1, counted_by="spy-embed"),
+            resolved_model_identity="spy-embed-model",
+        )
+
+
+async def test_hybrid_arm_embedder_query_embeds_the_real_query_text_via_run_wiring():
+    """CR-01 regression: with ``keywords`` pinned (no LLM call) and a spy embedding client, the
+    resolved ``hybrid`` arm — driven through the real ``databasise.runner.scheduler.run_wiring``
+    path, not a hand-built ``NodeContext`` — must have its ``embedder-query`` node embed the
+    actual query text, not the empty string ``keywords.py``'s pre-fix output shape produced for
+    every arm keeping the ``keywords`` node. Downstream nodes (``entity-lookup``/
+    ``relation-lookup``, ...) have no store access in this test and are expected to fail with
+    ``StoreNotWiredError`` — the run is scored ``partial``, per this module's own "partial
+    outcomes are never discarded" contract — but ``embedder-query``'s own result is captured
+    before that failure, which is what this test asserts against.
+    """
+    query = "Which films did Ed Wood direct?"
+    spy = _SpyEmbeddingClient(vector=[1.0, 0.0, 0.0])
+
+    resolved = resolve_arm("hybrid")
+    resolved = _inject_query(resolved, query)
+    resolved = _inject_pinned_keywords(resolved, hl_keywords=["film direction"], ll_keywords=["Ed Wood"])
+
+    registry = default_registry()
+    parsed = parse_wiring(resolved, registry)
+    assert parsed.report.ok, [v.code for v in parsed.report.violations]
+
+    result = await scheduler.run_wiring(
+        parsed,
+        registry,
+        stores={},
+        determinism_setting="cache-bypassed",
+        concurrency_setting="sequential",
+        clients={"embedding": spy},
+    )
+
+    embedder_query_output = result["results"]["embedder-query"]
+    assert embedder_query_output["query"] == query
+    assert embedder_query_output["query"] != ""
+    assert spy.calls == [[query]]
 
 
 # --------------------------------------------------------------------------------------------- #
