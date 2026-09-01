@@ -19,6 +19,8 @@ from __future__ import annotations
 import pytest
 from databasise.parity.import_index import VerificationResult, Violation
 from databasise.parity.run_comparison import (
+    _RELATION_SOURCE_NODE_ID,
+    _extract_decomposed_ids,
     _no_retrieval_to_compare_note,
     compare_arm_on_query,
     diff_ranked_ids,
@@ -93,6 +95,27 @@ def test_prefix_agreement_reports_first_disagreement_at_the_length_of_the_shorte
 
     assert diff.symmetric_difference == ("c",)
     assert diff.first_disagreement_position == 2
+
+
+def test_extract_decomposed_ids_handles_mixed_relation_item_shapes_crossreview_cr01():
+    """CR-01 regression: ``budget-relations["items"]`` can legitimately mix
+    ``entity-hydrate-expand``'s ``src_tgt``-shaped items with ``relation-hydrate-expand``'s
+    ``src_id``/``tgt_id``-shaped items (the ``global`` arm's ``join-relations.deps`` patch leaves
+    only the latter shape; ``hybrid`` mixes both). ``_extract_decomposed_ids`` must not raise
+    ``KeyError`` on either shape and must compute the same ``src->tgt`` id either way.
+    """
+    results = {
+        _RELATION_SOURCE_NODE_ID: {
+            "items": [
+                {"src_tgt": ["a", "b"]},
+                {"src_id": "c", "tgt_id": "d"},
+            ]
+        }
+    }
+
+    _chunk_ids, _entity_ids, relation_ids = _extract_decomposed_ids(results)
+
+    assert relation_ids == ["a->b", "c->d"]
 
 
 def test_diff_ranked_ids_is_reachable_with_no_client_or_store_wired_at_all():

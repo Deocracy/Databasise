@@ -411,11 +411,25 @@ def _extract_decomposed_ids(results: dict[str, Any]) -> tuple[list[str], list[st
 
     relation_output = results.get(_RELATION_SOURCE_NODE_ID)
     relation_ids = [
-        f"{item['src_tgt'][0]}->{item['src_tgt'][1]}"
+        _relation_comparison_id(item)
         for item in (relation_output or {}).get("items", [])
     ]
 
     return chunk_ids, entity_ids, relation_ids
+
+
+def _relation_comparison_id(item: dict[str, Any]) -> str:
+    """Build the ``src->tgt`` comparison id regardless of which of the two relation item shapes
+    survives dedup into ``budget-relations`` — ``entity-hydrate-expand`` emits ``src_tgt``,
+    ``relation-hydrate-expand`` emits ``src_id``/``tgt_id`` (see ``join_roundrobin.py``'s own
+    dual-shape ``_relation_key`` dedup helper, which already treats both as legitimate). The
+    ``global`` arm's ``join-relations.deps`` is patched to ``relation-hydrate-expand`` only, so
+    every item there lacks ``src_tgt`` — CR-01.
+    """
+    pair = item.get("src_tgt")
+    if pair is None:
+        pair = (item.get("src_id"), item.get("tgt_id"))
+    return f"{pair[0]}->{pair[1]}"
 
 
 # --------------------------------------------------------------------------------------------- #
