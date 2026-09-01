@@ -55,7 +55,7 @@ def _sha256_text(text: str) -> str:
 
 def _fetch_rows(num_questions: int) -> list[dict[str, Any]]:
     url = _HF_ROWS_URL.format(dataset=_DATASET, config=_CONFIG, split=_SPLIT, length=num_questions)
-    with urllib.request.urlopen(url, timeout=30) as resp:  # noqa: S310 — fixed HTTPS host, fixture build only
+    with urllib.request.urlopen(url, timeout=30) as resp:
         payload = json.load(resp)
     return [row["row"] for row in payload["rows"]]
 
