@@ -53,6 +53,40 @@ async def test_bug244_node_degree_and_labels_correct_on_empty_graph(store_root):
     await store.finalize()
 
 
+async def test_bug244_get_node_edges_agrees_with_node_degree_on_a_populated_graph(store_root):
+    """``get_node_edges`` extends ``node_degree``'s own non-aggregating query shape (frozen-bug
+    #244's mitigation) — proven here to agree with ``node_degree`` on the same store state,
+    including unflushed buffered puts and removals, before any node body depends on it.
+    """
+    store = CozoGraphStore(namespace="graph", workspace="ws", store_root=store_root)
+    await store.upsert_node("A", {"kind": "entity"})
+    await store.upsert_node("B", {"kind": "entity"})
+    await store.upsert_node("C", {"kind": "entity"})
+    await store.upsert_edge("A", "B", {"weight": "1.0"})
+    await store.upsert_edge("A", "C", {"weight": "2.0"})
+    await store.index_done_callback()
+
+    # Unflushed buffered state: one new edge, one removal — both must be reflected identically
+    # by node_degree (a count) and get_node_edges (the enumerated list) for this to be trusted.
+    await store.upsert_node("D", {"kind": "entity"})
+    await store.upsert_edge("A", "D", {"weight": "3.0"})
+    await store.delete_edge("A", "B")
+
+    degree = await store.node_degree("A")
+    edges = await store.get_node_edges("A")
+
+    assert degree == len(edges)
+    assert {(e["src"], e["tgt"]) for e in edges} == {("A", "C"), ("A", "D")}
+    await store.finalize()
+
+
+async def test_bug244_get_node_edges_correct_on_empty_graph(store_root):
+    store = CozoGraphStore(namespace="graph", workspace="ws", store_root=store_root)
+
+    assert await store.get_node_edges("Nonexistent") == []
+    await store.finalize()
+
+
 def test_bug244_adapter_source_contains_no_count_aggregation():
     """The mitigation: the adapter never uses Cozo's ``count()`` aggregation, which silently
     returns zero rows rather than the correct count on this pinned version (#244)."""
