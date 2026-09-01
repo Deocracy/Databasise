@@ -114,11 +114,26 @@ async def test_embedder_query_returns_a_vector_and_a_populated_token_accounting_
 
 
 async def test_embedder_query_prefers_the_keywords_node_output_when_present():
+    """CR-01 regression: the fake ``keywords`` output here must match the real shape
+    ``keywords.py``'s ``_keywords_body`` actually returns (``high_level_keywords``/
+    ``low_level_keywords``/``query``/``tokens``) — the prior version of this test stubbed a
+    ``{"query": ...}``-only shape the real body never produced, which is why the CR-01 bug (the
+    real body never emitted "query" at all) went undetected.
+    """
     client = _StubEmbeddingClient(vector=[0.0, 1.0, 0.0])
     ctx = _ctx(
         "embedder-query",
         config={"query": "config-path text, must not be used"},
-        inputs={"keywords": {"query": "keywords-path text"}},
+        inputs={
+            "keywords": {
+                "high_level_keywords": ["film direction"],
+                "low_level_keywords": ["Ed Wood"],
+                "query": "keywords-path text",
+                "tokens": TokenAccounting(
+                    prompt_tokens=3, completion_tokens=2, call_count=1, counted_by="stub-llm"
+                ),
+            }
+        },
         clients={"embedding": client},
     )
 
