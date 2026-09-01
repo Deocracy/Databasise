@@ -16,7 +16,11 @@ import pytest
 from databasise.parts.registry import PartRegistry
 from databasise.parts.schema import NodeContext, Part, WiringNode
 from databasise.runner import scheduler
-from databasise.runner.scheduler import InvalidMaxConcurrencyError, WiringRefusedError
+from databasise.runner.scheduler import (
+    InvalidMaxConcurrencyError,
+    InvalidTokenAllowanceError,
+    WiringRefusedError,
+)
 from databasise.validator.errors import ValidationReport, Violation
 from databasise.validator.parse import ParsedWiring
 
@@ -139,6 +143,41 @@ async def test_3b_max_concurrency_non_numeric_is_refused_as_invalid_max_concurre
     parsed = _wiring({"bad-node": node}, {"bad-node": part}, {"bad-node": ()})
 
     with pytest.raises(InvalidMaxConcurrencyError) as exc_info:
+        await _run(parsed)
+
+    assert "bad-node" in str(exc_info.value)
+    assert ran["called"] is False  # the run never started
+
+
+async def test_3c_negative_token_allowance_is_refused_at_validation_naming_the_node():
+    """WR-01 regression: mirrors ``test_3_max_concurrency_0_is_refused_at_validation_naming_the_node``
+    for ``token_allowance``'s own sibling refusal — a negative declared value must raise
+    ``InvalidTokenAllowanceError`` before any node is dispatched, naming the offending node id,
+    the same contract ``_validated_max_concurrency`` already gives ``max_concurrency``.
+    """
+    ran = {"called": False}
+
+    async def body(ctx: NodeContext):
+        ran["called"] = True
+        return {}
+
+    part = Part(
+        name_at_version="test/negative-allowance@1.0.0",
+        kind="fanout",
+        structural_depth="stage",
+        effects=[],
+        upstream_ref=None,
+        body=body,
+    )
+    node = WiringNode(
+        component="test/negative-allowance@1.0.0",
+        kind="fanout",
+        config={"token_allowance": -1},
+        deps=[],
+    )
+    parsed = _wiring({"bad-node": node}, {"bad-node": part}, {"bad-node": ()})
+
+    with pytest.raises(InvalidTokenAllowanceError) as exc_info:
         await _run(parsed)
 
     assert "bad-node" in str(exc_info.value)

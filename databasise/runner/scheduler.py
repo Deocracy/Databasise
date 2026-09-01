@@ -192,17 +192,17 @@ class InvalidMaxConcurrencyError(ValueError):
 
 class InvalidTokenAllowanceError(ValueError):
     """A node declared ``config.token_allowance`` that ``int()`` cannot coerce at all (a string,
-    a list, a dict, ...) — mirrors ``InvalidMaxConcurrencyError``'s constructor and message shape
-    (the WR-04 lesson: a bare ``ValueError`` leaking out of ``int(...)`` is not this module's own
-    named, actionable refusal). Refused at validation, before any node is dispatched, naming the
-    offending node id.
+    a list, a dict, ...), OR (WR-01) a negative value — mirrors ``InvalidMaxConcurrencyError``'s
+    constructor and message shape (the WR-04 lesson: a bare ``ValueError`` leaking out of
+    ``int(...)`` is not this module's own named, actionable refusal). Refused at validation,
+    before any node is dispatched, naming the offending node id.
     """
 
     def __init__(self, node_id: str, value: Any):
         self.node_id = node_id
         self.value = value
         super().__init__(
-            f"node {node_id!r} declares config.token_allowance={value!r}; must be coercible to int"
+            f"node {node_id!r} declares config.token_allowance={value!r}; must be >= 0"
         )
 
 
@@ -348,17 +348,20 @@ def _validated_max_concurrency(node_id: str, config: dict[str, Any] | None) -> i
 def _validated_token_allowance(node_id: str, config: dict[str, Any] | None) -> int:
     """Extract and validate ``config.token_allowance`` (DEC-A), defaulting to
     ``DEFAULT_TOKEN_ALLOWANCE`` (DEC-B) when absent. Raises :class:`InvalidTokenAllowanceError`,
-    naming ``node_id``, for a declared value ``int()`` cannot coerce at all — refused at
-    validation, before any node is dispatched, mirroring ``_validated_max_concurrency``'s own
-    WR-04-lesson shape for this sibling field.
+    naming ``node_id``, for a declared value ``int()`` cannot coerce at all, OR (WR-01) a negative
+    value — refused at validation, before any node is dispatched, mirroring
+    ``_validated_max_concurrency``'s own WR-04-lesson shape for this sibling field.
     """
     raw = DEFAULT_TOKEN_ALLOWANCE
     if config:
         raw = config.get("token_allowance", DEFAULT_TOKEN_ALLOWANCE)
     try:
-        return int(raw)
+        allowance = int(raw)
     except (TypeError, ValueError):
         raise InvalidTokenAllowanceError(node_id, raw) from None
+    if allowance < 0:
+        raise InvalidTokenAllowanceError(node_id, allowance)
+    return allowance
 
 
 def _validated_guards(node_id: str, config: dict[str, Any] | None) -> list[GuardDeclaration]:
