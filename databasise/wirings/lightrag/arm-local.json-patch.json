@@ -1,0 +1,42 @@
+{
+  "patch_format": "RFC 6902 JSON Patch",
+  "patch_format_reason": "Subtractive — removes relation-lookup, relation-hydrate-expand, chunk-vector — so per CONTRACT.md:182 this MUST be an RFC 6902 operation list, not an RFC 7386 merge-patch.",
+  "base": "lightrag-base.json",
+  "operations": [
+    { "op": "remove", "path": "/nodes/relation-lookup" },
+    { "op": "remove", "path": "/nodes/relation-hydrate-expand" },
+    { "op": "remove", "path": "/nodes/chunk-vector" },
+    { "op": "replace", "path": "/nodes/join-entities/deps", "value": ["entity-hydrate-expand"] },
+    { "op": "replace", "path": "/nodes/join-entities/config/arm_precedence",
+      "value": "entity-hydrate-expand-only, degenerate 1-ary join (entity-half)" },
+    { "op": "replace", "path": "/nodes/join-relations/deps", "value": ["entity-hydrate-expand"] },
+    { "op": "replace", "path": "/nodes/join-relations/config/arm_precedence",
+      "value": "entity-hydrate-expand-only, degenerate 1-ary join — local is not relation-free: entity-hydrate-expand's edge-expansion sub-step emits relations too (operate.py:5841-5895)" },
+    { "op": "replace", "path": "/nodes/join-chunks/deps", "value": ["chunk-sel-kg"] },
+    { "op": "replace", "path": "/nodes/join-chunks/config", "value": {
+      "socket_shape": "List[List[X]] -> List[X]",
+      "arity": 1,
+      "arm_precedence": "chunk-sel-kg-only, degenerate 1-ary join",
+      "apportionment_policy": "n/a - non-effectful join, no budget spent at this node"
+    } }
+  ],
+  "resulting_node_id_set": [
+    "keywords", "embedder-query", "entity-lookup", "entity-hydrate-expand",
+    "join-entities", "join-relations", "budget-entities", "budget-relations",
+    "chunk-sel-kg", "join-chunks", "heading-backfill", "rerank", "assemble",
+    "generate", "embedder-index"
+  ],
+  "guards": [
+    {
+      "guard_name": "ll_keywords_empty_fallthrough",
+      "declared_per": "CONTRACT.md §19.8",
+      "evaluating_node": "keywords",
+      "condition": "the keyword extractor's low-level (ll) keyword output is empty",
+      "declared_in_config_hash": true,
+      "emitted_when_not_fired": "this arm's own resolved node set above (the entity-only fifteen-node set) — the normal local disposition, entity-lookup/entity-hydrate-expand execute, relation nodes are structurally absent",
+      "when_fired": "per CONTRACT.md §19.8's equal-node-set rule outcome (1), this arm's ACTUALLY-EXECUTED behaviour converges exactly with the resolved global arm — the relation chain runs instead (operate.py:5021-5062), with the query embedding binding also differing: query_embedding=None on this path, so the store re-embeds the keyword string itself (operate.py:4980-4982). This convergence is NOT registered as a third, separate arm — it is local's own declared, observable variant, per outcome (1)'s own wording.",
+      "observability": "stamped on the run record and surfaced via CONTRACT.md §18.2's existing 'any degradation path a manifest declared and the run actually took' envelope field; no new envelope field is minted, per PARTS.md ## §R row D10.",
+      "gate_consequence": "CONTRACT.md §5's tenth refusal condition refuses a comparison whose compared arms differ in which guards fired; a local-vs-hybrid comparison stays runnable by partitioning or reporting guard-fired queries separately, per PARTS.md ## §R row D10."
+    }
+  ]
+}
