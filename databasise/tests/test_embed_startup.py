@@ -144,17 +144,20 @@ async def test_4_no_container_runtime_is_invoked_across_a_complete_run(store_roo
     assert after == before, f"task count changed across a complete run: {before} -> {after}"
 
 
-def test_5_the_declared_runtime_dependency_set_is_exactly_four_and_none_is_a_db_client():
+def test_5_the_declared_runtime_dependency_set_is_exactly_six_and_none_is_a_db_client():
     """Test 5: read from the installed distribution's own metadata, not the project file — the
-    claim is about the environment that actually runs.
+    claim is about the environment that actually runs. Phase 1's set of four grew to six in
+    Phase 3 (03-01-PLAN.md Task 2): ``openai`` (D-06/D-07's LLM/embedding client primitive) and
+    ``jsonpatch`` (D-13's RFC 6902 arm-patch application) are both new runtime dependencies, both
+    approved through the package-legitimacy gate (03-01-SUMMARY.md).
     """
     dist = distribution("databasise")
     requires = dist.requires or []
 
-    assert len(requires) == 4, f"expected exactly 4 runtime dependencies, got {requires}"
+    assert len(requires) == 6, f"expected exactly 6 runtime dependencies, got {requires}"
 
     names = {req.split(";")[0].split("[")[0].split("=")[0].split("<")[0].split(">")[0].strip().lower() for req in requires}
-    assert names == {"pycozo", "faiss-cpu", "rfc8785", "pydantic"}
+    assert names == {"pycozo", "faiss-cpu", "rfc8785", "pydantic", "openai", "jsonpatch"}
 
     _separate_server_clients = ("psycopg", "pymongo", "redis", "neo4j", "pymilvus", "qdrant", "opensearch")
     for name in names:
