@@ -14,6 +14,9 @@ venv/
 # Enviroment Variable Files
 .env
 .env.backup.*
+# Phase 3 parity-arm run config — holds a live OpenRouter API key (03-02-PLAN.md Task 1);
+# .env.parity.example is the tracked, secret-free companion.
+.env.parity
 
 # Generated Docker Compose files (output of setup wizard)
 docker-compose.*.yml
