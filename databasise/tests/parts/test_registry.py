@@ -1,5 +1,6 @@
-"""Tests for D-13's explicit part registry (parts/registry.py) and D-04's three
-declaration-only Falsifier-2 wiring entries (parts_core/declared_only.py).
+"""Tests for D-13's explicit part registry (parts/registry.py) and D-04's two remaining
+declaration-only Falsifier-2 wiring entries (parts_core/declared_only.py) — 03-08-PLAN.md Task 3
+retired the third, ``lightrag/query-side`` (version ``0.1.0``).
 """
 
 from __future__ import annotations
@@ -15,17 +16,20 @@ from databasise.parts.registry import (
 from databasise.parts.schema import NodeContext
 
 
-def test_default_registry_holds_exactly_twenty_two_entries():
-    """D-04's seven Phase-1 entries (four executable ``parts_core`` reference parts, three
-    declaration-only Falsifier-2 wiring placeholders) plus 03-04-PLAN.md Task 2's seven ported
-    LightRAG parts plus 03-05-PLAN.md's five graph-half parts (``keywords``, ``entity-lookup``,
-    ``relation-lookup``, ``entity-hydrate-expand``, ``relation-hydrate-expand``) plus
-    03-06-PLAN.md's three remaining base-wiring components (``join-roundrobin``,
-    ``truncator-token-budget``, ``chunk-selector-kg``) — this is by design the final count for the
-    LightRAG query side: all eighteen §L.1 positions now resolve against a registered part.
+def test_default_registry_holds_exactly_twenty_one_entries():
+    """D-04's six remaining Phase-1 entries (four executable ``parts_core`` reference parts, two
+    declaration-only Falsifier-2 wiring placeholders — 03-08-PLAN.md Task 3 retired the third,
+    ``lightrag/query-side`` (version ``0.1.0``), once Phase 3 ported its real eighteen positions)
+    plus
+    03-04-PLAN.md Task 2's seven ported LightRAG parts plus 03-05-PLAN.md's five graph-half parts
+    (``keywords``, ``entity-lookup``, ``relation-lookup``, ``entity-hydrate-expand``,
+    ``relation-hydrate-expand``) plus 03-06-PLAN.md's three remaining base-wiring components
+    (``join-roundrobin``, ``truncator-token-budget``, ``chunk-selector-kg``) — this is by design
+    the final count: all eighteen §L.1 positions resolve against a registered part, and the stub
+    they superseded is gone.
     """
     registry = default_registry()
-    assert len(registry.keys()) == 22
+    assert len(registry.keys()) == 21
 
 
 def test_get_on_an_unknown_key_raises_with_the_requested_key_quoted_in_the_message():
@@ -43,12 +47,12 @@ def test_register_refuses_a_duplicate_key_rather_than_overwriting_it():
         registry.register(existing_part)
 
 
-def test_the_three_declaration_only_entries_have_no_body_and_a_non_empty_upstream_ref():
+def test_the_two_declaration_only_entries_have_no_body_and_a_non_empty_upstream_ref():
     registry = default_registry()
     declaration_only = [
         registry.get(key) for key in registry.keys() if registry.get(key).body is None  # noqa: SIM118 — PartRegistry.keys() is not a dict; `in registry` is not a defined operation
     ]
-    assert len(declaration_only) == 3
+    assert len(declaration_only) == 2
     assert all(part.upstream_ref for part in declaration_only)
 
 

@@ -156,11 +156,14 @@ class Probe:
 
 
 def _w3_query_side_with_extra_key(key: str, value: str) -> dict[str, Any]:
-    """A deep copy of W3 with one extra key added to its ``query-side`` node — the shape the
-    ``c1``/``c2`` probes need to distinguish a self-declared derived field from an ordinary typo.
+    """A deep copy of W3 with one extra key added to its ``keywords`` node (the real decomposed
+    query side's own root node, immediately downstream of the opaque ``ingest`` node — the node
+    the old, now-retired single-node ``query-side`` stand-in occupied before 03-08-PLAN.md Task 3
+    replaced it with the real decomposed node set) — the shape the ``c1``/``c2`` probes need to
+    distinguish a self-declared derived field from an ordinary typo.
     """
     doc = copy.deepcopy(load_wiring("w3-lightrag-half-decomposed"))
-    doc["nodes"]["query-side"][key] = value
+    doc["nodes"]["keywords"][key] = value
     return doc
 
 
