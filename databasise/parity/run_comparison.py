@@ -262,6 +262,22 @@ def _ranking_agreement(a: list[str], b: list[str]) -> float:
     return concordant / total if total else 1.0
 
 
+def _no_retrieval_to_compare_note(arm_name: str, has_chunk_node: bool) -> str | None:
+    """``None`` when ``arm_name``'s resolved node set includes a chunk-source node (there is a
+    real chunk-set comparison to make); otherwise a stated reason distinguishing "no retrieval
+    happened for this arm" from "the comparison happened and found zero difference" — the
+    ``bypass`` arm's own case (a single ``generate`` node, no retrieval at all). A pure function
+    of the one fact that decides it, directly testable with no scheduler, no store, no client.
+    """
+    if has_chunk_node:
+        return None
+    return (
+        f"the {arm_name!r} arm resolves to a single 'generate' node with no retrieval at "
+        "all — there is no chunk-set comparison to make for this arm, distinct from a "
+        "computed zero symmetric difference"
+    )
+
+
 def diff_ranked_ids(decomposed_ids: list[str], original_ids: list[str]) -> RetrievalDiff:
     """The deterministic, zero-token retrieval-level diff (criterion 6, D-10) — pure list/set
     arithmetic over two ranked id lists. Makes no LLM call, no store call, no client call of any
@@ -426,6 +442,7 @@ class ComparisonRecord:
     original_arm_result: dict[str, Any] | None
     resolved_model_identities: dict[str, str]
     inconclusive_reason: str | None = None
+    retrieval_note: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -447,6 +464,7 @@ class ComparisonRecord:
             "original_arm_instrumentation": "harness-external",
             "resolved_model_identities": dict(self.resolved_model_identities),
             "inconclusive_reason": self.inconclusive_reason,
+            "retrieval_note": self.retrieval_note,
         }
 
 
@@ -526,6 +544,7 @@ async def compare_arm_on_query(
 
     resolved_arm = resolve_arm(arm_name)
     has_keywords_node = _KEYWORDS_NODE_ID in resolved_arm.get("nodes", {})
+    has_chunk_node = _CHUNK_SOURCE_NODE_ID in resolved_arm.get("nodes", {})
 
     pinned_keywords: dict[str, list[str]] | None = None
     band: KeywordVarianceBand | None = None
@@ -570,7 +589,15 @@ async def compare_arm_on_query(
         working_dir=v1_working_dir or DEFAULT_V1_WORKING_DIR,
     )
 
-    chunk_diff = diff_ranked_ids(decomposed_chunk_ids, list(v1_result.chunk_ids))
+    # A resolved arm with no chunk-source node (bypass: a single `generate` node, no retrieval at
+    # all) has nothing to diff — computing diff_ranked_ids([], []) here would read as a genuine
+    # zero symmetric difference (perfect agreement), which is not what "no retrieval happened"
+    # means. Recorded distinctly via retrieval_note instead (03-09-PLAN.md Task 1's own stated
+    # prohibition).
+    chunk_diff = (
+        diff_ranked_ids(decomposed_chunk_ids, list(v1_result.chunk_ids)) if has_chunk_node else None
+    )
+    retrieval_note = _no_retrieval_to_compare_note(arm_name, has_chunk_node)
     entity_diff = (
         diff_ranked_ids(decomposed_entity_ids, list(v1_result.entity_ids)) if has_keywords_node else None
     )
@@ -602,6 +629,7 @@ async def compare_arm_on_query(
         decomposed_run_record=decomposed.get("run_record"),
         original_arm_result=v1_result.to_dict(),
         resolved_model_identities=resolved_model_identities,
+        retrieval_note=retrieval_note,
     )
 
 
@@ -634,6 +662,8 @@ def _render_human_summary(records: list[ComparisonRecord]) -> str:
                 f"agreement={record.chunk_diff.ranking_agreement:.3f} "
                 f"first_disagreement={record.chunk_diff.first_disagreement_position}"
             )
+        elif record.retrieval_note is not None:
+            lines.append(f"    chunk diff: {record.retrieval_note}")
         lines.append("    original arm instrumentation: harness-external (no RIG §TR.1 record — D-05)")
     lines.append("\n" + "=" * 70)
     return "\n".join(lines)
