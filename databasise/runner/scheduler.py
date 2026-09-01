@@ -573,6 +573,12 @@ async def run_wiring(
                 )
                 partial = True
                 stop_reason = stop_reason or f"node {node_id!r}: {cause}"
+                # WR-03: deliberately skips ts.done(node_id) — a failed node never call it. Safe
+                # only because node_failures being non-empty forces the unconditional `break`
+                # below, so the sorter's now-inconsistent state (this node still "pending" from
+                # its own perspective) is never read again via is_active()/get_ready(). A future
+                # change that keeps scheduling past a partial batch failure must not rely on this
+                # invariant without also fixing ts.done() bookkeeping here.
                 continue
 
             task = tasks[node_id]
@@ -580,6 +586,9 @@ async def run_wiring(
                 # Cancelled by TaskGroup because a sibling in this same batch failed — not run,
                 # so it gets no trace entry of its own; the batch-level failure above already
                 # marks the whole run partial.
+                # WR-03: same ts.done()-skip invariant as the node_failures branch above — safe
+                # only because node_failures is guaranteed non-empty whenever a sibling triggers
+                # cancellation, which forces the unconditional `break` below.
                 continue
 
             # execution_mode is stamped on the trace only via host()'s refusal path today (D-08
