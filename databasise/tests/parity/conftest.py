@@ -20,6 +20,8 @@ from databasise.parity.corpus import CorpusSnapshot, load_snapshot
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _V1_VENV_PYTHON = _REPO_ROOT / "v1" / ".venv" / "bin" / "python"
 _V1_WORKING_DIR = _REPO_ROOT / "v1" / ".parity_working_dir"
+_V1_ENV_PARITY = _REPO_ROOT / "v1" / ".env.parity"
+_V2_PARITY_STORE = _REPO_ROOT / "v1" / ".parity_v2_store"
 
 
 @pytest.fixture(scope="session")
@@ -55,3 +57,31 @@ def corpus_snapshot() -> CorpusSnapshot:
     files are committed to the repo, so this never skips.
     """
     return load_snapshot()
+
+
+@pytest.fixture(scope="session")
+def v1_env_parity_path() -> Path:
+    """Path to the pinned run-config file ``databasise/parity/run_arm.py`` reads for real client
+    construction (03-04-PLAN.md Task 2). Skips cleanly when the gitignored file is absent on this
+    machine — the same guard shape as ``v1_venv_python``/``v1_index_dir`` above.
+    """
+    if not _V1_ENV_PARITY.exists():
+        pytest.skip(
+            f"v1/.env.parity not found at {_V1_ENV_PARITY} — see v1/README-PARITY.md to recreate it"
+        )
+    return _V1_ENV_PARITY
+
+
+@pytest.fixture(scope="session")
+def v2_parity_store_dir() -> Path:
+    """Path to the plan 03-02-imported v2 store namespace root
+    (``databasise/parity/import_index.py``'s ``DEFAULT_STORE_ROOT``) — what
+    ``databasise/parity/run_arm.py`` actually reads for a real run. Skips cleanly when the import
+    has not been performed on this machine.
+    """
+    if not _V2_PARITY_STORE.exists():
+        pytest.skip(
+            f"imported v2 parity store not found at {_V2_PARITY_STORE} — run "
+            "databasise.parity.import_index first (03-02-PLAN.md Task 3)"
+        )
+    return _V2_PARITY_STORE

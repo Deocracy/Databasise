@@ -1,0 +1,21 @@
+{
+  "patch_format": "RFC 6902 JSON Patch",
+  "patch_format_reason": "Subtractive — removes chunk-vector — so per CONTRACT.md:182 this MUST be an RFC 6902 operation list, not an RFC 7386 merge-patch (merge-patch's null sentinel cannot fail-close a removal).",
+  "base": "lightrag-base.json",
+  "operations": [
+    { "op": "remove", "path": "/nodes/chunk-vector" },
+    { "op": "replace", "path": "/nodes/join-chunks/deps", "value": ["chunk-sel-kg"] },
+    { "op": "replace", "path": "/nodes/join-chunks/config", "value": {
+      "socket_shape": "List[List[X]] -> List[X]",
+      "arity": 1,
+      "arm_precedence": "chunk-sel-kg-only, degenerate 1-ary join",
+      "apportionment_policy": "n/a - non-effectful join, no budget spent at this node"
+    } }
+  ],
+  "resulting_node_id_set": [
+    "keywords", "embedder-query", "entity-lookup", "entity-hydrate-expand",
+    "relation-lookup", "relation-hydrate-expand", "join-entities", "join-relations",
+    "budget-entities", "budget-relations", "chunk-sel-kg", "join-chunks",
+    "heading-backfill", "rerank", "assemble", "generate", "embedder-index"
+  ]
+}
