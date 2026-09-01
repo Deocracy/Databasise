@@ -1,0 +1,119 @@
+"""The one OpenAI-compatible LLM/embedding client implementation D-07 fixes: a caller-supplied
+``base_url``/``model``/``api_key`` reaches OpenRouter, a local Ollama endpoint, or plain OpenAI
+through the identical construction and code path — never a second implementation per provider.
+
+No in-repo analog exists for an HTTP LLM/embedding client body (03-PATTERNS.md "No Analog
+Found"); the only reused fragment is ``databasise/stores/vector.py``'s guarded-import idiom
+(``try: import X / except ImportError: raise with the install command``), applied here to
+``openai`` rather than degrading to a silent no-op SDK substitute.
+
+``resolved_model_identity`` is read from the response payload's own ``model`` field — the model
+the provider actually served, confirmed against the installed ``openai`` 3.6.0 SDK's
+``ChatCompletion``/``CreateEmbeddingResponse`` schemas this session — never the model id this
+client was constructed with (Phase 1 D-12 / Phase 2 D-08's "hash what is installed, never what is
+declared"). A response whose ``model`` field is empty or absent raises
+:class:`ModelIdentityMissingError` rather than substituting the requested id.
+
+``TokenAccounting.counted_by`` is set to the provider-reported tokenizer identity when the
+response's ``usage`` object carries one (a ``tokenizer_id`` attribute — no such field exists on
+the real OpenAI SDK's ``CompletionUsage`` today, so this branch only fires against a
+provider/proxy that adds one), and to ``resolved_model_identity`` otherwise.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from databasise.clients.base import ChatResult, EmbeddingResult
+from databasise.runner.trace import TokenAccounting
+
+try:
+    import openai  # type: ignore[import-untyped]
+except ImportError as _openai_import_err:
+    raise ImportError(
+        "openai is required for OpenAICompatibleClient. Install with: "
+        "pip install 'openai>=2.0.0,<4.0.0'"
+    ) from _openai_import_err
+
+
+class ModelIdentityMissingError(RuntimeError):
+    """Raised when a response carries no ``model`` field to derive ``resolved_model_identity``
+    from. Phase 1 D-12 / Phase 2 D-08's "hash what is installed, never what is declared" rule
+    forbids falling back to the model id this client was constructed with — a response this
+    malformed is refused by name rather than silently misreporting which model actually served
+    the call.
+    """
+
+    def __init__(self, requested_model: str):
+        self.requested_model = requested_model
+        super().__init__(
+            f"response for requested model {requested_model!r} carried no model field to derive "
+            "resolved_model_identity from; refusing to substitute the requested id"
+        )
+
+
+class OpenAICompatibleClient:
+    """Chat-completions + embeddings over any OpenAI-compatible endpoint (D-07): construct once
+    with the target ``base_url``/``model``/``api_key`` and the identical code path reaches
+    OpenRouter, a local Ollama endpoint, or plain OpenAI.
+
+    ``client`` is an escape hatch for tests: pass a stub double exposing the same
+    ``chat.completions.create``/``embeddings.create`` async surface as ``openai.AsyncOpenAI`` to
+    exercise this class with no network reachable. Left ``None`` (the real-usage path), a real
+    ``openai.AsyncOpenAI`` is constructed from ``base_url``/``api_key``.
+    """
+
+    def __init__(
+        self,
+        *,
+        base_url: str,
+        model: str,
+        api_key: str = "not-needed",
+        client: Any | None = None,
+    ) -> None:
+        self._model = model
+        self._client = client if client is not None else openai.AsyncOpenAI(
+            base_url=base_url, api_key=api_key
+        )
+
+    async def chat(self, messages: list[dict[str, str]], **kwargs: Any) -> ChatResult:
+        response = await self._client.chat.completions.create(
+            model=self._model, messages=messages, **kwargs
+        )
+        resolved_model_identity = self._resolved_identity(getattr(response, "model", None))
+        tokens = self._token_accounting(getattr(response, "usage", None), resolved_model_identity)
+        text = response.choices[0].message.content
+        return ChatResult(text=text, tokens=tokens, resolved_model_identity=resolved_model_identity)
+
+    async def embed(self, texts: list[str], **kwargs: Any) -> EmbeddingResult:
+        response = await self._client.embeddings.create(model=self._model, input=texts, **kwargs)
+        resolved_model_identity = self._resolved_identity(getattr(response, "model", None))
+        tokens = self._token_accounting(getattr(response, "usage", None), resolved_model_identity)
+        vectors = [item.embedding for item in response.data]
+        return EmbeddingResult(
+            vectors=vectors, tokens=tokens, resolved_model_identity=resolved_model_identity
+        )
+
+    def _resolved_identity(self, reported_model: str | None) -> str:
+        if not reported_model:
+            raise ModelIdentityMissingError(self._model)
+        return reported_model
+
+    def _token_accounting(self, usage: Any, resolved_model_identity: str) -> TokenAccounting:
+        if usage is None:
+            return TokenAccounting(counted_by=resolved_model_identity)
+
+        details = getattr(usage, "prompt_tokens_details", None)
+        cached_read_tokens = getattr(details, "cached_tokens", 0) or 0 if details is not None else 0
+        tokenizer_id = getattr(usage, "tokenizer_id", None)
+
+        return TokenAccounting(
+            prompt_tokens=getattr(usage, "prompt_tokens", 0) or 0,
+            completion_tokens=getattr(usage, "completion_tokens", 0) or 0,
+            cached_read_tokens=cached_read_tokens,
+            call_count=1,
+            counted_by=tokenizer_id or resolved_model_identity,
+        )
+
+
+__all__ = ["OpenAICompatibleClient", "ModelIdentityMissingError"]
