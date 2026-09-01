@@ -1,11 +1,11 @@
-"""Per-body tests for the pure-transform parts 03-06-PLAN.md ports — ``join-roundrobin`` (Task 1,
-three positions), with ``truncator-token-budget``/``chunk-selector-kg`` (Task 2) added below in
-this same plan's next commit. No network, runs everywhere. Every part is exercised through its own
-registered ``Part.body`` (never a private module function reached into directly), the same call
-shape ``databasise.parts.registry.dispatch`` uses — matching ``test_graph_half_parts.py``'s and
-``test_naive_arm_parts.py``'s own ``_ctx`` convention.
+"""Per-body tests for the three pure-transform parts 03-06-PLAN.md ports — ``join-roundrobin``
+(Task 1, three positions), ``truncator-token-budget`` and ``chunk-selector-kg`` (Task 2). No
+network, runs everywhere. Every part is exercised through its own registered ``Part.body`` (never a
+private module function reached into directly), the same call shape ``databasise.parts.registry.
+dispatch`` uses — matching ``test_graph_half_parts.py``'s and ``test_naive_arm_parts.py``'s own
+``_ctx`` convention.
 
-Join configs are drawn from the committed wiring files (``databasise/wirings/resolve.py``'s
+Task 1's join configs are drawn from the committed wiring files (``databasise/wirings/resolve.py``'s
 ``load_base``/``resolve_arm``), not hand-written dicts, so a config drift in the wiring itself
 breaks this suite rather than silently diverging from what actually ships.
 """
@@ -16,7 +16,13 @@ from typing import Any
 
 import pytest
 from databasise.parts.schema import NodeContext
+from databasise.parts_core.lightrag.chunk_sel_kg import LIGHTRAG_CHUNK_SELECTOR_KG_PART
 from databasise.parts_core.lightrag.join_roundrobin import LIGHTRAG_JOIN_ROUNDROBIN_PART
+from databasise.parts_core.lightrag.truncator_token_budget import (
+    LIGHTRAG_TRUNCATOR_TOKEN_BUDGET_PART,
+)
+from databasise.stores.kv import SqliteKVStore
+from databasise.stores.vector import FaissVectorStore
 from databasise.wirings.resolve import load_base, resolve_arm
 
 
@@ -197,3 +203,118 @@ async def test_join_chunks_degenerate_one_ary_local_arm_config_does_not_raise():
     result = await LIGHTRAG_JOIN_ROUNDROBIN_PART.body(ctx)
 
     assert [item["id"] for item in result["items"]] == ["only-one"]
+
+
+# --------------------------------------------------------------------------------------------- #
+# truncator-token-budget
+# --------------------------------------------------------------------------------------------- #
+
+
+async def test_truncator_preserves_input_order_and_removes_from_the_tail():
+    items = [{"entity_name": f"e{i}", "description": "x" * 40} for i in range(5)]
+    # Each item costs the same estimated tokens; an allowance covering three items' worth keeps
+    # exactly the first three, in their original order — never re-sorted.
+    per_item_cost = len(__import__("json").dumps(items[0], sort_keys=True)) // 4
+    allowance = per_item_cost * 3
+    ctx = _ctx(
+        "budget-entities",
+        config={"max_token_allowance": allowance},
+        inputs={"join-entities": {"items": items}},
+    )
+
+    result = await LIGHTRAG_TRUNCATOR_TOKEN_BUDGET_PART.body(ctx)
+
+    assert [item["entity_name"] for item in result["items"]] == ["e0", "e1", "e2"]
+    assert result["consumed"] > 0
+
+
+async def test_truncator_allowance_below_first_items_cost_yields_empty_and_zero_consumed():
+    items = [{"entity_name": "e0", "description": "y" * 100}]
+    ctx = _ctx(
+        "budget-relations",
+        config={"max_token_allowance": 1},
+        inputs={"join-relations": {"items": items}},
+    )
+
+    result = await LIGHTRAG_TRUNCATOR_TOKEN_BUDGET_PART.body(ctx)
+
+    assert result["items"] == []
+    assert result["consumed"] == 0
+
+
+async def test_truncator_default_allowance_differs_by_position_id():
+    """``budget-entities``/``budget-relations`` share one body; v1's own differing defaults
+    (``DEFAULT_MAX_ENTITY_TOKENS``/``DEFAULT_MAX_RELATION_TOKENS``) are selected by node id alone.
+    """
+    entities_ctx = _ctx("budget-entities", inputs={"join-entities": {"items": []}})
+    relations_ctx = _ctx("budget-relations", inputs={"join-relations": {"items": []}})
+
+    entities_result = await LIGHTRAG_TRUNCATOR_TOKEN_BUDGET_PART.body(entities_ctx)
+    relations_result = await LIGHTRAG_TRUNCATOR_TOKEN_BUDGET_PART.body(relations_ctx)
+
+    assert entities_result["allowance"] == 6000
+    assert relations_result["allowance"] == 8000
+
+
+# --------------------------------------------------------------------------------------------- #
+# chunk-selector-kg
+# --------------------------------------------------------------------------------------------- #
+
+
+def test_chunk_selector_kg_declares_reads_vector_even_with_a_weight_only_config():
+    """§19.9's fallback-reachability rule: the Part's own registered ``effects`` carries
+    ``reads_vector`` unconditionally — never gated on whatever ``config["pick_method"]`` a given
+    wiring happens to set.
+    """
+    assert "reads_vector" in LIGHTRAG_CHUNK_SELECTOR_KG_PART.effects
+    assert "reads_kv" in LIGHTRAG_CHUNK_SELECTOR_KG_PART.effects
+
+
+async def test_chunk_selector_kg_reports_which_pick_method_ran_on_fall_through(store_root):
+    kv = SqliteKVStore(namespace="text_chunks", workspace="ws", store_root=store_root)
+    await kv.upsert({"chunk-1": {"content": "hello"}})
+    entity = {"entity_name": "Alice", "source_id": "chunk-1"}
+    config = dict(load_base()["nodes"]["chunk-sel-kg"]["config"])
+    assert config["pick_method"] == "VECTOR"  # the published base config's own primary method
+    # No config["query_vector"] supplied: the VECTOR path yields nothing (see module docstring —
+    # this node's own base-wiring deps carry no query embedding), so it falls through to WEIGHT.
+
+    ctx = _ctx(
+        "chunk-sel-kg",
+        config=config,
+        inputs={"budget-entities": {"items": [entity]}, "budget-relations": {"items": []}},
+        stores={"kv": kv},
+    )
+
+    result = await LIGHTRAG_CHUNK_SELECTOR_KG_PART.body(ctx)
+
+    assert result["pick_method_used"] == "WEIGHT"
+    assert [item["chunk_id"] for item in result["items"]] == ["chunk-1"]
+
+
+async def test_chunk_selector_kg_vector_path_reaches_the_vector_store_when_a_query_vector_is_supplied(
+    store_root,
+):
+    kv = SqliteKVStore(namespace="text_chunks", workspace="ws", store_root=store_root)
+    await kv.upsert({"chunk-1": {"content": "hello"}, "chunk-2": {"content": "world"}})
+    vector = FaissVectorStore(namespace="chunks", workspace="ws", store_root=store_root)
+    await vector.upsert(ids=["chunk-1", "chunk-2"], embeddings=[[1.0, 0.0], [0.0, 1.0]])
+    await vector.index_done_callback()
+
+    entity = {"entity_name": "Alice", "source_id": "chunk-1<SEP>chunk-2"}
+    ctx = _ctx(
+        "chunk-sel-kg",
+        config={
+            "pick_method": "VECTOR",
+            "fallback_pick_method": "WEIGHT",
+            "query_vector": [1.0, 0.0],
+            "related_chunk_number": 5,
+        },
+        inputs={"budget-entities": {"items": [entity]}, "budget-relations": {"items": []}},
+        stores={"kv": kv, "vector": vector},
+    )
+
+    result = await LIGHTRAG_CHUNK_SELECTOR_KG_PART.body(ctx)
+
+    assert result["pick_method_used"] == "VECTOR"
+    assert result["items"][0]["chunk_id"] == "chunk-1"  # closest to the supplied query vector
