@@ -15,7 +15,7 @@ fixes:
     outcome: fixed
   - id: CR-01 (deviation record)
     file: databasise/evidence/DECLARED-DEVIATIONS.md
-    commit: 03dfe05
+    commit: 03dfe05, 09cdcef
     outcome: fixed
   - id: WR-01
     file: databasise/runner/scheduler.py
@@ -44,7 +44,7 @@ fixes:
 ### CR-01: `embedder-query` embeds an empty string for every arm that keeps the `keywords` node
 
 **Files modified:** `databasise/parts_core/lightrag/keywords.py`, `databasise/parity/run_arm.py`, `databasise/tests/parts_core/lightrag/test_naive_arm_parts.py`, `databasise/tests/parity/test_naive_arm_end_to_end.py`, `databasise/evidence/DECLARED-DEVIATIONS.md`
-**Commits:** `8bf1357`, `03dfe05`
+**Commits:** `8bf1357`, `03dfe05`, `09cdcef` (orchestrator follow-up: `DECLARED-DEVIATIONS.md` is rendered by `parity_report.main()`, so the hand-added deviation section was moved into `render_deviations_markdown()` and covered by an on-disk-matches-render test; suite after: 419 passed, 4 skipped)
 **Applied fix:** `keywords.py`'s `_keywords_body` now emits `"query": query` in both the
 pinned-replay and live-call branches, matching `embedder_query.py`'s `_query_text` reader.
 
