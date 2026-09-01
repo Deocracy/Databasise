@@ -35,8 +35,8 @@ and every non-secret value filled in.
 |---|---|
 | D-06 | Corpus: HotpotQA distractor setting (`databasise/tests/fixtures/corpus/`) |
 | D-07 | Generator: `qwen/qwen3.7-flash` via OpenRouter (`https://openrouter.ai/api/v1`), provider pinned to `Alibaba` (`allow_fallbacks: false`) — verified live 2026-08-31: this model has exactly one upstream provider on OpenRouter today, so the pin is a no-op in effect but still asserted, per D-07's own stated rationale ("a re-routed provider changes identity mid-run") |
-| D-08 | Keyword-extraction model: same `qwen/qwen3.7-flash`, same provider pin |
-| D-09 (**AMENDED** — see `.planning/phases/03-lightrag-query-side/03-D09-AMENDMENT.md`) | Embedder: `qwen/qwen3-embedding-8b` via OpenRouter's embeddings endpoint (`https://openrouter.ai/api/v1/embeddings`), **not** a local Ollama endpoint as the original D-09 said. Verified live 2026-08-31: a real embeddings call against this model and endpoint returns a 4096-dimension vector. Provider pinned to `DeepInfra` (cheapest of three live providers at pin time) for reproducibility, though the amendment text does not itself require pinning the embedder |
+| D-08 | Keyword-extraction model: same `qwen/qwen3.7-flash` — no separate binding is configured; D-07/D-08 pin the same model for both roles, so LightRAG's single `llm_model_func` already satisfies this |
+| D-09 (**AMENDED** — see `.planning/phases/03-lightrag-query-side/03-D09-AMENDMENT.md`) | Embedder: `qwen/qwen3-embedding-8b` via OpenRouter's embeddings endpoint (`https://openrouter.ai/api/v1/embeddings`), **not** a local Ollama endpoint as the original D-09 said. Verified live 2026-08-31: a real embeddings call against this model and endpoint returns a 4096-dimension vector. No provider pin: the amendment does not require one, v1's `openai_embed()` wrapper has no `extra_body` plumbing to carry one, and D-01 makes it moot — vectors are computed exactly once and never recomputed |
 | D-09 (unchanged half) | Rerank: disabled (`RERANK_BINDING=null`) |
 | D-05 | Storage: `CozoGraphStorage` (graph) + `FaissVectorDBStorage` (vector) — Phase 1's frozen store family, never v1's `NetworkXStorage`/`NanoVectorDBStorage` quick-start defaults |
 
@@ -64,8 +64,13 @@ verified import into the v2 namespace layout.
 to this one build; re-running it means re-running the whole comparison, not editing a config value
 (D-01, rated costly).
 
-Ingest command (see `databasise/parity/run_v1_ingest.py`, written for Task 2):
+Ingest command (see `v1/scripts/run_parity_ingest.py`, written for Task 2). This script lives
+under `v1/`, not `databasise/`, because it necessarily imports v1's own `lightrag` package to
+drive the ingest — `databasise/tools/check_import_boundary.py` forbids that import anywhere
+under `databasise/` (D-14), so the importer/verifier that later reads the resulting index lives
+in `databasise/parity/import_index.py` (Task 3) instead, reading v1's on-disk files directly and
+never importing v1's Python:
 
 ```bash
-cd v1 && set -a && . .env.parity && set +a && uv run python ../databasise/parity/run_v1_ingest.py
+cd v1 && set -a && . .env.parity && set +a && uv run python scripts/run_parity_ingest.py
 ```

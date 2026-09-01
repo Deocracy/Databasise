@@ -17,6 +17,13 @@ venv/
 # Phase 3 parity-arm run config — holds a live OpenRouter API key (03-02-PLAN.md Task 1);
 # .env.parity.example is the tracked, secret-free companion.
 .env.parity
+# v1 ingest working dir for the Phase 3 parity build (03-02-PLAN.md Task 2) — a build
+# artifact, never committed; identity is carried by the corpus manifest hashes and
+# Task 3's import verification.
+.parity_working_dir/
+# Default destination of the verified v2-namespace import (databasise/parity/import_index.py,
+# 03-02-PLAN.md Task 3) — also a build artifact, reproducible from .parity_working_dir/.
+.parity_v2_store/
 
 # Generated Docker Compose files (output of setup wizard)
 docker-compose.*.yml
