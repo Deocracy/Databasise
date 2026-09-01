@@ -22,6 +22,18 @@ dependencies = [
     # 2026-08-30 — see 01-01-SUMMARY.md for the recorded evidence.
     "rfc8785==0.1.4",
     "pydantic>=2.0,<3.0",
+    # OpenAI-compatible LLM/embedding client (D-06/D-07) — one construction shape reaches
+    # OpenRouter and a local Ollama endpoint alike via base_url override. Range widened past
+    # v1/pyproject.toml's copied ">=2.0.0,<3.0.0" pin to ">=2.0.0,<4.0.0": querying PyPI
+    # directly (03-01-PLAN.md Task 2's live-registry check) showed the current release is
+    # 3.6.0, outside the copied upper bound, so the bound is widened to cover the current
+    # major rather than pinning to a range PyPI itself has already moved past.
+    "openai>=2.0.0,<4.0.0",
+    # RFC 6902 JSON Patch application (D-13) — the arm-patch subtraction semantics
+    # CONTRACT.md relies on for fail-closed arm removal. Package-legitimacy gate approved
+    # 2026-08-30/31 — see 03-01-SUMMARY.md for the recorded evidence (prior executor run
+    # surfaced the checkpoint; user approved both openai and jsonpatch).
+    "jsonpatch",
 ]
 
 # PEP 735 dependency group, not [project.optional-dependencies]: uv installs the `dev`
@@ -55,15 +67,20 @@ packages = [
     "databasise.identity",
     "databasise.parts",
     "databasise.parts_core",
+    "databasise.parts_core.lightrag",
     "databasise.validator",
     "databasise.runner",
     "databasise.stores",
     "databasise.registry_artifact",
     "databasise.ledger",
     "databasise.evidence",
+    "databasise.clients",
+    "databasise.parity",
+    "databasise.wirings",
 ]
 
 # The wiring documents ship with the package rather than existing only in a source checkout
 # (Falsifier 2 evidence run, 02-01-PLAN.md Task 1).
 [tool.setuptools.package-data]
 "databasise.evidence" = ["wirings/*.json"]
+"databasise.wirings" = ["lightrag/*.json"]
