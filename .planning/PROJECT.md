@@ -20,13 +20,14 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 - ✓ Parity-harness precedent: `v1/tests/parity/run_substrate_parity.py` (same corpus, isolated dirs, structural diff) — existing
 - ✓ Runner, scheduler, and storage-keying designed and built (the §H1 must-decide fence) — Validated in Phase 1: Machine Core
 - ✓ Databasise embeddable in-process: Cozo (graph), Faiss (vector), SQLite (KV/lexical/registry/ledger) all in one process tree, no external DB server, no container — Validated in Phase 1: Machine Core
+- ✓ Static depth/execution_mode validator (CONTRACT §19) computed from wiring + registry, with self-declaration refused by name at wire time (`self-declared-derivation`) — Validated in Phase 2: Falsifier Gate (evidence: `databasise/evidence/FALSIFIER-2-EVIDENCE.md`)
+- ✓ Rung-1→rung-2 gate decision recorded, with a Falsifier 2 failure held as a SELECTION.md-level reversal — Validated in Phase 2: Falsifier Gate (`.planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md`)
 
 ### Active
 
 <!-- The four §BP rungs plus the product surface. All hypotheses until shipped. -->
 
-- [ ] Static depth/execution_mode validator (CONTRACT §19) computed from wiring + registry, no self-declaration — **Falsifier 2 gate**
-- [ ] Eval bundle stood up (dev/holdout/sealed per RIG §EV.1) and first A/A calibration run per tier — **Falsifier 5 gate**
+- [ ] Eval bundle stood up (dev/holdout/sealed per RIG §EV.1) and first A/A calibration run per tier — **Falsifier 5 gate**, deferred to its point of first need per `.planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md`; no promotion or parity claim is taken before the A/A floor exists
 - [ ] Falsifier 8 documentation pass: injected-LLM-endpoint survey across the sandbox-candidate engine set (non-gating)
 - [ ] LightRAG query side re-cut into primitive-part nodes (17 of 18 §L.1 positions), parity inside the A/A band (§BP rung 2)
 - [ ] LightRAG ingest core (~1,786 lines) admitted as opaque node under `quarantined` scope (§BP rung 3)
@@ -97,4 +98,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-31 after Phase 1 completion*
+*Last updated: 2026-08-31 after Phase 2 completion*
