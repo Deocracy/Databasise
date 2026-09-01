@@ -55,15 +55,17 @@ def test_b3_blast_radius_refusal_names_the_downstream_extractor_node():
     assert "extract" in refusals[0].message
 
 
-def test_c3_computes_query_side_effective_depth_opaque():
-    """The control for the self-declaration pair: W3 unmodified still computes ``query-side``'s
-    effective_depth as ``opaque`` (taint from the opaque ``ingest`` node) purely from wiring +
-    registry — the computation governs whether or not an author ever attempts to state it.
+def test_c3_computes_the_real_query_sides_root_effective_depth_opaque():
+    """The control for the self-declaration pair: W3 unmodified still computes ``keywords``'s
+    (the real decomposed query side's own root node, immediately downstream of the opaque
+    ``ingest`` node — see ``databasise.evidence.falsifier2._w3_query_side_with_extra_key``'s own
+    docstring) effective_depth as ``opaque``, purely from wiring + registry — the computation
+    governs whether or not an author ever attempts to state it.
     """
     probe = next(p for p in PROBES if p.probe_id == "c3-computed-depth-governs")
     parsed = parse_wiring(probe.doc, probe_registry())
     depths = effective_depth(parsed)
-    assert depths["query-side"] == "opaque"
+    assert depths["keywords"] == "opaque"
 
 
 def test_probe_only_parts_never_leak_into_the_production_registry():
