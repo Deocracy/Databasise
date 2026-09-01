@@ -156,6 +156,16 @@ def test_zero_deviations_renders_an_explicit_stated_zero_not_an_empty_document()
 
     assert "Zero declared deviations" in text
     assert "no completed comparison run has occurred" in text
+    # CR-01: the known design deviation is renderer-owned, so a re-render never drops it.
+    assert "Known design deviation (pending measurement)" in text
+
+
+def test_committed_deviations_document_matches_a_fresh_render():
+    from databasise.evidence.parity_report import DEVIATIONS_PATH, _collect_deviations
+
+    assert DEVIATIONS_PATH.read_text(encoding="utf-8") == render_deviations_markdown(
+        _collect_deviations()
+    )
 
 
 def test_a_deviation_with_an_empty_cause_makes_the_render_fail():

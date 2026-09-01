@@ -269,7 +269,36 @@ def render_deviations_markdown(deviations: list[DeclaredDeviation]) -> str:
         ]
         sections.append("## Named deviations\n\n" + header + "\n".join(rows) + "\n")
 
+    # CR-01 (03-REVIEW.md): a structural v2-vs-v1 difference known from reading the code, not
+    # from a measured run. Emitted by the renderer itself so a re-render cannot drop it — a hand
+    # edit to DECLARED-DEVIATIONS.md is overwritten by main() on the next render.
+    sections.append(_KNOWN_DESIGN_DEVIATION)
+
     return "\n".join(sections)
+
+
+_KNOWN_DESIGN_DEVIATION = (
+    "## Known design deviation (pending measurement)\n\n"
+    "Not a measured excursion (`_collect_deviations()` only picks up a `symmetric_difference` "
+    "on a `status=\"completed\"` comparison record, and none exist yet — see the "
+    "zero-deviations statement above); recorded here ahead of the automatic mechanism because "
+    "it is already known from reading the code, per CR-01's `03-REVIEW.md` finding.\n\n"
+    "| arm | query | measured difference | cause |\n"
+    "|---|---|---|---|\n"
+    "| hybrid, local, global | n/a — design-level, not yet measured | v2's "
+    "`entity-lookup`/`relation-lookup` embed one raw-query vector (`embedder-query`'s output "
+    "for `ctx.inputs[\"keywords\"][\"query\"]`) | v1 embeds two separate keyword-derived "
+    "vectors instead: `\", \".join(ll_keywords)` for entity lookup (`_get_node_data`) and "
+    "`\", \".join(hl_keywords)` for relation lookup (`_get_edge_data`), per "
+    "`v1/lightrag/operate.py`. The v2 wiring (`databasise/wirings/lightrag/base.json`, frozen "
+    "input) feeds one shared `embedder-query` node into `entity-lookup`, `relation-lookup`, "
+    "and `chunk-vector`, so this is a structural difference, not a bug — CR-01's fix makes "
+    "`embedder-query` embed the real query text (closing the \"empty string\" bug) but does "
+    "not restructure the wiring into v1's two-keyword-vector shape. Expected to surface as a "
+    "retrieval-level `entity_diff`/`relation_diff` excursion once a completed comparison run "
+    "exists (see `PARITY-EVIDENCE.md`), at which point the measured row above supersedes this "
+    "entry. |\n"
+)
 
 
 def _collect_deviations() -> list[DeclaredDeviation]:
