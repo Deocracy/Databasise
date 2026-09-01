@@ -383,12 +383,21 @@ def enumerate_boundaries(evidence: WiringEvidence, parsed: ParsedWiring) -> tupl
 
     doc = load_wiring(evidence.stem)
     for i, knob in enumerate(doc.get("boundary_knobs", [])):
+        between = knob.get("between")
+        rationale = knob.get("rationale")
+        if between is None or rationale is None:
+            missing = [key for key in ("between", "rationale") if knob.get(key) is None]
+            raise ValueError(
+                f"{evidence.stem}'s boundary_knobs[{i}] is missing required key(s) "
+                f"{missing}: every boundary_knobs entry must declare both 'between' and "
+                "'rationale'"
+            )
         rows.append(
             BoundaryRow(
                 boundary_id=knob.get("boundary_id", f"{evidence.stem}-knob-{i}"),
                 boundary_class="knob",
-                between=knob["between"],
-                rationale=knob["rationale"],
+                between=between,
+                rationale=rationale,
             )
         )
 
