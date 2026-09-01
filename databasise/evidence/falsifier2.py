@@ -395,6 +395,12 @@ def enumerate_boundaries(evidence: WiringEvidence, parsed: ParsedWiring) -> tupl
     return tuple(rows)
 
 
+def _escape_cell(value: str) -> str:
+    """Escape a markdown table cell so an author-supplied `|` or newline can't silently
+    split a rendered row into extra columns (WR-01)."""
+    return value.replace("|", "\\|").replace("\n", " ")
+
+
 def _render_node_table(rows: tuple[NodeRow, ...]) -> str:
     header = (
         "| node id | component | wiring kind | structural_depth | effective_depth | "
@@ -403,10 +409,11 @@ def _render_node_table(rows: tuple[NodeRow, ...]) -> str:
     )
     lines = []
     for row in rows:
-        effects_cell = ", ".join(row.part_effects) if row.part_effects else "—"
-        scope_cell = row.artifact_scope or "—"
+        component_cell = _escape_cell(row.component)
+        effects_cell = _escape_cell(", ".join(row.part_effects)) if row.part_effects else "—"
+        scope_cell = _escape_cell(row.artifact_scope) if row.artifact_scope else "—"
         lines.append(
-            f"| {row.node_id} | {row.component} | {row.wiring_kind} | {row.structural_depth} | "
+            f"| {row.node_id} | {component_cell} | {row.wiring_kind} | {row.structural_depth} | "
             f"{row.effective_depth} | {row.execution_mode} | {effects_cell} | {scope_cell} | "
             f"{row.blast_radius} |"
         )
@@ -432,15 +439,16 @@ def _render_boundaries(boundaries: tuple[BoundaryRow, ...]) -> str:
         "|---|---|---|---|\n"
     )
     lines = [
-        f"| {row.boundary_id} | {row.boundary_class} | {row.between} | {row.rationale} |"
+        f"| {row.boundary_id} | {row.boundary_class} | {_escape_cell(row.between)} | "
+        f"{_escape_cell(row.rationale)} |"
         for row in boundaries
     ]
     return header + "\n".join(lines) + "\n"
 
 
 def _wiring_shape_summary(probe: Probe) -> str:
-    return ", ".join(
-        f"{node_id}:{node['component']}" for node_id, node in probe.doc["nodes"].items()
+    return _escape_cell(
+        ", ".join(f"{node_id}:{node['component']}" for node_id, node in probe.doc["nodes"].items())
     )
 
 
