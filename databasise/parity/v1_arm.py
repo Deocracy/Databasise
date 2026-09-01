@@ -100,6 +100,11 @@ def _load_env_file(path: Path) -> dict[str, str]:
     ``databasise/parity/run_arm.py``'s own ``_load_env_file`` exactly (duplicated, not imported —
     each caller's own dependency surface stays obvious rather than reaching into a sibling
     module's private helper for a ~15-line stdlib parser).
+
+    IN-01: unlike the sibling copy, this one returns ``{}`` rather than raising on an absent
+    file — deliberate, since ``run_v1_arm``/``v1_arm.main()`` is reached directly (without going
+    through ``run_arm.py``'s copy first) only by a caller that does not need the same named
+    refusal; a direct caller wanting that refusal should call ``run_arm._load_env_file`` itself.
     """
     if not path.exists():
         return {}
