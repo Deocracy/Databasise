@@ -23,7 +23,7 @@ from databasise.parts_core import UndeclaredEffectError
 
 # The one place this mapping is stated — every other module (runner/scheduler.py's
 # _ScopedClientsView included) imports this dict rather than restating it.
-_CLIENT_EFFECT_TO_KEY: dict[str, str] = {
+CLIENT_EFFECT_TO_KEY: dict[str, str] = {
     "calls_llm": "llm",
     "calls_embedding": "embedding",
     "calls_rerank": "rerank",
@@ -63,7 +63,7 @@ class CapabilityScopedClients:
     def require(self, effect: Effect) -> Any:
         if effect not in self._declared_effects:
             raise UndeclaredEffectError(effect, self._declared_effects)
-        client_key = _CLIENT_EFFECT_TO_KEY.get(effect)
+        client_key = CLIENT_EFFECT_TO_KEY.get(effect)
         if client_key is None:
             # A declared effect with no client-shaped mapping (e.g. "reads_kv") cannot be
             # fulfilled through the clients view at all — refused the same way an undeclared
@@ -79,4 +79,5 @@ __all__ = [
     "CapabilityScopedClients",
     "ClientNotWiredError",
     "UndeclaredEffectError",
+    "CLIENT_EFFECT_TO_KEY",
 ]
