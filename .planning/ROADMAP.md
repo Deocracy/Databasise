@@ -107,14 +107,14 @@ Plans:
   5. Owner runs one A/A calibration and reads a bootstrap-resampled p95 floor keyed to `(bundle@v, tier, metric)` inseparable from the run's declared determinism/concurrency setting, with T1's null width materially narrower than T0's — Falsifier 5 *(amended 2026-08-31 per `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`: deferred to Phase 6's cross-modality run, same reason as criterion 4)*
   6. Until the A/A floor exists, parity is checked at the retrieval level with deterministic, zero-token comparisons of retrieved chunk sets and rankings between the original and the decomposed query side, plus human spot-checks of answers (D-05 substitute gate)
 
-**Plans**: 9 plans across 7 waves
+**Plans**: 2/9 plans executed across 7 waves
 
 Plans:
 
 **Wave 1**
 
-- [ ] 03-01-PLAN.md — machine-owned LLM/embedding/rerank client primitive, `NodeContext.clients`, scheduler threading, and the two gated package installs
-- [ ] 03-03-PLAN.md — MACH-02/MACH-03 amendment record, ROADMAP/REQUIREMENTS propagation, and the external model API coverage matrix
+- [x] 03-01-PLAN.md — machine-owned LLM/embedding/rerank client primitive, `NodeContext.clients`, scheduler threading, and the two gated package installs
+- [x] 03-03-PLAN.md — MACH-02/MACH-03 amendment record, ROADMAP/REQUIREMENTS propagation, and the external model API coverage matrix
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -211,7 +211,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Machine Core | 10/10 | Complete    | 2026-08-31 |
 | 2. Falsifier Gate | 4/4 | Complete    | 2026-08-31 |
-| 3. LightRAG Query Side | 0/TBD | Not started | - |
+| 3. LightRAG Query Side | 2/9 | In Progress|  |
 | 4. The Seam | 0/TBD | Not started | - |
 | 5. Opaque-Side Admission | 0/TBD | Not started | - |
 | 6. HippoRAG 2 & Side-by-Side | 0/TBD | Not started | - |
