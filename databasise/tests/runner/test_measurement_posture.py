@@ -68,8 +68,10 @@ def _scanned_files() -> list[Path]:
 
 def _ledger_import_findings(path: Path) -> list[_Finding]:
     """Flag any import whose dotted module path is ``databasise.ledger`` or a submodule of it,
-    and any bare ``import databasise.ledger[...]`` form — the two shapes a caller could use to
-    reach ``Ledger``, ``LedgerRecord``, or the ``databasise.ledger`` module itself.
+    any bare ``import databasise.ledger[...]`` form, and any ``from databasise import ledger``
+    form (or a dotted path into it via an imported alias name, e.g. ``from databasise import
+    ledger as l``) — the shapes a caller could use to reach ``Ledger``, ``LedgerRecord``, or the
+    ``databasise.ledger`` module itself (WR-03).
     """
     source = path.read_text(encoding="utf-8")
     tree = ast.parse(source, filename=str(path))
@@ -82,6 +84,20 @@ def _ledger_import_findings(path: Path) -> list[_Finding]:
                 findings.append(
                     _Finding(str(path), node.lineno, f"from {module} import ...")
                 )
+                continue
+            # `from databasise import ledger` reaches the ledger via the imported alias name
+            # rather than the dotted module path — check the combined "module.alias" against
+            # the same "databasise.ledger"/"databasise.ledger." predicate.
+            for alias in node.names:
+                combined = f"{module}.{alias.name}" if module else alias.name
+                if combined == "databasise.ledger" or combined.startswith(
+                    "databasise.ledger."
+                ):
+                    findings.append(
+                        _Finding(
+                            str(path), node.lineno, f"from {module} import {alias.name}"
+                        )
+                    )
         elif isinstance(node, ast.Import):
             for alias in node.names:
                 if alias.name == "databasise.ledger" or alias.name.startswith(
