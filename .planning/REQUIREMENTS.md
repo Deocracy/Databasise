@@ -13,8 +13,8 @@ Audited 2026-08-29 against SYSTEM-MODEL.md, CONTRACT.md, RIG.md, PARTS.md, ANATO
 ### Machine Core (MACH)
 
 - [ ] **MACH-01**: Static validator implements CONTRACT §19's depth/execution_mode derivations from wiring + registry — `effective_depth` computed as the minimum over transitive deps, `execution_mode` derived from declared `effects[]`, with no self-declaration standing in for the computation — demonstrated on the three named wirings (decomposed lightrag-local query side, opaque codebase-memory-mcp, half-decomposed full LightRAG); the §19.10 boundary enumeration is recorded with the node set — **Falsifier 2 gate**
-- [ ] **MACH-02**: Eval bundle stood up per RIG §EV.1 with dev/holdout/sealed splits, containing questions, gold answers, a judge instance, a judge prompt hash, a corpus snapshot hash, and the determinism/concurrency setting; both §EV.2 target families are mandatory bundle content; versions are minted, never edited in place (opening `sealed` mints a new version); holdout-usage logging policy in force before decomposition work consults dev/holdout. Bootstrapped from a public benchmark corpus
-- [ ] **MACH-03**: First A/A calibration per RIG §AA.1: one A/A run at n questions producing n paired per-question differences, bootstrap-resampled, the resampled distribution's p95 taken as the calibrated floor at `(bundle@v, tier, metric)` inseparable from the run's declared determinism/concurrency setting; §AA.2 precondition holds (a null with unknown bypass status is not usable as a floor). **Pass criterion: per-tier null width at T1 materially narrower than T0** (SELECTION Falsifier 5) — **Falsifier 5 gate**
+- [ ] **MACH-02**: Eval bundle stood up per RIG §EV.1 with dev/holdout/sealed splits, containing questions, gold answers, a judge instance, a judge prompt hash, a corpus snapshot hash, and the determinism/concurrency setting; both §EV.2 target families are mandatory bundle content; versions are minted, never edited in place (opening `sealed` mints a new version); holdout-usage logging policy in force before decomposition work consults dev/holdout. Bootstrapped from a public benchmark corpus [Amended 2026-08-31: moved to Phase 3, point of first need Phase 3's parity comparison, superseding this requirement's original rung-1 timing per `.planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md`]
+- [ ] **MACH-03**: First A/A calibration per RIG §AA.1: one A/A run at n questions producing n paired per-question differences, bootstrap-resampled, the resampled distribution's p95 taken as the calibrated floor at `(bundle@v, tier, metric)` inseparable from the run's declared determinism/concurrency setting; §AA.2 precondition holds (a null with unknown bypass status is not usable as a floor). **Pass criterion: per-tier null width at T1 materially narrower than T0** (SELECTION Falsifier 5) — **Falsifier 5 gate** [Amended 2026-08-31: moved to Phase 3, point of first need Phase 3's parity comparison, superseding this requirement's original rung-1 timing per `.planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md`]
 - [ ] **MACH-04**: Injected-LLM-endpoint survey documented across the five sandbox-candidate engines named in the lineup (Falsifier 8, non-gating documentation pass)
 - [x] **MACH-05**: Runner/scheduler executes wiring graphs with structured concurrency, metering spend at each node's declared boundary; the intra-node concurrency scheduling mechanism (§H1 handover, contract-settled at V-7) is decided as part of this design; **and the runner stamps the full RIG §TR.1 run-record field set the gate later reads — `determinism_setting`, `concurrency_setting`, `arm_execution_order`, per-node `cache_hit`, `realised_budget_share`, and `guards_fired` — validated against `docs/system-model/rig-trace.schema.json`**. *Run-record clause added 2026-08-30 per CONTEXT.md D-10: without these fields CONTRACT §5 can never evaluate refusal conditions 8, 10 or 11, and a confounded comparison then returns a normal verdict that looks settled rather than unsettled.*
 - [x] **MACH-06**: Component and artifact identity per CONTRACT §0/§1: `name@version`, RFC 8785 + SHA-256 `config_hash`, content-addressed artifact registry with `upstream_ref` lineage; instance identity is `(name@version, config_hash, resolved_dependency_ids)`, never a wiring node id
@@ -53,8 +53,8 @@ Audited 2026-08-29 against SYSTEM-MODEL.md, CONTRACT.md, RIG.md, PARTS.md, ANATO
 
 ### Model Hardening (HARD) — folded in at first-touch
 
-- [ ] **HARD-01**: Gate-script vacuous-pass sites fixed (parts-check.sh: 5 extraction sites guarding ~6 checks; anatomy-check.sh: 1 site guarding 3 checks) — first touched at rung 1
-- [ ] **HARD-02**: The eight ANATOMY §F rows lacking landed-repair pointers linked to their PARTS Appendix A dispositions, **reconciling stale cross-document rows in the same pass** (e.g. DR-06: ANATOMY reads "Answered", PARTS Appendix A still reads "not reached") — doc pass alongside rung 1
+- [ ] **HARD-01**: Gate-script vacuous-pass sites fixed (parts-check.sh: 5 extraction sites guarding ~6 checks; anatomy-check.sh: 1 site guarding 3 checks) — first touched at rung 1 [Amended 2026-08-31: moved to Phase 7, point of first need Phase 7's hardening pass, superseding this requirement's original rung-1 timing per `.planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md`]
+- [ ] **HARD-02**: The eight ANATOMY §F rows lacking landed-repair pointers linked to their PARTS Appendix A dispositions, **reconciling stale cross-document rows in the same pass** (e.g. DR-06: ANATOMY reads "Answered", PARTS Appendix A still reads "not reached") — doc pass alongside rung 1 [Amended 2026-08-31: moved to Phase 7, point of first need Phase 7's hardening pass, superseding this requirement's original rung-1 timing per `.planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md`]
 - [ ] **HARD-03**: DR-04 decided (per-chunk chunker/embedder provenance stamp on the stored chunk artifact: adopt the stamp, or record the two-covering rationale as sufficient) — first faced at rung 3
 - [ ] **HARD-04**: Owner's own corpus layered into the eval bundle before any promotion decision is made on it
 
@@ -83,8 +83,8 @@ Maps REQ-IDs to phases (see .planning/ROADMAP.md). Every v1 requirement maps to 
 |--------|-------|--------|
 | GATE-01 | Phase 2 | Pending |
 | MACH-01 | Phase 2 | Pending |
-| MACH-02 | Phase 2 | Pending |
-| MACH-03 | Phase 2 | Pending |
+| MACH-02 | Phase 3 | Pending |
+| MACH-03 | Phase 3 | Pending |
 | MACH-04 | Phase 5 | Pending |
 | MACH-05 | Phase 1 | Complete |
 | MACH-06 | Phase 1 | Complete |
@@ -111,8 +111,8 @@ Maps REQ-IDs to phases (see .planning/ROADMAP.md). Every v1 requirement maps to 
 | API-11 | Phase 4 | Pending |
 | EMBED-01 | Phase 1 | Complete |
 | EMBED-02 | Phase 4 | Pending |
-| HARD-01 | Phase 2 | Pending |
-| HARD-02 | Phase 2 | Pending |
+| HARD-01 | Phase 7 | Pending |
+| HARD-02 | Phase 7 | Pending |
 | HARD-03 | Phase 5 | Pending |
 | HARD-04 | Phase 7 | Pending |
 
