@@ -573,7 +573,7 @@ async def run_wiring(
                 )
                 partial = True
                 stop_reason = stop_reason or f"node {node_id!r}: {cause}"
-                # WR-03: deliberately skips ts.done(node_id) — a failed node never call it. Safe
+                # WR-03: deliberately skips ts.done(node_id) — a failed node never calls it. Safe
                 # only because node_failures being non-empty forces the unconditional `break`
                 # below, so the sorter's now-inconsistent state (this node still "pending" from
                 # its own perspective) is never read again via is_active()/get_ready(). A future
