@@ -120,9 +120,11 @@ async def dispatch(part: Part, ctx: NodeContext) -> Any:
 
 
 def default_registry() -> PartRegistry:
-    """A registry preloaded with D-04's four executable ``parts_core`` reference parts, the three
-    declaration-only Falsifier-2 wiring placeholders, and (03-04-PLAN.md Task 2) the seven ported
-    LightRAG parts the ``naive``/``bypass`` arms need — no tracer-only parts.
+    """A registry preloaded with D-04's four executable ``parts_core`` reference parts, the two
+    remaining declaration-only Falsifier-2 wiring placeholders (03-08-PLAN.md Task 3 retired the
+    third, ``lightrag/query-side`` (version ``0.1.0``), once Phase 3 ported its real eighteen
+    positions), and
+    (03-04-PLAN.md Task 2 onward) the fifteen ported LightRAG parts — no tracer-only parts.
     """
     # Local import: parts_core imports Part/Effect from parts.schema (not this module), so
     # importing it here keeps the registry/parts_core dependency direction one-way and obvious

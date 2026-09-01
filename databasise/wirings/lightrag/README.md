@@ -42,9 +42,17 @@ the illustrative JSON into this registered set:
 version suffix (e.g. `lightrag/keyword-extractor`), on the grounds that CONTRACT §0 mints a
 semver only at promotion and none of the fifteen new LightRAG components has been promoted. This
 plan's Task 1 posed that reading against the opposite convention already live in this registry —
-`lightrag/query-side@0.1.0`, `lightrag/full-ingest@0.1.0`, `codebase-memory-mcp@0.1.0` — and the
-committed Falsifier 2 evidence (`databasise/evidence/wirings/w1-lightrag-query-side.json`,
-`w3-lightrag-half-decomposed.json`) references `lightrag/query-side@0.1.0` by that exact string.
+`lightrag/query-side` (version `0.1.0`), `lightrag/full-ingest@0.1.0`, `codebase-memory-mcp@0.1.0`
+— and the committed Falsifier 2 evidence (`databasise/evidence/wirings/w1-lightrag-query-side.json`,
+`w3-lightrag-half-decomposed.json`) referenced `lightrag/query-side` (version `0.1.0`) by that
+exact string.
+
+**Update (03-08-PLAN.md Task 3): the `lightrag/query-side` stub is retired.** Phase 3 ported its
+real eighteen positions, so this declaration-only placeholder no longer exists anywhere under
+`databasise/` — `w1-lightrag-query-side.json` and `w3-lightrag-half-decomposed.json` were rewritten
+to resolve against the real, registered ports instead (see those files and
+`databasise/evidence/FALSIFIER-2-EVIDENCE.md`). The naming-convention decision recorded below
+still holds for every other component name; only the one stub's own identity string is gone.
 
 **Decision (owner, Task 1 checkpoint): `versioned`.** All fifteen new LightRAG components —
 `lightrag/embedder-query@0.1.0`, `lightrag/retriever-chunk-topk@0.1.0`,
