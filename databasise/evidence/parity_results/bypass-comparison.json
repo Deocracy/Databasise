@@ -1,0 +1,42 @@
+[
+  {
+    "status": "inconclusive",
+    "arm": "bypass",
+    "query_id": "q1",
+    "query": "Were Scott Derrickson and Ed Wood of the same nationality?",
+    "corpus_hash": "ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd",
+    "determinism_setting": "cache-bypassed",
+    "concurrency_setting": "sequential",
+    "run_count": 0,
+    "pinned_keywords": null,
+    "keyword_variance_band": null,
+    "chunk_diff": null,
+    "entity_diff": null,
+    "relation_diff": null,
+    "decomposed_run_record": null,
+    "original_arm_result": null,
+    "original_arm_instrumentation": "harness-external",
+    "resolved_model_identities": {},
+    "inconclusive_reason": "index-identity precondition returned 'refused' (chunk-text: no imported v2 store found at /home/chris/coding/Databasise-2.0-fully-agnostic-system/.claude/worktrees/agent-a1ad892379a742baf/v1/.parity_v2_store/shared-4fab18fef508b7bc3dda1cc2d8f12e36 \u2014 run import_v1_index() first)"
+  },
+  {
+    "status": "inconclusive",
+    "arm": "bypass",
+    "query_id": "q2",
+    "query": "What government position was held by the woman who portrayed Corliss Archer in the film Kiss and Tell?",
+    "corpus_hash": "ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd",
+    "determinism_setting": "cache-bypassed",
+    "concurrency_setting": "sequential",
+    "run_count": 0,
+    "pinned_keywords": null,
+    "keyword_variance_band": null,
+    "chunk_diff": null,
+    "entity_diff": null,
+    "relation_diff": null,
+    "decomposed_run_record": null,
+    "original_arm_result": null,
+    "original_arm_instrumentation": "harness-external",
+    "resolved_model_identities": {},
+    "inconclusive_reason": "index-identity precondition returned 'refused' (chunk-text: no imported v2 store found at /home/chris/coding/Databasise-2.0-fully-agnostic-system/.claude/worktrees/agent-a1ad892379a742baf/v1/.parity_v2_store/shared-4fab18fef508b7bc3dda1cc2d8f12e36 \u2014 run import_v1_index() first)"
+  }
+]
