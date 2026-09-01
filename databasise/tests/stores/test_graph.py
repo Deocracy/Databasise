@@ -134,6 +134,72 @@ async def test_query_dispatch_does_not_block_the_event_loop(store_root):
     await store.finalize()
 
 
+async def test_get_node_edges_returns_incident_edges_in_either_direction(store_root):
+    store = CozoGraphStore(namespace="graph", workspace="ws", store_root=store_root)
+    await store.upsert_node("A", {})
+    await store.upsert_node("B", {})
+    await store.upsert_node("C", {})
+    await store.upsert_edge("A", "B", {"weight": "1.0"})
+    await store.upsert_edge("C", "A", {"weight": "2.0"})
+    await store.index_done_callback()
+
+    edges = await store.get_node_edges("A")
+
+    pairs = {(e["src"], e["tgt"]): e["attrs"] for e in edges}
+    assert pairs == {("A", "B"): {"weight": "1.0"}, ("A", "C"): {"weight": "2.0"}}
+    await store.finalize()
+
+
+async def test_get_node_edges_returns_empty_list_for_unknown_or_edge_free_node(store_root):
+    store = CozoGraphStore(namespace="graph", workspace="ws", store_root=store_root)
+    await store.upsert_node("Lonely", {})
+    await store.index_done_callback()
+
+    assert await store.get_node_edges("Lonely") == []
+    assert await store.get_node_edges("Nonexistent") == []
+    await store.finalize()
+
+
+async def test_get_node_edges_consults_pending_buffers_before_flush(store_root):
+    store = CozoGraphStore(namespace="graph", workspace="ws", store_root=store_root)
+    await store.upsert_node("A", {})
+    await store.upsert_node("B", {})
+    await store.upsert_edge("A", "B", {"weight": "1.0"})
+    await store.index_done_callback()
+
+    # Unflushed put updates the attrs; unflushed removal (on a different edge) is excluded.
+    await store.upsert_node("C", {})
+    await store.upsert_edge("A", "B", {"weight": "9.0"})
+    await store.upsert_edge("A", "C", {"weight": "3.0"})
+    await store.delete_edge("A", "C")
+
+    edges = await store.get_node_edges("A")
+
+    pairs = {(e["src"], e["tgt"]): e["attrs"] for e in edges}
+    assert pairs == {("A", "B"): {"weight": "9.0"}}
+    await store.finalize()
+
+
+async def test_get_node_edges_agrees_with_node_degree_including_buffered_state(store_root):
+    store = CozoGraphStore(namespace="graph", workspace="ws", store_root=store_root)
+    await store.upsert_node("A", {})
+    await store.upsert_node("B", {})
+    await store.upsert_node("C", {})
+    await store.upsert_edge("A", "B", {"weight": "1.0"})
+    await store.upsert_edge("A", "C", {"weight": "2.0"})
+    await store.index_done_callback()
+
+    await store.upsert_node("D", {})
+    await store.upsert_edge("A", "D", {"weight": "3.0"})
+    await store.delete_edge("A", "B")
+
+    degree = await store.node_degree("A")
+    edges = await store.get_node_edges("A")
+
+    assert degree == len(edges) == 2
+    await store.finalize()
+
+
 def test_importing_without_pycozo_raises_actionable_import_error(monkeypatch):
     monkeypatch.setitem(sys.modules, "pycozo", None)
     monkeypatch.setitem(sys.modules, "pycozo.client", None)

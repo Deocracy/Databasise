@@ -194,6 +194,29 @@ class CozoGraphStore(StorageNameSpace):
         }
         return len(effective)
 
+    async def get_node_edges(self, node_id: str) -> list[dict[str, Any]]:
+        """Every edge incident on ``node_id``, either direction, as ``{"src", "tgt", "attrs"}``
+        dicts — ``src``/``tgt`` already in canonical order (every write path canonicalises via
+        ``_canonical_edge_key`` before storing, so no re-canonicalisation is needed here). Extends
+        ``node_degree``'s own non-aggregating query shape (frozen-bug #244's mitigation) to also
+        project ``attrs``, rather than introducing a second aggregation-shaped query for the same
+        underlying scan. Buffer consulted the same way ``node_degree`` computes its effective set:
+        a pending put for a key touching ``node_id`` overrides (or adds) that edge's attrs; a
+        pending removal drops it. An unknown or edge-free node returns ``[]``, never raises.
+        """
+        db_rows = await self._run(
+            "?[src, tgt, attrs] := *edges{src, tgt, attrs}, src = $id or tgt = $id", {"id": node_id}
+        )
+        effective: dict[tuple[str, str], dict[str, Any]] = {
+            (r[0], r[1]): _attrs_to_dict(r[2]) for r in db_rows
+        }
+        for key in self._pending_edge_rms:
+            effective.pop(key, None)
+        for key, attrs in self._pending_edge_puts.items():
+            if node_id in key:
+                effective[key] = dict(attrs)
+        return [{"src": src, "tgt": tgt, "attrs": attrs} for (src, tgt), attrs in effective.items()]
+
     async def get_all_labels(self) -> list[str]:
         """All node ids, disk + buffer, sorted. Avoids ``count()`` aggregation (frozen-bug #244)."""
         rows = await self._run("?[id] := *nodes{id}", {})
