@@ -48,6 +48,7 @@ import hashlib
 import asyncio
 import json
 import os
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -235,6 +236,16 @@ class FaissVectorStore(StorageNameSpace):
 
         results.sort(key=lambda r: (-r["score"], r["id"]))
         return results
+
+    def iter_vectors(self) -> Iterator[tuple[str, np.ndarray]]:
+        """Yield ``(doc_id, vector)`` for every committed (flushed) entry — WR-02: a public
+        accessor for callers that need the raw stored vectors (e.g. the parity import verifier),
+        so they read this store's public surface instead of reaching into ``_entries``/``_index``.
+        """
+        if self._index is None:
+            return
+        for doc_id, entry in self._entries.items():
+            yield doc_id, self._index.reconstruct(entry["int_id"])
 
     # ------------------------------------------------------------------ #
     # Lifecycle                                                            #
