@@ -6,3 +6,4 @@ node_modules/
 
 # GSD runtime sentinels
 .gsd/
+.env.secrets
