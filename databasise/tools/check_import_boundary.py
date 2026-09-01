@@ -23,6 +23,18 @@ constants would report a permanent false positive and train a reader to ignore t
 exclusion is doing real work by grepping this file directly (see ``tests/test_import_boundary.py``
 Test 5).
 
+**Subprocess-entry-point exclusion (03-07-PLAN.md Task 1 deviation).** A small, explicitly named
+set of files under ``databasise/`` are, by design, never imported by any ``databasise/`` module —
+they are leaf scripts launched only as a subprocess under a *different* interpreter (v1's own
+``uv``-managed venv), and their entire reason to exist is to call into v1's ``lightrag`` package
+from inside that other interpreter (``databasise/parity/v1_driver_script.py``'s own module
+docstring explains the split in full). Scanning them for a forbidden ``import lightrag`` would
+flag intentional, load-bearing code as a violation of a rule whose purpose — keep
+``databasise/``'s own interpreter from ever importing v1 — they do not violate: nothing under
+``databasise/`` imports them either. ``_SUBPROCESS_ENTRY_POINT_EXCLUSIONS`` names these files by
+resolved path, exactly like the self-exclusion above, so the exception is auditable rather than a
+silent gap in the scan.
+
 Import-line-scoped deliberately: only an actual ``import``/``from ... import`` statement or a
 dynamic-import call is checked against ``lightrag``/``v1`` — never an arbitrary string anywhere in
 the file. A docstring or an ``upstream_ref`` value legitimately names a v1 path in prose (e.g.
@@ -46,6 +58,14 @@ _FORBIDDEN_PATH_SEGMENT = "../v1/"
 
 _STORES_DIR_NAME = "stores"
 _STORES_EXCLUDED_MODULES = frozenset({"__init__.py", "base.py"})
+
+# Leaf scripts that intentionally import v1's ``lightrag`` package because they run under v1's own
+# interpreter as a subprocess entry point, never as a Python import target of anything under
+# ``databasise/`` — see the module docstring's "Subprocess-entry-point exclusion" note. Named here
+# by filename (matched against ``Path.name``, mirroring the self-exclusion's resolved-path
+# comparison one directory up), so the exception stays a short, explicit, auditable list rather
+# than a silent gap in the scan.
+_SUBPROCESS_ENTRY_POINT_EXCLUSIONS = frozenset({"v1_driver_script.py"})
 
 
 @dataclass(frozen=True)
@@ -127,6 +147,8 @@ def scan_tree(package_root: Path) -> list[Violation]:
     violations: list[Violation] = []
     for path in sorted(package_root.rglob("*.py")):
         if path.resolve() == self_path:
+            continue
+        if path.name in _SUBPROCESS_ENTRY_POINT_EXCLUSIONS:
             continue
         violations.extend(scan_file(path))
     return violations
