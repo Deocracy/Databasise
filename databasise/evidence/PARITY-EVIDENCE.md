@@ -67,6 +67,20 @@ Stated before the numbers, not after them. The decomposed arm's run comes back a
 
 **Degraded run — read the zero diffs above with this in mind.** `global`'s decomposed run halted before completing retrieval on q1, q2 (MACH-09's `degraded`/`degradation_reason` labelling, RIG §TR): node 'relation-hydrate-expand': NodeExecutionError: 'src_id'. The original arm's own answer for the same query/arm pairs also carries zero chunk/entity/relation ids (`original_arm_result` — see the raw `parity_results/` record). The `0` symmetric_difference reported above is therefore both sides retrieving nothing, not a validated matched retrieval — a live defect this comparison surfaced, out of this plan's scope to repair. See the Verdict section for how this bounds what the comparison actually shows.
 
+## Human spot-check of answer substance
+
+Criterion 6's substitute-gate half this document's retrieval-level comparison does not cover: an LLM-generated answer's *substance* is not mechanically checkable — `generate` is stochastic and no A/A floor is calibrated yet (MACH-02/MACH-03 deferred to Phase 6, `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`) — so only a human judgment call substitutes for it. Recorded per query in `human_findings.json`'s `answer_spotchecks` list; run instructions are `.planning/phases/03-lightrag-query-side/03-VALIDATION.md`'s Manual-Only Verifications row for this behavior.
+
+Each completed comparison record already carries the original (v1) arm's answer text under `original_arm_result.answer` (see the raw `parity_results/` files); the decomposed arm's answer text is not recorded in the run record, so the side-by-side read this section names is a live re-run, not a document comparison.
+
+### `q1`
+
+**Not yet recorded.** A human is required — answer substance is not mechanically checkable and no A/A floor is calibrated (MACH-02/MACH-03 deferred to Phase 6). To record it, add an entry to `human_findings.json`'s `answer_spotchecks` list naming `query_id='q1'`, the `arm` compared, a `judgment` (one of the three values this module's own `InvalidJudgmentError` enforces), `notes`, `recorded_by`, and `recorded_at`. Run instructions: `.planning/phases/03-lightrag-query-side/03-VALIDATION.md`'s Manual-Only Verifications table, "Human spot-check of answer substance" row.
+
+### `q2`
+
+**Not yet recorded.** A human is required — answer substance is not mechanically checkable and no A/A floor is calibrated (MACH-02/MACH-03 deferred to Phase 6). To record it, add an entry to `human_findings.json`'s `answer_spotchecks` list naming `query_id='q2'`, the `arm` compared, a `judgment` (one of the three values this module's own `InvalidJudgmentError` enforces), `notes`, `recorded_by`, and `recorded_at`. Run instructions: `.planning/phases/03-lightrag-query-side/03-VALIDATION.md`'s Manual-Only Verifications table, "Human spot-check of answer substance" row.
+
 ## The `keywords` variance band
 
 **N = 5 runs** (`databasise.parity.run_comparison._DEFAULT_KEYWORD_VARIANCE_RUNS`). Chosen (reasoning recorded in full in 03-09-SUMMARY.md's Decisions Made section): large enough to show repeats in the per-keyword frequency table for a typical HotpotQA question (2-4 keywords per level), small enough that 5 extra live `keywords` calls per query stays well within a rung-2 comparison's affordability, and `compute_keyword_variance_band` itself accepts any N ≥ 2 — raising N on a future real run needs no code change, only a different `keyword_variance_runs=` argument.
