@@ -107,7 +107,7 @@ Plans:
   5. Owner runs one A/A calibration and reads a bootstrap-resampled p95 floor keyed to `(bundle@v, tier, metric)` inseparable from the run's declared determinism/concurrency setting, with T1's null width materially narrower than T0's — Falsifier 5 *(amended 2026-08-31 per `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`: deferred to Phase 6's cross-modality run, same reason as criterion 4)*
   6. Until the A/A floor exists, parity is checked at the retrieval level with deterministic, zero-token comparisons of retrieved chunk sets and rankings between the original and the decomposed query side, plus human spot-checks of answers (D-05 substitute gate)
 
-**Plans**: 9/10 plans executed across 8 waves (03-10 is a gap-closure plan for G-03-1)
+**Plans**: 10/10 plans executed across 8 waves (03-10 is a gap-closure plan for G-03-1)
 
 Plans:
 
@@ -143,7 +143,7 @@ Plans:
 
 **Gap closure** *(G-03-1, from 03-UAT.md test 1)*
 
-- [ ] 03-10-PLAN.md — the human-authored declared-deviation cause mechanism, derived (no longer hardcoded) evidence prose, a landing place for the pending answer spot-check, and a reconciled MODAL-01 entry
+- [x] 03-10-PLAN.md — the human-authored declared-deviation cause mechanism, derived (no longer hardcoded) evidence prose, a landing place for the pending answer spot-check, and a reconciled MODAL-01 entry
 
 ### Phase 4: The Seam
 
@@ -215,7 +215,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Machine Core | 10/10 | Complete    | 2026-08-31 |
 | 2. Falsifier Gate | 4/4 | Complete    | 2026-08-31 |
-| 3. LightRAG Query Side | 9/9 | In Progress|  |
+| 3. LightRAG Query Side | 10/10 | In Progress|  |
 | 4. The Seam | 0/TBD | Not started | - |
 | 5. Opaque-Side Admission | 0/TBD | Not started | - |
 | 6. HippoRAG 2 & Side-by-Side | 0/TBD | Not started | - |
