@@ -1,6 +1,6 @@
 [
   {
-    "status": "inconclusive",
+    "status": "completed",
     "arm": "naive",
     "query_id": "q1",
     "query": "Were Scott Derrickson and Ed Wood of the same nationality?",
@@ -10,17 +10,248 @@
     "run_count": 0,
     "pinned_keywords": null,
     "keyword_variance_band": null,
-    "chunk_diff": null,
+    "chunk_diff": {
+      "decomposed_ids": [
+        "scott_derrickson-chunk-000",
+        "ed_wood-chunk-000",
+        "ed_wood_film-chunk-000",
+        "sinister_film-chunk-000",
+        "deliver_us_from_evil_2014_film-chunk-000",
+        "woodson_arkansas-chunk-000",
+        "adam_collis-chunk-000",
+        "doctor_strange_2016_film-chunk-000",
+        "conrad_brooks-chunk-000",
+        "tyler_bates-chunk-000"
+      ],
+      "original_ids": [
+        "scott_derrickson-chunk-000",
+        "ed_wood-chunk-000",
+        "ed_wood_film-chunk-000",
+        "sinister_film-chunk-000",
+        "deliver_us_from_evil_2014_film-chunk-000",
+        "woodson_arkansas-chunk-000",
+        "adam_collis-chunk-000",
+        "doctor_strange_2016_film-chunk-000",
+        "conrad_brooks-chunk-000",
+        "tyler_bates-chunk-000",
+        "charles_craft-chunk-000",
+        "shirley_temple-chunk-000"
+      ],
+      "symmetric_difference": [
+        "charles_craft-chunk-000",
+        "shirley_temple-chunk-000"
+      ],
+      "ranking_agreement": 1.0,
+      "first_disagreement_position": 10
+    },
     "entity_diff": null,
     "relation_diff": null,
-    "decomposed_run_record": null,
-    "original_arm_result": null,
+    "decomposed_run_record": {
+      "run_id": "parity-naive-5dda555f7bbd",
+      "wiring_id": "lightrag-base",
+      "wiring_instance_hash": "sha256:95db11107eb78a13f69ff4a15ccef659144f9f7c7e9bbb66714256a3af09e697",
+      "arm_id": "naive",
+      "arm_execution_order": 0,
+      "bundle_ref": "sentinel:no-eval-bundle-until-phase-2",
+      "corpus_snapshot_hash": "sentinel:no-corpus-snapshot-until-phase-2",
+      "executor_version": "databasise@0.1.0",
+      "concurrency_setting": "sequential",
+      "determinism_setting": "cache-bypassed",
+      "stop_reason": null,
+      "partial": false,
+      "degraded": false,
+      "degradation_reason": null,
+      "nodes": [
+        {
+          "node_id": "embedder-index",
+          "instance_hash": "3fee88be039f1018a7fc8704f778a7c1b0c1f6f91dfabbfd80b9313267541434",
+          "depth": "opaque",
+          "effective_depth": "opaque",
+          "tier": "T3",
+          "feed_tier": "T3",
+          "wall_clock_ms": 0,
+          "cache_hit": false,
+          "guards_fired": [],
+          "budget_state": "within_budget",
+          "realised_budget_share": 0.0,
+          "cross_process_failure_cause": null,
+          "resumable": false,
+          "tokens": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "cached_read_tokens": 0,
+            "call_count": 0,
+            "counted_by": "none"
+          }
+        },
+        {
+          "node_id": "embedder-query",
+          "instance_hash": "5d8908fbe98e1b967f9203ac01db62e394ca680cb21dd86ba8aeb697a50077f8",
+          "depth": "stage",
+          "effective_depth": "stage",
+          "tier": "T3",
+          "feed_tier": "T3",
+          "wall_clock_ms": 2445,
+          "cache_hit": false,
+          "guards_fired": [],
+          "budget_state": "within_budget",
+          "realised_budget_share": 1.3e-05,
+          "cross_process_failure_cause": null,
+          "resumable": true,
+          "tokens": {
+            "prompt_tokens": 13,
+            "completion_tokens": 0,
+            "cached_read_tokens": 0,
+            "call_count": 1,
+            "counted_by": "Qwen/Qwen3-Embedding-8B"
+          }
+        },
+        {
+          "node_id": "chunk-vector",
+          "instance_hash": "7c6808eee96781ab6094b2a891ffccc4922228c9f71bd226596c0ad4225f5269",
+          "depth": "stage",
+          "effective_depth": "stage",
+          "tier": "T3",
+          "feed_tier": "T3",
+          "wall_clock_ms": 12,
+          "cache_hit": false,
+          "guards_fired": [],
+          "budget_state": "within_budget",
+          "realised_budget_share": 0.0,
+          "cross_process_failure_cause": null,
+          "resumable": true,
+          "tokens": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "cached_read_tokens": 0,
+            "call_count": 0,
+            "counted_by": "none"
+          }
+        },
+        {
+          "node_id": "heading-backfill",
+          "instance_hash": "5b63cf5a5f89d5005dc361a42cf66f541a44fac1809c1da471ddcce7bd5ee24c",
+          "depth": "stage",
+          "effective_depth": "stage",
+          "tier": "T3",
+          "feed_tier": "T3",
+          "wall_clock_ms": 0,
+          "cache_hit": false,
+          "guards_fired": [],
+          "budget_state": "within_budget",
+          "realised_budget_share": 0.0,
+          "cross_process_failure_cause": null,
+          "resumable": true,
+          "tokens": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "cached_read_tokens": 0,
+            "call_count": 0,
+            "counted_by": "none"
+          }
+        },
+        {
+          "node_id": "rerank",
+          "instance_hash": "1c018e02f5a54a3fa94865508d06f07150aa64f3b4ab72004a99099556c7f8de",
+          "depth": "stage",
+          "effective_depth": "stage",
+          "tier": "T3",
+          "feed_tier": "T3",
+          "wall_clock_ms": 0,
+          "cache_hit": false,
+          "guards_fired": [],
+          "budget_state": "within_budget",
+          "realised_budget_share": 0.0,
+          "cross_process_failure_cause": null,
+          "resumable": true,
+          "tokens": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "cached_read_tokens": 0,
+            "call_count": 0,
+            "counted_by": "none"
+          }
+        },
+        {
+          "node_id": "assemble",
+          "instance_hash": "7ea1334822a2c01fd70c32a2bfd9b66518d74f8793cc137468d8a977eaac4a79",
+          "depth": "stage",
+          "effective_depth": "stage",
+          "tier": "T3",
+          "feed_tier": "T3",
+          "wall_clock_ms": 0,
+          "cache_hit": false,
+          "guards_fired": [],
+          "budget_state": "within_budget",
+          "realised_budget_share": 0.0,
+          "cross_process_failure_cause": null,
+          "resumable": true,
+          "tokens": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "cached_read_tokens": 0,
+            "call_count": 0,
+            "counted_by": "none"
+          }
+        },
+        {
+          "node_id": "generate",
+          "instance_hash": "33adf2a938acadf3bb90cb5a8b272e59bbfabc15c16cded6569dd97c0db7c411",
+          "depth": "stage",
+          "effective_depth": "stage",
+          "tier": "T3",
+          "feed_tier": "T3",
+          "wall_clock_ms": 3171,
+          "cache_hit": false,
+          "guards_fired": [],
+          "budget_state": "within_budget",
+          "realised_budget_share": 0.001652,
+          "cross_process_failure_cause": null,
+          "resumable": true,
+          "tokens": {
+            "prompt_tokens": 1217,
+            "completion_tokens": 435,
+            "cached_read_tokens": 0,
+            "call_count": 1,
+            "counted_by": "qwen/qwen3.7-flash"
+          }
+        }
+      ]
+    },
+    "original_arm_result": {
+      "chunk_ids": [
+        "scott_derrickson-chunk-000",
+        "ed_wood-chunk-000",
+        "ed_wood_film-chunk-000",
+        "sinister_film-chunk-000",
+        "deliver_us_from_evil_2014_film-chunk-000",
+        "woodson_arkansas-chunk-000",
+        "adam_collis-chunk-000",
+        "doctor_strange_2016_film-chunk-000",
+        "conrad_brooks-chunk-000",
+        "tyler_bates-chunk-000",
+        "charles_craft-chunk-000",
+        "shirley_temple-chunk-000"
+      ],
+      "entity_ids": [],
+      "relation_ids": [],
+      "answer": "Yes, Scott Derrickson and Ed Wood were of the same nationality. According to the provided context, both men were American. Scott Derrickson is described as an American director, screenwriter, and producer, while Edward Davis Wood Jr. is similarly identified as an American filmmaker, actor, writer, producer, and director.\n\n### References\n- [1] scott_derrickson.txt\n- [2] ed_wood.txt",
+      "hl_keywords_used": [],
+      "ll_keywords_used": [],
+      "wall_clock_seconds": 14.000324120999721,
+      "instrumentation": "harness-external"
+    },
     "original_arm_instrumentation": "harness-external",
-    "resolved_model_identities": {},
-    "inconclusive_reason": "index-identity precondition returned 'refused' (chunk-text: no imported v2 store found at /home/chris/coding/Databasise-2.0-fully-agnostic-system/.claude/worktrees/agent-a1ad892379a742baf/v1/.parity_v2_store/shared-4fab18fef508b7bc3dda1cc2d8f12e36 \u2014 run import_v1_index() first)"
+    "resolved_model_identities": {
+      "decomposed_generate": "qwen/qwen3.7-flash",
+      "original_arm_llm_model": "qwen/qwen3.7-flash",
+      "original_arm_embedding_model": "qwen/qwen3-embedding-8b"
+    },
+    "inconclusive_reason": null,
+    "retrieval_note": null
   },
   {
-    "status": "inconclusive",
+    "status": "completed",
     "arm": "naive",
     "query_id": "q2",
     "query": "What government position was held by the woman who portrayed Corliss Archer in the film Kiss and Tell?",
@@ -30,13 +261,250 @@
     "run_count": 0,
     "pinned_keywords": null,
     "keyword_variance_band": null,
-    "chunk_diff": null,
+    "chunk_diff": {
+      "decomposed_ids": [
+        "kiss_and_tell_1945_film-chunk-000",
+        "a_kiss_for_corliss-chunk-000",
+        "meet_corliss_archer_tv_series-chunk-000",
+        "meet_corliss_archer-chunk-000",
+        "shirley_temple-chunk-000",
+        "janet_waldo-chunk-000",
+        "charles_craft-chunk-000",
+        "ed_wood-chunk-000",
+        "lord_high_treasurer-chunk-000",
+        "ed_wood_film-chunk-000"
+      ],
+      "original_ids": [
+        "kiss_and_tell_1945_film-chunk-000",
+        "a_kiss_for_corliss-chunk-000",
+        "meet_corliss_archer_tv_series-chunk-000",
+        "meet_corliss_archer-chunk-000",
+        "shirley_temple-chunk-000",
+        "janet_waldo-chunk-000",
+        "charles_craft-chunk-000",
+        "ed_wood-chunk-000",
+        "lord_high_treasurer-chunk-000",
+        "ed_wood_film-chunk-000",
+        "conrad_brooks-chunk-000",
+        "adam_collis-chunk-000",
+        "secretary_of_state_for_constitutional_affairs-chunk-000",
+        "village_accountant-chunk-000"
+      ],
+      "symmetric_difference": [
+        "adam_collis-chunk-000",
+        "conrad_brooks-chunk-000",
+        "secretary_of_state_for_constitutional_affairs-chunk-000",
+        "village_accountant-chunk-000"
+      ],
+      "ranking_agreement": 1.0,
+      "first_disagreement_position": 10
+    },
     "entity_diff": null,
     "relation_diff": null,
-    "decomposed_run_record": null,
-    "original_arm_result": null,
+    "decomposed_run_record": {
+      "run_id": "parity-naive-61137c25525c",
+      "wiring_id": "lightrag-base",
+      "wiring_instance_hash": "sha256:99046461fc88ffd2a9d9755cc1a7de22d0dd1da91148676ee8b1993cb4b1a0e3",
+      "arm_id": "naive",
+      "arm_execution_order": 0,
+      "bundle_ref": "sentinel:no-eval-bundle-until-phase-2",
+      "corpus_snapshot_hash": "sentinel:no-corpus-snapshot-until-phase-2",
+      "executor_version": "databasise@0.1.0",
+      "concurrency_setting": "sequential",
+      "determinism_setting": "cache-bypassed",
+      "stop_reason": null,
+      "partial": false,
+      "degraded": false,
+      "degradation_reason": null,
+      "nodes": [
+        {
+          "node_id": "embedder-index",
+          "instance_hash": "3fee88be039f1018a7fc8704f778a7c1b0c1f6f91dfabbfd80b9313267541434",
+          "depth": "opaque",
+          "effective_depth": "opaque",
+          "tier": "T3",
+          "feed_tier": "T3",
+          "wall_clock_ms": 0,
+          "cache_hit": false,
+          "guards_fired": [],
+          "budget_state": "within_budget",
+          "realised_budget_share": 0.0,
+          "cross_process_failure_cause": null,
+          "resumable": false,
+          "tokens": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "cached_read_tokens": 0,
+            "call_count": 0,
+            "counted_by": "none"
+          }
+        },
+        {
+          "node_id": "embedder-query",
+          "instance_hash": "0e4411cd2e7ec5691bfed8c01756a65ac9e198c821c0bf5171d177a3a18c2404",
+          "depth": "stage",
+          "effective_depth": "stage",
+          "tier": "T3",
+          "feed_tier": "T3",
+          "wall_clock_ms": 1080,
+          "cache_hit": false,
+          "guards_fired": [],
+          "budget_state": "within_budget",
+          "realised_budget_share": 2.2e-05,
+          "cross_process_failure_cause": null,
+          "resumable": true,
+          "tokens": {
+            "prompt_tokens": 22,
+            "completion_tokens": 0,
+            "cached_read_tokens": 0,
+            "call_count": 1,
+            "counted_by": "Qwen/Qwen3-Embedding-8B"
+          }
+        },
+        {
+          "node_id": "chunk-vector",
+          "instance_hash": "5d427a43ea471e279de10c5d493e901c5cab7cadc25057897d784aad803cfe0d",
+          "depth": "stage",
+          "effective_depth": "stage",
+          "tier": "T3",
+          "feed_tier": "T3",
+          "wall_clock_ms": 1,
+          "cache_hit": false,
+          "guards_fired": [],
+          "budget_state": "within_budget",
+          "realised_budget_share": 0.0,
+          "cross_process_failure_cause": null,
+          "resumable": true,
+          "tokens": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "cached_read_tokens": 0,
+            "call_count": 0,
+            "counted_by": "none"
+          }
+        },
+        {
+          "node_id": "heading-backfill",
+          "instance_hash": "545a6885de09e288b0f275f958ff4a2374dd4b901864b86a9431a83b36223da7",
+          "depth": "stage",
+          "effective_depth": "stage",
+          "tier": "T3",
+          "feed_tier": "T3",
+          "wall_clock_ms": 0,
+          "cache_hit": false,
+          "guards_fired": [],
+          "budget_state": "within_budget",
+          "realised_budget_share": 0.0,
+          "cross_process_failure_cause": null,
+          "resumable": true,
+          "tokens": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "cached_read_tokens": 0,
+            "call_count": 0,
+            "counted_by": "none"
+          }
+        },
+        {
+          "node_id": "rerank",
+          "instance_hash": "6e2327d4bb056fe5c6e120fb5fdb27a9345757b077e8d01bbb82c10bf2784a15",
+          "depth": "stage",
+          "effective_depth": "stage",
+          "tier": "T3",
+          "feed_tier": "T3",
+          "wall_clock_ms": 0,
+          "cache_hit": false,
+          "guards_fired": [],
+          "budget_state": "within_budget",
+          "realised_budget_share": 0.0,
+          "cross_process_failure_cause": null,
+          "resumable": true,
+          "tokens": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "cached_read_tokens": 0,
+            "call_count": 0,
+            "counted_by": "none"
+          }
+        },
+        {
+          "node_id": "assemble",
+          "instance_hash": "97a905263fcb62be17d9d1e9cfdba6bb675a5c4c7cc475e83beaa67ee29acf23",
+          "depth": "stage",
+          "effective_depth": "stage",
+          "tier": "T3",
+          "feed_tier": "T3",
+          "wall_clock_ms": 0,
+          "cache_hit": false,
+          "guards_fired": [],
+          "budget_state": "within_budget",
+          "realised_budget_share": 0.0,
+          "cross_process_failure_cause": null,
+          "resumable": true,
+          "tokens": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "cached_read_tokens": 0,
+            "call_count": 0,
+            "counted_by": "none"
+          }
+        },
+        {
+          "node_id": "generate",
+          "instance_hash": "b7bdbad7f2c9285019b0b943a3d25170536ec88aac41fa2d787ff99b50374fb2",
+          "depth": "stage",
+          "effective_depth": "stage",
+          "tier": "T3",
+          "feed_tier": "T3",
+          "wall_clock_ms": 7151,
+          "cache_hit": false,
+          "guards_fired": [],
+          "budget_state": "within_budget",
+          "realised_budget_share": 0.002277,
+          "cross_process_failure_cause": null,
+          "resumable": true,
+          "tokens": {
+            "prompt_tokens": 1230,
+            "completion_tokens": 1047,
+            "cached_read_tokens": 0,
+            "call_count": 1,
+            "counted_by": "qwen/qwen3.7-flash"
+          }
+        }
+      ]
+    },
+    "original_arm_result": {
+      "chunk_ids": [
+        "kiss_and_tell_1945_film-chunk-000",
+        "a_kiss_for_corliss-chunk-000",
+        "meet_corliss_archer_tv_series-chunk-000",
+        "meet_corliss_archer-chunk-000",
+        "shirley_temple-chunk-000",
+        "janet_waldo-chunk-000",
+        "charles_craft-chunk-000",
+        "ed_wood-chunk-000",
+        "lord_high_treasurer-chunk-000",
+        "ed_wood_film-chunk-000",
+        "conrad_brooks-chunk-000",
+        "adam_collis-chunk-000",
+        "secretary_of_state_for_constitutional_affairs-chunk-000",
+        "village_accountant-chunk-000"
+      ],
+      "entity_ids": [],
+      "relation_ids": [],
+      "answer": "The woman who portrayed Corliss Archer in the 1945 film *Kiss and Tell* was child star Shirley Temple [1]. \n\nAs an adult, Shirley Temple Black transitioned into a distinguished career in public service and diplomacy, holding the following government positions [4]:\n* United States Ambassador to Ghana\n* United States Ambassador to Czechoslovakia\n* Chief of Protocol of the United States\n\n### References\n\n- [1] kiss_and_tell_1945_film.txt\n- [4] shirley_temple.txt",
+      "hl_keywords_used": [],
+      "ll_keywords_used": [],
+      "wall_clock_seconds": 16.172609104000003,
+      "instrumentation": "harness-external"
+    },
     "original_arm_instrumentation": "harness-external",
-    "resolved_model_identities": {},
-    "inconclusive_reason": "index-identity precondition returned 'refused' (chunk-text: no imported v2 store found at /home/chris/coding/Databasise-2.0-fully-agnostic-system/.claude/worktrees/agent-a1ad892379a742baf/v1/.parity_v2_store/shared-4fab18fef508b7bc3dda1cc2d8f12e36 \u2014 run import_v1_index() first)"
+    "resolved_model_identities": {
+      "decomposed_generate": "qwen/qwen3.7-flash",
+      "original_arm_llm_model": "qwen/qwen3.7-flash",
+      "original_arm_embedding_model": "qwen/qwen3-embedding-8b"
+    },
+    "inconclusive_reason": null,
+    "retrieval_note": null
   }
 ]
