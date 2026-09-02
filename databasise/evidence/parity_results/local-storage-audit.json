@@ -1,11 +1,146 @@
 {
   "arm": "local",
   "command": "uv run python -m databasise.parity.storage_audit --arm local",
-  "exit_code": 1,
-  "status": "inconclusive",
-  "outcome": "environment_precondition_failed",
-  "reason": "MissingParityEnvError: v1/.env.parity not found at <worktree>/v1/.env.parity — see v1/README-PARITY.md to recreate it, or pass an explicit clients= mapping to run_arm() to bypass real-client construction",
-  "note": "The path in the raised error is worktree-local (this executor's checkout under .claude/worktrees/); it will read as the real repo path on whichever machine runs this for real. No node rows, no matched/no-touch/over-declared counts were produced — the audit never reached the scheduler because client construction failed first. This is a precondition gate refusal, not an audit finding.",
-  "harmless_stderr_noise": "pycozo's own CozoClient.__init__ logs a caught ModuleNotFoundError for pandas (pandas is deliberately not a dependency — see 03-04-SUMMARY.md); unrelated to this refusal.",
-  "rerun_command_once_artifacts_exist": "cd databasise && uv run python -m databasise.parity.storage_audit --arm local"
+  "exit_code": 0,
+  "status": "completed",
+  "outcome": "clean",
+  "reason": "audit ran to completion: 15 node(s), matched=10 no-touch=5 over-declared=0, zero violations",
+  "matched_count": 10,
+  "no_touch_count": 5,
+  "over_declared_count": 0,
+  "rows": [
+    {
+      "node_id": "assemble",
+      "kind": "lightrag/assembler-kg-context@0.1.0",
+      "state": "matched",
+      "declared": [],
+      "touched": []
+    },
+    {
+      "node_id": "budget-entities",
+      "kind": "lightrag/truncator-token-budget@0.1.0",
+      "state": "matched",
+      "declared": [],
+      "touched": []
+    },
+    {
+      "node_id": "budget-relations",
+      "kind": "lightrag/truncator-token-budget@0.1.0",
+      "state": "matched",
+      "declared": [],
+      "touched": []
+    },
+    {
+      "node_id": "chunk-sel-kg",
+      "kind": "lightrag/chunk-selector-kg@0.1.0",
+      "state": "no-touch",
+      "declared": [
+        "reads_kv",
+        "reads_vector"
+      ],
+      "touched": []
+    },
+    {
+      "node_id": "embedder-index",
+      "kind": "lightrag/embedder-index@0.1.0",
+      "state": "no-touch",
+      "declared": [
+        "calls_embedding",
+        "writes_artifact"
+      ],
+      "touched": []
+    },
+    {
+      "node_id": "embedder-query",
+      "kind": "lightrag/embedder-query@0.1.0",
+      "state": "matched",
+      "declared": [
+        "calls_embedding"
+      ],
+      "touched": [
+        "client:embedding"
+      ]
+    },
+    {
+      "node_id": "entity-hydrate-expand",
+      "kind": "lightrag/entity-hydrate-expand@0.1.0",
+      "state": "matched",
+      "declared": [
+        "reads_graph"
+      ],
+      "touched": [
+        "store:graph"
+      ]
+    },
+    {
+      "node_id": "entity-lookup",
+      "kind": "lightrag/entity-lookup@0.1.0",
+      "state": "matched",
+      "declared": [
+        "reads_vector"
+      ],
+      "touched": [
+        "store:vector"
+      ]
+    },
+    {
+      "node_id": "generate",
+      "kind": "lightrag/generator-llm@0.1.0",
+      "state": "no-touch",
+      "declared": [
+        "calls_llm"
+      ],
+      "touched": []
+    },
+    {
+      "node_id": "heading-backfill",
+      "kind": "lightrag/chunk-heading-backfiller@0.1.0",
+      "state": "no-touch",
+      "declared": [
+        "reads_kv"
+      ],
+      "touched": []
+    },
+    {
+      "node_id": "join-chunks",
+      "kind": "lightrag/join-roundrobin@0.1.0",
+      "state": "matched",
+      "declared": [],
+      "touched": []
+    },
+    {
+      "node_id": "join-entities",
+      "kind": "lightrag/join-roundrobin@0.1.0",
+      "state": "matched",
+      "declared": [],
+      "touched": []
+    },
+    {
+      "node_id": "join-relations",
+      "kind": "lightrag/join-roundrobin@0.1.0",
+      "state": "matched",
+      "declared": [],
+      "touched": []
+    },
+    {
+      "node_id": "keywords",
+      "kind": "lightrag/keyword-extractor@0.1.0",
+      "state": "matched",
+      "declared": [
+        "calls_llm"
+      ],
+      "touched": [
+        "client:llm"
+      ]
+    },
+    {
+      "node_id": "rerank",
+      "kind": "lightrag/reranker-cross-encoder@0.1.0",
+      "state": "no-touch",
+      "declared": [
+        "calls_rerank"
+      ],
+      "touched": []
+    }
+  ]
 }

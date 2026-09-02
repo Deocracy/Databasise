@@ -1,6 +1,6 @@
 [
   {
-    "status": "inconclusive",
+    "status": "completed",
     "arm": "bypass",
     "query_id": "q1",
     "query": "Were Scott Derrickson and Ed Wood of the same nationality?",
@@ -13,14 +13,67 @@
     "chunk_diff": null,
     "entity_diff": null,
     "relation_diff": null,
-    "decomposed_run_record": null,
-    "original_arm_result": null,
+    "decomposed_run_record": {
+      "run_id": "parity-bypass-5dda555f7bbd",
+      "wiring_id": "lightrag-base",
+      "wiring_instance_hash": "sha256:199f5ca23e1e22f4541c017218a57e23c3e0bd21ae02d9545a2693abffa570a2",
+      "arm_id": "bypass",
+      "arm_execution_order": 0,
+      "bundle_ref": "sentinel:no-eval-bundle-until-phase-2",
+      "corpus_snapshot_hash": "sentinel:no-corpus-snapshot-until-phase-2",
+      "executor_version": "databasise@0.1.0",
+      "concurrency_setting": "sequential",
+      "determinism_setting": "cache-bypassed",
+      "stop_reason": null,
+      "partial": false,
+      "degraded": false,
+      "degradation_reason": null,
+      "nodes": [
+        {
+          "node_id": "generate",
+          "instance_hash": "bedcd83d5e6da5b2c1a741f767606b25653a840edff2f4bd57476faff01dd45a",
+          "depth": "stage",
+          "effective_depth": "stage",
+          "tier": "T3",
+          "feed_tier": "T3",
+          "wall_clock_ms": 6450,
+          "cache_hit": false,
+          "guards_fired": [],
+          "budget_state": "within_budget",
+          "realised_budget_share": 0.000564,
+          "cross_process_failure_cause": null,
+          "resumable": true,
+          "tokens": {
+            "prompt_tokens": 22,
+            "completion_tokens": 542,
+            "cached_read_tokens": 0,
+            "call_count": 1,
+            "counted_by": "qwen/qwen3.7-flash"
+          }
+        }
+      ]
+    },
+    "original_arm_result": {
+      "chunk_ids": [],
+      "entity_ids": [],
+      "relation_ids": [],
+      "answer": "Yes, both Scott Derrickson and Ed Wood were American. Derrickson was born in Denver, Colorado, and Wood was born in Poughkeepsie, New York, making them both citizens of the United States.",
+      "hl_keywords_used": [],
+      "ll_keywords_used": [],
+      "wall_clock_seconds": 4.464868476999982,
+      "instrumentation": "harness-external"
+    },
     "original_arm_instrumentation": "harness-external",
-    "resolved_model_identities": {},
-    "inconclusive_reason": "index-identity precondition returned 'refused' (chunk-text: no imported v2 store found at /home/chris/coding/Databasise-2.0-fully-agnostic-system/.claude/worktrees/agent-a1ad892379a742baf/v1/.parity_v2_store/shared-4fab18fef508b7bc3dda1cc2d8f12e36 \u2014 run import_v1_index() first)"
+    "resolved_model_identities": {
+      "decomposed_generate": "qwen/qwen3.7-flash",
+      "original_arm_llm_model": "qwen/qwen3.7-flash",
+      "original_arm_embedding_model": "qwen/qwen3-embedding-8b"
+    },
+    "inconclusive_reason": null,
+    "retrieval_note": "the 'bypass' arm resolves to a single 'generate' node with no retrieval at all \u2014 there is no chunk-set comparison to make for this arm, distinct from a computed zero symmetric difference"
   },
   {
-    "status": "inconclusive",
+    "status": "completed",
     "arm": "bypass",
     "query_id": "q2",
     "query": "What government position was held by the woman who portrayed Corliss Archer in the film Kiss and Tell?",
@@ -33,10 +86,63 @@
     "chunk_diff": null,
     "entity_diff": null,
     "relation_diff": null,
-    "decomposed_run_record": null,
-    "original_arm_result": null,
+    "decomposed_run_record": {
+      "run_id": "parity-bypass-61137c25525c",
+      "wiring_id": "lightrag-base",
+      "wiring_instance_hash": "sha256:12314a9a39a9b23dc5d982a86ac14911c88d1f3937113d5e108a23b9d67e1891",
+      "arm_id": "bypass",
+      "arm_execution_order": 0,
+      "bundle_ref": "sentinel:no-eval-bundle-until-phase-2",
+      "corpus_snapshot_hash": "sentinel:no-corpus-snapshot-until-phase-2",
+      "executor_version": "databasise@0.1.0",
+      "concurrency_setting": "sequential",
+      "determinism_setting": "cache-bypassed",
+      "stop_reason": null,
+      "partial": false,
+      "degraded": false,
+      "degradation_reason": null,
+      "nodes": [
+        {
+          "node_id": "generate",
+          "instance_hash": "ac0701cb4a28a6f8590394ee8d28ef6a7d7901c3b16b73eea046d4947daede43",
+          "depth": "stage",
+          "effective_depth": "stage",
+          "tier": "T3",
+          "feed_tier": "T3",
+          "wall_clock_ms": 12149,
+          "cache_hit": false,
+          "guards_fired": [],
+          "budget_state": "within_budget",
+          "realised_budget_share": 0.002205,
+          "cross_process_failure_cause": null,
+          "resumable": true,
+          "tokens": {
+            "prompt_tokens": 31,
+            "completion_tokens": 2174,
+            "cached_read_tokens": 0,
+            "call_count": 1,
+            "counted_by": "qwen/qwen3.7-flash"
+          }
+        }
+      ]
+    },
+    "original_arm_result": {
+      "chunk_ids": [],
+      "entity_ids": [],
+      "relation_ids": [],
+      "answer": "The actress who portrayed Corliss Archer in the 1945 film *Kiss and Tell* was **Martha Scott**. After her acting career, she served as the **United States Ambassador to UNESCO**, a position she held from 1971 to 1974 after being appointed by President Richard Nixon.",
+      "hl_keywords_used": [],
+      "ll_keywords_used": [],
+      "wall_clock_seconds": 8.09136523000052,
+      "instrumentation": "harness-external"
+    },
     "original_arm_instrumentation": "harness-external",
-    "resolved_model_identities": {},
-    "inconclusive_reason": "index-identity precondition returned 'refused' (chunk-text: no imported v2 store found at /home/chris/coding/Databasise-2.0-fully-agnostic-system/.claude/worktrees/agent-a1ad892379a742baf/v1/.parity_v2_store/shared-4fab18fef508b7bc3dda1cc2d8f12e36 \u2014 run import_v1_index() first)"
+    "resolved_model_identities": {
+      "decomposed_generate": "qwen/qwen3.7-flash",
+      "original_arm_llm_model": "qwen/qwen3.7-flash",
+      "original_arm_embedding_model": "qwen/qwen3-embedding-8b"
+    },
+    "inconclusive_reason": null,
+    "retrieval_note": "the 'bypass' arm resolves to a single 'generate' node with no retrieval at all \u2014 there is no chunk-set comparison to make for this arm, distinct from a computed zero symmetric difference"
   }
 ]
