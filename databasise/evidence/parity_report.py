@@ -94,6 +94,33 @@ def load_human_findings() -> dict[str, Any]:
 
 
 # --------------------------------------------------------------------------------------------- #
+# Run-state derivation (03-10-PLAN.md Task 2) — every prose section routes through this; no
+# section may assert a run state it did not read.
+# --------------------------------------------------------------------------------------------- #
+
+
+def _run_state() -> str:
+    """Derive one of ``"completed"``, ``"inconclusive"``, or ``"mixed"`` from the ``status``
+    field of every committed comparison record and every committed storage audit. Reads via
+    :func:`load_comparison`/:func:`load_storage_audit`, both of which resolve the module-level
+    :data:`RESULTS_DIR` global at call time — so ``monkeypatch.setattr(parity_report,
+    "RESULTS_DIR", tmp_path)`` in a test retargets this function too, with no separate
+    ``results_dir`` parameter needed.
+    """
+    statuses = {
+        record.get("status", "inconclusive")
+        for arm in ARMS
+        for record in load_comparison(arm)
+    }
+    statuses |= {load_storage_audit(arm).get("status", "inconclusive") for arm in ARMS}
+    if statuses == {"completed"}:
+        return "completed"
+    if statuses == {"inconclusive"}:
+        return "inconclusive"
+    return "mixed"
+
+
+# --------------------------------------------------------------------------------------------- #
 # Provenance check (Task 1's own <verify> command; also exposed via --check-results)
 # --------------------------------------------------------------------------------------------- #
 
@@ -285,19 +312,30 @@ def render_deviations_markdown(deviations: list[DeclaredDeviation]) -> str:
     ]
 
     if not deviations:
-        sections.append(
-            "## Zero declared deviations\n\n"
-            "No excursion is recorded in this document. This is a stated zero, not an absent "
-            "file — and, as of this render, it reflects that **no completed comparison run has "
-            "occurred**: every arm's committed result under `parity_results/` carries "
-            "`status=\"inconclusive\"` (the index-identity precondition and/or the "
-            "`v1/.env.parity` precondition failed on this machine — see `PARITY-EVIDENCE.md`'s "
-            "\"What was compared\" section). A stated zero here should therefore be read as "
-            "\"nothing has been measured yet,\" not as \"the comparison ran and found no "
-            "excursions.\" Re-running `parity_report.py` after a real comparison lands will "
-            "populate this section with either named entries or an updated zero statement that "
-            "reflects an actual completed comparison.\n"
-        )
+        state = _run_state()
+        if state == "inconclusive":
+            sections.append(
+                "## Zero declared deviations\n\n"
+                "No excursion is recorded in this document. This is a stated zero, not an absent "
+                "file — and, as of this render, it reflects that **no completed comparison run has "
+                "occurred**: every arm's committed result under `parity_results/` carries "
+                "`status=\"inconclusive\"` (the index-identity precondition and/or the "
+                "`v1/.env.parity` precondition failed on this machine — see `PARITY-EVIDENCE.md`'s "
+                "\"What was compared\" section). A stated zero here should therefore be read as "
+                "\"nothing has been measured yet,\" not as \"the comparison ran and found no "
+                "excursions.\" Re-running `parity_report.py` after a real comparison lands will "
+                "populate this section with either named entries or an updated zero statement that "
+                "reflects an actual completed comparison.\n"
+            )
+        else:
+            sections.append(
+                "## Zero declared deviations\n\n"
+                "No excursion is recorded in this document. This is a stated zero, and, as of "
+                "this render, it reflects a **completed comparison that found no excursion**: "
+                "every completed comparison record's `chunk_diff`/`entity_diff`/`relation_diff` "
+                "carried an empty `symmetric_difference`. This is a different statement from "
+                "\"nothing has been measured yet\" — the comparison ran and found agreement.\n"
+            )
     else:
         header = "| arm | query | measured difference | cause |\n|---|---|---|---|\n"
         rows = [
@@ -308,33 +346,83 @@ def render_deviations_markdown(deviations: list[DeclaredDeviation]) -> str:
     # CR-01 (03-REVIEW.md): a structural v2-vs-v1 difference known from reading the code, not
     # from a measured run. Emitted by the renderer itself so a re-render cannot drop it — a hand
     # edit to DECLARED-DEVIATIONS.md is overwritten by main() on the next render.
-    sections.append(_KNOWN_DESIGN_DEVIATION)
+    sections.append(_render_known_design_deviation())
 
     return "\n".join(sections)
 
 
-_KNOWN_DESIGN_DEVIATION = (
-    "## Known design deviation (pending measurement)\n\n"
-    "Not a measured excursion (`_collect_deviations()` only picks up a `symmetric_difference` "
-    "on a `status=\"completed\"` comparison record, and none exist yet — see the "
-    "zero-deviations statement above); recorded here ahead of the automatic mechanism because "
-    "it is already known from reading the code, per CR-01's `03-REVIEW.md` finding.\n\n"
-    "| arm | query | measured difference | cause |\n"
-    "|---|---|---|---|\n"
-    "| hybrid, local, global | n/a — design-level, not yet measured | v2's "
-    "`entity-lookup`/`relation-lookup` embed one raw-query vector (`embedder-query`'s output "
-    "for `ctx.inputs[\"keywords\"][\"query\"]`) | v1 embeds two separate keyword-derived "
-    "vectors instead: `\", \".join(ll_keywords)` for entity lookup (`_get_node_data`) and "
-    "`\", \".join(hl_keywords)` for relation lookup (`_get_edge_data`), per "
-    "`v1/lightrag/operate.py`. The v2 wiring (`databasise/wirings/lightrag/base.json`, frozen "
-    "input) feeds one shared `embedder-query` node into `entity-lookup`, `relation-lookup`, "
-    "and `chunk-vector`, so this is a structural difference, not a bug — CR-01's fix makes "
-    "`embedder-query` embed the real query text (closing the \"empty string\" bug) but does "
-    "not restructure the wiring into v1's two-keyword-vector shape. Expected to surface as a "
-    "retrieval-level `entity_diff`/`relation_diff` excursion once a completed comparison run "
-    "exists (see `PARITY-EVIDENCE.md`), at which point the measured row above supersedes this "
-    "entry. |\n"
-)
+def _render_known_design_deviation() -> str:
+    """CR-01's known structural v2-vs-v1 difference (one shared query-vector embed vs v1's two
+    separate keyword-derived vectors) — originally recorded as a standing prediction ahead of any
+    measurement. Now testable against the committed records (03-10-PLAN.md Task 2): state the
+    measured outcome rather than leaving the prediction standing.
+    """
+    header = (
+        "## Known design deviation (pending measurement)\n\n"
+        "Not a measured excursion (`_collect_deviations()` only picks up a `symmetric_difference` "
+        "on a `status=\"completed\"` comparison record); recorded here ahead of the automatic "
+        "mechanism because it is already known from reading the code, per CR-01's `03-REVIEW.md` "
+        "finding.\n\n"
+    )
+    graph_diffs = [
+        (arm, record.get("entity_diff"), record.get("relation_diff"))
+        for arm in ("hybrid", "local", "global")
+        for record in load_comparison(arm)
+        if record.get("status") == "completed"
+    ]
+    zero_entity_relation = graph_diffs and all(
+        entity_diff is not None
+        and relation_diff is not None
+        and not entity_diff.get("symmetric_difference")
+        and not relation_diff.get("symmetric_difference")
+        for _arm, entity_diff, relation_diff in graph_diffs
+    )
+    any_degraded = any(
+        record.get("decomposed_run_record", {}).get("degraded")
+        for arm in ("hybrid", "local", "global")
+        for record in load_comparison(arm)
+        if record.get("status") == "completed"
+    )
+    if zero_entity_relation:
+        status_sentence = (
+            "**Status, from the completed run**: `hybrid`/`local`/`global` all measured "
+            "`entity_diff`/`relation_diff` `symmetric_difference=[]` on both corpus queries — "
+            "the predicted excursion did not surface as a non-empty diff. "
+            + (
+                "That measurement is not dispositive, though: the same three arms' decomposed "
+                "runs degraded before completing a real retrieval on both sides (see the "
+                "per-arm degradation note in \"Per-arm retrieval-level comparison\" and the "
+                "Verdict section) — the zero reflects both the decomposed and original arm "
+                "retrieving nothing on this run, not a validated agreement over non-trivial "
+                "entity/relation sets. The structural difference below is unrefuted, not "
+                "confirmed absent; a clean run is needed to actually test it.\n\n"
+                if any_degraded
+                else "Read this alongside the storage audit, whose `matched`/`no-touch`/"
+                "`over-declared` counts are independent evidence the ported nodes touched what "
+                "they declared.\n\n"
+            )
+        )
+    else:
+        status_sentence = (
+            "**Status, from the completed run**: not yet re-derivable from a completed "
+            "`entity_diff`/`relation_diff` on all three graph arms — see the per-arm table "
+            "above for what is actually recorded.\n\n"
+        )
+    table = (
+        "| arm | query | measured difference | cause |\n"
+        "|---|---|---|---|\n"
+        "| hybrid, local, global | n/a — design-level, not a measured excursion | v2's "
+        "`entity-lookup`/`relation-lookup` embed one raw-query vector (`embedder-query`'s output "
+        "for `ctx.inputs[\"keywords\"][\"query\"]`) | v1 embeds two separate keyword-derived "
+        "vectors instead: `\", \".join(ll_keywords)` for entity lookup (`_get_node_data`) and "
+        "`\", \".join(hl_keywords)` for relation lookup (`_get_edge_data`), per "
+        "`v1/lightrag/operate.py`. The v2 wiring (`databasise/wirings/lightrag/base.json`, frozen "
+        "input) feeds one shared `embedder-query` node into `entity-lookup`, `relation-lookup`, "
+        "and `chunk-vector`, so this is a structural difference, not a bug — CR-01's fix makes "
+        "`embedder-query` embed the real query text (closing the \"empty string\" bug) but does "
+        "not restructure the wiring into v1's two-keyword-vector shape. |\n"
+    )
+    return header + status_sentence + table
 
 
 def _collect_deviations() -> list[DeclaredDeviation]:
@@ -414,6 +502,76 @@ def _escape_cell(value: str) -> str:
 
 
 def _render_what_was_compared() -> str:
+    state = _run_state()
+    completed = state == "completed"
+
+    if completed:
+        one_index_trailing = (
+            "and gated on every comparison run by plan 03-02's index-identity verifier "
+            "(`databasise.parity.import_index.verify_import`) — the same precondition this "
+            "run passed.\n"
+        )
+    else:
+        one_index_trailing = (
+            "and gated on every comparison run by plan 03-02's index-identity verifier "
+            "(`databasise.parity.import_index.verify_import`) — the same precondition this "
+            "document's own recorded runs failed against (see below).\n"
+        )
+
+    if completed:
+        naive_record = load_comparison("naive")[0]
+        ids = naive_record["resolved_model_identities"]
+        pinned_models_clause = (
+            "The completed run resolved these identities live from each provider's response, "
+            "never the requested id (Phase 1 D-12) — recorded per-comparison in each committed "
+            f"record's own `resolved_model_identities` field: `decomposed_generate={ids['decomposed_generate']!r}`, "
+            f"`original_arm_llm_model={ids['original_arm_llm_model']!r}`, "
+            f"`original_arm_embedding_model={ids['original_arm_embedding_model']!r}` (naive/bypass, "
+            "the two arms whose `generate` node ran). `hybrid`/`local`/`global` recorded "
+            "`decomposed_generate=\"\"` because their `generate` node never ran — see the "
+            "per-arm degradation note in \"Per-arm retrieval-level comparison\" below.\n"
+        )
+    else:
+        pinned_models_clause = (
+            "No comparison run recorded in this document reached the point of resolving these "
+            "identities live (see \"What is not measured\" and the precondition state below); "
+            "the pins themselves are config, not a claim about what ran.\n"
+        )
+
+    if completed:
+        hashes = sorted(
+            {
+                record.get("corpus_hash", "")
+                for arm in ARMS
+                for record in load_comparison(arm)
+                if record.get("status") == "completed"
+            }
+        )
+        run_state_bullet = (
+            "- **Run state (this render)**: all five arms' comparison runs and storage audits "
+            f"completed, against corpus hash `{hashes[0] if len(hashes) == 1 else hashes}`. "
+            "`v1/.venv`, `v1/.parity_working_dir`, `v1/.parity_v2_store`, and `v1/.env.parity` "
+            "were all present for this run — this is a completed comparison, not D-02's failed-"
+            "precondition refusal (`inconclusive`) path. That refusal path is proven "
+            "separately, against a monkeypatched fixture, in "
+            "`tests/parity/test_parity_evidence.py`, so it stays covered even though the real "
+            "committed data no longer exercises it.\n"
+        )
+    else:
+        run_state_bullet = (
+            "- **Environment precondition state on this machine (this render)**: `v1/.venv`, "
+            "`v1/.parity_working_dir`, `v1/.parity_v2_store`, and `v1/.env.parity` are all "
+            "absent — gitignored, worktree-local build artifacts from a different execution "
+            "session (03-02's own real ingest run) that do not carry over to a freshly spawned "
+            "worktree. Every arm's comparison run below therefore stopped at the index-identity "
+            "precondition gate before either arm was touched, and every arm's storage-audit run "
+            "stopped at client construction before the scheduler ran a single node. Both are the "
+            "harness's own designed refusal behavior (D-02, this document's own governing "
+            "prohibition against emitting a pass/fail verdict on a failed precondition), not a "
+            "code defect. Rebuild steps and the exact re-run commands are listed in "
+            "03-09-SUMMARY.md's \"Next Phase Readiness\" section.\n"
+        )
+
     lines = [
         "## What was compared\n",
         (
@@ -425,10 +583,7 @@ def _render_what_was_compared() -> str:
             "- **One index**: built exactly once by a real v1 OpenRouter ingest run over the "
             "pinned corpus (plan 03-02, `v1/scripts/run_parity_ingest.py`), imported into the v2 "
             "namespace layout by a verified read-and-reinsert import "
-            "(`databasise/parity/import_index.py`), and gated on every comparison run by plan "
-            "03-02's index-identity verifier "
-            "(`databasise.parity.import_index.verify_import`) — the same precondition this "
-            "document's own recorded runs failed against (see below).\n"
+            "(`databasise/parity/import_index.py`), " + one_index_trailing
         ),
         (
             f"- **Determinism / concurrency**: `{_DETERMINISM_SETTING}` / "
@@ -442,24 +597,9 @@ def _render_what_was_compared() -> str:
         (
             "- **Pinned model identities**: `qwen/qwen3.7-flash` (generator + keyword "
             "extraction, provider-pinned to Alibaba, D-07/D-08) and `qwen/qwen3-embedding-8b` "
-            "(embedder, amended D-09) — see `v1/README-PARITY.md`. No comparison run recorded in "
-            "this document reached the point of resolving these identities live (see \"What is "
-            "not measured\" and the precondition state below); the pins themselves are config, "
-            "not a claim about what ran.\n"
+            "(embedder, amended D-09) — see `v1/README-PARITY.md`. " + pinned_models_clause
         ),
-        (
-            "- **Environment precondition state on this machine (this render)**: `v1/.venv`, "
-            "`v1/.parity_working_dir`, `v1/.parity_v2_store`, and `v1/.env.parity` are all "
-            "absent — gitignored, worktree-local build artifacts from a different execution "
-            "session (03-02's own real ingest run) that do not carry over to a freshly spawned "
-            "worktree. Every arm's comparison run below therefore stopped at the index-identity "
-            "precondition gate before either arm was touched, and every arm's storage-audit run "
-            "stopped at client construction before the scheduler ran a single node. Both are the "
-            "harness's own designed refusal behavior (D-02, this document's own governing "
-            "prohibition against emitting a pass/fail verdict on a failed precondition), not a "
-            "code defect. Rebuild steps and the exact re-run commands are listed in "
-            "03-09-SUMMARY.md's \"Next Phase Readiness\" section.\n"
-        ),
+        run_state_bullet,
     ]
     return "\n".join(lines)
 
@@ -527,6 +667,39 @@ def _render_per_arm_comparison() -> str:
                 "difference — see `databasise/parity/run_comparison.py`'s own "
                 "`_no_retrieval_to_compare_note`.\n"
             )
+        elif arm == "naive":
+            sections.append(
+                "`naive` resolves to `embedder-index`/`embedder-query`/`chunk-vector`/"
+                "`heading-backfill`/`rerank`/`assemble`/`generate` — no entity or relation "
+                "lookup node at all. Its entity/relation columns above read `\"—\"` because "
+                "the arm's wiring has no entity/relation lookup to measure, not because a "
+                "measurement was skipped.\n"
+            )
+        degraded_records = [
+            record
+            for record in records
+            if record.get("status") == "completed"
+            and record.get("decomposed_run_record", {}).get("degraded")
+        ]
+        if degraded_records:
+            reasons = sorted(
+                {
+                    record["decomposed_run_record"].get("degradation_reason") or ""
+                    for record in degraded_records
+                }
+            )
+            queries = ", ".join(record["query_id"] for record in degraded_records)
+            sections.append(
+                f"**Degraded run — read the zero diffs above with this in mind.** "
+                f"`{arm}`'s decomposed run halted before completing retrieval on {queries} "
+                f"(MACH-09's `degraded`/`degradation_reason` labelling, RIG §TR): "
+                f"{'; '.join(reasons)}. The original arm's own answer for the same query/arm "
+                "pairs also carries zero chunk/entity/relation ids (`original_arm_result` — see "
+                "the raw `parity_results/` record). The `0` symmetric_difference reported above "
+                "is therefore both sides retrieving nothing, not a validated matched retrieval — "
+                "a live defect this comparison surfaced, out of this plan's scope to repair. See "
+                "the Verdict section for how this bounds what the comparison actually shows.\n"
+            )
     return "\n".join(sections)
 
 
@@ -553,11 +726,14 @@ def _render_keyword_variance_band() -> str:
         for record in load_comparison(arm):
             band = record.get("keyword_variance_band")
             if band is None:
-                rows.append(
-                    f"| {arm} | {record['query_id']} | not run — "
-                    f"{_escape_cell(record.get('inconclusive_reason') or record['status'])} | "
-                    "— | — | — | — | — |"
-                )
+                if record.get("status") == "completed":
+                    cell = f"not applicable — {arm}'s wiring has no `keywords` node"
+                else:
+                    cell = (
+                        f"not run — "
+                        f"{_escape_cell(record.get('inconclusive_reason') or record['status'])}"
+                    )
+                rows.append(f"| {arm} | {record['query_id']} | {cell} | — | — | — | — | — |")
                 continue
             rows.append(
                 f"| {arm} | {record['query_id']} | {band['run_count']} | "
@@ -589,20 +765,37 @@ def _render_storage_audit() -> str:
         outcome = audit.get("status", "unknown")
         rows.append(f"| {arm} | {matched} | {no_touch} | {over_declared} | {outcome} |")
     sections.append(header + "\n".join(rows) + "\n")
-    sections.append(
-        "Every arm above reports `matched=0 no-touch=0 over-declared=0` in this render — none "
-        "of the five audits reached the scheduler: `databasise.parity.storage_audit.run_audit` "
-        "builds clients from `v1/.env.parity` before dispatching a single node, and that file is "
-        "absent on this machine (see \"What was compared\"). This is the audit's own "
-        "`MissingParityEnvError` refusal, captured verbatim in each arm's committed "
-        "`{arm}-storage-audit.json` under `parity_results/` — not a claim that every node "
-        "correctly touched nothing.\n"
-    )
+    if _run_state() == "completed":
+        counts = {arm: load_storage_audit(arm) for arm in ARMS}
+        detail = "; ".join(
+            f"`{arm}`: matched={counts[arm].get('matched_count', 0)} "
+            f"no-touch={counts[arm].get('no_touch_count', 0)} "
+            f"over-declared={counts[arm].get('over_declared_count', 0)}"
+            for arm in ARMS
+        )
+        sections.append(
+            f"All five audits ran to completion clean, real per-node counts above: {detail}. "
+            "`matched`/`no-touch`/`over-declared` remain three distinct states throughout — a "
+            "`no-touch` node (one that legitimately never fires in a given arm's wiring, e.g. "
+            "`rerank` under D-09's pass-through config) is never collapsed into "
+            "`matched`/audited-compliant, and an `over-declared` count of `0` on every arm is "
+            "a real measured zero, not an assumed one (D-15).\n"
+        )
+    else:
+        sections.append(
+            "Every arm above reports `matched=0 no-touch=0 over-declared=0` in this render — "
+            "none of the five audits reached the scheduler: "
+            "`databasise.parity.storage_audit.run_audit` builds clients from `v1/.env.parity` "
+            "before dispatching a single node, and that file is absent on this machine (see "
+            "\"What was compared\"). This is the audit's own `MissingParityEnvError` refusal, "
+            "captured verbatim in each arm's committed `{arm}-storage-audit.json` under "
+            "`parity_results/` — not a claim that every node correctly touched nothing.\n"
+        )
     return "\n".join(sections)
 
 
 def _render_not_measured() -> str:
-    return (
+    first_paragraph = (
         "## What is not measured\n\n"
         "The A/A floor (MACH-02's eval bundle, MACH-03's bootstrap-resampled p95 calibration) is "
         f"deferred to Phase 6's side-by-side run, per `{_GATE_AMENDMENT_REF}` — this is the "
@@ -612,28 +805,73 @@ def _render_not_measured() -> str:
         "stays unmeasured until a floor exists.** GATE-01's standing condition continues to "
         "hold regardless of this document's own findings: no promotion decision and no parity "
         "claim rides on an unmeasured comparison.\n\n"
-        "Separately, and specific to this render: **no comparison in this document has actually "
-        "run.** Every arm's retrieval-level diff, `keywords` variance band, and storage-ownership "
-        "audit are all `inconclusive` on this machine (see \"What was compared\"). This document "
-        "is correct and complete for that inconclusive outcome, and is re-runnable to produce the "
-        "real verdict once the owner rebuilds the v1 environment — see 03-09-SUMMARY.md's \"Next "
-        "Phase Readiness\" for the exact rebuild and re-run commands.\n"
     )
+    if _run_state() == "completed":
+        second_paragraph = (
+            "Separately, and specific to this render: the retrieval-level comparison **has** "
+            "run — all five arms are `completed` (see \"What was compared\" and \"Per-arm "
+            "retrieval-level comparison\") — but the human answer-substance spot-check for q1/q2 "
+            "has not yet been recorded (see \"Human spot-check of answer substance\" below), and "
+            "`hybrid`/`local`/`global`'s decomposed runs degraded before completing a real "
+            "retrieval (see the per-arm degradation notes above), so their measured zero diffs "
+            "are not a validated agreement over non-trivial content. Neither gap is measured by "
+            "this document; both are named here rather than left implicit.\n"
+        )
+    else:
+        second_paragraph = (
+            "Separately, and specific to this render: **no comparison in this document has "
+            "actually run.** Every arm's retrieval-level diff, `keywords` variance band, and "
+            "storage-ownership audit are all `inconclusive` on this machine (see \"What was "
+            "compared\"). This document is correct and complete for that inconclusive outcome, "
+            "and is re-runnable to produce the real verdict once the owner rebuilds the v1 "
+            "environment — see 03-09-SUMMARY.md's \"Next Phase Readiness\" for the exact rebuild "
+            "and re-run commands.\n"
+        )
+    return first_paragraph + second_paragraph
 
 
 def _render_verdict() -> str:
+    if _run_state() != "completed":
+        return (
+            "## Verdict\n\n"
+            "**No parity verdict is recorded by this document.** Every one of the five arms' "
+            "comparison runs and storage-ownership audits reports an environment-precondition "
+            "refusal — never a pass, never a fail, exactly as this document's own stated prohibition "
+            "requires (\"the parity harness must not emit a pass or fail verdict when the "
+            "index-identity preconditions failed; it must emit `inconclusive`\"). The harness code "
+            "itself, its provenance-checking (`--check-results`), and this rendering are proven "
+            "correct against the real refusal path in this session; the clean-pass path — an actual "
+            "retrieval-level comparison against the real imported index and live model endpoints — "
+            "awaits the owner rebuilding the v1 environment (`v1/README-PARITY.md`) and re-running "
+            "the exact commands 03-09-SUMMARY.md names.\n"
+        )
+
     return (
         "## Verdict\n\n"
-        "**No parity verdict is recorded by this document.** Every one of the five arms' "
-        "comparison runs and storage-ownership audits reports an environment-precondition "
-        "refusal — never a pass, never a fail, exactly as this document's own stated prohibition "
-        "requires (\"the parity harness must not emit a pass or fail verdict when the "
-        "index-identity preconditions failed; it must emit `inconclusive`\"). The harness code "
-        "itself, its provenance-checking (`--check-results`), and this rendering are proven "
-        "correct against the real refusal path in this session; the clean-pass path — an actual "
-        "retrieval-level comparison against the real imported index and live model endpoints — "
-        "awaits the owner rebuilding the v1 environment (`v1/README-PARITY.md`) and re-running "
-        "the exact commands 03-09-SUMMARY.md names.\n"
+        "**All five arms completed.** `naive` and `bypass` ran their full pipelines end to "
+        "end and their retrieval-level comparisons are informative: `bypass` has no retrieval "
+        "to compare; `naive` measured exact chunk-set agreement past `ranking_agreement=1.000` "
+        "with two named tail-length excursions per query, both carried as declared deviations "
+        "in `DECLARED-DEVIATIONS.md` with a grounded cause (top_k cutoff vs v1's token-budget "
+        "truncation) rather than folded into a silent pass.\n\n"
+        "`hybrid`, `local`, and `global` also completed and measured `chunk_diff`/"
+        "`entity_diff`/`relation_diff` `symmetric_difference=[]` on both corpus queries — but "
+        "**this is not read as exact retrieval-level agreement.** All three arms' decomposed "
+        "runs degraded before completing a real retrieval (`entity-hydrate-expand`/"
+        "`relation-hydrate-expand` raised `NodeExecutionError` on every query/arm pair — see "
+        "the per-arm degradation notes in \"Per-arm retrieval-level comparison\"), and the "
+        "original (v1) arm's own answer for the same six pairs also carries zero chunk/"
+        "entity/relation ids. The measured zero is both sides retrieving nothing, not a "
+        "validated match over non-trivial content — a live defect this comparison surfaced, "
+        "not evidence of parity. Fixing that defect is out of this plan's scope; recorded here "
+        "so the verdict does not overstate what these three arms actually showed.\n\n"
+        "**What this verdict does not cover.** D-10's gate is the deterministic retrieval "
+        "level only — this document makes no answer-level parity claim. The human "
+        "answer-substance spot-check for q1/q2 is not yet recorded (see \"Human spot-check of "
+        "answer substance\" below). GATE-01's standing condition continues to hold: no "
+        "promotion decision and no parity claim rides on an unmeasured comparison, and the "
+        "`hybrid`/`local`/`global` degradation above means the retrieval-level comparison "
+        "itself is not yet clean for those three arms either.\n"
     )
 
 

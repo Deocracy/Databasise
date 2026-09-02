@@ -6,15 +6,15 @@ Rendered from the committed result files under `databasise/evidence/parity_resul
 
 - **Corpus**: `databasise/tests/fixtures/corpus/` — 20 documents, 2 queries (HotpotQA distractor setting, D-06). Corpus hash and per-arm query set are recorded per-arm below from each committed comparison result's own `corpus_hash` field.
 
-- **One index**: built exactly once by a real v1 OpenRouter ingest run over the pinned corpus (plan 03-02, `v1/scripts/run_parity_ingest.py`), imported into the v2 namespace layout by a verified read-and-reinsert import (`databasise/parity/import_index.py`), and gated on every comparison run by plan 03-02's index-identity verifier (`databasise.parity.import_index.verify_import`) — the same precondition this document's own recorded runs failed against (see below).
+- **One index**: built exactly once by a real v1 OpenRouter ingest run over the pinned corpus (plan 03-02, `v1/scripts/run_parity_ingest.py`), imported into the v2 namespace layout by a verified read-and-reinsert import (`databasise/parity/import_index.py`), and gated on every comparison run by plan 03-02's index-identity verifier (`databasise.parity.import_index.verify_import`) — the same precondition this run passed.
 
 - **Determinism / concurrency**: `cache-bypassed` / `sequential` (`databasise.parity.run_arm`'s own pinned settings).
 
 - **Rerank**: disabled (`RERANK_BINDING=null`, D-09's unchanged half; `v1/README-PARITY.md`). A number recorded with rerank off does not transfer to a run with it on — this evidence never claims otherwise.
 
-- **Pinned model identities**: `qwen/qwen3.7-flash` (generator + keyword extraction, provider-pinned to Alibaba, D-07/D-08) and `qwen/qwen3-embedding-8b` (embedder, amended D-09) — see `v1/README-PARITY.md`. No comparison run recorded in this document reached the point of resolving these identities live (see "What is not measured" and the precondition state below); the pins themselves are config, not a claim about what ran.
+- **Pinned model identities**: `qwen/qwen3.7-flash` (generator + keyword extraction, provider-pinned to Alibaba, D-07/D-08) and `qwen/qwen3-embedding-8b` (embedder, amended D-09) — see `v1/README-PARITY.md`. The completed run resolved these identities live from each provider's response, never the requested id (Phase 1 D-12) — recorded per-comparison in each committed record's own `resolved_model_identities` field: `decomposed_generate='qwen/qwen3.7-flash'`, `original_arm_llm_model='qwen/qwen3.7-flash'`, `original_arm_embedding_model='qwen/qwen3-embedding-8b'` (naive/bypass, the two arms whose `generate` node ran). `hybrid`/`local`/`global` recorded `decomposed_generate=""` because their `generate` node never ran — see the per-arm degradation note in "Per-arm retrieval-level comparison" below.
 
-- **Environment precondition state on this machine (this render)**: `v1/.venv`, `v1/.parity_working_dir`, `v1/.parity_v2_store`, and `v1/.env.parity` are all absent — gitignored, worktree-local build artifacts from a different execution session (03-02's own real ingest run) that do not carry over to a freshly spawned worktree. Every arm's comparison run below therefore stopped at the index-identity precondition gate before either arm was touched, and every arm's storage-audit run stopped at client construction before the scheduler ran a single node. Both are the harness's own designed refusal behavior (D-02, this document's own governing prohibition against emitting a pass/fail verdict on a failed precondition), not a code defect. Rebuild steps and the exact re-run commands are listed in 03-09-SUMMARY.md's "Next Phase Readiness" section.
+- **Run state (this render)**: all five arms' comparison runs and storage audits completed, against corpus hash `ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd`. `v1/.venv`, `v1/.parity_working_dir`, `v1/.parity_v2_store`, and `v1/.env.parity` were all present for this run — this is a completed comparison, not D-02's failed-precondition refusal (`inconclusive`) path. That refusal path is proven separately, against a monkeypatched fixture, in `tests/parity/test_parity_evidence.py`, so it stays covered even though the real committed data no longer exercises it.
 
 ## The trace asymmetry
 
@@ -28,6 +28,8 @@ Stated before the numbers, not after them. The decomposed arm's run comes back a
 |---|---|---|---|---|---|---|---|
 | q1 | completed | 2 | 1.000 | 10 | — | — |  |
 | q2 | completed | 4 | 1.000 | 10 | — | — |  |
+
+`naive` resolves to `embedder-index`/`embedder-query`/`chunk-vector`/`heading-backfill`/`rerank`/`assemble`/`generate` — no entity or relation lookup node at all. Its entity/relation columns above read `"—"` because the arm's wiring has no entity/relation lookup to measure, not because a measurement was skipped.
 
 ### `bypass`
 
@@ -45,12 +47,16 @@ Stated before the numbers, not after them. The decomposed arm's run comes back a
 | q1 | completed | 0 | 1.000 | None | 0 | 0 |  |
 | q2 | completed | 0 | 1.000 | None | 0 | 0 |  |
 
+**Degraded run — read the zero diffs above with this in mind.** `hybrid`'s decomposed run halted before completing retrieval on q1, q2 (MACH-09's `degraded`/`degradation_reason` labelling, RIG §TR): node 'entity-hydrate-expand': NodeExecutionError: 'entity_name'. The original arm's own answer for the same query/arm pairs also carries zero chunk/entity/relation ids (`original_arm_result` — see the raw `parity_results/` record). The `0` symmetric_difference reported above is therefore both sides retrieving nothing, not a validated matched retrieval — a live defect this comparison surfaced, out of this plan's scope to repair. See the Verdict section for how this bounds what the comparison actually shows.
+
 ### `local`
 
 | query_id | status | chunk sym_diff | ranking agreement | first disagreement | entity sym_diff | relation sym_diff | reason |
 |---|---|---|---|---|---|---|---|
 | q1 | completed | 0 | 1.000 | None | 0 | 0 |  |
 | q2 | completed | 0 | 1.000 | None | 0 | 0 |  |
+
+**Degraded run — read the zero diffs above with this in mind.** `local`'s decomposed run halted before completing retrieval on q1, q2 (MACH-09's `degraded`/`degradation_reason` labelling, RIG §TR): node 'entity-hydrate-expand': NodeExecutionError: 'entity_name'. The original arm's own answer for the same query/arm pairs also carries zero chunk/entity/relation ids (`original_arm_result` — see the raw `parity_results/` record). The `0` symmetric_difference reported above is therefore both sides retrieving nothing, not a validated matched retrieval — a live defect this comparison surfaced, out of this plan's scope to repair. See the Verdict section for how this bounds what the comparison actually shows.
 
 ### `global`
 
@@ -59,16 +65,18 @@ Stated before the numbers, not after them. The decomposed arm's run comes back a
 | q1 | completed | 0 | 1.000 | None | 0 | 0 |  |
 | q2 | completed | 0 | 1.000 | None | 0 | 0 |  |
 
+**Degraded run — read the zero diffs above with this in mind.** `global`'s decomposed run halted before completing retrieval on q1, q2 (MACH-09's `degraded`/`degradation_reason` labelling, RIG §TR): node 'relation-hydrate-expand': NodeExecutionError: 'src_id'. The original arm's own answer for the same query/arm pairs also carries zero chunk/entity/relation ids (`original_arm_result` — see the raw `parity_results/` record). The `0` symmetric_difference reported above is therefore both sides retrieving nothing, not a validated matched retrieval — a live defect this comparison surfaced, out of this plan's scope to repair. See the Verdict section for how this bounds what the comparison actually shows.
+
 ## The `keywords` variance band
 
 **N = 5 runs** (`databasise.parity.run_comparison._DEFAULT_KEYWORD_VARIANCE_RUNS`). Chosen (reasoning recorded in full in 03-09-SUMMARY.md's Decisions Made section): large enough to show repeats in the per-keyword frequency table for a typical HotpotQA question (2-4 keywords per level), small enough that 5 extra live `keywords` calls per query stays well within a rung-2 comparison's affordability, and `compute_keyword_variance_band` itself accepts any N ≥ 2 — raising N on a future real run needs no code change, only a different `keyword_variance_runs=` argument.
 
 | arm | query_id | run count (N) | hl size mean | hl size stdev | ll size mean | ll size stdev | any cache served |
 |---|---|---|---|---|---|---|---|
-| naive | q1 | not run — completed | — | — | — | — | — |
-| naive | q2 | not run — completed | — | — | — | — | — |
-| bypass | q1 | not run — completed | — | — | — | — | — |
-| bypass | q2 | not run — completed | — | — | — | — | — |
+| naive | q1 | not applicable — naive's wiring has no `keywords` node | — | — | — | — | — |
+| naive | q2 | not applicable — naive's wiring has no `keywords` node | — | — | — | — | — |
+| bypass | q1 | not applicable — bypass's wiring has no `keywords` node | — | — | — | — | — |
+| bypass | q2 | not applicable — bypass's wiring has no `keywords` node | — | — | — | — | — |
 | hybrid | q1 | 5 | 2.00 | 0.00 | 2.20 | 0.45 | False |
 | hybrid | q2 | 5 | 3.00 | 0.71 | 2.20 | 0.45 | False |
 | local | q1 | 5 | 2.00 | 0.00 | 2.00 | 0.00 | False |
@@ -88,14 +96,18 @@ Criterion 3 requires this to ship as part of the parity evidence, which is why i
 | local | 10 | 5 | 0 | completed |
 | global | 10 | 5 | 0 | completed |
 
-Every arm above reports `matched=0 no-touch=0 over-declared=0` in this render — none of the five audits reached the scheduler: `databasise.parity.storage_audit.run_audit` builds clients from `v1/.env.parity` before dispatching a single node, and that file is absent on this machine (see "What was compared"). This is the audit's own `MissingParityEnvError` refusal, captured verbatim in each arm's committed `{arm}-storage-audit.json` under `parity_results/` — not a claim that every node correctly touched nothing.
+All five audits ran to completion clean, real per-node counts above: `naive`: matched=5 no-touch=2 over-declared=0; `bypass`: matched=1 no-touch=0 over-declared=0; `hybrid`: matched=12 no-touch=5 over-declared=0; `local`: matched=10 no-touch=5 over-declared=0; `global`: matched=10 no-touch=5 over-declared=0. `matched`/`no-touch`/`over-declared` remain three distinct states throughout — a `no-touch` node (one that legitimately never fires in a given arm's wiring, e.g. `rerank` under D-09's pass-through config) is never collapsed into `matched`/audited-compliant, and an `over-declared` count of `0` on every arm is a real measured zero, not an assumed one (D-15).
 
 ## What is not measured
 
 The A/A floor (MACH-02's eval bundle, MACH-03's bootstrap-resampled p95 calibration) is deferred to Phase 6's side-by-side run, per `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md` — this is the **second** deferral of the same pair of requirements (first Phase 2 to Phase 3, recorded in `.planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md`; now Phase 3 to Phase 6). Residual risk, in D-11's own words, not softened: **answer-level drift originating in `keywords` and `generate` stays unmeasured until a floor exists.** GATE-01's standing condition continues to hold regardless of this document's own findings: no promotion decision and no parity claim rides on an unmeasured comparison.
 
-Separately, and specific to this render: **no comparison in this document has actually run.** Every arm's retrieval-level diff, `keywords` variance band, and storage-ownership audit are all `inconclusive` on this machine (see "What was compared"). This document is correct and complete for that inconclusive outcome, and is re-runnable to produce the real verdict once the owner rebuilds the v1 environment — see 03-09-SUMMARY.md's "Next Phase Readiness" for the exact rebuild and re-run commands.
+Separately, and specific to this render: the retrieval-level comparison **has** run — all five arms are `completed` (see "What was compared" and "Per-arm retrieval-level comparison") — but the human answer-substance spot-check for q1/q2 has not yet been recorded (see "Human spot-check of answer substance" below), and `hybrid`/`local`/`global`'s decomposed runs degraded before completing a real retrieval (see the per-arm degradation notes above), so their measured zero diffs are not a validated agreement over non-trivial content. Neither gap is measured by this document; both are named here rather than left implicit.
 
 ## Verdict
 
-**No parity verdict is recorded by this document.** Every one of the five arms' comparison runs and storage-ownership audits reports an environment-precondition refusal — never a pass, never a fail, exactly as this document's own stated prohibition requires ("the parity harness must not emit a pass or fail verdict when the index-identity preconditions failed; it must emit `inconclusive`"). The harness code itself, its provenance-checking (`--check-results`), and this rendering are proven correct against the real refusal path in this session; the clean-pass path — an actual retrieval-level comparison against the real imported index and live model endpoints — awaits the owner rebuilding the v1 environment (`v1/README-PARITY.md`) and re-running the exact commands 03-09-SUMMARY.md names.
+**All five arms completed.** `naive` and `bypass` ran their full pipelines end to end and their retrieval-level comparisons are informative: `bypass` has no retrieval to compare; `naive` measured exact chunk-set agreement past `ranking_agreement=1.000` with two named tail-length excursions per query, both carried as declared deviations in `DECLARED-DEVIATIONS.md` with a grounded cause (top_k cutoff vs v1's token-budget truncation) rather than folded into a silent pass.
+
+`hybrid`, `local`, and `global` also completed and measured `chunk_diff`/`entity_diff`/`relation_diff` `symmetric_difference=[]` on both corpus queries — but **this is not read as exact retrieval-level agreement.** All three arms' decomposed runs degraded before completing a real retrieval (`entity-hydrate-expand`/`relation-hydrate-expand` raised `NodeExecutionError` on every query/arm pair — see the per-arm degradation notes in "Per-arm retrieval-level comparison"), and the original (v1) arm's own answer for the same six pairs also carries zero chunk/entity/relation ids. The measured zero is both sides retrieving nothing, not a validated match over non-trivial content — a live defect this comparison surfaced, not evidence of parity. Fixing that defect is out of this plan's scope; recorded here so the verdict does not overstate what these three arms actually showed.
+
+**What this verdict does not cover.** D-10's gate is the deterministic retrieval level only — this document makes no answer-level parity claim. The human answer-substance spot-check for q1/q2 is not yet recorded (see "Human spot-check of answer substance" below). GATE-01's standing condition continues to hold: no promotion decision and no parity claim rides on an unmeasured comparison, and the `hybrid`/`local`/`global` degradation above means the retrieval-level comparison itself is not yet clean for those three arms either.

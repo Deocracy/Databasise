@@ -14,9 +14,11 @@ from __future__ import annotations
 import json
 
 import pytest
+from databasise.evidence import parity_report
 from databasise.evidence.parity_report import (
     ARMS,
     DeclaredDeviation,
+    StaleDeviationCauseError,
     UnreasonedDeviationError,
     check_results,
     render_deviations_markdown,
@@ -152,12 +154,33 @@ def test_a_storage_audit_file_missing_a_required_key_is_reported(tmp_path):
 
 
 def test_zero_deviations_renders_an_explicit_stated_zero_not_an_empty_document():
+    """Against the real committed data, which is now a completed run (03-10-PLAN.md Task 1):
+    zero deviations reads as "the comparison ran and found no excursion", not "nothing has
+    been measured yet" — see the companion inconclusive-fixture test below for the other
+    direction.
+    """
+    text = render_deviations_markdown([])
+
+    assert "Zero declared deviations" in text
+    assert "completed comparison that found no excursion" in text
+    # CR-01: the known design deviation is renderer-owned, so a re-render never drops it.
+    assert "Known design deviation (pending measurement)" in text
+
+
+def test_zero_deviations_against_an_inconclusive_fixture_states_nothing_measured_yet(
+    tmp_path, monkeypatch
+):
+    """The other direction of the same behavior, proven against a fixture set rather than
+    against whatever the committed files happen to hold (03-10-PLAN.md Task 2's own
+    instruction).
+    """
+    _write_complete_fixture_set(tmp_path)  # every arm status="inconclusive"
+    monkeypatch.setattr(parity_report, "RESULTS_DIR", tmp_path)
+
     text = render_deviations_markdown([])
 
     assert "Zero declared deviations" in text
     assert "no completed comparison run has occurred" in text
-    # CR-01: the known design deviation is renderer-owned, so a re-render never drops it.
-    assert "Known design deviation (pending measurement)" in text
 
 
 def test_committed_deviations_document_matches_a_fresh_render():
@@ -254,7 +277,16 @@ def test_render_markdown_counts_matched_no_touch_and_over_declared_separately():
     assert "| arm | matched | no-touch | over-declared | outcome |" in text
 
 
-def test_render_markdown_never_emits_a_pass_or_fail_verdict_for_the_current_inconclusive_state():
+def test_render_markdown_never_emits_a_pass_or_fail_verdict_for_an_inconclusive_fixture_set(
+    tmp_path, monkeypatch
+):
+    """The real committed data is now a completed run (03-10-PLAN.md Task 1), so this proves
+    D-02's refusal-over-verdict prohibition against a fixture set rather than against whatever
+    the committed files happen to hold — the plan's own instruction for this rewrite.
+    """
+    _write_complete_fixture_set(tmp_path)  # every arm status="inconclusive"
+    monkeypatch.setattr(parity_report, "RESULTS_DIR", tmp_path)
+
     text = render_markdown()
 
     assert "No parity verdict is recorded" in text
@@ -266,3 +298,130 @@ def test_render_markdown_names_every_arm():
 
     for arm in ARMS:
         assert f"`{arm}`" in text
+
+
+# --------------------------------------------------------------------------------------------- #
+# render_markdown() — the completed direction, proven against the real committed data
+# --------------------------------------------------------------------------------------------- #
+
+
+def test_render_markdown_completed_direction_carries_real_storage_audit_counts():
+    """Task 2's own acceptance criterion: the real storage-audit counts for hybrid appear as
+    rendered cells, not the pre-run 'matched=0 no-touch=0 over-declared=0' narrative.
+    """
+    text = render_markdown()
+
+    assert "matched=12" in text
+    assert "no-touch=5" in text
+
+
+def test_render_markdown_states_not_applicable_for_an_arm_with_no_keywords_node():
+    """`naive`/`bypass` are completed but have no `keywords` node — their null band cell reads
+    as not-applicable, never as an echo of the record's own status (the pre-fix bug this test
+    guards: 'not run — completed' is meaningless for a completed record).
+    """
+    text = render_markdown()
+
+    assert "not applicable — naive's wiring has no `keywords` node" in text
+    assert "not run — completed" not in text
+
+
+def test_render_markdown_states_the_hybrid_local_global_degradation_rather_than_a_clean_pass():
+    """`hybrid`/`local`/`global`'s decomposed runs degraded before completing a real retrieval
+    (entity-hydrate-expand / relation-hydrate-expand crashed) — the zero symmetric_difference on
+    those three arms is not read as a validated retrieval-level match.
+    """
+    text = render_markdown()
+
+    assert "Degraded run" in text
+    assert "not read as exact retrieval-level agreement" in text
+
+
+# --------------------------------------------------------------------------------------------- #
+# _run_state() and StaleDeviationCauseError (03-10-PLAN.md Task 2)
+# --------------------------------------------------------------------------------------------- #
+
+
+def test_run_state_on_the_real_committed_data_is_completed():
+    assert parity_report._run_state() == "completed"
+
+
+def test_run_state_on_an_all_inconclusive_fixture_is_inconclusive(tmp_path, monkeypatch):
+    _write_complete_fixture_set(tmp_path)
+    monkeypatch.setattr(parity_report, "RESULTS_DIR", tmp_path)
+
+    assert parity_report._run_state() == "inconclusive"
+
+
+def test_run_state_on_a_mixed_fixture_is_mixed(tmp_path, monkeypatch):
+    _write_complete_fixture_set(tmp_path)
+    completed = dict(_MINIMAL_INCONCLUSIVE_RECORD)
+    completed["status"] = "completed"
+    completed["chunk_diff"] = {
+        "decomposed_ids": [],
+        "original_ids": [],
+        "symmetric_difference": [],
+        "ranking_agreement": 1.0,
+        "first_disagreement_position": None,
+    }
+    _write_comparison(tmp_path, "naive", [completed])
+    monkeypatch.setattr(parity_report, "RESULTS_DIR", tmp_path)
+
+    assert parity_report._run_state() == "mixed"
+
+
+def test_a_completed_excursion_whose_recorded_cause_no_longer_matches_the_measurement_raises_stale(
+    tmp_path, monkeypatch
+):
+    """03-10-PLAN.md Task 1/Task 2: a re-run that changes the measured symmetric_difference
+    invalidates a recorded cause rather than silently inheriting it.
+    """
+    stale_record = dict(_MINIMAL_INCONCLUSIVE_RECORD)
+    stale_record.update(
+        status="completed",
+        arm="naive",
+        query_id="q1",
+        resolved_model_identities={
+            "decomposed_generate": "m",
+            "original_arm_llm_model": "m",
+            "original_arm_embedding_model": "e",
+        },
+        chunk_diff={
+            "decomposed_ids": [],
+            "original_ids": ["a"],
+            "symmetric_difference": ["a"],
+            "ranking_agreement": 1.0,
+            "first_disagreement_position": 0,
+        },
+    )
+    for arm in ARMS:
+        if arm == "naive":
+            _write_comparison(tmp_path, arm, [stale_record])
+        else:
+            _write_comparison(tmp_path, arm, [{**_MINIMAL_INCONCLUSIVE_RECORD, "arm": arm}])
+        _write_audit(tmp_path, arm, {**_MINIMAL_AUDIT, "arm": arm})
+
+    findings_path = tmp_path / "human_findings.json"
+    findings_path.write_text(
+        json.dumps(
+            {
+                "declared_causes": [
+                    {
+                        "arm": "naive",
+                        "query_id": "q1",
+                        "field": "chunk_diff",
+                        "symmetric_difference": ["b"],  # stale: measured is now ["a"]
+                        "cause": "some previously-recorded, now-stale cause text",
+                    }
+                ],
+                "answer_spotchecks": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(parity_report, "RESULTS_DIR", tmp_path)
+    monkeypatch.setattr(parity_report, "HUMAN_FINDINGS_PATH", findings_path)
+
+    with pytest.raises(StaleDeviationCauseError):
+        parity_report._collect_deviations()
