@@ -2,9 +2,12 @@
 
 CONTRACT §5's parity-not-gain record: every excursion outside the stated retrieval-level tolerance (zero, per 03-09-PLAN.md's own flagged planner assumption — see `PARITY-EVIDENCE.md`), named individually with its own cause. A blanket or catch-all cause makes this document's own renderer refuse to render rather than silently absorbing the excursion into an unnamed category.
 
-## Zero declared deviations
+## Named deviations
 
-No excursion is recorded in this document. This is a stated zero, not an absent file — and, as of this render, it reflects that **no completed comparison run has occurred**: every arm's committed result under `parity_results/` carries `status="inconclusive"` (the index-identity precondition and/or the `v1/.env.parity` precondition failed on this machine — see `PARITY-EVIDENCE.md`'s "What was compared" section). A stated zero here should therefore be read as "nothing has been measured yet," not as "the comparison ran and found no excursions." Re-running `parity_report.py` after a real comparison lands will populate this section with either named entries or an updated zero statement that reflects an actual completed comparison.
+| arm | query | measured difference | cause |
+|---|---|---|---|
+| naive | q1 | chunk_diff: symmetric_difference=['charles_craft-chunk-000', 'shirley_temple-chunk-000'] | v1's naive path retrieves up to chunk_top_k=20 candidate chunks via _get_vector_context (v1/lightrag/operate.py) and keeps chunks until token-budget truncation (process_chunks_unified) exhausts available_chunk_tokens, so these two tail chunks beyond rank 10 (ranks 11-12) survived because they still fit the budget on this small corpus; the decomposed chunk-vector node (databasise/parts_core/lightrag/chunk_vector.py) cuts strictly at top_k=10 and never retrieves past rank 10 at all — a tail-length difference in retrieval breadth, not a ranking divergence (ranking_agreement=1.000, first_disagreement_position=10). |
+| naive | q2 | chunk_diff: symmetric_difference=['adam_collis-chunk-000', 'conrad_brooks-chunk-000', 'secretary_of_state_for_constitutional_affairs-chunk-000', 'village_accountant-chunk-000'] | v1's naive path retrieves up to chunk_top_k=20 candidate chunks via _get_vector_context (v1/lightrag/operate.py) and keeps chunks until token-budget truncation (process_chunks_unified) exhausts available_chunk_tokens, so these four tail chunks beyond rank 10 (ranks 11-14) survived because they still fit the budget on this small corpus; the decomposed chunk-vector node (databasise/parts_core/lightrag/chunk_vector.py) cuts strictly at top_k=10 and never retrieves past rank 10 at all — a tail-length difference in retrieval breadth, not a ranking divergence (ranking_agreement=1.000, first_disagreement_position=10). |
 
 ## Known design deviation (pending measurement)
 

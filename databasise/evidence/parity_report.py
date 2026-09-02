@@ -39,6 +39,11 @@ RESULTS_DIR = Path(__file__).resolve().parent / "parity_results"
 EVIDENCE_PATH = Path(__file__).resolve().parent / "PARITY-EVIDENCE.md"
 DEVIATIONS_PATH = Path(__file__).resolve().parent / "DECLARED-DEVIATIONS.md"
 
+# The one committed, human-authored input this module reads (03-10-PLAN.md Task 1). Lives at the
+# evidence root, not inside the machine-written `parity_results/` directory, because it is never
+# written by the harness or this renderer — see `load_human_findings()`.
+HUMAN_FINDINGS_PATH = Path(__file__).resolve().parent / "human_findings.json"
+
 ARMS: tuple[str, ...] = ("naive", "bypass", "hybrid", "local", "global")
 
 # Matches databasise.parity.run_comparison._DEFAULT_KEYWORD_VARIANCE_RUNS. The choice and its
@@ -74,6 +79,18 @@ def load_storage_audit(arm: str) -> dict[str, Any]:
     """
     path = RESULTS_DIR / f"{arm}-storage-audit.json"
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def load_human_findings() -> dict[str, Any]:
+    """Load the one committed, human-authored input this module reads: ``declared_causes``
+    (per-excursion causes) and ``answer_spotchecks`` (Task 3's human judgment landing place).
+    Returns ``{}`` when the file is absent — an absent file is not a silent pass; every excursion
+    it would have named a cause for still falls through to :func:`_collect_deviations`'s
+    no-matching-entry refusal, which names this file's own path.
+    """
+    if not HUMAN_FINDINGS_PATH.exists():
+        return {}
+    return json.loads(HUMAN_FINDINGS_PATH.read_text(encoding="utf-8"))
 
 
 # --------------------------------------------------------------------------------------------- #
@@ -207,6 +224,16 @@ class UnreasonedDeviationError(ValueError):
     """
 
 
+class StaleDeviationCauseError(UnreasonedDeviationError):
+    """A ``human_findings.json`` ``declared_causes`` entry names a ``symmetric_difference`` that no
+    longer matches the currently measured one (03-10-PLAN.md Task 1). A cause names one specific
+    excursion; a re-run that changes the measurement invalidates it rather than silently
+    inheriting it onto whatever the new measurement happens to be. Subclasses
+    :class:`UnreasonedDeviationError` so every existing caller/test that catches the parent keeps
+    working unchanged.
+    """
+
+
 @dataclass(frozen=True)
 class DeclaredDeviation:
     """One CONTRACT §5 declared-deviation entry: an excursion outside the stated retrieval-level
@@ -214,12 +241,18 @@ class DeclaredDeviation:
     at zero (03-09-PLAN.md's own flagged planner assumption: with keywords pinned and one shared
     index, exact agreement is the expectation), so any non-empty ``symmetric_difference`` on a
     pinned-keyword run is, by default, an excursion requiring an entry here.
+
+    ``field`` (default ``""`` for backward compatibility with hand-built test fixtures) names
+    which of ``chunk_diff``/``entity_diff``/``relation_diff`` the excursion was measured on — the
+    third element of the ``(arm, query_id, field)`` triple ``human_findings.json``'s
+    ``declared_causes`` entries key against.
     """
 
     arm: str
     query_id: str
     description: str
     cause: str
+    field: str = ""
 
 
 def render_deviations_markdown(deviations: list[DeclaredDeviation]) -> str:
@@ -232,9 +265,12 @@ def render_deviations_markdown(deviations: list[DeclaredDeviation]) -> str:
         cause_norm = deviation.cause.strip().lower()
         if cause_norm in _GENERIC_CAUSES:
             raise UnreasonedDeviationError(
-                f"{deviation.arm}/{deviation.query_id}: cause {deviation.cause!r} is empty or a "
-                "generic/blanket category — CONTRACT §5 requires each excursion named "
-                "individually with its own specific cause, not an absorber category"
+                f"{deviation.arm}/{deviation.query_id}/{deviation.field or '?'}: cause "
+                f"{deviation.cause!r} is empty or a generic/blanket category — CONTRACT §5 "
+                "requires each excursion named individually with its own specific cause, not an "
+                f"absorber category. Add a `declared_causes` entry to {HUMAN_FINDINGS_PATH} for "
+                f"(arm={deviation.arm!r}, query_id={deviation.query_id!r}, "
+                f"field={deviation.field!r}) naming the measured {deviation.description}."
             )
 
     sections = [
@@ -303,11 +339,25 @@ _KNOWN_DESIGN_DEVIATION = (
 
 def _collect_deviations() -> list[DeclaredDeviation]:
     """Scan every committed comparison record for a completed excursion (a non-empty
-    ``symmetric_difference`` on a completed run's ``chunk_diff``/``entity_diff``/``relation_diff``).
-    Today every committed record is ``status="inconclusive"`` (see module docstring), so this
-    always returns an empty list — the function exists so a future completed run's excursions are
-    picked up automatically the next time this module renders, with no code change needed.
+    ``symmetric_difference`` on a completed run's ``chunk_diff``/``entity_diff``/``relation_diff``)
+    and look up its cause in ``human_findings.json``'s ``declared_causes`` (Task 1). Three
+    outcomes per excursion, all of which abort the whole render:
+
+    - no matching ``(arm, query_id, field)`` entry: ``cause=""`` is left on the returned
+      :class:`DeclaredDeviation`, so :func:`render_deviations_markdown`'s existing
+      absorber-category refusal fires — its message names :data:`HUMAN_FINDINGS_PATH`, the exact
+      triple, and the measured ``symmetric_difference``.
+    - a matching entry whose recorded ``symmetric_difference`` no longer equals the one just
+      measured: raises :class:`StaleDeviationCauseError` immediately — a re-run changed the
+      measurement, so the recorded cause no longer applies to it.
+    - a matching entry with a blanket/empty cause text: unchanged behavior —
+      :func:`render_deviations_markdown`'s ``_GENERIC_CAUSES`` check still refuses it.
     """
+    declared_causes = load_human_findings().get("declared_causes", [])
+    causes_by_key: dict[tuple[str, str, str], dict[str, Any]] = {
+        (entry["arm"], entry["query_id"], entry["field"]): entry for entry in declared_causes
+    }
+
     deviations: list[DeclaredDeviation] = []
     for arm in ARMS:
         for record in load_comparison(arm):
@@ -315,21 +365,39 @@ def _collect_deviations() -> list[DeclaredDeviation]:
                 continue
             for field_name in ("chunk_diff", "entity_diff", "relation_diff"):
                 diff = record.get(field_name)
-                if diff and diff.get("symmetric_difference"):
-                    # A completed run's own excursion has no cause yet — an unreasoned cause
-                    # here is *supposed* to raise, forcing a human to name the cause before this
-                    # document can render at all (the point of the refusal).
-                    deviations.append(
-                        DeclaredDeviation(
-                            arm=arm,
-                            query_id=record.get("query_id", "?"),
-                            description=(
-                                f"{field_name}: symmetric_difference="
-                                f"{diff['symmetric_difference']}"
-                            ),
-                            cause="",
-                        )
+                if not diff or not diff.get("symmetric_difference"):
+                    continue
+
+                measured = diff["symmetric_difference"]
+                query_id = record.get("query_id", "?")
+                description = f"{field_name}: symmetric_difference={measured}"
+                entry = causes_by_key.get((arm, query_id, field_name))
+
+                if entry is None:
+                    # No cause recorded yet — leave cause="" so the existing absorber-category
+                    # refusal fires (the point of the refusal: force a human to name it first).
+                    cause = ""
+                elif entry.get("symmetric_difference") != measured:
+                    raise StaleDeviationCauseError(
+                        f"{arm}/{query_id}/{field_name}: the declared_causes entry in "
+                        f"{HUMAN_FINDINGS_PATH} was written against "
+                        f"symmetric_difference={entry.get('symmetric_difference')!r}, but the "
+                        f"currently measured symmetric_difference is {measured!r} — a re-run "
+                        "changed the measurement, so the recorded cause no longer applies to "
+                        "it. Update the matching entry before this document can render again."
                     )
+                else:
+                    cause = entry.get("cause", "")
+
+                deviations.append(
+                    DeclaredDeviation(
+                        arm=arm,
+                        query_id=query_id,
+                        description=description,
+                        cause=cause,
+                        field=field_name,
+                    )
+                )
     return deviations
 
 
