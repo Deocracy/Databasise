@@ -3,22 +3,24 @@ status: testing
 phase: 03-lightrag-query-side
 source: [03-VERIFICATION.md]
 started: 2026-09-01T22:36:05Z
-updated: 2026-09-01T22:36:05Z
+updated: 2026-09-01T23:59:00Z
 ---
 
 ## Current Test
 
-number: 1
-name: Live five-arm parity comparison after rebuilding the v1 environment
+number: 2
+name: Human spot-check of answer substance for the two corpus queries
 expected: |
-  Each arm's comparison status flips from `inconclusive` to `completed`, with a real N=5 keyword variance band and real chunk/entity/relation sym_diff numbers recorded, or every excursion outside tolerance recorded individually in DECLARED-DEVIATIONS.md.
+  With the v1 environment and imported index present, run q1 and q2 through `databasise.parity.run_comparison --arm hybrid` and through v1 directly, read both answers side by side, and record a match / no-match judgment with notes for each query pair.
 awaiting: user response
 
 ## Tests
 
 ### 1. Live five-arm parity comparison after rebuilding the v1 environment
 expected: Rebuild the v1 pinned environment (v1/README-PARITY.md), re-run v1's real ingest to produce v1/.venv, v1/.parity_working_dir, v1/.parity_v2_store, v1/.env.parity, then re-run `databasise.parity.run_comparison` for all five arms and `databasise.evidence.parity_report` to render PARITY-EVIDENCE.md. Each arm's status flips from `inconclusive` to `completed` with a real N=5 keyword variance band and real sym_diff numbers, or every out-of-tolerance excursion is named in DECLARED-DEVIATIONS.md.
-result: [pending]
+result: issue
+reported: "Live run succeeded (all 5 arms completed, real N=5 variance bands, hybrid/local/global sym_diff=0, storage audits clean) but PARITY-EVIDENCE.md cannot render: naive arm's tail-truncation excursions (sym_diff=2/4, agreement=1.000, first_disagreement=10) need a named cause and parity_report.py has no mechanism to accept one (_collect_deviations hardcodes cause=\"\"); prose sections also hardcode the environment-refusal narrative, now false. User: mark as issue."
+severity: major
 
 ### 2. Human spot-check of answer substance for the two corpus queries
 expected: With the v1 environment and imported index present, run q1 and q2 through `databasise.parity.run_comparison --arm hybrid` and through v1 directly, read both answers side by side, and record a match / no-match judgment with notes for each query pair.
@@ -28,9 +30,18 @@ result: [pending]
 
 total: 2
 passed: 0
-issues: 0
-pending: 2
+issues: 1
+pending: 1
 skipped: 0
 blocked: 0
 
 ## Gaps
+
+- gap_id: G-03-1
+  truth: "PARITY-EVIDENCE.md and DECLARED-DEVIATIONS.md render from a completed live comparison, with every out-of-tolerance excursion individually named with a specific cause (CONTRACT §5)"
+  status: failed
+  reason: "User reported: renderer cannot produce the evidence documents from the first completed run — _collect_deviations() in databasise/evidence/parity_report.py hardcodes cause=\"\" with no input mechanism for a human-supplied cause (render raises UnreasonedDeviationError, and manual edits to DECLARED-DEVIATIONS.md are overwritten on next render); prose sections (What was compared, storage-audit narrative, What is not measured, Verdict) hardcode the environment-precondition-refusal narrative, which is false for a completed run. Known cause awaiting recording: naive arm sym_diff=2 (q1) / 4 (q2) is v1 naive returning tail chunks beyond top_k=10 under token-budget truncation while the decomposed chunk-vector node cuts strictly at top_k; ranking agreement 1.000, first_disagreement=10."
+  severity: major
+  test: 1
+  artifacts: []  # Filled by diagnosis
+  missing: []    # Filled by diagnosis
