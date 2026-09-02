@@ -12,7 +12,7 @@ hole this matrix exists to close.
 | provider routing / provider pinning | INTEGRATE | Phase 2 D-07 pins the provider because a re-routed provider changes identity mid-run |
 | deterministic sampling parameters (temperature, seed) | INTEGRATE | both arms are handed the same sampling parameters from one pinned record (D-07) |
 | `chat.completions` streaming | OPT-OUT | the parity comparison reads completed outputs; the streaming transport is Phase 4's §18 seam concern |
-| rerank | OPT-OUT | D-09 keeps the `rerank` node and its `calls_rerank` declaration but configures it as a pass-through — standing up a rerank provider adds a cost source and a variance source to the one comparison meant to isolate decomposition |
+| rerank | OPT-OUT | D-09 keeps the `rerank` node and `calls_rerank` declaration but configures it as a pass-through — a live rerank provider adds cost and variance to the comparison meant to isolate decomposition |
 | model catalogue listing | OPT-OUT | model identity is derived from the provider and model the response actually returns, never from a catalogue lookup (Phase 1 D-12, Phase 2 D-08) |
 | tool / function calling | OPT-OUT | no §L.1 query-side position calls a tool |
 | structured-output / JSON mode | OPT-OUT | the ported keyword extractor parses v1's own output shape, and matching v1 is what parity requires |
