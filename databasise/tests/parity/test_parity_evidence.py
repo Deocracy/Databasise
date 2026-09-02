@@ -425,3 +425,77 @@ def test_a_completed_excursion_whose_recorded_cause_no_longer_matches_the_measur
 
     with pytest.raises(StaleDeviationCauseError):
         parity_report._collect_deviations()
+
+
+# --------------------------------------------------------------------------------------------- #
+# _render_answer_spotcheck() / AnswerSpotCheck (03-10-PLAN.md Task 3)
+# --------------------------------------------------------------------------------------------- #
+
+
+def test_answer_spotcheck_section_names_both_queries_as_unrecorded_by_default():
+    text = render_markdown()
+
+    assert "Human spot-check of answer substance" in text
+    assert "human_findings.json" in text
+    assert "03-VALIDATION.md" in text
+    assert "### `q1`" in text
+    assert "### `q2`" in text
+    assert "Not yet recorded" in text
+    # No judgment is rendered as if it were the recorded verdict for an unrecorded query.
+    assert "**Judgment:" not in text
+
+
+def test_a_recorded_answer_spotcheck_entry_renders_its_judgment_and_notes(tmp_path, monkeypatch):
+    findings_path = tmp_path / "human_findings.json"
+    findings_path.write_text(
+        json.dumps(
+            {
+                "declared_causes": [],
+                "answer_spotchecks": [
+                    {
+                        "query_id": "q1",
+                        "arm": "hybrid",
+                        "judgment": "match",
+                        "notes": "both answers name the same nationality and cite the same facts",
+                        "recorded_by": "owner",
+                        "recorded_at": "2026-09-02",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(parity_report, "HUMAN_FINDINGS_PATH", findings_path)
+
+    text = parity_report._render_answer_spotcheck()
+
+    assert "**Judgment: `match`**" in text
+    assert "both answers name the same nationality" in text
+    assert "### `q2`" in text  # the other query still renders as unrecorded
+    assert "Not yet recorded" in text  # for q2, since only q1 was written
+
+
+def test_an_invalid_judgment_value_raises_rather_than_rendering(tmp_path, monkeypatch):
+    findings_path = tmp_path / "human_findings.json"
+    findings_path.write_text(
+        json.dumps(
+            {
+                "declared_causes": [],
+                "answer_spotchecks": [
+                    {
+                        "query_id": "q1",
+                        "arm": "hybrid",
+                        "judgment": "sort of agrees",  # not a valid judgment value
+                        "notes": "",
+                        "recorded_by": "owner",
+                        "recorded_at": "2026-09-02",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(parity_report, "HUMAN_FINDINGS_PATH", findings_path)
+
+    with pytest.raises(parity_report.InvalidJudgmentError):
+        parity_report._render_answer_spotcheck()

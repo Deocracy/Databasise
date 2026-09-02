@@ -59,6 +59,12 @@ _CONCURRENCY_SETTING = "sequential"
 
 _GATE_AMENDMENT_REF = ".planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md"
 _GATE_WAIVER_REF = ".planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md"
+_VALIDATION_REF = ".planning/phases/03-lightrag-query-side/03-VALIDATION.md"
+
+# The corpus snapshot carries exactly 2 queries (03-VALIDATION.md's own note); Task 3's human
+# spot-check section is rendered per query, never inferred from whatever the record set happens
+# to name.
+QUERY_IDS: tuple[str, ...] = ("q1", "q2")
 
 
 # --------------------------------------------------------------------------------------------- #
@@ -490,6 +496,106 @@ def _collect_deviations() -> list[DeclaredDeviation]:
 
 
 # --------------------------------------------------------------------------------------------- #
+# The human answer-substance spot-check (03-10-PLAN.md Task 3)
+# --------------------------------------------------------------------------------------------- #
+
+_VALID_JUDGMENTS: frozenset[str] = frozenset({"match", "no-match", "partial"})
+
+
+class InvalidJudgmentError(ValueError):
+    """An ``answer_spotchecks`` entry's ``judgment`` is not one of
+    :data:`_VALID_JUDGMENTS`. A judgment must be a judgment, not free text that quietly
+    renders (03-10-PLAN.md Task 3) — never derived from a diff number, never defaulted.
+    """
+
+
+@dataclass(frozen=True)
+class AnswerSpotCheck:
+    """One human-recorded answer-substance judgment for one corpus query, read from
+    ``human_findings.json``'s ``answer_spotchecks`` list (Task 1 created the key empty; this
+    task is the first to read and render it). Never fabricated, defaulted, or inferred from a
+    diff number — an unrecorded judgment renders as unrecorded, not as a guess.
+    """
+
+    query_id: str
+    arm: str
+    judgment: str
+    notes: str
+    recorded_by: str
+    recorded_at: str
+
+    def __post_init__(self) -> None:
+        if self.judgment not in _VALID_JUDGMENTS:
+            raise InvalidJudgmentError(
+                f"answer_spotchecks entry for query_id={self.query_id!r}: judgment "
+                f"{self.judgment!r} is not one of {sorted(_VALID_JUDGMENTS)} — a judgment must "
+                "be a judgment, not free text that quietly renders."
+            )
+
+
+def _render_answer_spotcheck() -> str:
+    """The landing place 03-VERIFICATION.md's second ``behavior_unverified_items`` entry asks
+    for: a committed input a human record survives re-render through, because both evidence
+    documents are renderer-owned and a hand edit to either is overwritten on the next render
+    (03-REVIEW-FIX.md CR-01).
+    """
+    by_query: dict[str, AnswerSpotCheck] = {}
+    for raw in load_human_findings().get("answer_spotchecks", []):
+        spotcheck = AnswerSpotCheck(
+            query_id=raw["query_id"],
+            arm=raw["arm"],
+            judgment=raw["judgment"],
+            notes=raw.get("notes", ""),
+            recorded_by=raw.get("recorded_by", ""),
+            recorded_at=raw.get("recorded_at", ""),
+        )
+        by_query[spotcheck.query_id] = spotcheck
+
+    sections = [
+        "## Human spot-check of answer substance\n",
+        (
+            "Criterion 6's substitute-gate half this document's retrieval-level comparison "
+            "does not cover: an LLM-generated answer's *substance* is not mechanically "
+            "checkable — `generate` is stochastic and no A/A floor is calibrated yet "
+            f"(MACH-02/MACH-03 deferred to Phase 6, `{_GATE_AMENDMENT_REF}`) — so only a human "
+            "judgment call substitutes for it. Recorded per query in `human_findings.json`'s "
+            f"`answer_spotchecks` list; run instructions are `{_VALIDATION_REF}`'s Manual-Only "
+            "Verifications row for this behavior.\n"
+        ),
+        (
+            "Each completed comparison record already carries the original (v1) arm's answer "
+            "text under `original_arm_result.answer` (see the raw `parity_results/` files); the "
+            "decomposed arm's answer text is not recorded in the run record, so the side-by-side "
+            "read this section names is a live re-run, not a document comparison.\n"
+        ),
+    ]
+    for query_id in QUERY_IDS:
+        entry = by_query.get(query_id)
+        if entry is None:
+            sections.append(
+                f"### `{query_id}`\n\n"
+                "**Not yet recorded.** A human is required — answer substance is not "
+                "mechanically checkable and no A/A floor is calibrated (MACH-02/MACH-03 "
+                "deferred to Phase 6). To record it, add an entry to `human_findings.json`'s "
+                f"`answer_spotchecks` list naming `query_id={query_id!r}`, the `arm` compared, "
+                "a `judgment` (one of the three values this module's own "
+                "`InvalidJudgmentError` enforces), `notes`, `recorded_by`, and `recorded_at`. "
+                f"Run instructions: `{_VALIDATION_REF}`'s Manual-Only Verifications table, "
+                "\"Human spot-check of answer substance\" row.\n"
+            )
+        else:
+            recorded_by = entry.recorded_by or "unrecorded"
+            recorded_at = entry.recorded_at or "unrecorded"
+            sections.append(
+                f"### `{query_id}`\n\n"
+                f"**Judgment: `{entry.judgment}`** (arm `{entry.arm}`, recorded by "
+                f"{recorded_by} at {recorded_at}).\n\n"
+                f"{_escape_cell(entry.notes)}\n"
+            )
+    return "\n".join(sections)
+
+
+# --------------------------------------------------------------------------------------------- #
 # PARITY-EVIDENCE.md rendering
 # --------------------------------------------------------------------------------------------- #
 
@@ -889,6 +995,7 @@ def render_markdown() -> str:
         _render_what_was_compared(),
         _render_trace_asymmetry(),
         _render_per_arm_comparison(),
+        _render_answer_spotcheck(),
         _render_keyword_variance_band(),
         _render_storage_audit(),
         _render_not_measured(),
