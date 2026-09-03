@@ -126,6 +126,46 @@ def _run_state() -> str:
     return "mixed"
 
 
+def _arm_degraded(arm: str) -> tuple[bool, str]:
+    """Whether any completed comparison record for ``arm`` reports
+    ``decomposed_run_record.degraded`` — read fresh from the committed records on every call, per
+    this module's own no-hardcoded-run-state rule (03-10-PLAN.md Task 2; 03-10 fix cycle, finding
+    2). Returns the first degradation reason found, or ``""`` when none of the arm's completed
+    records degraded. A clean re-run of a currently-degraded arm flips this to ``(False, "")``
+    with no code change — every prose section that reads it follows automatically.
+    """
+    for record in load_comparison(arm):
+        if record.get("status") != "completed":
+            continue
+        drr = record.get("decomposed_run_record", {})
+        if drr.get("degraded"):
+            return True, drr.get("degradation_reason") or drr.get("stop_reason") or ""
+    return False, ""
+
+
+def _never_executed_nodes(arm: str) -> list[str]:
+    """Node ids ``arm``'s storage audit reports (its full wiring node set) that never appear in
+    any of the arm's completed comparison records' ``decomposed_run_record.nodes`` list — i.e.
+    nodes the comparison run's scheduler never dispatched at all before halting on a
+    ``NodeExecutionError`` (``databasise/runner/scheduler.py`` breaks the whole scheduling loop on
+    the first batch failure, so every node downstream of the failure is never dispatched).
+
+    The storage-audit result file itself carries no dispatch/degraded information of its own (a
+    known, separately-tracked gap — the audit's ``rows`` record only which handles were touched,
+    not whether the node ran at all before the batch it belonged to failed); this cross-references
+    the comparison run's own per-node dispatch list instead, read fresh on every call so a repair
+    of the underlying crash is reflected with no code change here.
+    """
+    audit_nodes = {row["node_id"] for row in load_storage_audit(arm).get("rows", [])}
+    executed_nodes = {
+        node["node_id"]
+        for record in load_comparison(arm)
+        if record.get("status") == "completed"
+        for node in record.get("decomposed_run_record", {}).get("nodes", [])
+    }
+    return sorted(audit_nodes - executed_nodes)
+
+
 # --------------------------------------------------------------------------------------------- #
 # Provenance check (Task 1's own <verify> command; also exposed via --check-results)
 # --------------------------------------------------------------------------------------------- #
@@ -267,6 +307,17 @@ class StaleDeviationCauseError(UnreasonedDeviationError):
     """
 
 
+class OrphanDeviationCauseError(UnreasonedDeviationError):
+    """A ``human_findings.json`` ``declared_causes`` entry's ``(arm, query_id, field)`` triple
+    matches no measured excursion in the committed comparison records (03-10 fix cycle, finding
+    7). A cause filed under a mistyped key, or one whose excursion disappeared on a re-run, must
+    not sit silently in the human-authored record describing nothing — this is the same
+    record-never-silent discipline as :class:`StaleDeviationCauseError`, just for the opposite
+    direction (a cause with no matching measurement, rather than a measurement whose cause is
+    stale).
+    """
+
+
 @dataclass(frozen=True)
 class DeclaredDeviation:
     """One CONTRACT §5 declared-deviation entry: an excursion outside the stated retrieval-level
@@ -279,6 +330,11 @@ class DeclaredDeviation:
     which of ``chunk_diff``/``entity_diff``/``relation_diff`` the excursion was measured on — the
     third element of the ``(arm, query_id, field)`` triple ``human_findings.json``'s
     ``declared_causes`` entries key against.
+
+    ``recorded_by``/``recorded_at`` (both default ``""``) mirror ``AnswerSpotCheck``'s own
+    provenance fields (03-10 fix cycle, finding 8) — ``declared_causes`` is documented as
+    "human-authored" and its sibling ``answer_spotchecks`` schema already required both; a cause
+    with no recorded provenance is the same class of defect as an unverified cause.
     """
 
     arm: str
@@ -286,6 +342,8 @@ class DeclaredDeviation:
     description: str
     cause: str
     field: str = ""
+    recorded_by: str = ""
+    recorded_at: str = ""
 
 
 def render_deviations_markdown(deviations: list[DeclaredDeviation]) -> str:
@@ -343,9 +401,14 @@ def render_deviations_markdown(deviations: list[DeclaredDeviation]) -> str:
                 "\"nothing has been measured yet\" — the comparison ran and found agreement.\n"
             )
     else:
-        header = "| arm | query | measured difference | cause |\n|---|---|---|---|\n"
+        header = (
+            "| arm | query | measured difference | cause | recorded by | recorded at |\n"
+            "|---|---|---|---|---|---|\n"
+        )
         rows = [
-            f"| {d.arm} | {d.query_id} | {d.description} | {d.cause} |" for d in deviations
+            f"| {d.arm} | {d.query_id} | {d.description} | {d.cause} | "
+            f"{d.recorded_by or 'unrecorded'} | {d.recorded_at or 'unrecorded'} |"
+            for d in deviations
         ]
         sections.append("## Named deviations\n\n" + header + "\n".join(rows) + "\n")
 
@@ -383,12 +446,7 @@ def _render_known_design_deviation() -> str:
         and not relation_diff.get("symmetric_difference")
         for _arm, entity_diff, relation_diff in graph_diffs
     )
-    any_degraded = any(
-        record.get("decomposed_run_record", {}).get("degraded")
-        for arm in ("hybrid", "local", "global")
-        for record in load_comparison(arm)
-        if record.get("status") == "completed"
-    )
+    any_degraded = any(_arm_degraded(arm)[0] for arm in ("hybrid", "local", "global"))
     if zero_entity_relation:
         status_sentence = (
             "**Status, from the completed run**: `hybrid`/`local`/`global` all measured "
@@ -446,11 +504,17 @@ def _collect_deviations() -> list[DeclaredDeviation]:
       measurement, so the recorded cause no longer applies to it.
     - a matching entry with a blanket/empty cause text: unchanged behavior —
       :func:`render_deviations_markdown`'s ``_GENERIC_CAUSES`` check still refuses it.
+
+    A fourth outcome applies to the ``declared_causes`` list as a whole, after every measured
+    excursion has been scanned: any entry whose ``(arm, query_id, field)`` triple matched no
+    measured excursion is an orphan — raises :class:`OrphanDeviationCauseError` (03-10 fix cycle,
+    finding 7) rather than exiting clean with a dead cause left on file.
     """
     declared_causes = load_human_findings().get("declared_causes", [])
     causes_by_key: dict[tuple[str, str, str], dict[str, Any]] = {
         (entry["arm"], entry["query_id"], entry["field"]): entry for entry in declared_causes
     }
+    used_keys: set[tuple[str, str, str]] = set()
 
     deviations: list[DeclaredDeviation] = []
     for arm in ARMS:
@@ -465,12 +529,14 @@ def _collect_deviations() -> list[DeclaredDeviation]:
                 measured = diff["symmetric_difference"]
                 query_id = record.get("query_id", "?")
                 description = f"{field_name}: symmetric_difference={measured}"
-                entry = causes_by_key.get((arm, query_id, field_name))
+                key = (arm, query_id, field_name)
+                entry = causes_by_key.get(key)
 
                 if entry is None:
                     # No cause recorded yet — leave cause="" so the existing absorber-category
                     # refusal fires (the point of the refusal: force a human to name it first).
                     cause = ""
+                    recorded_by = recorded_at = ""
                 elif entry.get("symmetric_difference") != measured:
                     raise StaleDeviationCauseError(
                         f"{arm}/{query_id}/{field_name}: the declared_causes entry in "
@@ -481,7 +547,10 @@ def _collect_deviations() -> list[DeclaredDeviation]:
                         "it. Update the matching entry before this document can render again."
                     )
                 else:
+                    used_keys.add(key)
                     cause = entry.get("cause", "")
+                    recorded_by = entry.get("recorded_by", "")
+                    recorded_at = entry.get("recorded_at", "")
 
                 deviations.append(
                     DeclaredDeviation(
@@ -490,8 +559,23 @@ def _collect_deviations() -> list[DeclaredDeviation]:
                         description=description,
                         cause=cause,
                         field=field_name,
+                        recorded_by=recorded_by,
+                        recorded_at=recorded_at,
                     )
                 )
+
+    orphans = sorted(set(causes_by_key) - used_keys)
+    if orphans:
+        orphan_list = ", ".join(f"(arm={a!r}, query_id={q!r}, field={f!r})" for a, q, f in orphans)
+        raise OrphanDeviationCauseError(
+            f"{HUMAN_FINDINGS_PATH} has {len(orphans)} declared_causes entry(ies) matching no "
+            f"measured excursion in the committed comparison records: {orphan_list}. Each cause "
+            "names one specific excursion; a triple that matches nothing currently measured is "
+            "either a mistyped key or a cause whose excursion disappeared on a re-run. Remove "
+            "the stale entry or correct its (arm, query_id, field) to match the excursion it was "
+            "written for."
+        )
+
     return deviations
 
 
@@ -533,6 +617,39 @@ class AnswerSpotCheck:
             )
 
 
+def _render_spotcheck_arm_guidance() -> str:
+    """Which arm the live re-run this section names can actually be performed against (03-10 fix
+    cycle, finding 5). `hybrid`/`local`/`global`'s decomposed runs degrade before reaching
+    `generate` (see the per-arm degradation notes above and the Verdict section), so they never
+    produce a decomposed-side answer to read side by side with v1's — instructing a spot-check
+    against one of those three arms would mean judging two non-answers. `naive` completed its
+    full pipeline end to end and has a real generated answer on both sides, so it is the arm
+    where this read is actually possible today. Derived per-arm on every render, not a fixed
+    recommendation, so a repair of the crash flips this automatically.
+    """
+    if _run_state() != "completed":
+        return (
+            "No comparison run recorded in this document reached completion (see \"What was "
+            "compared\"), so no arm has an answer to read yet either side of this spot-check.\n"
+        )
+    graph_arms = ("hybrid", "local", "global")
+    blocked_arms = [arm for arm in graph_arms if _arm_degraded(arm)[0]]
+    if blocked_arms:
+        return (
+            f"`{'`, `'.join(blocked_arms)}` cannot host this read today: each one's decomposed "
+            "run degrades before reaching `generate` (see the per-arm degradation notes above), "
+            "so there is no decomposed-side answer to compare — v1's own answer for those "
+            "query/arm pairs is also `\"…[no-context]\"` (see `original_arm_result.answer` in "
+            "the raw `parity_results/` files). Run this spot-check against `naive` instead, "
+            "whose pipeline completed end to end on both sides; the graph arms become available "
+            "for this read once their crash is repaired (out of this plan's scope).\n"
+        )
+    return (
+        "All five arms completed without a decomposed-run degradation, so this read is "
+        "available against any of them.\n"
+    )
+
+
 def _render_answer_spotcheck() -> str:
     """The landing place 03-VERIFICATION.md's second ``behavior_unverified_items`` entry asks
     for: a committed input a human record survives re-render through, because both evidence
@@ -568,6 +685,7 @@ def _render_answer_spotcheck() -> str:
             "decomposed arm's answer text is not recorded in the run record, so the side-by-side "
             "read this section names is a live re-run, not a document comparison.\n"
         ),
+        _render_spotcheck_arm_guidance(),
     ]
     for query_id in QUERY_IDS:
         entry = by_query.get(query_id)
@@ -873,20 +991,52 @@ def _render_storage_audit() -> str:
     sections.append(header + "\n".join(rows) + "\n")
     if _run_state() == "completed":
         counts = {arm: load_storage_audit(arm) for arm in ARMS}
-        detail = "; ".join(
-            f"`{arm}`: matched={counts[arm].get('matched_count', 0)} "
-            f"no-touch={counts[arm].get('no_touch_count', 0)} "
-            f"over-declared={counts[arm].get('over_declared_count', 0)}"
-            for arm in ARMS
-        )
-        sections.append(
-            f"All five audits ran to completion clean, real per-node counts above: {detail}. "
-            "`matched`/`no-touch`/`over-declared` remain three distinct states throughout — a "
-            "`no-touch` node (one that legitimately never fires in a given arm's wiring, e.g. "
-            "`rerank` under D-09's pass-through config) is never collapsed into "
-            "`matched`/audited-compliant, and an `over-declared` count of `0` on every arm is "
-            "a real measured zero, not an assumed one (D-15).\n"
-        )
+        arm_degraded = {arm: _arm_degraded(arm) for arm in ARMS}
+        clean_arms = [arm for arm in ARMS if not arm_degraded[arm][0]]
+        degraded_arms = [arm for arm in ARMS if arm_degraded[arm][0]]
+
+        if clean_arms:
+            clean_detail = "; ".join(
+                f"`{arm}`: matched={counts[arm].get('matched_count', 0)} "
+                f"no-touch={counts[arm].get('no_touch_count', 0)} "
+                f"over-declared={counts[arm].get('over_declared_count', 0)}"
+                for arm in clean_arms
+            )
+            sections.append(
+                f"`{'`, `'.join(clean_arms)}` ran to completion clean — the comparison run "
+                "reports no `decomposed_run_record.degraded=true` for these arms, so every "
+                f"dispatched node had the chance to touch what it declared: {clean_detail}. "
+                "`matched`/`no-touch`/`over-declared` remain three distinct states throughout, "
+                "and an `over-declared` count of `0` on these arms is a real measured zero, not "
+                "an assumed one (D-15).\n"
+            )
+
+        for arm in degraded_arms:
+            _, reason = arm_degraded[arm]
+            never_executed = _never_executed_nodes(arm)
+            never_executed_cell = (
+                ", ".join(f"`{n}`" for n in never_executed) if never_executed else "none"
+            )
+            sections.append(
+                f"**`{arm}`'s audit is crash-truncated, not clean.** The comparison run's own "
+                f"`decomposed_run_record` reports `degraded=true` ({reason}), and "
+                "`databasise/runner/scheduler.py` halts the whole scheduling loop on that "
+                "`NodeExecutionError` without dispatching any node downstream of it — a node "
+                "that never executed is a fundamentally different state from a node that ran "
+                "and legitimately touched nothing. Cross-referencing this audit's own rows "
+                "against the node ids the comparison run's `decomposed_run_record` actually "
+                f"dispatched: {never_executed_cell} never executed in the run this audit "
+                "reflects. Some report `no-touch` above (a node that never touched its own "
+                "declared handle); some report `matched` vacuously (a node with no declared "
+                "effect at all — a join or budget node — counted `matched` regardless of "
+                "whether it was ever dispatched, per `storage_audit.py`'s own "
+                "no-declared-effects rule). A node that never ran cannot be shown not to have "
+                f"over-declared — `{arm}`'s audit counts (matched="
+                f"{counts[arm].get('matched_count', 0)} no-touch="
+                f"{counts[arm].get('no_touch_count', 0)} over-declared="
+                f"{counts[arm].get('over_declared_count', 0)}) are coverage of a halted run, "
+                "not proof every node touches only what it declares.\n"
+            )
     else:
         sections.append(
             "Every arm above reports `matched=0 no-touch=0 over-declared=0` in this render — "
@@ -913,15 +1063,34 @@ def _render_not_measured() -> str:
         "claim rides on an unmeasured comparison.\n\n"
     )
     if _run_state() == "completed":
+        graph_arms = ("hybrid", "local", "global")
+        degraded_arms = [arm for arm in graph_arms if _arm_degraded(arm)[0]]
+        if degraded_arms:
+            degradation_clause = (
+                f"and `{'`/`'.join(degraded_arms)}`'s decomposed run degraded before completing "
+                "a real retrieval (see the per-arm degradation notes above), so its measured "
+                "zero diff is not a validated agreement over non-trivial content"
+                if len(degraded_arms) == 1
+                else (
+                    f"and `{'`/`'.join(degraded_arms)}`'s decomposed runs degraded before "
+                    "completing a real retrieval (see the per-arm degradation notes above), so "
+                    "their measured zero diffs are not a validated agreement over non-trivial "
+                    "content"
+                )
+            )
+        else:
+            degradation_clause = (
+                f"and `{'`/`'.join(graph_arms)}` completed without a decomposed-run "
+                "degradation, so their measured retrieval-level agreement is not an artifact of "
+                "a halted run"
+            )
         second_paragraph = (
             "Separately, and specific to this render: the retrieval-level comparison **has** "
             "run — all five arms are `completed` (see \"What was compared\" and \"Per-arm "
             "retrieval-level comparison\") — but the human answer-substance spot-check for q1/q2 "
-            "has not yet been recorded (see \"Human spot-check of answer substance\" below), and "
-            "`hybrid`/`local`/`global`'s decomposed runs degraded before completing a real "
-            "retrieval (see the per-arm degradation notes above), so their measured zero diffs "
-            "are not a validated agreement over non-trivial content. Neither gap is measured by "
-            "this document; both are named here rather than left implicit.\n"
+            "has not yet been recorded (see \"Human spot-check of answer substance\" above), "
+            f"{degradation_clause}. Neither gap is measured by this document; both are named "
+            "here rather than left implicit.\n"
         )
     else:
         second_paragraph = (
@@ -952,33 +1121,61 @@ def _render_verdict() -> str:
             "the exact commands 03-09-SUMMARY.md names.\n"
         )
 
-    return (
-        "## Verdict\n\n"
-        "**All five arms completed.** `naive` and `bypass` ran their full pipelines end to "
-        "end and their retrieval-level comparisons are informative: `bypass` has no retrieval "
-        "to compare; `naive` measured exact chunk-set agreement past `ranking_agreement=1.000` "
-        "with two named tail-length excursions per query, both carried as declared deviations "
-        "in `DECLARED-DEVIATIONS.md` with a grounded cause (top_k cutoff vs v1's token-budget "
-        "truncation) rather than folded into a silent pass.\n\n"
-        "`hybrid`, `local`, and `global` also completed and measured `chunk_diff`/"
-        "`entity_diff`/`relation_diff` `symmetric_difference=[]` on both corpus queries — but "
-        "**this is not read as exact retrieval-level agreement.** All three arms' decomposed "
-        "runs degraded before completing a real retrieval (`entity-hydrate-expand`/"
-        "`relation-hydrate-expand` raised `NodeExecutionError` on every query/arm pair — see "
-        "the per-arm degradation notes in \"Per-arm retrieval-level comparison\"), and the "
-        "original (v1) arm's own answer for the same six pairs also carries zero chunk/"
-        "entity/relation ids. The measured zero is both sides retrieving nothing, not a "
-        "validated match over non-trivial content — a live defect this comparison surfaced, "
-        "not evidence of parity. Fixing that defect is out of this plan's scope; recorded here "
-        "so the verdict does not overstate what these three arms actually showed.\n\n"
+    graph_arms = ("hybrid", "local", "global")
+    arm_status = {arm: _arm_degraded(arm) for arm in graph_arms}
+    degraded_arms = [arm for arm in graph_arms if arm_status[arm][0]]
+
+    lines = [
+        "## Verdict\n",
+        (
+            "**All five arms completed.** `naive` and `bypass` ran their full pipelines end to "
+            "end and their retrieval-level comparisons are informative: `bypass` has no "
+            "retrieval to compare; `naive` measured exact chunk-set agreement past "
+            "`ranking_agreement=1.000` with two named tail-length excursions per query, both "
+            "carried as declared deviations in `DECLARED-DEVIATIONS.md` with a grounded cause "
+            "(top_k cutoff vs v1's token-budget truncation) rather than folded into a silent "
+            "pass.\n"
+        ),
+    ]
+    for arm in graph_arms:
+        degraded, reason = arm_status[arm]
+        if degraded:
+            lines.append(
+                f"`{arm}` also completed and measured `chunk_diff`/`entity_diff`/"
+                "`relation_diff` `symmetric_difference=[]` on both corpus queries — but **this "
+                f"is not read as exact retrieval-level agreement.** `{arm}`'s decomposed run "
+                f"degraded before completing a real retrieval ({reason} — see the per-arm "
+                "degradation note in \"Per-arm retrieval-level comparison\"), and the original "
+                "(v1) arm's own answer for the same query/arm pairs also carries zero "
+                "chunk/entity/relation ids. The measured zero is both sides retrieving nothing, "
+                "not a validated match over non-trivial content — a live defect this comparison "
+                "surfaced, not evidence of parity. Fixing that defect is out of this plan's "
+                "scope; recorded here so the verdict does not overstate what this arm actually "
+                "showed.\n"
+            )
+        else:
+            lines.append(
+                f"`{arm}` also completed and measured `chunk_diff`/`entity_diff`/"
+                "`relation_diff` `symmetric_difference=[]` on both corpus queries, with no "
+                "decomposed-run degradation — a validated exact retrieval-level agreement.\n"
+            )
+
+    coverage_gap = (
+        f", and the {'/'.join(degraded_arms)} degradation above means the retrieval-level "
+        "comparison itself is not yet clean for "
+        + ("that arm" if len(degraded_arms) == 1 else "those arms")
+        + " either"
+        if degraded_arms
+        else ""
+    )
+    lines.append(
         "**What this verdict does not cover.** D-10's gate is the deterministic retrieval "
         "level only — this document makes no answer-level parity claim. The human "
         "answer-substance spot-check for q1/q2 is not yet recorded (see \"Human spot-check of "
-        "answer substance\" below). GATE-01's standing condition continues to hold: no "
-        "promotion decision and no parity claim rides on an unmeasured comparison, and the "
-        "`hybrid`/`local`/`global` degradation above means the retrieval-level comparison "
-        "itself is not yet clean for those three arms either.\n"
+        "answer substance\" above). GATE-01's standing condition continues to hold: no "
+        f"promotion decision and no parity claim rides on an unmeasured comparison{coverage_gap}.\n"
     )
+    return "\n".join(lines)
 
 
 def render_markdown() -> str:
