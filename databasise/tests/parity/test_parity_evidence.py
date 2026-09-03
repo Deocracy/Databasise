@@ -499,3 +499,196 @@ def test_an_invalid_judgment_value_raises_rather_than_rendering(tmp_path, monkey
 
     with pytest.raises(parity_report.InvalidJudgmentError):
         parity_report._render_answer_spotcheck()
+
+
+# --------------------------------------------------------------------------------------------- #
+# 03-10 fix cycle (adversarial-audit findings 1-8)
+# --------------------------------------------------------------------------------------------- #
+
+_KEYWORD_BAND = {
+    "run_count": 5,
+    "high_level_frequency": {},
+    "low_level_frequency": {},
+    "high_level_size_mean": 2.0,
+    "high_level_size_stdev": 0.0,
+    "low_level_size_mean": 2.0,
+    "low_level_size_stdev": 0.0,
+    "any_cache_served": False,
+}
+
+_ZERO_DIFF = {
+    "decomposed_ids": [],
+    "original_ids": [],
+    "symmetric_difference": [],
+    "ranking_agreement": 1.0,
+    "first_disagreement_position": None,
+}
+
+_RESOLVED_IDENTITIES = {
+    "decomposed_generate": "m",
+    "original_arm_llm_model": "m",
+    "original_arm_embedding_model": "e",
+}
+
+
+def _completed_record(arm, query_id, **overrides):
+    record = dict(_MINIMAL_INCONCLUSIVE_RECORD)
+    record.update(
+        status="completed",
+        arm=arm,
+        query_id=query_id,
+        resolved_model_identities=dict(_RESOLVED_IDENTITIES),
+        decomposed_run_record={
+            "degraded": False,
+            "degradation_reason": None,
+            "stop_reason": None,
+            "nodes": [],
+        },
+        original_arm_result={"answer": "an answer"},
+        original_arm_instrumentation="harness-external",
+    )
+    record.update(overrides)
+    return record
+
+
+def _write_clean_completed_fixture_set(tmp_path):
+    """Every arm `completed`, no arm's `decomposed_run_record.degraded` set — the direction
+    03-10 fix cycle finding 2 requires: a clean fixture set renders no crash assertion.
+    """
+    for arm in ("naive", "bypass", "hybrid", "local", "global"):
+        records = [_completed_record(arm, "q1"), _completed_record(arm, "q2")]
+        if arm == "bypass":
+            for record in records:
+                record["retrieval_note"] = "no retrieval to compare"
+        elif arm == "naive":
+            for record in records:
+                record["chunk_diff"] = dict(_ZERO_DIFF)
+        else:  # hybrid, local, global
+            for record in records:
+                record["chunk_diff"] = dict(_ZERO_DIFF)
+                record["entity_diff"] = dict(_ZERO_DIFF)
+                record["relation_diff"] = dict(_ZERO_DIFF)
+                record["keyword_variance_band"] = dict(_KEYWORD_BAND)
+        _write_comparison(tmp_path, arm, records)
+        _write_audit(
+            tmp_path,
+            arm,
+            {
+                **_MINIMAL_AUDIT,
+                "arm": arm,
+                "status": "completed",
+                "outcome": "clean",
+                "matched_count": 1,
+                "no_touch_count": 0,
+                "over_declared_count": 0,
+                "rows": [],
+            },
+        )
+
+
+def test_render_markdown_for_a_clean_completed_fixture_set_asserts_no_crash(tmp_path, monkeypatch):
+    """03-10 fix cycle finding 2: the degradation disclosure must be derived, not hardcoded —
+    proven by re-rendering the completed-and-NOT-degraded direction and asserting no crash claim
+    survives (this is the exact defect the fix cycle closes: hardcoded prose asserting a crash
+    that did not happen).
+    """
+    _write_clean_completed_fixture_set(tmp_path)
+    monkeypatch.setattr(parity_report, "RESULTS_DIR", tmp_path)
+
+    text = render_markdown()
+
+    assert "NodeExecutionError" not in text
+    assert "Degraded run" not in text
+    assert "crash-truncated" not in text
+    assert "validated exact retrieval-level agreement" in text
+
+
+def test_render_markdown_for_an_inconclusive_fixture_set_asserts_no_pass_or_fail_verdict_word(
+    tmp_path, monkeypatch
+):
+    """03-10 fix cycle finding 4: the companion test above (`..._never_emits_a_pass_or_fail...`)
+    only proves the refusal strings are present; a literal 'VERDICT: PASS' injected into the
+    inconclusive branch would leave that test green. This proves the absence too.
+    """
+    _write_complete_fixture_set(tmp_path)  # every arm status="inconclusive"
+    monkeypatch.setattr(parity_report, "RESULTS_DIR", tmp_path)
+
+    text = parity_report._render_verdict()
+
+    assert "No parity verdict is recorded" in text
+    for banned in ("VERDICT: PASS", "VERDICT: FAIL", "**PASS**", "**FAIL**"):
+        assert banned not in text
+
+
+def test_a_completed_excursion_with_no_declared_cause_makes_the_whole_render_fail(
+    tmp_path, monkeypatch
+):
+    """CONTRACT §5's central refusal (03-10-PLAN.md must_haves truth 3 / prohibition 1; 03-10 fix
+    cycle finding 3): a completed excursion with no recorded cause aborts the render entirely —
+    proven directly here rather than only by the plan's own manual <verify> step of emptying
+    human_findings.json.
+    """
+    record = _completed_record(
+        "naive",
+        "q1",
+        chunk_diff={
+            "decomposed_ids": [],
+            "original_ids": ["a"],
+            "symmetric_difference": ["a"],
+            "ranking_agreement": 1.0,
+            "first_disagreement_position": 0,
+        },
+    )
+    for arm in ARMS:
+        if arm == "naive":
+            _write_comparison(tmp_path, arm, [record])
+        else:
+            _write_comparison(tmp_path, arm, [{**_MINIMAL_INCONCLUSIVE_RECORD, "arm": arm}])
+        _write_audit(tmp_path, arm, {**_MINIMAL_AUDIT, "arm": arm})
+
+    findings_path = tmp_path / "human_findings.json"
+    findings_path.write_text(
+        json.dumps({"declared_causes": [], "answer_spotchecks": []}), encoding="utf-8"
+    )
+
+    monkeypatch.setattr(parity_report, "RESULTS_DIR", tmp_path)
+    monkeypatch.setattr(parity_report, "HUMAN_FINDINGS_PATH", findings_path)
+
+    deviations = parity_report._collect_deviations()
+    with pytest.raises(UnreasonedDeviationError) as exc_info:
+        render_deviations_markdown(deviations)
+    assert str(findings_path) in str(exc_info.value)
+
+
+def test_an_orphan_declared_cause_entry_makes_the_render_fail(tmp_path, monkeypatch):
+    """03-10 fix cycle finding 7: a `declared_causes` entry whose (arm, query_id, field) triple
+    matches no measured excursion must refuse, not silently sit in the file describing nothing.
+    """
+    for arm in ARMS:
+        _write_comparison(tmp_path, arm, [{**_MINIMAL_INCONCLUSIVE_RECORD, "arm": arm}])
+        _write_audit(tmp_path, arm, {**_MINIMAL_AUDIT, "arm": arm})
+
+    findings_path = tmp_path / "human_findings.json"
+    findings_path.write_text(
+        json.dumps(
+            {
+                "declared_causes": [
+                    {
+                        "arm": "naive",
+                        "query_id": "q1",
+                        "field": "chunk_diff",
+                        "symmetric_difference": ["a"],
+                        "cause": "a cause for an excursion that was never actually measured",
+                    }
+                ],
+                "answer_spotchecks": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(parity_report, "RESULTS_DIR", tmp_path)
+    monkeypatch.setattr(parity_report, "HUMAN_FINDINGS_PATH", findings_path)
+
+    with pytest.raises(parity_report.OrphanDeviationCauseError):
+        parity_report._collect_deviations()
