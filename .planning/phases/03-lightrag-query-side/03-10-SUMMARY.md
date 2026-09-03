@@ -38,6 +38,7 @@ key-files:
     - databasise/evidence/DECLARED-DEVIATIONS.md
     - .planning/REQUIREMENTS.md
     - .planning/phases/03-lightrag-query-side/03-UAT.md
+    - .planning/phases/03-lightrag-query-side/03-VALIDATION.md
 
 key-decisions:
   - "Disclosed hybrid/local/global's decomposed-run degradation in the rendered prose rather than presenting their 0 symmetric_difference as clean exact retrieval agreement, even though the plan's own action text (written before this was noticed) prescribed the latter — an overstated claim in an evidence document is exactly the failure mode this machinery exists to prevent (Rule 1)."
@@ -176,6 +177,98 @@ None - no external service configuration required.
 *Phase: 03-lightrag-query-side*
 *Completed: 2026-09-02*
 
+## Review-Fix Cycle (2026-09-03)
+
+An adversarial audit of this plan's own committed output — checked against its own
+`must_haves`/`prohibitions`, not new scope — found 8 real defects, all inside what this plan
+already claimed to deliver. Fixed as a follow-up cycle rather than a new plan (03-REVIEW-FIX.md's
+own house pattern), so this SUMMARY is updated in place rather than superseded.
+
+**Findings and fixes:**
+
+1. **BLOCKER — `_render_storage_audit()` called hybrid/local/global's crash-truncated audits
+   "clean."** Their storage-audit rows show `generate`/`chunk-sel-kg`/`heading-backfill` as
+   `no-touch`, but `generate.py` calls the LLM unconditionally — a legitimately-reached `generate`
+   can never be `no-touch`. Combined with `scheduler.py` halting the whole scheduling loop on the
+   first `NodeExecutionError`, this meant those nodes (and several vacuously-`matched` join/budget
+   nodes) never executed at all, not that they legitimately never fire. Fixed: `_arm_degraded()`/
+   `_never_executed_nodes()` cross-reference each arm's audit rows against its comparison run's own
+   `decomposed_run_record.nodes` dispatch list, so a crash-truncated audit now reads as
+   crash-truncated, naming exactly which nodes never ran, while naive/bypass keep their genuinely
+   clean reading.
+2. **MAJOR — the degradation disclosure was hardcoded prose, not derived.** `_render_verdict()`
+   and `_render_not_measured()` asserted "NodeExecutionError on every query/arm pair" as a literal,
+   which happened to be true today but would stay asserted even after the crash is repaired and the
+   comparison re-run — the exact defect this plan was closing, with the opposite polarity. Fixed:
+   both sections now derive per-arm from `_arm_degraded()`; a completed-and-not-degraded fixture set
+   renders no crash claim (new test proves this direction).
+3. **BLOCKER — the CONTRACT §5 central refusal had no test.** "A completed excursion with no
+   recorded cause makes the whole render fail" was proven only by a manual `<verify>` step (emptying
+   `human_findings.json`). A silent-drop regression would have left the suite green. Fixed: a direct
+   test against `_collect_deviations()`/`render_deviations_markdown()`.
+4. **MAJOR — the inconclusive-path test only checked refusal strings were present, never that no
+   pass/fail verdict word was emitted.** A literal `"VERDICT: PASS"` injected into that branch would
+   have stayed green. Fixed: new test asserts the absence too.
+5. **MAJOR — the human spot-check instructions named `--arm hybrid`, an arm with no answer to
+   read.** `hybrid`'s (and `local`'s/`global`'s) decomposed run degrades before reaching `generate`,
+   so it never produces a decomposed-side answer; v1's own answer for those pairs is also
+   `"…[no-context]"`. Fixed: `_render_spotcheck_arm_guidance()` derives and names `naive` (the arm
+   that actually completed) in the rendered document; `03-VALIDATION.md` and `03-UAT.md` re-pointed
+   to match. No judgment was recorded — that stays a human decision; `03-UAT.md` test 2 stays
+   `[pending]`.
+6. **MINOR — "below" pointed at a section rendered above it.** `_render_not_measured()` and
+   `_render_verdict()` both said "see \"Human spot-check of answer substance\" below," but
+   `render_markdown()` places that section before both. Corrected to "above."
+7. **MINOR — an orphan `declared_causes` entry (matching no measured excursion) was silently
+   ignored.** The stale-cause guard covered same-key/different-value but not a mistyped key or a
+   cause whose excursion disappeared on a re-run. Fixed: `OrphanDeviationCauseError` raises when any
+   `declared_causes` entry's `(arm, query_id, field)` triple matches nothing measured.
+8. **MINOR — `declared_causes` entries carried no `recorded_by`/`recorded_at`**, though the sibling
+   `answer_spotchecks` schema requires both. Added the fields to `DeclaredDeviation`, rendered them
+   in `DECLARED-DEVIATIONS.md`'s table, and recorded them honestly on the two existing entries:
+   `"Claude (AI agent, gsd-code-fixer) — commit 2ce3c30; NOT recorded by the human owner"` — this
+   file's own name calls it "human-authored," and that attribution was never true for these two
+   causes.
+
+**Explicitly left open** (named by the audit, out of this fix cycle's scope — the human owner
+decides):
+
+- Repairing `entity-hydrate-expand`/`relation-hydrate-expand`'s `NodeExecutionError` and re-running
+  the comparison — materially larger work than a rendering-prose fix cycle, already tracked in
+  REQUIREMENTS.md's MODAL-01 annotation and `03-UAT.md`'s G-03-1 `missing` list.
+- `check_results()` has no completed-direction rule: a `status="completed"` record with
+  `degraded=true` and a vacuous zero passes the provenance gate as clean
+  (`_REQUIRED_COMPARISON_KEYS` omits `decomposed_run_record`). Noted, not fixed.
+- Storage-audit records carry no `run_id`/`corpus_hash`/`timestamp`, so they cannot be tied to the
+  comparison run they describe — the reason `_never_executed_nodes()` has to cross-reference the
+  comparison run's own dispatch list rather than reading degradation state directly off the audit
+  file. Noted, not fixed.
+
+**Commits:**
+
+- `5002261` fix — the 8 findings' renderer-code fixes (storage-audit/verdict/not-measured
+  derivation, spot-check guidance, orphan-cause refusal, cause provenance fields)
+- `3984e03` chore — honest `recorded_by`/`recorded_at` on `human_findings.json`'s two entries
+- `3b13c5c` test — the 4 new tests (missing-cause refusal, no-pass/fail-verdict-word, completed-not-
+  degraded direction, orphan-cause refusal); suite grew 37 → 41
+- `546354b` docs — `03-VALIDATION.md`/`03-UAT.md` re-pointed at `--arm naive`
+- `fe1a5b3` evidence — re-rendered `PARITY-EVIDENCE.md`/`DECLARED-DEVIATIONS.md`
+
+**Verification:** `uv run pytest -q tests/parity/test_parity_evidence.py` → 41 passed, 0 failed
+(baseline before this cycle: 37 passed). Full suite `uv run pytest -q` → 438 passed, 0 failed
+(baseline: 434 passed). `render_markdown() == render_markdown()` still holds byte-identical.
+`uv run python -m databasise.evidence.parity_report --check-results` → clean (5 arms).
+
+**What did not change:** the underlying `entity-hydrate-expand`/`relation-hydrate-expand` crash is
+still unrepaired; `hybrid`/`local`/`global`'s retrieval-level comparison is still not yet clean;
+the human answer-substance spot-check for q1/q2 is still unrecorded; MODAL-01's traceability row
+stays `Pending`. This cycle closed rendering/testing defects in how the already-measured, already-
+degraded state was *described* — it did not measure anything new.
+
 ## Self-Check: PASSED
 
-All key files (`human_findings.json`, `parity_report.py`, `test_parity_evidence.py`, `PARITY-EVIDENCE.md`, `DECLARED-DEVIATIONS.md`, `REQUIREMENTS.md`, `03-UAT.md`, this SUMMARY) confirmed present on disk. All three task commits (`2ce3c30`, `268152c`, `04842e5`) confirmed present in `git log`.
+All key files (`human_findings.json`, `parity_report.py`, `test_parity_evidence.py`,
+`PARITY-EVIDENCE.md`, `DECLARED-DEVIATIONS.md`, `REQUIREMENTS.md`, `03-UAT.md`, `03-VALIDATION.md`,
+this SUMMARY) confirmed present on disk. All three original task commits (`2ce3c30`, `268152c`,
+`04842e5`) and all five review-fix-cycle commits (`5002261`, `3984e03`, `3b13c5c`, `546354b`,
+`fe1a5b3`) confirmed present in `git log`.
