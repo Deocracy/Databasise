@@ -11,7 +11,7 @@ updated: 2026-09-01T23:59:00Z
 number: 2
 name: Human spot-check of answer substance for the two corpus queries
 expected: |
-  With the v1 environment and imported index present, run q1 and q2 through `databasise.parity.run_comparison --arm hybrid` and through v1 directly, read both answers side by side, and record a match / no-match judgment with notes for each query pair.
+  With the v1 environment and imported index present, run q1 and q2 through `databasise.parity.run_comparison --arm naive` (not `hybrid` — corrected 2026-09-03, 03-10 fix cycle finding 5: `hybrid`/`local`/`global`'s decomposed runs degrade before reaching `generate`, so they have no answer to compare; `naive` completed end to end and is the arm where this read is actually possible today) and through v1 directly, read both answers side by side, and record a match / no-match judgment with notes for each query pair.
 awaiting: user response
 
 ## Tests
@@ -23,9 +23,10 @@ reported: "Live run succeeded (all 5 arms completed, real N=5 variance bands, hy
 severity: major
 
 ### 2. Human spot-check of answer substance for the two corpus queries
-expected: With the v1 environment and imported index present, run q1 and q2 through `databasise.parity.run_comparison --arm hybrid` and through v1 directly, read both answers side by side, and record a match / no-match judgment with notes for each query pair.
+expected: With the v1 environment and imported index present, run q1 and q2 through `databasise.parity.run_comparison --arm naive` and through v1 directly, read both answers side by side, and record a match / no-match judgment with notes for each query pair.
 result: [pending]
 landing place: `databasise/evidence/human_findings.json`'s `answer_spotchecks` list (03-10-PLAN.md Task 3) — read and rendered by `databasise/evidence/parity_report.py`'s `_render_answer_spotcheck()` into `PARITY-EVIDENCE.md`'s "Human spot-check of answer substance" section, per query, on every render. Both q1 and q2 currently render as explicitly unrecorded; this test closes once an entry is added and the document re-rendered.
+arm correction (2026-09-03, 03-10 fix cycle finding 5): the `expected` field above now names `--arm naive`, not `--arm hybrid` as originally written. `hybrid`/`local`/`global`'s decomposed runs degrade before reaching `generate` (`entity-hydrate-expand`/`relation-hydrate-expand` raise `NodeExecutionError`; see `PARITY-EVIDENCE.md`'s per-arm degradation notes and Verdict section), so none of the three ever produces a decomposed-side answer — v1's own answer for those pairs is also `"…[no-context]"`. Recording a judgment against `hybrid` today would mean judging two non-answers. `naive` is the arm whose pipeline completed end to end on both sides; this test stays `[pending]` (no judgment recorded by this fix cycle — that stays a human decision) until the owner performs the read against `naive` per `03-VALIDATION.md`'s corrected Manual-Only Verifications row, or the graph-arm crash is repaired and this row is re-pointed back.
 
 ## Summary
 
