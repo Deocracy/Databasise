@@ -1,222 +1,164 @@
----
-last_mapped_commit: 9160a53de8976defcfb11b138253156fd5050ecd
-last_mapped_at: 2026-08-31
----
+<!-- refreshed: 2026-09-03 -->
 # Coding Conventions
 
-**Analysis Date:** 2026-08-31
+**Analysis Date:** 2026-09-03
 
 ## Naming Patterns
 
-**Files (Python):**
-
-- Lowercase with underscores: `addon_params.py`, `base.py`, `chunk_schema.py`, `constants.py`, `exceptions.py`
+**Files:**
+- Lowercase with underscores: `addon_params.py`, `base.py`, `chunk_schema.py`, `exceptions.py`
 - Pattern: `module_name.py` for single logical units
-- Test files: `test_*.py` or `*_test.py` (test directory structure mirrors source)
+- Test files: `test_*.py` (co-located in tests/ directory, mirrors source structure)
+- Component files (TypeScript): PascalCase, e.g., `App.tsx`, `GraphViewer.tsx`
 
-**Files (JavaScript/TypeScript):**
+**Functions:**
+- Python public: snake_case, e.g., `insert()`, `query()`, `delete_by_entity()`, `initialize_rag()`
+- Python async variants: prefix with `a`, e.g., `ainsert()`, `aquery()` (matching sync alternatives)
+- Python private/internal: leading underscore, e.g., `_run_sync()`, `_owning_loop()`, `_hermetic_mineru_env()`
+- TypeScript: camelCase, e.g., `handleApiKeyAlertOpenChange()`, `performHealthCheck()`
+- Test functions: `test_*()` pattern
 
-- Component files: PascalCase without spaces
-- Example: `lightrag_webui/` subdirectories and component files follow consistent naming
-- Test files: `.test.tsx`, `.test.ts` (co-located with source)
+**Variables:**
+- Python: snake_case throughout, e.g., `chunk_tokens`, `parallel_workers`, `keep_test_artifacts`
+- TypeScript: camelCase, e.g., `apiKeyAlertOpen`, `isMountedRef`, `enableHealthCheck`
+- Boolean fixtures/flags: descriptive, e.g., `keep_test_artifacts`, `stress_test_mode`, `parallel_workers`
 
-**Functions (Python):**
-
-- camelCase for private/internal: `_run_sync()`, `_owning_loop`
-- snake_case for public: `insert()`, `query()`, `delete_by_entity()`, `initialize_rag()`
-- Async variants prefixed with `a`: `ainsert()`, `aquery()` (matching sync alternatives)
-- Test functions: `test_*()` pattern (e.g., `test_run_sync_runs_coroutine_when_no_loop_running()`)
-
-**Variables (Python):**
-
-- snake_case throughout: `owning_loop`, `test_artifacts`, `run_integration_tests`
-- Private/internal: leading underscore `_hermetic_mineru_env`
-- Boolean fixtures/flags: descriptive names like `keep_test_artifacts`, `stress_test_mode`, `parallel_workers`
-
-**Types/Classes (Python):**
-
-- PascalCase: `LightRAG`, `RuntimeError`, `ThreadPoolExecutor`
-- Exception classes suffix with `Error` or `Exception`: `RuntimeError`
-- Dataclass names: `GuardDeclaration`, `StorageNameSpace`, `Part`, `WiringNode`
-
-**Types (TypeScript):**
-
-- Interfaces and Types: PascalCase
-- Enums: PascalCase
-- Example from eslint config: React version `19.0` implies typed component props
+**Types/Classes:**
+- Python classes: PascalCase, e.g., `LightRAG`, `RuntimeError`, `APIStatusError`
+- Python exceptions: suffix with `Error` or `Exception`, e.g., `StorageNotInitializedError`, `PipelineNotInitializedError`
+- TypeScript: PascalCase interfaces, types, enums
 
 ## Code Style
 
 **Formatting (Python):**
+- Tool: ruff (linter)
+- Target version: `py310` (v1) or `py311` (databasise)
+- Indent: 4 spaces
+- Convention: PEP 8 style guide (inferred from test structure)
+- Line length: Not explicitly specified
 
-- Tool: None explicitly configured (inferred from pyproject.toml defaults)
-- Line length: Not specified in config
-- Indent: Python default (4 spaces assumed)
-- Convention: Follows PEP 8 style guide (observed from test structure)
-
-**Formatting (JavaScript/TypeScript):**
-
+**Formatting (TypeScript/JavaScript):**
 - Tool: Prettier
-- Config file: `v1/lightrag_webui/.prettierrc.json`
+- Config: `v1/lightrag_webui/.prettierrc.json`
 - Settings:
-  - `semi: false` — No semicolons
-  - `tabWidth: 2` — 2-space indentation
-  - `singleQuote: true` — Single quotes for strings
-  - `printWidth: 100` — Max 100 characters per line
-  - `trailingComma: "none"` — No trailing commas
-  - `endOfLine: "crlf"` — Windows-style line endings
-  - `plugins: ["prettier-plugin-tailwindcss"]` — Tailwind CSS class sorting
+  - `tabWidth: 2` (2-space indent)
+  - `singleQuote: true` (single quotes)
+  - `semi: false` (no semicolons)
+  - `printWidth: 100`
+  - `trailingComma: "none"`
+  - `endOfLine: "crlf"` (Windows line endings)
+  - Plugin: prettier-plugin-tailwindcss
 
 **Linting (Python):**
-
 - Tool: ruff
-- Config: `pyproject.toml` section `[tool.ruff]`
-- Target version: `py310` (Python 3.10)
-- Scope: Code quality and style checks (specific rules configured via ruff)
+- Config: `[tool.ruff]` in pyproject.toml
+- Target version: `py310` (v1) or `py311` (databasise)
 
-**Linting (JavaScript/TypeScript):**
-
-- Tool: ESLint (flat config format)
-- Config file: `v1/lightrag_webui/eslint.config.js`
-- Parser: TypeScript ESLint (`typescript-eslint`)
-- Environment: Browser globals
-- React version: 19.0
+**Linting (TypeScript/JavaScript):**
+- Tool: ESLint (flat config)
+- Config: `v1/lightrag_webui/eslint.config.js`
+- Parser: typescript-eslint
 - Key rules:
-  - `@stylistic/indent: ['error', 2]` — Enforce 2-space indentation
-  - `@stylistic/quotes: ['error', 'single']` — Enforce single quotes
-  - `@typescript-eslint/no-explicit-any: ['off']` — Disable `any` type restrictions (intentionally permissive)
+  - `@stylistic/indent: ['error', 2]` — 2-space indentation
+  - `@stylistic/quotes: ['error', 'single']` — single quotes
+  - `@typescript-eslint/no-explicit-any: ['off']` — `any` allowed
   - React Hooks rules enabled
   - React Refresh rules enabled
-  - JSX runtime rules from React 19 enabled
+  - `react-refresh/only-export-components: ['warn', { allowConstantExport: true }]`
 
 ## Import Organization
 
-**Order (Python):**
+**Python:**
+- Start with `from __future__ import annotations`
+- Order: stdlib → third-party → local
+- Example (v1/lightrag/lightrag.py:1-78):
+  - Lines 1-8: future, stdlib (traceback, asyncio, os, time, warnings, copy)
+  - Lines 10-13: optional dependency (httpx) in try/except
+  - Lines 14-32: stdlib types and dataclass
+  - Lines 34-78: local lightrag.* imports
+- No blank lines within groups; one blank line between groups
 
-1. Standard library imports (`asyncio`, `sys`, etc.)
-2. Third-party imports (`pytest`, `aiohttp`, `pydantic`, etc.)
-3. Relative imports from the package (`.` and `..`)
-
-**Order (JavaScript/TypeScript):**
-
-1. External packages (`react`, `@eslint/js`, etc.)
-2. Local/relative imports
-- Example from eslint.config.js shows imports grouped before re-export
-
-**Path Aliases:**
-
-- Python: Package-relative imports using `lightrag.*` namespace (v1) and `databasise.*` namespace (new)
-- TypeScript: Inferred alias for `@` (common React pattern); verify in `tsconfig.json`
-- Example: `from lightrag.lightrag import _run_sync` (v1) or `from databasise.identity.canon import canonicalise` (databasise/)
+**TypeScript:**
+- Path alias: `@/*` → `./src/*` (tsconfig.json:25-26)
+- Import pattern: `import { named } from '@/path/to/module'`
+- Group: external → feature → utils
+- Example (App.tsx:1-20):
+  - React/library imports first
+  - Then `@/components`, `@/contexts`, `@/stores`, `@/api`, `@/features`
 
 ## Error Handling
 
-**Patterns (Python):**
+**Strategy:**
+- Custom exception classes with descriptive messages
+- Guard checks run **before** lazy factory invocation (prevents un-awaited coroutines)
+- RuntimeError raised eagerly with actionable error messages
 
-- Async context: Errors in event-loop validation are raised eagerly before coroutine creation
-- Example from `test_sync_wrapper_guard.py`: `_run_sync()` raises `RuntimeError` with actionable messages pointing to async alternatives
-- Pattern: Guard checks run *before* lazy factory invocation, preventing dangling un-awaited coroutines
-- Async-safe: Use try/finally blocks to ensure cleanup in async context managers
-- Custom exceptions: Inherit from standard exceptions (ValueError, RuntimeError) and document expected failure modes
-- Example: `GuardDeclarationError` inherits from `ValueError` and provides diagnostic message via `__init__` with field names and expected values
+**Patterns:**
+- Exception classes carry context: `APIStatusError` stores response, status_code, request_id
+- Example: `StorageNotInitializedError` includes initialization code snippet in message
+- Async guards: validate loop matches before coroutine creation
+  - `test_run_sync_raises_clear_error_inside_running_loop` — guard runs before factory
+  - `test_run_sync_does_not_create_coroutine_when_it_raises` — factory never invoked if guard fails
+- Multi-line error messages name both sync and async method signatures for clarity
 
-**Patterns (JavaScript/TypeScript):**
-
-- React context: Error boundaries implied by plugin configuration
-- API patterns (inferred from FastAPI backend): HTTP error responses with clear status codes
-- Guard against error states with early validation (same pattern as Python)
+**Anti-Pattern:**
+- Do not create coroutines inside guards (causes un-awaited warning if guard rejects)
+- Do not defer validation beyond guard check
 
 ## Logging
 
-**Framework (Python):**
-
-- Assumed: `logging` module (standard library)
-- Pattern: Used implicitly in test fixtures for environment setup messages
-- No external log aggregation dependency in pyproject.toml
-
-**Framework (JavaScript/TypeScript):**
-
-- Not explicitly configured in web UI config
-- Browser console logging assumed (standard `console.*`)
-- No structured logging dependency detected
+**Framework:**
+- Python: standard `logging` module
+- TypeScript: browser `console.*` (no external dependency)
 
 **Patterns:**
-
-- Tests log setup state via pytest fixtures (informational level)
-- Example: `_hermetic_mineru_env` fixture documents why each env var is stripped (self-documenting monkeypatch)
+- Test fixtures log setup reasoning (self-documenting)
+- _hermetic_mineru_env fixture documents why env vars are cleared (45-line comment explaining test isolation)
+- No structured logging library; plain text logs assumed
 
 ## Comments
 
-**When to Comment (Python):**
+**When to Comment:**
+- Document non-obvious guard conditions and invariants
+- Multi-line comments explain state management (e.g., conftest.py lines 11-44)
+- Module docstrings reference governing specifications
+- Complex async synchronization rules: test_sync_wrapper_guard.py lines 1-30 explain event-loop lifetime and two misuse modes
 
-- Document non-obvious guard conditions
-- Example from conftest: Multi-line comments explain why environment variables are stripped across tests (prevents test isolation leaks)
-- Example from test_sync_wrapper_guard.py: Detailed module-level docstring explains event-loop synchronization rules and two misuse modes
-- Pragma comments used for test coverage: `# pragma: no cover` marks code never reached on success path
-- CONTRACT references: Link to specification sections in comments when implementing requirements
-- Example: `# (CONTRACT §1)` or `# (SYSTEM-MODEL.md §BP)` ties implementation to governing spec
-
-**When to Comment (JavaScript/TypeScript):**
-
-- Not explicitly documented in config; assume React conventions
-- JSDoc for component props inferred from React 19 setup
+**Pragma Comments:**
+- `# pragma: no cover` marks unreachable paths (test factory functions that must never execute)
 
 **JSDoc/TSDoc:**
-
-- Python: Module-level and class-level docstrings expected (seen in test files)
-  - Module docstrings reference specification sections and upstream locations when reproducing code
-  - Example: `"""Storage lifecycle ABC, reproduced by copy (not import) from v1's ``StorageNameSpace`` (upstream_ref: v1/lightrag/base.py, lines 160-219; D-14/CONTRACT §7 lineage attribution)."""`
-  - Class docstrings explain purpose, constraints, and lifecycle
-- TypeScript: Inferred JSDoc comments for function signatures and types
+- Python: module-level docstrings expected; class-level for contracts
+- TypeScript: JSDoc for function signatures (inferred from React 19 setup)
 
 ## Function Design
 
-**Size (Python):**
+**Size:**
+- Focused on one guard/behavior (e.g., `test_run_sync_raises_clear_error_inside_running_loop`)
+- Test functions: one assertion or grouped assertions with clear comments
+- Helper functions: named to express intent
 
-- Test functions: Focused on a single guard or behavior (e.g., `test_run_sync_raises_clear_error_inside_running_loop` tests one error condition)
-- Helper functions: Named clearly to express intent (e.g., `side_body()` in gate scripts extracts structured sections)
-- Anti-pattern: Avoid monolithic test functions; prefer one assertion per test or grouped assertions with clear section comments
+**Parameters:**
+- Async wrappers pass via factory: `_run_sync(factory, sync_name="insert", async_name="ainsert", owning_loop=loop)`
+- Fixtures named descriptively: `keep_test_artifacts`, `stress_test_mode`, `parallel_workers`
+- CLI options via `request.config.getoption()` with env var fallback
 
-**Parameters (Python):**
-
-- Async functions: Parameters passed through wrapper functions (`_run_sync(factory, sync_name="insert", async_name="ainsert", owning_loop=loop)`)
-- Fixtures: Named to describe their role (`keep_test_artifacts`, `stress_test_mode`, `parallel_workers`)
-- CLI option forwarding: Via `request.config.getoption()` with fallback to environment variables
-- Dataclass/typed parameters: Use Pydantic `BaseModel` for complex configurations (e.g., `Part`, `WiringNode` in databasise/)
-
-**Return Values (Python):**
-
-- Async wrappers: Return same type as inner coroutine
-- Test fixtures: Return boolean (mode flags) or integer (worker counts)
-- Early validation: Functions return or raise early, no sentinel values for success (fail-fast principle)
-- Dataclass returns: Use `@dataclass(frozen=True)` for immutable value objects (e.g., `GuardDeclaration`)
-
-**Size (JavaScript/TypeScript):**
-
-- Components: Assume modular, single-responsibility pattern (inferred from plugin configuration for React Hooks)
-- Functions: Leverage TypeScript for type safety instead of runtime checks
+**Return Values:**
+- Async wrappers return same type as inner coroutine
+- Test fixtures return boolean or integer
+- Early validation: return or raise early; no sentinel success values (fail-fast)
 
 ## Module Design
 
-**Exports (Python):**
-
-- Pattern: Package-level `__all__` declarations (assumed from structure)
-- Example: `lightrag.lightrag` exports `_run_sync` for public use in wrappers
-- Async/sync pairing: Public API exposes both sync and async variants
-- Public entry points: Document with module-level docstrings (e.g., `databasise/__init__.py` documents `run_wiring`)
-
-**Exports (JavaScript/TypeScript):**
-
-- ESLint rule: `react-refresh/only-export-components` enforced with warning level
-- Pattern: React components are default exports or named exports
-- Rule allows `allowConstantExport: true` for constants alongside components
+**Exports:**
+- Async/sync pairing in public API (e.g., `insert()` + `ainsert()`)
+- Example: `from lightrag.lightrag import _run_sync` (public wrapper)
+- Package-level `__all__` (assumed)
 
 **Barrel Files:**
-
-- Not explicitly configured; assume standard pattern (index files re-export from subdirectories)
-- Example inferred: `lightrag/api/webui/` likely has index.ts/index.js
-- Example: `databasise/__init__.py` exports `run_wiring`, `TRACER_WORKSPACE`, `TRACER_KV_NAMESPACE` as public API
+- Pattern: index files re-export from subdirectories
+- Example: `lightrag/api/webui/` structure
 
 ---
 
-*Convention analysis: 2026-08-31*
+*Convention analysis: 2026-09-03*

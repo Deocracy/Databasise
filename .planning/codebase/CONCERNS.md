@@ -1,12 +1,7 @@
----
-last_mapped_commit: 9160a53de8976defcfb11b138253156fd5050ecd
-last_mapped_at: 2026-08-31
----
-<!-- refreshed: 2026-08-31 -->
-
+<!-- refreshed: 2026-09-03 -->
 # Codebase Concerns
 
-**Analysis Date:** 2026-08-31
+**Analysis Date:** 2026-09-03
 
 ## Known Bugs & Frozen Defects
 
@@ -27,6 +22,16 @@ last_mapped_at: 2026-08-31
 - **File:** `v1/lightrag/llm/openai.py:225`
 - **Impact:** Cached errors can cause misleading responses on cache hits
 - **Priority:** Low — likely edge case related to token length handling
+
+**Phase 3 Entity/Relation Hydration Crashes:**
+
+- **Issue:** Three decomposed query arms (`hybrid`, `local`, `global`) crash before completing retrieval
+  - `hybrid`/`local`: node 'entity-hydrate-expand' raises `NodeExecutionError: 'entity_name'`
+  - `global`: node 'relation-hydrate-expand' raises `NodeExecutionError: 'src_id'`
+- **Files:** `databasise/parts_core/lightrag/entity_hydrate_expand.py`, `databasise/parts_core/lightrag/relation_hydrate_expand.py`
+- **Impact:** Cannot measure retrieval-level parity for these arms; they degrade and halt before reaching answer generation
+- **Scope:** Out of Phase 3 scope; discovered and documented in `databasise/evidence/PARITY-EVIDENCE.md`'s per-arm degradation notes
+- **Priority:** High — blocks Phase 3's full MODAL-01 verification; requires repair before Phase 6's cross-modality comparison
 
 ## Tech Debt & Code Complexity
 
@@ -349,6 +354,7 @@ last_mapped_at: 2026-08-31
 - **Gap:** No stress tests for concurrent node execution with real semaphore contention
 - **Gap:** No integration test for ledger append-only correctness under concurrent access (Phase 1 does not exercise real promotion)
 - **Gap:** No end-to-end test of artifact scope filtering (write scope vs. discover scope)
+- **Gap:** No recovery test for hydration nodes with missing or malformed entity/relation attributes
 
 ## Scaling Limits
 
@@ -443,6 +449,22 @@ last_mapped_at: 2026-08-31
 - **Mitigation:** Store lifecycle must be coordinated by runner; databasise doesn't provide resource pooling
 - **Impact:** Long-running processes accumulating store instances (unlikely in Phase 1, possible if stores are created per-namespace dynamically)
 
+## Stray Artifacts & Environment Issues
+
+**Audit Stderr Output Files:**
+
+- **Files:** `databasise/audit_stderr_bypass.txt`, `audit_stderr_global.txt`, `audit_stderr_hybrid.txt`, `audit_stderr_local.txt`, `audit_stderr_naive.txt` (all empty, Sep 1 2026)
+- **Purpose:** Captured stderr from Phase 3 parity comparison runs (one per arm)
+- **Status:** Untracked; left in repo by audit/comparison script
+- **Impact:** No functional impact; should be gitignored or removed
+
+**Pinned Parity Environment Configuration:**
+
+- **File:** `v1/parity-env.txt` (997 bytes, Sep 1 2026)
+- **Purpose:** Frozen config for deterministic parity runs (provider pin, storage family, rerank disabled, LLM cache disabled)
+- **Status:** Untracked; symlinked to `v1/.env.parity` for parity run isolation
+- **Impact:** Necessary for Phase 3 reproducibility; should be documented and possibly tracked
+
 ---
 
-*Concerns audit: 2026-08-31*
+*Concerns audit: 2026-09-03*
