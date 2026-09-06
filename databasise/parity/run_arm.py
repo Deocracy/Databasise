@@ -71,6 +71,21 @@ class MissingParityEnvError(RuntimeError):
         )
 
 
+class MissingParityEnvKeyError(RuntimeError):
+    """Raised when ``.env.parity`` exists but is missing (or misspells) one of the keys
+    ``_build_clients`` requires — named rather than a bare ``KeyError``, per this module's own
+    "refusals over silent fallbacks" house style (WR-01).
+    """
+
+    def __init__(self, missing_keys: list[str]):
+        self.missing_keys = missing_keys
+        super().__init__(
+            f"v1/.env.parity is missing required key(s): {', '.join(missing_keys)} — "
+            "see v1/README-PARITY.md to recreate it, or pass an explicit clients= mapping to "
+            "run_arm() to bypass real-client construction"
+        )
+
+
 def _load_env_file(path: Path) -> dict[str, str]:
     """A minimal ``KEY=VALUE`` parser for the flat, already-established ``.env.parity`` shape
     (blank lines and ``#``-prefixed comments skipped, optional matching quote pair stripped) —
@@ -99,10 +114,26 @@ def _load_env_file(path: Path) -> dict[str, str]:
     return env
 
 
+_REQUIRED_ENV_KEYS = (
+    "LLM_BINDING_HOST",
+    "LLM_MODEL",
+    "LLM_BINDING_API_KEY",
+    "EMBEDDING_BINDING_HOST",
+    "EMBEDDING_MODEL",
+    "EMBEDDING_BINDING_API_KEY",
+)
+
+
 def _build_clients(env: dict[str, str]) -> dict[str, Any]:
     """One ``OpenAICompatibleClient`` construction shape (D-07) reaches both the LLM and the
     embedding endpoint the pinned config names — real network calls, never a cache, never a stub.
+
+    WR-01: refuses with a named ``MissingParityEnvKeyError`` naming every absent key, rather than
+    a bare ``KeyError`` on whichever key happens to be read first.
     """
+    missing = [key for key in _REQUIRED_ENV_KEYS if key not in env]
+    if missing:
+        raise MissingParityEnvKeyError(missing)
     llm = OpenAICompatibleClient(
         base_url=env["LLM_BINDING_HOST"],
         model=env["LLM_MODEL"],

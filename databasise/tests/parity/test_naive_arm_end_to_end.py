@@ -17,7 +17,7 @@ import numpy as np
 import pytest
 from databasise.clients.base import ChatResult, EmbeddingResult
 from databasise.parts.registry import default_registry
-from databasise.parity.run_arm import _inject_query, run_arm
+from databasise.parity.run_arm import MissingParityEnvKeyError, _build_clients, _inject_query, run_arm
 from databasise.parity.run_comparison import _inject_pinned_keywords
 from databasise.runner import scheduler
 from databasise.runner.trace import TokenAccounting
@@ -27,6 +27,36 @@ from databasise.validator.parse import parse_wiring
 from databasise.wirings.resolve import declared_node_ids, load_base, resolve_arm, resolved_node_ids
 
 _ALL_ARMS = ("naive", "bypass", "hybrid", "local", "global")
+
+
+# --------------------------------------------------------------------------------------------- #
+# WR-01: _build_clients names the refusal instead of a bare KeyError
+# --------------------------------------------------------------------------------------------- #
+
+
+def test_build_clients_raises_a_named_error_naming_every_missing_key():
+    with pytest.raises(MissingParityEnvKeyError) as exc_info:
+        _build_clients({"LLM_BINDING_HOST": "http://x", "LLM_MODEL": "m"})
+
+    assert "LLM_BINDING_API_KEY" in exc_info.value.missing_keys
+    assert "EMBEDDING_BINDING_HOST" in exc_info.value.missing_keys
+    assert "EMBEDDING_MODEL" in exc_info.value.missing_keys
+    assert "EMBEDDING_BINDING_API_KEY" in exc_info.value.missing_keys
+
+
+def test_build_clients_succeeds_when_every_required_key_is_present():
+    clients = _build_clients(
+        {
+            "LLM_BINDING_HOST": "http://llm",
+            "LLM_MODEL": "llm-model",
+            "LLM_BINDING_API_KEY": "llm-key",
+            "EMBEDDING_BINDING_HOST": "http://embed",
+            "EMBEDDING_MODEL": "embed-model",
+            "EMBEDDING_BINDING_API_KEY": "embed-key",
+        }
+    )
+
+    assert set(clients) == {"llm", "embedding"}
 
 
 # --------------------------------------------------------------------------------------------- #
