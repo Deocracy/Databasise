@@ -430,6 +430,103 @@ def test_render_not_measured_does_not_assert_agreement_for_an_arm_with_a_real_ex
     assert "no retrieval-level agreement claim is made for these arms at all" in text
 
 
+def test_render_not_measured_names_every_arm_when_degraded_and_excursion_states_mix(
+    tmp_path, monkeypatch
+):
+    """WR-01 (03-REVIEW.md, iteration 2): the CR-01 fix's `degraded_arms`/`excursion_arms`/
+    `clean_arms` computation was gated behind an if/elif/else priority chain that picked exactly
+    one whole-document clause, so a future state mixing a degraded arm with a non-degraded
+    excursion arm would silently drop the excursion (and clean) arms from this section entirely.
+    This is the synthetic (non-real-data) fixture the prior review asked for: `hybrid` is
+    degraded, `local` has a real, non-empty, non-degraded excursion, and `global` is clean — every
+    graph arm falling in a different one of the three buckets. The fix must name all three, not
+    just `hybrid`'s.
+    """
+    for arm in ("naive", "bypass"):
+        records = [_completed_record(arm, "q1"), _completed_record(arm, "q2")]
+        if arm == "bypass":
+            for record in records:
+                record["retrieval_note"] = "no retrieval to compare"
+        else:
+            for record in records:
+                record["chunk_diff"] = dict(_ZERO_DIFF)
+        _write_comparison(tmp_path, arm, records)
+        _write_audit(
+            tmp_path,
+            arm,
+            {**_MINIMAL_AUDIT, "arm": arm, "status": "completed", "outcome": "clean"},
+        )
+
+    hybrid_record = _completed_record(
+        "hybrid",
+        "q1",
+        chunk_diff=dict(_ZERO_DIFF),
+        entity_diff=dict(_ZERO_DIFF),
+        relation_diff=dict(_ZERO_DIFF),
+        decomposed_run_record={
+            "degraded": True,
+            "degradation_reason": "crashed",
+            "stop_reason": None,
+            "nodes": [],
+        },
+    )
+    _write_comparison(tmp_path, "hybrid", [hybrid_record])
+    _write_audit(
+        tmp_path,
+        "hybrid",
+        {**_MINIMAL_AUDIT, "arm": "hybrid", "status": "completed", "outcome": "clean"},
+    )
+
+    local_excursion_diff = {
+        "decomposed_ids": ["a"],
+        "original_ids": ["a", "b"],
+        "symmetric_difference": ["b"],
+        "ranking_agreement": 0.5,
+        "first_disagreement_position": 1,
+    }
+    local_record = _completed_record(
+        "local",
+        "q1",
+        chunk_diff=dict(_ZERO_DIFF),
+        entity_diff=local_excursion_diff,
+        relation_diff=dict(_ZERO_DIFF),
+    )
+    _write_comparison(tmp_path, "local", [local_record])
+    _write_audit(
+        tmp_path,
+        "local",
+        {**_MINIMAL_AUDIT, "arm": "local", "status": "completed", "outcome": "clean"},
+    )
+
+    global_record = _completed_record(
+        "global",
+        "q1",
+        chunk_diff=dict(_ZERO_DIFF),
+        entity_diff=dict(_ZERO_DIFF),
+        relation_diff=dict(_ZERO_DIFF),
+    )
+    _write_comparison(tmp_path, "global", [global_record])
+    _write_audit(
+        tmp_path,
+        "global",
+        {**_MINIMAL_AUDIT, "arm": "global", "status": "completed", "outcome": "clean"},
+    )
+
+    monkeypatch.setattr(parity_report, "RESULTS_DIR", tmp_path)
+
+    text = parity_report._render_not_measured()
+
+    assert "`hybrid`'s decomposed run degraded" in text
+    assert (
+        "`local` completed without a decomposed-run degradation but measured a real, non-empty"
+        in text
+    )
+    assert (
+        "`global` completed without a decomposed-run degradation, so their measured "
+        "retrieval-level agreement" in text
+    )
+
+
 # --------------------------------------------------------------------------------------------- #
 # _run_state() and StaleDeviationCauseError (03-10-PLAN.md Task 2)
 # --------------------------------------------------------------------------------------------- #

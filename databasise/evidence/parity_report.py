@@ -1225,8 +1225,16 @@ def _render_not_measured() -> str:
         clean_arms = [
             arm for arm in graph_arms if arm not in degraded_arms and arm not in excursion_arms
         ]
+        # WR-01 (03-REVIEW.md, iteration 2): each bucket gets its own clause, checked
+        # independently rather than via an if/elif/else priority chain, so a future mixed
+        # state (e.g. one degraded arm alongside a non-degraded excursion arm) still names
+        # every arm instead of only the highest-priority bucket. `degraded_arms`/
+        # `excursion_arms`/`clean_arms` already partition `graph_arms` with no overlap (each
+        # comprehension excludes the buckets computed before it), so at most one clause per
+        # bucket is ever needed and every arm is named in exactly one clause.
+        arm_clauses = []
         if degraded_arms:
-            degradation_clause = (
+            arm_clauses.append(
                 f"and `{'`/`'.join(degraded_arms)}`'s decomposed run degraded before completing "
                 "a real retrieval (see the per-arm degradation notes above), so its measured "
                 "zero diff is not a validated agreement over non-trivial content"
@@ -1238,19 +1246,20 @@ def _render_not_measured() -> str:
                     "content"
                 )
             )
-        elif excursion_arms:
-            degradation_clause = (
+        if excursion_arms:
+            arm_clauses.append(
                 f"and `{'`/`'.join(excursion_arms)}` completed without a decomposed-run "
                 "degradation but measured a real, non-empty entity/relation disagreement rather "
                 "than an agreement (see the per-arm degradation notes and Verdict section) — no "
                 "retrieval-level agreement claim is made for these arms at all"
             )
-        else:
-            degradation_clause = (
+        if clean_arms:
+            arm_clauses.append(
                 f"and `{'`/`'.join(clean_arms)}` completed without a decomposed-run "
                 "degradation, so their measured retrieval-level agreement is not an artifact of "
                 "a halted run"
             )
+        degradation_clause = "; ".join(arm_clauses)
         second_paragraph = (
             "Separately, and specific to this render: the retrieval-level comparison **has** "
             "run — all five arms are `completed` (see \"What was compared\" and \"Per-arm "
