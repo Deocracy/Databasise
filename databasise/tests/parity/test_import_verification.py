@@ -238,6 +238,66 @@ async def test_real_v1_build_perturbed_vector_is_caught_and_named(v1_index_dir, 
     )
 
 
+async def test_real_v1_build_perturbation_below_old_rounding_grid_resolution_is_still_caught(
+    v1_index_dir, store_root
+):
+    """WR-03 (03-REVIEW.md, iteration 2): the sibling test above only proves the new per-vector
+    tolerance check still catches a *gross* difference (+1.0 on one component) — a shift the old
+    2-decimal rounding-grid hash this replaced would also have caught trivially, since it moves
+    the component nowhere near a grid boundary. It does not prove CR-02's actual claim that the
+    new check is *strictly stronger*.
+
+    This test picks a delta, relative to the real component's own value, that (a) stays inside
+    that component's 2-decimal rounding cell — so the old `round(vector, 2)` hash would see the
+    perturbed vector as byte-identical to the original and report no difference at all — while (b)
+    still exceeding `_VECTOR_TOLERANCE` (1e-4) by 10x, comfortably above the ~1e-5 noise ceiling,
+    so the new tolerance check still flags and names it. That combination — old check silent, new
+    check catches and names the id — is the concrete case CR-02 was implemented to close.
+    """
+    from databasise.parity.import_index import _VECTOR_TOLERANCE
+    from databasise.stores.vector import FaissVectorStore
+
+    workspace = await import_v1_index(v1_index_dir, store_root)
+
+    store = FaissVectorStore(namespace="entities", workspace=workspace, store_root=store_root)
+    perturbed_id, original_vector = next(iter(store.iter_vectors()))
+    v0 = float(original_vector[0])
+
+    # `upper_room`/`lower_room` (distance from v0 to each edge of its own 2-decimal rounding
+    # cell) always sum to the cell width (0.01), so the larger of the two is always >= 0.005 —
+    # comfortably above `min_delta` regardless of where this real component happens to sit,
+    # guaranteeing a delta that both clears `_VECTOR_TOLERANCE` and stays inside the cell.
+    min_delta = 10 * _VECTOR_TOLERANCE
+    rounded_v0 = round(v0, 2)
+    upper_room = (rounded_v0 + 0.005) - v0
+    lower_room = v0 - (rounded_v0 - 0.005)
+    delta = (min_delta + upper_room) / 2.0 if upper_room >= lower_room else -(min_delta + lower_room) / 2.0
+
+    perturbed_vector = original_vector.copy()
+    perturbed_vector[0] = np.float32(v0 + delta)
+
+    # Proves the delta sits below the old grid's resolution: the old check hashed
+    # `np.round(vector.astype("float32"), decimals=2)` over the whole vector, and only component
+    # 0 changed at all, so an unchanged rounded value there means the old whole-set hash would
+    # have been identical for original vs. perturbed.
+    assert round(float(perturbed_vector[0]), 2) == round(v0, 2)
+    assert abs(delta) > _VECTOR_TOLERANCE
+
+    await store.upsert([perturbed_id], perturbed_vector, [{}])
+    await store.index_done_callback()
+
+    result = await verify_import(v1_index_dir, store_root, workspace)
+
+    # Proves the new tolerance check still catches and names it, where the old rounding-grid hash
+    # would not have.
+    assert result.status == "inconclusive"
+    tolerance_violations = [v for v in result.violations if v.assertion == "vector-tolerance"]
+    assert any(v.offending_id == perturbed_id for v in tolerance_violations), (
+        f"expected a vector-tolerance violation naming {perturbed_id!r}, got: "
+        f"{result.violations}"
+    )
+
+
 async def test_real_imported_entities_and_relationships_are_non_empty_with_identifying_fields(
     v2_parity_store_dir,
 ):
