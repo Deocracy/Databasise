@@ -105,6 +105,12 @@ None yet.
 - **Cozo 0.7.6 is architecture-frozen** with four known correctness bugs and no upstream fixes expected; pin and vendor the wheel (Phase 1).
 - **Open research flags**: HippoRAG 2 porting scope (Phase 6 planning), graph-aware deletion semantics for shared entities (Phase 5 planning), sealed-set sizing/MDE (Phase 2 planning).
 
+## Deferred Verification
+
+| Phase | State | Resume |
+|-------|-------|--------|
+| 03 | verification_deferred_human | /gsd-verify-work 3 |
+
 ## Deferred Items
 
 Items acknowledged and carried forward from previous milestone close:
