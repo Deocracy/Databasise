@@ -46,6 +46,22 @@ Load it into a run with:
 cd v1 && set -a && . .env.parity && set +a
 ```
 
+**JSON-valued variables must be single-quoted.** `OPENAI_LLM_EXTRA_BODY` carries a JSON object
+(`'{"provider":{"order":["Alibaba"],"allow_fallbacks":false}}'`). `set -a && . .env.parity`
+sources this file through bash, and bash's quote-removal on an *unquoted* assignment strips the
+value's inner double quotes before the process ever sees it — the resulting string
+(`{provider:{order:[Alibaba],allow_fallbacks:false}}`) is not valid JSON, and every extraction
+call that reads it raises `JSONDecodeError` (03-11-PLAN.md's root-cause finding). Wrapping the
+value in single quotes, as shown above, makes the inner double quotes survive sourcing intact.
+Any other JSON-valued line added to this file later needs the same single-quoting.
+
+**This pinned v1 also carries one coercion fix in `lightrag/operate.py`'s
+`_merge_edges_then_upsert`:** every `BaseGraphStorage` backend's `get_edge()` returns attribute
+values as strings, so an existing edge's `weight` arrived as `"1.0"` and crashed on
+`float + str` the first time an entity was mentioned in 2+ documents; the fix wraps the read in
+`float(...)`. Recorded here so the original-arm identity stays honest — this is a bug fix to the
+pinned baseline, not a behavior change to what it measures (03-11-PLAN.md finding).
+
 ## Ingest run record (Task 2)
 
 The one-time v1 ingest run over the fixed corpus snapshot (`databasise/tests/fixtures/corpus/`)

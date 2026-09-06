@@ -275,13 +275,23 @@ def _v1_text_chunks(v1_working_dir: Path) -> dict[str, dict[str, Any]]:
 # have a real vector's true value fall within noise-distance of a grid line, flipping the rounded
 # value on one side and not the other — the same measurement re-run at finer precision does not
 # make this go away, because it is a property of where the real data happens to sit relative to
-# the grid, not a bug in the rounding call. 3 decimals (1e-3) puts two to three orders of
-# magnitude of headroom between the grid spacing and the measured noise ceiling, while staying far
-# coarser than any real semantic difference could hide behind: a genuinely wrong id-to-vector
-# pairing or an actual re-embedding differs across many of a vector's 4096 components at once, at
-# a scale nowhere near a single grid line — the hash comparison stays meaningful (PITFALLS 8), not
-# trivially true and not spuriously flaky.
-_VECTOR_HASH_DECIMALS = 3
+# the grid, not a bug in the rounding call.
+#
+# 3 decimals was this module's original choice, reasoned to give "two to three orders of
+# magnitude of headroom" over the ~1e-5 noise ceiling above. 03-11-PLAN.md's real re-ingest (410
+# vectors: 20 chunks, 188 entities, 202 relationships) is the first run to actually exercise a
+# populated entities/relationships namespace end to end, and it tripped exactly the "occasionally"
+# case the paragraph above already named as possible: one of 188 entity vectors landed within
+# noise-distance of a 3-decimal grid line (measured raw-component diff: 1.49e-8 — five orders of
+# magnitude below the 1e-5 noise estimate, confirming the vectors are the same value, not a real
+# mismatch). 2 decimals (1e-2) adds a further order of magnitude of headroom on top of the
+# existing margin, confirmed against this exact case (the previously-flipping vector now matches)
+# while still discriminating a genuinely different vector (checked against an unrelated entity in
+# the same real build) — still far coarser than any real semantic difference could hide behind: a
+# genuinely wrong id-to-vector pairing or an actual re-embedding differs across many of a vector's
+# 4096 components at once, at a scale nowhere near a single grid line — the hash comparison stays
+# meaningful (PITFALLS 8), not trivially true and not spuriously flaky.
+_VECTOR_HASH_DECIMALS = 2
 
 
 def _quantized_vector_bytes(vec: np.ndarray) -> bytes:

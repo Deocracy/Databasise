@@ -52,9 +52,77 @@ def _load_corpus_documents() -> list[tuple[str, str]]:
     return documents
 
 
+class UnparseableExtraBodyError(RuntimeError):
+    """Raised when an ``OPENAI_LLM_EXTRA_BODY``-shaped env var is set but not valid JSON — the
+    exact defect reproduced during 03-11-PLAN.md's planning: bash's quote-removal on an unquoted
+    ``.env.parity`` assignment strips the inner double quotes before the process ever sees the
+    value. Named so the refusal happens once at startup rather than once per chunk inside an
+    extraction call whose failure was previously visible only in per-document ``error_msg``.
+    """
+
+    def __init__(self, env_var: str, raw_value: str):
+        self.env_var = env_var
+        self.raw_value = raw_value
+        super().__init__(
+            f"{env_var} is set but is not valid JSON: {raw_value!r}. If this value is set in "
+            "v1/.env.parity (or v1/parity-env.txt), wrap it in single quotes so bash's "
+            "`set -a && . .env.parity` sourcing does not strip the inner double quotes — see "
+            "v1/README-PARITY.md."
+        )
+
+
 def _extra_body(env_var: str) -> dict:
     raw = os.getenv(env_var)
-    return json.loads(raw) if raw else {}
+    if not raw:
+        return {}
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise UnparseableExtraBodyError(env_var, raw) from exc
+
+
+def _validate_extra_body_env() -> None:
+    """Call every ``_extra_body``-consumed env var once at startup, before ``initialize_rag()``,
+    so an unparseable value refuses immediately instead of raising once per chunk inside an
+    extraction call.
+    """
+    _extra_body("OPENAI_LLM_EXTRA_BODY")
+
+
+def _all_documents_processed(working_dir: Path) -> tuple[bool, list[tuple[str, str]]]:
+    """Read back document statuses from ``kv_store_doc_status.json`` after ``finalize_storages()``.
+    Returns ``(all_processed, failures)`` where ``failures`` is a list of
+    ``(doc_id, error_msg)`` for every document not at status ``processed``.
+    """
+    status_path = working_dir / "kv_store_doc_status.json"
+    if not status_path.exists():
+        return False, [("<all>", f"doc status file not found at {status_path}")]
+    statuses = json.loads(status_path.read_text(encoding="utf-8"))
+    failures = [
+        (doc_id, record.get("error_msg", "<no error_msg recorded>"))
+        for doc_id, record in statuses.items()
+        if record.get("status") != "processed"
+    ]
+    return not failures, failures
+
+
+def _entity_and_relation_sidecars_both_empty(working_dir: Path) -> bool:
+    """The exact signature of the OPENAI_LLM_EXTRA_BODY defect: chunks present (naive/bypass
+    embed fine, never touching ``_extra_body``) while both extraction-derived sidecars are empty.
+    """
+
+    def _is_empty(name: str) -> bool:
+        path = working_dir / name
+        if not path.exists():
+            return True
+        try:
+            return not json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return True
+
+    return _is_empty("faiss_index_entities.index.meta.json") and _is_empty(
+        "faiss_index_relationships.index.meta.json"
+    )
 
 
 async def llm_model_func(
@@ -120,6 +188,12 @@ async def main() -> None:
         )
         raise SystemExit(1)
 
+    try:
+        _validate_extra_body_env()
+    except UnparseableExtraBodyError as exc:
+        print(str(exc), file=sys.stderr)
+        raise SystemExit(1) from exc
+
     documents = _load_corpus_documents()
     print(f"loaded {len(documents)} corpus documents from {_CORPUS_DIR}")
 
@@ -129,9 +203,31 @@ async def main() -> None:
         for doc_id, text in documents:
             print(f"ingesting {doc_id}...")
             await rag.ainsert(text, ids=doc_id, file_paths=f"{doc_id}.txt")
-        print(f"ingest complete. index written under {_WORKING_DIR}")
     finally:
         await rag.finalize_storages()
+
+    all_processed, failures = _all_documents_processed(_WORKING_DIR)
+    if not all_processed:
+        print(
+            f"ingest FAILED: {len(failures)} document(s) did not reach status 'processed':",
+            file=sys.stderr,
+        )
+        for doc_id, error_msg in failures:
+            print(f"  - {doc_id}: {error_msg}", file=sys.stderr)
+        raise SystemExit(1)
+
+    if _entity_and_relation_sidecars_both_empty(_WORKING_DIR):
+        print(
+            "ingest FAILED: every document reports status 'processed', but both "
+            "faiss_index_entities.index.meta.json and faiss_index_relationships.index.meta.json "
+            "are empty while chunks are present — this is the exact signature of the "
+            "OPENAI_LLM_EXTRA_BODY defect (extraction silently produced no entities/relations). "
+            "Refusing to report this as a completed ingest.",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+
+    print(f"ingest complete. index written under {_WORKING_DIR}")
 
 
 if __name__ == "__main__":
