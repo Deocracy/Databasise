@@ -138,7 +138,7 @@ class Databasise:
         del debug
         check_consumable(query_object, self.registry)
 
-        resolved = resolve_selector(selector, registry=self.registry)
+        resolved = resolve_selector(selector, registry=self.registry, store_root=self.store_root)
         resolved = _inject_query(resolved, query_object.text or "")
         resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
         parsed = parse_wiring(resolved, self.registry)

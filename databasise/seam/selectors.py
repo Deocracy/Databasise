@@ -29,11 +29,11 @@ dict returned by ``resolve_arm`` — never through ``ParsedWiring``, which drops
 (Pitfall 1; ``databasise/validator/parse.py`` carries only ``nodes``/``parts``/``deps``/
 ``node_order``/``report``).
 
-**The alias selector (Task 2; D-12, FA-06).** Reads the promotion ledger's own ``alias`` column
-(the 04-03 checkpoint's ``dedicated-alias-column`` answer — see ``_resolve_alias``'s own
-docstring for the exact lookup call and the field read to identify the active wiring). The
-registry is empty in this phase and every alias lookup refuses — the expected end state, not a
-defect; Phase 7's promote path is what appends the first real row.
+**The alias selector (this plan's Task 2; D-12, FA-06).** Reads the promotion ledger's own
+``alias`` column (the 04-03 checkpoint's ``dedicated-alias-column`` answer — see
+``_resolve_alias``'s own docstring for the exact lookup call and the field read to identify the
+active wiring). The registry is empty in this phase and every alias lookup refuses — the expected
+end state, not a defect; Phase 7's promote path is what appends the first real row.
 
 **The harness selector (Task 3; D-13, FA-05).** Reads the ordered ``harnesses`` array off the raw
 resolved dict, preserving declared order verbatim. No production wiring in this repository
@@ -69,6 +69,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
+from databasise.ledger.ledger import Ledger
 from databasise.parts.registry import PartRegistry
 from databasise.seam.refusals import ForbiddenSelectorInputError, UnsatisfiableSelectorError
 from databasise.validator.depth import effective_depth
@@ -205,9 +206,31 @@ def resolve_selector(
 
 
 def _resolve_alias(alias: str, *, store_root: str | Path) -> dict[str, Any]:
-    """Placeholder pending Task 2 — raises rather than falling through to the default."""
-    del alias, store_root
-    raise NotImplementedError("the alias selector is this plan's Task 2 deliverable")
+    """The §18.4 alias branch (D-12, FA-06). Read-only: never appends to the ledger — running an
+    arm MUST NOT append (§6); only Phase 7's promote path does.
+
+    **The read contract Phase 7 inherits.** The lookup call is ``Ledger(store_root).by_alias
+    (alias)`` — the active-pointer projection over the additive ``alias`` column (the 04-03
+    checkpoint's ``dedicated-alias-column`` answer; see ``databasise/ledger/ledger.py``'s own
+    module docstring). The field read off the returned record to identify the active wiring is
+    ``mutation_id`` — resolved as an arm name via ``resolve_arm`` exactly like every other
+    selector branch. For this read to succeed, Phase 7's promote path must append a
+    ``LedgerRecord`` whose ``alias`` column holds the promoted alias string and whose
+    ``mutation_id`` holds the arm name identifying the promoted wiring. The registry is empty in
+    this phase, so every lookup here raises :class:`UnsatisfiableSelectorError` — the expected,
+    correct end state, not a defect (D-12/FA-06).
+
+    An empty registry and a registry holding other, non-matching rows raise the identical
+    refusal, naming only the consumer's own ``alias`` value — never a mutation_id or wiring id the
+    registry does hold (§18.2's closed set, applied to this branch; the distinction between "no
+    aliases exist" and "your alias is not one of them" is itself the disclosure the no-enumeration
+    rule forbids).
+    """
+    ledger = Ledger(store_root)
+    record = ledger.by_alias(alias)
+    if record is None:
+        raise UnsatisfiableSelectorError(selector_kind="alias", requested=alias)
+    return resolve_arm(record.mutation_id)
 
 
 def _resolve_harness(
