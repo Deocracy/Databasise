@@ -1,127 +1,96 @@
 ---
 phase: 03-lightrag-query-side
-fixed_at: 2026-09-01T00:00:00Z
+fixed_at: 2026-09-06T01:45:00Z
 review_path: .planning/phases/03-lightrag-query-side/03-REVIEW.md
 iteration: 1
-fix_scope: all
-findings_in_scope: 3
+findings_in_scope: 4
 fixed: 3
-skipped: 0
-status: all_fixed
-fixes:
-  - id: CR-01
-    file: databasise/parts_core/lightrag/keywords.py
-    commit: 8bf1357
-    outcome: fixed
-  - id: CR-01 (deviation record)
-    file: databasise/evidence/DECLARED-DEVIATIONS.md
-    commit: 03dfe05, 09cdcef
-    outcome: fixed
-  - id: WR-01
-    file: databasise/runner/scheduler.py
-    commit: 9c3d929
-    outcome: fixed
-  - id: IN-01
-    file: databasise/parity/run_arm.py
-    commit: 0588d53
-    outcome: fixed
+skipped: 1
+status: partial
 ---
 
 # Phase 03: Code Review Fix Report
 
-**Fixed at:** 2026-09-01
+**Fixed at:** 2026-09-06T01:45:00Z
 **Source review:** .planning/phases/03-lightrag-query-side/03-REVIEW.md
 **Iteration:** 1
 
 **Summary:**
-
-- Findings in scope: 3 (fix_scope=all, so Info tier was included this pass)
+- Findings in scope (Critical + Warning): 4
 - Fixed: 3
-- Skipped: 0
+- Skipped: 1
+
+Verification for all three fixes ran in the isolated worktree
+(`.claude/worktrees/rf-03-2098297-1788658415`, fast-forwarded into `main` after this report was
+written): `uv run pytest -q` (441 passed, 3 skipped, 1 deselected — the deselected test hits live
+OpenRouter endpoints) plus a manual run of `uv run python -m databasise.evidence.parity_report
+--check-results` to confirm the WR-03 CLI output by hand.
 
 ## Fixed Issues
 
-### CR-01: `embedder-query` embeds an empty string for every arm that keeps the `keywords` node
+### CR-01: `entity-hydrate-expand`/`relation-hydrate-expand` crash the whole node on any seed item missing its expected key
 
-**Files modified:** `databasise/parts_core/lightrag/keywords.py`, `databasise/parity/run_arm.py`, `databasise/tests/parts_core/lightrag/test_naive_arm_parts.py`, `databasise/tests/parity/test_naive_arm_end_to_end.py`, `databasise/evidence/DECLARED-DEVIATIONS.md`
-**Commits:** `8bf1357`, `03dfe05`, `09cdcef` (orchestrator follow-up: `DECLARED-DEVIATIONS.md` is rendered by `parity_report.main()`, so the hand-added deviation section was moved into `render_deviations_markdown()` and covered by an on-disk-matches-render test; suite after: 419 passed, 4 skipped)
-**Applied fix:** `keywords.py`'s `_keywords_body` now emits `"query": query` in both the
-pinned-replay and live-call branches, matching `embedder_query.py`'s `_query_text` reader.
+**Files modified:** `databasise/parts_core/lightrag/entity_hydrate_expand.py`, `databasise/parts_core/lightrag/relation_hydrate_expand.py`, `databasise/tests/parts_core/lightrag/test_graph_half_parts.py`
+**Commit:** 1827695
+**Applied fix:** Mirrored the existing absent-graph-node → `missing_seeds` pattern for a malformed
+seed. `entity_hydrate_expand.py` now uses `seed.get("entity_name")` instead of a bare subscript; a
+seed with no `entity_name` is appended to `missing_seeds` with `malformed_seed: True` and a
+`diagnostic` string naming the missing field, instead of raising `KeyError`. The symmetric change
+was applied to `relation_hydrate_expand.py` for `src_id`/`tgt_id` (diagnostic names whichever of
+the two is absent). All `seed["id"]` reads were also switched to `seed.get("id")` for consistency,
+so a seed missing `id` no longer raises either. Docstrings for both modules were updated to state
+the malformed-seed rule alongside the existing absent-node rule. Added two regression tests (one
+per module) asserting a seed missing the required field lands in `missing_seeds` with the expected
+diagnostic rather than raising.
 
-Reading the code before applying the reviewer's suggested diff surfaced a second, connected gap
-the review itself did not call out: `run_arm.py`'s `_inject_query()` only ever stamped
-`config["query"]` onto the `embedder-query` and `generate` nodes, never onto `keywords` itself —
-so even with the output-shape fix, `_keywords_body`'s own `query = str(config.get("query", ""))`
-was always `""` in every real run (not only when `keywords` is pinned), making the shape fix a
-no-op in production. Extended `_inject_query` to also stamp `keywords`, closing the actual root
-cause. This was caught by writing the new scheduler-level test (below) against the real injection
-path rather than a hand-built `NodeContext` — the test failed against the shape-only fix and
-passed once the injection gap was closed.
+### WR-01: `run_arm._build_clients` reads four required `.env.parity` keys with bare subscript access
 
-Also fixed the misleading unit test in `test_naive_arm_parts.py`
-(`test_embedder_query_prefers_the_keywords_node_output_when_present`), which previously stubbed a
-`{"query": ...}`-only `keywords` output shape the real body never produces; it now stubs the real
-shape (`high_level_keywords`/`low_level_keywords`/`query`/`tokens`).
+**Files modified:** `databasise/parity/run_arm.py`, `databasise/tests/parity/test_naive_arm_end_to_end.py`
+**Commit:** 35898e8
+**Applied fix:** Added a named `MissingParityEnvKeyError` (mirroring the existing
+`MissingParityEnvError` for the absent-file case) and a `_REQUIRED_ENV_KEYS` tuple of all six keys
+`_build_clients` needs. `_build_clients` now checks for every missing key up front and raises
+`MissingParityEnvKeyError` naming all of them, instead of a bare, unnamed `KeyError` on whichever
+key happens to be read first. `storage_audit.run_audit` reuses this same helper, so the fix reaches
+both callers with no further change. Added two tests: one asserting the new error names every
+missing key, one asserting normal construction still succeeds when all six keys are present.
 
-Added `test_hybrid_arm_embedder_query_embeds_the_real_query_text_via_run_wiring` in
-`test_naive_arm_end_to_end.py`: runs the resolved `hybrid` arm through the real
-`databasise.runner.scheduler.run_wiring` (via `resolve_arm`/`_inject_query`/
-`_inject_pinned_keywords`/`parse_wiring`, not a hand-built `NodeContext`) with `keywords` pinned
-and a spy embedding client, asserting the embedded text is non-empty and equals the injected
-query. Downstream nodes (`entity-lookup`/`relation-lookup`) have no store access in this test and
-fail with `StoreNotWiredError`, scoring the run `partial` — expected and asserted against, per the
-module's own "partial outcomes are never discarded" contract; the assertion is against
-`embedder-query`'s own captured result, not full-run completion.
+### WR-03: `check_results()` has no rule catching a `status="completed"` record whose `decomposed_run_record.degraded=true` alongside a vacuous zero diff
 
-Added a manual entry to `databasise/evidence/DECLARED-DEVIATIONS.md` recording that v2's
-`entity-lookup`/`relation-lookup` embed one raw-query vector where v1 embeds two separate
-keyword-derived vectors (`", ".join(ll_keywords)` / `", ".join(hl_keywords)`) — a structural
-consequence of the frozen v2 wiring (one shared `embedder-query` node), not something this fix
-changes, and not yet a measured excursion since no completed parity comparison run exists.
-
-### WR-01: `_validated_token_allowance` does not refuse a negative `config.token_allowance`
-
-**File modified:** `databasise/runner/scheduler.py`, `databasise/tests/runner/test_scheduler.py`
-**Commit:** `9c3d929`
-**Applied fix:** Mirrored `_validated_max_concurrency`'s shape exactly, per the review's suggested
-fix: coerce to `int`, then refuse any value `< 0` with `InvalidTokenAllowanceError`, naming the
-offending node, before any node is dispatched. Updated the error's message from "must be
-coercible to int" to "must be >= 0" so it stays accurate for the new negative-value refusal path
-too. Added `test_3c_negative_token_allowance_is_refused_at_validation_naming_the_node`, mirroring
-the existing `test_3_max_concurrency_0_is_refused_at_validation_naming_the_node`.
-
-### IN-01: `_load_env_file` is duplicated between `run_arm.py` and `v1_arm.py`
-
-**Files modified:** `databasise/parity/run_arm.py`, `databasise/parity/v1_arm.py`
-**Commit:** `0588d53`
-**Applied fix:** Applied the review's suggested fix exactly: a one-line cross-referencing comment
-on each `_load_env_file` definition, stating the absent-file behavior asymmetry (raise vs. return
-`{}`) is deliberate. No behavior change; the two copies remain duplicated, not merged, per the
-original finding's own stated house-style reasoning (each caller's dependency surface stays
-obvious).
+**Files modified:** `databasise/evidence/parity_report.py`, `databasise/tests/parity/test_parity_evidence.py`
+**Commit:** b54d7b8
+**Applied fix:** Per the review's option (b): added `_degraded_but_vacuous_arms()`, which scans each
+arm's committed comparison file for a `status="completed"` record whose
+`decomposed_run_record.degraded` is true and whose `chunk_diff`/`entity_diff`/`relation_diff` are
+all empty — the exact shape `check_results()`'s existing rules cannot see. `check_results()`
+itself is left unchanged (the `degraded`/`degradation_reason` fields are already honestly
+disclosed on the record, so this is not a new provenance violation); instead, `main()`'s
+`--check-results` CLI path now calls the new helper and, when it returns any arms, prints
+`"clean (5 arms, 3 degraded — `hybrid`, `local`, `global` measured a zero diff only because the
+decomposed run crashed before completing a real retrieval; see PARITY-EVIDENCE.md for
+disclosure)"` instead of a bare `"clean (5 arms)"`. Manually confirmed against the real committed
+`parity_results/` directory. Added three tests: a synthetic degraded-vacuous record is flagged, a
+synthetic clean completed record is not flagged, and a non-vacuous proof against the real committed
+data names exactly `hybrid`/`local`/`global` (the three arms CR-01's crash currently affects).
 
 ## Skipped Issues
 
-None — all three in-scope findings were fixed.
+### WR-02: `human_findings.json`'s two `declared_causes` entries are AI-authored, not human-authored
 
-## Verification
-
-Ran inside the isolated review-fix worktree
-(`.claude/worktrees/rf-03-480454-1788303784`, branch `gsd-reviewfix/03-480454`), not the main
-checkout — reproducing these exact counts from the main checkout after cleanup requires checking
-out the fast-forwarded commits on `main` and re-running the same commands there.
-
-- `uv run pytest -q` (full `databasise` suite): **418 passed, 4 skipped** (up from the pre-fix
-  baseline's 416 passed, 4 skipped — the +2 are `test_3c_negative_token_allowance_is_refused_...`
-  and `test_hybrid_arm_embedder_query_embeds_the_real_query_text_via_run_wiring`).
-- `uv run ruff check .`: **27 errors**, identical in count, file, and line to the pre-fix baseline
-  (verified via `git diff 3dabb02 HEAD --stat` cross-checked against a `ruff check` run against
-  the pre-fix commit) — no new ruff errors introduced by any of these fixes, including the two
-  touched test files that already carried pre-existing `I001` import-sort findings before this
-  pass.
+**File:** `databasise/evidence/human_findings.json:12-14,26-27`, `databasise/evidence/DECLARED-DEVIATIONS.md:9-10`
+**Reason:** CONTRACT §5 requires a human-authored cause for every named excursion. This agent
+cannot fabricate a human-authored replacement — that would create a false attestation of human
+review that did not happen, which is worse than the disclosed gap already on file. Verified the
+review's fallback condition instead: both files' `recorded_by` fields already read `"Claude (AI
+agent, gsd-code-fixer) — commit 2ce3c30; NOT recorded by the human owner, despite this file's own
+name"` — the provenance is accurately and honestly labelled today, matching what the review itself
+noted ("This is honestly disclosed... which is why this is a Warning rather than a Critical"). No
+further mechanical change closes the underlying gap; it requires the human owner to actually
+review and re-record the two causes (fix option (a) in the review), which is out of scope for this
+automated fixer.
 
 ---
 
-_Fixed: 2026-09-01_
+_Fixed: 2026-09-06T01:45:00Z_
 _Fixer: Claude (gsd-code-fixer)_
 _Iteration: 1_
