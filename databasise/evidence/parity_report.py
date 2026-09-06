@@ -267,6 +267,38 @@ def check_results(results_dir: Path | None = None) -> list[ProvenanceViolation]:
     return violations
 
 
+def _degraded_but_vacuous_arms(results_dir: Path | None = None) -> list[str]:
+    """Arm names whose committed comparison file has at least one ``status="completed"`` record
+    with ``decomposed_run_record.degraded=true`` and every comparison-number diff empty — such a
+    record satisfies every rule :func:`check_results` checks (required keys present, no number
+    alongside ``inconclusive``) but its zero diffs reflect a crashed run that never completed a
+    real retrieval, not a validated retrieval-level agreement (WR-03, ``03-REVIEW.md``). Used only
+    to qualify the CLI's "clean" success line — it is not itself a :class:`ProvenanceViolation`,
+    since the ``degraded``/``degradation_reason`` fields are already honestly disclosed on the
+    record; the gap is that a reader of the CLI's bare "clean" line would not otherwise know.
+    """
+    results_dir = results_dir or RESULTS_DIR
+    degraded_arms: list[str] = []
+    for arm in ARMS:
+        comparison_path = results_dir / f"{arm}-comparison.json"
+        if not comparison_path.exists():
+            continue
+        records = json.loads(comparison_path.read_text(encoding="utf-8"))
+        for record in records:
+            if record.get("status") != "completed":
+                continue
+            if not record.get("decomposed_run_record", {}).get("degraded"):
+                continue
+            all_empty = all(
+                not (record.get(key) or {}).get("symmetric_difference")
+                for key in ("chunk_diff", "entity_diff", "relation_diff")
+            )
+            if all_empty:
+                degraded_arms.append(arm)
+                break
+    return degraded_arms
+
+
 # --------------------------------------------------------------------------------------------- #
 # The declared-deviation record (CONTRACT §5) — Task 2's own refusal behavior
 # --------------------------------------------------------------------------------------------- #
@@ -1220,7 +1252,17 @@ def main(argv: list[str] | None = None) -> int:
             for v in violations:
                 print(f"VIOLATION: {v}", file=sys.stderr)
             return 1
-        print(f"parity_results/ provenance check: clean ({len(ARMS)} arms)")
+        degraded_arms = _degraded_but_vacuous_arms()
+        if degraded_arms:
+            degraded_list = ", ".join(f"`{arm}`" for arm in degraded_arms)
+            print(
+                f"parity_results/ provenance check: clean ({len(ARMS)} arms, "
+                f"{len(degraded_arms)} degraded — {degraded_list} measured a zero diff only "
+                "because the decomposed run crashed before completing a real retrieval; see "
+                "PARITY-EVIDENCE.md for disclosure)"
+            )
+        else:
+            print(f"parity_results/ provenance check: clean ({len(ARMS)} arms)")
         return 0
 
     deviations = _collect_deviations()
