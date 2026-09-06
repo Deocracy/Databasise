@@ -2360,8 +2360,14 @@ async def _merge_edges_then_upsert(
             already_edge = await knowledge_graph_inst.get_edge(src_id, tgt_id)
             # Handle the case where get_edge returns None or missing fields
             if already_edge:
-                # Get weight with default 1.0 if missing
-                already_weights.append(already_edge.get("weight", 1.0))
+                # Get weight with default 1.0 if missing. Coerced through float(): every
+                # BaseGraphStorage backend's get_edge() (CozoGraphStorage's _attrs_to_dict,
+                # NetworkXStorage's GraphML round-trip) returns attribute values as strings by
+                # design, so an existing edge's weight arrives here as e.g. "1.0", not 1.0 — left
+                # uncoerced, summing it against a freshly-extracted (always-float) weight below
+                # raised `TypeError: unsupported operand type(s) for +: 'float' and 'str'`
+                # (03-11-PLAN.md finding, reproduced on any entity mentioned in 2+ documents).
+                already_weights.append(float(already_edge.get("weight", 1.0)))
 
                 # Get source_id with empty string default if missing or None
                 if already_edge.get("source_id") is not None:

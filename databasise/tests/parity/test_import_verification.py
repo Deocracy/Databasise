@@ -203,3 +203,38 @@ async def test_real_v1_build_verifies_clean(v1_index_dir, store_root):
     assert result.status == "verified", (
         f"real Task 2 build failed D-02 verification: {result.violations}"
     )
+
+
+async def test_real_imported_entities_and_relationships_are_non_empty_with_identifying_fields(
+    v2_parity_store_dir,
+):
+    """03-11-PLAN.md Task 1(h): proves at the store boundary — through the store's own public
+    read surface, against the real re-imported index, never a synthetic fixture — that the
+    entity and relation vector namespaces the OPENAI_LLM_EXTRA_BODY defect emptied are now
+    populated and carry the exact fields whose absence produced the recorded
+    ``KeyError: 'entity_name'`` / ``KeyError: 'src_id'`` stop reasons.
+    """
+    from databasise.parity.import_index import _import_workspace
+    from databasise.stores.vector import FaissVectorStore
+
+    workspace = _import_workspace()  # same derivation import_index.py itself uses, not hardcoded
+
+    for kind, required_fields in (
+        ("entities", ("entity_name",)),
+        ("relationships", ("src_id", "tgt_id")),
+    ):
+        store = FaissVectorStore(namespace=kind, workspace=workspace, store_root=v2_parity_store_dir)
+        first_id, first_vector = next(iter(store.iter_vectors()), (None, None))
+        assert first_id is not None, f"{kind} vector namespace is empty in the imported store"
+
+        records = await store.query(first_vector, top_k=10_000)
+        assert records, f"{kind} query against the store's own data returned no records"
+
+        for record in records:
+            for field_name in required_fields:
+                value = record.get(field_name)
+                assert value, (
+                    f"{kind} record {record.get('id')!r} is missing a non-empty "
+                    f"{field_name!r} — this is the exact field whose absence produced the "
+                    f"recorded KeyError stop reason"
+                )
