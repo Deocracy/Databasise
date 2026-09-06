@@ -11,11 +11,14 @@ than a hardcoded arm name, and the ``RunRecord`` is redacted into a closed envel
 returned as the un-redacted dict ``run_arm`` returns. ``provides`` is read off the raw resolved
 dict, never through ``ParsedWiring`` (Pitfall 1) — ``run_arm.py``'s own precedent.
 
-**04-02 Task 1: evidence references.** Before the ``RunRecord`` (and the scheduler's raw
-``results`` dict) go out of scope, ``query()`` mints the envelope's ``evidence`` list from the
-naive arm's own retrieval position's output (``_EVIDENCE_RETRIEVAL_NODE_ID``, preserving that
-node's own output order verbatim — Task 2's own no-re-sort rule). Task 3, later in this same plan,
-wires the ``token_accounting`` breakdown alongside it.
+**04-02: evidence references and the token breakdown.** Before the ``RunRecord`` (and the
+scheduler's raw ``results`` dict) go out of scope, ``query()`` mints the envelope's ``evidence``
+list from the naive arm's own retrieval position's output (``_EVIDENCE_RETRIEVAL_NODE_ID``,
+preserving that node's own output order verbatim — Task 2's own no-re-sort rule) and assembles the
+``token_accounting`` breakdown from every node's own ``TokenAccounting`` (``databasise.seam.tokens
+.assemble_token_breakdown``). The breakdown assembly raises before any envelope is constructed if a
+node reports the ``unbudgetable`` sentinel (D-08) — that exception is left to propagate out of
+``query()`` unmodified.
 """
 
 from __future__ import annotations
@@ -38,6 +41,7 @@ from databasise.seam.evidence import (
 )
 from databasise.seam.query import QueryObject, check_consumable
 from databasise.seam.selectors import Selector, resolve_selector
+from databasise.seam.tokens import assemble_token_breakdown
 from databasise.stores.graph import CozoGraphStore
 from databasise.stores.kv import SqliteKVStore
 from databasise.stores.vector import MultiNamespaceVectorStore
@@ -206,6 +210,10 @@ class Databasise:
         retrieval_items = retrieval_output["items"] if isinstance(retrieval_output, dict) else []
         evidence = mint_evidence_refs(retrieval_items, namespace=CHUNKS_NAMESPACE)
 
+        # Task 3 (04-02): raises UnbudgetableParticipantError before any envelope is constructed if
+        # a node reports the unbudgetable sentinel (D-08) — left to propagate unmodified.
+        token_accounting = assemble_token_breakdown(record.nodes)
+
         return ResponseEnvelope(
             answer=answer,
             evidence=evidence,
@@ -214,6 +222,7 @@ class Databasise:
             degraded=record.degraded,
             stop_reason=record.stop_reason,
             degradation_reason=record.degradation_reason,
+            token_accounting=token_accounting,
         )
 
     async def resolve_evidence(self, ref: EvidenceRef) -> dict[str, Any]:
