@@ -1,0 +1,22 @@
+{
+  "wiring_id": "harness-fixture",
+  "title": "Harness selector fixture (04-03-PLAN.md Task 3, FA-05) — declares two ordered harnesses. No production wiring in this repository declares a harness (every one of the five lightrag arms' own `harnesses` array is empty); this fixture exists solely to give the harness selector a real subject to resolve and dispatch, and is not itself a published arm.",
+  "wiring_version": "1",
+  "nodes": {
+    "pass": {
+      "component": "parts-core/passthrough@1.0.0",
+      "kind": "passthrough",
+      "deps": []
+    },
+    "call": {
+      "component": "parts-core/fake-llm-caller@1.0.0",
+      "kind": "llm-caller",
+      "effects": ["calls_llm", "writes_kv"],
+      "config": { "prompt": "harness fixture prompt", "token_allowance": 1000000 },
+      "deps": ["pass"]
+    }
+  },
+  "recipe": {},
+  "harnesses": ["first-stage-harness", "second-stage-harness"],
+  "provides": ["call"]
+}
