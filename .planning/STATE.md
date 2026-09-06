@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 04
 current_phase_name: The Seam
 status: executing
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-09-06T23:22:38.369Z"
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-09-06T23:58:31.102Z"
 last_activity: 2026-09-06
 last_activity_desc: Phase 04 execution started
-state_head: ce4e08919c89e5ffd2dfa34196c4038caa078570
+state_head: fcc3a05e36af66e7ccd7b579137ee1423ac07331
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 32
-  completed_plans: 29
+  completed_plans: 30
 milestone_name: milestone
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 04 (The Seam) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-09-06 — Phase 04 execution started
 
@@ -66,6 +66,7 @@ Progress: [██████████] 100%
 | Phase 03 P13 | 65min | 3 tasks | 16 files |
 | Phase 04 P01 | 30min | 3 tasks | 13 files |
 | Phase 04 P02 | 45min | 3 tasks | 8 files |
+| Phase 04 P03 | 70min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,9 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 04]: 04-01: the default selector resolves unconditionally to the naive arm; alias/capability/harness raise NotImplementedError naming 04-03 as owner rather than falling through silently.
 - [Phase 04]: Extracted a shared _StrictModel base into databasise/seam/_base.py to break the envelope<->evidence/tokens circular import (Pitfall 7) — envelope.py needs to import EvidenceRef/TokenBreakdownEntry from evidence.py/tokens.py to bind them into its own fields; those modules need the same strict base envelope.py's models use
 - [Phase 04]: EvidenceRef carries only ref/namespace/kind/score/tier, not the full §4 ChunkRef shape — corpus_id, recipe@version, ordinal, and content_hash are not available at the retrieval position today (FA-03); declared as a named limitation rather than shipping a reference that only looks like a ChunkRef
+- [Phase 04]: Checkpoint answer applied: dedicated-alias-column. Added an additive `alias TEXT` column to the ledger schema rather than overloading mutation_id, since the ledger is append-only and a Phase 7 row could never be disentangled later. Ledger.by_alias projects the active pointer keyed on alias; the seam's alias branch resolves the returned record's mutation_id as an arm name.
+- [Phase 04]: Capability selector tie-break is smallest-resolved-wiring-wins, not declared-arm-order: every arm's effect set is not disjoint from its neighbours' (bypass's calls_llm is a subset of every other arm's effects), so a declared-order tie-break would make every arm but naive permanently unreachable by capability alone.
+- [Phase 04]: The default selector's opaque exclusion (§8 condition 7) is scoped to the wiring's own provides node, not "contains an opaque node anywhere" — naive itself contains the dep-free embedder-index node at opaque structural depth, and a whole-wiring exclusion would have made the default selector unable to resolve naive at all.
 
 ### Pending Todos
 
@@ -127,6 +131,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-06T23:22:38.282Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-09-06T23:58:31.015Z
+Stopped at: Completed 04-03-PLAN.md
 Resume file: None
