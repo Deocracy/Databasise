@@ -48,6 +48,23 @@ def _ctx(
     )
 
 
+class _NamespaceRecordingVectorHandle:
+    """A fake multi-namespace vector handle (``databasise.stores.vector.MultiNamespaceVectorStore``'s
+    real call shape): records every namespace name ``select()`` was asked for, and returns the
+    single real per-namespace store this test wired underneath — see
+    ``test_graph_half_parts.py``'s own copy of this fake for why it is duplicated rather than
+    imported (IN-01: this codebase's own house style for small per-test-file doubles).
+    """
+
+    def __init__(self, store: Any):
+        self._store = store
+        self.selected_namespaces: list[str] = []
+
+    def select(self, namespace: str) -> Any:
+        self.selected_namespaces.append(namespace)
+        return self._store
+
+
 class _StubEmbeddingClient:
     """Returns ``vector`` for every input text, in order, plus a real, non-zero
     ``TokenAccounting`` — one call, ``len(texts)`` prompt tokens (one per requested text)."""
@@ -159,16 +176,18 @@ async def test_chunk_vector_returns_items_ordered_by_descending_score(store_root
         metadatas=[{"content": "low"}, {"content": "high"}, {"content": "mid"}],
     )
     await store.index_done_callback()
+    fake_vector = _NamespaceRecordingVectorHandle(store)
 
     ctx = _ctx(
         "chunk-vector",
         config={"top_k": 10},
         inputs={"embedder-query": {"vector": [1.0, 0.0, 0.0]}},
-        stores={"vector": store},
+        stores={"vector": fake_vector},
     )
 
     result = await LIGHTRAG_RETRIEVER_CHUNK_TOPK_PART.body(ctx)
 
+    assert fake_vector.selected_namespaces == ["chunks"]
     scores = [item["score"] for item in result["items"]]
     assert scores == sorted(scores, reverse=True)
     assert [item["id"] for item in result["items"]] == ["high", "mid", "low"]

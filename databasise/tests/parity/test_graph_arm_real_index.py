@@ -23,6 +23,10 @@ from databasise.parts_core.lightrag.entity_hydrate_expand import (
     LIGHTRAG_ENTITY_HYDRATE_EXPAND_PART,
 )
 from databasise.parts_core.lightrag.entity_lookup import LIGHTRAG_ENTITY_LOOKUP_PART
+from databasise.parts_core.lightrag.relation_hydrate_expand import (
+    LIGHTRAG_RELATION_HYDRATE_EXPAND_PART,
+)
+from databasise.parts_core.lightrag.relation_lookup import LIGHTRAG_RELATION_LOOKUP_PART
 
 
 def _ctx(
@@ -76,6 +80,56 @@ async def test_entity_lookup_and_hydrate_expand_against_the_real_imported_index(
         )
         assert len(hydrate_result["entities"]) >= 1, (
             "entity-hydrate-expand hydrated zero real graph nodes"
+        )
+    finally:
+        for store in stores.values():
+            await store.finalize()
+
+
+async def test_relation_lookup_and_hydrate_expand_against_the_real_imported_index(
+    v2_parity_store_dir,
+):
+    workspace = _import_workspace()
+    stores = _run_arm._build_stores(DEFAULT_STORE_ROOT, workspace)
+    try:
+        vector_handle = stores["vector"]
+        relationships_store = vector_handle.select("relationships")
+        _first_id, first_vector = next(iter(relationships_store.iter_vectors()), (None, None))
+        assert first_vector is not None, (
+            "relationships vector namespace is empty in the imported store"
+        )
+
+        lookup_ctx = _ctx(
+            "relation-lookup",
+            config={"top_k": 40},
+            inputs={"embedder-query": {"vector": first_vector.tolist()}},
+            stores={"vector": vector_handle},
+        )
+        lookup_result = await LIGHTRAG_RELATION_LOOKUP_PART.body(lookup_ctx)
+
+        assert lookup_result["items"], "relation-lookup returned no items against the real index"
+        for item in lookup_result["items"]:
+            assert item.get("src_id"), (
+                f"relation-lookup item {item.get('id')!r} carries no non-empty src_id — this is "
+                "the exact field whose absence produced the recorded NodeExecutionError: 'src_id'"
+            )
+            assert item.get("tgt_id"), (
+                f"relation-lookup item {item.get('id')!r} carries no non-empty tgt_id"
+            )
+
+        hydrate_ctx = _ctx(
+            "relation-hydrate-expand",
+            inputs={"relation-lookup": lookup_result},
+            stores={"graph": stores["graph"]},
+        )
+        hydrate_result = await LIGHTRAG_RELATION_HYDRATE_EXPAND_PART.body(hydrate_ctx)
+
+        assert hydrate_result["missing_seeds"] == [], (
+            f"relation-hydrate-expand reported missing seeds against the real graph: "
+            f"{hydrate_result['missing_seeds']}"
+        )
+        assert len(hydrate_result["relations"]) >= 1, (
+            "relation-hydrate-expand hydrated zero real graph edges"
         )
     finally:
         for store in stores.values():

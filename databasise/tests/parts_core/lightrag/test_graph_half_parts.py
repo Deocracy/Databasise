@@ -186,16 +186,18 @@ async def test_relation_lookup_returns_items_ordered_by_descending_score_with_en
         metadatas=[{"src_id": "A", "tgt_id": "B"}, {"src_id": "C", "tgt_id": "D"}],
     )
     await store.index_done_callback()
+    fake_vector = _NamespaceRecordingVectorHandle(store)
 
     ctx = _ctx(
         "relation-lookup",
         config={"top_k": 10},
         inputs={"embedder-query": {"vector": [1.0, 0.0, 0.0]}},
-        stores={"vector": store},
+        stores={"vector": fake_vector},
     )
 
     result = await LIGHTRAG_RELATION_LOOKUP_PART.body(ctx)
 
+    assert fake_vector.selected_namespaces == ["relationships"]
     assert [(item["src_id"], item["tgt_id"]) for item in result["items"]] == [("C", "D"), ("A", "B")]
     scores = [item["score"] for item in result["items"]]
     assert scores == sorted(scores, reverse=True)

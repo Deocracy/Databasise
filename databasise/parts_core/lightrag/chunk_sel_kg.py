@@ -23,10 +23,12 @@ the hook a caller MAY set to exercise the real path (this plan's own unit tests 
 **unpatched base wiring's own committed config carries no such key**, so a real run against it
 degrades straight to WEIGHT without this body ever fabricating a vector to query with — an honest,
 recorded architectural fact (03-06-SUMMARY.md), not a silently masked gap. Where a vector is
-supplied, ranking is delegated to ``ctx.stores["vector"].query(...)``'s own top-k search, filtered
-to this node's own candidate chunk-id set: the store this plan wires exposes no by-id vector
-lookup (unlike v1's ``chunks_vdb.get_vectors_by_ids``), so a local cosine re-computation over
-looked-up vectors is not this store's available surface.
+supplied, this position first selects its own ``chunks`` namespace off the multi-namespace vector
+handle (``databasise/stores/vector.py``'s ``MultiNamespaceVectorStore``) — never touched by the
+WEIGHT fallback branch — then ranking is delegated to that namespace's ``query(...)``'s own top-k
+search, filtered to this node's own candidate chunk-id set: the store this plan wires exposes no
+by-id vector lookup (unlike v1's ``chunks_vdb.get_vectors_by_ids``), so a local cosine
+re-computation over looked-up vectors is not this store's available surface.
 
 Declares ``reads_kv`` and ``reads_vector`` **unconditionally** — never conditional on
 ``config["pick_method"]`` — per CONTRACT §19.9's fallback-reachability rule: the declaration
@@ -44,6 +46,10 @@ _NAME_AT_VERSION = "lightrag/chunk-selector-kg@0.1.0"
 _GRAPH_FIELD_SEP = "<SEP>"  # v1/lightrag/constants.py:49, ported by copy (D-14 import boundary)
 _DEFAULT_RELATED_CHUNK_NUMBER = 5  # v1/lightrag/constants.py:58
 _DEFAULT_MIN_RELATED_CHUNKS = 1
+# This position's own vector namespace (v1's own per-kind naming, matching
+# databasise/parity/import_index.py's _VECTOR_KINDS) — selected only by the VECTOR pick-method
+# branch below; the WEIGHT fallback branch never selects or touches a vector namespace at all.
+_CHUNKS_NAMESPACE = "chunks"
 
 
 def _entities_with_chunks(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -137,7 +143,7 @@ async def _pick_by_vector_similarity(
     """
     if not all_chunk_ids or num_of_chunks <= 0:
         return []
-    store = ctx.stores["vector"]
+    store = ctx.stores["vector"].select(_CHUNKS_NAMESPACE)
     candidates = set(all_chunk_ids)
     results = await store.query(query_vector, top_k=max(num_of_chunks, len(all_chunk_ids)))
     picked = [r["id"] for r in results if r["id"] in candidates]
