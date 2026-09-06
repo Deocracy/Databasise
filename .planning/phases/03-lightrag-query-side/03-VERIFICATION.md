@@ -1,34 +1,72 @@
 ---
 phase: 03-lightrag-query-side
-verified: 2026-09-01T22:34:12Z
-status: human_needed
-score: 4/6 must-haves verified
-behavior_unverified: 2 # criteria 2 and 6 — harness/evidence machinery present and tested, but the live comparison run itself is environment-gapped on this machine
+verified: 2026-09-05T23:15:00Z
+status: gaps_found
+score: 2/4 must-haves verified (criteria 4/5 remain N/A — legitimately deferred to Phase 6, unchanged)
+behavior_unverified: 0
 overrides_applied: 0
-behavior_unverified_items:
-  - truth: "Owner runs the same corpus through the decomposed query side and the pre-decomposition original and reads an N-run variance band (criterion 2), inside criterion 6's deterministic retrieval-level substitute gate."
-    test: "Rebuild the v1 pinned environment (v1/README-PARITY.md), re-run v1's real ingest to produce v1/.venv, v1/.parity_working_dir, v1/.parity_v2_store, v1/.env.parity, then re-run `databasise.parity.run_comparison` for all five arms and `databasise.evidence.parity_report` to render PARITY-EVIDENCE.md."
-    expected: "Each arm's comparison status flips from `inconclusive` to `completed`, with a real N=5 keyword variance band and real chunk/entity/relation sym_diff numbers recorded, or every excursion outside tolerance recorded individually in DECLARED-DEVIATIONS.md."
-    why_human: "The comparison requires a real OpenRouter-backed v1 ingest run and a rebuilt parity environment that do not exist on this machine (v1/.venv, v1/.parity_working_dir, v1/.parity_v2_store, v1/.env.parity are all absent, gitignored, worktree-local artifacts). No grep or static check can produce the missing runtime data; only an owner-run comparison on a machine holding those artifacts can close this."
-  - truth: "Criterion 6's human spot-checks of answers are performed and recorded alongside the deterministic retrieval-level comparison."
-    test: "Once the v1 environment and imported index exist, run each of the corpus snapshot's 2 queries (q1, q2) through `databasise.parity.run_comparison --arm hybrid` and through v1 directly, then read both answers side by side and judge substance match."
-    expected: "A recorded human judgment (match / no-match, with notes) for each query pair, entered into PARITY-EVIDENCE.md or a successor evidence render."
-    why_human: "An LLM-generated answer's substance is not mechanically checkable, and no A/A floor exists yet (MACH-02/MACH-03 deferred to Phase 6) to make word-for-word equality the right bar — only a human judgment call substitutes for it, exactly as 03-VALIDATION.md's Manual-Only Verifications table already states."
-human_verification:
-  - test: "Rebuild the v1 pinned environment (v1/README-PARITY.md), re-run v1's real ingest to produce v1/.venv, v1/.parity_working_dir, v1/.parity_v2_store, v1/.env.parity, then re-run `databasise.parity.run_comparison` for all five arms and `databasise.evidence.parity_report` to render PARITY-EVIDENCE.md."
-    expected: "Each arm's comparison status flips from `inconclusive` to `completed`, with a real N=5 keyword variance band and real chunk/entity/relation sym_diff numbers recorded, or every excursion outside tolerance recorded individually in DECLARED-DEVIATIONS.md."
-    why_human: "Requires a real OpenRouter-backed v1 ingest run and rebuilt parity environment absent on this machine; not mechanically verifiable by grep/static check."
-  - test: "Once the v1 environment and imported index exist, run each of the corpus snapshot's 2 queries (q1, q2) through `databasise.parity.run_comparison --arm hybrid` and through v1 directly, then read both answers side by side and judge substance match."
-    expected: "A recorded human judgment (match / no-match, with notes) for each query pair."
-    why_human: "Answer substance is not mechanically checkable; no A/A floor exists yet to set an automatic bar."
+re_verification:
+  previous_status: human_needed
+  previous_score: 4/6
+  gaps_closed:
+    - "Environment gap closed: v1/.venv, v1/.parity_working_dir, v1/.parity_v2_store, v1/.env.parity were rebuilt and a real five-arm comparison actually ran (previously blocked all measurement)."
+    - "G-03-1 (evidence renderer crashing with UnreasonedDeviationError, PARITY-EVIDENCE.md 0 bytes) closed by 03-10-PLAN.md — the renderer now produces a non-empty, derived document from the completed run."
+  gaps_remaining:
+    - "Human spot-check of answer substance for q1/q2 — still not recorded (human_findings.json's answer_spotchecks is still an empty list)."
+  regressions: []
+gaps:
+  - truth: "Declared deviations carry a specific human-authored cause, per CONTRACT §5 and 03-10-PLAN.md's own must-have truth #2 ('...carrying a specific human-authored cause')"
+    status: failed
+    reason: "human_findings.json's two declared_causes entries (naive q1, q2) are recorded_by 'Claude (AI agent, gsd-code-fixer) — commit 2ce3c30; NOT recorded by the human owner, despite this file's own name'. 03-10-SUMMARY.md self-documents this as a finding (downgraded to 'MINOR' by the executor); 03-REVIEW.md's WR-02 independently re-raises it as an open Warning requiring human action, unresolved as of this verification's HEAD. The mechanism CR-01 built (a committed human-authored-cause input file) is real and tested, but no human has actually used it yet — the only two causes on file are AI-authored, which is exactly what CONTRACT §5 says must not stand in for a human's reasoning."
+    artifacts:
+      - path: "databasise/evidence/human_findings.json"
+        issue: "declared_causes[0].recorded_by and [1].recorded_by both name an AI agent, not the human owner"
+      - path: "databasise/evidence/DECLARED-DEVIATIONS.md"
+        issue: "Renders the AI-authored causes verbatim into the committed document without qualification beyond the honest recorded_by string"
+    missing:
+      - "The human owner (christopher@deocracy.org) reviews the two named naive excursions (q1: 2 chunk ids past rank 10, q2: 4 chunk ids past rank 10) and re-records declared_causes with their own reasoning and recorded_by, per WR-02's fix."
+  - truth: "The committed parity evidence (PARITY-EVIDENCE.md, DECLARED-DEVIATIONS.md, parity_results/{hybrid,local,global}-comparison.json) accurately reflects the current source code's behavior"
+    status: failed
+    reason: "Commit 1827695 (CR-01, landed today) changed entity_hydrate_expand.py/relation_hydrate_expand.py so the exact malformed-seed shape that produced 'NodeExecutionError: entity_name' / 'src_id' no longer raises at all — it now degrades one seed into missing_seeds and lets the node continue. The committed evidence documents were rendered before this fix (03-REVIEW.md's own WR-04 finding, still open) and still assert, as the current/live state, that hybrid/local/global 'degrade before completing a real retrieval' with this exact crash. No re-run has happened since the fix landed, so today's committed evidence describes pre-fix behavior that the current source no longer exhibits, and — separately — provides no evidence either way about whether the fixed code now completes a real retrieval for these three arms."
+    artifacts:
+      - path: "databasise/evidence/PARITY-EVIDENCE.md"
+        issue: "Verdict and per-arm sections (lines ~50,59,68,117,119,121,133,135,137) describe hybrid/local/global's NodeExecutionError crash as the current state; commit 1827695 has since changed this behavior"
+      - path: "databasise/evidence/parity_results/hybrid-comparison.json"
+        issue: "decomposed_run_record.stop_reason/degradation_reason still name the pre-fix KeyError('entity_name') crash"
+      - path: "databasise/evidence/parity_results/local-comparison.json"
+        issue: "Same stale stop_reason (KeyError('entity_name'))"
+      - path: "databasise/evidence/parity_results/global-comparison.json"
+        issue: "Same stale stop_reason (KeyError('src_id'))"
+    missing:
+      - "Re-run databasise.parity.run_comparison for hybrid/local/global and re-render databasise.evidence.parity_report now that CR-01 has landed, replacing the stale crash-based record with whatever the current code actually measures — or, if a re-run is deliberately deferred, an explicit dated note in PARITY-EVIDENCE.md stating the NodeExecutionError this document describes was patched by commit 1827695 after this evidence was rendered."
+  - truth: "Retrieval-level parity is measured (not a vacuous both-sides-empty zero) for the graph-half arms — hybrid, local, global (ROADMAP criterion 6)"
+    status: failed
+    reason: "hybrid/local/global's decomposed runs each halted before completing any real retrieval (NodeExecutionError on entity-hydrate-expand / relation-hydrate-expand); the original (v1) arm's recorded answer for the same query/arm pairs is also empty ('...[no-context]'). The recorded symmetric_difference=0 for chunk/entity/relation diffs on these 3 arms is both sides retrieving nothing, not a validated match — PARITY-EVIDENCE.md's own Verdict section states this explicitly ('not evidence of parity... a live defect this comparison surfaced'). No valid retrieval-level parity measurement exists today for 3 of the 5 wiring arms, including the two arms (hybrid, global) that most heavily exercise the KG-half decomposition this phase built."
+    artifacts:
+      - path: "databasise/evidence/parity_results/hybrid-comparison.json"
+        issue: "decomposed_run_record.partial=true, degraded=true — run never reached generate"
+      - path: "databasise/evidence/parity_results/local-comparison.json"
+        issue: "Same partial/degraded shape"
+      - path: "databasise/evidence/parity_results/global-comparison.json"
+        issue: "Same partial/degraded shape"
+    missing:
+      - "A completed retrieval-level comparison for hybrid/local/global where the decomposed run actually reaches generate on both sides (or at minimum reaches a real, non-empty retrieval to diff), following the CR-01 fix — or, absent that, an explicit declared deviation naming the crash as an accepted, out-of-scope defect for this phase rather than a vacuous zero standing in for parity."
+  - truth: "Criterion 6's human spot-checks of answers are performed and recorded alongside the deterministic retrieval-level comparison"
+    status: failed
+    reason: "human_findings.json's answer_spotchecks list is still empty. 03-UAT.md's test 2 remains [pending] (unchanged since the prior verification, now correctly re-pointed at the naive arm instead of hybrid). PARITY-EVIDENCE.md's own 'Human spot-check of answer substance' section renders both q1 and q2 as 'Not yet recorded.' The landing mechanism (03-10-PLAN.md's deliverable) is real, tested, and correctly wired into the renderer — but no human has performed the read yet."
+    artifacts:
+      - path: "databasise/evidence/human_findings.json"
+        issue: "answer_spotchecks: [] — no entries"
+    missing:
+      - "The human owner runs q1 and q2 through databasise.parity.run_comparison --arm naive and through v1 directly, reads both answers side by side, and records a match/no-match judgment with notes in human_findings.json's answer_spotchecks list, per 03-UAT.md test 2's corrected instructions."
 ---
 
 # Phase 3: LightRAG Query Side Verification Report
 
 **Phase Goal:** LightRAG's query path runs as fitted primitive parts and its parity against the original is measured, not asserted (§BP rung 2)
-**Verified:** 2026-09-01T22:34:12Z
-**Status:** human_needed
-**Re-verification:** No — initial verification
+**Verified:** 2026-09-05T23:15:00Z
+**Status:** gaps_found
+**Re-verification:** Yes — after gap closure (previous verification 2026-09-01, status human_needed, 4/6)
 
 ## Goal Achievement
 
@@ -36,103 +74,82 @@ human_verification:
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | Seventeen of eighteen §L.1 query-side positions run as fitted primitive-part nodes; the eighteenth (`embedder-index`) is authored as the one index-recipe node | ✓ VERIFIED | `databasise.parts_core.lightrag.LIGHTRAG_PARTS` has 15 registered `@0.1.0` parts (matches 18 wiring positions minus the 3 join-* and 2 budget-* positions that share one component each). `embedder-index@0.1.0` has `structural_depth='opaque'`, `artifact_scope='quarantined'`; `wirings/lightrag/base.json`'s `recipe.embedding` names it explicitly. Base wiring parses cleanly to 18 nodes via `parse_wiring` (verified this session). |
-| 2 | Owner runs the same corpus through the decomposed query side and the pre-decomposition original and reads an N-run variance band, or every excursion is a named declared deviation | ⚠️ PRESENT_BEHAVIOR_UNVERIFIED | The harness (`databasise/parity/run_comparison.py`, `parity_report.py`) is built, unit-tested (25 passed in `test_parity_evidence.py`), and its provenance check runs clean (`--check-results` → "clean (5 arms)"). But no live comparison has actually run on this machine: `PARITY-EVIDENCE.md` reports `inconclusive` for all 5 arms and both queries, because `v1/.venv`, `v1/.parity_working_dir`, `v1/.parity_v2_store`, `v1/.env.parity` are absent (gitignored, worktree-local artifacts from a different session). `DECLARED-DEVIATIONS.md` correctly reports "zero declared deviations" but flags this as "nothing has been measured yet," not a completed clean pass. |
-| 3 | Every fitted node reaches storage through a machine primitive only; the per-node ownership audit ships as part of the parity evidence | ✓ VERIFIED | No ported part under `databasise/parts_core/lightrag/` imports any `v1.*` module (grep confirmed). `check_import_boundary` exits 0. `_ScopedStoresView`/`_ScopedClientsView` in `runner/scheduler.py` route every store/client access through a `TouchRecorder` at one construction site. `storage_audit.py`'s `matched`/`no-touch`/`over-declared` states are reported distinctly (never collapsed into "compliant"), and the audit table ships inside `PARITY-EVIDENCE.md`'s "per-node storage-ownership audit" section (currently `inconclusive` for the same environment-gap reason as criterion 2). |
-| 4 | Eval bundle minted per RIG §EV.1/§EV.2 before decomposition work reads holdout | N/A — deferred to Phase 6 | `03-GATE-AMENDMENT.md` records the second deferral of MACH-02, citing `SELECTION.md` as governing document and naming Phase 6 as point of first need. ROADMAP.md lines 106-107 and REQUIREMENTS.md lines 16-17 both carry the amendment annotation. |
-| 5 | A/A calibration read, Falsifier 5 pass criterion met | N/A — deferred to Phase 6 | Same amendment record covers MACH-03; residual risk ("answer-level drift originating in `keywords` and `generate` stays unmeasured") stated plainly in the amendment and echoed in `PARITY-EVIDENCE.md`'s "What is not measured" section. |
-| 6 | Until the A/A floor exists, parity is checked at the retrieval level with deterministic, zero-token comparisons, plus human spot-checks of answers (D-05 substitute gate) | ⚠️ PRESENT_BEHAVIOR_UNVERIFIED | The deterministic retrieval-level diff machinery exists and is unit-tested (`test_retrieval_parity.py`: 11 passed, 1 skipped — the skip is the real two-arm live case). The `keywords` N-run variance band (D-12) is implemented and its own conformance is tested. But the actual comparison run and the human spot-check of answer substance have not been performed on this machine for the same environment-gap reason as criterion 2 — `03-VALIDATION.md`'s own Manual-Only Verifications table documents this as an open item. |
+| 1 | Seventeen of eighteen §L.1 query-side positions run as fitted primitive-part nodes; the eighteenth (`embedder-index`) is authored as the one index-recipe node | ✓ VERIFIED | `databasise.parts_core.lightrag.LIGHTRAG_PARTS` has 15 registered `@0.1.0` parts (confirmed by live import this session — unchanged from prior verification). `embedder-index@0.1.0` has `structural_depth='opaque'`, `artifact_scope='quarantined'`. |
+| 2 | Owner runs the same corpus through the decomposed query side and the pre-decomposition original and reads an N-run variance band, or every excursion is a named declared deviation under CONTRACT §5 | ✗ FAILED | The live five-arm comparison did run this time (environment gap closed). `naive`/`bypass` produced real, informative measurements. But the two naive excursions' declared causes are AI-authored, not human-authored as CONTRACT §5 and the plan's own must-have require (see gap 1); and `hybrid`/`local`/`global`'s measured "zero diff" is both sides retrieving nothing, not a real variance band or a validated deviation (see gap 3). |
+| 3 | Every fitted node reaches storage through a machine primitive only; the per-node ownership audit ships as part of the parity evidence | ✓ VERIFIED | No ported part imports `v1.*` (grep confirmed, unchanged). The audit ships inside `PARITY-EVIDENCE.md` and honestly distinguishes `naive`/`bypass`'s clean audits from `hybrid`/`local`/`global`'s crash-truncated ones — it does not claim compliance for nodes that never ran. This transparency is itself the correct behavior for this criterion. |
+| 4 | Eval bundle minted per RIG §EV.1/§EV.2 before decomposition work reads holdout | N/A — deferred to Phase 6 | Unchanged: `03-GATE-AMENDMENT.md` records the deferral, cross-referenced in ROADMAP.md and REQUIREMENTS.md. |
+| 5 | A/A calibration read, Falsifier 5 pass criterion met | N/A — deferred to Phase 6 | Unchanged: same amendment covers MACH-03. |
+| 6 | Until the A/A floor exists, parity is checked at the retrieval level with deterministic, zero-token comparisons, plus human spot-checks of answers (D-05 substitute gate) | ✗ FAILED | Real retrieval-level comparison exists for `naive`/`bypass` only. `hybrid`/`local`/`global` never completed a real retrieval on either side (see gap 3) — no valid comparison exists for 3 of 5 arms. The human answer-substance spot-check required by this criterion has not been performed at all (`human_findings.json`'s `answer_spotchecks` is empty; see gap 4). |
 
-**Score:** 4/6 truths verified (criteria 4/5 are N/A — legitimately deferred to Phase 6 via a written, cross-referenced amendment, not part of Phase 3's own obligation); 2 present-but-behavior-unverified (criteria 2 and 6).
+**Score:** 2/4 truths verified for Phase 3's own obligation (criteria 1, 3); criteria 2 and 6 FAILED; criteria 4/5 remain correctly N/A (deferred to Phase 6, unchanged from prior verification).
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `databasise/clients/base.py`, `openai_compat.py`, `__init__.py` | Machine-owned LLM/embedding/rerank client primitive | ✓ VERIFIED | `ClientNotWiredError` defined and raised on missing wiring; `openai_compat.py` populates real `TokenAccounting` from provider `usage`. |
-| `databasise/parity/import_index.py`, `corpus.py` | v1 index import + corpus snapshot | ✓ VERIFIED | `VerificationResult.status: Literal["verified","inconclusive","refused"]` present; corpus MANIFEST.json exists (20 docs, 2 queries, hashed). |
-| `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`, `COVERAGE.md` | Deferral record + API coverage matrix | ✓ VERIFIED | Amendment cites SELECTION.md, names Phase 6, states residual risk. COVERAGE.md has 15 decision rows, 0 unreasoned opt-outs. |
-| `databasise/wirings/lightrag/base.json`, `resolve.py`, `parts_core/lightrag/__init__.py`, `parity/run_arm.py` | Naive-arm tracer end to end | ✓ VERIFIED | Base parses to 18 nodes; all 5 arms (naive=7, local=15, global=15, hybrid=17, bypass=1 nodes) resolve and parse with zero violations. |
-| `databasise/parts_core/lightrag/keywords.py`, `entity_hydrate_expand.py`, `relation_hydrate_expand.py` | Graph half | ✓ VERIFIED | `entity-hydrate-expand`/`relation-hydrate-expand` read only `ctx.stores["graph"]`; `entity-lookup`/`relation-lookup` read only `ctx.stores["vector"]` — confirmed by grep, no cross-reach. |
-| `databasise/parts_core/lightrag/join_roundrobin.py`, `truncator_token_budget.py`, `chunk_sel_kg.py` | Transform half | ✓ VERIFIED | `join-entities`/`join-relations`/`join-chunks` all resolve to `lightrag/join-roundrobin@0.1.0` with differing config; `budget-entities`/`budget-relations` resolve to `lightrag/truncator-token-budget@0.1.0`, each self-naming its `apportioning_node`. `chunk-sel-kg` declares `reads_vector` unconditionally (confirmed in source and registered Part effects). |
-| `databasise/parity/v1_arm.py`, `v1_driver_script.py`, `run_comparison.py` | Parity harness | ✓ VERIFIED (harness) / ⚠️ (live run) | Harness code present, tested, provenance-clean; live comparison inconclusive on this machine (see criteria 2/6 above). |
-| `databasise/parity/storage_audit.py`, `evidence/FALSIFIER-2-EVIDENCE.md` | Ownership audit + Falsifier 2 evidence retained | ✓ VERIFIED | `matched`/`no-touch`/`over-declared` states distinct; `FALSIFIER-2-EVIDENCE.md` still names `w1-lightrag-query-side` records post-stub-retirement, and `tests/validator/test_falsifier2_evidence.py` + `test_falsifier2_probes.py` pass (24 tests). |
-| `databasise/evidence/PARITY-EVIDENCE.md`, `DECLARED-DEVIATIONS.md`, `parity_report.py` | Recorded parity evidence | ✓ VERIFIED (as an honest inconclusive render) | Document states plainly that no comparison has run yet and why; `--check-results` exits 0 clean. |
-| `v1/.env.parity` | v1 parity env file | ✗ MISSING (expected) | Gitignored, worktree-local build artifact from a different execution session — documented gap, not a code defect. |
+| `databasise/parts_core/lightrag/*` (15 parts) | Decomposed query-side node bodies | ✓ VERIFIED | Unchanged from prior verification — live import confirms 15 registered parts. |
+| `databasise/parts_core/lightrag/entity_hydrate_expand.py`, `relation_hydrate_expand.py` | Malformed-seed handling (CR-01 fix) | ✓ VERIFIED (code) | `seed.get("entity_name")`/`seed.get("src_id")`/`seed.get("tgt_id")` with explicit `is None` checks confirmed in current source, routing to `missing_seeds` with `malformed_seed: True` instead of raising `KeyError`. Two new regression tests confirmed present and passing. |
+| `databasise/parity/run_arm.py` | Named refusal for missing `.env.parity` keys (WR-01 fix) | ✓ VERIFIED (code) | `MissingParityEnvKeyError` and `_REQUIRED_ENV_KEYS` present; confirmed by commit diff and code review's independent verification. |
+| `databasise/evidence/parity_report.py` | Qualifies `--check-results` clean line for degraded-but-vacuous arms (WR-03 fix) | ✓ VERIFIED (code) | `_degraded_but_vacuous_arms()` present, tested against real committed data (asserted to name exactly hybrid/local/global). |
+| `databasise/evidence/human_findings.json` | Committed human-authored cause + answer-spotcheck input | ⚠️ PARTIAL | Mechanism exists and is wired into the renderer correctly, but its two populated entries are AI-authored (not human-authored, contradicting the file's own stated purpose and CONTRACT §5), and `answer_spotchecks` is empty. |
+| `databasise/evidence/PARITY-EVIDENCE.md`, `DECLARED-DEVIATIONS.md` | Rendered parity evidence from the completed run | ⚠️ STALE | Renders non-empty and derives its prose from committed records (G-03-1 genuinely closed) — but the records it derives from predate today's CR-01 fix and are not yet re-run, so 3 of 5 arms' sections describe behavior the current source no longer produces (WR-04, unresolved). |
+| `databasise/evidence/parity_results/{hybrid,local,global}-comparison.json` | Real per-arm comparison records | ⚠️ STALE | Real committed data, but pre-CR-01; `decomposed_run_record.stop_reason`/`degradation_reason` still name the exact crash the fix landed today addresses. |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|----|----|--------|---------|
-| `NodeContext.clients` | `runner/scheduler.py` construction site | Single population point | ✓ WIRED | Confirmed at `_scoped_clients` construction alongside `_ScopedStoresView`. |
-| `_ScopedStoresView.__getitem__` / `_ScopedClientsView.__getitem__` | `TouchRecorder` | Recorder call on every access | ✓ WIRED | Confirmed in `runner/scheduler.py` lines ~259, ~296-300. |
-| `databasise.run_wiring` | `runner.scheduler.run_wiring` | `clients` mapping forwarded | ✓ WIRED | `databasise/__init__.py` `run_wiring()` forwards `clients=clients` unchanged. |
-| `wirings/resolve.py` (RFC 6902 patch) | `validator.parse.parse_wiring` | Patch applied before parse | ✓ WIRED | All 5 arm patches apply and parse cleanly (verified this session with live resolve+parse). |
-| `v1_driver_script.py` | v1 interpreter (subprocess) | Never imported by `databasise/` | ✓ WIRED (by boundary check) | `check_import_boundary` exits 0; no `import lightrag` found in `parts_core/lightrag/`. |
+| `human_findings.json` | `render_deviations_markdown()` | `load_human_findings()` → `_collect_deviations()` | ✓ WIRED | Confirmed: renders non-empty, refuses on stale/blanket/missing cause (tested against real committed data per WR-03/03-10 test suite). |
+| `entity_hydrate_expand.py` malformed seed | `missing_seeds` output | `seed.get(...)` + `is None` guard | ✓ WIRED | Confirmed in source; new regression tests exercise exactly this path per code review's independent verification. |
+| `parity_results/*-comparison.json` (current, pre-fix) | `PARITY-EVIDENCE.md` prose | `_run_state()` helper | ⚠️ WIRED BUT STALE | The link itself works correctly (derives prose from records) — the records themselves are stale relative to source (see gaps 2/3). |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| Full test suite | `cd databasise && uv run pytest -q` | 415 passed, 4 skipped | ✓ PASS |
-| Base wiring parses | live `parse_wiring(base, default_registry())` | 18 nodes, no exception | ✓ PASS |
-| All 5 arms resolve+parse | live `resolve_arm(arm)` + `parse_wiring` for naive/local/global/hybrid/bypass | 7/15/15/17/1 nodes respectively, no violations | ✓ PASS |
-| Import boundary checker | `uv run python -m databasise.tools.check_import_boundary` | exit 0 | ✓ PASS |
-| Parity provenance check | `uv run python -m databasise.evidence.parity_report --check-results` | "clean (5 arms)", exit 0 | ✓ PASS |
-| Frozen-bug regression suite | `pytest tests/stores/test_graph_frozen_bugs.py` | 9 passed, no skip/xfail | ✓ PASS |
-| Embedder-index reproduction | `pytest tests/parity/test_embedder_index_reproduction.py` | 4 passed, 1 skipped (live sample case, `human_judgment: true`) | ✓ PASS |
-| Naive arm end-to-end + validator/parts suites | `pytest tests/parity/test_naive_arm_end_to_end.py tests/validator/ tests/parts/` | 92 passed, 1 skipped | ✓ PASS |
-| Import boundary unit tests | `pytest tests/test_import_boundary.py` | 10 passed | ✓ PASS |
-| Live 5-arm retrieval comparison | `run_comparison` for all arms | all `inconclusive` (environment-gapped) | ? SKIP → routed to human verification |
+| Full test suite | `cd databasise && uv run pytest -q` | 445 passed, 0 failed | ✓ PASS |
+| CR-01 fix present in source | `grep -n "seed.get(" entity_hydrate_expand.py` | `raw_entity_name = seed.get("entity_name")` with `is None` guard confirmed | ✓ PASS |
+| Parts registry count | live `LIGHTRAG_PARTS` import | 15 parts, `embedder-index` opaque/quarantined | ✓ PASS |
+| Debt-marker scan | grep `TBD\|FIXME\|XXX` across evidence/parity/parts_core/clients/wirings | zero matches | ✓ PASS |
+| Live 5-arm comparison currency | diff between commit 1827695's fix and committed `hybrid/local/global-comparison.json` stop_reason | Stop reason still names the pre-fix `KeyError` string the fix removed | ✗ FAIL — flagged as gap 2 |
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
 |-------------|-------------|--------------|--------|----------|
-| MODAL-01 | 03-01, 02, 04–09 | LightRAG query side re-cut into primitive-part nodes with N-run variance-banded parity or declared deviations | ✓ SATISFIED (code); ⚠️ REQUIREMENTS.md tracking stale | The decomposition and harness are real and tested; the "variance-banded parity" half is machinery-present-but-not-yet-run (see criteria 2/6). REQUIREMENTS.md line 96 still reads `MODAL-01 \| Phase 3 \| Pending` with an unchecked `[ ]` box — a documentation-tracking lag, not a code gap, but it should be updated once the live comparison closes (or explicitly left "Pending" pending that run — the phase's own evidence document already says as much). |
-| MACH-02 | 03-03, 03-09 | Eval bundle (RIG §EV.1) | N/A for Phase 3 — correctly deferred to Phase 6 | `03-GATE-AMENDMENT.md`; REQUIREMENTS.md line 86 correctly maps MACH-02 → Phase 6. |
-| MACH-03 | 03-03, 03-09 | A/A calibration, Falsifier 5 | N/A for Phase 3 — correctly deferred to Phase 6 | Same amendment; REQUIREMENTS.md line 87 correctly maps MACH-03 → Phase 6. |
+| MODAL-01 | 03-01, 02, 04–10 | LightRAG query side re-cut into primitive-part nodes with N-run variance-banded parity or declared deviations | ⚠️ PARTIALLY SATISFIED | Decomposition (17/18 positions) is real and complete. The parity-measurement half of MODAL-01 is real for `naive`/`bypass` only; `hybrid`/`local`/`global` (the graph-half arms) have no valid retrieval-level parity measurement yet, and the two recorded declared-deviation causes are AI- not human-authored. REQUIREMENTS.md line 29's own dated annotation (2026-09-02) already documents the graph-arm degradation as "a live defect surfaced by this comparison, not yet repaired" and correctly keeps the traceability row unchecked/`Pending` — that row has not been updated since CR-01 landed today, which is consistent with (not contradicted by) this verification. |
+| MACH-02 | 03-03, 03-09 | Eval bundle (RIG §EV.1) | N/A for Phase 3 — correctly deferred to Phase 6 | Unchanged. |
+| MACH-03 | 03-03, 03-09 | A/A calibration, Falsifier 5 | N/A for Phase 3 — correctly deferred to Phase 6 | Unchanged. |
 
-No orphaned requirements: ROADMAP.md's own "Requirements" field for Phase 3 lists only `MODAL-01`; MACH-02/MACH-03 appear in plan frontmatter solely because those plans do the deferral-recording work, and REQUIREMENTS.md's traceability table already attributes their substance to Phase 6, consistent with the amendment.
+No orphaned requirements — ROADMAP.md's Phase 3 requirements field lists only `MODAL-01`; MACH-02/MACH-03 appear in plan frontmatter only for the deferral-recording plans and REQUIREMENTS.md already attributes their substance to Phase 6.
 
 ### Anti-Patterns Found
 
-None. Grep for `TBD|FIXME|XXX|TODO|HACK|PLACEHOLDER|not yet implemented|coming soon` across all `.py`/`.md` files under `databasise/clients/`, `databasise/parity/`, `databasise/parts_core/lightrag/`, `databasise/wirings/`, `databasise/evidence/` returned zero matches (excluding JSON test-fixture data).
+None (debt-marker scan clean; no `TBD`/`FIXME`/`XXX`/`TODO`/`HACK`/`PLACEHOLDER` in files touched by this phase's plans or its review-fix cycle).
 
-### Prohibitions Check (phase-wide, judgment-tier)
+### Code Review Findings Carried Into This Verification
 
-All 8 shared prohibitions carried in every plan's `must_haves.prohibitions` block were spot-checked against the actual code and evidence documents:
+`03-REVIEW.md` (2026-09-06, post-fix re-review, `status: issues_found`) has two open items not resolved by today's three fix commits:
 
-| Prohibition | Status | Evidence |
-|-------------|--------|----------|
-| Harness must not emit pass/fail on failed index-identity precondition — must emit `inconclusive` | ✓ HELD | `import_index.py`, `run_comparison.py` both use `Literal["...", "inconclusive", ...]`; `PARITY-EVIDENCE.md` renders `inconclusive` throughout, never a fabricated pass. |
-| Variance band must carry run count and cache status, never cache-served re-runs | ✓ HELD | `PARITY-EVIDENCE.md`'s keyword variance table has `run count (N)` and `any cache served` columns (currently "not run" rather than fabricated). |
-| Declared-deviation record must not use a blanket/catch-all category | ✓ HELD | `DECLARED-DEVIATIONS.md` states "the renderer refuses to render rather than silently absorbing the excursion into an unnamed category"; currently a stated, explained zero. |
-| A node making a real LLM/embedding/rerank call must not report zero spend | ✓ HELD | `openai_compat.py` derives `TokenAccounting` from real provider `usage`; scheduler docstring explicitly names this as the guarantee (`runner/scheduler.py:93`). |
-| v1 original arm must not be presented with a RIG §TR.1 record it didn't produce; trace asymmetry must be stated | ✓ HELD | `PARITY-EVIDENCE.md`'s "The trace asymmetry" section states this explicitly before any numbers. |
-| MACH-02/MACH-03 deferral must not be silent or recorded as passed/satisfied/n-a | ✓ HELD | Amendment + REQUIREMENTS.md both explicit; REQUIREMENTS.md checkboxes remain unchecked, not marked complete. |
-| Storage audit must not report a no-touch node as audited-compliant | ✓ HELD | `storage_audit.py` has three distinct states (`matched`/`no-touch`/`over-declared`); no "compliant" collapse. |
-| Regenerating Falsifier 2 evidence must not silently change recorded verdicts | ✓ HELD | `test_falsifier2_evidence.py`/`test_falsifier2_probes.py` (24 tests) pass; `w1-lightrag-query-side` records remain intact post-stub-retirement. |
+- **WR-02** (requires human action, not a code change): `human_findings.json`'s two `declared_causes` entries are AI-authored. Carried into this verification as gap 1.
+- **WR-04** (a fix or a re-run is needed): the committed parity evidence describes a crash CR-01 has since changed the behavior of, without any note that the code has moved since the evidence was rendered. Carried into this verification as gap 2.
 
-### Human Verification Required
-
-1. **Live five-arm parity comparison** — Rebuild the v1 pinned environment (`v1/README-PARITY.md`), re-run v1's real OpenRouter ingest to regenerate `v1/.venv`, `v1/.parity_working_dir`, `v1/.parity_v2_store`, `v1/.env.parity` (all gitignored/worktree-local, absent on this machine), then re-run `databasise.parity.run_comparison` for all 5 arms and re-render `databasise.evidence.parity_report`.
-   - Expected: comparison status flips from `inconclusive` to `completed`; a real N=5 keyword variance band and real chunk/entity/relation sym_diff numbers are recorded, or every excursion is individually named in `DECLARED-DEVIATIONS.md`.
-   - Why human: requires real model-API-backed ingest and a rebuilt local environment; no static/grep check can produce the missing runtime artifacts.
-
-2. **Human spot-check of answer substance** — Once the environment above exists, run the corpus snapshot's 2 queries (q1, q2) through the `hybrid` arm and through v1 directly, and judge whether the answers' substance matches.
-   - Expected: a recorded judgment per query pair.
-   - Why human: LLM-generated answer substance is not mechanically checkable, and no A/A floor exists yet (Falsifier 5 deferred to Phase 6) to make exact-match the right bar.
+Both were independently re-confirmed against current source/evidence in this verification session, not taken on the review's word.
 
 ### Gaps Summary
 
-No blocking gaps. The phase's own code, wiring, harness, evidence-rendering, and test suite are all real, substantive, and correctly wired — every artifact and key link declared in the nine plans' `must_haves` was independently confirmed against the live codebase this session (base/arm wiring parsing, store/client scoping with touch recording, storage-ownership audit's three-state model, import-boundary isolation, real token metering, and the MACH-02/MACH-03 deferral's cross-document consistency).
+The phase made real, substantive progress since the prior verification: the v1 parity environment was rebuilt, a genuine five-arm live comparison ran, and the evidence-rendering machinery (G-03-1) that was previously completely broken (0-byte `PARITY-EVIDENCE.md`) now renders a real, derived document. The decomposition itself (criteria 1 and 3) remains solid and unchanged.
 
-The two items left open (criteria 2 and 6 — the actual live N-run parity comparison and the human answer spot-check) are not code gaps: the harness that would produce them is built and unit-tested, and the reason they read `inconclusive` is a documented, expected environment gap (v1 build artifacts absent on this machine) rather than a defect. `03-VALIDATION.md`'s own sign-off already draws this same line and names it explicitly as the phase's one open item. These are routed to human verification, not recorded as failed truths.
+However, the phase's central claim — "parity ... is measured, not asserted" — does not yet hold across the board:
 
-One minor documentation-tracking item: `.planning/REQUIREMENTS.md`'s traceability table still lists `MODAL-01` as `Phase 3 | Pending` with its checkbox unchecked. Given the substance is otherwise verified and the parity comparison itself remains open pending the human items above, leaving MODAL-01 "Pending" until that live run closes is arguably correct — but it is worth an explicit owner decision on whether to flip it now (decomposition done, parity machinery proven) or hold it for the live run.
+1. **The two recorded declared-deviation causes are AI-authored, not human-authored**, contradicting both CONTRACT §5 and the plan's own must-have truth. This is a self-acknowledged gap (03-10-SUMMARY.md calls it "MINOR"; the independent code review calls it a Warning requiring human action) that remains open.
+2. **The committed evidence is stale relative to the current source.** Three fix commits landed on `main` today, including one (CR-01) that directly changes the behavior the evidence describes for `hybrid`/`local`/`global`. The evidence was never re-rendered after the fix, so it currently misdescribes what today's code does for 3 of 5 arms — and, separately, provides no information about whether the fix actually produces a real, completed retrieval for those arms.
+3. **No valid retrieval-level parity measurement exists yet for `hybrid`/`local`/`global`.** Their recorded "zero diff" is both sides retrieving nothing (a crash on one side, an empty answer on the other), which `PARITY-EVIDENCE.md`'s own Verdict section already states plainly is not evidence of parity. This affects the two arms (`hybrid`, `global`) that most directly exercise the graph-half decomposition this phase built.
+4. **The human answer-substance spot-check (criterion 6) has still not been performed** — unchanged from the prior verification, now correctly re-pointed at the `naive` arm.
+
+None of these are regressions — they are either newly measured (the environment gap closing let real problems surface that were previously masked by "cannot verify") or a currency problem introduced by today's own fix commits landing without a matching evidence re-render. A closure plan for this phase should: (a) re-run the comparison for `hybrid`/`local`/`global` now that CR-01 has landed and re-render the evidence, honestly reporting whatever that run actually measures; (b) route the human-authored-cause and answer-spot-check items to the owner explicitly, since no further code change closes either one.
 
 ---
 
-_Verified: 2026-09-01T22:34:12Z_
+_Verified: 2026-09-05T23:15:00Z_
 _Verifier: Claude (gsd-verifier)_
