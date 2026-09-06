@@ -1,11 +1,16 @@
 """databasise — the agnostic machine.
 
-Public entry point: ``run_wiring(wiring_doc, *, store_root, registry=None, determinism_setting,
-concurrency_setting)``. This is the seam every later plan and every consumer calls: it composes
-``validator.parse_wiring`` -> ``runner.scheduler.run_wiring`` (which itself composes
+``run_wiring(wiring_doc, *, store_root, registry=None, determinism_setting,
+concurrency_setting)`` below is **machine-internal** (D-02), not the seam a consumer calls: it
+composes ``validator.parse_wiring`` -> ``runner.scheduler.run_wiring`` (which itself composes
 ``validator.depth`` and ``identity`` internally) -> ``runner.trace.RunRecord``, then stamps the
 run-level fields this module owns (``run_id``, ``wiring_id``, ``wiring_instance_hash``,
-``arm_id``, ``arm_execution_order``) before returning the schema-valid run-record dict.
+``arm_id``, ``arm_execution_order``) before returning the schema-valid run-record dict — a dict
+carrying exactly the internal identities (``wiring_id``, ``wiring_instance_hash``, every node's
+``node_id``/``instance_hash``) that §18.2 forbids a consumer from receiving. The consumer-facing
+seam is ``databasise.seam.Databasise``; this function stays importable because Phase 3's parity
+harness (``databasise/parity/run_arm.py``) calls it directly and must keep working, but a
+consumer reaching it directly bypasses the redaction the seam exists to provide.
 
 **Honesty fields, composer-threaded (01-10-PLAN.md Task 1).** ``partial``, ``degraded``,
 ``stop_reason`` and ``degradation_reason`` are threaded straight from ``scheduler.run_wiring``'s
@@ -50,6 +55,12 @@ async def run_wiring(
     clients: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Parse, validate, resolve identity, execute and trace one wiring run.
+
+    **Machine-internal (D-02).** This returns an un-redacted run record carrying exactly the
+    internal identities (``wiring_id``, ``wiring_instance_hash``, every node's
+    ``node_id``/``instance_hash``) §18.2 forbids a consumer from receiving. The consumer-facing
+    seam is ``databasise.seam.Databasise`` — call that, not this, unless you are Phase 3's parity
+    harness.
 
     ``clients`` (D-06) is forwarded straight through to ``_scheduler.run_wiring`` unchanged — a
     real LLM/embedding/rerank wiring for a parity run is plan 03-02's job and belongs in the
