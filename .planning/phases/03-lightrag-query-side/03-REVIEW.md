@@ -1,6 +1,6 @@
 ---
 phase: 03-lightrag-query-side
-reviewed: 2026-09-05T00:00:00Z
+reviewed: 2026-09-06T02:30:00Z
 depth: standard
 files_reviewed: 74
 files_reviewed_list:
@@ -99,231 +99,131 @@ files_reviewed_list:
   - v1/README-PARITY.md
   - v1/scripts/run_parity_ingest.py
 findings:
-  critical: 1
+  critical: 0
   warning: 3
   info: 1
-  total: 5
+  total: 4
 status: issues_found
 ---
 
 # Phase 03: Code Review Report
 
-**Reviewed:** 2026-09-05
+**Reviewed:** 2026-09-06
 **Depth:** standard
-**Files Reviewed:** 74 (non-source `.gitignore`/`.python-version`/lock/corpus-fixture paths cross-checked for secrets and malformed content, not reviewed as findings targets in their own right; `v1/.env.parity.example` could not be read — sandboxed out by the review environment's own permission settings, not a code defect)
+**Files Reviewed:** 74
 **Status:** issues_found
 
 ## Summary
 
-This is a re-review of the post-03-10 state at HEAD. The prior review's three findings
-(CR-01 — `embedder-query` embedding an empty string; WR-01 — `_validated_token_allowance` not
-refusing a negative value; IN-01 — the `_load_env_file` duplication) were re-verified directly
-against the current source and all three hold up correctly: `keywords.py`'s `_keywords_body` now
-emits `"query"` in both branches and `run_arm.py`'s `_inject_query` now stamps `keywords` too;
-`scheduler.py`'s `_validated_token_allowance` now mirrors `_validated_max_concurrency`'s `< 0`
-refusal exactly; both `_load_env_file` copies now carry cross-referencing docstrings naming their
-deliberate absent-file asymmetry. None are re-listed below.
+This is iteration 2 of the auto fix loop's re-review. Three fixes landed since the prior review
+(`03-REVIEW.iter2.md`) and were each verified directly against current source, not taken on the
+fixer's word:
 
-Plan 03-10 (parity evidence gap closure) and its own follow-up adversarial-audit fix cycle landed
-after the prior review and were given full attention here, since they were not previously reviewed.
-The renderer (`parity_report.py`) and its 41-test suite are unusually well hardened — the review
-did not find a new defect in the eight fixed findings from that audit cycle, and the two gaps that
-cycle explicitly left open (see WR-02/WR-03 below) are real and worth carrying into this report
-since they were never before recorded in a `03-REVIEW.md`.
+- **CR-01** (`entity_hydrate_expand.py`/`relation_hydrate_expand.py`, commit `1827695`) — confirmed
+  fixed. Both bodies now use `seed.get(...)` with an explicit `is None` check instead of a bare
+  subscript, routing a malformed seed to `missing_seeds` with `malformed_seed: True` and a
+  diagnostic naming the missing field, exactly mirroring the existing absent-graph-node path. The
+  two new regression tests in `test_graph_half_parts.py`
+  (`test_entity_hydrate_expand_reports_a_malformed_seed_missing_entity_name`,
+  `test_relation_hydrate_expand_reports_a_malformed_seed_missing_src_or_tgt_id`) construct exactly
+  the malformed-seed shape (a seed dict missing `entity_name` / missing `tgt_id`) that used to raise
+  `KeyError`, and assert the new `missing_seeds` entry shape — they genuinely exercise the fixed
+  path, not just a passing shape. Cross-checked against the actual committed evidence: the exact
+  `KeyError: 'entity_name'` / `KeyError: 'src_id'` strings this fix targets are present verbatim in
+  `parity_results/{hybrid,local,global}-comparison.json`'s `decomposed_run_record.stop_reason`, so
+  the fix targets the real, previously-measured crash rather than a hypothetical one. Downstream
+  consumers of `missing_seeds`/`entities`/`relations` (`join_roundrobin.py`) only read the
+  `entities`/`relations` fields, never `missing_seeds`, so the new dict shape introduces no
+  regression there.
+- **WR-01** (`run_arm.py`, commit `35898e8`) — confirmed fixed. `MissingParityEnvKeyError` is
+  defined, `_REQUIRED_ENV_KEYS` names all six keys `_build_clients` needs, and `_build_clients` now
+  checks every key up front before constructing either client. The two new tests in
+  `test_naive_arm_end_to_end.py` assert both the failure path (partial env → all four missing keys
+  named on the exception) and the success path (all six keys present → both clients constructed) —
+  real coverage of the fixed branch, not just an import check.
+- **WR-03** (`parity_report.py`, commit `b54d7b8`) — confirmed fixed. `_degraded_but_vacuous_arms()`
+  scans each arm's committed comparison file for a `completed` record with
+  `decomposed_run_record.degraded=true` and an all-empty diff, and `main()`'s `--check-results` path
+  now qualifies the clean line with the degraded arm names instead of printing a bare `clean (5
+  arms)`. The real-data test
+  (`test_degraded_but_vacuous_arms_on_the_real_committed_data_names_the_three_known_degraded_arms`)
+  runs the function against the actual committed `parity_results/` directory and asserts it names
+  exactly `hybrid`/`local`/`global` — this is a genuine assertion against production data, not a
+  synthetic-only test.
 
-This pass also gave first-time review attention to `databasise/parts/schema.py` and
-`databasise/parts/registry.py` (not in the prior review's file list) — both clean, no findings.
+All three fixes are correct, complete, and covered by tests that actually exercise the previously-
+broken path. None are re-listed as findings below.
 
-The one new Critical finding (CR-01 below) is a defect this review confirmed by direct code
-reading, not merely repeated from the evidence documents: `entity-hydrate-expand.py`/
-`relation-hydrate-expand.py` assume every seed item they consume carries a required key, with no
-defensive path for a malformed/incomplete seed — the same class of gap the evidence documents
-attribute to "diagnosis pending." Given the crash on `hybrid`/`local`/`global` is a real,
-already-measured production defect (all three arms are stopped by a `NodeExecutionError` before
-completing retrieval — see `PARITY-EVIDENCE.md`'s own Verdict section), it is recorded here as a
-BLOCKER for the first time in a formal code review, with a concrete fix.
+**WR-02** (AI-authored `declared_causes` in `human_findings.json`) was correctly skipped by the
+fixer. CONTRACT §5 requires a human-authored cause; fabricating one to close the finding would
+create a false attestation, which is a worse defect than the disclosed gap already on file. It
+still holds in current source (`human_findings.json:12,26` still read `"recorded_by": "Claude (AI
+agent, gsd-code-fixer)... NOT recorded by the human owner"`) and is carried forward below,
+explicitly flagged as requiring human action rather than a code change, so the automated fix loop
+does not keep re-selecting it.
 
-## Critical Issues
+A fresh pass over the rest of the scope surfaced one new finding: the CR-01 code fix changes what
+would happen if the `hybrid`/`local`/`global` arms were re-run (a malformed seed now degrades one
+item observably instead of crashing the whole node), but the committed evidence
+(`PARITY-EVIDENCE.md`, `DECLARED-DEVIATIONS.md`, `parity_results/*.json`) was last regenerated
+*before* the fix and still describes the old crash as the live, unrepaired state of the code. See
+WR-04 below.
 
-### CR-01: `entity-hydrate-expand`/`relation-hydrate-expand` crash the whole node on any seed item missing its expected key, instead of routing it to `missing_seeds` the way an absent graph node already is
+`embedder_query.py`'s `IN-01` (the `or`-chain treating an empty `"query"` the same as an absent one)
+was not in the fixer's Critical+Warning scope and remains unchanged in current source — carried
+forward below since it was never resolved, not because it is newly found.
 
-**File:** `databasise/parts_core/lightrag/entity_hydrate_expand.py:44-52`, `databasise/parts_core/lightrag/relation_hydrate_expand.py:41-57`
-
-**Issue:** Both bodies read a required field straight off each upstream seed item with a bare
-subscript, before any validation:
-
-```python
-# entity_hydrate_expand.py
-for seed in seeds:
-    entity_name = str(seed["entity_name"])   # KeyError if absent
-    node = await graph.get_node(entity_name)
-    if node is None:
-        missing.append({"entity_name": entity_name, "missing": True, "derived_from": [seed["id"]]})
-        continue
-```
-
-```python
-# relation_hydrate_expand.py
-for seed in seeds:
-    src_id = str(seed["src_id"])             # KeyError if absent
-    tgt_id = str(seed["tgt_id"])              # KeyError if absent
-    edge = await graph.get_edge(src_id, tgt_id)
-    ...
-```
-
-Both modules' own docstrings state the house rule explicitly: "A seed whose node is absent from
-the graph is reported in `missing_seeds` rather than silently dropped... this decomposition makes
-that gap observable instead of silent." That rule is honored for a seed that *has* the expected
-key but whose graph lookup misses — but a seed item that is missing the key itself (`entity_name`/
-`src_id`/`tgt_id`/`id`) is not defended against at all: it raises a bare `KeyError`, which
-`runner/scheduler.py`'s `_run_node` wraps into `NodeExecutionError` and which then halts the whole
-batch (`scheduler.py`'s own documented "the whole scheduling loop" stop, confirmed in this same
-review pass). This is precisely the failure class the already-committed evidence records: the
-committed `parity_results/{hybrid,local,global}-comparison.json` all show
-`decomposed_run_record.degraded=true` with a `stop_reason` naming `entity-hydrate-expand`/
-`relation-hydrate-expand`, and `PARITY-EVIDENCE.md`'s own Verdict section states plainly that these
-three arms "degraded before completing a real retrieval" on every query. `REQUIREMENTS.md`'s
-MODAL-01 annotation and `03-UAT.md`'s G-03-1 entry both name this as a live, unrepaired defect —
-but no `03-REVIEW.md` has recorded it as a classified finding with a concrete fix until now.
-
-Cross-checked against the upstream producers during this review: `entity-lookup`/`relation-lookup`
-(`databasise/parts_core/lightrag/entity_lookup.py`, `relation_lookup.py`) return whatever
-`ctx.stores["vector"].query(...)` hands back, merged with each stored document's own imported
-metadata (`FaissVectorStore.query`, `databasise/stores/vector.py:235`); that metadata is imported
-verbatim from v1's own Faiss sidecar by `databasise/parity/import_index.py:186-188`, which strips
-only `__id__`/`__vector__`/`__created_at__`. Nothing in that path re-validates that every record
-still carries `entity_name` (or `src_id`/`tgt_id`) before it reaches `entity-hydrate-expand`/
-`relation-hydrate-expand` — a v1-side record shaped even slightly differently than
-`v1/lightrag/lightrag.py`'s `data_for_entities_vdb`/`data_for_rels_vdb` (e.g. an older or
-partially-migrated v1 index snapshot) reaches this node's bare subscript and crashes the batch,
-with no diagnostic naming which seed or which field was missing.
-
-**Fix:** Mirror the existing "absent graph node -> `missing_seeds`" pattern for "malformed seed"
-too, so a defect in the upstream data degrades this one item observably instead of halting the
-entire node (and, per `scheduler.py`'s fail-fast batch semantics, every node still queued behind
-it):
-
-```python
-for seed in seeds:
-    entity_name = seed.get("entity_name")
-    if not entity_name:
-        missing.append({"entity_name": None, "missing": True, "derived_from": [seed.get("id")],
-                         "malformed_seed": True})
-        continue
-    entity_name = str(entity_name)
-    node = await graph.get_node(entity_name)
-    ...
-```
-
-and the symmetric change for `relation_hydrate_expand.py`'s `src_id`/`tgt_id` read. This does not
-fix the underlying root cause (why a seed is missing the field in the first place, which the 03-10
-review-fix cycle correctly scoped as a separate, materially larger investigation) — it converts an
-unhandled crash that halts the whole run into the same graceful, observable degradation this
-module already gives a legitimately-absent graph node, which is enough to let the other seeds in
-the same batch (and the nodes downstream of a *successful* hydrate-expand) keep running instead of
-losing the entire arm to one bad record.
+No new Critical issues were found in this pass.
 
 ## Warnings
 
-### WR-01: `run_arm._build_clients` reads four required `.env.parity` keys with bare subscript access, raising an unnamed `KeyError` instead of this module's own named refusal
+### WR-04: The committed parity evidence documents describe a crash that CR-01's fix has since changed the behavior of, without any note that the code has moved since the evidence was rendered
 
-**File:** `databasise/parity/run_arm.py:102-116`
+**File:** `databasise/evidence/PARITY-EVIDENCE.md:50,59,68,117,119,121,133,135,137`,
+`databasise/evidence/parity_results/{hybrid,local,global}-comparison.json`
 
-**Issue:** `_build_clients` is the one caller `run_arm.run_arm`/`storage_audit.run_audit` both use
-to construct real clients from the parsed `.env.parity` dict:
+**Issue:** `PARITY-EVIDENCE.md`'s Verdict section states, for `hybrid`/`local`/`global`: "`hybrid`'s
+decomposed run degraded before completing a real retrieval (node 'entity-hydrate-expand':
+NodeExecutionError: 'entity_name' ...). ... Fixing that defect is out of this plan's scope." This
+was accurate when rendered (commit `d110313`, before `1827695`), but `1827695` has since changed
+`entity_hydrate_expand.py`/`relation_hydrate_expand.py` so that the exact seed shape that produced
+`NodeExecutionError: 'entity_name'` / `'src_id'` no longer raises at all — it now degrades one seed
+into `missing_seeds` and lets the run continue. The committed `parity_results/{hybrid,local,global}
+-comparison.json` files (and the prose that reads them) were never regenerated after the fix
+landed, so they currently assert, as the live state of the code, a crash that the code no longer
+produces. This is a live discrepancy between what's committed as evidence and what the current
+source actually does — a reader trusting `PARITY-EVIDENCE.md`'s Verdict section today would
+reasonably (and incorrectly) conclude that `hybrid`/`local`/`global` still crash the same way,
+when in fact re-running the comparison would very likely change the measured diffs (a
+degraded-but-continuing run reaches further downstream nodes — `assemble`, `budget-*`, `generate`,
+etc. — that never executed in the crash-truncated run these numbers reflect, per
+`PARITY-EVIDENCE.md`'s own list of never-dispatched nodes at lines 117-121).
 
-```python
-def _build_clients(env: dict[str, str]) -> dict[str, Any]:
-    llm = OpenAICompatibleClient(
-        base_url=env["LLM_BINDING_HOST"],
-        model=env["LLM_MODEL"],
-        api_key=env["LLM_BINDING_API_KEY"],
-    )
-    embedding = OpenAICompatibleClient(
-        base_url=env["EMBEDDING_BINDING_HOST"],
-        model=env["EMBEDDING_MODEL"],
-        api_key=env["EMBEDDING_BINDING_API_KEY"],
-    )
-    return {"llm": llm, "embedding": embedding}
-```
-
-This same module explicitly names `MissingParityEnvError` for the absent-file case, and its own
-module docstring states the house style is "refusals over silent fallbacks." A `.env.parity` file
-that exists but is missing (or misspells) one of these five keys — an easy mistake when hand-editing
-the file per `v1/README-PARITY.md`'s recreate instructions — produces a bare, unnamed `KeyError:
-'LLM_BINDING_HOST'` deep inside client construction, with no path back to which file or which key
-was wrong. `storage_audit.run_audit` reuses this exact helper (`_run_arm._build_clients`), so the
-gap reaches both callers.
-
-**Fix:** Name the refusal the same way the absent-file case already is:
-
-```python
-_REQUIRED_ENV_KEYS = (
-    "LLM_BINDING_HOST", "LLM_MODEL", "LLM_BINDING_API_KEY",
-    "EMBEDDING_BINDING_HOST", "EMBEDDING_MODEL", "EMBEDDING_BINDING_API_KEY",
-)
-
-def _build_clients(env: dict[str, str]) -> dict[str, Any]:
-    missing = [k for k in _REQUIRED_ENV_KEYS if k not in env]
-    if missing:
-        raise MissingParityEnvKeyError(missing)  # new, named error, mirroring MissingParityEnvError
-    ...
-```
+**Fix:** Either (a) re-run `run_comparison.py` for the three affected arms and re-render
+`parity_report.py` now that CR-01 has landed, replacing the stale crash-based numbers with whatever
+the degraded-but-completing run actually measures, or (b) if a re-run is deliberately deferred to a
+later plan, add an explicit note to `PARITY-EVIDENCE.md`'s Verdict section (and ideally a dated
+marker in the comparison JSON itself) stating that the underlying `NodeExecutionError` this
+document describes was patched by commit `1827695` after this evidence was rendered, so the
+document's own crash description is understood as historical rather than current.
 
 ### WR-02: `human_findings.json`'s two `declared_causes` entries are AI-authored, not human-authored, despite CONTRACT §5 requiring a human-authored cause for every named excursion
 
+**Requires human action, not a code change — do not re-select for the automated fix loop.**
+
 **File:** `databasise/evidence/human_findings.json:12-14,26-27`, `databasise/evidence/DECLARED-DEVIATIONS.md:9-10`
 
-**Issue:** `parity_report.py`'s own module docstring states `human_findings.json` is "the one
-committed, human-authored input this module reads" for CONTRACT §5's parity-not-gain record — the
-mechanism exists specifically because a cause must be *human*-reasoned, not mechanically derived,
-so an unverified excursion is never silently absorbed. Both of the file's two `declared_causes`
-entries carry:
+**Issue:** Both `declared_causes` entries still carry `"recorded_by": "Claude (AI agent,
+gsd-code-fixer) — commit 2ce3c30; NOT recorded by the human owner, despite this file's own name"`.
+CONTRACT §5's parity-not-gain record requires a human-reasoned cause for a named excursion; an
+AI-authored cause does not satisfy that requirement no matter how honestly it discloses its own
+provenance. The fixer correctly declined to fabricate a human attribution for this iteration — that
+would be a false attestation, strictly worse than the disclosed gap.
 
-```json
-"recorded_by": "Claude (AI agent, gsd-code-fixer) — commit 2ce3c30; NOT recorded by the human owner, despite this file's own name",
-```
-
-This is honestly disclosed (the 03-10 review-fix cycle's own finding 8 added this exact
-provenance field for this exact reason), which is why this is a Warning rather than a Critical: the
-gap is visible, not hidden. But the underlying gap is unresolved — CONTRACT §5's actual requirement
-(a human traces and confirms the cause) is not met for either of the two currently-rendered
-deviations, and nothing in the current pipeline (`check_results()`, `render_deviations_markdown()`)
-distinguishes an AI-authored cause from a human-authored one when deciding whether a render is
-"clean." A downstream reader of `PARITY-EVIDENCE.md`/`DECLARED-DEVIATIONS.md` who does not also
-read `recorded_by` closely could reasonably believe the human owner has already verified these two
-excursions are benign tail-length artifacts, when in fact no human has yet done so.
-
-**Fix:** Either (a) have the human owner actually review and re-record these two causes (the fix
-this file's own honesty is pointing at), or (b) add a `check_results()`/`render_deviations_markdown`
-rule that refuses (or at minimum visibly flags in the rendered Verdict section) a
-`recorded_by` value that does not look human-attributed, so "the render is clean" cannot be
-mistaken for "a human has verified every named cause" while an AI-authored cause is still on file.
-
-### WR-03: `check_results()` has no rule catching a `status="completed"` record whose `decomposed_run_record.degraded=true` alongside a vacuous (both-sides-empty) zero diff — such a record still passes the provenance check as clean
-
-**File:** `databasise/evidence/parity_report.py:173-267`
-
-**Issue:** `_REQUIRED_COMPARISON_KEYS` (line 173) and `check_results()`'s validation loop
-(lines 226-254) check that a `completed` record carries its required provenance fields and that an
-`inconclusive` record carries no comparison number — but neither checks
-`decomposed_run_record.degraded`/`degradation_reason` at all. A `hybrid`/`local`/`global`-style
-record — `status="completed"`, `entity_diff.symmetric_difference=[]`, but
-`decomposed_run_record.degraded=true` because the run crashed before completing real retrieval —
-satisfies every rule `check_results()` currently checks and prints `parity_results/ provenance
-check: clean (5 arms)`. The "clean" claim is therefore true only in the narrow sense the function
-actually checks (required keys present, no number alongside `inconclusive`); it does not mean "the
-zero diffs recorded here are validated retrieval-level agreements," which is the reading a CLI
-output literally named "clean" invites. This exact gap was surfaced and explicitly left unfixed by
-the 03-10 review-fix cycle ("`check_results()` has no completed-direction rule... Noted, not
-fixed.") — recorded here for the first time in a `03-REVIEW.md` rather than only in a plan
-SUMMARY's own "explicitly left open" list, so it does not get lost when that SUMMARY is archived.
-
-**Fix:** Add a rule to `check_results()`: a `completed` record whose `decomposed_run_record`
-carries `degraded=true` and whose own comparison numbers are all-empty diffs should either be
-excluded from "clean," or the CLI's success line should be qualified (e.g. "clean (5 arms, 3
-degraded — see PARITY-EVIDENCE.md for disclosure)") so `--check-results`'s exit-0 output cannot be
-read as "every arm's numbers are trustworthy" on its own.
+**Fix:** The human owner (christopher@deocracy.org) needs to actually review the two named
+excursions in `DECLARED-DEVIATIONS.md` and re-record `declared_causes` with their own reasoning and
+`recorded_by`. No code change closes this; the automated fix loop should stop selecting it and
+instead surface it as a pending human task.
 
 ## Info
 
@@ -331,32 +231,18 @@ read as "every arm's numbers are trustworthy" on its own.
 
 **File:** `databasise/parts_core/lightrag/embedder_query.py:23-31`
 
-**Issue:**
-
-```python
-def _query_text(ctx: NodeContext) -> str:
-    keywords_output = ctx.inputs.get("keywords")
-    if keywords_output is not None:
-        if isinstance(keywords_output, dict):
-            return str(keywords_output.get("query") or keywords_output.get("text") or "")
-        return str(keywords_output)
-    config = ctx.config or {}
-    return str(config.get("query", ""))
-```
-
-`keywords_output.get("query") or keywords_output.get("text") or ""` treats a present-but-empty
-`"query"` value identically to an absent one, falling through to `.get("text")` and then to `""`.
-In practice `keywords.py`'s `_keywords_body` always stamps whatever `config["query"]` was (which
-`run_arm._inject_query` always sets to the real user query text), so this is very unlikely to be
-reached with a legitimately empty string today — a purely defensive, low-probability edge case, not
-an observed defect.
+**Issue:** Unchanged since the prior review — not newly introduced. `keywords_output.get("query")
+or keywords_output.get("text") or ""` treats a present-but-empty `"query"` value identically to an
+absent one, falling through to `.get("text")` and then to `""`. `keywords.py`'s `_keywords_body`
+always stamps `config["query"]` (which `run_arm._inject_query` always sets to the real user query
+text), so this remains a low-probability defensive edge case rather than an observed defect.
 
 **Fix:** `keywords_output.get("query") if keywords_output.get("query") is not None else
-keywords_output.get("text", "")` if the distinction between "explicitly empty query" and "no query
-key present" ever needs to be preserved; optional, given the low current likelihood of it mattering.
+keywords_output.get("text", "")` if the "explicitly empty" vs. "absent" distinction ever needs to
+be preserved; optional given the low current likelihood of it mattering.
 
 ---
 
-_Reviewed: 2026-09-05_
+_Reviewed: 2026-09-06_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
