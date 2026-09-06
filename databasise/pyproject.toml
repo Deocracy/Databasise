@@ -77,6 +77,7 @@ packages = [
     "databasise.clients",
     "databasise.parity",
     "databasise.wirings",
+    "databasise.seam",
 ]
 
 # The wiring documents ship with the package rather than existing only in a source checkout

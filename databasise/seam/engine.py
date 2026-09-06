@@ -1,0 +1,190 @@
+"""``databasise.seam.engine`` — the async ``Databasise`` seam object (D-01), the phase's primary
+noun. A caller reaches the engine with a §18.1 query object and receives a §18.2 closed
+``ResponseEnvelope`` — no wiring name, arm name, node id or instance hash crossing the boundary in
+either direction.
+
+**Pattern 1 (04-RESEARCH.md): generalizing ``run_arm.py``'s call shape.** ``query()``'s body
+follows ``databasise/parity/run_arm.py:run_arm``'s established sequence exactly — resolve, inject
+query, inject a token allowance, parse, build stores, ``scheduler.run_wiring``, construct a
+``RunRecord`` — the one difference being the wiring comes from selector resolution (§18.4) rather
+than a hardcoded arm name, and the ``RunRecord`` is redacted into a closed envelope rather than
+returned as the un-redacted dict ``run_arm`` returns. ``provides`` is read off the raw resolved
+dict, never through ``ParsedWiring`` (Pitfall 1) — ``run_arm.py``'s own precedent.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import uuid
+from pathlib import Path
+from typing import Any
+
+from databasise.identity.canon import canonicalise
+from databasise.parts.registry import PartRegistry, default_registry
+from databasise.runner import scheduler as _scheduler
+from databasise.runner.trace import RunRecord
+from databasise.seam.envelope import ResponseEnvelope
+from databasise.seam.query import QueryObject, check_consumable
+from databasise.seam.selectors import Selector, resolve_selector
+from databasise.stores.graph import CozoGraphStore
+from databasise.stores.kv import SqliteKVStore
+from databasise.stores.vector import MultiNamespaceVectorStore
+from databasise.validator.parse import parse_wiring
+
+# The v1-native per-kind names the LightRAG wirings' kv/graph stores are keyed by — matching
+# databasise/parity/run_arm.py's own _TEXT_CHUNKS_KIND/_GRAPH_KIND constants exactly.
+_TEXT_CHUNKS_KIND = "text_chunks"
+_GRAPH_KIND = "chunk_entity_relation"
+
+_EXECUTOR_VERSION = "databasise@0.1.0"
+_DETERMINISM_SETTING = "cache-bypassed"
+_CONCURRENCY_SETTING = "sequential"
+
+# Mirrors run_arm.py's _DEFAULT_TOKEN_ALLOWANCE/DEC-B note: an absent config.token_allowance
+# defaults to 0 at the scheduler, budget-halting every node on its first spend. The seam is the
+# one caller that needs a real run to complete, so it sets a real, generous per-node allowance —
+# never the published wiring itself.
+_DEFAULT_TOKEN_ALLOWANCE = 1_000_000
+
+
+def _inject_query(resolved: dict[str, Any], query: str) -> dict[str, Any]:
+    """Mirrors ``run_arm.py``'s own ``_inject_query`` exactly: stamps ``query`` onto every
+    resolved node whose config reads one (``keywords``, ``embedder-query``, ``generate``) — a
+    no-op for a node the resolved wiring does not contain."""
+    nodes = resolved.get("nodes", {})
+    for node_id in ("keywords", "embedder-query", "generate"):
+        if node_id not in nodes:
+            continue
+        config = dict(nodes[node_id].get("config") or {})
+        config["query"] = query
+        nodes[node_id]["config"] = config
+    return resolved
+
+
+def _inject_token_allowance(resolved: dict[str, Any], allowance: int) -> dict[str, Any]:
+    """Mirrors ``run_arm.py``'s own ``_inject_token_allowance`` exactly: sets
+    ``config.token_allowance`` on every resolved node that does not already declare one."""
+    for node in resolved.get("nodes", {}).values():
+        config = dict(node.get("config") or {})
+        config.setdefault("token_allowance", allowance)
+        node["config"] = config
+    return resolved
+
+
+def _build_stores(store_root: Path, workspace: str) -> dict[str, Any]:
+    """kv/vector/graph, all three, at the engine's own namespace/workspace — mirrors
+    ``run_arm.py``'s own ``_build_stores`` exactly (see that module's docstring for why every arm
+    gets every store wired regardless of which subset it actually touches)."""
+    return {
+        "kv": SqliteKVStore(namespace=_TEXT_CHUNKS_KIND, workspace=workspace, store_root=store_root),
+        "vector": MultiNamespaceVectorStore(workspace=workspace, store_root=store_root),
+        "graph": CozoGraphStore(namespace=_GRAPH_KIND, workspace=workspace, store_root=store_root),
+    }
+
+
+class Databasise:
+    """The consumer-facing async seam object (D-01). Holds ``store_root``/``workspace``, an
+    optional ``PartRegistry`` (defaulting to ``default_registry()``) and an optional ``clients``
+    dict for test injection — the same override point ``run_arm.py`` already establishes."""
+
+    def __init__(
+        self,
+        *,
+        store_root: str | Path,
+        workspace: str,
+        registry: PartRegistry | None = None,
+        clients: dict[str, Any] | None = None,
+    ) -> None:
+        self.store_root = Path(store_root)
+        self.workspace = workspace
+        self.registry = registry if registry is not None else default_registry()
+        self.clients = clients
+
+    async def query(
+        self,
+        query_object: QueryObject,
+        selector: Selector | None = None,
+        *,
+        debug: bool = False,
+    ) -> ResponseEnvelope:
+        """§18.1 query object in, §18.2 closed envelope out. ``debug``'s node-by-node trace
+        behind the trace reference is 04-04's deliverable — accepted here so the signature is
+        stable across the phase, currently a no-op.
+        """
+        del debug
+        check_consumable(query_object, self.registry)
+
+        resolved = resolve_selector(selector, registry=self.registry)
+        resolved = _inject_query(resolved, query_object.text or "")
+        resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
+        parsed = parse_wiring(resolved, self.registry)
+
+        stores = _build_stores(self.store_root, self.workspace)
+        try:
+            scheduled = await _scheduler.run_wiring(
+                parsed,
+                self.registry,
+                stores,
+                determinism_setting=_DETERMINISM_SETTING,
+                concurrency_setting=_CONCURRENCY_SETTING,
+                clients=self.clients,
+            )
+        finally:
+            for store in stores.values():
+                await store.finalize()
+
+        if "cycle" in scheduled:
+            # No selector this plan resolves can produce a cyclic wiring (the naive arm is
+            # acyclic, proven by databasise/tests/parity's own conformance tests) — a genuine
+            # occurrence is out of this plan's scope, not silently swallowed.
+            raise RuntimeError("the seam does not yet support a cyclic resolved wiring")
+
+        wiring_bytes = canonicalise(resolved)
+        wiring_instance_hash = f"sha256:{hashlib.sha256(wiring_bytes).hexdigest()}"
+        wiring_id = resolved.get("wiring_id") or (
+            f"wiring:{hashlib.sha256(wiring_bytes).hexdigest()[:16]}"
+        )
+
+        # Constructed and consumed here only — never returned. RunRecord carries exactly the
+        # internal identities (wiring_id, wiring_instance_hash, node_id, instance_hash) §18.2
+        # forbids a consumer from receiving; the envelope below is what actually crosses the seam.
+        record = RunRecord(
+            run_id=str(uuid.uuid4()),
+            wiring_id=wiring_id,
+            wiring_instance_hash=wiring_instance_hash,
+            arm_id="seam",
+            arm_execution_order=0,
+            executor_version=_EXECUTOR_VERSION,
+            concurrency_setting=_CONCURRENCY_SETTING,
+            determinism_setting=_DETERMINISM_SETTING,
+            nodes=scheduled["nodes"],
+            partial=scheduled["partial"],
+            degraded=scheduled["degraded"],
+            stop_reason=scheduled["stop_reason"],
+            degradation_reason=scheduled["degradation_reason"],
+        )
+
+        provides = resolved.get("provides") or []
+        provided = {node_id: scheduled["results"].get(node_id) for node_id in provides}
+
+        answer = ""
+        depth_label = "stage"
+        for node in record.nodes:
+            if node.node_id not in provides:
+                continue
+            depth_label = node.effective_depth
+            output = provided.get(node.node_id)
+            if isinstance(output, dict) and "completion" in output:
+                answer = str(output["completion"])
+
+        return ResponseEnvelope(
+            answer=answer,
+            depth_label=depth_label,
+            partial=record.partial,
+            degraded=record.degraded,
+            stop_reason=record.stop_reason,
+            degradation_reason=record.degradation_reason,
+        )
+
+
+__all__ = ["Databasise"]
