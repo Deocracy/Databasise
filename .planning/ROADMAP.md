@@ -107,7 +107,7 @@ Plans:
   5. Owner runs one A/A calibration and reads a bootstrap-resampled p95 floor keyed to `(bundle@v, tier, metric)` inseparable from the run's declared determinism/concurrency setting, with T1's null width materially narrower than T0's — Falsifier 5 *(amended 2026-08-31 per `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`: deferred to Phase 6's cross-modality run, same reason as criterion 4)*
   6. Until the A/A floor exists, parity is checked at the retrieval level with deterministic, zero-token comparisons of retrieved chunk sets and rankings between the original and the decomposed query side, plus human spot-checks of answers (D-05 substitute gate)
 
-**Plans**: 10/13 plans executed — 10/10 executed across 8 waves, plus 3 gap-closure plans (03-11..03-13) for the four `03-VERIFICATION.md` gaps
+**Plans**: 11/13 plans executed — 10/10 executed across 8 waves, plus 3 gap-closure plans (03-11..03-13) for the four `03-VERIFICATION.md` gaps
 
 Plans:
 
@@ -147,7 +147,7 @@ Plans:
 
 **Gap closure** *(the four `03-VERIFICATION.md` gaps; sequential — each wave depends on the one before)*
 
-- [ ] 03-11-PLAN.md — wave 1 · the corpus index has no knowledge graph: the unquoted `OPENAI_LLM_EXTRA_BODY` that failed every extraction, the guards that stop it recurring, the re-ingest and re-import, and the D-07 provider pin on the decomposed arm
+- [x] 03-11-PLAN.md — wave 1 · the corpus index has no knowledge graph: the unquoted `OPENAI_LLM_EXTRA_BODY` that failed every extraction, the guards that stop it recurring, the re-ingest and re-import, and the D-07 provider pin on the decomposed arm
 - [ ] 03-12-PLAN.md — wave 2 · the graph-half nodes read the chunks index: a multi-namespace vector handle, each §L.1 vector position pointed at its own namespace, proven against the real imported index, then one graph arm run end to end
 - [ ] 03-13-PLAN.md — wave 3 · one consistent evidence set from one post-fix run, named defects instead of vacuous zeros, a MODAL-01 annotation that matches, and the two owner-only asks made exact
 
@@ -221,7 +221,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Machine Core | 10/10 | Complete    | 2026-08-31 |
 | 2. Falsifier Gate | 4/4 | Complete    | 2026-08-31 |
-| 3. LightRAG Query Side | 10/13 | In Progress|  |
+| 3. LightRAG Query Side | 11/13 | In Progress|  |
 | 4. The Seam | 0/TBD | Not started | - |
 | 5. Opaque-Side Admission | 0/TBD | Not started | - |
 | 6. HippoRAG 2 & Side-by-Side | 0/TBD | Not started | - |
