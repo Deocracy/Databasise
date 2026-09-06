@@ -239,6 +239,30 @@ async def test_entity_hydrate_expand_reports_a_missing_seed_rather_than_dropping
     await graph.finalize()
 
 
+async def test_entity_hydrate_expand_reports_a_malformed_seed_missing_entity_name(store_root):
+    """CR-01 regression: a seed lacking the required ``entity_name`` key must land in
+    ``missing_seeds`` with a diagnostic naming the missing field, not raise ``KeyError`` and halt
+    the whole node.
+    """
+    graph = CozoGraphStore(namespace="chunk_entity_relation", workspace="ws", store_root=store_root)
+    ctx = _ctx(
+        "entity-hydrate-expand",
+        inputs={"entity-lookup": {"items": [{"id": "ent-broken", "score": 0.3}]}},
+        stores={"graph": graph},
+    )
+
+    result = await LIGHTRAG_ENTITY_HYDRATE_EXPAND_PART.body(ctx)
+
+    assert result["entities"] == []
+    assert len(result["missing_seeds"]) == 1
+    entry = result["missing_seeds"][0]
+    assert entry["missing"] is True
+    assert entry["malformed_seed"] is True
+    assert "entity_name" in entry["diagnostic"]
+    assert entry["derived_from"] == ["ent-broken"]
+    await graph.finalize()
+
+
 async def test_entity_hydrate_expand_cannot_reach_the_vector_store(store_root):
     graph = CozoGraphStore(namespace="chunk_entity_relation", workspace="ws", store_root=store_root)
     vector = FaissVectorStore(namespace="entities", workspace="ws", store_root=store_root)
@@ -310,6 +334,33 @@ async def test_relation_hydrate_expand_reports_a_missing_seed_rather_than_droppi
     assert result["relations"] == []
     assert len(result["missing_seeds"]) == 1
     assert result["missing_seeds"][0]["missing"] is True
+    await graph.finalize()
+
+
+async def test_relation_hydrate_expand_reports_a_malformed_seed_missing_src_or_tgt_id(store_root):
+    """CR-01 regression: a seed lacking ``src_id``/``tgt_id`` must land in ``missing_seeds`` with a
+    diagnostic naming the missing field, not raise ``KeyError`` and halt the whole node.
+    """
+    graph = CozoGraphStore(namespace="chunk_entity_relation", workspace="ws", store_root=store_root)
+    ctx = _ctx(
+        "relation-hydrate-expand",
+        inputs={
+            "relation-lookup": {
+                "items": [{"id": "rel-broken", "score": 0.2, "src_id": "Alice"}]
+            }
+        },
+        stores={"graph": graph},
+    )
+
+    result = await LIGHTRAG_RELATION_HYDRATE_EXPAND_PART.body(ctx)
+
+    assert result["relations"] == []
+    assert len(result["missing_seeds"]) == 1
+    entry = result["missing_seeds"][0]
+    assert entry["missing"] is True
+    assert entry["malformed_seed"] is True
+    assert "tgt_id" in entry["diagnostic"]
+    assert entry["derived_from"] == ["rel-broken"]
     await graph.finalize()
 
 
