@@ -286,12 +286,14 @@ def _v1_text_chunks(v1_working_dir: Path) -> dict[str, dict[str, Any]]:
 #
 # Replaced with a direct tolerance check on the raw, unrounded float32 vectors (CR-02 fix cycle):
 # no grid, so no boundary case regardless of how the dataset grows, and it uses each vector's full
-# component resolution rather than discarding a quarter of it up front. 1e-4 is two orders of
-# magnitude above the measured ~1e-5 noise ceiling — comfortable headroom that a genuine
-# re-normalisation pass never trips — while a real re-embedding or a wrong id-to-vector pairing
-# (which differ across many of a vector's 4096 components at once, several orders of magnitude
-# above this tolerance) is still caught, and the comparison now names the specific offending
-# vector id rather than only reporting a whole-set hash mismatch.
+# component resolution rather than discarding a quarter of it up front. 1e-4 is one order of
+# magnitude (10x) above the measured ~1e-5 noise ceiling — that ceiling is itself the observed
+# maximum per-component noise across all 407 real vectors, not a typical or average value, so 10x
+# above a measured maximum is defensible headroom that a genuine re-normalisation pass never trips
+# — while a real re-embedding or a wrong id-to-vector pairing (which differ across many of a
+# vector's 4096 components at once, several orders of magnitude above this tolerance) is still
+# caught, and the comparison now names the specific offending vector id rather than only reporting
+# a whole-set hash mismatch.
 _VECTOR_TOLERANCE = 1e-4
 
 
