@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 2
+open_count: 1
 waived_count: 0
-fixed_count: 0
+fixed_count: 1
 total_count: 2
-last_updated: 2026-09-06T22:23:04.063Z
+last_updated: 2026-09-06T23:20:55.764Z
 ---
 
 # Broken Windows Ledger
@@ -15,7 +15,7 @@ last_updated: 2026-09-06T22:23:04.063Z
 
 | id | phase | kind | file | line | description | status | reason | recorded_at | resolved_at |
 |----|-------|------|------|------|-------------|--------|--------|-------------|-------------|
-| 1 | 04 | stub | databasise/seam/envelope.py |  | evidence/token_accounting fields declared empty per declare-upfront checkpoint decision; filled by 04-02 | open |  | 2026-09-06T22:23:03.911Z |  |
+| 1 | 04 | stub | databasise/seam/envelope.py |  | evidence/token_accounting fields declared empty per declare-upfront checkpoint decision; filled by 04-02 | fixed |  | 2026-09-06T22:23:03.911Z | 2026-09-06T23:20:55.764Z |
 | 2 | 04 | stub | databasise/seam/envelope.py |  | trace_token/seam_events fields declared empty per declare-upfront checkpoint decision; filled by 04-04 | open |  | 2026-09-06T22:23:04.063Z |  |
 
 ````json
@@ -27,10 +27,10 @@ last_updated: 2026-09-06T22:23:04.063Z
     "file": "databasise/seam/envelope.py",
     "line": null,
     "description": "evidence/token_accounting fields declared empty per declare-upfront checkpoint decision; filled by 04-02",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-09-06T22:23:03.911Z",
-    "resolved_at": null
+    "resolved_at": "2026-09-06T23:20:55.764Z"
   },
   {
     "id": 2,
