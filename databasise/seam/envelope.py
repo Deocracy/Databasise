@@ -8,20 +8,21 @@ and land empty/``None`` in this plan — 04-02 and 04-04 fill them. Every later 
 binds an element type into a field that already exists here; none may widen this envelope. See
 04-01-SUMMARY.md's ``decisions_recorded_here`` section for the derivation.
 
-**04-02 Task 1: the evidence element type is now bound to its real model**
-(``databasise.seam.evidence.EvidenceRef``) — 04-01's own placeholder class of the same shape is
-retired in favour of it; no field on ``ResponseEnvelope`` itself was added, renamed, or removed.
-See that module for the field shape and FA-03's declared ``ChunkRef`` shortfall. The
-token-accounting element type is bound in Task 3, later in this same plan.
+**04-02: the evidence and token-accounting element types are now bound to their real models**
+(``databasise.seam.evidence.EvidenceRef``, ``databasise.seam.tokens.TokenBreakdownEntry``) —
+04-01's own placeholder classes of the same shape are retired in favour of them; no field on
+``ResponseEnvelope`` itself was added, renamed, or removed. See those two modules for the field
+shapes and FA-03's declared ``ChunkRef`` shortfall.
 
 **Nested strictness (Pitfall 7).** Pydantic v2 does not cascade ``frozen=True, extra="forbid"``
 through nested model fields — each nested model must set its own ``model_config``, or inherit from
 a shared strict base. Every model in this module, top-level and nested alike, inherits
 ``_StrictModel`` (``databasise.seam._base`` — see that module's own docstring for why the base
-lives in its own leaf module rather than here, once ``evidence.py`` needs to inherit it too), so an
-unexpected key is rejected at every nesting depth, not only the outermost. The structural guard
-alone would miss an internal id smuggled inside a nested value (D-05) — the behavioral leak gate
-over a real serialized envelope is 04-04's job; this module only carries the structural half.
+lives in its own leaf module rather than here, once ``evidence.py``/``tokens.py`` need to inherit
+it too), so an unexpected key is rejected at every nesting depth, not only the outermost. The
+structural guard alone would miss an internal id smuggled inside a nested value (D-05) — the
+behavioral leak gate over a real serialized envelope is 04-04's job; this module only carries the
+structural half.
 
 **`resolved_model_identity` is excluded (FA-02, resolved by the checkpoint answer).** No
 requirement in this phase asks for it, and including it would make "which model answered" visible
@@ -32,20 +33,7 @@ from __future__ import annotations
 
 from databasise.seam._base import _StrictModel
 from databasise.seam.evidence import EvidenceRef
-
-
-class TokenAccountingEntry(_StrictModel):
-    """One breakdown entry in §18.2's ``counted_by``-tagged token accounting (D-08, Pitfall 5) —
-    never a single summed scalar, since per-node ``counted_by`` values legitimately disagree
-    within one run. 04-02 Task 3 populates this list from a real run; this plan declares the shape
-    and leaves the envelope's ``token_accounting`` list empty until then.
-    """
-
-    counted_by: str
-    prompt_tokens: int = 0
-    completion_tokens: int = 0
-    cached_read_tokens: int = 0
-    call_count: int = 0
+from databasise.seam.tokens import TokenBreakdownEntry
 
 
 class SeamEvent(_StrictModel):
@@ -56,7 +44,7 @@ class SeamEvent(_StrictModel):
     """
 
     component: str
-    spend: TokenAccountingEntry | None = None
+    spend: TokenBreakdownEntry | None = None
     outcome: str
 
 
@@ -76,8 +64,8 @@ class ResponseEnvelope(_StrictModel):
     degraded: bool
     stop_reason: str | None = None
     degradation_reason: str | None = None
-    token_accounting: list[TokenAccountingEntry] = []
+    token_accounting: list[TokenBreakdownEntry] = []
     seam_events: list[SeamEvent] = []
 
 
-__all__ = ["EvidenceRef", "ResponseEnvelope", "SeamEvent", "TokenAccountingEntry"]
+__all__ = ["EvidenceRef", "ResponseEnvelope", "SeamEvent", "TokenBreakdownEntry"]
