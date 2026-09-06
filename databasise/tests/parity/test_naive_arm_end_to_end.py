@@ -17,7 +17,13 @@ import numpy as np
 import pytest
 from databasise.clients.base import ChatResult, EmbeddingResult
 from databasise.parts.registry import default_registry
-from databasise.parity.run_arm import MissingParityEnvKeyError, _build_clients, _inject_query, run_arm
+from databasise.parity.run_arm import (
+    MissingParityEnvKeyError,
+    UnparseableProviderRoutingError,
+    _build_clients,
+    _inject_query,
+    run_arm,
+)
 from databasise.parity.run_comparison import _inject_pinned_keywords
 from databasise.runner import scheduler
 from databasise.runner.trace import TokenAccounting
@@ -57,6 +63,44 @@ def test_build_clients_succeeds_when_every_required_key_is_present():
     )
 
     assert set(clients) == {"llm", "embedding"}
+
+
+_REQUIRED_ENV = {
+    "LLM_BINDING_HOST": "http://llm",
+    "LLM_MODEL": "llm-model",
+    "LLM_BINDING_API_KEY": "llm-key",
+    "EMBEDDING_BINDING_HOST": "http://embed",
+    "EMBEDDING_MODEL": "embed-model",
+    "EMBEDDING_BINDING_API_KEY": "embed-key",
+}
+
+
+def test_build_clients_does_not_require_provider_routing_key_optional_by_design():
+    # OPENAI_LLM_EXTRA_BODY absent is not in _REQUIRED_ENV_KEYS — the WR-01 missing-key tests
+    # above still assert exactly the six keys they always have (03-11-PLAN.md Task 2).
+    clients = _build_clients(_REQUIRED_ENV)
+
+    assert set(clients) == {"llm", "embedding"}
+    assert clients["llm"]._provider_routing_body is None
+
+
+def test_build_clients_passes_a_present_and_parseable_provider_routing_body_to_the_llm_client():
+    env = {**_REQUIRED_ENV, "OPENAI_LLM_EXTRA_BODY": '{"provider": {"order": ["Alibaba"]}}'}
+
+    clients = _build_clients(env)
+
+    assert clients["llm"]._provider_routing_body == {"provider": {"order": ["Alibaba"]}}
+    # Matches v1_driver_script.py's own behavior: the pin never reaches the embedding client.
+    assert clients["embedding"]._provider_routing_body is None
+
+
+def test_build_clients_refuses_by_name_on_an_unparseable_provider_routing_body():
+    env = {**_REQUIRED_ENV, "OPENAI_LLM_EXTRA_BODY": '{provider:{order:[Alibaba]}}'}
+
+    with pytest.raises(UnparseableProviderRoutingError) as exc_info:
+        _build_clients(env)
+
+    assert exc_info.value.env_var == "OPENAI_LLM_EXTRA_BODY"
 
 
 # --------------------------------------------------------------------------------------------- #
