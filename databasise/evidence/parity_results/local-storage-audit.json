@@ -4,10 +4,10 @@
   "exit_code": 0,
   "status": "completed",
   "outcome": "clean",
-  "reason": "audit ran to completion: 15 node(s), matched=10 no-touch=5 over-declared=0, zero violations",
-  "matched_count": 10,
-  "no_touch_count": 5,
-  "over_declared_count": 0,
+  "reason": "audit ran to completion: 15 node(s), matched=12 no-touch=2 over-declared=1, zero violations",
+  "matched_count": 12,
+  "no_touch_count": 2,
+  "over_declared_count": 1,
   "rows": [
     {
       "node_id": "assemble",
@@ -33,12 +33,14 @@
     {
       "node_id": "chunk-sel-kg",
       "kind": "lightrag/chunk-selector-kg@0.1.0",
-      "state": "no-touch",
+      "state": "over-declared",
       "declared": [
         "reads_kv",
         "reads_vector"
       ],
-      "touched": []
+      "touched": [
+        "store:kv"
+      ]
     },
     {
       "node_id": "embedder-index",
@@ -86,20 +88,24 @@
     {
       "node_id": "generate",
       "kind": "lightrag/generator-llm@0.1.0",
-      "state": "no-touch",
+      "state": "matched",
       "declared": [
         "calls_llm"
       ],
-      "touched": []
+      "touched": [
+        "client:llm"
+      ]
     },
     {
       "node_id": "heading-backfill",
       "kind": "lightrag/chunk-heading-backfiller@0.1.0",
-      "state": "no-touch",
+      "state": "matched",
       "declared": [
         "reads_kv"
       ],
-      "touched": []
+      "touched": [
+        "store:kv"
+      ]
     },
     {
       "node_id": "join-chunks",

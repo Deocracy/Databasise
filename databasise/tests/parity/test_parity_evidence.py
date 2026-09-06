@@ -197,11 +197,15 @@ def test_degraded_but_vacuous_arms_ignores_a_clean_completed_record(tmp_path):
     assert parity_report._degraded_but_vacuous_arms(results_dir=tmp_path) == []
 
 
-def test_degraded_but_vacuous_arms_on_the_real_committed_data_names_the_three_known_degraded_arms():
-    """Non-vacuous proof against the actual committed evidence: CR-01's crash affects exactly
-    ``hybrid``/``local``/``global`` today (see ``PARITY-EVIDENCE.md``'s own Verdict section).
+def test_degraded_but_vacuous_arms_on_the_real_committed_data_names_no_arms():
+    """Non-vacuous proof against the actual committed evidence (03-13-PLAN.md's re-run, after
+    03-11/03-12's ingest/namespace fixes): all five arms now complete a real, non-degraded
+    retrieval on both sides, so this list is correctly empty — CR-01's crash it once named is no
+    longer what any arm's committed record shows (see ``PARITY-EVIDENCE.md``'s own Verdict
+    section, and the "Outstanding" section of ``DECLARED-DEVIATIONS.md`` for what is measured in
+    its place: real, non-empty, individually-named excursions, not a vacuous zero).
     """
-    assert parity_report._degraded_but_vacuous_arms() == ["hybrid", "local", "global"]
+    assert parity_report._degraded_but_vacuous_arms() == []
 
 
 # --------------------------------------------------------------------------------------------- #
@@ -240,9 +244,20 @@ def test_zero_deviations_against_an_inconclusive_fixture_states_nothing_measured
 
 
 def test_committed_deviations_document_matches_a_fresh_render():
-    from databasise.evidence.parity_report import DEVIATIONS_PATH, _collect_deviations
+    """`render_deviations_document()` (03-13-PLAN.md gap 2), not `render_deviations_markdown()`
+    directly, is what `main()` actually writes to `DECLARED-DEVIATIONS.md` now that a real,
+    completed, non-degraded run can carry excursions still awaiting a CONTRACT §5 cause on more
+    than one arm at once — calling `render_deviations_markdown()` on the full real deviations
+    list raises (correctly; proven separately below), so it is not the function this committed
+    file is a fresh render of.
+    """
+    from databasise.evidence.parity_report import (
+        DEVIATIONS_PATH,
+        _collect_deviations,
+        render_deviations_document,
+    )
 
-    assert DEVIATIONS_PATH.read_text(encoding="utf-8") == render_deviations_markdown(
+    assert DEVIATIONS_PATH.read_text(encoding="utf-8") == render_deviations_document(
         _collect_deviations()
     )
 
@@ -363,12 +378,15 @@ def test_render_markdown_names_every_arm():
 
 def test_render_markdown_completed_direction_carries_real_storage_audit_counts():
     """Task 2's own acceptance criterion: the real storage-audit counts for hybrid appear as
-    rendered cells, not the pre-run 'matched=0 no-touch=0 over-declared=0' narrative.
+    rendered cells, not the pre-run 'matched=0 no-touch=0 over-declared=0' narrative. Counts
+    updated for 03-13-PLAN.md's re-run: hybrid's audit is no longer crash-truncated (it now runs
+    to completion clean, 17 nodes total), so its matched/no-touch split changed from the
+    pre-namespace-fix numbers this test used to assert.
     """
     text = render_markdown()
 
-    assert "matched=12" in text
-    assert "no-touch=5" in text
+    assert "matched=14" in text
+    assert "no-touch=2" in text
 
 
 def test_render_markdown_states_not_applicable_for_an_arm_with_no_keywords_node():
@@ -382,15 +400,18 @@ def test_render_markdown_states_not_applicable_for_an_arm_with_no_keywords_node(
     assert "not run — completed" not in text
 
 
-def test_render_markdown_states_the_hybrid_local_global_degradation_rather_than_a_clean_pass():
-    """`hybrid`/`local`/`global`'s decomposed runs degraded before completing a real retrieval
-    (entity-hydrate-expand / relation-hydrate-expand crashed) — the zero symmetric_difference on
-    those three arms is not read as a validated retrieval-level match.
+def test_render_markdown_states_the_hybrid_local_global_excursions_rather_than_a_clean_pass():
+    """03-13-PLAN.md's re-run: `hybrid`/`local`/`global` no longer degrade (the namespace fix
+    from 03-12-PLAN.md let their decomposed runs reach `generate` cleanly), but their real,
+    non-empty `entity_diff`/`relation_diff` excursions still must not be read as a validated
+    retrieval-level match — this is the successor to the old crash-degradation assertion this
+    test used to make, for the state the real committed data now shows instead.
     """
     text = render_markdown()
 
-    assert "Degraded run" in text
-    assert "not read as exact retrieval-level agreement" in text
+    assert "Degraded run" not in text
+    assert "not read as exact retrieval-level agreement either" in text
+    assert "each one needs a CONTRACT §5 human-authored cause" in text
 
 
 # --------------------------------------------------------------------------------------------- #
