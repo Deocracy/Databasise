@@ -8,13 +8,20 @@ and land empty/``None`` in this plan — 04-02 and 04-04 fill them. Every later 
 binds an element type into a field that already exists here; none may widen this envelope. See
 04-01-SUMMARY.md's ``decisions_recorded_here`` section for the derivation.
 
+**04-02 Task 1: the evidence element type is now bound to its real model**
+(``databasise.seam.evidence.EvidenceRef``) — 04-01's own placeholder class of the same shape is
+retired in favour of it; no field on ``ResponseEnvelope`` itself was added, renamed, or removed.
+See that module for the field shape and FA-03's declared ``ChunkRef`` shortfall. The
+token-accounting element type is bound in Task 3, later in this same plan.
+
 **Nested strictness (Pitfall 7).** Pydantic v2 does not cascade ``frozen=True, extra="forbid"``
 through nested model fields — each nested model must set its own ``model_config``, or inherit from
 a shared strict base. Every model in this module, top-level and nested alike, inherits
-``_StrictModel`` below, so an unexpected key is rejected at every nesting depth, not only the
-outermost. The structural guard alone would miss an internal id smuggled inside a nested value
-(D-05) — the behavioral leak gate over a real serialized envelope is 04-04's job; this module only
-carries the structural half.
+``_StrictModel`` (``databasise.seam._base`` — see that module's own docstring for why the base
+lives in its own leaf module rather than here, once ``evidence.py`` needs to inherit it too), so an
+unexpected key is rejected at every nesting depth, not only the outermost. The structural guard
+alone would miss an internal id smuggled inside a nested value (D-05) — the behavioral leak gate
+over a real serialized envelope is 04-04's job; this module only carries the structural half.
 
 **`resolved_model_identity` is excluded (FA-02, resolved by the checkpoint answer).** No
 requirement in this phase asks for it, and including it would make "which model answered" visible
@@ -23,34 +30,15 @@ to a consumer without that having been decided under §18.3's invariance rule.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
-
-
-class _StrictModel(BaseModel):
-    """The shared strict base every model in this module inherits (Pitfall 7) — frozen and
-    extra-forbidding, so an unexpected key is rejected at every nesting depth."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-
-class EvidenceRef(_StrictModel):
-    """§18.2's evidence reference: a machine-resolvable, deref-raising ref (§4's ``ScoredItem``),
-    never an inline copy of evidence content. The element type — what ``ref``/``kind`` actually
-    carry for a real run — is 04-02's deliverable; this plan declares the shape and leaves the
-    envelope's ``evidence`` list empty.
-    """
-
-    ref: str
-    kind: str
-    tier: str | None = None
-    score: float | None = None
+from databasise.seam._base import _StrictModel
+from databasise.seam.evidence import EvidenceRef
 
 
 class TokenAccountingEntry(_StrictModel):
     """One breakdown entry in §18.2's ``counted_by``-tagged token accounting (D-08, Pitfall 5) —
     never a single summed scalar, since per-node ``counted_by`` values legitimately disagree
-    within one run. 04-02 populates this list from a real run; this plan declares the shape and
-    leaves the envelope's ``token_accounting`` list empty.
+    within one run. 04-02 Task 3 populates this list from a real run; this plan declares the shape
+    and leaves the envelope's ``token_accounting`` list empty until then.
     """
 
     counted_by: str
@@ -92,4 +80,4 @@ class ResponseEnvelope(_StrictModel):
     seam_events: list[SeamEvent] = []
 
 
-__all__ = ["ResponseEnvelope", "EvidenceRef", "TokenAccountingEntry", "SeamEvent"]
+__all__ = ["EvidenceRef", "ResponseEnvelope", "SeamEvent", "TokenAccountingEntry"]

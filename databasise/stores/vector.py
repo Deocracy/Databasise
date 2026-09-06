@@ -44,8 +44,8 @@ already use.
 
 from __future__ import annotations
 
-import hashlib
 import asyncio
+import hashlib
 import json
 import os
 from collections.abc import Iterator
@@ -246,6 +246,19 @@ class FaissVectorStore(StorageNameSpace):
             return
         for doc_id, entry in self._entries.items():
             yield doc_id, self._index.reconstruct(entry["int_id"])
+
+    def get_by_id(self, doc_id: str) -> dict[str, Any] | None:
+        """The same per-item shape ``query()`` returns for ``doc_id`` (``{"id": doc_id,
+        **metadata}``, score-free since no query vector is involved here) if this store currently
+        holds a committed entry for it, else ``None``. A public accessor mirroring
+        ``iter_vectors``'s own WR-02 reasoning: a caller that needs to resolve one specific
+        committed entry back to its metadata — the seam's evidence-reference dereference (D-07) —
+        reads this store's public surface instead of reaching into ``_entries``.
+        """
+        entry = self._entries.get(doc_id)
+        if entry is None:
+            return None
+        return {"id": doc_id, **entry["metadata"]}
 
     # ------------------------------------------------------------------ #
     # Lifecycle                                                            #
