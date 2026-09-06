@@ -243,6 +243,27 @@ async def test_heading_backfill_omits_content_headings_when_the_kv_record_has_no
     assert result["items"][0]["content"] == "plain content"
 
 
+async def test_heading_backfill_reads_join_chunks_input_for_the_hybrid_local_global_shape(store_root):
+    """03-12-PLAN.md Task 3 regression: the base wiring (hybrid/local/global) declares this node's
+    sole dependency as ``join-chunks``, not ``chunk-vector`` — the body must read positionally, not
+    by a hardcoded dependency name, or every hybrid/local/global run raises
+    ``NodeExecutionError: 'chunk-vector'`` the moment retrieval reaches this node.
+    """
+    kv = SqliteKVStore(namespace="text_chunks", workspace="ws", store_root=store_root)
+    await kv.upsert({"chunk-1": {"content": "authoritative content"}})
+    await kv.index_done_callback()
+
+    ctx = _ctx(
+        "heading-backfill",
+        inputs={"join-chunks": {"items": [{"id": "chunk-1", "score": 0.7}]}},
+        stores={"kv": kv},
+    )
+
+    result = await LIGHTRAG_CHUNK_HEADING_BACKFILLER_PART.body(ctx)
+
+    assert result["items"][0]["content"] == "authoritative content"
+
+
 async def test_heading_backfill_leaves_an_item_untouched_when_no_kv_record_exists(store_root):
     kv = SqliteKVStore(namespace="text_chunks", workspace="ws", store_root=store_root)
     ctx = _ctx(
