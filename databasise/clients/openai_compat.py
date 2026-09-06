@@ -70,13 +70,24 @@ class OpenAICompatibleClient:
         model: str,
         api_key: str = "not-needed",
         client: Any | None = None,
+        provider_routing_body: dict[str, Any] | None = None,
     ) -> None:
         self._model = model
+        self._provider_routing_body = provider_routing_body
         self._client = client if client is not None else openai.AsyncOpenAI(
             base_url=base_url, api_key=api_key
         )
 
     async def chat(self, messages: list[dict[str, str]], **kwargs: Any) -> ChatResult:
+        # D-07's pinned provider-routing body (OPENAI_LLM_EXTRA_BODY), matching
+        # v1_driver_script.py's/run_parity_ingest.py's `extra_body=_extra_body(...)` on the chat
+        # call only — never on embed() (see that pair's own `openai_embed.func` call, which never
+        # passes extra_body). A caller-supplied `extra_body` kwarg wins over the constructed
+        # default (setdefault, not overwrite) — the escape hatch tests already rely on stays open.
+        # An absent pin adds no key at all, so a local Ollama configuration with no provider to
+        # route sends none.
+        if self._provider_routing_body is not None:
+            kwargs.setdefault("extra_body", self._provider_routing_body)
         response = await self._client.chat.completions.create(
             model=self._model, messages=messages, **kwargs
         )
