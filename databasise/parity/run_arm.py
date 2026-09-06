@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import hashlib
+import json
 import sys
 import uuid
 from pathlib import Path
@@ -123,6 +124,40 @@ _REQUIRED_ENV_KEYS = (
     "EMBEDDING_BINDING_API_KEY",
 )
 
+# Optional by design (D-07 pin has no meaning for a local Ollama configuration with no provider to
+# route) — deliberately NOT added to _REQUIRED_ENV_KEYS, which would break the existing WR-01
+# missing-key tests that assert exactly which keys are required.
+_PROVIDER_ROUTING_ENV_KEY = "OPENAI_LLM_EXTRA_BODY"
+
+
+class UnparseableProviderRoutingError(RuntimeError):
+    """Raised when ``OPENAI_LLM_EXTRA_BODY`` is present in the parity env but is not valid JSON —
+    a named refusal, matching ``MissingParityEnvKeyError``'s "refusals over silent fallbacks"
+    house style, rather than silently dropping the pin and running the decomposed arm with
+    unpinned provider routing while the original arm's ``v1/scripts/run_parity_ingest.py`` refuses
+    the same malformed value outright.
+    """
+
+    def __init__(self, env_var: str, raw_value: str):
+        self.env_var = env_var
+        self.raw_value = raw_value
+        super().__init__(f"{env_var} is set but is not valid JSON: {raw_value!r}")
+
+
+def _parse_provider_routing_body(env: dict[str, str]) -> dict[str, Any] | None:
+    """Source D-07's pinned provider-routing body from the same parity env mapping the six
+    required keys come from. Absent -> ``None`` (no pin — correct for a local Ollama configuration
+    that has no provider to route). Present-but-unparseable -> a named refusal, never a silently
+    dropped pin.
+    """
+    raw = env.get(_PROVIDER_ROUTING_ENV_KEY)
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise UnparseableProviderRoutingError(_PROVIDER_ROUTING_ENV_KEY, raw) from exc
+
 
 def _build_clients(env: dict[str, str]) -> dict[str, Any]:
     """One ``OpenAICompatibleClient`` construction shape (D-07) reaches both the LLM and the
@@ -134,10 +169,12 @@ def _build_clients(env: dict[str, str]) -> dict[str, Any]:
     missing = [key for key in _REQUIRED_ENV_KEYS if key not in env]
     if missing:
         raise MissingParityEnvKeyError(missing)
+    provider_routing_body = _parse_provider_routing_body(env)
     llm = OpenAICompatibleClient(
         base_url=env["LLM_BINDING_HOST"],
         model=env["LLM_MODEL"],
         api_key=env["LLM_BINDING_API_KEY"],
+        provider_routing_body=provider_routing_body,
     )
     embedding = OpenAICompatibleClient(
         base_url=env["EMBEDDING_BINDING_HOST"],
