@@ -55,12 +55,14 @@ call that reads it raises `JSONDecodeError` (03-11-PLAN.md's root-cause finding)
 value in single quotes, as shown above, makes the inner double quotes survive sourcing intact.
 Any other JSON-valued line added to this file later needs the same single-quoting.
 
-**This pinned v1 also carries one coercion fix in `lightrag/operate.py`'s
-`_merge_edges_then_upsert`:** every `BaseGraphStorage` backend's `get_edge()` returns attribute
-values as strings, so an existing edge's `weight` arrived as `"1.0"` and crashed on
-`float + str` the first time an entity was mentioned in 2+ documents; the fix wraps the read in
-`float(...)`. Recorded here so the original-arm identity stays honest — this is a bug fix to the
-pinned baseline, not a behavior change to what it measures (03-11-PLAN.md finding).
+**This pinned v1 also carries the same coercion fix at two sites in `lightrag/operate.py`:**
+every `BaseGraphStorage` backend's `get_edge()` returns attribute values as strings, so an
+existing edge's `weight` arrived as `"1.0"` and crashed on `float + str` the first time an
+entity was mentioned in 2+ documents; both `_merge_edges_then_upsert` and the cache-rebuild path
+`_rebuild_single_relationship` read the identical shape from the identical `get_edge()` source,
+so both wrap the read in `float(...)`. Recorded here so the original-arm identity stays honest —
+this is a bug fix to the pinned baseline, not a behavior change to what it measures (03-11-PLAN.md
+finding; second site closed in the phase-03 review-fix cycle).
 
 ## Ingest run record (Task 2)
 
