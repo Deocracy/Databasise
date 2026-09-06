@@ -164,7 +164,24 @@ Plans:
   4. Caller sets the debug flag and retrieves the node-by-node execution trace through the envelope's trace reference — internal node identities stay behind the reference and never enter the envelope itself
   5. The same seam is reachable two ways with identical behavior: `import databasise` in-process, and the optional REST layer over the same call path
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+**Wave 1**
+
+- [ ] 04-01-PLAN.md — the seam tracer: the async `Databasise` object, the §18.1 query object, the §18.2 closed envelope frozen at every nesting depth, the refusal hierarchy, and `run_wiring` demoted to machine-internal
+
+**Wave 2** *(blocked on Wave 1; the two plans run in parallel — no shared files)*
+
+- [ ] 04-02-PLAN.md — evidence references that resolve back to the store, and a per-`counted_by` token breakdown with an explicit refusal for an `unbudgetable` participant
+- [ ] 04-03-PLAN.md — all four §18.4 selectors, the closed selector input set, refusals that name what was missing without naming what the machine holds, and the §18.5 falsifier check
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 04-04-PLAN.md — run-record persistence behind an opaque trace token, MACH-11's out-of-`deps` mutation event, and the two-tier leak gate over a complete real envelope
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 04-05-PLAN.md — the optional REST transport with SSE streaming over the same seam object, the dual-transport conformance test, and this phase's COVERAGE.md
 
 ### Phase 5: Opaque-Side Admission
 
