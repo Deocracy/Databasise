@@ -46,6 +46,23 @@ def _ctx(
     )
 
 
+class _NamespaceRecordingVectorHandle:
+    """A fake multi-namespace vector handle (``databasise.stores.vector.MultiNamespaceVectorStore``'s
+    real call shape): records every namespace name ``select()`` was asked for, and returns the
+    single real per-namespace store this test wired underneath — see
+    ``test_graph_half_parts.py``'s own copy of this fake for why it is duplicated rather than
+    imported (IN-01: this codebase's own house style for small per-test-file doubles).
+    """
+
+    def __init__(self, store: Any):
+        self._store = store
+        self.selected_namespaces: list[str] = []
+
+    def select(self, namespace: str) -> Any:
+        self.selected_namespaces.append(namespace)
+        return self._store
+
+
 def _base_config(node_id: str) -> dict[str, Any]:
     return dict(load_base()["nodes"][node_id]["config"])
 
@@ -278,18 +295,23 @@ async def test_chunk_selector_kg_reports_which_pick_method_ran_on_fall_through(s
     assert config["pick_method"] == "VECTOR"  # the published base config's own primary method
     # No config["query_vector"] supplied: the VECTOR path yields nothing (see module docstring —
     # this node's own base-wiring deps carry no query embedding), so it falls through to WEIGHT.
+    fake_vector = _NamespaceRecordingVectorHandle(
+        FaissVectorStore(namespace="chunks", workspace="ws", store_root=store_root)
+    )
 
     ctx = _ctx(
         "chunk-sel-kg",
         config=config,
         inputs={"budget-entities": {"items": [entity]}, "budget-relations": {"items": []}},
-        stores={"kv": kv},
+        stores={"kv": kv, "vector": fake_vector},
     )
 
     result = await LIGHTRAG_CHUNK_SELECTOR_KG_PART.body(ctx)
 
     assert result["pick_method_used"] == "WEIGHT"
     assert [item["chunk_id"] for item in result["items"]] == ["chunk-1"]
+    # The WEIGHT fallback branch must not select or touch a vector namespace at all.
+    assert fake_vector.selected_namespaces == []
 
 
 async def test_chunk_selector_kg_vector_path_reaches_the_vector_store_when_a_query_vector_is_supplied(
@@ -300,6 +322,7 @@ async def test_chunk_selector_kg_vector_path_reaches_the_vector_store_when_a_que
     vector = FaissVectorStore(namespace="chunks", workspace="ws", store_root=store_root)
     await vector.upsert(ids=["chunk-1", "chunk-2"], embeddings=[[1.0, 0.0], [0.0, 1.0]])
     await vector.index_done_callback()
+    fake_vector = _NamespaceRecordingVectorHandle(vector)
 
     entity = {"entity_name": "Alice", "source_id": "chunk-1<SEP>chunk-2"}
     ctx = _ctx(
@@ -311,10 +334,11 @@ async def test_chunk_selector_kg_vector_path_reaches_the_vector_store_when_a_que
             "related_chunk_number": 5,
         },
         inputs={"budget-entities": {"items": [entity]}, "budget-relations": {"items": []}},
-        stores={"kv": kv, "vector": vector},
+        stores={"kv": kv, "vector": fake_vector},
     )
 
     result = await LIGHTRAG_CHUNK_SELECTOR_KG_PART.body(ctx)
 
     assert result["pick_method_used"] == "VECTOR"
     assert result["items"][0]["chunk_id"] == "chunk-1"  # closest to the supplied query vector
+    assert fake_vector.selected_namespaces == ["chunks"]
