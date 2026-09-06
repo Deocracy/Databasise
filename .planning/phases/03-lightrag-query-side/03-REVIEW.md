@@ -1,106 +1,36 @@
 ---
 phase: 03-lightrag-query-side
-reviewed: 2026-09-06T02:30:00Z
+reviewed: 2026-09-06T20:18:28Z
 depth: standard
-files_reviewed: 74
+files_reviewed: 23
 files_reviewed_list:
-  - databasise/clients/base.py
-  - databasise/clients/__init__.py
   - databasise/clients/openai_compat.py
-  - databasise/evidence/DECLARED-DEVIATIONS.md
-  - databasise/evidence/FALSIFIER-2-EVIDENCE.md
-  - databasise/evidence/falsifier2.py
-  - databasise/evidence/human_findings.json
-  - databasise/evidence/PARITY-EVIDENCE.md
   - databasise/evidence/parity_report.py
-  - databasise/evidence/parity_results/bypass-comparison.json
-  - databasise/evidence/parity_results/bypass-storage-audit.json
-  - databasise/evidence/parity_results/global-comparison.json
-  - databasise/evidence/parity_results/global-storage-audit.json
-  - databasise/evidence/parity_results/hybrid-comparison.json
-  - databasise/evidence/parity_results/hybrid-storage-audit.json
-  - databasise/evidence/parity_results/local-comparison.json
-  - databasise/evidence/parity_results/local-storage-audit.json
-  - databasise/evidence/parity_results/naive-comparison.json
-  - databasise/evidence/parity_results/naive-storage-audit.json
-  - databasise/evidence/wirings/w1-lightrag-query-side.json
-  - databasise/evidence/wirings/w3-lightrag-half-decomposed.json
-  - databasise/.gitignore
-  - databasise/__init__.py
-  - databasise/parity/build_corpus_fixture.py
-  - databasise/parity/corpus.py
   - databasise/parity/import_index.py
-  - databasise/parity/__init__.py
   - databasise/parity/run_arm.py
-  - databasise/parity/run_comparison.py
-  - databasise/parity/storage_audit.py
-  - databasise/parity/v1_arm.py
-  - databasise/parity/v1_driver_script.py
-  - databasise/parts_core/declared_only.py
-  - databasise/parts_core/lightrag/assemble.py
   - databasise/parts_core/lightrag/chunk_sel_kg.py
   - databasise/parts_core/lightrag/chunk_vector.py
-  - databasise/parts_core/lightrag/embedder_index.py
-  - databasise/parts_core/lightrag/embedder_query.py
-  - databasise/parts_core/lightrag/entity_hydrate_expand.py
   - databasise/parts_core/lightrag/entity_lookup.py
-  - databasise/parts_core/lightrag/generate.py
   - databasise/parts_core/lightrag/heading_backfill.py
-  - databasise/parts_core/lightrag/__init__.py
-  - databasise/parts_core/lightrag/join_roundrobin.py
-  - databasise/parts_core/lightrag/keywords.py
-  - databasise/parts_core/lightrag/relation_hydrate_expand.py
   - databasise/parts_core/lightrag/relation_lookup.py
-  - databasise/parts_core/lightrag/rerank.py
-  - databasise/parts_core/lightrag/truncator_token_budget.py
-  - databasise/parts/registry.py
-  - databasise/parts/schema.py
-  - databasise/pyproject.toml
-  - databasise/runner/scheduler.py
-  - databasise/stores/graph.py
   - databasise/stores/vector.py
-  - databasise/tests/clients/__init__.py
-  - databasise/tests/clients/test_capability_scoped_clients.py
   - databasise/tests/clients/test_openai_compat.py
-  - databasise/tests/fixtures/corpus/MANIFEST.json
-  - databasise/tests/fixtures/corpus/README.md
-  - databasise/tests/parity/conftest.py
-  - databasise/tests/parity/__init__.py
-  - databasise/tests/parity/test_arm_conformance.py
-  - databasise/tests/parity/test_embedder_index_reproduction.py
+  - databasise/tests/parity/test_graph_arm_real_index.py
   - databasise/tests/parity/test_import_verification.py
-  - databasise/tests/parity/test_keyword_variance.py
   - databasise/tests/parity/test_naive_arm_end_to_end.py
   - databasise/tests/parity/test_parity_evidence.py
-  - databasise/tests/parity/test_retrieval_parity.py
-  - databasise/tests/parity/test_storage_audit.py
   - databasise/tests/parts_core/lightrag/test_graph_half_parts.py
   - databasise/tests/parts_core/lightrag/test_naive_arm_parts.py
   - databasise/tests/parts_core/lightrag/test_transform_parts.py
-  - databasise/tests/parts/test_registry.py
-  - databasise/tests/runner/test_clients_threading.py
-  - databasise/tests/runner/test_scheduler.py
-  - databasise/tests/stores/test_graph_frozen_bugs.py
-  - databasise/tests/stores/test_graph.py
-  - databasise/tests/test_embed_startup.py
-  - databasise/tests/test_import_boundary.py
-  - databasise/tests/validator/test_falsifier2_evidence.py
-  - databasise/tests/validator/test_falsifier2_probes.py
-  - databasise/tools/check_import_boundary.py
-  - databasise/wirings/__init__.py
-  - databasise/wirings/lightrag/arm-bypass.json-patch.json
-  - databasise/wirings/lightrag/arm-global.json-patch.json
-  - databasise/wirings/lightrag/arm-hybrid.json-patch.json
-  - databasise/wirings/lightrag/arm-local.json-patch.json
-  - databasise/wirings/lightrag/arm-naive.json-patch.json
-  - databasise/wirings/lightrag/base.json
-  - databasise/wirings/lightrag/README.md
-  - databasise/wirings/resolve.py
-  - v1/README-PARITY.md
+  - databasise/tests/stores/test_vector_namespaces.py
+  - v1/lightrag/operate.py
   - v1/scripts/run_parity_ingest.py
+  - v1/README-PARITY.md
+  - databasise/evidence/PARITY-EVIDENCE.md
+  - databasise/evidence/DECLARED-DEVIATIONS.md
 findings:
-  critical: 0
-  warning: 3
+  critical: 2
+  warning: 1
   info: 1
   total: 4
 status: issues_found
@@ -108,141 +38,240 @@ status: issues_found
 
 # Phase 03: Code Review Report
 
-**Reviewed:** 2026-09-06
+**Reviewed:** 2026-09-06T20:18:28Z
 **Depth:** standard
-**Files Reviewed:** 74
+**Files Reviewed:** 23 (plus the committed `parity_results/*.json` sanity-checked as data)
 **Status:** issues_found
 
 ## Summary
 
-This is iteration 2 of the auto fix loop's re-review. Three fixes landed since the prior review
-(`03-REVIEW.iter2.md`) and were each verified directly against current source, not taken on the
-fixer's word:
+This is a gap-closure wave over a parity-measurement harness; the product being reviewed is not
+just code but the honesty of a comparison. Most of the wave holds up well under adversarial
+reading: the `MultiNamespaceVectorStore` no-default refusal is real and tested (no silent `chunks`
+fallback survives); `render_deviations_document()`'s split into "reasoned" (rendered through the
+still-strict, unmodified `render_deviations_markdown`) and "PENDING, not fabricated" outstanding
+entries is a legitimate refinement, not a weakening — 18 real, non-degraded, unreasoned excursions
+on `hybrid`/`local`/`global` are disclosed as `PENDING`, never smuggled into "Named deviations",
+and `test_committed_deviations_document_matches_a_fresh_render` proves the committed file is not
+stale; `test_parity_evidence.py`'s re-pin (`matched=14`/`no-touch=2`, specific per-arm excursion
+counts) asserts real numbers against the real committed data, not a shape-only check. The
+`v1/lightrag/operate.py` `float()` coercion is correct, minimal for the crash it fixes, and
+honestly disclosed in `v1/README-PARITY.md` as a baseline change.
 
-- **CR-01** (`entity_hydrate_expand.py`/`relation_hydrate_expand.py`, commit `1827695`) — confirmed
-  fixed. Both bodies now use `seed.get(...)` with an explicit `is None` check instead of a bare
-  subscript, routing a malformed seed to `missing_seeds` with `malformed_seed: True` and a
-  diagnostic naming the missing field, exactly mirroring the existing absent-graph-node path. The
-  two new regression tests in `test_graph_half_parts.py`
-  (`test_entity_hydrate_expand_reports_a_malformed_seed_missing_entity_name`,
-  `test_relation_hydrate_expand_reports_a_malformed_seed_missing_src_or_tgt_id`) construct exactly
-  the malformed-seed shape (a seed dict missing `entity_name` / missing `tgt_id`) that used to raise
-  `KeyError`, and assert the new `missing_seeds` entry shape — they genuinely exercise the fixed
-  path, not just a passing shape. Cross-checked against the actual committed evidence: the exact
-  `KeyError: 'entity_name'` / `KeyError: 'src_id'` strings this fix targets are present verbatim in
-  `parity_results/{hybrid,local,global}-comparison.json`'s `decomposed_run_record.stop_reason`, so
-  the fix targets the real, previously-measured crash rather than a hypothetical one. Downstream
-  consumers of `missing_seeds`/`entities`/`relations` (`join_roundrobin.py`) only read the
-  `entities`/`relations` fields, never `missing_seeds`, so the new dict shape introduces no
-  regression there.
-- **WR-01** (`run_arm.py`, commit `35898e8`) — confirmed fixed. `MissingParityEnvKeyError` is
-  defined, `_REQUIRED_ENV_KEYS` names all six keys `_build_clients` needs, and `_build_clients` now
-  checks every key up front before constructing either client. The two new tests in
-  `test_naive_arm_end_to_end.py` assert both the failure path (partial env → all four missing keys
-  named on the exception) and the success path (all six keys present → both clients constructed) —
-  real coverage of the fixed branch, not just an import check.
-- **WR-03** (`parity_report.py`, commit `b54d7b8`) — confirmed fixed. `_degraded_but_vacuous_arms()`
-  scans each arm's committed comparison file for a `completed` record with
-  `decomposed_run_record.degraded=true` and an all-empty diff, and `main()`'s `--check-results` path
-  now qualifies the clean line with the degraded arm names instead of printing a bare `clean (5
-  arms)`. The real-data test
-  (`test_degraded_but_vacuous_arms_on_the_real_committed_data_names_the_three_known_degraded_arms`)
-  runs the function against the actual committed `parity_results/` directory and asserts it names
-  exactly `hybrid`/`local`/`global` — this is a genuine assertion against production data, not a
-  synthetic-only test.
+Two defects stand out, both in the "evidence looks cleaner than the numbers support" class this
+review was told to weight highest:
 
-All three fixes are correct, complete, and covered by tests that actually exercise the previously-
-broken path. None are re-listed as findings below.
+1. `PARITY-EVIDENCE.md`'s own "What is not measured" section states, of `hybrid`/`local`/`global`,
+   that "their measured retrieval-level agreement is not an artifact of a halted run" — but the
+   committed data for all three arms shows real, substantial *disagreement*
+   (`ranking_agreement` 0.50-0.86, `entity_diff`/`relation_diff` symmetric differences of 20-78
+   items per query), which the same document's own Verdict section correctly refuses to call
+   agreement. The renderer's degradation branch was updated (03-13-PLAN.md gap 2) to also check
+   for excursions; the "not measured" branch producing this sentence was not, and no test asserts
+   on its wording — the stale phrase survived the fix cycle that closed the identical bug
+   elsewhere in the same file.
 
-**WR-02** (AI-authored `declared_causes` in `human_findings.json`) was correctly skipped by the
-fixer. CONTRACT §5 requires a human-authored cause; fabricating one to close the finding would
-create a false attestation, which is a worse defect than the disclosed gap already on file. It
-still holds in current source (`human_findings.json:12,26` still read `"recorded_by": "Claude (AI
-agent, gsd-code-fixer)... NOT recorded by the human owner"`) and is carried forward below,
-explicitly flagged as requiring human action rather than a code change, so the automated fix loop
-does not keep re-selecting it.
+2. `_VECTOR_HASH_DECIMALS` was dropped from 3 to 2 against the plan's explicit "the importer is
+   already correct, do not change it" instruction, to clear a rounding-grid boundary case. The
+   change is a probability reduction of a defect class, not a removal of it, and it costs real
+   discriminating power (see finding CR-02) — a boundary-free tolerance check was available and
+   would have been strictly better on both counts.
 
-A fresh pass over the rest of the scope surfaced one new finding: the CR-01 code fix changes what
-would happen if the `hybrid`/`local`/`global` arms were re-run (a malformed seed now degrades one
-item observably instead of crashing the whole node), but the committed evidence
-(`PARITY-EVIDENCE.md`, `DECLARED-DEVIATIONS.md`, `parity_results/*.json`) was last regenerated
-*before* the fix and still describes the old crash as the live, unrepaired state of the code. See
-WR-04 below.
+## Critical Issues
 
-`embedder_query.py`'s `IN-01` (the `or`-chain treating an empty `"query"` the same as an absent one)
-was not in the fixer's Critical+Warning scope and remains unchanged in current source — carried
-forward below since it was never resolved, not because it is newly found.
+### CR-01: `PARITY-EVIDENCE.md`'s "What is not measured" section asserts a measured agreement that the committed data contradicts
 
-No new Critical issues were found in this pass.
+**File:** `databasise/evidence/parity_report.py:1234-1238` (rendered into
+`databasise/evidence/PARITY-EVIDENCE.md:115`)
+
+**Issue:** `_render_not_measured()`'s `degradation_clause` has two branches, keyed only on whether
+any of `hybrid`/`local`/`global` degraded:
+
+```python
+if degraded_arms:
+    degradation_clause = (... "so its/their measured zero diff is not a validated agreement...")
+else:
+    degradation_clause = (
+        f"and `{'`/`'.join(graph_arms)}` completed without a decomposed-run "
+        "degradation, so their measured retrieval-level agreement is not an artifact of "
+        "a halted run"
+    )
+```
+
+The `else` branch was written under the assumption (the same one 03-13-PLAN.md gap 2's fix to
+`_render_verdict` names and corrects) that "not degraded" implies "measured agreement." It does
+not: the real committed run for all three graph arms is non-degraded *and* substantially
+disagreeing —
+
+```
+hybrid  q1: ranking_agreement=0.628, entity_diff=58, relation_diff=60
+hybrid  q2: ranking_agreement=0.731, entity_diff=46, relation_diff=44
+local   q1: ranking_agreement=0.500, entity_diff=20, relation_diff=33
+local   q2: ranking_agreement=0.673, entity_diff=22, relation_diff=30
+global  q1: ranking_agreement=0.533, entity_diff=76, relation_diff=78
+global  q2: ranking_agreement=0.857, entity_diff=68, relation_diff=68
+```
+
+(figures read directly from `databasise/evidence/parity_results/{hybrid,local,global}-comparison.json`).
+The rendered sentence — "their measured retrieval-level agreement is not an artifact of a halted
+run" — asserts an agreement that was never measured, directly contradicting the same document's
+own Verdict section three sections later ("this is not read as exact retrieval-level agreement
+either... the two disagree"). A reader of only the "What is not measured" section, or anyone
+grepping the document for "agreement", is told the opposite of what "Per-arm retrieval-level
+comparison" and "Verdict" actually show. This is exactly the failure mode this review was told to
+weight above an ordinary crash: code that makes a comparison look cleaner than it is.
+
+No test in `test_parity_evidence.py` asserts on `_render_not_measured()`'s wording for the
+non-degraded-with-excursions case — the existing regression test for this fix cycle
+(`test_render_markdown_states_the_hybrid_local_global_excursions_rather_than_a_clean_pass`) only
+checks the Verdict section's text, so the stale sibling branch in a different function went
+unnoticed.
+
+**Fix:** Branch `degradation_clause` on the same three-way state `_render_verdict()` already
+computes (degraded / non-degraded-with-excursions / non-degraded-and-clean), not on `degraded_arms`
+alone, e.g.:
+
+```python
+excursion_arms = [a for a in graph_arms if not _arm_degraded(a)[0] and _arm_excursion_summary(a)]
+clean_arms = [a for a in graph_arms if a not in degraded_arms and a not in excursion_arms]
+if degraded_arms:
+    degradation_clause = (...)
+elif excursion_arms:
+    degradation_clause = (
+        f"and `{'`/`'.join(excursion_arms)}` completed without a decomposed-run degradation but "
+        "measured a real, non-empty entity/relation disagreement rather than an agreement (see "
+        "the per-arm degradation notes and Verdict section) — no retrieval-level agreement claim "
+        "is made for these arms at all"
+    )
+else:
+    degradation_clause = (
+        f"and `{'`/`'.join(clean_arms)}` completed without a decomposed-run degradation, so their "
+        "measured retrieval-level agreement is not an artifact of a halted run"
+    )
+```
+and add a test asserting `"measured retrieval-level agreement"` does NOT appear in
+`_render_not_measured()`'s output when any graph arm has a non-empty, non-degraded excursion.
+
+### CR-02: `_VECTOR_HASH_DECIMALS = 2` trades away discriminating power to clear a boundary case that a tolerance check would remove entirely
+
+**File:** `databasise/parity/import_index.py:294-298`
+
+**Issue:** The task specifically asked whether this committed constant should stand. It should
+not, for three compounding reasons:
+
+1. **It lowers the probability of the boundary-flake class; it does not remove it.** Any
+   fixed-decimal round is a grid with edges. The docstring's own history (6 and 5 decimals tried
+   first, then 3, now 2) is itself the pattern of "coarsen until the current dataset stops
+   crossing a line" — each step reduces the chance of landing near an edge on *this* 410-vector
+   build, but the next real re-ingest (more documents, more entities) can land near an edge at 2
+   decimals exactly as one did at 3. The class of bug is unchanged; only its odds on today's data
+   moved.
+
+2. **The coarsening measurably reduces the hash's discriminating power, not just its
+   flakiness.** A 4096-dim, L2-normalised, float32 embedding has a typical per-component magnitude
+   of `1/sqrt(4096) ≈ 0.0156`. Rounding to 2 decimals (a 0.01 grid) means any component with
+   `|x| < 0.005` — roughly a quarter of all components under a normal-ish distribution around that
+   magnitude — collapses to exactly `0.00`, and the surviving nonzero values are quantized onto a
+   handful of buckets (`±0.01`, `±0.02`, rarely `±0.03`). The hash is still over 4096 quantized
+   components at once, so a *wrong id-to-vector pairing* or a *genuine re-embedding* (which differ
+   across many components by an amount well above 0.005) will still almost certainly be caught —
+   but a subtler defect (e.g. two near-duplicate entities' vectors accidentally swapped, or a
+   small but real normalisation drift affecting a minority of components) now has roughly 4x more
+   room to hide below the new grid's resolution than it did at 3 decimals. The check is weaker in
+   a way that is real, even though it happens not to matter for the one case actually exercised.
+
+3. **A tolerance-based check is strictly better on both axes the docstring itself argues for.**
+   Replacing the rounded-hash comparison with an explicit per-vector distance check (e.g.
+   `np.max(np.abs(v1 - v2)) < 1e-4` — still 100x the measured ~1e-5 noise ceiling, five orders of
+   magnitude above the 1.49e-8 diff that triggered this change) is monotonic, not a step function:
+   it has no grid line to land near, so it cannot flake regardless of how the dataset grows, and it
+   does not collapse a quarter of every vector's components to a shared value first. It would have
+   passed the exact case that motivated this change (1.49e-8 ≪ 1e-4) without discarding resolution
+   from the other 75% of components that don't round to zero. This is a case where the "how do I
+   make the boundary case pass" framing produced a worse fix than the one directly available.
+
+Compounding this: no test pins `_quantized_vector_bytes`/`_VECTOR_HASH_DECIMALS`'s behavior at all
+— nothing regresses if this constant is changed again, nothing proves a genuinely different vector
+still fails the check post-coarsening, and nothing proves a near-boundary pair now matches. The
+change shipped on the strength of a code-comment narrative and one manual real-build observation,
+not a runnable check (this codebase's own stated convention — see `chunk_sel_kg.py`'s and
+`vector.py`'s docstrings' emphasis on tests proving claims, not comments alone).
+
+Separately, and worth naming plainly: 03-11-PLAN.md's own text instructed the executor not to
+change this module. The change was made anyway, is reasoned in the code, and is disclosed — but it
+still departs from an explicit plan directive on the one module in this wave whose entire purpose
+is measuring correctness, and it should have been escalated rather than executed unilaterally,
+independent of whether the technical outcome (see below) turns out defensible.
+
+**Verdict on the constant:** it should not stand as implemented. Replace the rounded-hash
+comparison with a tolerance-based per-vector distance check (component-wise or max-abs-diff over
+the raw float32 vectors, no rounding at all) in both `_v1_vector_pairs`/`_v2_vector_pairs`'s
+comparison path. This removes the boundary-flake class entirely rather than making it rarer, and
+restores full component resolution for genuinely-different-vector detection. If the hash-of-sorted-
+pairs shape is kept for its whole-set fingerprint convenience, at minimum add a test that (a)
+proves a real, non-trivial vector difference (e.g. swap two entities' vectors) still fails
+verification at `_VECTOR_HASH_DECIMALS = 2`, and (b) documents in a runnable assertion — not only a
+comment — what per-component magnitude a difference must exceed to be caught.
 
 ## Warnings
 
-### WR-04: The committed parity evidence documents describe a crash that CR-01's fix has since changed the behavior of, without any note that the code has moved since the evidence was rendered
+### WR-01: The `_merge_edges_then_upsert` string-weight fix is not applied to the sibling code path with the identical defect
 
-**File:** `databasise/evidence/PARITY-EVIDENCE.md:50,59,68,117,119,121,133,135,137`,
-`databasise/evidence/parity_results/{hybrid,local,global}-comparison.json`
+**File:** `v1/lightrag/operate.py:1835` (compare to the fixed line at `v1/lightrag/operate.py:2370`)
 
-**Issue:** `PARITY-EVIDENCE.md`'s Verdict section states, for `hybrid`/`local`/`global`: "`hybrid`'s
-decomposed run degraded before completing a real retrieval (node 'entity-hydrate-expand':
-NodeExecutionError: 'entity_name' ...). ... Fixing that defect is out of this plan's scope." This
-was accurate when rendered (commit `d110313`, before `1827695`), but `1827695` has since changed
-`entity_hydrate_expand.py`/`relation_hydrate_expand.py` so that the exact seed shape that produced
-`NodeExecutionError: 'entity_name'` / `'src_id'` no longer raises at all — it now degrades one seed
-into `missing_seeds` and lets the run continue. The committed `parity_results/{hybrid,local,global}
--comparison.json` files (and the prose that reads them) were never regenerated after the fix
-landed, so they currently assert, as the live state of the code, a crash that the code no longer
-produces. This is a live discrepancy between what's committed as evidence and what the current
-source actually does — a reader trusting `PARITY-EVIDENCE.md`'s Verdict section today would
-reasonably (and incorrectly) conclude that `hybrid`/`local`/`global` still crash the same way,
-when in fact re-running the comparison would very likely change the measured diffs (a
-degraded-but-continuing run reaches further downstream nodes — `assemble`, `budget-*`, `generate`,
-etc. — that never executed in the crash-truncated run these numbers reflect, per
-`PARITY-EVIDENCE.md`'s own list of never-dispatched nodes at lines 117-121).
+**Issue:** The committed fix wraps `already_edge.get("weight", 1.0)` in `float(...)` inside
+`_merge_edges_then_upsert` (line 2370), because every `BaseGraphStorage.get_edge()` backend returns
+attribute values as strings. `_rebuild_single_relationship` (the cache-rebuild path) reads the
+identical shape from the identical source one function up in the same file:
 
-**Fix:** Either (a) re-run `run_comparison.py` for the three affected arms and re-render
-`parity_report.py` now that CR-01 has landed, replacing the stale crash-based numbers with whatever
-the degraded-but-completing run actually measures, or (b) if a re-run is deliberately deferred to a
-later plan, add an explicit note to `PARITY-EVIDENCE.md`'s Verdict section (and ideally a dated
-marker in the comparison JSON itself) stating that the underlying `NodeExecutionError` this
-document describes was patched by commit `1827695` after this evidence was rendered, so the
-document's own crash description is understood as historical rather than current.
+```python
+current_relationship = await knowledge_graph_inst.get_edge(src, tgt)   # line 1739 — same source
+...
+weight = sum(weights) if weights else current_relationship.get("weight", 1.0)   # line 1835
+```
 
-### WR-02: `human_findings.json`'s two `declared_causes` entries are AI-authored, not human-authored, despite CONTRACT §5 requiring a human-authored cause for every named excursion
+When `weights` is empty (no extraction data carried a weight for this rebuild), `weight` is
+assigned directly from `current_relationship.get("weight", 1.0)` with no `float()` coercion — the
+exact unguarded read the fix elsewhere in this file exists to close. This does not crash inside
+`_rebuild_single_relationship` itself (no arithmetic is performed on `weight` in that function
+before it is written back to storage), but it re-introduces a string-typed `"weight"` value into
+graph storage on the cache-rebuild path, which is the same class of value `_merge_edges_then_upsert`
+was just hardened against — this is not proven to be currently reachable by any of the five parity
+arms, but it is the same bug, one function away from the one that was fixed, and the fix cycle's
+disclosure ("this is a bug fix to the pinned baseline... recorded here so the original-arm identity
+stays honest") did not mention it.
 
-**Requires human action, not a code change — do not re-select for the automated fix loop.**
-
-**File:** `databasise/evidence/human_findings.json:12-14,26-27`, `databasise/evidence/DECLARED-DEVIATIONS.md:9-10`
-
-**Issue:** Both `declared_causes` entries still carry `"recorded_by": "Claude (AI agent,
-gsd-code-fixer) — commit 2ce3c30; NOT recorded by the human owner, despite this file's own name"`.
-CONTRACT §5's parity-not-gain record requires a human-reasoned cause for a named excursion; an
-AI-authored cause does not satisfy that requirement no matter how honestly it discloses its own
-provenance. The fixer correctly declined to fabricate a human attribution for this iteration — that
-would be a false attestation, strictly worse than the disclosed gap.
-
-**Fix:** The human owner (christopher@deocracy.org) needs to actually review the two named
-excursions in `DECLARED-DEVIATIONS.md` and re-record `declared_causes` with their own reasoning and
-`recorded_by`. No code change closes this; the automated fix loop should stop selecting it and
-instead surface it as a pending human task.
+**Fix:** Apply the identical `float(...)` coercion at line 1835:
+```python
+weight = sum(weights) if weights else float(current_relationship.get("weight", 1.0))
+```
+and note the second site alongside the first in `v1/README-PARITY.md`'s existing disclosure
+paragraph, since both are the same baseline-identity change.
 
 ## Info
 
-### IN-01: `embedder_query._query_text`'s `or`-chain silently treats a genuinely empty query string the same as an absent key
+### IN-01: `verify_import`'s graph-topology assertion never checks node/edge attribute payloads
 
-**File:** `databasise/parts_core/lightrag/embedder_query.py:23-31`
+**File:** `databasise/parity/import_index.py:331-359, 430-462`
 
-**Issue:** Unchanged since the prior review — not newly introduced. `keywords_output.get("query")
-or keywords_output.get("text") or ""` treats a present-but-empty `"query"` value identically to an
-absent one, falling through to `.get("text")` and then to `""`. `keywords.py`'s `_keywords_body`
-always stamps `config["query"]` (which `run_arm._inject_query` always sets to the real user query
-text), so this remains a low-probability defensive edge case rather than an observed defect.
+**Issue:** `_v1_graph`/`_v2_graph` read only `id`/`src, tgt` — the D-02 graph-topology assertion
+compares node-id sets and edge-endpoint-pair sets, never the `attrs` payload (`description`,
+`weight`, `entity_type`, etc.) each node/edge carries. An import that correctly preserves every
+node id and edge pair but silently corrupts or drops an attribute value (for example, exactly the
+kind of string/float weight confusion CR-01/WR-01 discuss) would pass `verify_import` cleanly. This
+may be a deliberate, documented scope choice ("three assertions": chunk-text, vector-hash,
+graph-topology) rather than an oversight, but it is worth naming explicitly since the review was
+asked to give this importer/verifier extra scrutiny: a "verified" result names less than its own
+name implies to a reader who has not read this file's internals.
 
-**Fix:** `keywords_output.get("query") if keywords_output.get("query") is not None else
-keywords_output.get("text", "")` if the "explicitly empty" vs. "absent" distinction ever needs to
-be preserved; optional given the low current likelihood of it mattering.
+**Fix:** If attribute-level fidelity matters for this phase's claims, extend the graph-topology
+assertion to also compare each node/edge's `attrs` dict (or a canonical hash of it) between v1 and
+v2, the same way `_vector_set_hash` already does for vectors. If it is an intentional scope
+limitation, say so in the module docstring's list of "D-02's three assertions" so a reader does not
+have to infer the boundary from the code.
 
 ---
 
-_Reviewed: 2026-09-06_
+_Reviewed: 2026-09-06T20:18:28Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
