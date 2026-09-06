@@ -28,10 +28,11 @@ write path. Nothing here calls any embedding client; vectors are never recompute
 
 **Both stores L2-normalise on write** (module docstring of ``databasise/stores/vector.py``): v1
 already stores L2-normalised vectors (its own docstring: "storing L2-normalised vectors in an
-``IndexFlatIP``"), so v2's ``upsert`` re-normalising an already-normalised vector is idempotent
-and does not change the stored value. This is exactly why the vector-set hash comparison below is
-meaningful rather than trivially true — a real re-embedding or a real normalisation bug would
-change the hash; idempotent re-normalisation of an already-unit vector does not.
+``IndexFlatIP``"), so v2's ``upsert`` re-normalising an already-normalised vector is idempotent up
+to floating-point rounding — this is exactly why the per-vector tolerance comparison below is
+meaningful rather than trivially true — a real re-embedding or a real normalisation bug would move
+a vector's components well past the tolerance; idempotent re-normalisation of an already-unit
+vector does not.
 
 Cozo's schema is identical on both sides (``nodes {id: String => attrs: Json}``,
 ``edges {src: String, tgt: String => attrs: Json}`` — see ``v1/lightrag/kg/cozo_impl.py`` and
@@ -43,7 +44,6 @@ store kind, not an accident of the schemas happening to match.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import sys
 from dataclasses import dataclass, field
@@ -105,7 +105,7 @@ class Violation:
     (chunk id, vector kind, or node/edge identity) if the failure is id-scoped.
     """
 
-    assertion: Literal["chunk-text", "vector-hash", "graph-topology"]
+    assertion: Literal["chunk-text", "vector-tolerance", "graph-topology"]
     detail: str
     offending_id: str | None = None
 
@@ -270,35 +270,32 @@ def _v1_text_chunks(v1_working_dir: Path) -> dict[str, dict[str, Any]]:
 # over an already-unit vector is only idempotent up to floating-point rounding — empirically,
 # renormalising a float32 unit vector can shift its last ULP. Measured directly against the real
 # Task 2 build (4096-dim qwen3-embedding-8b vectors, 407 vectors across all three kinds): observed
-# per-component noise up to ~1e-5. A fixed-decimal round is a grid with boundaries, and any grid
-# fine enough to sit close to that noise floor (tried 6 and 5 decimals first) will occasionally
-# have a real vector's true value fall within noise-distance of a grid line, flipping the rounded
-# value on one side and not the other — the same measurement re-run at finer precision does not
-# make this go away, because it is a property of where the real data happens to sit relative to
-# the grid, not a bug in the rounding call.
+# per-component noise up to ~1e-5.
 #
-# 3 decimals was this module's original choice, reasoned to give "two to three orders of
-# magnitude of headroom" over the ~1e-5 noise ceiling above. 03-11-PLAN.md's real re-ingest (410
-# vectors: 20 chunks, 188 entities, 202 relationships) is the first run to actually exercise a
-# populated entities/relationships namespace end to end, and it tripped exactly the "occasionally"
-# case the paragraph above already named as possible: one of 188 entity vectors landed within
-# noise-distance of a 3-decimal grid line (measured raw-component diff: 1.49e-8 — five orders of
-# magnitude below the 1e-5 noise estimate, confirming the vectors are the same value, not a real
-# mismatch). 2 decimals (1e-2) adds a further order of magnitude of headroom on top of the
-# existing margin, confirmed against this exact case (the previously-flipping vector now matches)
-# while still discriminating a genuinely different vector (checked against an unrelated entity in
-# the same real build) — still far coarser than any real semantic difference could hide behind: a
-# genuinely wrong id-to-vector pairing or an actual re-embedding differs across many of a vector's
-# 4096 components at once, at a scale nowhere near a single grid line — the hash comparison stays
-# meaningful (PITFALLS 8), not trivially true and not spuriously flaky.
-_VECTOR_HASH_DECIMALS = 2
+# This module originally compared a SHA-256 hash over each vector rounded to a fixed number of
+# decimals (tried 6, 5, then 3, then 2 decimals). Every fixed-decimal round is a grid with
+# boundaries: any grid fine enough to sit close to the ~1e-5 noise floor above will occasionally
+# have a real vector's true value fall within noise-distance of a grid line, flipping the rounded
+# value on one side and not the other — a property of where the real data happens to sit relative
+# to the grid, not a bug in the rounding call, so coarsening the grid only makes the boundary case
+# rarer, never removes it (03-11-PLAN.md's real re-ingest tripped exactly this case: one of 188
+# entity vectors landed 1.49e-8 from a 3-decimal grid line). Coarsening the grid also throws away
+# real discriminating power: rounding a 4096-dim, L2-normalised vector (typical per-component
+# magnitude ~1/sqrt(4096) ≈ 0.0156) to 2 decimals collapses roughly a quarter of its components —
+# every one with |x| < 0.005 — to exactly 0.0 before the hash ever sees them.
+#
+# Replaced with a direct tolerance check on the raw, unrounded float32 vectors (CR-02 fix cycle):
+# no grid, so no boundary case regardless of how the dataset grows, and it uses each vector's full
+# component resolution rather than discarding a quarter of it up front. 1e-4 is two orders of
+# magnitude above the measured ~1e-5 noise ceiling — comfortable headroom that a genuine
+# re-normalisation pass never trips — while a real re-embedding or a wrong id-to-vector pairing
+# (which differ across many of a vector's 4096 components at once, several orders of magnitude
+# above this tolerance) is still caught, and the comparison now names the specific offending
+# vector id rather than only reporting a whole-set hash mismatch.
+_VECTOR_TOLERANCE = 1e-4
 
 
-def _quantized_vector_bytes(vec: np.ndarray) -> bytes:
-    return np.round(vec.astype("float32"), decimals=_VECTOR_HASH_DECIMALS).astype("float32").tobytes()
-
-
-def _v1_vector_pairs(v1_working_dir: Path, kind: str) -> list[tuple[str, bytes]]:
+def _v1_vector_pairs(v1_working_dir: Path, kind: str) -> list[tuple[str, np.ndarray]]:
     index_path = v1_working_dir / f"faiss_index_{kind}.index"
     meta_path = Path(str(index_path) + ".meta.json")
     if not index_path.exists() or not meta_path.exists():
@@ -307,25 +304,62 @@ def _v1_vector_pairs(v1_working_dir: Path, kind: str) -> list[tuple[str, bytes]]
     meta: dict[str, dict[str, Any]] = json.loads(meta_path.read_text(encoding="utf-8"))
     pairs = []
     for fid_str, record in meta.items():
-        vec = index.reconstruct(int(fid_str))
-        pairs.append((record["__id__"], _quantized_vector_bytes(vec)))
+        vec = index.reconstruct(int(fid_str)).astype("float32")
+        pairs.append((record["__id__"], vec))
     return pairs
 
 
-async def _v2_vector_pairs(store_root: Path, workspace: str, kind: str) -> list[tuple[str, bytes]]:
+async def _v2_vector_pairs(store_root: Path, workspace: str, kind: str) -> list[tuple[str, np.ndarray]]:
     store_dir = Path(store_root) / workspace / kind
     if not (store_dir / "vector.faiss").exists():
         return []
     store = FaissVectorStore(namespace=kind, workspace=workspace, store_root=store_root)
-    return [(doc_id, _quantized_vector_bytes(vec)) for doc_id, vec in store.iter_vectors()]
+    return [(doc_id, vec.astype("float32")) for doc_id, vec in store.iter_vectors()]
 
 
-def _vector_set_hash(pairs: list[tuple[str, bytes]]) -> str:
-    digest = hashlib.sha256()
-    for doc_id, vec_bytes in sorted(pairs, key=lambda p: p[0]):
-        digest.update(doc_id.encode("utf-8"))
-        digest.update(vec_bytes)
-    return digest.hexdigest()
+def _compare_vector_sets(
+    v1_pairs: list[tuple[str, np.ndarray]],
+    v2_pairs: list[tuple[str, np.ndarray]],
+    kind: str,
+) -> list[Violation]:
+    """Compare two vector sets id-by-id: id sets must match, and every common id's v1/v2 vectors
+    must agree within ``_VECTOR_TOLERANCE`` on every component (max-abs-diff over the raw float32
+    vectors, no rounding — see the module-level rationale above). Unlike the rounded-hash
+    comparison this replaces, a failure here names the specific offending vector id rather than
+    only reporting that some vector in the set differs.
+    """
+    v1_by_id = dict(v1_pairs)
+    v2_by_id = dict(v2_pairs)
+    violations: list[Violation] = []
+
+    missing = set(v1_by_id) - set(v2_by_id)
+    extra = set(v2_by_id) - set(v1_by_id)
+    if missing or extra:
+        violations.append(
+            Violation(
+                assertion="vector-tolerance",
+                detail=(
+                    f"vector kind {kind!r}: {len(missing)} id(s) missing from v2, "
+                    f"{len(extra)} id(s) extra in v2"
+                ),
+                offending_id=min(missing | extra),
+            )
+        )
+
+    for doc_id in sorted(set(v1_by_id) & set(v2_by_id)):
+        max_abs_diff = float(np.max(np.abs(v1_by_id[doc_id] - v2_by_id[doc_id])))
+        if max_abs_diff >= _VECTOR_TOLERANCE:
+            violations.append(
+                Violation(
+                    assertion="vector-tolerance",
+                    detail=(
+                        f"vector kind {kind!r}, id {doc_id!r}: max component diff "
+                        f"{max_abs_diff:.6g} >= tolerance {_VECTOR_TOLERANCE:.0e}"
+                    ),
+                    offending_id=doc_id,
+                )
+            )
+    return violations
 
 
 def _v1_graph(v1_working_dir: Path) -> tuple[set[str], set[tuple[str, str]]] | None:
@@ -409,23 +443,11 @@ async def verify_import(
                 )
             )
 
-    # (b) vector-set hash equal, per vector kind.
+    # (b) vector sets equal within tolerance, per vector kind, naming the offending id.
     for kind in _VECTOR_KINDS:
         v1_pairs = _v1_vector_pairs(v1_working_dir, kind)
         v2_pairs = await _v2_vector_pairs(store_root, workspace, kind)
-        v1_hash = _vector_set_hash(v1_pairs)
-        v2_hash = _vector_set_hash(v2_pairs)
-        if v1_hash != v2_hash:
-            violations.append(
-                Violation(
-                    assertion="vector-hash",
-                    detail=(
-                        f"vector kind {kind!r}: v1 hash {v1_hash[:12]} != v2 hash {v2_hash[:12]} "
-                        f"({len(v1_pairs)} v1 vectors, {len(v2_pairs)} v2 vectors)"
-                    ),
-                    offending_id=kind,
-                )
-            )
+        violations.extend(_compare_vector_sets(v1_pairs, v2_pairs, kind))
 
     # (c) graph node count, edge count, node id set, edge endpoint-pair set all matching.
     v1_graph = _v1_graph(v1_working_dir)

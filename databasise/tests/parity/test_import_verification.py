@@ -3,7 +3,9 @@
 The <behavior> claims this module is built against:
   - Importing a v1 index produces a v2 store set whose chunk text is byte-identical to v1's for
     every chunk id.
-  - The SHA-256 over the sorted (id, vector-bytes) pairs is equal on both sides after import.
+  - Every vector's v1/v2 copies agree within tolerance, component-wise, after import (CR-02 fix
+    cycle: a direct per-vector tolerance check, not a rounded-hash comparison — see
+    `import_index.py`'s module-level rationale).
   - The v2 graph's node count, edge count, node id set, and edge endpoint-pair set all match v1's.
   - A deliberately corrupted chunk text on the v2 side makes the verifier report `inconclusive`
     with that chunk id named, and does not report a pass or a fail.
@@ -202,6 +204,37 @@ async def test_real_v1_build_verifies_clean(v1_index_dir, store_root):
 
     assert result.status == "verified", (
         f"real Task 2 build failed D-02 verification: {result.violations}"
+    )
+
+
+async def test_real_v1_build_perturbed_vector_is_caught_and_named(v1_index_dir, store_root):
+    """CR-02 fix cycle: replacing the rounded-hash comparison with a direct per-vector tolerance
+    check must still catch a genuinely different vector on the real imported index — and, unlike
+    the whole-set hash it replaces, must name the specific offending id rather than only the
+    vector kind. The perturbation (+1.0 on one component) is four orders of magnitude above
+    `_VECTOR_TOLERANCE` (1e-4), well past the ~1e-5 re-normalisation noise ceiling the tolerance is
+    sized against.
+    """
+    from databasise.parity.import_index import _VECTOR_TOLERANCE
+    from databasise.stores.vector import FaissVectorStore
+
+    workspace = await import_v1_index(v1_index_dir, store_root)
+
+    store = FaissVectorStore(namespace="entities", workspace=workspace, store_root=store_root)
+    perturbed_id, original_vector = next(iter(store.iter_vectors()))
+    perturbed_vector = original_vector.copy()
+    perturbed_vector[0] += 1.0
+    assert abs(float(perturbed_vector[0] - original_vector[0])) > 1000 * _VECTOR_TOLERANCE
+    await store.upsert([perturbed_id], perturbed_vector, [{}])
+    await store.index_done_callback()
+
+    result = await verify_import(v1_index_dir, store_root, workspace)
+
+    assert result.status == "inconclusive"
+    tolerance_violations = [v for v in result.violations if v.assertion == "vector-tolerance"]
+    assert any(v.offending_id == perturbed_id for v in tolerance_violations), (
+        f"expected a vector-tolerance violation naming {perturbed_id!r}, got: "
+        f"{result.violations}"
     )
 
 
