@@ -414,6 +414,22 @@ def test_render_markdown_states_the_hybrid_local_global_excursions_rather_than_a
     assert "each one needs a CONTRACT §5 human-authored cause" in text
 
 
+def test_render_not_measured_does_not_assert_agreement_for_an_arm_with_a_real_excursion():
+    """CR-01 fix cycle: `_render_not_measured()`'s "What is not measured" section used to claim,
+    for any non-degraded graph arm, that "their measured retrieval-level agreement is not an
+    artifact of a halted run" — an agreement claim the real committed data for `hybrid`/`local`/
+    `global` directly contradicts (each has real, non-empty `entity_diff`/`relation_diff`
+    excursions). This pins the corrected wording: no "measured retrieval-level agreement" phrase
+    survives in the rendered document while any graph arm has a non-empty, non-degraded
+    excursion — the same real committed data `test_render_markdown_states_the_hybrid_local_
+    global_excursions_rather_than_a_clean_pass` already proves is non-degraded-with-excursions.
+    """
+    text = render_markdown()
+
+    assert "measured retrieval-level agreement" not in text
+    assert "no retrieval-level agreement claim is made for these arms at all" in text
+
+
 # --------------------------------------------------------------------------------------------- #
 # _run_state() and StaleDeviationCauseError (03-10-PLAN.md Task 2)
 # --------------------------------------------------------------------------------------------- #

@@ -1217,6 +1217,14 @@ def _render_not_measured() -> str:
     if _run_state() == "completed":
         graph_arms = ("hybrid", "local", "global")
         degraded_arms = [arm for arm in graph_arms if _arm_degraded(arm)[0]]
+        excursion_arms = [
+            arm
+            for arm in graph_arms
+            if arm not in degraded_arms and _arm_excursion_summary(arm)
+        ]
+        clean_arms = [
+            arm for arm in graph_arms if arm not in degraded_arms and arm not in excursion_arms
+        ]
         if degraded_arms:
             degradation_clause = (
                 f"and `{'`/`'.join(degraded_arms)}`'s decomposed run degraded before completing "
@@ -1230,9 +1238,16 @@ def _render_not_measured() -> str:
                     "content"
                 )
             )
+        elif excursion_arms:
+            degradation_clause = (
+                f"and `{'`/`'.join(excursion_arms)}` completed without a decomposed-run "
+                "degradation but measured a real, non-empty entity/relation disagreement rather "
+                "than an agreement (see the per-arm degradation notes and Verdict section) — no "
+                "retrieval-level agreement claim is made for these arms at all"
+            )
         else:
             degradation_clause = (
-                f"and `{'`/`'.join(graph_arms)}` completed without a decomposed-run "
+                f"and `{'`/`'.join(clean_arms)}` completed without a decomposed-run "
                 "degradation, so their measured retrieval-level agreement is not an artifact of "
                 "a halted run"
             )
