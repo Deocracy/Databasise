@@ -15,9 +15,12 @@ raises ``UndeclaredEffectError`` on any attempt to reach either.
 A seed whose node is absent from the graph is reported in ``missing_seeds`` rather than silently
 dropped (v1's own ``_get_node_data`` merely logs a warning and filters it out — this decomposition
 makes that gap observable instead of silent, since a shorter result set here would otherwise read
-as a genuine retrieval difference in plan 03-07's parity comparison). Every hydrated or expanded
-item carries ``derived_from`` naming the seed ref (or entity name) it was computed from — a
-hydration that re-projects a seed into a wider shape is authoring, not pass-through (CONTRACT §4).
+as a genuine retrieval difference in plan 03-07's parity comparison). A seed that is itself
+malformed (missing the required ``entity_name`` key) follows the same rule: it is reported in
+``missing_seeds`` with a diagnostic naming the missing field, rather than raising and halting the
+whole node's batch. Every hydrated or expanded item carries ``derived_from`` naming the seed ref (or
+entity name) it was computed from — a hydration that re-projects a seed into a wider shape is
+authoring, not pass-through (CONTRACT §4).
 
 Emits two lists, both consumed by plan 03-06's join nodes: ``entities`` (the hydrated seeds) and
 ``relations`` (the expanded one-hop edges) — ``entity-hydrate-expand``'s own edge-expansion
@@ -42,14 +45,28 @@ async def _entity_hydrate_expand_body(ctx: NodeContext) -> dict[str, Any]:
     hydrated: list[dict[str, Any]] = []
     missing: list[dict[str, Any]] = []
     for seed in seeds:
-        entity_name = str(seed["entity_name"])
+        raw_entity_name = seed.get("entity_name")
+        if raw_entity_name is None:
+            missing.append(
+                {
+                    "entity_name": None,
+                    "missing": True,
+                    "malformed_seed": True,
+                    "diagnostic": "seed missing required field 'entity_name'",
+                    "derived_from": [seed.get("id")],
+                }
+            )
+            continue
+        entity_name = str(raw_entity_name)
         node = await graph.get_node(entity_name)
         if node is None:
-            missing.append({"entity_name": entity_name, "missing": True, "derived_from": [seed["id"]]})
+            missing.append(
+                {"entity_name": entity_name, "missing": True, "derived_from": [seed.get("id")]}
+            )
             continue
         degree = await graph.node_degree(entity_name)
         hydrated.append(
-            {**node, "entity_name": entity_name, "rank": degree, "derived_from": [seed["id"]]}
+            {**node, "entity_name": entity_name, "rank": degree, "derived_from": [seed.get("id")]}
         )
 
     seen_edges: set[tuple[str, str]] = set()

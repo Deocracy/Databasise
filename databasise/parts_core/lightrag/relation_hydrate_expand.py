@@ -13,8 +13,10 @@ reach either.
 
 A seed whose edge is absent from the graph is reported in ``missing_seeds`` rather than silently
 dropped — the same observability rule ``entity-hydrate-expand`` follows, for the symmetric reason.
-Every hydrated or expanded item carries ``derived_from`` naming the seed ref (or endpoint-pair key)
-it was computed from (CONTRACT §4's authored-evidence rule).
+A seed that is itself malformed (missing ``src_id``/``tgt_id``) follows the same rule: it is
+reported in ``missing_seeds`` with a diagnostic naming the missing field, rather than raising and
+halting the whole node's batch. Every hydrated or expanded item carries ``derived_from`` naming the
+seed ref (or endpoint-pair key) it was computed from (CONTRACT §4's authored-evidence rule).
 
 Emits two lists, both consumed by plan 03-06's join nodes: ``relations`` (the hydrated seeds) and
 ``entities`` (the expanded endpoint entities) — this node's own endpoint-expansion sub-step emits
@@ -39,8 +41,23 @@ async def _relation_hydrate_expand_body(ctx: NodeContext) -> dict[str, Any]:
     hydrated: list[dict[str, Any]] = []
     missing: list[dict[str, Any]] = []
     for seed in seeds:
-        src_id = str(seed["src_id"])
-        tgt_id = str(seed["tgt_id"])
+        raw_src_id = seed.get("src_id")
+        raw_tgt_id = seed.get("tgt_id")
+        if raw_src_id is None or raw_tgt_id is None:
+            missing_field = "src_id" if raw_src_id is None else "tgt_id"
+            missing.append(
+                {
+                    "src_id": raw_src_id,
+                    "tgt_id": raw_tgt_id,
+                    "missing": True,
+                    "malformed_seed": True,
+                    "diagnostic": f"seed missing required field '{missing_field}'",
+                    "derived_from": [seed.get("id")],
+                }
+            )
+            continue
+        src_id = str(raw_src_id)
+        tgt_id = str(raw_tgt_id)
         edge = await graph.get_edge(src_id, tgt_id)
         if edge is None:
             missing.append(
@@ -48,13 +65,15 @@ async def _relation_hydrate_expand_body(ctx: NodeContext) -> dict[str, Any]:
                     "src_id": src_id,
                     "tgt_id": tgt_id,
                     "missing": True,
-                    "derived_from": [seed["id"]],
+                    "derived_from": [seed.get("id")],
                 }
             )
             continue
         attrs = dict(edge)
         attrs.setdefault("weight", 1.0)
-        hydrated.append({"src_id": src_id, "tgt_id": tgt_id, **attrs, "derived_from": [seed["id"]]})
+        hydrated.append(
+            {"src_id": src_id, "tgt_id": tgt_id, **attrs, "derived_from": [seed.get("id")]}
+        )
 
     seen_entities: set[str] = set()
     entities: list[dict[str, Any]] = []
