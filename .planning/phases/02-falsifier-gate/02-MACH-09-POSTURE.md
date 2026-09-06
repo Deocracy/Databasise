@@ -63,6 +63,25 @@ pins, structurally, that no non-test module imports the ledger and that no modul
 `promote`/`promote_next`/`promote_now`/`rollback` verb, so a later change that starts building
 the promotion path fails this test rather than silently invalidating this record.
 
+## Read-only exception (04-03-PLAN.md, D-12/FA-06)
+
+`databasise/seam/selectors.py`'s alias branch is the first non-test, non-`ledger/` module to
+import `databasise.ledger.ledger`. It calls `Ledger.by_alias(alias)` — a derived projection over
+the ledger's additive `alias` column, computed the same `ORDER BY id DESC LIMIT 1` way
+`active_pointer` already is — and never calls `Ledger.append()`. This is a **read** of the ledger's
+existing content to answer "which wiring does this alias name", not a measurement-gated promotion
+decision: no `promote`/`promote_next`/`promote_now`/`rollback` verb is defined anywhere in
+`databasise/seam/`, and the registry this branch reads is empty until Phase 7's MACH-07 promote
+path appends the first real row.
+
+The guard test (`databasise/tests/runner/test_measurement_posture.py::
+test_no_non_test_module_imports_the_ledger`) carries one narrow, named exemption for exactly this
+file, with the reason recorded in the test's own module docstring — not a directory-wide carve-out,
+and not a relaxation of the promotion-verb or provenance-default guards, both of which still scan
+`databasise/seam/selectors.py` unchanged. A second non-test ledger caller, or an `append()` call
+appearing outside the test suite, still fails this test and still means this document needs another
+update — this exception covers exactly one read path, not the general question.
+
 ## Degraded labelling — already landed, cited not rebuilt
 
 RIG §TR.3's `partial`/`degraded`/`stop_reason`/`degradation_reason` required-together field set

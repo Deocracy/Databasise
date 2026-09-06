@@ -20,6 +20,18 @@ repoint — those are MACH-07 and Phase 7's deliverables. Nothing in the runner 
 running an arm MUST NOT append to the ledger (CONTRACT §6) — only a promotion does, and Phase 1
 does not exercise a real promotion.
 
+**``alias`` column (04-03-PLAN.md checkpoint, answer ``dedicated-alias-column``).** A small,
+additive ``alias TEXT`` column, distinct from ``mutation_id``: the ledger is append-only, enforced
+by the ``BEFORE UPDATE``/``BEFORE DELETE`` triggers below, so a field carrying two meanings (a
+mutation's own identity, and a separate public handle a consumer might name) could never be
+disentangled once Phase 7 writes the first real row under whatever shape this module reads. The
+seam's alias selector (``databasise.seam.selectors._resolve_alias``) reads it via
+:meth:`Ledger.by_alias`, itself a derived projection exactly like :meth:`active_pointer` — never
+an independently-writable "current alias" column. The registry is empty until Phase 7's promote
+path appends the first row naming both ``alias`` (the promoted alias string) and ``mutation_id``
+(the identifier of the promoted wiring/arm) on the same record; every alias lookup against an
+empty or non-matching registry refuses, cleanly and identically, per D-12/FA-06.
+
 **WR-03, deliberate exception:** every method on ``Ledger`` is plain synchronous ``def`` — this
 module has no ``async def`` surface to dispatch off the event loop in the first place, unlike
 ``stores/kv.py``/``stores/lexical.py`` (own deliberate-exception notes) or ``stores/graph.py``
@@ -61,6 +73,7 @@ class LedgerRecord:
     parity_records: list[dict[str, Any]]
     promotion_provenance: str
     promotion_trace_ids: list[str]
+    alias: str | None = None
 
 
 _JSON_FIELDS = ("arm_instance_hashes", "opaque_ttl_renewals", "parity_records", "promotion_trace_ids")
@@ -99,12 +112,16 @@ class Ledger:
                 parity_records TEXT NOT NULL,
                 promotion_provenance TEXT NOT NULL,
                 promotion_trace_ids TEXT NOT NULL,
+                alias TEXT,
                 created_at TEXT NOT NULL
             )
             """
         )
         self._conn.execute(
             "CREATE INDEX IF NOT EXISTS ix_ledger_mutation_id ON ledger(mutation_id)"
+        )
+        self._conn.execute(
+            "CREATE INDEX IF NOT EXISTS ix_ledger_alias ON ledger(alias)"
         )
         self._conn.execute(
             """
@@ -144,8 +161,8 @@ class Ledger:
             "INSERT INTO ledger (mutation_id, mutation_class, parent, arm_instance_hashes, "
             "effect_size, verdict, evidence_pointer, proposer_id, depth_label, "
             "tier_of_decision, decomposition_ratio, opaque_ttl_renewals, parity_records, "
-            "promotion_provenance, promotion_trace_ids, created_at) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "promotion_provenance, promotion_trace_ids, alias, created_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 record.mutation_id,
                 record.mutation_class,
@@ -162,6 +179,7 @@ class Ledger:
                 json.dumps(record.parity_records),
                 record.promotion_provenance,
                 json.dumps(record.promotion_trace_ids),
+                record.alias,
                 created_at,
             ),
         )
@@ -175,6 +193,22 @@ class Ledger:
         cur = self._conn.execute(
             "SELECT * FROM ledger WHERE mutation_id = ? ORDER BY id DESC LIMIT 1",
             (mutation_id,),
+        )
+        row = cur.fetchone()
+        return self._row_to_record(row) if row is not None else None
+
+    def by_alias(self, alias: str) -> LedgerRecord | None:
+        """The active pointer for ``alias`` — a projection over the ledger, computed by
+        ``ORDER BY id DESC LIMIT 1`` keyed on the additive ``alias`` column, exactly like
+        :meth:`active_pointer`'s own projection keyed on ``mutation_id``. Returns ``None`` when no
+        row names this alias — the seam's alias selector (``databasise.seam.selectors.
+        _resolve_alias``) is this method's only caller, and refuses identically whether the
+        registry holds no rows at all or holds rows naming a different alias (D-12/FA-06's
+        empty-registry-refuses-cleanly requirement).
+        """
+        cur = self._conn.execute(
+            "SELECT * FROM ledger WHERE alias = ? ORDER BY id DESC LIMIT 1",
+            (alias,),
         )
         row = cur.fetchone()
         return self._row_to_record(row) if row is not None else None
