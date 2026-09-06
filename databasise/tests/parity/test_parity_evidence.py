@@ -148,6 +148,62 @@ def test_a_storage_audit_file_missing_a_required_key_is_reported(tmp_path):
     assert any("naive-storage-audit.json" in v.file and "reason" in v.detail for v in violations)
 
 
+_EMPTY_DIFF = {
+    "decomposed_ids": [],
+    "original_ids": [],
+    "symmetric_difference": [],
+    "ranking_agreement": 1.0,
+    "first_disagreement_position": None,
+}
+
+
+def test_degraded_but_vacuous_arms_flags_a_completed_record_that_crashed_before_retrieving(tmp_path):
+    """WR-03 (03-REVIEW.md): a ``status="completed"`` record whose ``decomposed_run_record.degraded``
+    is true and whose comparison numbers are all empty diffs passes ``check_results()`` cleanly, but
+    :func:`parity_report._degraded_but_vacuous_arms` must still name it so the CLI's "clean" line
+    can be qualified rather than reading as "every arm's numbers are trustworthy."
+    """
+    _write_complete_fixture_set(tmp_path)
+    degraded_record = {
+        **_MINIMAL_INCONCLUSIVE_RECORD,
+        "arm": "hybrid",
+        "status": "completed",
+        "inconclusive_reason": None,
+        "chunk_diff": _EMPTY_DIFF,
+        "entity_diff": _EMPTY_DIFF,
+        "relation_diff": _EMPTY_DIFF,
+        "decomposed_run_record": {"degraded": True, "degradation_reason": "crashed"},
+    }
+    _write_comparison(tmp_path, "hybrid", [degraded_record])
+
+    assert check_results(results_dir=tmp_path) == []
+    assert parity_report._degraded_but_vacuous_arms(results_dir=tmp_path) == ["hybrid"]
+
+
+def test_degraded_but_vacuous_arms_ignores_a_clean_completed_record(tmp_path):
+    _write_complete_fixture_set(tmp_path)
+    clean_record = {
+        **_MINIMAL_INCONCLUSIVE_RECORD,
+        "arm": "hybrid",
+        "status": "completed",
+        "inconclusive_reason": None,
+        "chunk_diff": _EMPTY_DIFF,
+        "entity_diff": _EMPTY_DIFF,
+        "relation_diff": _EMPTY_DIFF,
+        "decomposed_run_record": {"degraded": False},
+    }
+    _write_comparison(tmp_path, "hybrid", [clean_record])
+
+    assert parity_report._degraded_but_vacuous_arms(results_dir=tmp_path) == []
+
+
+def test_degraded_but_vacuous_arms_on_the_real_committed_data_names_the_three_known_degraded_arms():
+    """Non-vacuous proof against the actual committed evidence: CR-01's crash affects exactly
+    ``hybrid``/``local``/``global`` today (see ``PARITY-EVIDENCE.md``'s own Verdict section).
+    """
+    assert parity_report._degraded_but_vacuous_arms() == ["hybrid", "local", "global"]
+
+
 # --------------------------------------------------------------------------------------------- #
 # render_deviations_markdown() — the CONTRACT §5 refusal
 # --------------------------------------------------------------------------------------------- #
