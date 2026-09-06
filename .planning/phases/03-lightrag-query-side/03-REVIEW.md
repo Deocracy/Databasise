@@ -1,277 +1,197 @@
 ---
 phase: 03-lightrag-query-side
-reviewed: 2026-09-06T20:18:28Z
+reviewed: 2026-09-06T21:10:00Z
 depth: standard
-files_reviewed: 23
+files_reviewed: 16
 files_reviewed_list:
-  - databasise/clients/openai_compat.py
   - databasise/evidence/parity_report.py
-  - databasise/parity/import_index.py
-  - databasise/parity/run_arm.py
-  - databasise/parts_core/lightrag/chunk_sel_kg.py
-  - databasise/parts_core/lightrag/chunk_vector.py
-  - databasise/parts_core/lightrag/entity_lookup.py
-  - databasise/parts_core/lightrag/heading_backfill.py
-  - databasise/parts_core/lightrag/relation_lookup.py
-  - databasise/stores/vector.py
-  - databasise/tests/clients/test_openai_compat.py
-  - databasise/tests/parity/test_graph_arm_real_index.py
-  - databasise/tests/parity/test_import_verification.py
-  - databasise/tests/parity/test_naive_arm_end_to_end.py
-  - databasise/tests/parity/test_parity_evidence.py
-  - databasise/tests/parts_core/lightrag/test_graph_half_parts.py
-  - databasise/tests/parts_core/lightrag/test_naive_arm_parts.py
-  - databasise/tests/parts_core/lightrag/test_transform_parts.py
-  - databasise/tests/stores/test_vector_namespaces.py
-  - v1/lightrag/operate.py
-  - v1/scripts/run_parity_ingest.py
-  - v1/README-PARITY.md
   - databasise/evidence/PARITY-EVIDENCE.md
   - databasise/evidence/DECLARED-DEVIATIONS.md
+  - databasise/parity/import_index.py
+  - databasise/tests/parity/test_import_verification.py
+  - databasise/tests/parity/test_parity_evidence.py
+  - v1/lightrag/operate.py
+  - v1/README-PARITY.md
+  - databasise/stores/vector.py
+  - databasise/parity/run_arm.py
+  - databasise/clients/openai_compat.py
+  - databasise/parts_core/lightrag/entity_lookup.py
+  - databasise/parts_core/lightrag/relation_lookup.py
+  - databasise/parts_core/lightrag/chunk_vector.py
+  - databasise/parts_core/lightrag/chunk_sel_kg.py
+  - databasise/parts_core/lightrag/heading_backfill.py
 findings:
-  critical: 2
-  warning: 1
+  critical: 0
+  warning: 3
   info: 1
   total: 4
 status: issues_found
 ---
 
-# Phase 03: Code Review Report
+# Phase 03: Code Review Report (iteration 2 — fix verification)
 
-**Reviewed:** 2026-09-06T20:18:28Z
+**Reviewed:** 2026-09-06T21:10:00Z
 **Depth:** standard
-**Files Reviewed:** 23 (plus the committed `parity_results/*.json` sanity-checked as data)
+**Files Reviewed:** 16
 **Status:** issues_found
 
 ## Summary
 
-This is a gap-closure wave over a parity-measurement harness; the product being reviewed is not
-just code but the honesty of a comparison. Most of the wave holds up well under adversarial
-reading: the `MultiNamespaceVectorStore` no-default refusal is real and tested (no silent `chunks`
-fallback survives); `render_deviations_document()`'s split into "reasoned" (rendered through the
-still-strict, unmodified `render_deviations_markdown`) and "PENDING, not fabricated" outstanding
-entries is a legitimate refinement, not a weakening — 18 real, non-degraded, unreasoned excursions
-on `hybrid`/`local`/`global` are disclosed as `PENDING`, never smuggled into "Named deviations",
-and `test_committed_deviations_document_matches_a_fresh_render` proves the committed file is not
-stale; `test_parity_evidence.py`'s re-pin (`matched=14`/`no-touch=2`, specific per-arm excursion
-counts) asserts real numbers against the real committed data, not a shape-only check. The
-`v1/lightrag/operate.py` `float()` coercion is correct, minimal for the crash it fixes, and
-honestly disclosed in `v1/README-PARITY.md` as a baseline change.
+This is a re-review of three fixes landed against the prior review's CR-01, CR-02, and WR-01
+(commits `f2f7e96`, `31738b1`, `45925d6`), reviewed as new code rather than as a diff, per this
+task's instructions. All three fixes are correct on the actual committed data and each is backed
+by a genuine, non-vacuous regression test that exercises real committed evidence or a real
+imported index — none of the three passes vacuously.
 
-Two defects stand out, both in the "evidence looks cleaner than the numbers support" class this
-review was told to weight highest:
+**WR-01** is a clean, exact mirror of the already-fixed sibling site; confirmed no third unguarded
+`get("weight", ...)` read of the same `get_edge()` shape remains in the file, and
+`v1/README-PARITY.md`'s disclosure now correctly names both sites.
 
-1. `PARITY-EVIDENCE.md`'s own "What is not measured" section states, of `hybrid`/`local`/`global`,
-   that "their measured retrieval-level agreement is not an artifact of a halted run" — but the
-   committed data for all three arms shows real, substantial *disagreement*
-   (`ranking_agreement` 0.50-0.86, `entity_diff`/`relation_diff` symmetric differences of 20-78
-   items per query), which the same document's own Verdict section correctly refuses to call
-   agreement. The renderer's degradation branch was updated (03-13-PLAN.md gap 2) to also check
-   for excursions; the "not measured" branch producing this sentence was not, and no test asserts
-   on its wording — the stale phrase survived the fix cycle that closed the identical bug
-   elsewhere in the same file.
+**CR-02**'s replacement primitive is sound at the core: I exercised `_compare_vector_sets`
+directly against synthetic id-missing, id-extra, below-tolerance, and above-tolerance cases, and
+all four behave correctly — it compares the right pairs by id, not by position; it flags a
+one-sided id with the correct offending id; and the 1e-4 boundary triggers exactly where
+documented. It also correctly declines to reproduce the boundary-flake class the prior review
+named, since there is no rounding grid left to sit near. Two things about the surrounding
+justification do not hold up, both detailed under Warnings below: the docstring's own stated
+safety margin ("two orders of magnitude") is arithmetically wrong, and the new perturbation test
+does not prove the specific property CR-02 was fixed to deliver (see WR-02/WR-03 below).
 
-2. `_VECTOR_HASH_DECIMALS` was dropped from 3 to 2 against the plan's explicit "the importer is
-   already correct, do not change it" instruction, to clear a rounding-grid boundary case. The
-   change is a probability reduction of a defect class, not a removal of it, and it costs real
-   discriminating power (see finding CR-02) — a boundary-free tolerance check was available and
-   would have been strictly better on both counts.
+**CR-01**'s fix correctly derives the sentence from the same `_arm_degraded()`/
+`_arm_excursion_summary()` state `_render_verdict()` already computes, and both
+`PARITY-EVIDENCE.md` and `DECLARED-DEVIATIONS.md` were confirmed byte-for-byte re-renderable from
+the current code against the current committed data (`render_markdown()` output and
+`render_deviations_document(_collect_deviations())` output both match the committed files
+exactly). On the real data (no arm currently degraded), the fix is correct and the two documents
+no longer contradict each other or the Verdict section. The one gap found — detailed under WR-01
+below — is that the new branching is not as generic as `_render_verdict()`'s per-arm loop: it
+would silently drop mention of a non-priority arm bucket if the data ever produced a mix of
+degraded and excursion arms simultaneously. This does not misstate anything on the current data
+and does not reproduce CR-01's original defect (a false "measured agreement" claim); it is a
+latent completeness gap, not a live one.
 
-## Critical Issues
-
-### CR-01: `PARITY-EVIDENCE.md`'s "What is not measured" section asserts a measured agreement that the committed data contradicts
-
-**File:** `databasise/evidence/parity_report.py:1234-1238` (rendered into
-`databasise/evidence/PARITY-EVIDENCE.md:115`)
-
-**Issue:** `_render_not_measured()`'s `degradation_clause` has two branches, keyed only on whether
-any of `hybrid`/`local`/`global` degraded:
-
-```python
-if degraded_arms:
-    degradation_clause = (... "so its/their measured zero diff is not a validated agreement...")
-else:
-    degradation_clause = (
-        f"and `{'`/`'.join(graph_arms)}` completed without a decomposed-run "
-        "degradation, so their measured retrieval-level agreement is not an artifact of "
-        "a halted run"
-    )
-```
-
-The `else` branch was written under the assumption (the same one 03-13-PLAN.md gap 2's fix to
-`_render_verdict` names and corrects) that "not degraded" implies "measured agreement." It does
-not: the real committed run for all three graph arms is non-degraded *and* substantially
-disagreeing —
-
-```
-hybrid  q1: ranking_agreement=0.628, entity_diff=58, relation_diff=60
-hybrid  q2: ranking_agreement=0.731, entity_diff=46, relation_diff=44
-local   q1: ranking_agreement=0.500, entity_diff=20, relation_diff=33
-local   q2: ranking_agreement=0.673, entity_diff=22, relation_diff=30
-global  q1: ranking_agreement=0.533, entity_diff=76, relation_diff=78
-global  q2: ranking_agreement=0.857, entity_diff=68, relation_diff=68
-```
-
-(figures read directly from `databasise/evidence/parity_results/{hybrid,local,global}-comparison.json`).
-The rendered sentence — "their measured retrieval-level agreement is not an artifact of a halted
-run" — asserts an agreement that was never measured, directly contradicting the same document's
-own Verdict section three sections later ("this is not read as exact retrieval-level agreement
-either... the two disagree"). A reader of only the "What is not measured" section, or anyone
-grepping the document for "agreement", is told the opposite of what "Per-arm retrieval-level
-comparison" and "Verdict" actually show. This is exactly the failure mode this review was told to
-weight above an ordinary crash: code that makes a comparison look cleaner than it is.
-
-No test in `test_parity_evidence.py` asserts on `_render_not_measured()`'s wording for the
-non-degraded-with-excursions case — the existing regression test for this fix cycle
-(`test_render_markdown_states_the_hybrid_local_global_excursions_rather_than_a_clean_pass`) only
-checks the Verdict section's text, so the stale sibling branch in a different function went
-unnoticed.
-
-**Fix:** Branch `degradation_clause` on the same three-way state `_render_verdict()` already
-computes (degraded / non-degraded-with-excursions / non-degraded-and-clean), not on `degraded_arms`
-alone, e.g.:
-
-```python
-excursion_arms = [a for a in graph_arms if not _arm_degraded(a)[0] and _arm_excursion_summary(a)]
-clean_arms = [a for a in graph_arms if a not in degraded_arms and a not in excursion_arms]
-if degraded_arms:
-    degradation_clause = (...)
-elif excursion_arms:
-    degradation_clause = (
-        f"and `{'`/`'.join(excursion_arms)}` completed without a decomposed-run degradation but "
-        "measured a real, non-empty entity/relation disagreement rather than an agreement (see "
-        "the per-arm degradation notes and Verdict section) — no retrieval-level agreement claim "
-        "is made for these arms at all"
-    )
-else:
-    degradation_clause = (
-        f"and `{'`/`'.join(clean_arms)}` completed without a decomposed-run degradation, so their "
-        "measured retrieval-level agreement is not an artifact of a halted run"
-    )
-```
-and add a test asserting `"measured retrieval-level agreement"` does NOT appear in
-`_render_not_measured()`'s output when any graph arm has a non-empty, non-degraded excursion.
-
-### CR-02: `_VECTOR_HASH_DECIMALS = 2` trades away discriminating power to clear a boundary case that a tolerance check would remove entirely
-
-**File:** `databasise/parity/import_index.py:294-298`
-
-**Issue:** The task specifically asked whether this committed constant should stand. It should
-not, for three compounding reasons:
-
-1. **It lowers the probability of the boundary-flake class; it does not remove it.** Any
-   fixed-decimal round is a grid with edges. The docstring's own history (6 and 5 decimals tried
-   first, then 3, now 2) is itself the pattern of "coarsen until the current dataset stops
-   crossing a line" — each step reduces the chance of landing near an edge on *this* 410-vector
-   build, but the next real re-ingest (more documents, more entities) can land near an edge at 2
-   decimals exactly as one did at 3. The class of bug is unchanged; only its odds on today's data
-   moved.
-
-2. **The coarsening measurably reduces the hash's discriminating power, not just its
-   flakiness.** A 4096-dim, L2-normalised, float32 embedding has a typical per-component magnitude
-   of `1/sqrt(4096) ≈ 0.0156`. Rounding to 2 decimals (a 0.01 grid) means any component with
-   `|x| < 0.005` — roughly a quarter of all components under a normal-ish distribution around that
-   magnitude — collapses to exactly `0.00`, and the surviving nonzero values are quantized onto a
-   handful of buckets (`±0.01`, `±0.02`, rarely `±0.03`). The hash is still over 4096 quantized
-   components at once, so a *wrong id-to-vector pairing* or a *genuine re-embedding* (which differ
-   across many components by an amount well above 0.005) will still almost certainly be caught —
-   but a subtler defect (e.g. two near-duplicate entities' vectors accidentally swapped, or a
-   small but real normalisation drift affecting a minority of components) now has roughly 4x more
-   room to hide below the new grid's resolution than it did at 3 decimals. The check is weaker in
-   a way that is real, even though it happens not to matter for the one case actually exercised.
-
-3. **A tolerance-based check is strictly better on both axes the docstring itself argues for.**
-   Replacing the rounded-hash comparison with an explicit per-vector distance check (e.g.
-   `np.max(np.abs(v1 - v2)) < 1e-4` — still 100x the measured ~1e-5 noise ceiling, five orders of
-   magnitude above the 1.49e-8 diff that triggered this change) is monotonic, not a step function:
-   it has no grid line to land near, so it cannot flake regardless of how the dataset grows, and it
-   does not collapse a quarter of every vector's components to a shared value first. It would have
-   passed the exact case that motivated this change (1.49e-8 ≪ 1e-4) without discarding resolution
-   from the other 75% of components that don't round to zero. This is a case where the "how do I
-   make the boundary case pass" framing produced a worse fix than the one directly available.
-
-Compounding this: no test pins `_quantized_vector_bytes`/`_VECTOR_HASH_DECIMALS`'s behavior at all
-— nothing regresses if this constant is changed again, nothing proves a genuinely different vector
-still fails the check post-coarsening, and nothing proves a near-boundary pair now matches. The
-change shipped on the strength of a code-comment narrative and one manual real-build observation,
-not a runnable check (this codebase's own stated convention — see `chunk_sel_kg.py`'s and
-`vector.py`'s docstrings' emphasis on tests proving claims, not comments alone).
-
-Separately, and worth naming plainly: 03-11-PLAN.md's own text instructed the executor not to
-change this module. The change was made anyway, is reasoned in the code, and is disclosed — but it
-still departs from an explicit plan directive on the one module in this wave whose entire purpose
-is measuring correctness, and it should have been escalated rather than executed unilaterally,
-independent of whether the technical outcome (see below) turns out defensible.
-
-**Verdict on the constant:** it should not stand as implemented. Replace the rounded-hash
-comparison with a tolerance-based per-vector distance check (component-wise or max-abs-diff over
-the raw float32 vectors, no rounding at all) in both `_v1_vector_pairs`/`_v2_vector_pairs`'s
-comparison path. This removes the boundary-flake class entirely rather than making it rarer, and
-restores full component resolution for genuinely-different-vector detection. If the hash-of-sorted-
-pairs shape is kept for its whole-set fingerprint convenience, at minimum add a test that (a)
-proves a real, non-trivial vector difference (e.g. swap two entities' vectors) still fails
-verification at `_VECTOR_HASH_DECIMALS = 2`, and (b) documents in a runnable assertion — not only a
-comment — what per-component magnitude a difference must exceed to be caught.
+IN-01 (graph-topology assertion never checks node/edge attribute payloads) was out of this fix
+cycle's scope and still holds unchanged — confirmed `_v1_graph`/`_v2_graph` in
+`databasise/parity/import_index.py` still return only id-sets and edge-endpoint-pair sets.
 
 ## Warnings
 
-### WR-01: The `_merge_edges_then_upsert` string-weight fix is not applied to the sibling code path with the identical defect
+### WR-01: `_render_not_measured()`'s three-way branch is not per-arm, unlike `_render_verdict()`, and would drop an arm's status silently under a future mixed degraded+excursion state
 
-**File:** `v1/lightrag/operate.py:1835` (compare to the fixed line at `v1/lightrag/operate.py:2370`)
+**File:** `databasise/evidence/parity_report.py:1228-1253`
 
-**Issue:** The committed fix wraps `already_edge.get("weight", 1.0)` in `float(...)` inside
-`_merge_edges_then_upsert` (line 2370), because every `BaseGraphStorage.get_edge()` backend returns
-attribute values as strings. `_rebuild_single_relationship` (the cache-rebuild path) reads the
-identical shape from the identical source one function up in the same file:
+**Issue:** The CR-01 fix computes `degraded_arms`/`excursion_arms`/`clean_arms` (mirroring
+`_render_verdict()`'s per-arm state), but then picks exactly one whole-document clause via
+`if degraded_arms: ... elif excursion_arms: ... else: ...` — a priority chain, not a per-arm
+report. `_render_verdict()` (the function this fix explicitly modeled itself on) instead loops
+`for arm in graph_arms` and emits one sentence per arm regardless of how the three buckets mix.
 
+On the real committed data (`degraded_arms == []` for all three graph arms today) this produces
+the correct sentence and the fix is fully correct for the case it was written to close. But
+imagine a future re-run where, say, `hybrid` degrades while `local`/`global` keep their real,
+non-degraded excursions (a state `_arm_degraded`/`_arm_excursion_summary` already computes fresh
+from committed records, so it can occur with no code change): `degraded_arms == ["hybrid"]` is
+truthy, so the `elif excursion_arms:` branch never runs, and the resulting sentence discusses only
+`hybrid`'s degradation — `local`/`global`'s real excursions go completely unmentioned by this
+paragraph. This does not resurrect CR-01's specific defect (no false "measured agreement" claim is
+made), but it does silently omit disclosure for two arms whose status this exact section exists to
+name, which is the same class of gap CR-01 was written to close and the exact question this task
+asked to check ("would it still be true if the arms' measured outcomes changed again?" — the
+answer for this section is "no, it would stop naming two of the three arms").
+
+**Fix:** Mirror `_render_verdict()`'s per-arm loop instead of a single whole-document clause, e.g.
+build one clause per arm keyed on that arm's own `(degraded, excursion, clean)` state and join
+them, so every graph arm's status is always named in this section regardless of how the three
+buckets mix:
 ```python
-current_relationship = await knowledge_graph_inst.get_edge(src, tgt)   # line 1739 — same source
-...
-weight = sum(weights) if weights else current_relationship.get("weight", 1.0)   # line 1835
+arm_clauses = []
+for arm in graph_arms:
+    degraded, _ = _arm_degraded(arm)
+    if degraded:
+        arm_clauses.append(f"`{arm}`'s decomposed run degraded before completing a real retrieval")
+    elif _arm_excursion_summary(arm):
+        arm_clauses.append(f"`{arm}` measured a real, non-empty disagreement rather than an agreement")
+    else:
+        arm_clauses.append(f"`{arm}` measured retrieval-level agreement with no degradation")
+degradation_clause = "; ".join(arm_clauses)
 ```
+and add a synthetic (non-real-data) unit test that constructs a mixed degraded+excursion state and
+asserts every arm is named in the output — the current regression test only exercises the
+all-excursion, no-degradation state the real data happens to be in today.
 
-When `weights` is empty (no extraction data carried a weight for this rebuild), `weight` is
-assigned directly from `current_relationship.get("weight", 1.0)` with no `float()` coercion — the
-exact unguarded read the fix elsewhere in this file exists to close. This does not crash inside
-`_rebuild_single_relationship` itself (no arithmetic is performed on `weight` in that function
-before it is written back to storage), but it re-introduces a string-typed `"weight"` value into
-graph storage on the cache-rebuild path, which is the same class of value `_merge_edges_then_upsert`
-was just hardened against — this is not proven to be currently reachable by any of the five parity
-arms, but it is the same bug, one function away from the one that was fixed, and the fix cycle's
-disclosure ("this is a bug fix to the pinned baseline... recorded here so the original-arm identity
-stays honest") did not mention it.
+### WR-02: `_VECTOR_TOLERANCE`'s stated safety margin is arithmetically wrong — it is one order of magnitude above the noise ceiling, not two
 
-**Fix:** Apply the identical `float(...)` coercion at line 1835:
-```python
-weight = sum(weights) if weights else float(current_relationship.get("weight", 1.0))
-```
-and note the second site alongside the first in `v1/README-PARITY.md`'s existing disclosure
-paragraph, since both are the same baseline-identity change.
+**File:** `databasise/parity/import_index.py:289-290` (same claim repeated in commit `45925d6`'s message)
+
+**Issue:** The code comment states: `"1e-4 is two orders of magnitude above the measured ~1e-5
+noise ceiling"`. `1e-4 / 1e-5 = 10`, i.e. one order of magnitude, not two — "two orders of
+magnitude" above `1e-5` would be `1e-3`, ten times looser than the tolerance actually shipped.
+This exact miscalculation was already present in the prior review's own suggested fix text
+("still 100x the measured ~1e-5 noise ceiling") and was carried forward verbatim into the shipped
+docstring and commit message without being checked. This is precisely the class of "evidence looks
+cleaner than the numbers support" defect this review track exists to catch: a reader trusting the
+comment believes there is 100x headroom between the tolerance and the worst observed noise, when
+the real margin is 10x. Ten times is not necessarily too tight — the module's own claim is that
+`~1e-5` is already the observed maximum per-component noise across 407 real vectors, so 10x above
+a measured maximum is a defensible margin — but the code should not misstate its own math, since
+the next person to consider tightening or loosening `_VECTOR_TOLERANCE` will reason from the wrong
+number.
+
+**Fix:** Correct the comment to say "one order of magnitude" (or restate the actual ratio, `10x`),
+and either accept the true 10x margin explicitly or widen `_VECTOR_TOLERANCE` if a firmer margin
+above the observed noise ceiling is wanted.
+
+### WR-03: The new perturbation test proves the mechanism still fires, but not the specific improvement CR-02 claimed over the old rounding-grid check
+
+**File:** `databasise/tests/parity/test_import_verification.py` (new
+`test_real_v1_build_perturbed_vector_is_caught_and_named`)
+
+**Issue:** The task this fix was reviewed under specifically asked whether the perturbation test
+"perturb[s] by an amount that would have passed the old 2-decimal grid, so it proves the new check
+is strictly stronger." It does not: the test adds `+1.0` to one component of a unit-normalized
+vector (whose components have typical magnitude `~1/sqrt(4096) ≈ 0.0156`), a perturbation the test
+itself asserts is `> 1000 * _VECTOR_TOLERANCE`. A shift of `+1.0` moves the rounded-to-2-decimals
+value from something like `0.02` to `1.02` — the old `_VECTOR_HASH_DECIMALS = 2` rounding-grid
+check the prior review criticized would have caught this trivially, since it is nowhere near a
+grid boundary. This test therefore only proves the new mechanism still catches an obvious, gross
+difference (the same thing the old hash-based check already caught); it does not exercise, and
+cannot distinguish, the actual property CR-02 was implemented to deliver — catching a subtler
+difference (in the `0.005`–`0.0156` component-magnitude range that used to collapse toward zero
+or land within a 2-decimal grid cell) that the old check would have missed but the new tolerance
+check catches. As shipped, nothing in the test suite demonstrates the new check is "strictly
+stronger" rather than merely "differently implemented but equally coarse-grained."
+
+**Fix:** Add (or change the existing perturbation to use) a component-level perturbation sized
+between the tolerance and the old grid's resolution — e.g. perturb by `5e-3` (above
+`_VECTOR_TOLERANCE = 1e-4`, but small enough that `np.round(x, 2)` often leaves the 2-decimal
+rounded value unchanged for a component whose true value sits mid-cell) and assert both that (a)
+the new tolerance check still flags it and names the id, and (b) recompute what the old
+`_quantized_vector_bytes`/`_vector_set_hash` comparison would have produced for the same
+perturbed pair and assert it would *not* have differed — proving the new check is strictly
+stronger on a concrete case, not just equally capable on an easy one.
 
 ## Info
 
 ### IN-01: `verify_import`'s graph-topology assertion never checks node/edge attribute payloads
 
-**File:** `databasise/parity/import_index.py:331-359, 430-462`
+**File:** `databasise/parity/import_index.py:365-462` (unchanged by this fix cycle; carried
+forward from the prior review, out of scope for this fix run)
 
-**Issue:** `_v1_graph`/`_v2_graph` read only `id`/`src, tgt` — the D-02 graph-topology assertion
-compares node-id sets and edge-endpoint-pair sets, never the `attrs` payload (`description`,
-`weight`, `entity_type`, etc.) each node/edge carries. An import that correctly preserves every
-node id and edge pair but silently corrupts or drops an attribute value (for example, exactly the
-kind of string/float weight confusion CR-01/WR-01 discuss) would pass `verify_import` cleanly. This
-may be a deliberate, documented scope choice ("three assertions": chunk-text, vector-hash,
-graph-topology) rather than an oversight, but it is worth naming explicitly since the review was
-asked to give this importer/verifier extra scrutiny: a "verified" result names less than its own
-name implies to a reader who has not read this file's internals.
+**Issue:** `_v1_graph`/`_v2_graph` still read only node-id sets and edge-endpoint-pair sets — the
+D-02 graph-topology assertion never compares each node/edge's `attrs` payload (`description`,
+`weight`, `entity_type`, etc.). An import that preserves every id and edge pair but corrupts or
+drops an attribute value (exactly the class of string/float weight confusion WR-01 in the prior
+review discussed) would pass `verify_import` cleanly. This may be a deliberate, documented scope
+choice rather than an oversight, but it still means "verified" names less than a reader might
+assume from the name.
 
 **Fix:** If attribute-level fidelity matters for this phase's claims, extend the graph-topology
 assertion to also compare each node/edge's `attrs` dict (or a canonical hash of it) between v1 and
-v2, the same way `_vector_set_hash` already does for vectors. If it is an intentional scope
-limitation, say so in the module docstring's list of "D-02's three assertions" so a reader does not
-have to infer the boundary from the code.
+v2. If it is an intentional scope limitation, say so explicitly in the module docstring's list of
+"D-02's three assertions."
 
 ---
 
-_Reviewed: 2026-09-06T20:18:28Z_
+_Reviewed: 2026-09-06T21:10:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_

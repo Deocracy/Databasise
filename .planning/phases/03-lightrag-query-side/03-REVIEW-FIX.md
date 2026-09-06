@@ -1,96 +1,125 @@
 ---
 phase: 03-lightrag-query-side
-fixed_at: 2026-09-06T01:45:00Z
+fixed_at: 2026-09-06T20:58:48Z
 review_path: .planning/phases/03-lightrag-query-side/03-REVIEW.md
-iteration: 1
-findings_in_scope: 4
+iteration: 3
+findings_in_scope: 3
 fixed: 3
-skipped: 1
-status: partial
+skipped: 0
+status: all_fixed
 ---
 
 # Phase 03: Code Review Fix Report
 
-**Fixed at:** 2026-09-06T01:45:00Z
-**Source review:** .planning/phases/03-lightrag-query-side/03-REVIEW.md
-**Iteration:** 1
+**Fixed at:** 2026-09-06T20:58:48Z
+**Source review:** `.planning/phases/03-lightrag-query-side/03-REVIEW.md`
+**Iteration:** 3
 
 **Summary:**
-- Findings in scope (Critical + Warning): 4
-- Fixed: 3
-- Skipped: 1
 
-Verification for all three fixes ran in the isolated worktree
-(`.claude/worktrees/rf-03-2098297-1788658415`, fast-forwarded into `main` after this report was
-written): `uv run pytest -q` (441 passed, 3 skipped, 1 deselected — the deselected test hits live
-OpenRouter endpoints) plus a manual run of `uv run python -m databasise.evidence.parity_report
---check-results` to confirm the WR-03 CLI output by hand.
+- Findings in scope (critical + warning): 3
+- Fixed: 3
+- Skipped: 0
+
+**Verification environment:** all edits were authored and unit-verified inside an isolated git
+worktree (`gsd-reviewfix/03-4176741`), fast-forward-merged into `main`, then the worktree and its
+temp branch were removed. The two real-data tests that need the real Task 2 v1 build
+(`v1/.parity_working_dir`, gitignored and untracked) do not exist inside a fresh git worktree by
+default — only git-tracked files are checked out there — so they were first proven against real
+data by temporarily symlinking `v1/.parity_working_dir` (and `.parity_v2_store`, `.venv`) into the
+worktree, running them there, then deleting the symlinks before committing (`git status` inside
+the worktree was clean of the symlinks at commit time). `v1/.env.parity` was deliberately never
+symlinked into the worktree — it is a live-API-key file and this session's secret-file guard
+refuses to touch it. The **authoritative full-suite run below is the main checkout's**, taken
+after the fast-forward merge, where all real-data fixtures (including `.env.parity`) are present
+natively.
 
 ## Fixed Issues
 
-### CR-01: `entity-hydrate-expand`/`relation-hydrate-expand` crash the whole node on any seed item missing its expected key
-
-**Files modified:** `databasise/parts_core/lightrag/entity_hydrate_expand.py`, `databasise/parts_core/lightrag/relation_hydrate_expand.py`, `databasise/tests/parts_core/lightrag/test_graph_half_parts.py`
-**Commit:** 1827695
-**Applied fix:** Mirrored the existing absent-graph-node → `missing_seeds` pattern for a malformed
-seed. `entity_hydrate_expand.py` now uses `seed.get("entity_name")` instead of a bare subscript; a
-seed with no `entity_name` is appended to `missing_seeds` with `malformed_seed: True` and a
-`diagnostic` string naming the missing field, instead of raising `KeyError`. The symmetric change
-was applied to `relation_hydrate_expand.py` for `src_id`/`tgt_id` (diagnostic names whichever of
-the two is absent). All `seed["id"]` reads were also switched to `seed.get("id")` for consistency,
-so a seed missing `id` no longer raises either. Docstrings for both modules were updated to state
-the malformed-seed rule alongside the existing absent-node rule. Added two regression tests (one
-per module) asserting a seed missing the required field lands in `missing_seeds` with the expected
-diagnostic rather than raising.
-
-### WR-01: `run_arm._build_clients` reads four required `.env.parity` keys with bare subscript access
-
-**Files modified:** `databasise/parity/run_arm.py`, `databasise/tests/parity/test_naive_arm_end_to_end.py`
-**Commit:** 35898e8
-**Applied fix:** Added a named `MissingParityEnvKeyError` (mirroring the existing
-`MissingParityEnvError` for the absent-file case) and a `_REQUIRED_ENV_KEYS` tuple of all six keys
-`_build_clients` needs. `_build_clients` now checks for every missing key up front and raises
-`MissingParityEnvKeyError` naming all of them, instead of a bare, unnamed `KeyError` on whichever
-key happens to be read first. `storage_audit.run_audit` reuses this same helper, so the fix reaches
-both callers with no further change. Added two tests: one asserting the new error names every
-missing key, one asserting normal construction still succeeds when all six keys are present.
-
-### WR-03: `check_results()` has no rule catching a `status="completed"` record whose `decomposed_run_record.degraded=true` alongside a vacuous zero diff
+### WR-01: `_render_not_measured()`'s three-way branch is not per-arm, unlike `_render_verdict()`, and would drop an arm's status silently under a future mixed degraded+excursion state
 
 **Files modified:** `databasise/evidence/parity_report.py`, `databasise/tests/parity/test_parity_evidence.py`
-**Commit:** b54d7b8
-**Applied fix:** Per the review's option (b): added `_degraded_but_vacuous_arms()`, which scans each
-arm's committed comparison file for a `status="completed"` record whose
-`decomposed_run_record.degraded` is true and whose `chunk_diff`/`entity_diff`/`relation_diff` are
-all empty — the exact shape `check_results()`'s existing rules cannot see. `check_results()`
-itself is left unchanged (the `degraded`/`degradation_reason` fields are already honestly
-disclosed on the record, so this is not a new provenance violation); instead, `main()`'s
-`--check-results` CLI path now calls the new helper and, when it returns any arms, prints
-`"clean (5 arms, 3 degraded — `hybrid`, `local`, `global` measured a zero diff only because the
-decomposed run crashed before completing a real retrieval; see PARITY-EVIDENCE.md for
-disclosure)"` instead of a bare `"clean (5 arms)"`. Manually confirmed against the real committed
-`parity_results/` directory. Added three tests: a synthetic degraded-vacuous record is flagged, a
-synthetic clean completed record is not flagged, and a non-vacuous proof against the real committed
-data names exactly `hybrid`/`local`/`global` (the three arms CR-01's crash currently affects).
+**Commit:** `4504e22`
+**Applied fix:** `_render_not_measured()`'s `degradation_clause` was picked by an `if
+degraded_arms: ... elif excursion_arms: ... else: ...` priority chain — mutually exclusive, so a
+future state with a degraded arm alongside a real, non-degraded excursion arm would silently drop
+the excursion (and any clean) arm from this section. Changed the chain to three independent `if`
+blocks, each appending its own clause to an `arm_clauses` list, then joined with `"; "` —
+`degraded_arms`/`excursion_arms`/`clean_arms` already partition `graph_arms` with no overlap (each
+comprehension excludes the buckets computed before it), so this always names every graph arm in
+exactly one clause regardless of how the three buckets mix, mirroring `_render_verdict()`'s
+per-arm completeness without changing its existing wording for any single-bucket case. Added
+`test_render_not_measured_names_every_arm_when_degraded_and_excursion_states_mix` — a synthetic
+fixture (not the real committed data) with `hybrid` degraded, `local` a real non-degraded
+excursion, and `global` clean — asserting all three arms are named in the rendered text. Confirmed
+the existing regression test (`test_render_not_measured_does_not_assert_agreement_for_an_arm_with_
+a_real_excursion`, which pins the real-data, all-excursion case) still passes unchanged, and
+re-rendered both `PARITY-EVIDENCE.md` and `DECLARED-DEVIATIONS.md` against the real committed
+data — byte-for-byte identical to the already-committed documents (`git diff` reported no changes
+to either), since the real data has no degraded arm and this fix only changes behavior when
+multiple buckets are non-empty simultaneously.
+
+### WR-02: `_VECTOR_TOLERANCE`'s stated safety margin is arithmetically wrong — it is one order of magnitude above the noise ceiling, not two
+
+**Files modified:** `databasise/parity/import_index.py`
+**Commit:** `d2fd287`
+**Applied fix:** The comment claimed `1e-4` is "two orders of magnitude above the measured ~1e-5
+noise ceiling," but `1e-4 / 1e-5 = 10` — one order of magnitude. Corrected the comment to state
+the true `10x` ratio, and added the reasoning for why that margin is still defensible: the `~1e-5`
+figure is itself the observed *maximum* per-component noise across all 407 real vectors (not a
+typical/average value), so 10x above a measured maximum is reasonable headroom — without changing
+`_VECTOR_TOLERANCE`'s value, since the review explicitly asked for the honest sentence rather than
+inflating the constant to match the original (wrong) claim.
+
+### WR-03: The new perturbation test proves the mechanism still fires, but not the specific improvement CR-02 claimed over the old rounding-grid check
+
+**Files modified:** `databasise/tests/parity/test_import_verification.py`
+**Commit:** `1fbc04a`
+**Applied fix:** The existing `test_real_v1_build_perturbed_vector_is_caught_and_named` perturbs a
+component by `+1.0` — a shift the old 2-decimal rounding-grid hash (`_quantized_vector_bytes` /
+`_vector_set_hash`, both fully removed from the source by the CR-02 fix, confirmed via `git log`
+on the pre-fix commit) would also have caught trivially, since it moves the value nowhere near a
+grid boundary. Kept that test as-is (it still covers "a gross difference is still caught," a
+separate, legitimate case) and added a new sibling test,
+`test_real_v1_build_perturbation_below_old_rounding_grid_resolution_is_still_caught`, that
+computes a component-specific delta guaranteed to (a) stay inside that real component's own
+2-decimal rounding cell — so `round(value, 2)` is provably unchanged, meaning the old whole-vector
+hash would have reported no difference at all — while (b) still exceeding `_VECTOR_TOLERANCE` by
+10x, so the new tolerance check still flags and names the offending id. The delta is derived from
+the real vector's own value at test time (not hardcoded), using the fact that the two rounding-cell
+half-widths on either side of any real float always sum to `0.01`, so the larger half is always
+`>= 0.005` — comfortably above the `10x`-tolerance minimum regardless of which real vector value
+the test happens to draw. Verified against the real imported index (`v1/.parity_working_dir`,
+symlinked into the isolated worktree for this run only): both the kept `+1.0` test and the new
+discriminating test pass, and the new test's own in-test assertions confirm the delta both
+round-trips through the old grid unchanged and clears the new tolerance.
 
 ## Skipped Issues
 
-### WR-02: `human_findings.json`'s two `declared_causes` entries are AI-authored, not human-authored
+None — all in-scope findings were fixed.
 
-**File:** `databasise/evidence/human_findings.json:12-14,26-27`, `databasise/evidence/DECLARED-DEVIATIONS.md:9-10`
-**Reason:** CONTRACT §5 requires a human-authored cause for every named excursion. This agent
-cannot fabricate a human-authored replacement — that would create a false attestation of human
-review that did not happen, which is worse than the disclosed gap already on file. Verified the
-review's fallback condition instead: both files' `recorded_by` fields already read `"Claude (AI
-agent, gsd-code-fixer) — commit 2ce3c30; NOT recorded by the human owner, despite this file's own
-name"` — the provenance is accurately and honestly labelled today, matching what the review itself
-noted ("This is honestly disclosed... which is why this is a Warning rather than a Critical"). No
-further mechanical change closes the underlying gap; it requires the human owner to actually
-review and re-record the two causes (fix option (a) in the review), which is out of scope for this
-automated fixer.
+## Out of scope
+
+IN-01 (`_v1_graph`/`_v2_graph`'s node/edge-attribute payloads are never compared) is an
+Info-severity finding, outside this run's `critical_warning` fix scope, and was left unaddressed
+for the record — unchanged from the prior iteration's review.
+
+## Verification
+
+Full suite, run in the **main checkout** after the review-fix branch (`gsd-reviewfix/03-4176741`)
+was fast-forward-merged into `main` and the worktree removed:
+
+```text
+cd databasise && uv run pytest -q
+466 passed in 120.39s (0:02:00)
+```
+
+Baseline before this fix cycle was 464 passed, 0 failed; the two additional passing tests are the
+WR-01 mixed-state regression test and the WR-03 discriminating perturbation test added above. No
+test was removed, weakened, or marked skip/xfail by any of the three fixes.
 
 ---
 
-_Fixed: 2026-09-06T01:45:00Z_
+_Fixed: 2026-09-06T20:58:48Z_
 _Fixer: Claude (gsd-code-fixer)_
-_Iteration: 1_
+_Iteration: 3_
