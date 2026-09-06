@@ -10,6 +10,12 @@ query, inject a token allowance, parse, build stores, ``scheduler.run_wiring``, 
 than a hardcoded arm name, and the ``RunRecord`` is redacted into a closed envelope rather than
 returned as the un-redacted dict ``run_arm`` returns. ``provides`` is read off the raw resolved
 dict, never through ``ParsedWiring`` (Pitfall 1) — ``run_arm.py``'s own precedent.
+
+**04-02 Task 1: evidence references.** Before the ``RunRecord`` (and the scheduler's raw
+``results`` dict) go out of scope, ``query()`` mints the envelope's ``evidence`` list from the
+naive arm's own retrieval position's output (``_EVIDENCE_RETRIEVAL_NODE_ID``, preserving that
+node's own output order verbatim — Task 2's own no-re-sort rule). Task 3, later in this same plan,
+wires the ``token_accounting`` breakdown alongside it.
 """
 
 from __future__ import annotations
@@ -24,6 +30,12 @@ from databasise.parts.registry import PartRegistry, default_registry
 from databasise.runner import scheduler as _scheduler
 from databasise.runner.trace import RunRecord
 from databasise.seam.envelope import ResponseEnvelope
+from databasise.seam.evidence import (
+    CHUNKS_NAMESPACE,
+    EvidenceRef,
+    mint_evidence_refs,
+    resolve_evidence_ref,
+)
 from databasise.seam.query import QueryObject, check_consumable
 from databasise.seam.selectors import Selector, resolve_selector
 from databasise.stores.graph import CozoGraphStore
@@ -35,6 +47,14 @@ from databasise.validator.parse import parse_wiring
 # databasise/parity/run_arm.py's own _TEXT_CHUNKS_KIND/_GRAPH_KIND constants exactly.
 _TEXT_CHUNKS_KIND = "text_chunks"
 _GRAPH_KIND = "chunk_entity_relation"
+
+# The naive arm's own retrieval position (databasise/wirings/lightrag/arm-naive.json-patch.json's
+# "chunk-vector" node, kind "retriever") — the only arm the default selector resolves in this
+# phase (04-03's alias/capability/harness selectors are the only other resolvable arms, and none
+# lands in this plan). A future selector resolving a wiring with a differently-named or absent
+# retrieval position is out of this plan's scope — mirrors the same hardcoded-node-id precedent
+# already established by ``_inject_query``'s "keywords"/"embedder-query"/"generate" below.
+_EVIDENCE_RETRIEVAL_NODE_ID = "chunk-vector"
 
 _EXECUTOR_VERSION = "databasise@0.1.0"
 _DETERMINISM_SETTING = "cache-bypassed"
@@ -177,14 +197,37 @@ class Databasise:
             if isinstance(output, dict) and "completion" in output:
                 answer = str(output["completion"])
 
+        # Task 1/2 (04-02): mint evidence refs from the naive arm's own retrieval position, in its
+        # own output order — no re-sort here (see _EVIDENCE_RETRIEVAL_NODE_ID's own docstring note
+        # and this module's docstring). A wiring that never dispatches this node (none does today —
+        # the default selector always resolves the naive arm) yields no retrieval output at all,
+        # which mints to an empty list, never a refusal (the empty-evidence behavior Task 1 proves).
+        retrieval_output = scheduled["results"].get(_EVIDENCE_RETRIEVAL_NODE_ID)
+        retrieval_items = retrieval_output["items"] if isinstance(retrieval_output, dict) else []
+        evidence = mint_evidence_refs(retrieval_items, namespace=CHUNKS_NAMESPACE)
+
         return ResponseEnvelope(
             answer=answer,
+            evidence=evidence,
             depth_label=depth_label,
             partial=record.partial,
             degraded=record.degraded,
             stop_reason=record.stop_reason,
             degradation_reason=record.degradation_reason,
         )
+
+    async def resolve_evidence(self, ref: EvidenceRef) -> dict[str, Any]:
+        """The second §18 operation the seam exposes (§18.5 — per part kind, evidence, never per
+        modality): resolves an evidence reference back through the same store handle it was minted
+        from. Opens the store set the same way ``query`` does and finalizes it in a ``finally``
+        block, mirroring ``query``'s own store lifecycle exactly.
+        """
+        stores = _build_stores(self.store_root, self.workspace)
+        try:
+            return resolve_evidence_ref(ref, stores["vector"])
+        finally:
+            for store in stores.values():
+                await store.finalize()
 
 
 __all__ = ["Databasise"]
