@@ -143,6 +143,32 @@ def _arm_degraded(arm: str) -> tuple[bool, str]:
     return False, ""
 
 
+def _arm_excursion_summary(arm: str) -> str:
+    """A one-line, per-query summary of every non-empty `chunk_diff`/`entity_diff`/
+    `relation_diff` `symmetric_difference` this arm's completed comparison records measured, or
+    `""` when every diff on every completed record for this arm is empty. Read fresh from the
+    committed records on every call — the same no-hardcoded-run-state discipline `_arm_degraded`
+    already follows (03-13-PLAN.md gap 2: a real, completed, non-degraded run can still disagree
+    on content, a state the original two-branch Verdict logic had no way to say — it treated
+    "not degraded" as synonymous with "measured zero," which was true only by coincidence while
+    every real committed run happened to be crash-truncated on this arm.
+    """
+    parts: list[str] = []
+    for record in load_comparison(arm):
+        if record.get("status") != "completed":
+            continue
+        query_id = record.get("query_id", "?")
+        field_counts = []
+        for field_name in ("chunk_diff", "entity_diff", "relation_diff"):
+            diff = record.get(field_name)
+            sym_diff = (diff or {}).get("symmetric_difference") or []
+            if sym_diff:
+                field_counts.append(f"{field_name}={len(sym_diff)}")
+        if field_counts:
+            parts.append(f"`{query_id}`: {', '.join(field_counts)}")
+    return "; ".join(parts) + "." if parts else ""
+
+
 def _never_executed_nodes(arm: str) -> list[str]:
     """Node ids ``arm``'s storage audit reports (its full wiring node set) that never appear in
     any of the arm's completed comparison records' ``decomposed_run_record.nodes`` list — i.e.
@@ -452,6 +478,60 @@ def render_deviations_markdown(deviations: list[DeclaredDeviation]) -> str:
     return "\n".join(sections)
 
 
+def _render_pending_causes_section(pending: list[DeclaredDeviation]) -> str:
+    """Excursions :func:`render_deviations_markdown` correctly refuses to fold into its own
+    "Named deviations" table (CONTRACT §5: no human-authored `declared_causes` entry on file
+    yet) — rendered here, separately, so the document as a whole is never blocked by them.
+    Returns ``""`` when nothing is pending. The `cause` cell always reads `PENDING`, naming the
+    owner action; never a fabricated cause (03-13-PLAN.md's own prohibition).
+    """
+    if not pending:
+        return ""
+    header = "| arm | query | measured difference | cause |\n|---|---|---|---|\n"
+    rows = [
+        f"| {d.arm} | {d.query_id} | {d.description} | PENDING — see "
+        "`.planning/phases/03-lightrag-query-side/03-UAT.md` |"
+        for d in pending
+    ]
+    return (
+        "\n## Outstanding — CONTRACT §5 cause not yet recorded\n\n"
+        f"{len(pending)} measured excursion(s) below have no `declared_causes` entry in "
+        "`human_findings.json` yet. `render_deviations_markdown()`'s own all-or-nothing refusal "
+        "on an unreasoned deviation is 03-10-PLAN.md's own tested CONTRACT §5 behaviour and is "
+        "not weakened here — this section exists precisely because that refusal is correct and "
+        "must not be worked around by fabricating a cause. An executor cannot author these on "
+        "the owner's behalf (CONTRACT §5 requires human reasoning), so each is named here "
+        "instead, distinct from — never merged into — the \"Named deviations\" table above, "
+        "pending the exact owner action "
+        "`.planning/phases/03-lightrag-query-side/03-UAT.md` spells out.\n\n"
+        + header
+        + "\n".join(rows)
+        + "\n"
+    )
+
+
+def render_deviations_document(deviations: list[DeclaredDeviation]) -> str:
+    """The actual committed content of ``DECLARED-DEVIATIONS.md``. Splits ``deviations`` into
+    those already carrying a valid, specific cause and those that do not, renders the former
+    through the unmodified, still fully CONTRACT-§5-strict :func:`render_deviations_markdown`
+    (whose own all-or-nothing refusal is untouched — it still raises if a *present* cause is
+    stale/orphaned upstream in :func:`_collect_deviations`, or would raise if any of ``reasoned``
+    were itself generic/blank, which they are not by construction), and appends the latter as an
+    honest, separate "Outstanding" section via :func:`_render_pending_causes_section`.
+
+    03-13-PLAN.md's own real run is why this function exists: once more than one arm has a real,
+    completed, non-degraded retrieval to compare, a single missing cause on any one of them would
+    block this document for *every* arm's findings, including ones already fully reasoned —
+    reproducing G-03-1 (a document that cannot render) under a new name. This function is the
+    fix: never silently drop an unreasoned excursion (still true — it is rendered, PENDING, not
+    a fabricated cause), and never let a real gap on one arm block the parts of this document
+    that already have their own honest content to report.
+    """
+    pending = [d for d in deviations if d.cause.strip().lower() in _GENERIC_CAUSES]
+    reasoned = [d for d in deviations if d.cause.strip().lower() not in _GENERIC_CAUSES]
+    return render_deviations_markdown(reasoned) + _render_pending_causes_section(pending)
+
+
 def _render_known_design_deviation() -> str:
     """CR-01's known structural v2-vs-v1 difference (one shared query-vector embed vs v1's two
     separate keyword-derived vectors) — originally recorded as a standing prediction ahead of any
@@ -497,6 +577,24 @@ def _render_known_design_deviation() -> str:
                 "`over-declared` counts are independent evidence the ported nodes touched what "
                 "they declared.\n\n"
             )
+        )
+    elif graph_diffs and not any_degraded:
+        # All three graph arms completed with no crash, so "not yet re-derivable" (the fallback
+        # below) would be false — the data needed to derive the outcome is right here. It just
+        # isn't the zero-diff outcome the standing prediction hoped for: a real, measured,
+        # non-empty entity/relation excursion on a completed, non-degraded run confirms the
+        # structural difference surfaces as an actual disagreement, not merely an unrefuted
+        # prediction (03-13-PLAN.md gap 2 — this branch did not exist before a real completed
+        # non-degraded graph-arm run first existed to measure it).
+        status_sentence = (
+            "**Status, from the completed run**: `hybrid`/`local`/`global` all completed with "
+            "no decomposed-run degradation, and their `entity_diff`/`relation_diff` "
+            "`symmetric_difference` is non-empty on every query — the predicted structural "
+            "difference **does surface as a measured excursion**, not merely an unrefuted "
+            "prediction. See the per-arm table above for the actual counts, and the Verdict "
+            "section for how each excursion is read (a real disagreement on real content, not a "
+            "crash and not a match — CONTRACT §5 causes are outstanding, not authored by this "
+            "renderer).\n\n"
         )
     else:
         status_sentence = (
@@ -777,15 +875,37 @@ def _render_what_was_compared() -> str:
     if completed:
         naive_record = load_comparison("naive")[0]
         ids = naive_record["resolved_model_identities"]
+        # Which arms actually reached `generate` is read from each arm's own recorded
+        # `decomposed_generate` value, never assumed from a fixed arm-name list — a degraded run
+        # that halts before `generate` records `decomposed_generate=""`, and which arms that is
+        # true for changes with the code (03-13-PLAN.md gap 2: this sentence was hardcoded to
+        # "naive/bypass" and went stale the moment a graph arm's decomposed run first completed).
+        generate_ran_arms = sorted(
+            {
+                arm
+                for arm in ARMS
+                for record in load_comparison(arm)
+                if record.get("status") == "completed"
+                and record.get("resolved_model_identities", {}).get("decomposed_generate")
+            }
+        )
+        generate_not_ran_arms = sorted(set(ARMS) - set(generate_ran_arms))
+        never_ran_clause = (
+            f" `{'`, `'.join(generate_not_ran_arms)}` recorded `decomposed_generate=\"\"` "
+            "because their `generate` node never ran — see the per-arm degradation note in "
+            "\"Per-arm retrieval-level comparison\" below."
+            if generate_not_ran_arms
+            else " Every arm's `generate` node ran and recorded a resolved identity — none "
+            "halted before reaching it."
+        )
         pinned_models_clause = (
             "The completed run resolved these identities live from each provider's response, "
             "never the requested id (Phase 1 D-12) — recorded per-comparison in each committed "
             f"record's own `resolved_model_identities` field: `decomposed_generate={ids['decomposed_generate']!r}`, "
             f"`original_arm_llm_model={ids['original_arm_llm_model']!r}`, "
-            f"`original_arm_embedding_model={ids['original_arm_embedding_model']!r}` (naive/bypass, "
-            "the two arms whose `generate` node ran). `hybrid`/`local`/`global` recorded "
-            "`decomposed_generate=\"\"` because their `generate` node never ran — see the "
-            "per-arm degradation note in \"Per-arm retrieval-level comparison\" below.\n"
+            f"`original_arm_embedding_model={ids['original_arm_embedding_model']!r}` "
+            f"(`{'`, `'.join(generate_ran_arms)}`, the arm(s) whose `generate` node ran)."
+            f"{never_ran_clause}\n"
         )
     else:
         pinned_models_clause = (
@@ -1171,6 +1291,7 @@ def _render_verdict() -> str:
     ]
     for arm in graph_arms:
         degraded, reason = arm_status[arm]
+        arm_excursions = _arm_excursion_summary(arm)
         if degraded:
             lines.append(
                 f"`{arm}` also completed and measured `chunk_diff`/`entity_diff`/"
@@ -1184,6 +1305,18 @@ def _render_verdict() -> str:
                 "surfaced, not evidence of parity. Fixing that defect is out of this plan's "
                 "scope; recorded here so the verdict does not overstate what this arm actually "
                 "showed.\n"
+            )
+        elif arm_excursions:
+            lines.append(
+                f"`{arm}` completed with no decomposed-run degradation, but **this is not read "
+                "as exact retrieval-level agreement either.** Both sides retrieved real, "
+                f"non-trivial content, and the two disagree: {arm_excursions} A completed run "
+                "with a real disagreement is a genuine excursion, not a crash and not a match — "
+                "each one needs a CONTRACT §5 human-authored cause before it can be read as "
+                "accepted, and none is recorded yet for this arm; see `DECLARED-DEVIATIONS.md`'s "
+                "\"Outstanding\" section and "
+                "`.planning/phases/03-lightrag-query-side/03-UAT.md` for the exact owner "
+                "action.\n"
             )
         else:
             lines.append(
@@ -1266,7 +1399,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     deviations = _collect_deviations()
-    deviations_text = render_deviations_markdown(deviations)
+    deviations_text = render_deviations_document(deviations)
     DEVIATIONS_PATH.write_text(deviations_text, encoding="utf-8")
 
     evidence_text = render_markdown()
