@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 03
 current_phase_name: LightRAG Query Side
 status: executing
-stopped_at: Completed 03-12-PLAN.md
-last_updated: "2026-09-06T17:44:18.108Z"
+stopped_at: Completed 03-13-PLAN.md
+last_updated: "2026-09-06T20:09:13.012Z"
 last_activity: 2026-09-05
 last_activity_desc: Phase 03 execution started
-state_head: 4796010f140e17ce64b91fa3b339bb77021c4f1c
+state_head: 300a0af5ef2b5bdd595ceac10103585790a07317
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 27
-  completed_plans: 26
+  completed_plans: 27
 milestone_name: milestone
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 03 (LightRAG Query Side) — EXECUTING
-Plan: 3 of 13
+Plan: 4 of 13
 Status: Ready to execute
 Last activity: 2026-09-05 — Phase 03 execution started
 
@@ -63,6 +63,7 @@ Progress: [██████████] 100%
 | Phase 03 P10 | 35min | 3 tasks | 6 files |
 | Phase 03 P11 | ~45min (this session; continuation after prior executor cut off by rate limit at ~31min) | 2 tasks | 9 files |
 | Phase 03 P12 | ~90min | 3 tasks | 12 files |
+| Phase 03 P13 | 65min | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 
 - [Phase 03]: 03-12: Fixed the shared-vector-store bug (all four vector-reading positions served the same chunks-only FaissVectorStore) via a new MultiNamespaceVectorStore handle with per-namespace selection and a named refusal when unselected. — entity-lookup/relation-lookup were being served chunk records with no entity_name/src_id fields, producing the recorded NodeExecutionError; a wiring-level fix (one shared store instance under one capability key) needed a namespace-scoped handle, not a per-node workaround.
 - [Phase 03]: 03-12: Found and fixed a second latent bug (heading-backfill hardcoded a naive-arm-only dependency name) discovered only once the namespace fix let retrieval reach that node for the first time on hybrid/local/global. — The base wiring names this node's sole dependency join-chunks; only the naive arm patch renames it to chunk-vector. Fixed by reading the dependency positionally instead of by a hardcoded name.
+- [Phase 03]: 03-13: A real five-arm run (post-03-11/03-12 fixes) closed 03-VERIFICATION.md gap 3 fully — all five arms complete a real, non-degraded retrieval on both sides — but surfaced a new one: hybrid/local/global's real entity/relation retrieval disagrees substantially with the original arm (18 unreasoned excursions). — No prior real committed run had all three graph arms complete simultaneously; the crash previously masked this disagreement as a vacuous zero. CONTRACT §5 requires a human-authored cause for each excursion, which does not exist yet, so this is reported honestly rather than assumed acceptable.
+- [Phase 03]: 03-13: Added render_deviations_document() to parity_report.py rather than weakening render_deviations_markdown()'s CONTRACT §5 refusal, after the real run showed the strict function would block the whole DECLARED-DEVIATIONS.md render over any one of 18 new uncaused excursions. — 03-10-PLAN.md's own must-have truth 3 tests that the strict refusal aborts the render on a completed excursion with no cause; a wrapper that renders already-caused excursions normally and lists not-yet-caused ones as an honest PENDING section keeps that tested contract untouched while still producing a real, non-stale document.
 
 ### Pending Todos
 
@@ -112,6 +115,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-06T17:44:00.420Z
-Stopped at: Completed 03-12-PLAN.md
+Last session: 2026-09-06T18:52:30.241Z
+Stopped at: Completed 03-13-PLAN.md
 Resume file: None
