@@ -1832,7 +1832,7 @@ async def _rebuild_single_relationship(
         else current_relationship.get("keywords", "")
     )
 
-    weight = sum(weights) if weights else current_relationship.get("weight", 1.0)
+    weight = sum(weights) if weights else float(current_relationship.get("weight", 1.0))
 
     # Generate final description from relations or fallback to current
     if description_list:
