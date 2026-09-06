@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 04
 current_phase_name: The Seam
 status: executing
-stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-09-06T22:30:07.934Z"
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-09-06T23:22:38.369Z"
 last_activity: 2026-09-06
 last_activity_desc: Phase 04 execution started
-state_head: acf019739b8efc381e643e2046b13e21410136c8
+state_head: ce4e08919c89e5ffd2dfa34196c4038caa078570
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 32
-  completed_plans: 28
+  completed_plans: 29
 milestone_name: milestone
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 04 (The Seam) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-09-06 — Phase 04 execution started
 
@@ -65,6 +65,7 @@ Progress: [██████████] 100%
 | Phase 03 P12 | ~90min | 3 tasks | 12 files |
 | Phase 03 P13 | 65min | 3 tasks | 16 files |
 | Phase 04 P01 | 30min | 3 tasks | 13 files |
+| Phase 04 P02 | 45min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,8 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 03]: 03-13: Added render_deviations_document() to parity_report.py rather than weakening render_deviations_markdown()'s CONTRACT §5 refusal, after the real run showed the strict function would block the whole DECLARED-DEVIATIONS.md render over any one of 18 new uncaused excursions. — 03-10-PLAN.md's own must-have truth 3 tests that the strict refusal aborts the render on a completed excursion with no cause; a wrapper that renders already-caused excursions normally and lists not-yet-caused ones as an honest PENDING section keeps that tested contract untouched while still producing a real, non-stale document.
 - [Phase 04]: 04-01: checkpoint answer applied verbatim — declare-upfront for the §18.2 envelope field set; resolved_model_identity excluded from the envelope (FA-02 resolved).
 - [Phase 04]: 04-01: the default selector resolves unconditionally to the naive arm; alias/capability/harness raise NotImplementedError naming 04-03 as owner rather than falling through silently.
+- [Phase 04]: Extracted a shared _StrictModel base into databasise/seam/_base.py to break the envelope<->evidence/tokens circular import (Pitfall 7) — envelope.py needs to import EvidenceRef/TokenBreakdownEntry from evidence.py/tokens.py to bind them into its own fields; those modules need the same strict base envelope.py's models use
+- [Phase 04]: EvidenceRef carries only ref/namespace/kind/score/tier, not the full §4 ChunkRef shape — corpus_id, recipe@version, ordinal, and content_hash are not available at the retrieval position today (FA-03); declared as a named limitation rather than shipping a reference that only looks like a ChunkRef
 
 ### Pending Todos
 
@@ -124,6 +127,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-06T22:30:07.855Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-09-06T23:22:38.282Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None

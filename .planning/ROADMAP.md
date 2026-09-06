@@ -164,7 +164,7 @@ Plans:
   4. Caller sets the debug flag and retrieves the node-by-node execution trace through the envelope's trace reference — internal node identities stay behind the reference and never enter the envelope itself
   5. The same seam is reachable two ways with identical behavior: `import databasise` in-process, and the optional REST layer over the same call path
 
-**Plans**: 1/5 plans executed
+**Plans**: 2/5 plans executed
 
 **Wave 1**
 
@@ -172,7 +172,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1; the two plans run in parallel — no shared files)*
 
-- [ ] 04-02-PLAN.md — evidence references that resolve back to the store, and a per-`counted_by` token breakdown with an explicit refusal for an `unbudgetable` participant
+- [x] 04-02-PLAN.md — evidence references that resolve back to the store, and a per-`counted_by` token breakdown with an explicit refusal for an `unbudgetable` participant
 - [ ] 04-03-PLAN.md — all four §18.4 selectors, the closed selector input set, refusals that name what was missing without naming what the machine holds, and the §18.5 falsifier check
 
 **Wave 3** *(blocked on Wave 2)*
@@ -239,7 +239,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Machine Core | 10/10 | Complete    | 2026-08-31 |
 | 2. Falsifier Gate | 4/4 | Complete    | 2026-08-31 |
 | 3. LightRAG Query Side | 13/13 | In Progress|  |
-| 4. The Seam | 1/5 | In Progress|  |
+| 4. The Seam | 2/5 | In Progress|  |
 | 5. Opaque-Side Admission | 0/TBD | Not started | - |
 | 6. HippoRAG 2 & Side-by-Side | 0/TBD | Not started | - |
 | 7. Promotion & Rollback | 0/TBD | Not started | - |
