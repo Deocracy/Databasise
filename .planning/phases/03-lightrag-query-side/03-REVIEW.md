@@ -1,14 +1,31 @@
 ---
 phase: 03-lightrag-query-side
-reviewed: 2026-09-01T00:00:00Z
+reviewed: 2026-09-05T00:00:00Z
 depth: standard
-files_reviewed: 61
+files_reviewed: 74
 files_reviewed_list:
   - databasise/clients/base.py
   - databasise/clients/__init__.py
   - databasise/clients/openai_compat.py
+  - databasise/evidence/DECLARED-DEVIATIONS.md
+  - databasise/evidence/FALSIFIER-2-EVIDENCE.md
   - databasise/evidence/falsifier2.py
+  - databasise/evidence/human_findings.json
+  - databasise/evidence/PARITY-EVIDENCE.md
   - databasise/evidence/parity_report.py
+  - databasise/evidence/parity_results/bypass-comparison.json
+  - databasise/evidence/parity_results/bypass-storage-audit.json
+  - databasise/evidence/parity_results/global-comparison.json
+  - databasise/evidence/parity_results/global-storage-audit.json
+  - databasise/evidence/parity_results/hybrid-comparison.json
+  - databasise/evidence/parity_results/hybrid-storage-audit.json
+  - databasise/evidence/parity_results/local-comparison.json
+  - databasise/evidence/parity_results/local-storage-audit.json
+  - databasise/evidence/parity_results/naive-comparison.json
+  - databasise/evidence/parity_results/naive-storage-audit.json
+  - databasise/evidence/wirings/w1-lightrag-query-side.json
+  - databasise/evidence/wirings/w3-lightrag-half-decomposed.json
+  - databasise/.gitignore
   - databasise/__init__.py
   - databasise/parity/build_corpus_fixture.py
   - databasise/parity/corpus.py
@@ -38,11 +55,15 @@ files_reviewed_list:
   - databasise/parts_core/lightrag/truncator_token_budget.py
   - databasise/parts/registry.py
   - databasise/parts/schema.py
+  - databasise/pyproject.toml
   - databasise/runner/scheduler.py
   - databasise/stores/graph.py
   - databasise/stores/vector.py
+  - databasise/tests/clients/__init__.py
   - databasise/tests/clients/test_capability_scoped_clients.py
   - databasise/tests/clients/test_openai_compat.py
+  - databasise/tests/fixtures/corpus/MANIFEST.json
+  - databasise/tests/fixtures/corpus/README.md
   - databasise/tests/parity/conftest.py
   - databasise/tests/parity/__init__.py
   - databasise/tests/parity/test_arm_conformance.py
@@ -58,6 +79,7 @@ files_reviewed_list:
   - databasise/tests/parts_core/lightrag/test_transform_parts.py
   - databasise/tests/parts/test_registry.py
   - databasise/tests/runner/test_clients_threading.py
+  - databasise/tests/runner/test_scheduler.py
   - databasise/tests/stores/test_graph_frozen_bugs.py
   - databasise/tests/stores/test_graph.py
   - databasise/tests/test_embed_startup.py
@@ -66,50 +88,250 @@ files_reviewed_list:
   - databasise/tests/validator/test_falsifier2_probes.py
   - databasise/tools/check_import_boundary.py
   - databasise/wirings/__init__.py
+  - databasise/wirings/lightrag/arm-bypass.json-patch.json
+  - databasise/wirings/lightrag/arm-global.json-patch.json
+  - databasise/wirings/lightrag/arm-hybrid.json-patch.json
+  - databasise/wirings/lightrag/arm-local.json-patch.json
+  - databasise/wirings/lightrag/arm-naive.json-patch.json
+  - databasise/wirings/lightrag/base.json
+  - databasise/wirings/lightrag/README.md
   - databasise/wirings/resolve.py
+  - v1/README-PARITY.md
   - v1/scripts/run_parity_ingest.py
 findings:
   critical: 1
-  warning: 1
+  warning: 3
   info: 1
-  total: 3
+  total: 5
 status: issues_found
 ---
 
 # Phase 03: Code Review Report
 
-**Reviewed:** 2026-09-01
+**Reviewed:** 2026-09-05
 **Depth:** standard
-**Files Reviewed:** 61 Python files (non-source `.md`/`.json`/`.lock`/`.example`/`pyproject.toml` paths in the phase's file list were cross-checked against the code above for accuracy, not reviewed as findings targets in their own right)
+**Files Reviewed:** 74 (non-source `.gitignore`/`.python-version`/lock/corpus-fixture paths cross-checked for secrets and malformed content, not reviewed as findings targets in their own right; `v1/.env.parity.example` could not be read — sandboxed out by the review environment's own permission settings, not a code defect)
 **Status:** issues_found
 
 ## Summary
 
-This is a re-review of the post-fix state at HEAD, after CR-01/WR-01/WR-02/WR-03 from the prior
-review (`03-REVIEW-FIX.md`) were applied in commits `350caad`/`c339cb9`/`e20df3a`/`5105aa6`. All
-four fixes hold up under direct re-reading — the narrowed Cozo re-create guard, the
-`FaissVectorStore.iter_vectors()` accessor, the `ts.done()`-skip invariant comment, and the
-`run_comparison.py` relation-id dual-shape extraction are all present and correct as described.
-IN-01 (the `_load_env_file` duplication) was explicitly skipped as out-of-scope and remains open —
-carried forward below at the same Info tier, since re-verification confirms the behavioral
-asymmetry it names still exists.
+This is a re-review of the post-03-10 state at HEAD. The prior review's three findings
+(CR-01 — `embedder-query` embedding an empty string; WR-01 — `_validated_token_allowance` not
+refusing a negative value; IN-01 — the `_load_env_file` duplication) were re-verified directly
+against the current source and all three hold up correctly: `keywords.py`'s `_keywords_body` now
+emits `"query"` in both branches and `run_arm.py`'s `_inject_query` now stamps `keywords` too;
+`scheduler.py`'s `_validated_token_allowance` now mirrors `_validated_max_concurrency`'s `< 0`
+refusal exactly; both `_load_env_file` copies now carry cross-referencing docstrings naming their
+deliberate absent-file asymmetry. None are re-listed below.
 
-This pass found one new, high-confidence correctness bug that the prior review did not surface:
-the query text `embedder-query` is supposed to embed for every arm that keeps the `keywords` node
-(`hybrid`/`local`/`global` — three of the five arms) silently collapses to an empty string,
-because the real `keywords` part body's output shape and `embedder-query`'s own reader of that
-output were never reconciled after `keywords` got a real body in plan 03-05. The one unit test
-covering this path stubs a shape that does not match what `keywords.py` actually returns, which is
-why this has gone undetected. See CR-01 below.
+Plan 03-10 (parity evidence gap closure) and its own follow-up adversarial-audit fix cycle landed
+after the prior review and were given full attention here, since they were not previously reviewed.
+The renderer (`parity_report.py`) and its 41-test suite are unusually well hardened — the review
+did not find a new defect in the eight fixed findings from that audit cycle, and the two gaps that
+cycle explicitly left open (see WR-02/WR-03 below) are real and worth carrying into this report
+since they were never before recorded in a `03-REVIEW.md`.
+
+This pass also gave first-time review attention to `databasise/parts/schema.py` and
+`databasise/parts/registry.py` (not in the prior review's file list) — both clean, no findings.
+
+The one new Critical finding (CR-01 below) is a defect this review confirmed by direct code
+reading, not merely repeated from the evidence documents: `entity-hydrate-expand.py`/
+`relation-hydrate-expand.py` assume every seed item they consume carries a required key, with no
+defensive path for a malformed/incomplete seed — the same class of gap the evidence documents
+attribute to "diagnosis pending." Given the crash on `hybrid`/`local`/`global` is a real,
+already-measured production defect (all three arms are stopped by a `NodeExecutionError` before
+completing retrieval — see `PARITY-EVIDENCE.md`'s own Verdict section), it is recorded here as a
+BLOCKER for the first time in a formal code review, with a concrete fix.
 
 ## Critical Issues
 
-### CR-01: `embedder-query` embeds an empty string for every arm that keeps the `keywords` node — `hybrid`/`local`/`global` retrieval is built on a null query vector
+### CR-01: `entity-hydrate-expand`/`relation-hydrate-expand` crash the whole node on any seed item missing its expected key, instead of routing it to `missing_seeds` the way an absent graph node already is
 
-**File:** `databasise/parts_core/lightrag/embedder_query.py:23-31`, `databasise/parts_core/lightrag/keywords.py:105-131`
+**File:** `databasise/parts_core/lightrag/entity_hydrate_expand.py:44-52`, `databasise/parts_core/lightrag/relation_hydrate_expand.py:41-57`
 
-**Issue:** `_query_text` reads the query to embed from `ctx.inputs["keywords"]` whenever the
-`keywords` node is one of `embedder-query`'s deps:
+**Issue:** Both bodies read a required field straight off each upstream seed item with a bare
+subscript, before any validation:
+
+```python
+# entity_hydrate_expand.py
+for seed in seeds:
+    entity_name = str(seed["entity_name"])   # KeyError if absent
+    node = await graph.get_node(entity_name)
+    if node is None:
+        missing.append({"entity_name": entity_name, "missing": True, "derived_from": [seed["id"]]})
+        continue
+```
+
+```python
+# relation_hydrate_expand.py
+for seed in seeds:
+    src_id = str(seed["src_id"])             # KeyError if absent
+    tgt_id = str(seed["tgt_id"])              # KeyError if absent
+    edge = await graph.get_edge(src_id, tgt_id)
+    ...
+```
+
+Both modules' own docstrings state the house rule explicitly: "A seed whose node is absent from
+the graph is reported in `missing_seeds` rather than silently dropped... this decomposition makes
+that gap observable instead of silent." That rule is honored for a seed that *has* the expected
+key but whose graph lookup misses — but a seed item that is missing the key itself (`entity_name`/
+`src_id`/`tgt_id`/`id`) is not defended against at all: it raises a bare `KeyError`, which
+`runner/scheduler.py`'s `_run_node` wraps into `NodeExecutionError` and which then halts the whole
+batch (`scheduler.py`'s own documented "the whole scheduling loop" stop, confirmed in this same
+review pass). This is precisely the failure class the already-committed evidence records: the
+committed `parity_results/{hybrid,local,global}-comparison.json` all show
+`decomposed_run_record.degraded=true` with a `stop_reason` naming `entity-hydrate-expand`/
+`relation-hydrate-expand`, and `PARITY-EVIDENCE.md`'s own Verdict section states plainly that these
+three arms "degraded before completing a real retrieval" on every query. `REQUIREMENTS.md`'s
+MODAL-01 annotation and `03-UAT.md`'s G-03-1 entry both name this as a live, unrepaired defect —
+but no `03-REVIEW.md` has recorded it as a classified finding with a concrete fix until now.
+
+Cross-checked against the upstream producers during this review: `entity-lookup`/`relation-lookup`
+(`databasise/parts_core/lightrag/entity_lookup.py`, `relation_lookup.py`) return whatever
+`ctx.stores["vector"].query(...)` hands back, merged with each stored document's own imported
+metadata (`FaissVectorStore.query`, `databasise/stores/vector.py:235`); that metadata is imported
+verbatim from v1's own Faiss sidecar by `databasise/parity/import_index.py:186-188`, which strips
+only `__id__`/`__vector__`/`__created_at__`. Nothing in that path re-validates that every record
+still carries `entity_name` (or `src_id`/`tgt_id`) before it reaches `entity-hydrate-expand`/
+`relation-hydrate-expand` — a v1-side record shaped even slightly differently than
+`v1/lightrag/lightrag.py`'s `data_for_entities_vdb`/`data_for_rels_vdb` (e.g. an older or
+partially-migrated v1 index snapshot) reaches this node's bare subscript and crashes the batch,
+with no diagnostic naming which seed or which field was missing.
+
+**Fix:** Mirror the existing "absent graph node -> `missing_seeds`" pattern for "malformed seed"
+too, so a defect in the upstream data degrades this one item observably instead of halting the
+entire node (and, per `scheduler.py`'s fail-fast batch semantics, every node still queued behind
+it):
+
+```python
+for seed in seeds:
+    entity_name = seed.get("entity_name")
+    if not entity_name:
+        missing.append({"entity_name": None, "missing": True, "derived_from": [seed.get("id")],
+                         "malformed_seed": True})
+        continue
+    entity_name = str(entity_name)
+    node = await graph.get_node(entity_name)
+    ...
+```
+
+and the symmetric change for `relation_hydrate_expand.py`'s `src_id`/`tgt_id` read. This does not
+fix the underlying root cause (why a seed is missing the field in the first place, which the 03-10
+review-fix cycle correctly scoped as a separate, materially larger investigation) — it converts an
+unhandled crash that halts the whole run into the same graceful, observable degradation this
+module already gives a legitimately-absent graph node, which is enough to let the other seeds in
+the same batch (and the nodes downstream of a *successful* hydrate-expand) keep running instead of
+losing the entire arm to one bad record.
+
+## Warnings
+
+### WR-01: `run_arm._build_clients` reads four required `.env.parity` keys with bare subscript access, raising an unnamed `KeyError` instead of this module's own named refusal
+
+**File:** `databasise/parity/run_arm.py:102-116`
+
+**Issue:** `_build_clients` is the one caller `run_arm.run_arm`/`storage_audit.run_audit` both use
+to construct real clients from the parsed `.env.parity` dict:
+
+```python
+def _build_clients(env: dict[str, str]) -> dict[str, Any]:
+    llm = OpenAICompatibleClient(
+        base_url=env["LLM_BINDING_HOST"],
+        model=env["LLM_MODEL"],
+        api_key=env["LLM_BINDING_API_KEY"],
+    )
+    embedding = OpenAICompatibleClient(
+        base_url=env["EMBEDDING_BINDING_HOST"],
+        model=env["EMBEDDING_MODEL"],
+        api_key=env["EMBEDDING_BINDING_API_KEY"],
+    )
+    return {"llm": llm, "embedding": embedding}
+```
+
+This same module explicitly names `MissingParityEnvError` for the absent-file case, and its own
+module docstring states the house style is "refusals over silent fallbacks." A `.env.parity` file
+that exists but is missing (or misspells) one of these five keys — an easy mistake when hand-editing
+the file per `v1/README-PARITY.md`'s recreate instructions — produces a bare, unnamed `KeyError:
+'LLM_BINDING_HOST'` deep inside client construction, with no path back to which file or which key
+was wrong. `storage_audit.run_audit` reuses this exact helper (`_run_arm._build_clients`), so the
+gap reaches both callers.
+
+**Fix:** Name the refusal the same way the absent-file case already is:
+
+```python
+_REQUIRED_ENV_KEYS = (
+    "LLM_BINDING_HOST", "LLM_MODEL", "LLM_BINDING_API_KEY",
+    "EMBEDDING_BINDING_HOST", "EMBEDDING_MODEL", "EMBEDDING_BINDING_API_KEY",
+)
+
+def _build_clients(env: dict[str, str]) -> dict[str, Any]:
+    missing = [k for k in _REQUIRED_ENV_KEYS if k not in env]
+    if missing:
+        raise MissingParityEnvKeyError(missing)  # new, named error, mirroring MissingParityEnvError
+    ...
+```
+
+### WR-02: `human_findings.json`'s two `declared_causes` entries are AI-authored, not human-authored, despite CONTRACT §5 requiring a human-authored cause for every named excursion
+
+**File:** `databasise/evidence/human_findings.json:12-14,26-27`, `databasise/evidence/DECLARED-DEVIATIONS.md:9-10`
+
+**Issue:** `parity_report.py`'s own module docstring states `human_findings.json` is "the one
+committed, human-authored input this module reads" for CONTRACT §5's parity-not-gain record — the
+mechanism exists specifically because a cause must be *human*-reasoned, not mechanically derived,
+so an unverified excursion is never silently absorbed. Both of the file's two `declared_causes`
+entries carry:
+
+```json
+"recorded_by": "Claude (AI agent, gsd-code-fixer) — commit 2ce3c30; NOT recorded by the human owner, despite this file's own name",
+```
+
+This is honestly disclosed (the 03-10 review-fix cycle's own finding 8 added this exact
+provenance field for this exact reason), which is why this is a Warning rather than a Critical: the
+gap is visible, not hidden. But the underlying gap is unresolved — CONTRACT §5's actual requirement
+(a human traces and confirms the cause) is not met for either of the two currently-rendered
+deviations, and nothing in the current pipeline (`check_results()`, `render_deviations_markdown()`)
+distinguishes an AI-authored cause from a human-authored one when deciding whether a render is
+"clean." A downstream reader of `PARITY-EVIDENCE.md`/`DECLARED-DEVIATIONS.md` who does not also
+read `recorded_by` closely could reasonably believe the human owner has already verified these two
+excursions are benign tail-length artifacts, when in fact no human has yet done so.
+
+**Fix:** Either (a) have the human owner actually review and re-record these two causes (the fix
+this file's own honesty is pointing at), or (b) add a `check_results()`/`render_deviations_markdown`
+rule that refuses (or at minimum visibly flags in the rendered Verdict section) a
+`recorded_by` value that does not look human-attributed, so "the render is clean" cannot be
+mistaken for "a human has verified every named cause" while an AI-authored cause is still on file.
+
+### WR-03: `check_results()` has no rule catching a `status="completed"` record whose `decomposed_run_record.degraded=true` alongside a vacuous (both-sides-empty) zero diff — such a record still passes the provenance check as clean
+
+**File:** `databasise/evidence/parity_report.py:173-267`
+
+**Issue:** `_REQUIRED_COMPARISON_KEYS` (line 173) and `check_results()`'s validation loop
+(lines 226-254) check that a `completed` record carries its required provenance fields and that an
+`inconclusive` record carries no comparison number — but neither checks
+`decomposed_run_record.degraded`/`degradation_reason` at all. A `hybrid`/`local`/`global`-style
+record — `status="completed"`, `entity_diff.symmetric_difference=[]`, but
+`decomposed_run_record.degraded=true` because the run crashed before completing real retrieval —
+satisfies every rule `check_results()` currently checks and prints `parity_results/ provenance
+check: clean (5 arms)`. The "clean" claim is therefore true only in the narrow sense the function
+actually checks (required keys present, no number alongside `inconclusive`); it does not mean "the
+zero diffs recorded here are validated retrieval-level agreements," which is the reading a CLI
+output literally named "clean" invites. This exact gap was surfaced and explicitly left unfixed by
+the 03-10 review-fix cycle ("`check_results()` has no completed-direction rule... Noted, not
+fixed.") — recorded here for the first time in a `03-REVIEW.md` rather than only in a plan
+SUMMARY's own "explicitly left open" list, so it does not get lost when that SUMMARY is archived.
+
+**Fix:** Add a rule to `check_results()`: a `completed` record whose `decomposed_run_record`
+carries `degraded=true` and whose own comparison numbers are all-empty diffs should either be
+excluded from "clean," or the CLI's success line should be qualified (e.g. "clean (5 arms, 3
+degraded — see PARITY-EVIDENCE.md for disclosure)") so `--check-results`'s exit-0 output cannot be
+read as "every arm's numbers are trustworthy" on its own.
+
+## Info
+
+### IN-01: `embedder_query._query_text`'s `or`-chain silently treats a genuinely empty query string the same as an absent key
+
+**File:** `databasise/parts_core/lightrag/embedder_query.py:23-31`
+
+**Issue:**
 
 ```python
 def _query_text(ctx: NodeContext) -> str:
@@ -122,131 +344,19 @@ def _query_text(ctx: NodeContext) -> str:
     return str(config.get("query", ""))
 ```
 
-But the real `lightrag/keyword-extractor@0.1.0` part body (`keywords.py`'s `_keywords_body`, both
-the live-call branch at line ~122-131 and the pinned-replay branch at line ~109-115) never emits a
-`"query"` or `"text"` key — its return dict only ever carries
-`high_level_keywords`/`low_level_keywords`/`tokens`(/`resolved_model_identity`). So whenever
-`embedder-query` depends on `keywords` (`ctx.inputs.get("keywords")` is a non-`None` dict — true
-for every arm except `naive`/`bypass`, which remove the `keywords` node entirely and set
-`embedder-query`'s `deps: []`), `keywords_output.get("query")` and `.get("text")` both miss, and
-`_query_text` returns `""`. The `config["query"]` fallback branch is therefore dead code for every
-arm that has a `keywords` dependency, even though `databasise/parity/run_arm.py`'s
-`_inject_query()` carefully stamps `config["query"]` onto the `embedder-query` node for *every*
-arm (it has no way to know this stamp will be ignored).
+`keywords_output.get("query") or keywords_output.get("text") or ""` treats a present-but-empty
+`"query"` value identically to an absent one, falling through to `.get("text")` and then to `""`.
+In practice `keywords.py`'s `_keywords_body` always stamps whatever `config["query"]` was (which
+`run_arm._inject_query` always sets to the real user query text), so this is very unlikely to be
+reached with a legitimately empty string today — a purely defensive, low-probability edge case, not
+an observed defect.
 
-Concretely: for the `hybrid`, `local`, and `global` arms (per `databasise/wirings/lightrag/
-base.json`, `"embedder-query": {"deps": ["keywords"], ...}`, unmodified by any of those three
-arms' patches), every real run — including `databasise/parity/run_comparison.py`'s pinned parity
-path, where `_inject_pinned_keywords` short-circuits `keywords` to return the exact same
-`{"high_level_keywords": [...], "low_level_keywords": [...]}` shape — embeds the literal empty
-string as the query vector for `entity-lookup`, `relation-lookup`, and `chunk-vector`. This is not
-a refusal and not an exception: `client.embed([""])` succeeds and returns *some* vector, and
-`store.query(vector, top_k=...)` returns *some* top-k neighbours — silently wrong retrieval
-results with no error signal, for three of the five published arms.
-
-The one existing unit test for this path,
-`databasise/tests/parts_core/lightrag/test_naive_arm_parts.py::test_embedder_query_prefers_the_keywords_node_output_when_present`,
-passes `inputs={"keywords": {"query": "keywords-path text"}}` — a shape `keywords.py`'s real body
-never produces — so it exercises a code path that is unreachable in production and gives false
-confidence. No test in this phase drives `hybrid`/`local`/`global` end to end through
-`runner.scheduler.run_wiring` with the real `keywords` and `embedder-query` bodies both live
-(`test_storage_audit.py`'s only full scheduler run uses the `naive` arm, which has no `keywords`
-dependency at all); the gap is invisible to the current test suite.
-
-**Fix:** Reconcile the two node contracts. The minimal fix is to have `keywords.py`'s
-`_keywords_body` also emit the resolved query text it actually used for entity/relation retrieval
-(v1's own `hybrid`/`local`/`global` behavior embeds a keyword-derived string, not the raw question
-— check `v1/lightrag/operate.py`'s `_get_node_data`/`_get_edge_data` call sites for the exact
-hl/ll-keyword-joining convention to port), e.g.:
-
-```python
-    return {
-        "high_level_keywords": hl_keywords,
-        "low_level_keywords": ll_keywords,
-        "query": query,  # or the v1-equivalent keyword-derived string, per the arm's own mode
-        "tokens": result.tokens,
-        "resolved_model_identity": result.resolved_model_identity,
-    }
-```
-
-and the same addition to the pinned-replay branch's return dict. Then fix the misleading unit test
-to assert against the real shape, and add an integration-level test that runs the `hybrid` (or
-`local`/`global`) arm end to end through `runner.scheduler.run_wiring` with real `keywords` and
-`embedder-query` bodies and a spy embedding client, asserting the text actually embedded is
-non-empty and derived from the keyword extraction — the exact gap this review found no coverage
-for.
-
-## Warnings
-
-### WR-01: `_validated_token_allowance` does not refuse a negative `config.token_allowance`, unlike its sibling `_validated_max_concurrency`
-
-**File:** `databasise/runner/scheduler.py:348-361`
-
-**Issue:** `_validated_max_concurrency` explicitly refuses (`InvalidMaxConcurrencyError`) any
-declared value below 1, at validation time, before any node dispatches. `_validated_token_allowance`
-only catches a value `int()` cannot coerce at all (`TypeError`/`ValueError`) — it never checks the
-coerced result is non-negative:
-
-```python
-def _validated_token_allowance(node_id: str, config: dict[str, Any] | None) -> int:
-    raw = DEFAULT_TOKEN_ALLOWANCE
-    if config:
-        raw = config.get("token_allowance", DEFAULT_TOKEN_ALLOWANCE)
-    try:
-        return int(raw)
-    except (TypeError, ValueError):
-        raise InvalidTokenAllowanceError(node_id, raw) from None
-```
-
-A wiring (untrusted author input, per this same module's own CR-01 docstring paragraph) that
-declares `config.token_allowance: -1` sails through validation. Downstream, `runner/budget.py`'s
-`meter()` computes `state = "within_budget" if spent <= allowance else "halted"` — with
-`allowance=-1` and `spent=0` (the default for a node that makes no metered call at all), `0 <= -1`
-is `False`, so the node is stamped `"halted"` even though it spent nothing. Every node sharing that
-config value halts the run, with no named refusal pointing at the offending node the way
-`InvalidMaxConcurrencyError` does for the analogous `max_concurrency` case — the module's own
-stated contract ("refused at validation, before any node is dispatched, naming the offending node
-id") holds for one sibling field and silently doesn't for the other.
-
-**Fix:** Mirror `_validated_max_concurrency`'s shape:
-
-```python
-def _validated_token_allowance(node_id: str, config: dict[str, Any] | None) -> int:
-    raw = DEFAULT_TOKEN_ALLOWANCE
-    if config:
-        raw = config.get("token_allowance", DEFAULT_TOKEN_ALLOWANCE)
-    try:
-        allowance = int(raw)
-    except (TypeError, ValueError):
-        raise InvalidTokenAllowanceError(node_id, raw) from None
-    if allowance < 0:
-        raise InvalidTokenAllowanceError(node_id, allowance)
-    return allowance
-```
-
-## Info
-
-### IN-01 (carried forward, still open): `_load_env_file` is duplicated between `run_arm.py` and `v1_arm.py`, with drifted absent-file behavior
-
-**File:** `databasise/parity/run_arm.py:74-93`, `databasise/parity/v1_arm.py:98-116`
-
-**Issue:** Re-verified against the current HEAD — this finding from the prior review was
-explicitly skipped as out of scope for `fix_scope=critical_warning` and no code change touched
-either function. Both modules still carry a near-identical `KEY=VALUE` `.env.parity` parser, but
-`run_arm._load_env_file` raises `MissingParityEnvError` when the file is absent while
-`v1_arm._load_env_file` silently returns `{}`. In the normal `compare_arm_on_query` flow this
-asymmetry is masked (the `run_arm`-imported copy is called first and raises before `run_v1_arm` is
-ever reached), but a caller that invokes `run_v1_arm`/`v1_arm.main()` directly with a missing
-`.env.parity` gets silent fallthrough to `os.environ` rather than the same named refusal
-`run_arm.py`'s copy gives every other caller.
-
-**Fix:** Unchanged from the prior review's suggestion — a one-line comment on each definition
-cross-referencing the sibling copy and stating the asymmetry is deliberate (or, if it is not
-deliberate, make `v1_arm._load_env_file` raise the same way). Still Info-tier and still optional
-per the original invocation's scope.
+**Fix:** `keywords_output.get("query") if keywords_output.get("query") is not None else
+keywords_output.get("text", "")` if the distinction between "explicitly empty query" and "no query
+key present" ever needs to be preserved; optional, given the low current likelihood of it mattering.
 
 ---
 
-_Reviewed: 2026-09-01_
+_Reviewed: 2026-09-05_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
