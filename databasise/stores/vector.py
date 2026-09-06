@@ -352,3 +352,109 @@ class FaissVectorStore(StorageNameSpace):
             return {"status": "success", "message": "data dropped"}
         except Exception as exc:  # noqa: BLE001 — drop()'s own documented contract (v1 StorageNameSpace)
             return {"status": "error", "message": str(exc)}
+
+
+class VectorNamespaceNotSelectedError(RuntimeError):
+    """Raised by :class:`MultiNamespaceVectorStore`'s ``query``/``upsert``/``delete_by_ids`` when
+    no namespace has been selected via :meth:`MultiNamespaceVectorStore.select` first — the whole
+    point of that handle: a node that forgets to select its own namespace can no longer be silently
+    served a default one. Names the workspace and lists whatever namespace directories already
+    exist on disk under it (this handle never enumerates a fixed namespace set up front, so the
+    honest answer to "available" is what is actually there), following
+    :class:`VectorStoreCorruptedError`'s and ``StoreNotWiredError``'s own house style — a named
+    exception carrying the specifics, never a bare ``None`` and never a silent fallback.
+    """
+
+    def __init__(self, workspace: str, available: list[str]):
+        self.workspace = workspace
+        self.available = list(available)
+        super().__init__(
+            f"no vector namespace selected for workspace {workspace!r} — call "
+            "select(namespace) before query()/upsert()/delete_by_ids(). Namespaces available "
+            f"under this workspace: {self.available!r}"
+        )
+
+
+class MultiNamespaceVectorStore(StorageNameSpace):
+    """A vector store handle over ``<store_root>/<workspace>/<namespace>/`` that binds no single
+    namespace at construction time. Each vector-reading §L.1 position (``entity-lookup``,
+    ``relation-lookup``, ``chunk-vector``, ``chunk-sel-kg``) selects its own namespace via
+    ``select(name)`` before reading — the fix for ``run_arm._build_stores`` previously binding one
+    ``FaissVectorStore`` instance (the ``chunks`` namespace) under the sole key ``"vector"``, which
+    silently served every vector-reading node the same chunks index regardless of which namespace
+    its own position is actually defined over.
+
+    ``select(name)`` is lazy and cached: the first call for a given namespace constructs a real
+    :class:`FaissVectorStore` and caches it; every later ``select(name)`` for the same name returns
+    the identical object (the same open index, never re-opened). Lifecycle methods
+    (``initialize``/``finalize``/``index_done_callback``/``drop_pending_index_ops``/``drop``) fan
+    out only over namespaces this handle has actually selected so far — an unselected namespace is
+    never constructed just to be torn down.
+
+    ``query``/``upsert``/``delete_by_ids`` called on this handle itself (rather than on a namespace
+    returned by ``select``) refuse by name via :class:`VectorNamespaceNotSelectedError`: a caller
+    that forgot to select can no longer be handed a default index.
+    """
+
+    def __init__(self, workspace: str, store_root: str | Path) -> None:
+        super().__init__(namespace="<multi>", workspace=workspace)
+        self._store_root = store_root
+        self._children: dict[str, FaissVectorStore] = {}
+
+    def select(self, namespace: str) -> FaissVectorStore:
+        child = self._children.get(namespace)
+        if child is None:
+            child = FaissVectorStore(
+                namespace=namespace, workspace=self.workspace, store_root=self._store_root
+            )
+            self._children[namespace] = child
+        return child
+
+    def _available_namespaces(self) -> list[str]:
+        base = Path(self._store_root) / self.workspace
+        if base.exists():
+            try:
+                return sorted(p.name for p in base.iterdir() if p.is_dir())
+            except OSError:
+                pass
+        return sorted(self._children.keys())
+
+    async def query(self, vector: Any, top_k: int = 10) -> list[dict[str, Any]]:
+        raise VectorNamespaceNotSelectedError(self.workspace, self._available_namespaces())
+
+    async def upsert(
+        self,
+        ids: list[str],
+        embeddings: Any,
+        metadatas: list[dict[str, Any]] | None = None,
+    ) -> None:
+        raise VectorNamespaceNotSelectedError(self.workspace, self._available_namespaces())
+
+    async def delete_by_ids(self, ids: list[str]) -> None:
+        raise VectorNamespaceNotSelectedError(self.workspace, self._available_namespaces())
+
+    async def initialize(self) -> None:
+        for child in self._children.values():
+            await child.initialize()
+
+    async def finalize(self) -> None:
+        for child in self._children.values():
+            await child.finalize()
+
+    async def index_done_callback(self) -> None:
+        for child in self._children.values():
+            await child.index_done_callback()
+
+    async def drop_pending_index_ops(self) -> None:
+        for child in self._children.values():
+            await child.drop_pending_index_ops()
+
+    async def drop(self) -> dict[str, str]:
+        errors: dict[str, str] = {}
+        for name, child in self._children.items():
+            result = await child.drop()
+            if result.get("status") != "success":
+                errors[name] = result.get("message", "unknown error")
+        if errors:
+            return {"status": "error", "message": str(errors)}
+        return {"status": "success", "message": f"dropped {len(self._children)} namespace(s)"}
