@@ -29,11 +29,11 @@ dict returned by ``resolve_arm`` — never through ``ParsedWiring``, which drops
 (Pitfall 1; ``databasise/validator/parse.py`` carries only ``nodes``/``parts``/``deps``/
 ``node_order``/``report``).
 
-**The alias selector (this plan's Task 2; D-12, FA-06).** Reads the promotion ledger's own
-``alias`` column (the 04-03 checkpoint's ``dedicated-alias-column`` answer — see
-``_resolve_alias``'s own docstring for the exact lookup call and the field read to identify the
-active wiring). The registry is empty in this phase and every alias lookup refuses — the expected
-end state, not a defect; Phase 7's promote path is what appends the first real row.
+**The alias selector (Task 2; D-12, FA-06).** Reads the promotion ledger's own ``alias`` column
+(the 04-03 checkpoint's ``dedicated-alias-column`` answer — see ``_resolve_alias``'s own
+docstring for the exact lookup call and the field read to identify the active wiring). The
+registry is empty in this phase and every alias lookup refuses — the expected end state, not a
+defect; Phase 7's promote path is what appends the first real row.
 
 **The harness selector (Task 3; D-13, FA-05).** Reads the ordered ``harnesses`` array off the raw
 resolved dict, preserving declared order verbatim. No production wiring in this repository
@@ -177,11 +177,45 @@ def _resolve_capability(
     return match[1]
 
 
-def _resolve_default(*, registry: PartRegistry) -> dict[str, Any]:
+def _is_default_eligible(resolved: dict[str, Any], registry: PartRegistry) -> bool:
+    """§8 condition 7: excluded from the *default* candidate set only when one of the wiring's
+    own ``provides`` positions — the node whose output becomes the answer — resolves to
+    ``opaque`` effective depth. See the module docstring for why this is scoped to the provides
+    node rather than to "contains an opaque node anywhere": every one of the five arms except
+    ``bypass`` also contains the unrelated, dep-free ``embedder-index`` node at opaque structural
+    depth, and excluding on that alone would make the default selector unable to resolve
+    ``naive`` at all.
+
+    A wiring that fails to parse against ``registry`` is treated as ineligible rather than
+    raising — it has nothing meaningful to say about depth yet (mirrors ``validator/parse.py``'s
+    own precedent of gating the depth pass on a structurally sound parse).
+    """
+    parsed = parse_wiring(resolved, registry)
+    if not parsed.report.ok:
+        return False
+    depths = effective_depth(parsed)
+    provides = resolved.get("provides") or []
+    return all(depths.get(node_id) != "opaque" for node_id in provides)
+
+
+def _resolve_default(
+    *,
+    registry: PartRegistry,
+    candidates: Sequence[_Candidate] | None = None,
+) -> dict[str, Any]:
     """The default branch's own resolution path — a separate, spy-able function so a test can
-    prove a non-default selector never falls through to it (Task 1's own acceptance criterion)."""
-    del registry
-    return resolve_arm(_DEFAULT_ARM)
+    prove a non-default selector never falls through to it (Task 1's own acceptance criterion).
+    Iterates the candidate pool in order (``_ARM_NAMES`` order in production) and returns the
+    first candidate whose ``provides`` position is not opaque-depth (§8 condition 7); ``naive`` is
+    first and its own ``provides`` node (``generate``) is always ``stage``, so this is
+    behaviourally identical to 04-01/04-02's hardcoded ``naive`` default for every wiring this
+    repository actually publishes.
+    """
+    pool = candidates if candidates is not None else _capability_candidates()
+    for _name, resolved in pool:
+        if _is_default_eligible(resolved, registry):
+            return resolved
+    raise UnsatisfiableSelectorError(selector_kind="default", requested=None)
 
 
 def resolve_selector(
@@ -233,15 +267,39 @@ def _resolve_alias(alias: str, *, store_root: str | Path) -> dict[str, Any]:
     return resolve_arm(record.mutation_id)
 
 
+def _wiring_declares_harness(resolved: dict[str, Any], name: str) -> bool:
+    """Membership in the wiring's own ordered ``harnesses`` array, read off the raw resolved
+    dict — never sorted, deduped, or reordered."""
+    return name in resolved.get("harnesses", [])
+
+
+def _match_harness(name: str, candidates: Sequence[_Candidate]) -> _Candidate | None:
+    """The pure matching function both the production harness branch and a direct unit test
+    (over a hand-built candidate list, e.g. the wiring-harness.json fixture) call."""
+    for candidate in candidates:
+        if _wiring_declares_harness(candidate[1], name):
+            return candidate
+    return None
+
+
 def _resolve_harness(
     name: str,
     *,
     registry: PartRegistry,
     candidates: Sequence[_Candidate] | None = None,
 ) -> dict[str, Any]:
-    """Placeholder pending Task 3 — raises rather than falling through to the default."""
-    del registry, candidates
-    raise NotImplementedError("the harness selector is this plan's Task 3 deliverable")
+    """The §18.4 harness branch (D-13, FA-05). No production wiring in this repository declares a
+    harness — every one of the five arms' own ``harnesses`` array is empty — so in production this
+    branch always raises :class:`UnsatisfiableSelectorError`; it is proven against
+    ``databasise/tests/fixtures/wiring-harness.json`` alone (see that fixture's own ``title``).
+    """
+    del registry
+    pool = candidates if candidates is not None else _capability_candidates()
+
+    match = _match_harness(name, pool)
+    if match is None:
+        raise UnsatisfiableSelectorError(selector_kind="harness", requested=name)
+    return match[1]
 
 
 __all__ = ["Selector", "resolve_selector"]
