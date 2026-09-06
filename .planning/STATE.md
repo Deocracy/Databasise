@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 03
 current_phase_name: LightRAG Query Side
 status: executing
-stopped_at: Completed 03-11-PLAN.md (graph-half re-ingest + D-07 provider-pin gap closure)
-last_updated: "2026-09-06T16:42:27.944Z"
+stopped_at: Completed 03-12-PLAN.md
+last_updated: "2026-09-06T17:44:18.108Z"
 last_activity: 2026-09-05
 last_activity_desc: Phase 03 execution started
-state_head: dbffb01a2b4f8c6527151c409a222cd745123ad2
+state_head: 4796010f140e17ce64b91fa3b339bb77021c4f1c
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 27
-  completed_plans: 24
+  completed_plans: 26
 milestone_name: milestone
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 03 (LightRAG Query Side) — EXECUTING
-Plan: 2 of 13
+Plan: 3 of 13
 Status: Ready to execute
 Last activity: 2026-09-05 — Phase 03 execution started
 
@@ -62,6 +62,7 @@ Progress: [██████████] 100%
 |------|----------|-------|-------|
 | Phase 03 P10 | 35min | 3 tasks | 6 files |
 | Phase 03 P11 | ~45min (this session; continuation after prior executor cut off by rate limit at ~31min) | 2 tasks | 9 files |
+| Phase 03 P12 | ~90min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,9 @@ depends on real, non-empty entity data reaching verify_import for the first time
 scoped, single-cause bug fixes rather than redesigns, and are documented as Rule 1 deviations in
 03-11-SUMMARY.md.
 
+- [Phase 03]: 03-12: Fixed the shared-vector-store bug (all four vector-reading positions served the same chunks-only FaissVectorStore) via a new MultiNamespaceVectorStore handle with per-namespace selection and a named refusal when unselected. — entity-lookup/relation-lookup were being served chunk records with no entity_name/src_id fields, producing the recorded NodeExecutionError; a wiring-level fix (one shared store instance under one capability key) needed a namespace-scoped handle, not a per-node workaround.
+- [Phase 03]: 03-12: Found and fixed a second latent bug (heading-backfill hardcoded a naive-arm-only dependency name) discovered only once the namespace fix let retrieval reach that node for the first time on hybrid/local/global. — The base wiring names this node's sole dependency join-chunks; only the naive arm patch renames it to chunk-vector. Fixed by reading the dependency positionally instead of by a hardcoded name.
+
 ### Pending Todos
 
 None yet.
@@ -108,6 +112,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-06T16:42:27.842Z
-Stopped at: Completed 03-11-PLAN.md (graph-half re-ingest + D-07 provider-pin gap closure)
+Last session: 2026-09-06T17:44:00.420Z
+Stopped at: Completed 03-12-PLAN.md
 Resume file: None
