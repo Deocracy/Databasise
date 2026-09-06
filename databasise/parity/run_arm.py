@@ -41,7 +41,7 @@ from databasise.runner import scheduler as _scheduler
 from databasise.runner.trace import RunRecord
 from databasise.stores.graph import CozoGraphStore
 from databasise.stores.kv import SqliteKVStore
-from databasise.stores.vector import FaissVectorStore
+from databasise.stores.vector import MultiNamespaceVectorStore
 from databasise.validator.parse import parse_wiring
 from databasise.wirings.resolve import resolve_arm
 
@@ -50,7 +50,6 @@ DEFAULT_V1_ENV_PARITY = _REPO_ROOT / "v1" / ".env.parity"
 
 # The v1-native per-kind names the imported store set is keyed by (databasise/parity/import_index.py).
 _TEXT_CHUNKS_KIND = "text_chunks"
-_CHUNKS_VECTOR_KIND = "chunks"
 _GRAPH_KIND = "chunk_entity_relation"
 
 _EXECUTOR_VERSION = "databasise@0.1.0"
@@ -189,12 +188,17 @@ def _build_stores(store_root: Path, workspace: str) -> dict[str, Any]:
     touches only a subset (``naive`` never reaches ``graph``) gets every store wired, since
     ``CapabilityScopedStores`` already denies access to anything a node's own effects don't
     declare; wiring all three here once is simpler than special-casing per arm.
+
+    ``"vector"`` binds a :class:`MultiNamespaceVectorStore`, not a single namespace's
+    ``FaissVectorStore`` directly — one raw handle previously served every vector-reading node
+    (``entity-lookup``, ``relation-lookup``, ``chunk-vector``, ``chunk-sel-kg``) the same ``chunks``
+    index regardless of which namespace each position is actually defined over. Each of those
+    parts now selects its own namespace (``entities``/``relationships``/``chunks``) off this handle
+    before reading.
     """
     return {
         "kv": SqliteKVStore(namespace=_TEXT_CHUNKS_KIND, workspace=workspace, store_root=store_root),
-        "vector": FaissVectorStore(
-            namespace=_CHUNKS_VECTOR_KIND, workspace=workspace, store_root=store_root
-        ),
+        "vector": MultiNamespaceVectorStore(workspace=workspace, store_root=store_root),
         "graph": CozoGraphStore(namespace=_GRAPH_KIND, workspace=workspace, store_root=store_root),
     }
 

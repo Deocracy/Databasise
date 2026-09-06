@@ -50,6 +50,23 @@ def _ctx(
     )
 
 
+class _NamespaceRecordingVectorHandle:
+    """A fake multi-namespace vector handle (``databasise.stores.vector.MultiNamespaceVectorStore``'s
+    real call shape): records every namespace name ``select()`` was asked for, and returns the
+    single real per-namespace store this test wired underneath, regardless of which name was
+    requested — sufficient to assert *which* namespace a node asked for without needing more than
+    one real namespace built per test.
+    """
+
+    def __init__(self, store: Any):
+        self._store = store
+        self.selected_namespaces: list[str] = []
+
+    def select(self, namespace: str) -> Any:
+        self.selected_namespaces.append(namespace)
+        return self._store
+
+
 class _StubKeywordLLMClient:
     """Returns a fixed JSON keyword payload, plus a real, non-zero ``TokenAccounting``."""
 
@@ -144,16 +161,18 @@ async def test_entity_lookup_returns_items_ordered_by_descending_score_with_enti
         metadatas=[{"entity_name": "Low"}, {"entity_name": "High"}],
     )
     await store.index_done_callback()
+    fake_vector = _NamespaceRecordingVectorHandle(store)
 
     ctx = _ctx(
         "entity-lookup",
         config={"top_k": 10},
         inputs={"embedder-query": {"vector": [1.0, 0.0, 0.0]}},
-        stores={"vector": store},
+        stores={"vector": fake_vector},
     )
 
     result = await LIGHTRAG_ENTITY_LOOKUP_PART.body(ctx)
 
+    assert fake_vector.selected_namespaces == ["entities"]
     assert [item["entity_name"] for item in result["items"]] == ["High", "Low"]
     scores = [item["score"] for item in result["items"]]
     assert scores == sorted(scores, reverse=True)
