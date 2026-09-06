@@ -1,9 +1,20 @@
-"""``lightrag/chunk-heading-backfiller`` (naive arm position 3 of 7) — attaches each retrieved
-chunk's authoritative KV-stored content and, when present, its heading breadcrumb. Ported by
-search from ``v1/lightrag/operate.py``'s ``_attach_content_headings``, which looks each chunk up
-by ``chunk_id`` in ``text_chunks`` KV storage and joins its parent-heading chain
+"""``lightrag/chunk-heading-backfiller`` (naive arm position 3 of 7; also base-wiring position,
+reached by ``hybrid``/``local``/``global`` via ``join-chunks``) — attaches each retrieved chunk's
+authoritative KV-stored content and, when present, its heading breadcrumb. Ported by search from
+``v1/lightrag/operate.py``'s ``_attach_content_headings``, which looks each chunk up by
+``chunk_id`` in ``text_chunks`` KV storage and joins its parent-heading chain
 (``v1/lightrag/chunk_schema.py``'s ``format_parent_headings``/``normalize_chunk_heading``) into a
 single breadcrumb string, omitted when empty rather than sent as an empty field.
+
+This node's own sole predecessor's *name* differs by arm — the base wiring (``wirings/lightrag/
+base.json``, used by ``hybrid``/``local``/``global``) declares ``deps: ["join-chunks"]``, while
+``arm-naive.json-patch.json`` overrides that to ``deps: ["chunk-vector"]`` (naive has no
+``join-chunks`` node at all — ``chunk-vector`` feeds this position directly). The scheduler keys
+``ctx.inputs`` by each dependency's own node id (``runner/scheduler.py``'s ``_run_node``), so this
+body reads its single upstream value positionally (``next(iter(ctx.inputs.values()))``) rather
+than by a hardcoded dependency name — reading a hardcoded ``"chunk-vector"`` key here silently
+raised ``NodeExecutionError: 'chunk-vector'`` on every ``hybrid``/``local``/``global`` run, a defect
+invisible until 03-12-PLAN.md's namespace fix let retrieval reach this node for the first time.
 """
 
 from __future__ import annotations
@@ -39,7 +50,11 @@ def _content_headings(chunk_record: dict[str, Any]) -> str:
 
 
 async def _heading_backfill_body(ctx: NodeContext) -> dict[str, Any]:
-    items = list(ctx.inputs["chunk-vector"]["items"])
+    # Read the sole predecessor positionally, not by name — see module docstring: the name is
+    # "chunk-vector" for naive and "join-chunks" for hybrid/local/global, and this node has
+    # exactly one dependency in every arm that includes it at all.
+    (upstream_output,) = ctx.inputs.values()
+    items = list(upstream_output["items"])
     if not items:
         return {"items": []}
 
