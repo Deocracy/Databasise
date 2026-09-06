@@ -39,4 +39,45 @@ class UnconsumableQueryMemberError(SeamRefusalError):
         super().__init__(f"query member {member_name!r} cannot be consumed")
 
 
-__all__ = ["SeamRefusalError", "EmptyQueryObjectError", "UnconsumableQueryMemberError"]
+class UnsatisfiableSelectorError(SeamRefusalError):
+    """Raised when no fitted modality satisfies a §18.4 selector (D-10) — an alias absent from
+    the registry, a capability set no candidate wiring's registered parts jointly declare, a
+    harness name no candidate declares, or (for the default form) a candidate set with nothing
+    eligible left after the opaque exclusion (§8 condition 7). Never answered by the nearest
+    satisfiable wiring instead (a near-miss fallback is worse than a refusal — see this module's
+    docstring), and the message below names only ``selector_kind``/``requested`` — the consumer's
+    own input — never a candidate wiring id, arm name, or node id.
+    """
+
+    def __init__(self, *, selector_kind: str, requested: Any):
+        self.selector_kind = selector_kind
+        self.requested = requested
+        super().__init__(
+            f"no fitted modality satisfies the {selector_kind!r} selector: {requested!r}"
+        )
+
+
+class ForbiddenSelectorInputError(SeamRefusalError):
+    """Raised at ``Selector`` model validation (before any resolution runs) when a legal member's
+    value has the shape of an internal identity — an instance hash — rather than a consumer-facing
+    alias/capability/harness name. ``extra="forbid"`` already refuses a selector naming a wiring
+    id, arm name, or node position as its own key (04-01); this refusal covers the narrower case
+    of an internal identity smuggled in as the *value* of an otherwise-legal member.
+    """
+
+    def __init__(self, *, member_name: str, value: str):
+        self.member_name = member_name
+        self.value = value
+        super().__init__(
+            f"selector member {member_name!r} carries a value shaped like an internal identity: "
+            f"{value!r}"
+        )
+
+
+__all__ = [
+    "SeamRefusalError",
+    "EmptyQueryObjectError",
+    "UnconsumableQueryMemberError",
+    "UnsatisfiableSelectorError",
+    "ForbiddenSelectorInputError",
+]
