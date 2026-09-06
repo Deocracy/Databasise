@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 04
 current_phase_name: The Seam
 status: executing
-stopped_at: Completed 03-13-PLAN.md
-last_updated: "2026-09-06T22:02:39.852Z"
-last_activity: 2026-09-05
-last_activity_desc: Phase 03 execution started
-state_head: aacaa92f04687ce41d7078d1c46a79ea45c0f5b1
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-09-06T22:30:07.934Z"
+last_activity: 2026-09-06
+last_activity_desc: Phase 04 execution started
+state_head: acf019739b8efc381e643e2046b13e21410136c8
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 32
-  completed_plans: 27
+  completed_plans: 28
 milestone_name: milestone
 ---
 
@@ -24,14 +24,14 @@ milestone_name: milestone
 See: .planning/PROJECT.md (updated 2026-08-29)
 
 **Core value:** Modalities are swappable without consumers noticing — LightRAG and HippoRAG 2 both live behind one unchanging §18 envelope, comparable side-by-side on the rig.
-**Current focus:** Phase 03 — LightRAG Query Side
+**Current focus:** Phase 04 — The Seam
 
 ## Current Position
 
-Phase: 04 (The Seam) — READY TO EXECUTE
-Plan: 4 of 13
+Phase: 04 (The Seam) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-09-05 — Phase 03 execution started
+Last activity: 2026-09-06 — Phase 04 execution started
 
 Progress: [██████████] 100%
 
@@ -64,6 +64,7 @@ Progress: [██████████] 100%
 | Phase 03 P11 | ~45min (this session; continuation after prior executor cut off by rate limit at ~31min) | 2 tasks | 9 files |
 | Phase 03 P12 | ~90min | 3 tasks | 12 files |
 | Phase 03 P13 | 65min | 3 tasks | 16 files |
+| Phase 04 P01 | 30min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,8 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 03]: 03-12: Found and fixed a second latent bug (heading-backfill hardcoded a naive-arm-only dependency name) discovered only once the namespace fix let retrieval reach that node for the first time on hybrid/local/global. — The base wiring names this node's sole dependency join-chunks; only the naive arm patch renames it to chunk-vector. Fixed by reading the dependency positionally instead of by a hardcoded name.
 - [Phase 03]: 03-13: A real five-arm run (post-03-11/03-12 fixes) closed 03-VERIFICATION.md gap 3 fully — all five arms complete a real, non-degraded retrieval on both sides — but surfaced a new one: hybrid/local/global's real entity/relation retrieval disagrees substantially with the original arm (18 unreasoned excursions). — No prior real committed run had all three graph arms complete simultaneously; the crash previously masked this disagreement as a vacuous zero. CONTRACT §5 requires a human-authored cause for each excursion, which does not exist yet, so this is reported honestly rather than assumed acceptable.
 - [Phase 03]: 03-13: Added render_deviations_document() to parity_report.py rather than weakening render_deviations_markdown()'s CONTRACT §5 refusal, after the real run showed the strict function would block the whole DECLARED-DEVIATIONS.md render over any one of 18 new uncaused excursions. — 03-10-PLAN.md's own must-have truth 3 tests that the strict refusal aborts the render on a completed excursion with no cause; a wrapper that renders already-caused excursions normally and lists not-yet-caused ones as an honest PENDING section keeps that tested contract untouched while still producing a real, non-stale document.
+- [Phase 04]: 04-01: checkpoint answer applied verbatim — declare-upfront for the §18.2 envelope field set; resolved_model_identity excluded from the envelope (FA-02 resolved).
+- [Phase 04]: 04-01: the default selector resolves unconditionally to the naive arm; alias/capability/harness raise NotImplementedError naming 04-03 as owner rather than falling through silently.
 
 ### Pending Todos
 
@@ -121,6 +124,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-06T18:52:30.241Z
-Stopped at: Completed 03-13-PLAN.md
+Last session: 2026-09-06T22:30:07.855Z
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None
