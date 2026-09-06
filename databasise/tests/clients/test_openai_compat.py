@@ -16,16 +16,20 @@ from databasise.clients.openai_compat import ModelIdentityMissingError, OpenAICo
 class _StubChatCompletions:
     def __init__(self, response: Any) -> None:
         self._response = response
+        self.captured_kwargs: dict[str, Any] | None = None
 
     async def create(self, **kwargs: Any) -> Any:
+        self.captured_kwargs = kwargs
         return self._response
 
 
 class _StubEmbeddings:
     def __init__(self, response: Any) -> None:
         self._response = response
+        self.captured_kwargs: dict[str, Any] | None = None
 
     async def create(self, **kwargs: Any) -> Any:
+        self.captured_kwargs = kwargs
         return self._response
 
 
@@ -126,3 +130,60 @@ async def test_6_an_embedding_response_missing_the_model_field_also_raises():
 
     with pytest.raises(ModelIdentityMissingError):
         await client.embed(["one text"])
+
+
+# --------------------------------------------------------------------------------------------- #
+# D-07 provider-routing pin pass-through (03-11-PLAN.md Task 2)
+# --------------------------------------------------------------------------------------------- #
+
+_PIN = {"provider": {"order": ["Alibaba"], "allow_fallbacks": False}}
+
+
+async def test_7_a_client_constructed_with_a_pinned_routing_body_sends_it_on_chat():
+    stub = _StubOpenAIClient(chat_response=_chat_response(model="served-model"))
+    client = OpenAICompatibleClient(
+        base_url="http://ignored", model="requested-model", client=stub, provider_routing_body=_PIN
+    )
+
+    await client.chat([{"role": "user", "content": "hi"}])
+
+    assert stub.chat.completions.captured_kwargs["extra_body"] == _PIN
+
+
+async def test_8_a_client_constructed_with_no_pin_sends_no_extra_body_key_at_all():
+    stub = _StubOpenAIClient(chat_response=_chat_response(model="served-model"))
+    client = OpenAICompatibleClient(base_url="http://ignored", model="requested-model", client=stub)
+
+    await client.chat([{"role": "user", "content": "hi"}])
+
+    assert "extra_body" not in stub.chat.completions.captured_kwargs
+
+
+async def test_9_a_per_call_extra_body_kwarg_overrides_the_constructed_pin():
+    stub = _StubOpenAIClient(chat_response=_chat_response(model="served-model"))
+    client = OpenAICompatibleClient(
+        base_url="http://ignored", model="requested-model", client=stub, provider_routing_body=_PIN
+    )
+    override = {"provider": {"order": ["OpenAI"]}}
+
+    await client.chat([{"role": "user", "content": "hi"}], extra_body=override)
+
+    assert stub.chat.completions.captured_kwargs["extra_body"] == override
+
+
+async def test_10_the_pin_is_not_applied_to_embed_matching_v1_driver_scripts_own_behavior():
+    """v1_driver_script.py's/run_parity_ingest.py's embedding call (``openai_embed.func``) never
+    passes ``extra_body`` — only the chat call does. This asserts the two arms cannot diverge
+    silently on that point.
+    """
+    stub = _StubOpenAIClient(embedding_response=_embedding_response(model="embed-model"))
+    client = OpenAICompatibleClient(
+        base_url="http://ignored",
+        model="requested-embed",
+        client=stub,
+        provider_routing_body=_PIN,
+    )
+
+    await client.embed(["one text"])
+
+    assert "extra_body" not in stub.embeddings.captured_kwargs
