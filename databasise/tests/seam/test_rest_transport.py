@@ -20,7 +20,12 @@ import inspect
 import json
 
 import pytest
-from fastapi.testclient import TestClient
+
+# Skips this entire module cleanly (never a collection error) when the `rest` extra is not
+# installed — the plan's own `<verify>` runs a bare `uv run pytest -q` with no extra active
+# specifically to prove the embedded library needs no web stack; a collection error here would
+# make that verification impossible to satisfy rather than merely skip the REST-specific tests.
+pytest.importorskip("fastapi")
 
 from databasise.clients.base import ChatResult, EmbeddingResult
 from databasise.runner.trace import TokenAccounting
@@ -40,6 +45,7 @@ from databasise.seam.refusals import (
 from databasise.seam.rest import create_app
 from databasise.seam.tokens import UnbudgetableParticipantError
 from databasise.seam.trace_store import UnknownTraceReferenceError
+from fastapi.testclient import TestClient
 
 _STUB_COMPLETION = "This is a stub completion for the REST transport's tracer test."
 
@@ -259,7 +265,7 @@ def test_the_rest_response_body_passes_both_leak_gate_tiers_via_the_imported_red
 # test below fails loudly (a missing dict key) rather than silently skipping it — the same
 # "cannot silently fall through" property the plan requires of the production handler, applied to
 # this test's own coverage.
-_REFUSAL_FACTORIES: dict[type[SeamRefusalError], "object"] = {
+_REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
     EmptyQueryObjectError: lambda: EmptyQueryObjectError(QueryObject()),
     UnconsumableQueryMemberError: lambda: UnconsumableQueryMemberError("embedding"),
     UnsatisfiableSelectorError: lambda: UnsatisfiableSelectorError(

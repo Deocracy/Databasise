@@ -129,4 +129,4 @@ def create_app(
     return app
 
 
-__all__ = ["create_app", "QueryRequest", "TraceRequest"]
+__all__ = ["QueryRequest", "TraceRequest", "create_app"]
