@@ -19,6 +19,14 @@ preserving that node's own output order verbatim — Task 2's own no-re-sort rul
 .assemble_token_breakdown``). The breakdown assembly raises before any envelope is constructed if a
 node reports the ``unbudgetable`` sentinel (D-08) — that exception is left to propagate out of
 ``query()`` unmodified.
+
+**04-04, Task 1: the opaque trace reference (API-10, D-06).** ``query()`` persists the ``RunRecord``
+into ``databasise.seam.trace_store.TraceStore`` and mints an opaque token before the record goes
+out of scope, binding it to the envelope's ``trace_token`` field — 04-01's declared-but-empty
+placeholder. ``resolve_trace`` is the third §18 operation the seam exposes (per part kind, never
+per modality): it returns the run's node-by-node trace only when the caller sets ``debug``; without
+it, the ``nodes`` key is stripped so a caller that did not ask for internal identities does not
+receive them (T-04-19).
 """
 
 from __future__ import annotations
@@ -42,6 +50,7 @@ from databasise.seam.evidence import (
 from databasise.seam.query import QueryObject, check_consumable
 from databasise.seam.selectors import Selector, resolve_selector
 from databasise.seam.tokens import assemble_token_breakdown
+from databasise.seam.trace_store import TraceStore
 from databasise.stores.graph import CozoGraphStore
 from databasise.stores.kv import SqliteKVStore
 from databasise.stores.vector import MultiNamespaceVectorStore
@@ -123,6 +132,11 @@ class Databasise:
         self.workspace = workspace
         self.registry = registry if registry is not None else default_registry()
         self.clients = clients
+        # 04-04 Task 1: one TraceStore per engine, opened once against store_root — a second
+        # Databasise instance constructed against the same store_root opens its own connection to
+        # the same on-disk database file, which is what proves a minted token's durability across
+        # the process that minted it.
+        self._trace_store = TraceStore(self.store_root)
 
     async def query(
         self,
@@ -131,9 +145,9 @@ class Databasise:
         *,
         debug: bool = False,
     ) -> ResponseEnvelope:
-        """§18.1 query object in, §18.2 closed envelope out. ``debug``'s node-by-node trace
-        behind the trace reference is 04-04's deliverable — accepted here so the signature is
-        stable across the phase, currently a no-op.
+        """§18.1 query object in, §18.2 closed envelope out. ``debug`` is accepted here only for
+        signature stability with ``resolve_trace`` — the envelope's own trace reference is always
+        opaque; a caller wanting the node-by-node trace exchanges it through ``resolve_trace``.
         """
         del debug
         check_consumable(query_object, self.registry)
@@ -214,9 +228,14 @@ class Databasise:
         # a node reports the unbudgetable sentinel (D-08) — left to propagate unmodified.
         token_accounting = assemble_token_breakdown(record.nodes)
 
+        # 04-04 Task 1 (API-10, D-06): persist the RunRecord and mint its opaque trace reference
+        # before the record goes out of scope.
+        trace_token = self._trace_store.persist(record.to_dict())
+
         return ResponseEnvelope(
             answer=answer,
             evidence=evidence,
+            trace_token=trace_token,
             depth_label=depth_label,
             partial=record.partial,
             degraded=record.degraded,
@@ -237,6 +256,20 @@ class Databasise:
         finally:
             for store in stores.values():
                 await store.finalize()
+
+    async def resolve_trace(self, trace_reference: str, *, debug: bool = False) -> dict[str, Any]:
+        """The third §18 operation the seam exposes (API-10, D-06), per part kind and not per
+        modality: exchanges an opaque trace reference for the run record it was minted from.
+        Raises :class:`~databasise.seam.trace_store.UnknownTraceReferenceError` — never returns
+        ``None``, never a partial record — for a reference this engine's ``TraceStore`` does not
+        hold. Returns the full record, including the node-by-node trace, only when ``debug`` is
+        set; without it, the ``nodes`` key is stripped so a caller that did not ask for internal
+        node identities does not receive them (T-04-19).
+        """
+        record = self._trace_store.resolve(trace_reference)
+        if debug:
+            return record
+        return {key: value for key, value in record.items() if key != "nodes"}
 
 
 __all__ = ["Databasise"]
