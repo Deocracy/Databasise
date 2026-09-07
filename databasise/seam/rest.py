@@ -32,7 +32,7 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from fastapi import FastAPI
+    from fastapi import Depends, FastAPI
     from fastapi.requests import Request
     from fastapi.responses import JSONResponse
     from fastapi.sse import EventSourceResponse
@@ -122,10 +122,30 @@ def create_app(
     async def post_query(body: QueryRequest) -> ResponseEnvelope:
         return await engine.query(body.query, body.selector)
 
+    async def _resolve_streamed_envelope(body: QueryRequest) -> ResponseEnvelope:
+        """CR-01: resolves the envelope eagerly, as a FastAPI dependency, so a
+        ``SeamRefusalError`` is raised and caught *before* ``post_query_stream``'s own
+        async-generator body starts running. ``post_query_stream`` is itself an async generator
+        function (required for FastAPI's SSE detection to route it through
+        ``EventSourceResponse``'s producer machinery) — the generator's body does not execute
+        until the SSE producer starts consuming it, by which point the response has already begun
+        and this module's app-level ``SeamRefusalError`` handler can no longer intercept anything
+        raised inside it (see this module's own reproduction in 04-REVIEW.md CR-01). A FastAPI
+        dependency, by contrast, is awaited synchronously during request dispatch, before the
+        SSE branch runs at all — so a refusal raised here propagates through the same
+        ``add_exception_handler(SeamRefusalError, ...)`` path every non-streaming endpoint uses.
+        Calls the identical ``Databasise.query()`` an in-process caller awaits — never a private
+        method, and never a second execution path from ``query_stream``'s own.
+        """
+        return await engine.query(body.query, body.selector)
+
     @app.post("/query/stream", response_class=EventSourceResponse)
-    async def post_query_stream(body: QueryRequest):
-        async for event in engine.query_stream(body.query, body.selector):
-            yield event
+    async def post_query_stream(
+        envelope: ResponseEnvelope = Depends(_resolve_streamed_envelope),
+    ):
+        for ref in envelope.evidence:
+            yield {"kind": "evidence", "evidence": ref.model_dump()}
+        yield {"kind": "final", **envelope.model_dump(exclude={"evidence"})}
 
     @app.post("/evidence/resolve")
     async def post_resolve_evidence(ref: EvidenceRef) -> dict[str, Any]:

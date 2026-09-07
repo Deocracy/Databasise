@@ -212,6 +212,19 @@ def test_the_streamed_events_assemble_to_the_same_content_the_non_streaming_endp
     assert final_events[0]["answer"] == non_streaming["answer"]
 
 
+def test_a_refusal_via_query_stream_returns_the_documented_non_success_response(client):
+    """CR-01: before the fix, every SeamRefusalError raised inside `_execute()` crashed the ASGI
+    task group with an unhandled ExceptionGroup instead of returning the 422 every other endpoint
+    returns for the identical refusal, because the refusal fired lazily on the streaming
+    generator's first iteration, after the SSE response had already begun. Mirrors the
+    non-streaming refusal-mapping test's own expectation: a 422 carrying the refusal's own type."""
+    response = client.post("/query/stream", json={"query": {}})
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["refusal_type"] == "EmptyQueryObjectError"
+
+
 async def test_evidence_dereference_endpoint_returns_what_the_in_process_operation_returns(
     client, rest_app
 ):
