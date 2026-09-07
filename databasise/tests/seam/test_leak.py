@@ -51,7 +51,11 @@ from databasise.seam.engine import (
 )
 from databasise.seam.envelope import ResponseEnvelope
 from databasise.seam.evidence import CHUNKS_NAMESPACE, mint_evidence_refs
-from databasise.seam.redact import assert_no_forbidden_keys, forbidden_identities
+from databasise.seam.redact import (
+    assert_no_forbidden_keys,
+    assert_no_forbidden_values,
+    forbidden_identities,
+)
 from databasise.seam.tokens import assemble_token_breakdown
 from databasise.seam.trace_store import TraceStore
 from databasise.tests.seam.conftest import _CONTENT
@@ -253,6 +257,18 @@ async def test_no_forbidden_key_appears_at_any_nesting_depth_in_the_parsed_envel
     assert_no_forbidden_keys(parsed_envelope, low_entropy)
 
 
+async def test_no_forbidden_low_entropy_value_appears_outside_the_freeform_answer_field(
+    complete_run,
+):
+    """CR-04: the value half of the gate, run over the same real envelope the key-walk above
+    already passes cleanly."""
+    envelope, record = complete_run
+    _high_entropy, low_entropy = forbidden_identities(record.to_dict())
+    parsed_envelope = json.loads(envelope.model_dump_json())
+
+    assert_no_forbidden_values(parsed_envelope, low_entropy)
+
+
 async def test_the_forbidden_set_is_built_from_the_run_record_and_contains_a_64_char_hex_value(
     complete_run,
 ):
@@ -296,3 +312,30 @@ async def test_the_high_entropy_check_fails_on_a_string_containing_a_real_instan
 
     with pytest.raises(AssertionError):
         assert real_instance_hash not in hostile_text
+
+
+def test_the_value_check_fails_on_a_node_id_planted_as_a_seam_events_component_value():
+    """CR-04's own reproduction: a real node id sitting in ``SeamEvent.component`` (a structured,
+    non-freeform field) passed both the old high-entropy and structural-key checks cleanly — this
+    is the leak class ``assert_no_forbidden_values`` exists to catch."""
+    forbidden = {"chunk-vector", "seam", "lightrag-base"}
+    hostile = {
+        "answer": "an ordinary answer",
+        "seam_events": [{"component": "chunk-vector", "spend": None, "outcome": "completed"}],
+    }
+
+    with pytest.raises(AssertionError):
+        assert_no_forbidden_values(hostile, forbidden)
+
+
+def test_the_value_check_does_not_false_positive_on_an_answer_legitimately_containing_a_low_entropy_word():
+    """The naive arm's own ``keywords`` node id is an ordinary English word (this module's own
+    docstring) — an answer that legitimately contains it must never trip the gate, which is exactly
+    why ``answer`` is on ``FREEFORM_VALUE_KEYS`` and every other field is not."""
+    forbidden = {"keywords", "generate", "seam", "lightrag-base"}
+    envelope_like = {
+        "answer": "The extracted keywords generate a useful summary of the corpus.",
+        "seam_events": [],
+    }
+
+    assert_no_forbidden_values(envelope_like, forbidden)
