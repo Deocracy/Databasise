@@ -44,6 +44,7 @@ from databasise.seam.engine import (
     _DETERMINISM_SETTING,
     _EVIDENCE_RETRIEVAL_NODE_ID,
     _EXECUTOR_VERSION,
+    Databasise,
     _build_stores,
     _inject_query,
     _inject_token_allowance,
@@ -51,6 +52,7 @@ from databasise.seam.engine import (
 )
 from databasise.seam.envelope import ResponseEnvelope
 from databasise.seam.evidence import CHUNKS_NAMESPACE, mint_evidence_refs
+from databasise.seam.query import QueryObject
 from databasise.seam.redact import (
     assert_no_forbidden_keys,
     assert_no_forbidden_values,
@@ -267,6 +269,38 @@ async def test_no_forbidden_low_entropy_value_appears_outside_the_freeform_answe
     parsed_envelope = json.loads(envelope.model_dump_json())
 
     assert_no_forbidden_values(parsed_envelope, low_entropy)
+
+
+async def test_the_leak_gate_passes_against_resolve_traces_own_non_debug_output(
+    synthetic_naive_store,
+):
+    """CR-05: every other leak-gate run in this module (and in test_rest_transport.py) exercised
+    either the envelope or `resolve_trace(debug=True)` — the one output that is actually the
+    seam's third §18 operation's *default*, consumer-facing shape,
+    `resolve_trace(debug=False)`, was never run through this gate at all. This is how CR-02's
+    `run_id`/`wiring_id`/`wiring_instance_hash`/`arm_id` leak shipped unnoticed."""
+    engine = Databasise(
+        store_root=synthetic_naive_store["store_root"],
+        workspace=synthetic_naive_store["workspace"],
+        clients={
+            "embedding": _StubEmbeddingClient(vector=synthetic_naive_store["query_vector"]),
+            "llm": _StubLLMClient(),
+        },
+    )
+    envelope = await engine.query(QueryObject(text=_QUERY_TEXT))
+
+    debug_record = await engine.resolve_trace(envelope.trace_token, debug=True)
+    non_debug_record = await engine.resolve_trace(envelope.trace_token, debug=False)
+
+    high_entropy, low_entropy = forbidden_identities(debug_record)
+    serialized_non_debug = json.dumps(non_debug_record)
+
+    for value in high_entropy:
+        assert value not in serialized_non_debug, (
+            f"high-entropy identity {value!r} leaked into resolve_trace(debug=False)'s output"
+        )
+    assert_no_forbidden_keys(non_debug_record, low_entropy)
+    assert_no_forbidden_values(non_debug_record, low_entropy)
 
 
 async def test_the_forbidden_set_is_built_from_the_run_record_and_contains_a_64_char_hex_value(

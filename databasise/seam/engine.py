@@ -25,8 +25,8 @@ into ``databasise.seam.trace_store.TraceStore`` and mints an opaque token before
 out of scope, binding it to the envelope's ``trace_token`` field — 04-01's declared-but-empty
 placeholder. ``resolve_trace`` is the third §18 operation the seam exposes (per part kind, never
 per modality): it returns the run's node-by-node trace only when the caller sets ``debug``; without
-it, the ``nodes`` key is stripped so a caller that did not ask for internal identities does not
-receive them (T-04-19).
+it, the response is filtered to an explicit allow-list of non-identity fields (CR-02) so a caller
+that did not ask for internal identities does not receive them (T-04-19).
 
 **04-04, Task 2: MACH-11 — the out-of-``deps`` store-mutation event (D-09, FA-08).** ``query()``
 passes a recorder callable to ``scheduler.run_wiring`` that records every ``(node_id, "store",
@@ -115,6 +115,27 @@ _CONCURRENCY_SETTING = "sequential"
 # one caller that needs a real run to complete, so it sets a real, generous per-node allowance —
 # never the published wiring itself.
 _DEFAULT_TOKEN_ALLOWANCE = 1_000_000
+
+# CR-02: the RunRecord fields `resolve_trace(debug=False)` returns — an explicit allow-list, not a
+# deny-list of one key (`nodes`). §18.2 forbids a consumer receiving `run_id`, `wiring_id`,
+# `wiring_instance_hash`, or `arm_id` without `debug=True`; a deny-list silently leaks any field
+# not named, which is exactly how those four survived the old `!= "nodes"` filter unnoticed. An
+# allow-list instead excludes a new internal-identity field added to RunRecord later by default,
+# rather than leaking it by omission.
+_NON_DEBUG_TRACE_FIELDS = frozenset(
+    {
+        "partial",
+        "degraded",
+        "stop_reason",
+        "degradation_reason",
+        "bundle_ref",
+        "corpus_snapshot_hash",
+        "executor_version",
+        "concurrency_setting",
+        "determinism_setting",
+        "arm_execution_order",
+    }
+)
 
 
 def _inject_query(resolved: dict[str, Any], query: str) -> dict[str, Any]:
@@ -397,13 +418,14 @@ class Databasise:
         Raises :class:`~databasise.seam.trace_store.UnknownTraceReferenceError` — never returns
         ``None``, never a partial record — for a reference this engine's ``TraceStore`` does not
         hold. Returns the full record, including the node-by-node trace, only when ``debug`` is
-        set; without it, the ``nodes`` key is stripped so a caller that did not ask for internal
-        node identities does not receive them (T-04-19).
+        set; without it, the response is filtered to ``_NON_DEBUG_TRACE_FIELDS`` (CR-02) so a
+        caller that did not ask for internal identities does not receive ``run_id``, ``wiring_id``,
+        ``wiring_instance_hash``, ``arm_id``, or the node-by-node ``nodes`` trace (T-04-19).
         """
         record = self._trace_store.resolve(trace_reference)
         if debug:
             return record
-        return {key: value for key, value in record.items() if key != "nodes"}
+        return {key: value for key, value in record.items() if key in _NON_DEBUG_TRACE_FIELDS}
 
 
 __all__ = ["Databasise"]

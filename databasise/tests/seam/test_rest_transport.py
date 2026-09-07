@@ -34,7 +34,11 @@ from databasise.seam import rest as rest_module
 from databasise.seam import selectors as selectors_module
 from databasise.seam.evidence import EvidenceRef, UnresolvableEvidenceReferenceError
 from databasise.seam.query import QueryObject
-from databasise.seam.redact import assert_no_forbidden_keys, forbidden_identities
+from databasise.seam.redact import (
+    assert_no_forbidden_keys,
+    assert_no_forbidden_values,
+    forbidden_identities,
+)
 from databasise.seam.refusals import (
     EmptyQueryObjectError,
     ForbiddenSelectorInputError,
@@ -252,7 +256,37 @@ def test_the_rest_response_body_passes_both_leak_gate_tiers_via_the_imported_red
     for value in high_entropy:
         assert value not in response.text, f"high-entropy identity {value!r} leaked into the REST response"
 
-    assert_no_forbidden_keys(json.loads(response.text), low_entropy)
+    parsed_response = json.loads(response.text)
+    assert_no_forbidden_keys(parsed_response, low_entropy)
+    assert_no_forbidden_values(parsed_response, low_entropy)
+
+
+def test_the_trace_resolve_endpoints_non_debug_output_passes_both_leak_gate_tiers(client):
+    """CR-05: the gate run above exercises the `/query` response body and the debug=True trace
+    record — the `/trace/resolve {"debug": false}` output (the seam's third §18 operation's own
+    *default*, consumer-facing shape) was never run through the gate at all."""
+    response = client.post("/query", json=_QUERY_BODY)
+    assert response.status_code == 200
+    trace_token = response.json()["trace_token"]
+
+    debug_record = client.post(
+        "/trace/resolve", json={"trace_reference": trace_token, "debug": True}
+    ).json()
+    non_debug_response = client.post(
+        "/trace/resolve", json={"trace_reference": trace_token, "debug": False}
+    )
+    assert non_debug_response.status_code == 200
+
+    high_entropy, low_entropy = forbidden_identities(debug_record)
+
+    for value in high_entropy:
+        assert value not in non_debug_response.text, (
+            f"high-entropy identity {value!r} leaked into the non-debug /trace/resolve response"
+        )
+
+    non_debug_body = json.loads(non_debug_response.text)
+    assert_no_forbidden_keys(non_debug_body, low_entropy)
+    assert_no_forbidden_values(non_debug_body, low_entropy)
 
 
 # --------------------------------------------------------------------------------------------- #

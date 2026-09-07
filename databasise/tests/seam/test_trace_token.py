@@ -114,6 +114,20 @@ async def test_exchanging_the_reference_without_debug_carries_no_node_level_entr
     assert non_debug_record["partial"] is False
 
 
+async def test_exchanging_the_reference_without_debug_carries_none_of_the_runs_own_identities(
+    synthetic_naive_store,
+):
+    """CR-02: `resolve_trace(debug=False)` used to strip only `nodes`, leaking `run_id`,
+    `wiring_id`, `wiring_instance_hash`, and `arm_id` — every one of the internal identities §18.2
+    forbids a consumer from receiving without `debug=True`."""
+    engine = _make_engine(synthetic_naive_store)
+
+    envelope = await engine.query(QueryObject(text=_QUERY_TEXT))
+    non_debug_record = await engine.resolve_trace(envelope.trace_token, debug=False)
+
+    assert {"run_id", "wiring_id", "wiring_instance_hash", "arm_id"} & non_debug_record.keys() == set()
+
+
 async def test_an_unknown_trace_reference_raises_the_named_refusal(synthetic_naive_store):
     engine = _make_engine(synthetic_naive_store)
 
