@@ -47,6 +47,28 @@ dev = [
     # Validates emitted run records against the frozen rig-trace.schema.json.
     "jsonschema>=4.0",
     "ruff",
+    # Test-only (04-05, D-17): drives the REST transport in the dual-transport conformance
+    # test via FastAPI's own httpx-based TestClient. Needed regardless of whether the `rest`
+    # extra is installed. Version matches v1/pyproject.toml:87's existing pin. Package
+    # legitimacy confirmed by the developer 2026-09-06 (see 04-CHECKPOINT-ANSWERS.md).
+    "httpx>=0.28.1",
+]
+
+# 04-05 (D-15, EMBED-02, ROADMAP criterion 5): the optional REST transport. A
+# [project.optional-dependencies] extra, deliberately NOT a [dependency-groups] group — a PEP 735
+# group is not installable by an external consumer of the published package at all
+# (`pip install package[group]` is not a thing), which would make EMBED-02's "optional layer
+# anyone can opt into" false in practice. Installed as `databasise[rest]` or `uv sync --extra rest`.
+# Package legitimacy confirmed by the developer 2026-09-06 (see 04-CHECKPOINT-ANSWERS.md).
+[project.optional-dependencies]
+rest = [
+    # 0.135 is the first release to ship native fastapi.sse.EventSourceResponse (04-RESEARCH.md
+    # Pattern 4) — pinning below that forces a hand-rolled SSE framer or an extra dependency
+    # (sse-starlette) for no reason (Don't Hand-Roll table).
+    "fastapi>=0.135",
+    # ASGI server to run the optional REST app. Unconstrained, matching v1/pyproject.toml:95's
+    # existing pin in this same monorepo.
+    "uvicorn",
 ]
 
 [tool.pytest.ini_options]
