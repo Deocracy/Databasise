@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Machine Core** - Embedded stores, component identity, runner/scheduler, and storage keying — the §H1 must-decide fence (completed 2026-08-31)
 - [x] **Phase 2: Falsifier Gate** - Computed depth/execution_mode validator, eval bundle, and A/A calibration — Falsifiers 2 and 5, the rung-1 gate (completed 2026-08-31)
 - [ ] **Phase 3: LightRAG Query Side** - Seventeen §L.1 query positions re-cut as primitive parts with variance-banded parity (§BP rung 2)
-- [ ] **Phase 4: The Seam** - §18 closed envelope, four selectors, trace and budget reporting, in-process and REST transports
+- [x] **Phase 4: The Seam** - §18 closed envelope, four selectors, trace and budget reporting, in-process and REST transports (completed 2026-09-06)
 - [ ] **Phase 5: Opaque-Side Admission** - Ingest core and codebase-memory-mcp admitted under §8's conditions, plus the ingest/corpus surface (§BP rung 3)
 - [ ] **Phase 6: HippoRAG 2 & Side-by-Side** - Second modality fully decomposed and both run on one corpus, compared in one call (§BP rung 4 — the proof point)
 - [ ] **Phase 7: Promotion & Rollback** - Append-only ledger, operator-asserted promotion path, and the owner's corpus in the bundle
@@ -239,7 +239,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Machine Core | 10/10 | Complete    | 2026-08-31 |
 | 2. Falsifier Gate | 4/4 | Complete    | 2026-08-31 |
 | 3. LightRAG Query Side | 13/13 | In Progress|  |
-| 4. The Seam | 5/5 | In Progress|  |
+| 4. The Seam | 5/5 | Complete    | 2026-09-06 |
 | 5. Opaque-Side Admission | 0/TBD | Not started | - |
 | 6. HippoRAG 2 & Side-by-Side | 0/TBD | Not started | - |
 | 7. Promotion & Rollback | 0/TBD | Not started | - |
