@@ -27,7 +27,19 @@ from databasise.runner.trace import TokenAccounting
 from databasise.seam import redact as redact_module
 from databasise.seam import rest as rest_module
 from databasise.seam import selectors as selectors_module
+from databasise.seam.evidence import EvidenceRef, UnresolvableEvidenceReferenceError
+from databasise.seam.query import QueryObject
+from databasise.seam.redact import assert_no_forbidden_keys, forbidden_identities
+from databasise.seam.refusals import (
+    EmptyQueryObjectError,
+    ForbiddenSelectorInputError,
+    SeamRefusalError,
+    UnconsumableQueryMemberError,
+    UnsatisfiableSelectorError,
+)
 from databasise.seam.rest import create_app
+from databasise.seam.tokens import UnbudgetableParticipantError
+from databasise.seam.trace_store import UnknownTraceReferenceError
 
 _STUB_COMPLETION = "This is a stub completion for the REST transport's tracer test."
 
@@ -143,3 +155,185 @@ def test_rest_module_calls_no_selector_resolution_redaction_or_envelope_assembly
 
     overlap = called & forbidden
     assert not overlap, f"databasise/seam/rest.py calls forbidden seam-logic function(s): {overlap}"
+
+
+# --------------------------------------------------------------------------------------------- #
+# Task 2: SSE streaming, the four §18 operations' REST/in-process parity, refusal mapping, leak.
+# --------------------------------------------------------------------------------------------- #
+
+_QUERY_BODY = {"query": {"text": "Which films did Ed Wood direct?"}}
+
+
+def test_rest_module_uses_only_fastapis_native_sse_support_and_hand_formats_no_event_field():
+    """FA-11/Pattern 4 (04-RESEARCH.md): no `sse-starlette` dependency, no manually formatted
+    `data: ...` framing string — only FastAPI's own `fastapi.sse.EventSourceResponse`."""
+    source = inspect.getsource(rest_module)
+    assert "sse_starlette" not in source
+    assert "fastapi.sse" in source
+    assert '"data:' not in source and "'data:" not in source
+
+
+def _parse_sse_events(body_text: str) -> list[dict]:
+    """Every `data: <json>` line's decoded payload, in wire order — the minimal parser this
+    module needs; not a general SSE client."""
+    events: list[dict] = []
+    for block in body_text.strip().split("\n\n"):
+        for line in block.splitlines():
+            if line.startswith("data: "):
+                events.append(json.loads(line[len("data: ") :]))
+    return events
+
+
+def test_the_streamed_events_assemble_to_the_same_content_the_non_streaming_endpoint_returns(client):
+    non_streaming = client.post("/query", json=_QUERY_BODY).json()
+
+    streamed = client.post("/query/stream", json=_QUERY_BODY)
+    assert streamed.status_code == 200
+    assert streamed.headers["content-type"].startswith("text/event-stream")
+
+    events = _parse_sse_events(streamed.text)
+    evidence_events = [event for event in events if event["kind"] == "evidence"]
+    final_events = [event for event in events if event["kind"] == "final"]
+    assert len(final_events) == 1
+
+    assert [event["evidence"]["ref"] for event in evidence_events] == [
+        item["ref"] for item in non_streaming["evidence"]
+    ]
+    assert final_events[0]["answer"] == non_streaming["answer"]
+
+
+async def test_evidence_dereference_endpoint_returns_what_the_in_process_operation_returns(
+    client, rest_app
+):
+    query_response = client.post("/query", json=_QUERY_BODY).json()
+    ref = query_response["evidence"][0]
+
+    rest_resolved = client.post("/evidence/resolve", json=ref)
+    assert rest_resolved.status_code == 200
+
+    in_process_resolved = await rest_app.state.engine.resolve_evidence(EvidenceRef(**ref))
+    assert rest_resolved.json() == in_process_resolved
+
+
+async def test_trace_resolution_endpoint_returns_what_the_in_process_operation_returns(
+    client, rest_app
+):
+    query_response = client.post("/query", json=_QUERY_BODY).json()
+    trace_token = query_response["trace_token"]
+
+    rest_resolved = client.post(
+        "/trace/resolve", json={"trace_reference": trace_token, "debug": True}
+    )
+    assert rest_resolved.status_code == 200
+
+    in_process_resolved = await rest_app.state.engine.resolve_trace(trace_token, debug=True)
+    assert rest_resolved.json() == in_process_resolved
+
+
+def test_the_rest_response_body_passes_both_leak_gate_tiers_via_the_imported_redact_module(client):
+    """The gate imported from ``databasise.seam.redact`` — never a second, REST-local copy of it
+    (D-17's anti-pattern)."""
+    response = client.post("/query", json=_QUERY_BODY)
+    assert response.status_code == 200
+    trace_token = response.json()["trace_token"]
+
+    debug_record = client.post(
+        "/trace/resolve", json={"trace_reference": trace_token, "debug": True}
+    ).json()
+
+    high_entropy, low_entropy = forbidden_identities(debug_record)
+
+    for value in high_entropy:
+        assert value not in response.text, f"high-entropy identity {value!r} leaked into the REST response"
+
+    assert_no_forbidden_keys(json.loads(response.text), low_entropy)
+
+
+# --------------------------------------------------------------------------------------------- #
+# T-04-27: every seam refusal maps to a non-success response carrying its own named value, never
+# a generic 500 — enumerated from SeamRefusalError's own subclass set at test time.
+# --------------------------------------------------------------------------------------------- #
+
+# One factory per known refusal type, keyed by class — a plausible instance this test can raise
+# and inspect. If a later phase adds a subclass without adding a factory here, the parametrized
+# test below fails loudly (a missing dict key) rather than silently skipping it — the same
+# "cannot silently fall through" property the plan requires of the production handler, applied to
+# this test's own coverage.
+_REFUSAL_FACTORIES: dict[type[SeamRefusalError], "object"] = {
+    EmptyQueryObjectError: lambda: EmptyQueryObjectError(QueryObject()),
+    UnconsumableQueryMemberError: lambda: UnconsumableQueryMemberError("embedding"),
+    UnsatisfiableSelectorError: lambda: UnsatisfiableSelectorError(
+        selector_kind="capability", requested=["reads_space"]
+    ),
+    ForbiddenSelectorInputError: lambda: ForbiddenSelectorInputError(
+        member_name="alias", value="a" * 64
+    ),
+    UnknownTraceReferenceError: lambda: UnknownTraceReferenceError("bogus-token"),
+    UnbudgetableParticipantError: lambda: UnbudgetableParticipantError("some-node"),
+    UnresolvableEvidenceReferenceError: lambda: UnresolvableEvidenceReferenceError(
+        EvidenceRef(ref="missing", namespace="chunks", kind="text_chunk")
+    ),
+}
+
+
+def _all_seam_refusal_subclasses() -> list[type[SeamRefusalError]]:
+    """Every currently-defined subclass of ``SeamRefusalError``, walked recursively (not just
+    direct children) — this is what makes the enumeration match the plan's own instruction to
+    walk the base class's subclasses rather than hand-maintain a list."""
+    discovered: set[type[SeamRefusalError]] = set()
+    frontier = list(SeamRefusalError.__subclasses__())
+    while frontier:
+        current = frontier.pop()
+        if current in discovered:
+            continue
+        discovered.add(current)
+        frontier.extend(current.__subclasses__())
+    return sorted(discovered, key=lambda cls: cls.__name__)
+
+
+def test_the_refusal_handler_is_registered_once_at_the_application_level(rest_app):
+    """D-10/T-04-27: one application-level handler, registered on the base class — never a
+    per-endpoint try/except (the plan's own prohibition)."""
+    assert rest_app.exception_handlers.get(SeamRefusalError) is not None
+
+
+@pytest.fixture
+def probe_app(rest_app):
+    """One test-only route added to the *same* production app instance the other tests in this
+    module build — so the parametrized test below exercises the actual registered
+    ``SeamRefusalError`` handler, never a re-implementation of it."""
+
+    @rest_app.post("/_test/raise/{class_name}")
+    async def _raise_named_refusal(class_name: str):
+        for exc_cls, factory in _REFUSAL_FACTORIES.items():
+            if exc_cls.__name__ == class_name:
+                raise factory()
+        raise AssertionError(f"no test factory registered for {class_name!r}")
+
+    return rest_app
+
+
+@pytest.mark.parametrize("exc_cls", _all_seam_refusal_subclasses())
+def test_every_refusal_subclass_maps_to_a_non_success_status_carrying_its_named_value(
+    probe_app, exc_cls
+):
+    assert exc_cls in _REFUSAL_FACTORIES, (
+        f"{exc_cls.__name__} has no test factory registered in this module — a refusal type was "
+        "added without extending this test, which is exactly the silent-fall-through this test "
+        "exists to prevent"
+    )
+    response = TestClient(probe_app).post(f"/_test/raise/{exc_cls.__name__}")
+
+    assert not (200 <= response.status_code < 300), (
+        f"{exc_cls.__name__} mapped to a success status {response.status_code}"
+    )
+    body = response.json()
+    assert body["refusal_type"] == exc_cls.__name__
+
+    instance = _REFUSAL_FACTORIES[exc_cls]()
+    for key, value in vars(instance).items():
+        if isinstance(value, EvidenceRef | QueryObject):
+            value = value.model_dump()
+        assert body.get(key) == value, (
+            f"{exc_cls.__name__}'s {key!r} attribute missing or mismatched in the response body"
+        )
