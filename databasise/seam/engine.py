@@ -27,6 +27,27 @@ placeholder. ``resolve_trace`` is the third §18 operation the seam exposes (per
 per modality): it returns the run's node-by-node trace only when the caller sets ``debug``; without
 it, the ``nodes`` key is stripped so a caller that did not ask for internal identities does not
 receive them (T-04-19).
+
+**04-04, Task 2: MACH-11 — the out-of-``deps`` store-mutation event (D-09, FA-08).** ``query()``
+passes a recorder callable to ``scheduler.run_wiring`` that records every ``(node_id, "store",
+store_key)`` touch the scheduler's own ``_ScopedStoresView`` reports. After the run, ``_mach11_events``
+correlates: for every node whose registered ``Part`` declares ``mutates_store``, the store keys it
+touched are compared against ``_accounted_store_keys`` — the union, over that node's own declared
+``deps`` (``ParsedWiring.deps``), of any ``reads_*``/``writes_*`` effect its dependency's own
+resolved ``Part`` declares. A touched key no declared dependency accounts for is an out-of-``deps``
+mutation and produces one ``SeamEvent``, carrying the part's registered ``name@version`` (never a
+node id), its own token spend, and an outcome drawn from ``ResponseEnvelope``'s closed vocabulary.
+
+**This correlation rule is defined by this plan, not by CONTRACT (FA-08) — read this before
+extending it.** ``mutates_store`` itself names no specific store key (§2's vocabulary keeps it
+opaque on purpose), so it never contributes to ``_accounted_store_keys`` on its own; only a
+dependency's own concrete ``reads_*``/``writes_*`` effect counts as "this data flow accounts for
+that store". No part registered anywhere in ``parts_core``/``LIGHTRAG_PARTS`` declares
+``mutates_store`` today, so ``seam_events`` is always empty for every production arm this phase
+ships — the correlation is proven only against the fixture parts
+``databasise/tests/seam/test_mach11_event.py`` registers. A later phase introducing a real
+out-of-``deps`` mutating part should re-check this rule against it rather than assume it already
+covers every shape such a part could take.
 """
 
 from __future__ import annotations
@@ -39,8 +60,8 @@ from typing import Any
 from databasise.identity.canon import canonicalise
 from databasise.parts.registry import PartRegistry, default_registry
 from databasise.runner import scheduler as _scheduler
-from databasise.runner.trace import RunRecord
-from databasise.seam.envelope import ResponseEnvelope
+from databasise.runner.trace import NodeTrace, RunRecord
+from databasise.seam.envelope import ResponseEnvelope, SeamEvent
 from databasise.seam.evidence import (
     CHUNKS_NAMESPACE,
     EvidenceRef,
@@ -49,12 +70,18 @@ from databasise.seam.evidence import (
 )
 from databasise.seam.query import QueryObject, check_consumable
 from databasise.seam.selectors import Selector, resolve_selector
-from databasise.seam.tokens import assemble_token_breakdown
+from databasise.seam.tokens import TokenBreakdownEntry, assemble_token_breakdown
 from databasise.seam.trace_store import TraceStore
 from databasise.stores.graph import CozoGraphStore
 from databasise.stores.kv import SqliteKVStore
 from databasise.stores.vector import MultiNamespaceVectorStore
-from databasise.validator.parse import parse_wiring
+from databasise.validator.parse import ParsedWiring, parse_wiring
+
+# 04-04 Task 2 (MACH-11): a reads_*/writes_* effect suffix names the store key it accounts for —
+# mirrors databasise/parts_core/__init__.py's own CapabilityScopedStores.require suffix rule
+# (`effect.split("_", 1)[-1]`). "mutates_store" itself is excluded: its own suffix, "store", names
+# no real store key (§2 keeps it deliberately opaque), so it never contributes to the accounted set.
+_ACCOUNTABLE_STORE_EFFECT_PREFIXES = ("reads_", "writes_")
 
 # The v1-native per-kind names the LightRAG wirings' kv/graph stores are keyed by — matching
 # databasise/parity/run_arm.py's own _TEXT_CHUNKS_KIND/_GRAPH_KIND constants exactly.
@@ -115,6 +142,57 @@ def _build_stores(store_root: Path, workspace: str) -> dict[str, Any]:
     }
 
 
+def _accounted_store_keys(parsed: ParsedWiring, node_id: str) -> set[str]:
+    """The store keys ``node_id``'s own declared ``deps`` account for (FA-08's correlation rule) —
+    the union, over each direct dependency's own resolved ``Part.effects``, of the store key any
+    ``reads_*``/``writes_*`` effect names. See this module's docstring for the rule's full
+    statement and provenance.
+    """
+    accounted: set[str] = set()
+    for dep_id in parsed.deps.get(node_id, ()):
+        dep_part = parsed.parts.get(dep_id)
+        if dep_part is None:
+            continue
+        for effect in dep_part.effects:
+            if effect.startswith(_ACCOUNTABLE_STORE_EFFECT_PREFIXES):
+                accounted.add(effect.split("_", 1)[-1])
+    return accounted
+
+
+def _mach11_events(
+    parsed: ParsedWiring,
+    touches: list[tuple[str, str, str]],
+    node_by_id: dict[str, NodeTrace],
+) -> list[SeamEvent]:
+    """Correlate a run's recorded store touches against its own wiring graph (FA-08): for every
+    node whose registered ``Part`` declares ``mutates_store``, a touched store key
+    ``_accounted_store_keys`` does not cover is an out-of-``deps`` mutation, surfaced as exactly
+    one ``SeamEvent`` per such node — never per touch, since the event names the participant, not
+    each individual store access.
+    """
+    events: list[SeamEvent] = []
+    reported_nodes: set[str] = set()
+    for node_id, kind, store_key in touches:
+        if kind != "store" or node_id in reported_nodes:
+            continue
+        part = parsed.parts.get(node_id)
+        if part is None or "mutates_store" not in part.effects:
+            continue
+        if store_key in _accounted_store_keys(parsed, node_id):
+            continue
+
+        reported_nodes.add(node_id)
+        node_trace = node_by_id.get(node_id)
+        spend = (
+            TokenBreakdownEntry(**node_trace.tokens.to_dict())
+            if node_trace is not None
+            else TokenBreakdownEntry(counted_by="none")
+        )
+        outcome = "halted" if node_trace is not None and node_trace.budget_state == "halted" else "completed"
+        events.append(SeamEvent(component=part.name_at_version, spend=spend, outcome=outcome))
+    return events
+
+
 class Databasise:
     """The consumer-facing async seam object (D-01). Holds ``store_root``/``workspace``, an
     optional ``PartRegistry`` (defaulting to ``default_registry()``) and an optional ``clients``
@@ -157,6 +235,13 @@ class Databasise:
         resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
         parsed = parse_wiring(resolved, self.registry)
 
+        # 04-04 Task 2 (MACH-11): records every (node_id, "store", store_key) touch the scheduler's
+        # own _ScopedStoresView reports, correlated against the wiring graph after the run.
+        touches: list[tuple[str, str, str]] = []
+
+        def _recorder(node_id: str, kind: str, key: str) -> None:
+            touches.append((node_id, kind, key))
+
         stores = _build_stores(self.store_root, self.workspace)
         try:
             scheduled = await _scheduler.run_wiring(
@@ -166,6 +251,7 @@ class Databasise:
                 determinism_setting=_DETERMINISM_SETTING,
                 concurrency_setting=_CONCURRENCY_SETTING,
                 clients=self.clients,
+                recorder=_recorder,
             )
         finally:
             for store in stores.values():
@@ -228,6 +314,11 @@ class Databasise:
         # a node reports the unbudgetable sentinel (D-08) — left to propagate unmodified.
         token_accounting = assemble_token_breakdown(record.nodes)
 
+        # 04-04 Task 2 (MACH-11): correlate the run's own recorded touches against its own wiring
+        # graph — see this module's docstring for the rule's full statement (FA-08).
+        node_by_id = {node.node_id: node for node in record.nodes}
+        seam_events = _mach11_events(parsed, touches, node_by_id)
+
         # 04-04 Task 1 (API-10, D-06): persist the RunRecord and mint its opaque trace reference
         # before the record goes out of scope.
         trace_token = self._trace_store.persist(record.to_dict())
@@ -242,6 +333,7 @@ class Databasise:
             stop_reason=record.stop_reason,
             degradation_reason=record.degradation_reason,
             token_accounting=token_accounting,
+            seam_events=seam_events,
         )
 
     async def resolve_evidence(self, ref: EvidenceRef) -> dict[str, Any]:

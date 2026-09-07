@@ -14,6 +14,14 @@ binds an element type into a field that already exists here; none may widen this
 ``ResponseEnvelope`` itself was added, renamed, or removed. See those two modules for the field
 shapes and FA-03's declared ``ChunkRef`` shortfall.
 
+**04-04: ``SeamEvent.outcome`` is now a closed ``Literal`` (D-09/MACH-11).** The correlation rule
+that populates ``seam_events`` — a ``mutates_store`` participant reached outside its wiring's own
+``deps`` graph — lives in ``databasise.seam.engine`` (see that module's docstring for the rule's
+exact statement and its FA-08 provenance: defined by this plan, not by CONTRACT, and narrower than
+the general case, since no registered ``parts_core`` part exercises it today). An outcome string
+outside the declared vocabulary is refused at construction rather than passed through — the same
+closed-set discipline every other field in this module already carries.
+
 **Nested strictness (Pitfall 7).** Pydantic v2 does not cascade ``frozen=True, extra="forbid"``
 through nested model fields — each nested model must set its own ``model_config``, or inherit from
 a shared strict base. Every model in this module, top-level and nested alike, inherits
@@ -31,21 +39,33 @@ to a consumer without that having been decided under §18.3's invariance rule.
 
 from __future__ import annotations
 
+from typing import Literal
+
 from databasise.seam._base import _StrictModel
 from databasise.seam.evidence import EvidenceRef
 from databasise.seam.tokens import TokenBreakdownEntry
 
+# The closed outcome vocabulary for a MACH-11 seam event (04-04, Claude's Discretion per
+# 04-CONTEXT.md — CONTRACT names no outcome vocabulary for this event). "completed": the
+# out-of-deps mutation's own node finished dispatch normally. "halted": the node's own
+# budget_state is "halted" (CONTRACT §9's budget-halt path) — the mutation is still real and still
+# reported, never silently dropped because the run stopped early. "failed": reserved for a node
+# whose dispatch itself raised before completing; no registered part reaches this branch today
+# (FA-08 — nothing in parts_core exercises the out-of-deps case at all yet), but the vocabulary is
+# declared now rather than widened later once one does.
+SeamEventOutcome = Literal["completed", "halted", "failed"]
+
 
 class SeamEvent(_StrictModel):
     """D-09/MACH-11's seam-level event: a ``mutates_store`` call outside a wiring's ``deps`` graph,
-    carrying the component's ``name@version``, its spend, and its outcome. 04-04 wires the
-    detection and populates this list from a real run; this plan declares the shape and leaves the
-    envelope's ``seam_events`` list empty.
+    carrying the component's ``name@version``, its spend, and its outcome — drawn from a closed
+    vocabulary declared on this model, refusing construction with anything else. 04-04 wires the
+    detection (``databasise.seam.engine``) and populates this list from a real run.
     """
 
     component: str
     spend: TokenBreakdownEntry | None = None
-    outcome: str
+    outcome: SeamEventOutcome
 
 
 class ResponseEnvelope(_StrictModel):
@@ -68,4 +88,10 @@ class ResponseEnvelope(_StrictModel):
     seam_events: list[SeamEvent] = []
 
 
-__all__ = ["EvidenceRef", "ResponseEnvelope", "SeamEvent", "TokenBreakdownEntry"]
+__all__ = [
+    "EvidenceRef",
+    "ResponseEnvelope",
+    "SeamEvent",
+    "SeamEventOutcome",
+    "TokenBreakdownEntry",
+]
