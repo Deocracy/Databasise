@@ -83,9 +83,18 @@ def _refusal_response(_request: Request, exc: SeamRefusalError) -> JSONResponse:
     rather than a hand-maintained per-type mapping, since every refusal in
     ``databasise.seam.refusals``/``evidence``/``tokens``/``trace_store`` already stores its own
     offending value on a named attribute in its constructor (house style, see
-    ``databasise/seam/refusals.py``'s own module docstring)."""
+    ``databasise/seam/refusals.py``'s own module docstring).
+
+    **CR-03: a leading-underscore attribute is never exposed.** Every refusal names only the
+    consumer's own input, except ``UnbudgetableParticipantError`` (``databasise/seam/tokens.py``),
+    which carries the machine's own internal node id on a private ``_internal_node_id`` attribute
+    specifically so a generic ``vars(exc)`` dump like this one cannot leak it — the same convention
+    any future refusal with an internal-only value should follow.
+    """
     detail: dict[str, Any] = {"refusal_type": type(exc).__name__, "message": str(exc)}
     for key, value in vars(exc).items():
+        if key.startswith("_"):
+            continue
         if isinstance(value, BaseModel):
             value = value.model_dump()
         detail[key] = value

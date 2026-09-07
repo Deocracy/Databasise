@@ -372,6 +372,16 @@ def test_every_refusal_subclass_maps_to_a_non_success_status_carrying_its_named_
 
     instance = _REFUSAL_FACTORIES[exc_cls]()
     for key, value in vars(instance).items():
+        # CR-03: a leading-underscore attribute (UnbudgetableParticipantError's own
+        # `_internal_node_id`) is deliberately never exposed in the response body — see
+        # `_refusal_response`'s own docstring. Asserting its *absence* here, rather than skipping
+        # it silently, is what keeps this generic test from re-enshrining the leak it was fixed to
+        # prevent.
+        if key.startswith("_"):
+            assert key not in body, (
+                f"{exc_cls.__name__}'s private attribute {key!r} leaked into the response body"
+            )
+            continue
         if isinstance(value, EvidenceRef | QueryObject):
             value = value.model_dump()
         assert body.get(key) == value, (
