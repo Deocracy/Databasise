@@ -58,6 +58,27 @@ class EvidenceRef(_StrictModel):
     tier: str | None = None
 
 
+class MalformedEvidenceItemError(RuntimeError):
+    """Raised when a raw retrieval item reaching :func:`mint_evidence_refs` carries no ``"id"``
+    key — a differently-shaped item a future retrieval node could return — named explicitly rather
+    than letting a bare ``KeyError`` propagate (house style: this module's own
+    ``UnresolvableEvidenceReferenceError`` and ``databasise.stores.vector``'s own
+    ``VectorNamespaceNotSelectedError``/``VectorStoreCorruptedError`` follow the identical pattern:
+    a named exception carrying the specifics, never a bare ``KeyError``/``ValueError``).
+
+    Not a :class:`~databasise.seam.refusals.SeamRefusalError`: the malformed shape is the wiring's
+    own retrieval node output, not the consumer's own input — ``refusals.py``'s own module
+    docstring is explicit that a seam refusal names only what the consumer supplied.
+    """
+
+    def __init__(self, *, namespace: str, index: int):
+        self.namespace = namespace
+        self.index = index
+        super().__init__(
+            f"retrieval item at index {index} in namespace {namespace!r} carries no 'id' key"
+        )
+
+
 class UnresolvableEvidenceReferenceError(SeamRefusalError):
     """Raised when an ``EvidenceRef`` names a record its own namespace's store does not currently
     hold (§4's deref-raising discipline, T-04-08's mitigation). Never returns ``None`` and never an
@@ -77,11 +98,17 @@ def mint_evidence_refs(
     """Mint one ``EvidenceRef`` per raw retrieval item, in the exact order ``items`` arrives.
     Envelope assembly must not re-sort (04-02 Task 2) — this function does not either; it is a pure
     element-wise map, order-preserving by construction.
+
+    Raises :class:`MalformedEvidenceItemError` — WR-03, never a bare ``KeyError`` — for an item
+    carrying no ``"id"`` key (a differently-shaped item a future retrieval node could return).
     """
-    return [
-        EvidenceRef(ref=str(item["id"]), namespace=namespace, kind=kind, score=item.get("score"))
-        for item in items
-    ]
+    refs: list[EvidenceRef] = []
+    for index, item in enumerate(items):
+        item_id = item.get("id")
+        if item_id is None:
+            raise MalformedEvidenceItemError(namespace=namespace, index=index)
+        refs.append(EvidenceRef(ref=str(item_id), namespace=namespace, kind=kind, score=item.get("score")))
+    return refs
 
 
 def resolve_evidence_ref(ref: EvidenceRef, vector_store: Any) -> dict[str, Any]:
@@ -102,6 +129,7 @@ __all__ = [
     "CHUNKS_NAMESPACE",
     "TEXT_CHUNK_KIND",
     "EvidenceRef",
+    "MalformedEvidenceItemError",
     "UnresolvableEvidenceReferenceError",
     "mint_evidence_refs",
     "resolve_evidence_ref",

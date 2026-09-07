@@ -20,7 +20,9 @@ from databasise.seam._base import _StrictModel
 from databasise.seam.evidence import (
     CHUNKS_NAMESPACE,
     EvidenceRef,
+    MalformedEvidenceItemError,
     UnresolvableEvidenceReferenceError,
+    mint_evidence_refs,
 )
 from databasise.stores.vector import FaissVectorStore
 from databasise.tests.seam.conftest import _CONTENT
@@ -103,6 +105,18 @@ async def test_zero_item_retrieval_yields_an_empty_but_present_evidence_list(sto
     assert envelope.evidence == []
     assert isinstance(envelope.answer, str) and len(envelope.answer) > 0
     assert envelope.answer == _STUB_COMPLETION
+
+
+def test_mint_evidence_refs_raises_the_named_refusal_for_an_item_missing_its_id_key():
+    """WR-03: a retrieval item missing an "id" key used to let a bare `KeyError` propagate — now a
+    named exception carrying the malformed item's namespace/index, house style."""
+    items = [{"id": "chunk-1", "score": 0.9}, {"score": 0.4}]
+
+    with pytest.raises(MalformedEvidenceItemError) as exc_info:
+        mint_evidence_refs(items, namespace=CHUNKS_NAMESPACE)
+
+    assert exc_info.value.namespace == CHUNKS_NAMESPACE
+    assert exc_info.value.index == 1
 
 
 def test_module_docstring_names_each_chunkref_member_as_unpopulated():
