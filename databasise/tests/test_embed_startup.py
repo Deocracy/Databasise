@@ -150,14 +150,29 @@ def test_5_the_declared_runtime_dependency_set_is_exactly_six_and_none_is_a_db_c
     Phase 3 (03-01-PLAN.md Task 2): ``openai`` (D-06/D-07's LLM/embedding client primitive) and
     ``jsonpatch`` (D-13's RFC 6902 arm-patch application) are both new runtime dependencies, both
     approved through the package-legitimacy gate (03-01-SUMMARY.md).
+
+    04-05 (D-15): ``dist.requires`` now also lists the optional ``rest`` extra's own dependencies
+    (``fastapi``, ``uvicorn``) — ``importlib.metadata`` includes every ``[project.optional
+    -dependencies]`` entry in ``Requires-Dist``, each marked with its own ``; extra == "..."``
+    environment marker. Those are excluded from the *unconditional* count below by construction
+    (an extra-gated requirement is, by definition, not installed unless a consumer opts in) —
+    this is the metadata-level proof of D-15's own claim that the embedded library's mandatory
+    dependency set is unchanged by adding the optional REST transport.
     """
     dist = distribution("databasise")
     requires = dist.requires or []
 
-    assert len(requires) == 6, f"expected exactly 6 runtime dependencies, got {requires}"
+    unconditional = [req for req in requires if "extra ==" not in req]
+    assert len(unconditional) == 6, f"expected exactly 6 unconditional runtime dependencies, got {unconditional}"
 
-    names = {req.split(";")[0].split("[")[0].split("=")[0].split("<")[0].split(">")[0].strip().lower() for req in requires}
+    names = {req.split(";")[0].split("[")[0].split("=")[0].split("<")[0].split(">")[0].strip().lower() for req in unconditional}
     assert names == {"pycozo", "faiss-cpu", "rfc8785", "pydantic", "openai", "jsonpatch"}
+
+    # D-15: the rest extra's own dependencies exist in the metadata, but only as extra-gated
+    # (never unconditional) requirements — never installed unless a consumer opts in.
+    conditional = [req for req in requires if "extra ==" in req]
+    assert conditional, "expected the optional rest extra's dependencies to appear as extra-gated Requires-Dist entries"
+    assert all('extra == "rest"' in req for req in conditional), conditional
 
     _separate_server_clients = ("psycopg", "pymongo", "redis", "neo4j", "pymilvus", "qdrant", "opensearch")
     for name in names:
