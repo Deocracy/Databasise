@@ -11,8 +11,9 @@ import pydantic
 import pytest
 
 from databasise.clients.base import ChatResult, EmbeddingResult
-from databasise.runner.trace import TokenAccounting
+from databasise.runner.trace import NodeTrace, TokenAccounting
 from databasise.seam import Databasise, QueryObject, ResponseEnvelope
+from databasise.seam.engine import _select_answer
 
 _STUB_COMPLETION = "This is a stub completion for the seam's end-to-end tracer test."
 
@@ -74,3 +75,58 @@ def test_response_envelope_rejects_an_unexpected_keyword():
             degraded=False,
             wiring_id="should-not-be-accepted",
         )
+
+
+# --------------------------------------------------------------------------------------------- #
+# WR-01: _select_answer iterates `provides` (the wiring's own declared order), never scheduler
+# dispatch order, and refuses when more than one provides position produces a completion.
+# --------------------------------------------------------------------------------------------- #
+
+
+def _node_trace(node_id: str, *, effective_depth: str) -> NodeTrace:
+    return NodeTrace(
+        node_id=node_id,
+        instance_hash=f"sha256:fake-{node_id}",
+        depth="stage",
+        effective_depth=effective_depth,
+        wall_clock_ms=0,
+        cache_hit=False,
+        guards_fired=[],
+        budget_state="completed",
+        realised_budget_share=0.0,
+        cross_process_failure_cause=None,
+        resumable=True,
+        tokens=TokenAccounting(),
+    )
+
+
+def test_select_answer_uses_the_answering_provides_nodes_own_effective_depth():
+    provides = ["silent-node", "answering-node"]
+    provided = {"answering-node": {"completion": "the real answer"}}
+    node_by_id = {
+        "silent-node": _node_trace("silent-node", effective_depth="deep"),
+        "answering-node": _node_trace("answering-node", effective_depth="stage"),
+    }
+
+    answer, depth_label = _select_answer(provides, provided, node_by_id)
+
+    assert answer == "the real answer"
+    assert depth_label == "stage"
+
+
+def test_select_answer_refuses_when_more_than_one_provides_node_produces_a_completion():
+    """WR-01's own reproduction: two provides positions each producing a completion used to
+    silently last-write-win on whichever happened to appear last in scheduler dispatch order —
+    now refused explicitly instead."""
+    provides = ["node-a", "node-b"]
+    provided = {
+        "node-a": {"completion": "answer from a"},
+        "node-b": {"completion": "answer from b"},
+    }
+    node_by_id = {
+        "node-a": _node_trace("node-a", effective_depth="stage"),
+        "node-b": _node_trace("node-b", effective_depth="stage"),
+    }
+
+    with pytest.raises(RuntimeError):
+        _select_answer(provides, provided, node_by_id)
