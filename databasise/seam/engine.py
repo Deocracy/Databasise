@@ -224,6 +224,42 @@ def _mach11_events(
     return events
 
 
+def _select_answer(
+    provides: list[str],
+    provided: dict[str, Any],
+    node_by_id: dict[str, NodeTrace],
+) -> tuple[str, str]:
+    """WR-01: the envelope's ``answer``/``depth_label``, selected by iterating ``provides`` — the
+    wiring's own declared order — never scheduler dispatch order. Iterating dispatch order let
+    whichever provides-node happened to run last silently win for both fields, with no signal in
+    the envelope that a choice was made among several — exactly the implicit, order-dependent
+    behavior this package's own house style (explicit refusals over silent narrowing) prohibits
+    elsewhere. Raises ``RuntimeError`` if more than one ``provides`` node produces a completion —
+    no selector this phase resolves can produce that today (every arm this phase ships declares
+    exactly one ``provides`` position), so it is refused rather than silently resolved by
+    incidental order, mirroring ``_execute()``'s own precedent for a cyclic resolved wiring.
+    """
+    answer = ""
+    depth_label = "stage"
+    answered_node_id: str | None = None
+    for node_id in provides:
+        output = provided.get(node_id)
+        if not (isinstance(output, dict) and "completion" in output):
+            continue
+        if answered_node_id is not None:
+            raise RuntimeError(
+                f"wiring declares more than one provides position with a completion "
+                f"({answered_node_id!r} and {node_id!r} both did); the seam has no defined "
+                "tie-break for more than one answering provides node"
+            )
+        answered_node_id = node_id
+        answer = str(output["completion"])
+        node_trace = node_by_id.get(node_id)
+        if node_trace is not None:
+            depth_label = node_trace.effective_depth
+    return answer, depth_label
+
+
 class Databasise:
     """The consumer-facing async seam object (D-01). Holds ``store_root``/``workspace``, an
     optional ``PartRegistry`` (defaulting to ``default_registry()``) and an optional ``clients``
@@ -351,18 +387,11 @@ class Databasise:
             degradation_reason=scheduled["degradation_reason"],
         )
 
+        node_by_id = {node.node_id: node for node in record.nodes}
+
         provides = resolved.get("provides") or []
         provided = {node_id: scheduled["results"].get(node_id) for node_id in provides}
-
-        answer = ""
-        depth_label = "stage"
-        for node in record.nodes:
-            if node.node_id not in provides:
-                continue
-            depth_label = node.effective_depth
-            output = provided.get(node.node_id)
-            if isinstance(output, dict) and "completion" in output:
-                answer = str(output["completion"])
+        answer, depth_label = _select_answer(provides, provided, node_by_id)
 
         # Task 1/2 (04-02): mint evidence refs from the naive arm's own retrieval position, in its
         # own output order — no re-sort here (see _EVIDENCE_RETRIEVAL_NODE_ID's own docstring note
@@ -379,7 +408,6 @@ class Databasise:
 
         # 04-04 Task 2 (MACH-11): correlate the run's own recorded touches against its own wiring
         # graph — see this module's docstring for the rule's full statement (FA-08).
-        node_by_id = {node.node_id: node for node in record.nodes}
         seam_events = _mach11_events(parsed, touches, node_by_id)
 
         # 04-04 Task 1 (API-10, D-06): persist the RunRecord and mint its opaque trace reference
