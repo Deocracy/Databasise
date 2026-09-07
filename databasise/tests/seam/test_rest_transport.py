@@ -32,6 +32,7 @@ from databasise.runner.trace import TokenAccounting
 from databasise.seam import redact as redact_module
 from databasise.seam import rest as rest_module
 from databasise.seam import selectors as selectors_module
+from databasise.seam.engine import Databasise
 from databasise.seam.evidence import EvidenceRef, UnresolvableEvidenceReferenceError
 from databasise.seam.query import QueryObject
 from databasise.seam.redact import (
@@ -210,6 +211,58 @@ def test_the_streamed_events_assemble_to_the_same_content_the_non_streaming_endp
         item["ref"] for item in non_streaming["evidence"]
     ]
     assert final_events[0]["answer"] == non_streaming["answer"]
+
+
+async def test_rest_streamed_events_equal_databasise_query_streams_in_process_output(
+    synthetic_naive_store,
+):
+    """04-05-PLAN.md Task 2's own acceptance criterion, closing the gap 04-VERIFICATION.md found:
+    the CR-01 fix left `post_query_stream` reimplementing `Databasise.query_stream()`'s own
+    event-shaping inline instead of reusing it, so nothing proved the two stayed in sync (only
+    REST-streaming-vs-REST-non-streaming content equality was tested, above). Both paths now
+    iterate the identical `stream_envelope_events()` (`databasise/seam/engine.py`); this test is
+    what would fail if a future edit made the two copies diverge again. Excludes only
+    `trace_token` from the final event's comparison — the one field two independent runs
+    legitimately mint differently (D-06), mirroring `test_dual_transport.py`'s own exclusion.
+    """
+    clients = _stub_clients(synthetic_naive_store)
+
+    in_process_engine = Databasise(
+        store_root=synthetic_naive_store["store_root"],
+        workspace=synthetic_naive_store["workspace"],
+        clients=clients,
+    )
+    in_process_events = [
+        event
+        async for event in in_process_engine.query_stream(
+            QueryObject(text=_QUERY_BODY["query"]["text"])
+        )
+    ]
+
+    rest_app = create_app(
+        store_root=synthetic_naive_store["store_root"],
+        workspace=synthetic_naive_store["workspace"],
+        clients=clients,
+    )
+    rest_client = TestClient(rest_app)
+    streamed = rest_client.post("/query/stream", json=_QUERY_BODY)
+    assert streamed.status_code == 200
+    rest_events = _parse_sse_events(streamed.text)
+
+    assert rest_events and in_process_events
+    assert len(rest_events) == len(in_process_events)
+    for rest_event, in_process_event in zip(rest_events, in_process_events):
+        assert rest_event["kind"] == in_process_event["kind"]
+        if rest_event["kind"] != "final":
+            assert rest_event == in_process_event
+            continue
+        # D-06: each run mints its own fresh, random trace_token — equal values here would mean
+        # the token was not actually random, the opposite of what a passing test should prove.
+        assert rest_event["trace_token"] and in_process_event["trace_token"]
+        assert rest_event["trace_token"] != in_process_event["trace_token"]
+        rest_compared = {k: v for k, v in rest_event.items() if k != "trace_token"}
+        in_process_compared = {k: v for k, v in in_process_event.items() if k != "trace_token"}
+        assert rest_compared == in_process_compared
 
 
 def test_a_refusal_via_query_stream_returns_the_documented_non_success_response(client):

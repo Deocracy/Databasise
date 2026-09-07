@@ -53,17 +53,29 @@ covers every shape such a part could take.
 ``query()``'s entire body — selector resolution, run execution, evidence minting, token-breakdown
 assembly, MACH-11 correlation, trace persistence, envelope construction — now lives in
 ``_execute()``. ``query()`` is exactly ``return await self._execute(...)``; ``query_stream()`` is
-an async generator over the identical ``_execute()`` call, yielding the already-assembled
+an async generator over the identical ``_execute()`` call, shaping the already-assembled
 envelope's own fields incrementally (one event per evidence reference, in the envelope's own
 order, then one final event carrying every remaining field) rather than fabricating a second,
 divergent execution path or a token-level stream the underlying scheduler does not itself produce.
+
+**CR-01 gap closure: the REST transport reuses this event-shaping, never reimplements it.** The
+CR-01 review fix moved envelope resolution into a FastAPI ``Depends()`` dependency so a
+``SeamRefusalError`` is known and mapped to a 422 *before* the SSE response begins — but an async
+generator's own body (including ``query_stream()``'s) does not run any code until it is first
+iterated, so ``query_stream()`` itself cannot supply that eager-refusal guarantee to a REST caller.
+The module-level :func:`stream_envelope_events` below is the fix: it is the one event-shaping
+implementation both ``query_stream()`` and ``databasise.seam.rest``'s ``/query/stream`` endpoint
+iterate over. REST resolves the envelope eagerly via the identical ``_execute()`` call (through
+``query()``, in its own ``Depends()`` dependency) and then shapes it with the exact same function
+``query_stream()`` shapes it with — one shared shaping implementation, never two independently
+maintained copies that could silently diverge.
 """
 
 from __future__ import annotations
 
 import hashlib
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 from typing import Any
 
@@ -234,6 +246,20 @@ def _mach11_events(
     return events
 
 
+def stream_envelope_events(envelope: ResponseEnvelope) -> Iterator[dict[str, Any]]:
+    """The one event-shaping implementation :meth:`Databasise.query_stream` and
+    ``databasise.seam.rest``'s ``/query/stream`` endpoint both iterate — never two independently
+    maintained copies (see this module's docstring, "CR-01 gap closure"). Pure and synchronous on
+    purpose: it only reads an already-computed ``ResponseEnvelope``'s own fields, so calling it can
+    never itself raise a ``SeamRefusalError`` — every refusal is already resolved (or raised) by
+    the time a caller has an ``envelope`` to pass in. One event per evidence reference, in the
+    envelope's own order (no re-sort), then one final event carrying every remaining field.
+    """
+    for ref in envelope.evidence:
+        yield {"kind": "evidence", "evidence": ref.model_dump()}
+    yield {"kind": "final", **envelope.model_dump(exclude={"evidence"})}
+
+
 def _select_answer(
     provides: list[str],
     provided: dict[str, Any],
@@ -316,18 +342,16 @@ class Databasise:
     ) -> AsyncIterator[dict[str, Any]]:
         """The streaming variant of :meth:`query` (API-04, D-16). Shares ``query``'s selector
         resolution, execution and redaction entirely — it calls the identical ``_execute()`` this
-        class's own ``query()`` calls, computing the exact same ``ResponseEnvelope``, and differs
-        only in yielding the envelope's own fields incrementally rather than returning the
-        assembled model in one call. One event per evidence reference (the envelope's own order,
-        never re-sorted), then one final event carrying every remaining field — never a second,
-        divergent execution path, and never a token-level stream the underlying scheduler does not
-        itself produce.
+        class's own ``query()`` calls, computing the exact same ``ResponseEnvelope`` — and shapes
+        it into events via the module-level :func:`stream_envelope_events`, the same function
+        ``databasise.seam.rest``'s ``/query/stream`` endpoint iterates (see this module's
+        docstring, "CR-01 gap closure") rather than a second, divergent execution path or shaping
+        copy, and never a token-level stream the underlying scheduler does not itself produce.
         """
         del debug
         envelope = await self._execute(query_object, selector)
-        for ref in envelope.evidence:
-            yield {"kind": "evidence", "evidence": ref.model_dump()}
-        yield {"kind": "final", **envelope.model_dump(exclude={"evidence"})}
+        for event in stream_envelope_events(envelope):
+            yield event
 
     async def _execute(
         self,
@@ -466,4 +490,4 @@ class Databasise:
         return {key: value for key, value in record.items() if key in _NON_DEBUG_TRACE_FIELDS}
 
 
-__all__ = ["Databasise"]
+__all__ = ["Databasise", "stream_envelope_events"]
