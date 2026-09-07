@@ -245,3 +245,19 @@ async def test_accounted_store_keys_reads_the_deps_own_resolved_part_effects(sto
 
     assert _accounted_store_keys(parsed, "mut-in-deps") == {"kv"}
     assert _accounted_store_keys(parsed, "mut-out-of-deps") == set()
+
+
+async def test_the_fallback_spend_for_a_touched_but_untraced_node_uses_a_distinct_unknown_sentinel(
+    store_root,
+):
+    """WR-02: a node_id present in `touches` but absent from `node_by_id` (this run's own trace
+    never observed it, despite a recorded touch) must report a spend visibly distinct from a real,
+    honestly-reported zero-count "none" entry — never a fabricated-looking "none" a reader could
+    mistake for "this participant genuinely spent zero tokens" (D-08)."""
+    parsed, _scheduled, touches = await _run_fixture_and_synthesize_mutator_touches(store_root)
+
+    [event] = _mach11_events(parsed, touches, node_by_id={})
+
+    assert event.spend is not None
+    assert event.spend.counted_by == "unknown"
+    assert event.spend.counted_by != "none"

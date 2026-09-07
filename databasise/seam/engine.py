@@ -214,10 +214,20 @@ def _mach11_events(
 
         reported_nodes.add(node_id)
         node_trace = node_by_id.get(node_id)
+        # WR-02: a genuinely untraced node (this run's own node_by_id carries no NodeTrace for it,
+        # despite a recorded touch) reports the sentinel "unknown" — never the real "none" value a
+        # node that honestly spent zero tokens reports. Conflating the two would report a confident
+        # fabricated zero for a node this code never actually observed, in tension with
+        # UnbudgetableParticipantError's own stated principle (D-08: a plausible-looking fabricated
+        # count is worse than a refusal because it reads as measured). In production this branch
+        # should be unreachable — every node the scheduler's own recorder reports a touch for also
+        # receives a NodeTrace, even when halted (see test_mach11_event.py's own D-08 note) — but a
+        # visibly distinct sentinel, rather than deletion, is the safer choice if that guarantee
+        # ever changes.
         spend = (
             TokenBreakdownEntry(**node_trace.tokens.to_dict())
             if node_trace is not None
-            else TokenBreakdownEntry(counted_by="none")
+            else TokenBreakdownEntry(counted_by="unknown")
         )
         outcome = "halted" if node_trace is not None and node_trace.budget_state == "halted" else "completed"
         events.append(SeamEvent(component=part.name_at_version, spend=spend, outcome=outcome))
