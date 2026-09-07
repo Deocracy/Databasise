@@ -22,7 +22,7 @@ Audited 2026-08-29 against SYSTEM-MODEL.md, CONTRACT.md, RIG.md, PARTS.md, ANATO
 - [x] **MACH-08**: Storage keying per RIG §RUN: KV shared only where CONTRACT §3's `shared` scope admits it (effective depth `stage`); an arm containing an `opaque` node writes `quarantined`, never `shared`; per-part graph/vector namespaces; artifact sharing iff index-recipe hashes are identical
 - [x] **MACH-09**: Measurement posture for answer-level and index-side mutation classes defaults **off** per RIG §F3.2 and stays off in v1 unless §CM.3's A1–A4 cost-model inputs are replaced by measurements; fallback-ladder (degraded) runs are labelled via RIG §TR's `degraded`/`degradation_reason`
 - [ ] **MACH-10**: F-07 discharged: the snapshot/reset protocol CONTRACT §14.4 point 3 names for `mutable-store` components is defined, or the A/B exclusion is recorded as permanent
-- [ ] **MACH-11**: F-08 discharged: CONTRACT §18.2's envelope extended with the minimum seam-level event shape (`name@version`, spend, outcome) for the `mutates_store`-outside-`deps` exception class
+- [x] **MACH-11**: F-08 discharged: CONTRACT §18.2's envelope extended with the minimum seam-level event shape (`name@version`, spend, outcome) for the `mutates_store`-outside-`deps` exception class
 
 ### Modality Ports (MODAL)
 
@@ -43,7 +43,7 @@ Audited 2026-08-29 against SYSTEM-MODEL.md, CONTRACT.md, RIG.md, PARTS.md, ANATO
 - [ ] **API-07**: MCP surface exposes a curated intention-level tool set (ingest, query, delete, status, compare) with capability parity to REST; admission rule per §18.5 — a capability expressible as a §18.4 selector is never a new tool, and the surface never grows per-modality
 - [ ] **API-08**: Caller can run one query against two or more modalities on the same corpus in one call and receive per-arm results side-by-side, **keyed by the caller-supplied selectors** — never by arm_id, wiring name, node id, or modality name (§18.2/§18.3); comparison is inspection-only (per-arm outputs, traces, scores — no verdict) and is unaffected by §F3's default posture (RIG §RUN.4); one arm is a run, never a comparison (§RUN.3)
 - [ ] **API-09**: Caller can promote and roll back a wiring via RIG §PR.3's operator path: `promotion_provenance: operator_asserted` with non-empty `promotion_trace_ids`, no `verdict` and no `tier-of-decision`; explicit caller-invoked action only; promote-next/promote-now remain unavailable for answer-level and index-side classes under the default posture (MACH-09)
-- [ ] **API-10**: Caller can retrieve the node-by-node execution trace for a query per RIG §TR's schema, reached through §18.2's trace reference (debug-flagged; trace content lives behind the reference — internal identities never enter the envelope itself)
+- [x] **API-10**: Caller can retrieve the node-by-node execution trace for a query per RIG §TR's schema, reached through §18.2's trace reference (debug-flagged; trace content lives behind the reference — internal identities never enter the envelope itself)
 - [x] **API-11**: Response envelope carries per-query budget-token spend with `counted_by` on every token number, an explicit refusal — never a substituted or estimated number — for any `unbudgetable` participant §8 admits, and spend never conflated with capacity (§9)
 
 ### Embeddable Product (EMBED)
@@ -92,7 +92,7 @@ Maps REQ-IDs to phases (see .planning/ROADMAP.md). Every v1 requirement maps to 
 | MACH-08 | Phase 1 | Complete |
 | MACH-09 | Phase 2 | Complete |
 | MACH-10 | Phase 6 | Pending |
-| MACH-11 | Phase 4 | Pending |
+| MACH-11 | Phase 4 | Complete |
 | MODAL-01 | Phase 3 | Pending |
 | MODAL-02 | Phase 5 | Pending |
 | MODAL-03 | Phase 5 | Pending |
@@ -107,7 +107,7 @@ Maps REQ-IDs to phases (see .planning/ROADMAP.md). Every v1 requirement maps to 
 | API-07 | Phase 5 | Pending |
 | API-08 | Phase 6 | Pending |
 | API-09 | Phase 7 | Pending |
-| API-10 | Phase 4 | Pending |
+| API-10 | Phase 4 | Complete |
 | API-11 | Phase 4 | Complete |
 | EMBED-01 | Phase 1 | Complete |
 | EMBED-02 | Phase 4 | Pending |
