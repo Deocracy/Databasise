@@ -48,12 +48,22 @@ ships — the correlation is proven only against the fixture parts
 ``databasise/tests/seam/test_mach11_event.py`` registers. A later phase introducing a real
 out-of-``deps`` mutating part should re-check this rule against it rather than assume it already
 covers every shape such a part could take.
+
+**04-05, Task 2: ``query_stream`` (API-04, D-16) shares ``query``'s execution, never forks it.**
+``query()``'s entire body — selector resolution, run execution, evidence minting, token-breakdown
+assembly, MACH-11 correlation, trace persistence, envelope construction — now lives in
+``_execute()``. ``query()`` is exactly ``return await self._execute(...)``; ``query_stream()`` is
+an async generator over the identical ``_execute()`` call, yielding the already-assembled
+envelope's own fields incrementally (one event per evidence reference, in the envelope's own
+order, then one final event carrying every remaining field) rather than fabricating a second,
+divergent execution path or a token-level stream the underlying scheduler does not itself produce.
 """
 
 from __future__ import annotations
 
 import hashlib
 import uuid
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
@@ -228,6 +238,38 @@ class Databasise:
         opaque; a caller wanting the node-by-node trace exchanges it through ``resolve_trace``.
         """
         del debug
+        return await self._execute(query_object, selector)
+
+    async def query_stream(
+        self,
+        query_object: QueryObject,
+        selector: Selector | None = None,
+        *,
+        debug: bool = False,
+    ) -> AsyncIterator[dict[str, Any]]:
+        """The streaming variant of :meth:`query` (API-04, D-16). Shares ``query``'s selector
+        resolution, execution and redaction entirely — it calls the identical ``_execute()`` this
+        class's own ``query()`` calls, computing the exact same ``ResponseEnvelope``, and differs
+        only in yielding the envelope's own fields incrementally rather than returning the
+        assembled model in one call. One event per evidence reference (the envelope's own order,
+        never re-sorted), then one final event carrying every remaining field — never a second,
+        divergent execution path, and never a token-level stream the underlying scheduler does not
+        itself produce.
+        """
+        del debug
+        envelope = await self._execute(query_object, selector)
+        for ref in envelope.evidence:
+            yield {"kind": "evidence", "evidence": ref.model_dump()}
+        yield {"kind": "final", **envelope.model_dump(exclude={"evidence"})}
+
+    async def _execute(
+        self,
+        query_object: QueryObject,
+        selector: Selector | None,
+    ) -> ResponseEnvelope:
+        """The one execution path both ``query`` and ``query_stream`` call — see this module's
+        docstring (04-05, Task 2) for why splitting it out this way is what makes "shares
+        resolution, execution and redaction" true by construction rather than by convention."""
         check_consumable(query_object, self.registry)
 
         resolved = resolve_selector(selector, registry=self.registry, store_root=self.store_root)

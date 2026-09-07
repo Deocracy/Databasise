@@ -16,6 +16,21 @@ learn what a token resolves to is to already hold a record this module minted it
 pattern exactly: its own database file (``trace.db``) beside ``ledger.db`` at the store root, one
 table, ``PRAGMA journal_mode=WAL``. Unlike the ledger, this table is not append-only-with-triggers —
 a trace record is never amended or superseded, so there is nothing analogous to guard against.
+
+**04-05, Task 1 (Rule 3 deviation): ``check_same_thread=False``.** Unlike ``databasise/stores/kv.py``'s
+connection (whose own docstring defers this exact change as "real surgery with real correctness
+risk" for the *runner's* structured concurrency), ``TraceStore`` is constructed exactly once, in
+``Databasise.__init__``, and is then used for the *lifetime* of that engine instance. 04-05's REST
+transport constructs the engine once (an application factory, ``databasise.seam.rest.create_app``)
+but then serves every request on the ASGI server's own event-loop thread — which, under a test
+driven by ``starlette.testclient.TestClient``, is a *different* OS thread than the one that
+constructed the engine (`TestClient` runs the ASGI app on an ``anyio`` portal thread). This is
+never concurrent, cross-thread *access* (exactly one thread executes at any instant, since a
+single connection is only ever awaited sequentially through the async engine) — only a mismatch
+between the *constructing* thread and the *using* thread, which ``check_same_thread=False`` is
+the documented, correct escape hatch for. A real multi-worker/multi-threaded deployment sharing
+one ``TraceStore`` connection across concurrent requests remains out of scope and unaddressed by
+this change, exactly as it always was.
 """
 
 from __future__ import annotations
@@ -55,7 +70,10 @@ class TraceStore:
     def __init__(self, store_root: str | Path) -> None:
         db_path = Path(store_root) / "trace.db"
         db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(db_path)
+        # check_same_thread=False: see this module's own docstring (04-05, Task 1) — safe here
+        # because this connection is never accessed concurrently from more than one thread at a
+        # time, only sequentially from a thread that may differ from the one that opened it.
+        self._conn = sqlite3.connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._create_schema()
