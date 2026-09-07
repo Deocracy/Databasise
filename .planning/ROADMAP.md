@@ -164,7 +164,7 @@ Plans:
   4. Caller sets the debug flag and retrieves the node-by-node execution trace through the envelope's trace reference — internal node identities stay behind the reference and never enter the envelope itself
   5. The same seam is reachable two ways with identical behavior: `import databasise` in-process, and the optional REST layer over the same call path
 
-**Plans**: 4/5 plans executed
+**Plans**: 5/5 plans executed
 
 **Wave 1**
 
@@ -181,7 +181,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3)*
 
-- [ ] 04-05-PLAN.md — the optional REST transport with SSE streaming over the same seam object, the dual-transport conformance test, and this phase's COVERAGE.md
+- [x] 04-05-PLAN.md — the optional REST transport with SSE streaming over the same seam object, the dual-transport conformance test, and this phase's COVERAGE.md
 
 ### Phase 5: Opaque-Side Admission
 
@@ -239,7 +239,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Machine Core | 10/10 | Complete    | 2026-08-31 |
 | 2. Falsifier Gate | 4/4 | Complete    | 2026-08-31 |
 | 3. LightRAG Query Side | 13/13 | In Progress|  |
-| 4. The Seam | 4/5 | In Progress|  |
+| 4. The Seam | 5/5 | In Progress|  |
 | 5. Opaque-Side Admission | 0/TBD | Not started | - |
 | 6. HippoRAG 2 & Side-by-Side | 0/TBD | Not started | - |
 | 7. Promotion & Rollback | 0/TBD | Not started | - |

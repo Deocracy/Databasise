@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.0
 current_phase: 04
 current_phase_name: The Seam
-status: executing
-stopped_at: Completed 04-04-PLAN.md
-last_updated: "2026-09-07T00:38:49.614Z"
+status: verifying
+stopped_at: Completed 04-05-PLAN.md
+last_updated: "2026-09-07T02:02:05.171Z"
 last_activity: 2026-09-06
 last_activity_desc: Phase 04 execution started
-state_head: a758504314a382fc30de1f752ef78f190826e4c3
+state_head: 3f2d5cfa6be6ed700ecf4e5289e9c5e095237dfc
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 32
-  completed_plans: 31
+  completed_plans: 32
 milestone_name: milestone
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 
 Phase: 04 (The Seam) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-06 — Phase 04 execution started
 
 Progress: [██████████] 100%
@@ -68,6 +68,7 @@ Progress: [██████████] 100%
 | Phase 04 P02 | 45min | 3 tasks | 8 files |
 | Phase 04 P03 | 70min | 3 tasks | 9 files |
 | Phase 04 P04 | 90min | 3 tasks | 7 files |
+| Phase 04 P05 | 45min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,9 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 04]: Checkpoint answer applied: dedicated-alias-column. Added an additive `alias TEXT` column to the ledger schema rather than overloading mutation_id, since the ledger is append-only and a Phase 7 row could never be disentangled later. Ledger.by_alias projects the active pointer keyed on alias; the seam's alias branch resolves the returned record's mutation_id as an arm name.
 - [Phase 04]: Capability selector tie-break is smallest-resolved-wiring-wins, not declared-arm-order: every arm's effect set is not disjoint from its neighbours' (bypass's calls_llm is a subset of every other arm's effects), so a declared-order tie-break would make every arm but naive permanently unreachable by capability alone.
 - [Phase 04]: The default selector's opaque exclusion (§8 condition 7) is scoped to the wiring's own provides node, not "contains an opaque node anywhere" — naive itself contains the dep-free embedder-index node at opaque structural depth, and a whole-wiring exclusion would have made the default selector unable to resolve naive at all.
+- [Phase 04]: 04-05: rest and uvicorn go under [project.optional-dependencies] (never [dependency-groups], which a pip install cannot reach externally); httpx joins the existing dev group. — Package legitimacy for fastapi/uvicorn/httpx confirmed by the developer 2026-09-06 (04-CHECKPOINT-ANSWERS.md). A PEP 735 dependency group is not pip-installable by an external consumer, which would make EMBED-02's "optional layer anyone can opt into" false in practice.
+- [Phase 04]: 04-05: query_stream() shares query()'s identical _execute() path, yielding evidence events then one final event, rather than fabricating token-level LLM streaming. — The underlying scheduler produces one completed run, not incremental LLM tokens. D-16 only requires streamed content to assemble to the same answer/evidence the non-streaming endpoint returns, which this design proves without inventing streaming the execution model does not support.
+- [Phase 04]: 04-05: EMBED-02 marked complete for its REST half only (FA-10) — the MCP transport is Deferred Idea API-07, out of this phase's scope. — Per the plan's own instruction to state the qualification in the SUMMARY rather than leave it unqualified. Dual-transport conformance is proven for REST vs in-process; a later phase shipping API-07 inherits the same thin-adapter invariant rather than a fresh design question.
 
 ### Pending Todos
 
@@ -132,6 +136,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-07T00:38:49.363Z
-Stopped at: Completed 04-04-PLAN.md
+Last session: 2026-09-07T02:02:04.929Z
+Stopped at: Completed 04-05-PLAN.md
 Resume file: None

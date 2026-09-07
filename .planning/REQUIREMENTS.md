@@ -37,7 +37,7 @@ Audited 2026-08-29 against SYSTEM-MODEL.md, CONTRACT.md, RIG.md, PARTS.md, ANATO
 - [ ] **API-01**: Caller can ingest documents (raw upload and structured payload) with async job status polling
 - [ ] **API-02**: Caller can delete a document with graph-aware cleanup of entities/edges shared across documents
 - [x] **API-03**: Caller queries with CONTRACT §18.1's query **object** (never a query string); selection via §18.4's four selectors (alias, capability, harness, default) with an unsatisfiable selector returning an explicit refusal naming what was missing, never a silent fallback; an unconsumable query-object member is refused by name; opaque nodes are excluded from the default selector (§8 condition 7); the response is the §18.2 closed envelope, invariant across modality swap
-- [ ] **API-04**: Caller can stream query responses
+- [x] **API-04**: Caller can stream query responses
 - [x] **API-05**: Every answer carries citations/provenance (evidence references per §18.2)
 - [ ] **API-06**: Caller can introspect health, corpus status, and document counts (bounded/paginated, never full dumps)
 - [ ] **API-07**: MCP surface exposes a curated intention-level tool set (ingest, query, delete, status, compare) with capability parity to REST; admission rule per §18.5 — a capability expressible as a §18.4 selector is never a new tool, and the surface never grows per-modality
@@ -49,7 +49,7 @@ Audited 2026-08-29 against SYSTEM-MODEL.md, CONTRACT.md, RIG.md, PARTS.md, ANATO
 ### Embeddable Product (EMBED)
 
 - [x] **EMBED-01**: Databasise installs and runs as a single self-contained process tree on the local machine — importable as a Python library, embedded stores (Cozo pinned/vendored for graph, Faiss for vector, SQLite stdlib for KV/lexical/artifact-registry-index/ledger, filesystem for blob), no external DB servers, no Docker; node `execution_mode` remains derived per CONTRACT §3 (subprocess/confined-unit placements are legal inside the tree — only pure, non-iterative nodes may be hosted in-process). *Amended 2026-08-30 per CONTEXT.md D-05: the prior text named LanceDB, which was adopted from `.planning/research/STACK.md:26`'s factually wrong description of the incumbent. Cozo + Faiss are the fork's actual defaults (`v1/lightrag/lightrag.py:275-284`, `v1/lightrag/api/config.py:64-68`) and are owner-locked.*
-- [ ] **EMBED-02**: The REST + MCP server is a thin optional layer over the same seam the embedded library exposes — one seam, two transports
+- [x] **EMBED-02**: The REST + MCP server is a thin optional layer over the same seam the embedded library exposes — one seam, two transports
 
 ### Model Hardening (HARD) — folded in at first-touch
 
@@ -101,7 +101,7 @@ Maps REQ-IDs to phases (see .planning/ROADMAP.md). Every v1 requirement maps to 
 | API-01 | Phase 5 | Pending |
 | API-02 | Phase 5 | Pending |
 | API-03 | Phase 4 | Complete |
-| API-04 | Phase 4 | Pending |
+| API-04 | Phase 4 | Complete |
 | API-05 | Phase 4 | Complete |
 | API-06 | Phase 5 | Pending |
 | API-07 | Phase 5 | Pending |
@@ -110,7 +110,7 @@ Maps REQ-IDs to phases (see .planning/ROADMAP.md). Every v1 requirement maps to 
 | API-10 | Phase 4 | Complete |
 | API-11 | Phase 4 | Complete |
 | EMBED-01 | Phase 1 | Complete |
-| EMBED-02 | Phase 4 | Pending |
+| EMBED-02 | Phase 4 | Complete |
 | HARD-01 | Phase 7 | Pending |
 | HARD-02 | Phase 7 | Pending |
 | HARD-03 | Phase 5 | Pending |
