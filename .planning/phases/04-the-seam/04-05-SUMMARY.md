@@ -213,17 +213,24 @@ signal, "too-new" on every package's newest-release timestamp), not a substantiv
 ## Accomplishments
 
 - `databasise/seam/rest.py`: `create_app()` builds one `Databasise` instance and wires four
-  endpoints, each exactly deserialize → await the identical in-process method → serialize —
-  `POST /query`, `POST /query/stream` (SSE via FastAPI's native `fastapi.sse.EventSourceResponse`,
-  no `sse-starlette`), `POST /evidence/resolve`, `POST /trace/resolve`. One
+  endpoints — `POST /query`, `POST /query/stream` (SSE via FastAPI's native
+  `fastapi.sse.EventSourceResponse`, no `sse-starlette`), `POST /evidence/resolve`,
+  `POST /trace/resolve`. `/query`, `/evidence/resolve`, and `/trace/resolve` are each exactly
+  deserialize → await the identical in-process method → serialize; `/query/stream` resolves the
+  envelope eagerly (a `Depends()` dependency awaiting `Databasise.query()`) and then shapes it
+  with `databasise.seam.engine.stream_envelope_events()`, the identical event-shaping function
+  `Databasise.query_stream()` itself shapes with — see Deviation 5 below for why streaming needed
+  this split rather than the other three endpoints' plain call-through. One
   `app.add_exception_handler(SeamRefusalError, ...)` maps every current and future refusal
   subclass to a 422 carrying the refusal's own named attribute(s) — Starlette dispatches by MRO,
   so the handler needs no per-type enumeration of its own.
 - `databasise/seam/engine.py`: `query()` is now `return await self._execute(...)`;
-  `query_stream()` is a new async generator over the identical `_execute()`, yielding one SSE
-  event per evidence reference then one final event with every remaining field — the streaming
-  variant D-16 requires, sharing selector resolution, execution and redaction by construction
-  rather than convention.
+  `query_stream()` is an async generator over the identical `_execute()`, shaping its already-
+  assembled envelope via the module-level `stream_envelope_events()` — one SSE event per evidence
+  reference then one final event with every remaining field — the streaming variant D-16 requires,
+  sharing selector resolution, execution and redaction by construction rather than convention.
+  `stream_envelope_events()` is the same function `databasise.seam.rest`'s `/query/stream`
+  endpoint shapes its own events with (Deviation 5).
 - `databasise/seam/trace_store.py`: `TraceStore`'s SQLite connection now opens with
   `check_same_thread=False` (Rule 3 — see Deviations) — the engine is constructed once but served
   from whatever thread the ASGI app's event loop runs on, which differs from the constructing
@@ -328,11 +335,36 @@ exactly the two transports this plan proves equivalent — no row was missing, n
 operation that does not exist, and no operation shipped that the table does not name. No edit was
 made rather than a cosmetic one for its own sake.
 
+**5. [Post-verification correction, 04-GAP-FIX.md] The CR-01 review fix (commit `8536200`)
+orphaned `Databasise.query_stream()`, and this SUMMARY's own claims above went stale with it.**
+- **Found during:** `04-VERIFICATION.md`'s independent re-derivation of the CR-01 fix. Moving
+  envelope resolution into a FastAPI `Depends()` dependency (necessary: an async generator's body
+  does not run until first iterated, so `query_stream()` itself cannot supply the pre-SSE-byte
+  refusal guarantee CR-01 requires) left `post_query_stream` reimplementing the two shaping `yield`
+  lines inline instead of iterating `query_stream()` — an unintended side effect the CR-01 fix
+  itself did not reconcile with this plan's own "REST reuses, never reimplements" design, or with
+  this SUMMARY's own accomplishments text above (both corrected in place, not just noted here).
+  `grep -rn "\.query_stream(" databasise/` found zero callers at verification time.
+- **Fix:** extracted the two shaping `yield` lines into a module-level
+  `databasise.seam.engine.stream_envelope_events(envelope)` — pure, synchronous, and callable
+  without re-triggering resolution. `query_stream()` now shapes through it; `post_query_stream`
+  shapes the eagerly-`Depends()`-resolved envelope through the identical function. REST keeps
+  CR-01's eager-refusal property (resolution still happens in `Depends()`, before the SSE response
+  begins) while genuinely sharing the shaping implementation rather than duplicating it.
+- **Files affected:** `databasise/seam/engine.py`, `databasise/seam/rest.py`,
+  `databasise/tests/seam/test_rest_transport.py` (new REST-streaming-vs-in-process-`query_stream`
+  parity test, mirroring `test_dual_transport.py`'s own `trace_token`-exclusion pattern).
+- **Verification:** `cd databasise && uv run --extra rest pytest -q tests/seam/` — 116 passed
+  (115 baseline + 1 new parity test); `cd databasise && uv run --extra rest pytest -q` — full
+  suite green at parity with the 581-passed baseline (see `04-GAP-FIX.md` for the exact count and
+  where it ran).
+
 **Total deviations:** 2 auto-fixed (Rule 3, both blocking issues), 1 sequencing note, 1 explicit
-non-change.
+non-change, 1 post-verification correction (Deviation 5).
 **Impact on plan:** None on the plan's own stated goals — every task's acceptance criteria and the
 plan-level `<verification>` block all pass, including the full suite both with and without the
-`rest` extra active.
+`rest` extra active. Deviation 5 closes the one gap `04-VERIFICATION.md` found (streaming
+REST/in-process reuse) without reopening any of the other 21 verified truths.
 
 ## Requirement Note: EMBED-02 Partial Scope (FA-10)
 

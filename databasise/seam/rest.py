@@ -45,7 +45,7 @@ except ImportError as exc:  # pragma: no cover - exercised only without the `res
 from pydantic import BaseModel, ConfigDict
 
 from databasise.parts.registry import PartRegistry
-from databasise.seam.engine import Databasise
+from databasise.seam.engine import Databasise, stream_envelope_events
 from databasise.seam.envelope import ResponseEnvelope
 from databasise.seam.evidence import EvidenceRef
 from databasise.seam.query import QueryObject
@@ -143,9 +143,15 @@ def create_app(
     async def post_query_stream(
         envelope: ResponseEnvelope = Depends(_resolve_streamed_envelope),
     ):
-        for ref in envelope.evidence:
-            yield {"kind": "evidence", "evidence": ref.model_dump()}
-        yield {"kind": "final", **envelope.model_dump(exclude={"evidence"})}
+        """Shapes the eagerly-resolved ``envelope`` with ``databasise.seam.engine``'s own
+        ``stream_envelope_events`` -- the identical function ``Databasise.query_stream()`` shapes
+        its own events with (see ``engine.py``'s module docstring, "CR-01 gap closure"). This
+        endpoint never re-implements the shaping itself: resolution happens eagerly above (via
+        ``_resolve_streamed_envelope``, so a refusal maps to the documented 422 before the first
+        SSE byte is written), and shaping is the one function both transports iterate.
+        """
+        for event in stream_envelope_events(envelope):
+            yield event
 
     @app.post("/evidence/resolve")
     async def post_resolve_evidence(ref: EvidenceRef) -> dict[str, Any]:
