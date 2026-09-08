@@ -35,7 +35,7 @@ Audited 2026-08-29 against SYSTEM-MODEL.md, CONTRACT.md, RIG.md, PARTS.md, ANATO
 ### Product Surface (API)
 
 - [ ] **API-01**: Caller can ingest documents (raw upload and structured payload) with async job status polling
-- [ ] **API-02**: Caller can delete a document with graph-aware cleanup of entities/edges shared across documents
+- [x] **API-02**: Caller can delete a document with graph-aware cleanup of entities/edges shared across documents
 - [x] **API-03**: Caller queries with CONTRACT §18.1's query **object** (never a query string); selection via §18.4's four selectors (alias, capability, harness, default) with an unsatisfiable selector returning an explicit refusal naming what was missing, never a silent fallback; an unconsumable query-object member is refused by name; opaque nodes are excluded from the default selector (§8 condition 7); the response is the §18.2 closed envelope, invariant across modality swap
 - [x] **API-04**: Caller can stream query responses
 - [x] **API-05**: Every answer carries citations/provenance (evidence references per §18.2)
@@ -99,7 +99,7 @@ Maps REQ-IDs to phases (see .planning/ROADMAP.md). Every v1 requirement maps to 
 | MODAL-04 | Phase 6 | Pending |
 | MODAL-05 | Phase 6 | Pending |
 | API-01 | Phase 5 | Pending |
-| API-02 | Phase 5 | Pending |
+| API-02 | Phase 5 | Complete |
 | API-03 | Phase 4 | Complete |
 | API-04 | Phase 4 | Complete |
 | API-05 | Phase 4 | Complete |

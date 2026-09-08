@@ -196,7 +196,7 @@ Plans:
   4. Caller reads health, corpus status, and document counts in bounded paginated form; a full corpus or index dump is never returned
   5. The MCP surface exposes the same capabilities as REST as intention-level tools; a capability expressible as a §18.4 selector never becomes a new tool, and adding a modality adds no tool
 
-**Plans**: 7 plans
+**Plans**: 3/7 plans executed
 
 Plans:
 **Wave 1**
@@ -206,7 +206,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 05-03-PLAN.md — The delete port: a separate §19.6 registration, MACH-11's first real correlation, graph-aware cleanup proved (wave 2)
+- [x] 05-03-PLAN.md — The delete port: a separate §19.6 registration, MACH-11's first real correlation, graph-aware cleanup proved (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -263,7 +263,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Falsifier Gate | 4/4 | Complete    | 2026-08-31 |
 | 3. LightRAG Query Side | 13/13 | In Progress|  |
 | 4. The Seam | 5/5 | Complete    | 2026-09-06 |
-| 5. Opaque-Side Admission | 0/TBD | Not started | - |
+| 5. Opaque-Side Admission | 3/7 | In Progress|  |
 | 6. HippoRAG 2 & Side-by-Side | 0/TBD | Not started | - |
 | 7. Promotion & Rollback | 0/TBD | Not started | - |
 
