@@ -89,5 +89,16 @@
     "source_grounding_authority": "grep"
   },
   "mode": "yolo",
-  "granularity": "standard"
+  "granularity": "standard",
+  "gsd_graph": {
+    "enabled": true,
+    "auto_update": true,
+    "store_dir": ".gsd-graph",
+    "report_on_sync": true,
+    "communities_on_sync": false,
+    "full_on_enable": true
+  },
+  "graphify": {
+    "enabled": true
+  }
 }
