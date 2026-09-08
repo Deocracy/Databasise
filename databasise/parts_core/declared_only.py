@@ -1,8 +1,8 @@
 """D-04's declaration-only registry entries for the Falsifier-2 named wirings (REQUIREMENTS.md
-MACH-01: the opaque codebase-memory-mcp, and the half-decomposed full LightRAG). Each is schema +
-effects[] + structural_depth + artifact_scope, with ``body`` set to ``None`` — Phase 2 computes
-over these without waiting on Phase 3's real port. A ``None`` body makes a part un-executable,
-never a silent no-op: see ``registry.dispatch()``'s explicit refusal.
+MACH-01: the opaque codebase-memory-mcp, and the half-decomposed full LightRAG). Each started as
+schema + effects[] + structural_depth + artifact_scope, with ``body`` set to ``None`` — Phase 2
+computed over these without waiting on Phase 3's real port. A ``None`` body makes a part
+un-executable, never a silent no-op: see ``registry.dispatch()``'s explicit refusal.
 
 03-08-PLAN.md Task 3: the third original entry here, ``lightrag/query-side`` (version ``0.1.0``,
 the decomposed lightrag-local query side, MACH-01's first named wiring), is retired — Phase 3 ported its real
@@ -10,15 +10,26 @@ eighteen positions (``databasise/parts_core/lightrag/``), so the stand-in stub i
 not merely dropped from ``DECLARED_ONLY_PARTS``: no reference to its name survives anywhere under
 ``databasise/`` (``databasise/evidence/wirings/w1-lightrag-query-side.json`` and
 ``w3-lightrag-half-decomposed.json`` were rewritten to resolve against the real ports instead).
+
+05-01-PLAN.md Task 1: ``LIGHTRAG_FULL_INGEST_PART`` is no longer declaration-only — it now carries
+a real ``body`` (``databasise.parts_core.lightrag.full_ingest.full_ingest_body``) and a real §8
+``admission`` record (``LIGHTRAG_FULL_INGEST_ADMISSION``). ``CODEBASE_MEMORY_MCP_PART`` remains
+declaration-only (``body=None``) until plan 05-06 admits it.
 """
 
 from __future__ import annotations
 
 from databasise.parts.schema import Part
+from databasise.parts_core.lightrag.full_ingest import (
+    LIGHTRAG_FULL_INGEST_ADMISSION,
+    full_ingest_body,
+)
 
 # The opaque codebase-memory-mcp part (MACH-01's second named wiring): opaque structural depth,
 # declaring self_storage and fs — which is why it is legal at any depth: a self_storage write is
-# never a shared write (CONTRACT §3's three-scope table).
+# never a shared write (CONTRACT §3's three-scope table). Declaration-only until plan 05-06 admits
+# it (body=None, no admission requirement for a declaration-only part — PartRegistry.register only
+# enforces admission for an executable, body-carrying opaque part).
 CODEBASE_MEMORY_MCP_PART = Part(
     name_at_version="codebase-memory-mcp@0.1.0",
     kind="opaque",
@@ -29,17 +40,19 @@ CODEBASE_MEMORY_MCP_PART = Part(
     artifact_scope="self_storage",
 )
 
-# The half-decomposed full LightRAG (MACH-01's third named wiring): opaque structural depth for
-# the ingest side, declaring calls_llm and writes_artifact with artifact_scope="quarantined",
-# because an opaque node MAY write quarantined and MUST NOT write shared (CONTRACT §3).
+# The full LightRAG ingest core (MACH-01's third named wiring): opaque structural depth, declaring
+# calls_llm and writes_artifact with artifact_scope="quarantined", because an opaque node MAY
+# write quarantined and MUST NOT write shared (CONTRACT §3). Real, executable body + real §8
+# admission record as of 05-01-PLAN.md Task 1 — no longer a declaration-only stub.
 LIGHTRAG_FULL_INGEST_PART = Part(
     name_at_version="lightrag/full-ingest@0.1.0",
     kind="opaque",
     structural_depth="opaque",
     effects=["calls_llm", "writes_artifact", "reads_kv", "reads_graph"],
     upstream_ref="v1/lightrag/pipeline.py",
-    body=None,
+    body=full_ingest_body,
     artifact_scope="quarantined",
+    admission=LIGHTRAG_FULL_INGEST_ADMISSION,
 )
 
 DECLARED_ONLY_PARTS: tuple[Part, ...] = (

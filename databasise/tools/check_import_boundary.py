@@ -23,17 +23,20 @@ constants would report a permanent false positive and train a reader to ignore t
 exclusion is doing real work by grepping this file directly (see ``tests/test_import_boundary.py``
 Test 5).
 
-**Subprocess-entry-point exclusion (03-07-PLAN.md Task 1 deviation).** A small, explicitly named
-set of files under ``databasise/`` are, by design, never imported by any ``databasise/`` module —
-they are leaf scripts launched only as a subprocess under a *different* interpreter (v1's own
-``uv``-managed venv), and their entire reason to exist is to call into v1's ``lightrag`` package
-from inside that other interpreter (``databasise/parity/v1_driver_script.py``'s own module
-docstring explains the split in full). Scanning them for a forbidden ``import lightrag`` would
-flag intentional, load-bearing code as a violation of a rule whose purpose — keep
-``databasise/``'s own interpreter from ever importing v1 — they do not violate: nothing under
-``databasise/`` imports them either. ``_SUBPROCESS_ENTRY_POINT_EXCLUSIONS`` names these files by
-resolved path, exactly like the self-exclusion above, so the exception is auditable rather than a
-silent gap in the scan.
+**Subprocess-entry-point exclusion (03-07-PLAN.md Task 1 deviation; extended by 05-01-PLAN.md
+Task 1).** A small, explicitly named set of files under ``databasise/`` are, by design, never
+imported by any ``databasise/`` module — they are leaf scripts launched only as a subprocess under
+a *different* interpreter (v1's own ``uv``-managed venv), and their entire reason to exist is to
+call into v1's ``lightrag`` package from inside that other interpreter
+(``databasise/parity/v1_driver_script.py``'s own module docstring explains the split in full).
+Scanning them for a forbidden ``import lightrag`` would flag intentional, load-bearing code as a
+violation of a rule whose purpose — keep ``databasise/``'s own interpreter from ever importing v1
+— they do not violate: nothing under ``databasise/`` imports them either.
+``_SUBPROCESS_ENTRY_POINT_EXCLUSIONS`` names these files by resolved path, exactly like the
+self-exclusion above, so the exception is auditable rather than a silent gap in the scan.
+``v1_corpus_driver_script.py`` (``databasise/foreign/``) joined this list in 05-01-PLAN.md Task 1:
+it serves the corpus-side write operations (ingest today; delete/status added by 05-03/05-04),
+the write-capable sibling to ``v1_driver_script.py``'s read-only query side.
 
 Import-line-scoped deliberately: only an actual ``import``/``from ... import`` statement or a
 dynamic-import call is checked against ``lightrag``/``v1`` — never an arbitrary string anywhere in
@@ -65,7 +68,7 @@ _STORES_EXCLUDED_MODULES = frozenset({"__init__.py", "base.py"})
 # by filename (matched against ``Path.name``, mirroring the self-exclusion's resolved-path
 # comparison one directory up), so the exception stays a short, explicit, auditable list rather
 # than a silent gap in the scan.
-_SUBPROCESS_ENTRY_POINT_EXCLUSIONS = frozenset({"v1_driver_script.py"})
+_SUBPROCESS_ENTRY_POINT_EXCLUSIONS = frozenset({"v1_driver_script.py", "v1_corpus_driver_script.py"})
 
 
 @dataclass(frozen=True)

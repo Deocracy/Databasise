@@ -21,9 +21,12 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Annotated, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+if TYPE_CHECKING:
+    from databasise.parts.admission import AdmissionRecord
 
 Effect = Literal[
     "reads_kv",
@@ -110,6 +113,11 @@ class Part:
     ``artifact_scope`` is set only for a part that declares ``writes_artifact`` — CONTRACT §3's
     three-scope table (``shared``/``quarantined``/``self_storage``) — and stays ``None`` for a
     part that writes no artifact at all.
+
+    ``admission`` (05-01-PLAN.md) is required for an executable (``body is not None``) opaque
+    part — CONTRACT §8's admission record. ``PartRegistry.register`` enforces this at
+    registration time (``UnadmittedOpaquePartError``); a declaration-only part (``body is None``)
+    carries no admission requirement.
     """
 
     name_at_version: str
@@ -119,6 +127,7 @@ class Part:
     upstream_ref: str | None
     body: Callable[[NodeContext], Any] | None = None
     artifact_scope: ArtifactScope | None = None
+    admission: "AdmissionRecord | None" = None
 
 
 class WiringNode(BaseModel):

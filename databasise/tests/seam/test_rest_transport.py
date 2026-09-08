@@ -43,6 +43,7 @@ from databasise.seam.redact import (
 from databasise.seam.refusals import (
     EmptyQueryObjectError,
     ForbiddenSelectorInputError,
+    ForeignEngineRefusalError,
     SeamRefusalError,
     UnconsumableQueryMemberError,
     UnsatisfiableSelectorError,
@@ -379,6 +380,9 @@ _REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
     UnresolvableEvidenceReferenceError: lambda: UnresolvableEvidenceReferenceError(
         EvidenceRef(ref="missing", namespace="chunks", kind="text_chunk")
     ),
+    ForeignEngineRefusalError: lambda: ForeignEngineRefusalError(
+        operation="ingest", cause=RuntimeError("stub subprocess failure")
+    ),
 }
 
 
@@ -450,6 +454,11 @@ def test_every_refusal_subclass_maps_to_a_non_success_status_carrying_its_named_
             continue
         if isinstance(value, EvidenceRef | QueryObject):
             value = value.model_dump()
+        elif isinstance(value, BaseException):
+            # ForeignEngineRefusalError's own `cause` attribute — mirrors rest.py's own
+            # _refusal_response stringification of a raw exception value (not JSON-serializable
+            # as-is).
+            value = str(value)
         assert body.get(key) == value, (
             f"{exc_cls.__name__}'s {key!r} attribute missing or mismatched in the response body"
         )

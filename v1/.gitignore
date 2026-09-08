@@ -24,6 +24,11 @@ venv/
 # Default destination of the verified v2-namespace import (databasise/parity/import_index.py,
 # 03-02-PLAN.md Task 3) — also a build artifact, reproducible from .parity_working_dir/.
 .parity_v2_store/
+# v1 working dir for the machine's own real corpus ingest (databasise/foreign/v1_corpus_adapter.py's
+# DEFAULT_V1_WORKING_DIR, 05-01-PLAN.md Task 1) — a build artifact, never committed. Tests always
+# override working_dir with a tmp_path, so this directory is only ever created by real production
+# use.
+.corpus_working_dir/
 
 # Generated Docker Compose files (output of setup wizard)
 docker-compose.*.yml

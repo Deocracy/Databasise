@@ -74,10 +74,26 @@ class ForbiddenSelectorInputError(SeamRefusalError):
         )
 
 
+class ForeignEngineRefusalError(SeamRefusalError):
+    """The seam-facing wrapper for a foreign-engine subprocess failure
+    (``databasise.foreign.CorpusOpSubprocessError``/``CorpusOpTimeoutError``) — so
+    ``rest.py``'s existing generic ``SeamRefusalError`` handler maps it without a new
+    endpoint-level branch. ``operation`` names the seam operation that was attempted (e.g.
+    ``"ingest"``); ``cause`` carries the underlying foreign-engine exception. The message never
+    enumerates this machine's own wirings, arms or node ids, per this module's own docstring rule.
+    """
+
+    def __init__(self, *, operation: str, cause: BaseException):
+        self.operation = operation
+        self.cause = cause
+        super().__init__(f"the foreign engine refused operation {operation!r}: {cause}")
+
+
 __all__ = [
     "SeamRefusalError",
     "EmptyQueryObjectError",
     "UnconsumableQueryMemberError",
     "UnsatisfiableSelectorError",
     "ForbiddenSelectorInputError",
+    "ForeignEngineRefusalError",
 ]
