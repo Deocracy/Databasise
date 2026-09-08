@@ -69,6 +69,20 @@ rest = [
     # ASGI server to run the optional REST app. Unconstrained, matching v1/pyproject.toml:95's
     # existing pin in this same monorepo.
     "uvicorn",
+    # Required by FastAPI/Starlette to parse multipart/form-data (API-01's POST /documents/upload).
+    # Package-legitimacy checkpoint confirmed 2026-09-08 (05-04-PLAN.md's pre-task checkpoint,
+    # resolved: official FastAPI-documented companion package, github.com/Kludex/python-multipart).
+    "python-multipart>=0.0.32",
+]
+# 05-04-PLAN.md (API-07): the MCP transport's own optional extra, separate from `rest` — plan
+# 05-07 adds the new MCP transport package (a new subpackage of this same distribution) and
+# wires it against this dependency in the same commit that adds that new subpackage's own entry
+# to [tool.setuptools] packages below (never split across commits, so uv sync between the two
+# plans never names a package directory that does not yet exist).
+# Package-legitimacy checkpoint confirmed 2026-09-08 (05-04-PLAN.md's pre-task checkpoint,
+# resolved: official Model Context Protocol SDK, github.com/modelcontextprotocol/python-sdk).
+mcp = [
+    "mcp>=2.2.0",
 ]
 
 [tool.pytest.ini_options]

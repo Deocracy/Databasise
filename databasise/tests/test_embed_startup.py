@@ -158,6 +158,12 @@ def test_5_the_declared_runtime_dependency_set_is_exactly_six_and_none_is_a_db_c
     (an extra-gated requirement is, by definition, not installed unless a consumer opts in) —
     this is the metadata-level proof of D-15's own claim that the embedded library's mandatory
     dependency set is unchanged by adding the optional REST transport.
+
+    05-04-PLAN.md Task 2: a second optional extra, ``mcp`` (API-07's own optional dependency,
+    ``mcp>=2.2.0``), joined ``rest`` — the assertion below widened from "every conditional
+    requirement names the ``rest`` extra" to "every conditional requirement names a known optional
+    extra", since a second legitimately-optional extra is not a violation of D-15's own claim
+    (neither extra is ever installed unless a consumer opts in).
     """
     dist = distribution("databasise")
     requires = dist.requires or []
@@ -168,11 +174,12 @@ def test_5_the_declared_runtime_dependency_set_is_exactly_six_and_none_is_a_db_c
     names = {req.split(";")[0].split("[")[0].split("=")[0].split("<")[0].split(">")[0].strip().lower() for req in unconditional}
     assert names == {"pycozo", "faiss-cpu", "rfc8785", "pydantic", "openai", "jsonpatch"}
 
-    # D-15: the rest extra's own dependencies exist in the metadata, but only as extra-gated
-    # (never unconditional) requirements — never installed unless a consumer opts in.
+    # D-15: every optional extra's own dependencies exist in the metadata, but only as
+    # extra-gated (never unconditional) requirements — never installed unless a consumer opts in.
     conditional = [req for req in requires if "extra ==" in req]
-    assert conditional, "expected the optional rest extra's dependencies to appear as extra-gated Requires-Dist entries"
-    assert all('extra == "rest"' in req for req in conditional), conditional
+    assert conditional, "expected the optional extras' dependencies to appear as extra-gated Requires-Dist entries"
+    known_extras = {'extra == "rest"', 'extra == "mcp"'}
+    assert all(any(marker in req for marker in known_extras) for req in conditional), conditional
 
     _separate_server_clients = ("psycopg", "pymongo", "redis", "neo4j", "pymilvus", "qdrant", "opensearch")
     for name in names:

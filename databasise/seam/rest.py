@@ -3,6 +3,19 @@ ROADMAP criterion 5). Never imported at module scope by ``databasise/__init__.py
 ``databasise/seam/__init__.py`` — only a consumer who has installed the ``rest`` extra, and who
 explicitly imports this module, pays the FastAPI-absent cost (Pattern 3, 04-RESEARCH.md).
 
+**05-04-PLAN.md Task 2: the corpus-side operations, over the identical thin-adapter shape.**
+``POST /documents``, ``POST /documents/upload``, ``GET /jobs/{job_id}``,
+``DELETE /documents/{document_id}``, ``GET /health``, ``GET /corpus`` and ``GET /corpus/counts``
+carry every corpus-side operation (API-01, API-02, API-06) this transport now exposes — each body
+is still exactly deserialize-then-await-then-return, the identical rule the query-side endpoints
+above already prove. ``POST /documents`` and ``POST /documents/upload`` are two delivery shapes of
+one §18 operation (``Databasise.ingest``) — the same relationship ``/query`` and ``/query/stream``
+already have — so the surface has not grown an operation, only a second way to reach the same one.
+The one route with more than one statement is the upload route (it must read the multipart file's
+bytes before it can build an ``IngestDocument``); it still contains no selector resolution, no
+redaction and no envelope assembly, so ``test_rest_transport.py``'s AST proof keeps passing over
+the enlarged module.
+
 **Thin adapter, provably (D-17).** Every endpoint body below is exactly: deserialize the request
 into the same ``QueryObject``/``Selector``/``EvidenceRef`` shapes an in-process caller constructs,
 await the identical ``Databasise`` method an in-process caller awaits, and return the result for
@@ -32,7 +45,7 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from fastapi import Depends, FastAPI
+    from fastapi import Depends, FastAPI, Form, Query, UploadFile
     from fastapi.requests import Request
     from fastapi.responses import JSONResponse
     from fastapi.sse import EventSourceResponse
@@ -45,11 +58,22 @@ except ImportError as exc:  # pragma: no cover - exercised only without the `res
 from pydantic import BaseModel, ConfigDict
 
 from databasise.parts.registry import PartRegistry
+from databasise.seam.corpus import (
+    MAX_PAGE_SIZE,
+    CorpusStatus,
+    DeletionOutcome,
+    DocumentCounts,
+    HealthReport,
+    IngestDocument,
+    IngestJob,
+    JobStatus,
+    Page,
+)
 from databasise.seam.engine import Databasise, stream_envelope_events
 from databasise.seam.envelope import ResponseEnvelope
 from databasise.seam.evidence import EvidenceRef
 from databasise.seam.query import QueryObject
-from databasise.seam.refusals import SeamRefusalError
+from databasise.seam.refusals import PageSizeExceededError, SeamRefusalError
 from databasise.seam.selectors import Selector
 
 # Non-success, never a 2xx — the one property T-04-27's mitigation depends on. 422 (Unprocessable
@@ -75,6 +99,35 @@ class QueryRequest(_RequestModel):
 class TraceRequest(_RequestModel):
     trace_reference: str
     debug: bool = False
+
+
+class IngestRequest(_RequestModel):
+    document: IngestDocument
+
+
+class DeleteRequest(_RequestModel):
+    document_id: str
+
+
+def _checked_page(limit: int, offset: int) -> Page:
+    """[Rule 1 - Bug] Refuses ``limit`` above ``MAX_PAGE_SIZE`` by raising
+    ``PageSizeExceededError`` directly, never by letting ``Page(limit=limit, offset=offset)``
+    raise it — ``Page``'s own ``model_validator`` (05-04-PLAN.md Task 1) is designed for an
+    in-process caller, and pydantic wraps a validator-raised exception into a
+    ``pydantic.ValidationError`` at the construction call site (the same behaviour
+    ``AmbiguousIngestPayloadError``'s own module docstring documents for ``IngestDocument``). A
+    ``Page`` built by hand inside a route body, from raw query parameters FastAPI has already
+    finished parsing, is *not* the same code path FastAPI's own request-body parsing uses — the
+    wrapped ``ValidationError`` would propagate as an unmatched exception (Starlette's exception
+    middleware matches by ``type(exc).__mro__`` against the registered ``SeamRefusalError``
+    handler, and ``pydantic.ValidationError`` is not in that hierarchy), producing an unhandled
+    500 instead of the documented 422. Raising the refusal here, before ``Page`` is ever
+    constructed, keeps the 422/``requested``/``limit`` contract every other refusal in this module
+    already has via ``_refusal_response``'s generic ``vars(exc)`` dump.
+    """
+    if limit > MAX_PAGE_SIZE:
+        raise PageSizeExceededError(requested=limit, limit=MAX_PAGE_SIZE)
+    return Page(limit=limit, offset=offset)
 
 
 def _refusal_response(_request: Request, exc: SeamRefusalError) -> JSONResponse:
@@ -166,7 +219,59 @@ def create_app(
     async def post_resolve_trace(body: TraceRequest) -> dict[str, Any]:
         return await engine.resolve_trace(body.trace_reference, debug=body.debug)
 
+    @app.post("/documents")
+    async def post_documents(body: IngestRequest) -> IngestJob:
+        return await engine.ingest(body.document)
+
+    @app.post("/documents/upload")
+    async def post_documents_upload(
+        file: UploadFile,
+        document_id: str | None = Form(default=None),
+    ) -> IngestJob:
+        """The one route in this module with more than one statement (05-04-PLAN.md Task 2): it
+        must read the uploaded file's bytes before an ``IngestDocument`` can be built — still no
+        selector resolution, no redaction and no envelope assembly, so
+        ``test_rest_transport.py``'s AST proof keeps passing. The byte-size cap is enforced by
+        ``IngestDocument``'s own validator refusing an oversized ``raw`` payload, never by a size
+        branch written here.
+        """
+        raw = await file.read()
+        document = IngestDocument(
+            raw=raw,
+            document_id=document_id,
+            file_name=file.filename,
+            content_type=file.content_type,
+        )
+        return await engine.ingest(document)
+
+    @app.get("/jobs/{job_id}")
+    async def get_job_status(
+        job_id: str,
+        limit: int = Query(default=50),
+        offset: int = Query(default=0, ge=0),
+    ) -> JobStatus:
+        return await engine.get_job_status(job_id, _checked_page(limit, offset))
+
+    @app.delete("/documents/{document_id}")
+    async def delete_document(document_id: str) -> DeletionOutcome:
+        return await engine.delete_document(document_id)
+
+    @app.get("/health")
+    async def get_health() -> HealthReport:
+        return await engine.health()
+
+    @app.get("/corpus")
+    async def get_corpus(
+        limit: int = Query(default=50),
+        offset: int = Query(default=0, ge=0),
+    ) -> CorpusStatus:
+        return await engine.corpus_status(_checked_page(limit, offset))
+
+    @app.get("/corpus/counts")
+    async def get_corpus_counts() -> DocumentCounts:
+        return await engine.document_counts()
+
     return app
 
 
-__all__ = ["QueryRequest", "TraceRequest", "create_app"]
+__all__ = ["QueryRequest", "TraceRequest", "IngestRequest", "DeleteRequest", "create_app"]
