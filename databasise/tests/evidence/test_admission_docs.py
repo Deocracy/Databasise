@@ -133,3 +133,55 @@ def test_survey_document_exists_and_is_non_empty():
     path = _evidence_dir() / "INJECTED-LLM-ENDPOINT-SURVEY.md"
     assert path.exists(), f"{path} does not exist"
     assert path.stat().st_size > 0, f"{path} is empty"
+
+
+# ---------------------------------------------------------------------------
+# DR-04 decision document (HARD-03)
+# ---------------------------------------------------------------------------
+
+
+def _dr04_text() -> str:
+    return (_evidence_dir() / "DR-04-DECISION.md").read_text(encoding="utf-8")
+
+
+def _dr04_front_matter() -> str:
+    text = _dr04_text()
+    assert text.startswith("---"), "DR-04-DECISION.md must open with a YAML front matter block"
+    parts = text.split("---")
+    assert len(parts) >= 3, "front matter block is not closed with a second '---'"
+    return parts[1]
+
+
+def test_dr04_selects_one_named_option():
+    fm = _dr04_front_matter()
+
+    assert "defect_row: DR-04" in fm
+    assert "requirement: HARD-03" in fm
+
+    options = ("per-chunk-provenance-stamp", "two-covering-rationale")
+    present = [opt for opt in options if re.search(rf"selected_option:\s*{re.escape(opt)}", fm)]
+    assert len(present) == 1, f"expected exactly one selected_option value, found {present}"
+
+    assert re.search(r"selection_is_clean:\s*(true|false)", fm), (
+        "front matter must declare selection_is_clean as a boolean"
+    )
+
+
+def test_dr04_checks_both_coverings():
+    text = _dr04_text()
+
+    for column in ("sa2_chunker", "sa2_extraction", "sa2_embedding"):
+        assert column in text, f"covering 1's real column name {column!r} not named in the record"
+
+    for field in ("ref", "namespace", "kind", "score", "tier"):
+        assert re.search(rf"`{field}`", text), (
+            f"EvidenceRef's real field {field!r} not named (backtick-quoted) in the record"
+        )
+
+    assert "FA-03" in text, "the record must name FA-03 as the prior finding on covering 2's gap"
+
+
+def test_dr04_document_exists_and_is_non_empty():
+    path = _evidence_dir() / "DR-04-DECISION.md"
+    assert path.exists(), f"{path} does not exist"
+    assert path.stat().st_size > 0, f"{path} is empty"
