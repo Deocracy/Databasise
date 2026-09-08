@@ -1,5 +1,6 @@
-"""``databasise.seam.corpus`` — the corpus-side seam DTOs: ``IngestDocument`` (the caller's input)
-and ``IngestJob`` (the job handle ``Databasise.ingest()`` returns), plus ``MAX_DOCUMENT_BYTES`` and
+"""``databasise.seam.corpus`` — the corpus-side seam DTOs: ``IngestDocument`` (the caller's input),
+``IngestJob`` (the job handle ``Databasise.ingest()`` returns) and ``DeletionOutcome`` (the result
+``Databasise.delete_document()`` returns, 05-03-PLAN.md Task 2), plus ``MAX_DOCUMENT_BYTES`` and
 ``generated_on_disk_name`` — the raw-upload path safety mechanism (05-01-PLAN.md Task 3).
 
 ``IngestDocument`` accepts exactly one of two input shapes — ``text`` (a structured, already-
@@ -15,9 +16,11 @@ directory name.
 from __future__ import annotations
 
 import re
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
+from databasise.seam.envelope import SeamEvent
 from databasise.seam.refusals import AmbiguousIngestPayloadError, OversizedDocumentError
 
 MAX_DOCUMENT_BYTES = 25 * 1024 * 1024
@@ -72,6 +75,26 @@ class IngestJob(BaseModel):
     enqueued: int
 
 
+class DeletionOutcome(BaseModel):
+    """The result ``Databasise.delete_document()`` returns (05-03-PLAN.md Task 2). ``status`` is
+    drawn from v1's own four-value ``DeletionResult`` vocabulary (``v1/lightrag/base.py``) —
+    imported conceptually rather than re-invented, since the machine never imports ``lightrag``
+    itself (``databasise/tools/check_import_boundary.py``). Deleting an already-deleted or
+    never-ingested document is a normal ``"not_found"`` outcome carried here, never a refusal — a
+    caller deleting an id that no longer exists has asked a legitimate question and received a
+    legitimate answer. ``seam_events`` carries the MACH-11 correlation this deletion produced
+    (``databasise.seam.engine._mach11_events``) — empty when nothing was recorded, one entry when
+    the deleting node's own ``mutates_store`` effect correlated against its recorded touches.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    document_id: str
+    status: Literal["success", "not_found", "not_allowed", "fail"]
+    message: str
+    seam_events: list[SeamEvent] = []
+
+
 def generated_on_disk_name(document_id: str) -> str:
     """The on-disk file name for a raw-upload document, built only from the server-minted
     ``document_id`` and a fixed suffix. Refuses any ``document_id`` that does not match the bare-
@@ -87,4 +110,10 @@ def generated_on_disk_name(document_id: str) -> str:
     return f"{document_id}{_ON_DISK_SUFFIX}"
 
 
-__all__ = ["MAX_DOCUMENT_BYTES", "IngestDocument", "IngestJob", "generated_on_disk_name"]
+__all__ = [
+    "MAX_DOCUMENT_BYTES",
+    "IngestDocument",
+    "IngestJob",
+    "DeletionOutcome",
+    "generated_on_disk_name",
+]

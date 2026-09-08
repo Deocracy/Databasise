@@ -42,12 +42,24 @@ node id), its own token spend, and an outcome drawn from ``ResponseEnvelope``'s 
 extending it.** ``mutates_store`` itself names no specific store key (§2's vocabulary keeps it
 opaque on purpose), so it never contributes to ``_accounted_store_keys`` on its own; only a
 dependency's own concrete ``reads_*``/``writes_*`` effect counts as "this data flow accounts for
-that store". No part registered anywhere in ``parts_core``/``LIGHTRAG_PARTS`` declares
-``mutates_store`` today, so ``seam_events`` is always empty for every production arm this phase
-ships — the correlation is proven only against the fixture parts
-``databasise/tests/seam/test_mach11_event.py`` registers. A later phase introducing a real
-out-of-``deps`` mutating part should re-check this rule against it rather than assume it already
-covers every shape such a part could take.
+that store".
+
+**05-03-PLAN.md Task 2: the rule re-checked against a real deleting part — two touch kinds, not
+one.** As Phase 4 built this correlation, it keyed on store touches the scheduler's own
+``_ScopedStoresView`` observes — a machine-held store handle the node reads/writes through. Phase
+5's two corpus-side ports (``lightrag/full-ingest@0.1.0``, ``lightrag/full-delete@0.1.0``) are
+hosted at the ``subprocess`` placement: their real store mutation happens inside v1's own
+subprocess, against v1's own storage handles, which the machine never touches directly — the
+machine can observe *nothing* for a ``mutates_store`` node at that placement. Such a node instead
+reports its own touches through ``databasise.parts.schema.NodeContext.record_store_touch``,
+threaded by the scheduler to the run's recorder with the ``TOUCH_KIND_NODE_REPORTED`` kind
+(``databasise.runner.scheduler``) — distinct from the machine-observed ``TOUCH_KIND_OBSERVED`` kind
+``_ScopedStoresView`` emits. ``_mach11_events`` treats both kinds as touches for a ``mutates_store``
+part, but the two are never merged into one undifferentiated tuple: a reader can always tell
+observed evidence (the machine crossed a handle it holds) from a self-report (the node says it
+mutated something the machine could not see). ``lightrag/full-delete@0.1.0`` is the first real,
+non-fixture part to exercise this correlation — the in-``deps`` no-event case Phase 4 already
+proved against fixture parts remains unchanged and untouched by this addition.
 
 **04-05, Task 2: ``query_stream`` (API-04, D-16) shares ``query``'s execution, never forks it.**
 ``query()``'s entire body — selector resolution, run execution, evidence minting, token-breakdown
@@ -66,6 +78,15 @@ ingest.json``, stamping a fresh caller document id and v1 track id onto the node
 same ``parse_wiring`` -> ``_build_stores`` -> ``scheduler.run_wiring`` sequence ``_execute`` uses)
 rather than resolving a selector, because no selector shape can express "put this document into the
 corpus" — there is no candidate wiring to choose among, only one fixed operation to perform.
+
+**05-03-PLAN.md: ``delete_document`` — the fifth §18 operation, and MACH-11's first real
+correlation.** Mirrors ``ingest``'s own direct-dispatch shape exactly (loading
+``databasise/wirings/lightrag/corpus-delete.json``, stamping the target document id onto the
+node's config, the identical ``parse_wiring`` -> ``_build_stores`` -> ``scheduler.run_wiring``
+sequence) — with one addition ``ingest`` does not need: it passes the same recorder callable
+``_execute()`` passes, because ``lightrag/full-delete@0.1.0`` is the first production Part to
+declare ``mutates_store``. See ``_mach11_events``'s own docstring for the two-touch-kind
+correlation rule this exercises for real.
 
 **CR-01 gap closure: the REST transport reuses this event-shaping, never reimplements it.** The
 CR-01 review fix moved envelope resolution into a FastAPI ``Depends()`` dependency so a
@@ -94,7 +115,12 @@ from databasise.identity.canon import canonicalise
 from databasise.parts.registry import PartRegistry, default_registry
 from databasise.runner import scheduler as _scheduler
 from databasise.runner.trace import NodeTrace, RunRecord
-from databasise.seam.corpus import IngestDocument, IngestJob, generated_on_disk_name
+from databasise.seam.corpus import (
+    DeletionOutcome,
+    IngestDocument,
+    IngestJob,
+    generated_on_disk_name,
+)
 from databasise.seam.envelope import ResponseEnvelope, SeamEvent
 from databasise.seam.evidence import (
     CHUNKS_NAMESPACE,
@@ -103,7 +129,7 @@ from databasise.seam.evidence import (
     resolve_evidence_ref,
 )
 from databasise.seam.query import QueryObject, check_consumable
-from databasise.seam.refusals import ForeignEngineRefusalError
+from databasise.seam.refusals import ForeignEngineRefusalError, UnknownDocumentError
 from databasise.seam.selectors import Selector, resolve_selector
 from databasise.seam.tokens import TokenBreakdownEntry, assemble_token_breakdown
 from databasise.seam.trace_store import TraceStore
@@ -119,6 +145,13 @@ _INGEST_WIRING_PATH = (
     Path(__file__).resolve().parent.parent / "wirings" / "lightrag" / "corpus-ingest.json"
 )
 _INGEST_NODE_ID = "full-ingest"
+
+# 05-03-PLAN.md Task 2: the one-node delete wiring Databasise.delete_document() parses and runs —
+# same relative-load shape as the ingest wiring above.
+_DELETE_WIRING_PATH = (
+    Path(__file__).resolve().parent.parent / "wirings" / "lightrag" / "corpus-delete.json"
+)
+_DELETE_NODE_ID = "full-delete"
 
 # v1's own docs_format vocabulary (lightrag.constants.FULL_DOCS_FORMAT_RAW/_PENDING_PARSE),
 # duplicated as bare string literals here rather than imported — databasise/tools/
@@ -230,6 +263,13 @@ def _accounted_store_keys(parsed: ParsedWiring, node_id: str) -> set[str]:
     return accounted
 
 
+# 05-03-PLAN.md Task 2: both store-touch kinds MACH-11 correlates — a machine-observed touch
+# (a node whose store access crossed a handle the machine itself holds) or a node-reported one
+# (an opaque/subprocess-hosted node self-reporting a mutation the machine could not observe).
+# Imported from the scheduler rather than repeating the string values here.
+_STORE_TOUCH_KINDS = (_scheduler.TOUCH_KIND_OBSERVED, _scheduler.TOUCH_KIND_NODE_REPORTED)
+
+
 def _mach11_events(
     parsed: ParsedWiring,
     touches: list[tuple[str, str, str]],
@@ -239,12 +279,17 @@ def _mach11_events(
     node whose registered ``Part`` declares ``mutates_store``, a touched store key
     ``_accounted_store_keys`` does not cover is an out-of-``deps`` mutation, surfaced as exactly
     one ``SeamEvent`` per such node — never per touch, since the event names the participant, not
-    each individual store access.
+    each individual store access. A touch counts whether it is machine-observed
+    (``TOUCH_KIND_OBSERVED``, the scheduler's own ``_ScopedStoresView``) or node-reported
+    (``TOUCH_KIND_NODE_REPORTED``, an opaque/subprocess-hosted node's own
+    ``NodeContext.record_store_touch`` self-report, per this module's own docstring's 05-03
+    section) — both are real evidence of a mutation this correlation must not miss, even though
+    only one of them is something the machine itself crossed a handle to observe.
     """
     events: list[SeamEvent] = []
     reported_nodes: set[str] = set()
     for node_id, kind, store_key in touches:
-        if kind != "store" or node_id in reported_nodes:
+        if kind not in _STORE_TOUCH_KINDS or node_id in reported_nodes:
             continue
         part = parsed.parts.get(node_id)
         if part is None or "mutates_store" not in part.effects:
@@ -448,6 +493,73 @@ class Databasise:
         return IngestJob(
             job_id=str(result.get("track_id") or track_id),
             enqueued=int(result.get("enqueued", 0)),
+        )
+
+    async def delete_document(self, document_id: str) -> DeletionOutcome:
+        """The fifth §18 operation this seam exposes (05-03-PLAN.md) — a write, like ``ingest``,
+        dispatching the single named ``lightrag/full-delete`` opaque Part directly through the
+        real scheduler rather than through ``_execute()``'s selector-resolution path, for the same
+        reason ``ingest`` does: no selector can express "delete this document from the corpus".
+
+        A document v1 itself reports ``not_found`` (already deleted, or never ingested) is a
+        normal outcome carried in ``DeletionOutcome.status`` — never a refusal. Only a
+        ``document_id`` that fails the machine's own token discipline (the same bare-token rule
+        ``generated_on_disk_name`` enforces for a raw-upload's on-disk name) is refused, as
+        :class:`~databasise.seam.refusals.UnknownDocumentError`, before any wiring is even loaded.
+
+        Passes **the same recorder-callable shape ``_execute()`` passes to ``run_wiring``** — this
+        is the load-bearing line documented in this module's own docstring's 05-03 section:
+        without it, MACH-11 sees nothing, and the deleting node's own ``mutates_store`` effect
+        would never correlate into a ``SeamEvent`` at all.
+        """
+        try:
+            generated_on_disk_name(document_id)
+        except ValueError as exc:
+            raise UnknownDocumentError(document_id=document_id) from exc
+
+        resolved = json.loads(_DELETE_WIRING_PATH.read_text(encoding="utf-8"))
+        node_config = dict(resolved["nodes"][_DELETE_NODE_ID].get("config") or {})
+        node_config["doc_id"] = document_id
+        resolved["nodes"][_DELETE_NODE_ID]["config"] = node_config
+
+        resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
+        parsed = parse_wiring(resolved, self.registry)
+
+        # 05-03-PLAN.md Task 2 (MACH-11): the same recorder shape _execute() passes to run_wiring
+        # — records every (node_id, kind, store_key) touch, observed or node-reported alike.
+        touches: list[tuple[str, str, str]] = []
+
+        def _recorder(node_id: str, kind: str, key: str) -> None:
+            touches.append((node_id, kind, key))
+
+        stores = _build_stores(self.store_root, self.workspace)
+        try:
+            scheduled = await _scheduler.run_wiring(
+                parsed,
+                self.registry,
+                stores,
+                determinism_setting=_DETERMINISM_SETTING,
+                concurrency_setting=_CONCURRENCY_SETTING,
+                clients=self.clients,
+                recorder=_recorder,
+            )
+        finally:
+            for store in stores.values():
+                await store.finalize()
+
+        node_exception = scheduled.get("node_exceptions", {}).get(_DELETE_NODE_ID)
+        if isinstance(node_exception, (CorpusOpSubprocessError, CorpusOpTimeoutError)):
+            raise ForeignEngineRefusalError(operation="delete", cause=node_exception) from node_exception
+
+        result = scheduled["results"].get(_DELETE_NODE_ID) or {}
+        node_by_id = {node.node_id: node for node in scheduled["nodes"]}
+        seam_events = _mach11_events(parsed, touches, node_by_id)
+
+        return DeletionOutcome(
+            document_id=document_id,
+            status=result.get("status") or "fail",
+            message=str(result.get("message") or ""),
+            seam_events=seam_events,
         )
 
     async def _execute(

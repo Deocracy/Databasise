@@ -202,12 +202,13 @@ LIGHTRAG_FULL_DELETE_ADMISSION = AdmissionRecord(
 
 
 async def full_delete_body(ctx: NodeContext) -> dict[str, Any]:
-    """Reads ``doc_id``/``delete_llm_cache`` from ``ctx.config`` and launches the v1 corpus
-    driver's ``delete`` branch via ``run_corpus_op`` (blocking — wrapped in ``asyncio.to_thread``
-    per that function's own docstring note), returning the driver's payload with an
-    always-unbudgetable token report (see condition 9's verdict above for why this is never a
-    fabricated zero). 05-03-PLAN.md Task 2 adds this node's own MACH-11 store-touch reporting
-    call to this body once ``NodeContext`` gains ``record_store_touch``.
+    """Reads ``doc_id``/``delete_llm_cache`` from ``ctx.config``, launches the v1 corpus driver's
+    ``delete`` branch via ``run_corpus_op`` (blocking — wrapped in ``asyncio.to_thread`` per that
+    function's own docstring note), reports this node's own store touches for a successful
+    deletion (05-03-PLAN.md Task 2's MACH-11 wiring — never reported for a ``not_found``/
+    ``not_allowed``/``fail`` status, since nothing was mutated, and a fabricated touch would be a
+    fabricated event), and returns the driver's payload with an always-unbudgetable token report
+    (see condition 9's verdict above for why this is never a fabricated zero).
     """
     config = ctx.config or {}
     payload: dict[str, Any] = {
@@ -221,6 +222,14 @@ async def full_delete_body(ctx: NodeContext) -> dict[str, Any]:
         payload,
         timeout=DELETE_WALL_CLOCK_CEILING_SECONDS,
     )
+
+    if result.get("status") == "success":
+        # v1's own deletion path mutates all three store kinds inside the opaque boundary — the
+        # machine holds no handle to any of them at this port's subprocess placement, so each is
+        # self-reported by the node rather than machine-observed (05-03-PLAN.md Task 2).
+        ctx.record_store_touch("graph")
+        ctx.record_store_touch("vector")
+        ctx.record_store_touch("kv")
 
     return {
         **result,

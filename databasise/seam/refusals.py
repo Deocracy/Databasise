@@ -105,6 +105,22 @@ class OversizedDocumentError(SeamRefusalError):
         )
 
 
+class UnknownDocumentError(SeamRefusalError):
+    """Raised by ``Databasise.delete_document()`` (05-03-PLAN.md Task 2) when ``document_id``
+    fails the machine's own token discipline — the same bare-token rule
+    ``databasise.seam.corpus.generated_on_disk_name`` already enforces for a raw-upload's on-disk
+    name. Never raised for an id that is well-formed but simply does not exist in the corpus — v1
+    itself reports that case as a normal ``"not_found"`` status carried in
+    ``databasise.seam.corpus.DeletionOutcome.status``, not a refusal.
+    """
+
+    def __init__(self, *, document_id: str):
+        self.document_id = document_id
+        super().__init__(
+            f"document id {document_id!r} fails the machine's own token discipline"
+        )
+
+
 class ForeignEngineRefusalError(SeamRefusalError):
     """The seam-facing wrapper for a foreign-engine subprocess failure
     (``databasise.foreign.CorpusOpSubprocessError``/``CorpusOpTimeoutError``) — so
@@ -128,5 +144,6 @@ __all__ = [
     "ForbiddenSelectorInputError",
     "AmbiguousIngestPayloadError",
     "OversizedDocumentError",
+    "UnknownDocumentError",
     "ForeignEngineRefusalError",
 ]
