@@ -151,6 +151,16 @@ DEFAULT_TOKEN_ALLOWANCE = 0
 # _ScopedClientsView (see module docstring's "Optional per-node touch recording" paragraph).
 TouchRecorder = Callable[[str, str, str], None]
 
+# 05-03-PLAN.md Task 2: the two store-touch kinds MACH-11 correlates (databasise.seam.engine
+# ._mach11_events). TOUCH_KIND_OBSERVED is the pre-existing value _ScopedStoresView already
+# emits for a machine-observed touch (a node whose store access crosses a handle the machine
+# itself holds) — unchanged, both _mach11_events and test_mach11_event.py already read it.
+# TOUCH_KIND_NODE_REPORTED is new: a node's own self-report via NodeContext.record_store_touch,
+# for a mutation the machine holds no store handle to observe (an opaque node's subprocess-hosted
+# store mutation). The two kinds are never merged — a reader can always tell which is which.
+TOUCH_KIND_OBSERVED = "store"
+TOUCH_KIND_NODE_REPORTED = "store-declared"
+
 # Transient store-write members plus writes_artifact/mutates_store: per D-13's rule, a node
 # carrying one of these has mutated a store on the completed portion of the run, so it can never
 # count as a safe resume boundary regardless of any determinism stamp.
@@ -262,7 +272,7 @@ class _ScopedStoresView:
             if effect.split("_", 1)[-1] == store_key:
                 handle = self._scoped.require(effect)
                 if self._recorder is not None:
-                    self._recorder(self._node_id, "store", store_key)
+                    self._recorder(self._node_id, TOUCH_KIND_OBSERVED, store_key)
                 return handle
         raise UndeclaredEffectError(f"*_{store_key}", self._declared_effects)
 
@@ -435,13 +445,23 @@ async def _run_node(
     scoped_clients = _ScopedClientsView(
         CapabilityScopedClients(clients or {}, part.effects), part.effects, node_id, recorder
     )
-    ctx = NodeContext(
+    ctx_kwargs: dict[str, Any] = dict(
         node_id=node_id,
         config=node.config,
         inputs=inputs,
         stores=scoped_stores,
         clients=scoped_clients,
     )
+    if recorder is not None:
+        # 05-03-PLAN.md Task 2: a node-reported store touch (NodeContext.record_store_touch) is
+        # bound to this run's own recorder with the node-reported kind — never the machine-
+        # observed kind _ScopedStoresView emits above. When no recorder is supplied for the run,
+        # NodeContext's own no-op default (schema.py) is left in place unchanged.
+        def _record_store_touch(key: str, _node_id: str = node_id) -> None:
+            recorder(_node_id, TOUCH_KIND_NODE_REPORTED, key)
+
+        ctx_kwargs["record_store_touch"] = _record_store_touch
+    ctx = NodeContext(**ctx_kwargs)
     ctx._semaphore = semaphore  # type: ignore[attr-defined]  # scheduler-owned extension, see module docstring
 
     start = time.monotonic()

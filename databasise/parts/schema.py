@@ -88,10 +88,20 @@ NodeKind = Annotated[
 class NodeContext:
     """The calling convention every ``Part.body`` receives: its own node id, the wiring-declared
     config (possibly ``None``), the already-computed outputs of its direct dependencies, the
-    stores dict the runner assembled for this run, and the clients dict the runner assembled for
-    this run (D-06) — scoped the same deny-by-default way ``stores`` is. Defaults to an empty
-    dict so every existing construction site and every existing test that builds a
-    ``NodeContext`` by keyword keeps working unchanged.
+    stores dict the runner assembled for this run, the clients dict the runner assembled for
+    this run (D-06) — scoped the same deny-by-default way ``stores`` is — and
+    ``record_store_touch`` (05-03-PLAN.md Task 2). Defaults to an empty dict/a no-op callable so
+    every existing construction site and every existing test that builds a ``NodeContext`` by
+    keyword keeps working unchanged.
+
+    ``record_store_touch`` is the channel by which a node whose real store mutation happens
+    outside any handle the machine holds — an opaque node hosted in its own OS process, whose
+    ``mutates_store`` effect the machine cannot observe via ``ctx.stores`` because the mutation
+    never crosses that boundary — reports that mutation for MACH-11 correlation
+    (``databasise.seam.engine._mach11_events``). A node-reported touch is a self-report and is
+    recorded as such (the scheduler binds it to the ``store-declared`` kind, never the
+    machine-observed ``store`` kind ``_ScopedStoresView`` emits) — the two are never merged into
+    one undifferentiated tuple.
     """
 
     node_id: str
@@ -99,6 +109,7 @@ class NodeContext:
     inputs: dict[str, Any]
     stores: dict[str, Any]
     clients: dict[str, Any] = field(default_factory=dict)
+    record_store_touch: Callable[[str], None] = field(default=lambda _key: None)
 
 
 @dataclass

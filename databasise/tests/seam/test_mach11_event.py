@@ -25,13 +25,21 @@ dependency node, proving the recorder plumbing itself.
 
 from __future__ import annotations
 
+import asyncio
+import dataclasses
+import sys
+from pathlib import Path
+
 import pydantic
 import pytest
 
+from databasise.foreign import run_corpus_op
 from databasise.parts.registry import Part, PartRegistry
 from databasise.parts.schema import NodeContext
 from databasise.parts_core import CapabilityScopedStores
-from databasise.runner.scheduler import _ScopedStoresView, run_wiring
+from databasise.parts_core.declared_only import LIGHTRAG_FULL_DELETE_PART
+from databasise.runner.scheduler import TOUCH_KIND_NODE_REPORTED, _ScopedStoresView, run_wiring
+from databasise.runner.trace import TokenAccounting
 from databasise.seam.engine import _accounted_store_keys, _mach11_events
 from databasise.seam.envelope import SeamEvent
 from databasise.stores.kv import SqliteKVStore
@@ -261,3 +269,130 @@ async def test_the_fallback_spend_for_a_touched_but_untraced_node_uses_a_distinc
     assert event.spend is not None
     assert event.spend.counted_by == "unknown"
     assert event.spend.counted_by != "none"
+
+
+# --------------------------------------------------------------------------------------------
+# 05-03-PLAN.md Task 2: the real deleting part — the first non-fixture mutates_store part MACH-11
+# ever correlates. Unlike the fixture mutators above, lightrag/full-delete@0.1.0's kind is
+# "opaque" (subprocess placement, hosted given a positive ceiling), so it completes real dispatch
+# under the current runner — no D-08 workaround is needed here.
+# --------------------------------------------------------------------------------------------
+
+_STUB_DRIVER = Path(__file__).resolve().parents[1] / "fixtures" / "v1_corpus_driver_stub.py"
+
+
+def _make_stub_full_delete_body(*, timeout: float, stub_status: str = "success"):
+    async def _body(ctx: NodeContext) -> dict[str, object]:
+        config = ctx.config or {}
+        payload: dict[str, object] = {
+            "doc_id": config.get("doc_id"),
+            "delete_llm_cache": bool(config.get("delete_llm_cache", False)),
+            "_stub_status": stub_status,
+        }
+        result = await asyncio.to_thread(
+            run_corpus_op,
+            "delete",
+            payload,
+            timeout=timeout,
+            interpreter=Path(sys.executable),
+            driver_script=_STUB_DRIVER,
+        )
+
+        if result.get("status") == "success":
+            ctx.record_store_touch("graph")
+            ctx.record_store_touch("vector")
+            ctx.record_store_touch("kv")
+
+        return {**result, "tokens": TokenAccounting(counted_by="unbudgetable")}
+
+    return _body
+
+
+async def _run_real_delete_part_wiring(store_root, *, stub_status: str = "success"):
+    """Real ``parse_wiring`` + real ``run_wiring`` (with a real recorder) over a one-node wiring
+    naming a test-local variant of the production ``lightrag/full-delete@0.1.0`` Part — same name,
+    effects, structural_depth, artifact_scope and (a copy of) the admission record, body pointed
+    at the stub driver, exactly mirroring ``test_full_ingest.py``'s own test-local-variant pattern.
+    """
+    admission = dataclasses.replace(
+        LIGHTRAG_FULL_DELETE_PART.admission, wall_clock_ceiling_seconds=5.0
+    )
+    body = _make_stub_full_delete_body(timeout=5.0, stub_status=stub_status)
+    test_part = dataclasses.replace(LIGHTRAG_FULL_DELETE_PART, body=body, admission=admission)
+    registry = PartRegistry(seed_tracer_parts=False)
+    registry.register(test_part)
+
+    wiring = {
+        "wiring_id": "test-delete-mach11",
+        "nodes": {
+            "full-delete": {
+                "component": test_part.name_at_version,
+                "kind": "opaque",
+                "effects": test_part.effects,
+                "config": {"doc_id": "deadbeef"},
+                "deps": [],
+            }
+        },
+        "provides": ["full-delete"],
+    }
+    parsed = parse_wiring(wiring, registry)
+    assert parsed.report.ok, [v.code for v in parsed.report.violations]
+
+    touches: list[tuple[str, str, str]] = []
+
+    def recorder(node_id: str, kind: str, key: str) -> None:
+        touches.append((node_id, kind, key))
+
+    scheduled = await run_wiring(
+        parsed,
+        registry,
+        stores={},
+        determinism_setting="cache-bypassed",
+        concurrency_setting="sequential",
+        recorder=recorder,
+    )
+
+    return parsed, scheduled, touches
+
+
+async def test_the_real_deleting_part_produces_exactly_one_seam_event(store_root):
+    parsed, scheduled, touches = await _run_real_delete_part_wiring(store_root)
+    node_by_id = {node.node_id: node for node in scheduled["nodes"]}
+
+    events = _mach11_events(parsed, touches, node_by_id)
+
+    assert len(events) == 1
+
+
+async def test_the_real_deleting_events_component_equals_the_registered_name_at_version_not_a_node_id(
+    store_root,
+):
+    parsed, scheduled, touches = await _run_real_delete_part_wiring(store_root)
+    node_by_id = {node.node_id: node for node in scheduled["nodes"]}
+
+    [event] = _mach11_events(parsed, touches, node_by_id)
+
+    assert event.component == LIGHTRAG_FULL_DELETE_PART.name_at_version
+    assert event.component != "full-delete"
+
+
+async def test_the_real_deleting_events_spend_carries_a_real_value_not_the_unknown_sentinel(
+    store_root,
+):
+    parsed, scheduled, touches = await _run_real_delete_part_wiring(store_root)
+    node_by_id = {node.node_id: node for node in scheduled["nodes"]}
+
+    [event] = _mach11_events(parsed, touches, node_by_id)
+
+    assert event.spend is not None
+    assert event.spend.counted_by == "unbudgetable"
+    assert event.spend.counted_by != "unknown"
+
+
+async def test_the_real_deleting_nodes_recorded_touches_carry_the_node_reported_kind(store_root):
+    _parsed, _scheduled, touches = await _run_real_delete_part_wiring(store_root)
+
+    node_touches = [(node_id, kind, key) for node_id, kind, key in touches if node_id == "full-delete"]
+    assert node_touches, "no touch recorded for the full-delete node"
+    for _node_id, kind, _key in node_touches:
+        assert kind == TOUCH_KIND_NODE_REPORTED

@@ -4,15 +4,15 @@
 needs a real v1 venv or a real LLM call to prove the ingest wiring end to end.
 
 Honours the same stdin/stdout JSON protocol the real driver does: for ``op == "ingest"`` echoes
-back ``{"track_id": <job's track_id>, "enqueued": len(documents), "usage": None}``, optionally
-sleeping first (``_stub_sleep_seconds`` on the job) so a timeout can be provoked deliberately. For
-``op == "delete"`` (05-03-PLAN.md Task 1) echoes a configurable status
-(``_stub_status``, defaulting to ``"success"``) back as ``{"status": ..., "doc_id": ..., "message":
-..., "status_code": ..., "file_path": None}``. For ``op == "entities"`` echoes a configurable entity
-map (``_stub_entities``, defaulting to ``{}``) back as ``{"entities": ...}``. Any other ``op`` exits
-1 with a traceback on stderr. Imports nothing from ``lightrag`` and nothing from ``databasise`` — a
-genuine leaf, run under whatever interpreter the test process itself uses (no special venv
-required).
+back ``{"track_id": <job's track_id>, "enqueued": len(documents), "usage": None}``. For
+``op == "delete"`` (05-03-PLAN.md Task 1) echoes a configurable status (``_stub_status``,
+defaulting to ``"success"``) back as ``{"status": ..., "doc_id": ..., "message": ..., "status_code":
+..., "file_path": None}``. Both ``ingest`` and ``delete`` optionally sleep first
+(``_stub_sleep_seconds`` on the job) so a timeout can be provoked deliberately. For
+``op == "entities"`` echoes a configurable entity map (``_stub_entities``, defaulting to ``{}``)
+back as ``{"entities": ...}``. Any other ``op`` exits 1 with a traceback on stderr. Imports nothing
+from ``lightrag`` and nothing from ``databasise`` — a genuine leaf, run under whatever interpreter
+the test process itself uses (no special venv required).
 """
 
 from __future__ import annotations
@@ -34,6 +34,9 @@ def _run_ingest(job: dict) -> dict:
 
 
 def _run_delete(job: dict) -> dict:
+    sleep_seconds = job.get("_stub_sleep_seconds")
+    if sleep_seconds:
+        time.sleep(float(sleep_seconds))
     status = job.get("_stub_status", "success")
     return {
         "status": status,
