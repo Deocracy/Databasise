@@ -46,9 +46,11 @@ from databasise.seam.refusals import (
     ForbiddenSelectorInputError,
     ForeignEngineRefusalError,
     OversizedDocumentError,
+    PageSizeExceededError,
     SeamRefusalError,
     UnconsumableQueryMemberError,
     UnknownDocumentError,
+    UnknownJobError,
     UnsatisfiableSelectorError,
 )
 from databasise.seam.rest import create_app
@@ -389,6 +391,8 @@ _REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
     AmbiguousIngestPayloadError: lambda: AmbiguousIngestPayloadError(set_members=["text", "raw"]),
     OversizedDocumentError: lambda: OversizedDocumentError(actual_bytes=100, limit_bytes=10),
     UnknownDocumentError: lambda: UnknownDocumentError(document_id="../escape"),
+    UnknownJobError: lambda: UnknownJobError(job_id="no-such-job"),
+    PageSizeExceededError: lambda: PageSizeExceededError(requested=101, limit=100),
 }
 
 

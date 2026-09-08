@@ -18,8 +18,9 @@ query side exactly.
 
 Protocol: read one JSON object ``{"op": str, "working_dir": str, ...}`` from stdin. This module
 implements ``op == "ingest"`` (05-01-PLAN.md Task 1), ``op == "delete"`` and ``op == "entities"``
-(05-03-PLAN.md Task 1), and ``op == "entity_info"`` (05-03-PLAN.md Task 3) — any other ``op``
-value exits 1 with a named message rather than a silent no-op (05-04 adds the status branch).
+(05-03-PLAN.md Task 1), ``op == "entity_info"`` (05-03-PLAN.md Task 3), and ``op == "status"``/
+``op == "health"`` (05-04-PLAN.md Task 1) — any other ``op`` value exits 1 with a named message
+rather than a silent no-op.
 
 ``op == "ingest"``'s job carries ``{"documents": [{"id": str, "text": str}, ...], "track_id": str |
 None, "file_paths": [str, ...] | None, "docs_format": str | None}`` (``file_paths``/``docs_format``
@@ -65,6 +66,23 @@ via v1's own ``get_entity_info`` accessor and returns
 ``{"entities": {<entity_name>: [<source_id>, ...] | None}}`` — ``None`` for a name whose graph
 node no longer exists, never omitted from the map.
 
+``op == "status"``'s job carries ``{"track_id": str | None, "limit": int, "offset": int}``
+(05-04-PLAN.md Task 1). Counts are always whole-corpus, read via ``rag.get_processing_status()``
+(never filtered by ``track_id`` — v1 exposes no track-scoped counts). The document list is read
+via ``rag.aget_docs_by_track_id(track_id)`` when a ``track_id`` is given, and otherwise via v1's
+own doc-status store, listing every status via ``rag.doc_status.get_docs_by_statuses(list(DocStatus))``
+— sorted by document id for a deterministic page, then sliced by ``offset``/``limit`` on this
+(the v1) side, so an unbounded list never crosses the pipe. Writes
+``{"counts": {<status>: <int>}, "documents": [{"document_id", "status", "updated_at",
+"error_message"}, ...], "total": int}`` — ``total`` is the full (unsliced) match count for the
+given ``track_id`` filter (or the whole corpus when ``track_id`` is ``None``), and
+``error_message`` is only ever a real value for a document whose status is ``"failed"``, ``None``
+otherwise.
+
+``op == "health"``'s job carries no extra fields beyond ``working_dir``. Builds v1's facade for
+real (a genuine liveness probe, not merely a check that ``working_dir`` exists on disk) and writes
+``{"working_dir_present": bool, "storages_initialized": bool}``.
+
 A malformed job, a v1-side failure, or any other exception prints a traceback to stderr and exits
 1 — the caller (``v1_corpus_adapter.py``) treats any non-zero exit as a refusal carrying that
 stderr, never as an empty success.
@@ -78,14 +96,16 @@ import os
 import sys
 import traceback
 from functools import partial
+from pathlib import Path
 from typing import Any
 
 from lightrag import LightRAG
+from lightrag.base import DocStatus
 from lightrag.constants import FULL_DOCS_FORMAT_RAW, GRAPH_FIELD_SEP
 from lightrag.llm.openai import openai_complete_if_cache, openai_embed
 from lightrag.utils import EmbeddingFunc
 
-_KNOWN_OPS = ("ingest", "delete", "entities", "entity_info")
+_KNOWN_OPS = ("ingest", "delete", "entities", "entity_info", "status", "health")
 
 
 class UnknownOpError(ValueError):
@@ -254,6 +274,61 @@ async def _run_entity_info(job: dict[str, Any]) -> dict[str, Any]:
     return {"entities": entities}
 
 
+async def _run_status(job: dict[str, Any]) -> dict[str, Any]:
+    """A bounded, read-only status probe (05-04-PLAN.md Task 1). Calls only
+    ``rag.get_processing_status``/``rag.aget_docs_by_track_id``/``rag.doc_status.get_docs_by_statuses``
+    — v1's own public read accessors. This branch calls no mutating v1 API — never the write
+    entry points ``_run_ingest``/``_run_delete`` above call — a later edit that adds one here is
+    visibly wrong against this docstring's own stated scope: read-only, always.
+    """
+    track_id = job.get("track_id")
+    limit = int(job.get("limit", 50))
+    offset = int(job.get("offset", 0))
+    working_dir = str(job["working_dir"])
+
+    rag = await _build_rag(working_dir)
+    try:
+        counts = await rag.get_processing_status()
+        if track_id:
+            docs_by_id = await rag.aget_docs_by_track_id(track_id)
+        else:
+            docs_by_id = await rag.doc_status.get_docs_by_statuses(list(DocStatus))
+    finally:
+        await rag.finalize_storages()
+
+    document_ids = sorted(docs_by_id.keys())
+    total = len(document_ids)
+    page_ids = document_ids[offset : offset + limit]
+
+    documents: list[dict[str, Any]] = []
+    for document_id in page_ids:
+        doc_status = docs_by_id[document_id]
+        status_value = getattr(doc_status.status, "value", str(doc_status.status))
+        documents.append(
+            {
+                "document_id": document_id,
+                "status": status_value,
+                "updated_at": doc_status.updated_at,
+                "error_message": doc_status.error_msg if status_value == DocStatus.FAILED.value else None,
+            }
+        )
+
+    return {"counts": counts, "documents": documents, "total": total}
+
+
+async def _run_health(job: dict[str, Any]) -> dict[str, Any]:
+    working_dir = str(job["working_dir"])
+    working_dir_present = Path(working_dir).exists()
+
+    rag = await _build_rag(working_dir)
+    try:
+        storages_initialized = True
+    finally:
+        await rag.finalize_storages()
+
+    return {"working_dir_present": working_dir_present, "storages_initialized": storages_initialized}
+
+
 async def _run(job: dict[str, Any]) -> dict[str, Any]:
     op = job["op"]
     if op == "ingest":
@@ -264,6 +339,10 @@ async def _run(job: dict[str, Any]) -> dict[str, Any]:
         return await _run_entities(job)
     if op == "entity_info":
         return await _run_entity_info(job)
+    if op == "status":
+        return await _run_status(job)
+    if op == "health":
+        return await _run_health(job)
     raise UnknownOpError(op)
 
 

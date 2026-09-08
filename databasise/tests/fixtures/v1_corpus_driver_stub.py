@@ -12,8 +12,20 @@ defaulting to ``"success"``) back as ``{"status": ..., "doc_id": ..., "message":
 ``op == "entities"`` echoes a configurable entity map (``_stub_entities``, defaulting to ``{}``)
 and a configurable chunk-id list (``_stub_chunk_ids``, defaulting to ``None``) back as
 ``{"chunk_ids": ..., "entities": ...}``. For ``op == "entity_info"`` echoes a configurable
-name-keyed map (``_stub_entity_info``, defaulting to ``{}``) back as ``{"entities": ...}``. Any
-other ``op`` exits 1 with a traceback on stderr. Imports nothing from ``lightrag`` and nothing
+name-keyed map (``_stub_entity_info``, defaulting to ``{}``) back as ``{"entities": ...}``.
+
+For ``op == "status"`` (05-04-PLAN.md Task 1), the job carries a caller-configured
+``_stub_documents`` (a list of ``{"document_id", "status", "updated_at", "error_message",
+"_track_id"}`` dicts — ``_track_id`` is stub-only bookkeeping, stripped before the page is
+returned) and ``_stub_counts``. Filters by the job's own ``track_id`` when given (matching each
+document's ``_track_id``), slices the result by ``offset``/``limit`` exactly as the real driver
+does, and returns ``{"counts": ..., "documents": ..., "total": <the unsliced, filtered count>}`` —
+letting a test build an arbitrarily large ``_stub_documents`` list to exercise pagination across
+several pages without a real v1 venv. For ``op == "health"`` echoes configurable
+``_stub_working_dir_present``/``_stub_storages_initialized`` booleans (both defaulting to
+``True``) back as ``{"working_dir_present": ..., "storages_initialized": ...}``.
+
+Any other ``op`` exits 1 with a traceback on stderr. Imports nothing from ``lightrag`` and nothing
 from ``databasise`` — a genuine leaf, run under whatever interpreter the test process itself uses
 (no special venv required).
 """
@@ -61,6 +73,28 @@ def _run_entity_info(job: dict) -> dict:
     return {"entities": job.get("_stub_entity_info") or {}}
 
 
+def _run_status(job: dict) -> dict:
+    track_id = job.get("track_id")
+    limit = int(job.get("limit", 50))
+    offset = int(job.get("offset", 0))
+    documents = list(job.get("_stub_documents") or [])
+    if track_id:
+        documents = [doc for doc in documents if doc.get("_track_id") == track_id]
+
+    total = len(documents)
+    page = documents[offset : offset + limit]
+    page = [{k: v for k, v in doc.items() if k != "_track_id"} for doc in page]
+
+    return {"counts": job.get("_stub_counts") or {}, "documents": page, "total": total}
+
+
+def _run_health(job: dict) -> dict:
+    return {
+        "working_dir_present": job.get("_stub_working_dir_present", True),
+        "storages_initialized": job.get("_stub_storages_initialized", True),
+    }
+
+
 def main() -> int:
     try:
         job = json.loads(sys.stdin.read())
@@ -73,6 +107,10 @@ def main() -> int:
             result = _run_entities(job)
         elif op == "entity_info":
             result = _run_entity_info(job)
+        elif op == "status":
+            result = _run_status(job)
+        elif op == "health":
+            result = _run_health(job)
         else:
             raise ValueError(f"unknown op {op!r}")
     except Exception:

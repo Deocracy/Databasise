@@ -121,6 +121,39 @@ class UnknownDocumentError(SeamRefusalError):
         )
 
 
+class UnknownJobError(SeamRefusalError):
+    """Raised by ``Databasise.get_job_status()`` (05-04-PLAN.md Task 1) when the foreign driver
+    reports zero documents for the given job id — the raise-not-None behaviour
+    ``databasise.seam.trace_store.TraceStore.resolve`` already established for an unknown trace
+    reference, applied here to an unknown ingest job. Never raised for a job that genuinely has no
+    documents on its *current page* (a caller-requested offset past the end of a real job) — only
+    for a job id v1's own doc-status store reports no matching documents for at all.
+    """
+
+    def __init__(self, *, job_id: str):
+        self.job_id = job_id
+        super().__init__(f"job id {job_id!r} does not resolve to any known ingest job")
+
+
+class PageSizeExceededError(SeamRefusalError):
+    """Raised by ``databasise.seam.corpus.Page`` validation (05-04-PLAN.md Task 1) when
+    ``limit`` exceeds ``databasise.seam.corpus.MAX_PAGE_SIZE`` — refused, never silently clamped
+    down to the cap, per this codebase's refusals-over-silent-narrowing house style."""
+
+    def __init__(self, *, requested: int, limit: int):
+        self.requested = requested
+        self.limit = limit
+        # The literal "PageSizeExceededError" substring is load-bearing, mirroring
+        # AmbiguousIngestPayloadError's own documented reason: pydantic's model_validator wraps
+        # this exception into a pydantic.ValidationError at the Page construction call site
+        # (losing the original exception object), so a caller distinguishing this refusal from
+        # another by inspecting the wrapped error's own message needs the refusal's own name to
+        # survive in that message text.
+        super().__init__(
+            f"PageSizeExceededError: requested page size {requested} exceeds the {limit}-entry cap"
+        )
+
+
 class ForeignEngineRefusalError(SeamRefusalError):
     """The seam-facing wrapper for a foreign-engine subprocess failure
     (``databasise.foreign.CorpusOpSubprocessError``/``CorpusOpTimeoutError``) — so
@@ -145,5 +178,7 @@ __all__ = [
     "AmbiguousIngestPayloadError",
     "OversizedDocumentError",
     "UnknownDocumentError",
+    "UnknownJobError",
+    "PageSizeExceededError",
     "ForeignEngineRefusalError",
 ]

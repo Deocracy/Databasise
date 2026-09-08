@@ -30,6 +30,14 @@ DEFAULT_V1_DRIVER_SCRIPT = Path(__file__).resolve().parent / "v1_corpus_driver_s
 DEFAULT_V1_ENV_PARITY = _REPO_ROOT / "v1" / ".env.parity"
 DEFAULT_V1_WORKING_DIR = _REPO_ROOT / "v1" / ".corpus_working_dir"
 
+# 05-04-PLAN.md Task 1: a status read builds v1's facade and reads its doc-status store — it
+# performs no extraction and calls no model, unlike an ingest (which may reach the LLM/embedder)
+# or a delete (which may reach the LLM on a partial-rebuild path). This is why the seam's status
+# methods (get_job_status/health/corpus_status/document_counts) are per-call, never polled in a
+# tight loop: each call still pays a full facade construction against v1's own doc-status/graph
+# storage backends, which is not free even though it makes no network call.
+STATUS_WALL_CLOCK_CEILING_SECONDS = 60.0
+
 
 class MissingV1InterpreterError(RuntimeError):
     """Raised when the pinned ``v1/`` interpreter does not exist — named rather than a bare
@@ -150,4 +158,5 @@ __all__ = [
     "DEFAULT_V1_DRIVER_SCRIPT",
     "DEFAULT_V1_ENV_PARITY",
     "DEFAULT_V1_WORKING_DIR",
+    "STATUS_WALL_CLOCK_CEILING_SECONDS",
 ]

@@ -88,6 +88,23 @@ sequence) — with one addition ``ingest`` does not need: it passes the same rec
 declare ``mutates_store``. See ``_mach11_events``'s own docstring for the two-touch-kind
 correlation rule this exercises for real.
 
+**05-04-PLAN.md Task 1: bounded status/health/counts — a liveness/status read is owned by the
+§17 adapter, never a registered port.** ``get_job_status``/``health``/``corpus_status``/
+``document_counts`` are this seam's sixth through ninth operations (API-01's polling half,
+API-06). Unlike ``ingest``/``delete_document``, none of the four dispatches a wiring through the
+real scheduler — a bounded liveness/status read produces no evidence, mutates nothing, and
+declares no effect, so it reaches ``databasise.foreign.run_corpus_op`` directly, exactly as
+``ingest``/``delete_document``'s own opaque Part bodies do, but with no ``Part``/wiring/scheduler
+step in between. ``get_job_status``/``corpus_status`` call the single ``"status"`` op with
+different ``track_id``/``Page`` arguments; ``document_counts`` calls the same op with a
+zero-length page and reads only its ``counts`` field; ``health`` calls the ``"health"`` op *and*
+additionally probes the machine's own kv/vector/graph stores directly (never through the
+scheduler), catching each store's own construction exception into a reachability map rather than
+letting it propagate — an unreachable participant is reported as unreachable, never a raised
+refusal. ``get_job_status`` raises ``UnknownJobError`` when the driver reports zero total matching
+documents for the given job id — the same raise-not-None precedent ``TraceStore.resolve``
+established, restated here for an unknown ingest job rather than an unknown trace reference.
+
 **CR-01 gap closure: the REST transport reuses this event-shaping, never reimplements it.** The
 CR-01 review fix moved envelope resolution into a FastAPI ``Depends()`` dependency so a
 ``SeamRefusalError`` is known and mapped to a 422 *before* the SSE response begins — but an async
@@ -103,6 +120,7 @@ maintained copies that could silently diverge.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import uuid
@@ -110,15 +128,25 @@ from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 from typing import Any
 
-from databasise.foreign import CorpusOpSubprocessError, CorpusOpTimeoutError
+from databasise.foreign import CorpusOpSubprocessError, CorpusOpTimeoutError, run_corpus_op
+from databasise.foreign.v1_corpus_adapter import (
+    DEFAULT_V1_INTERPRETER,
+    STATUS_WALL_CLOCK_CEILING_SECONDS,
+)
 from databasise.identity.canon import canonicalise
 from databasise.parts.registry import PartRegistry, default_registry
 from databasise.runner import scheduler as _scheduler
 from databasise.runner.trace import NodeTrace, RunRecord
 from databasise.seam.corpus import (
+    CorpusStatus,
     DeletionOutcome,
+    DocumentCounts,
+    DocumentStatusEntry,
+    HealthReport,
     IngestDocument,
     IngestJob,
+    JobStatus,
+    Page,
     generated_on_disk_name,
 )
 from databasise.seam.envelope import ResponseEnvelope, SeamEvent
@@ -129,7 +157,7 @@ from databasise.seam.evidence import (
     resolve_evidence_ref,
 )
 from databasise.seam.query import QueryObject, check_consumable
-from databasise.seam.refusals import ForeignEngineRefusalError, UnknownDocumentError
+from databasise.seam.refusals import ForeignEngineRefusalError, UnknownDocumentError, UnknownJobError
 from databasise.seam.selectors import Selector, resolve_selector
 from databasise.seam.tokens import TokenBreakdownEntry, assemble_token_breakdown
 from databasise.seam.trace_store import TraceStore
@@ -560,6 +588,121 @@ class Databasise:
             status=result.get("status") or "fail",
             message=str(result.get("message") or ""),
             seam_events=seam_events,
+        )
+
+    async def get_job_status(self, job_id: str, page: Page | None = None) -> JobStatus:
+        """The sixth §18 operation this seam exposes (05-04-PLAN.md Task 1) — API-01's polling
+        half. Reaches ``databasise.foreign.run_corpus_op`` directly (no wiring, no scheduler — see
+        this module's own docstring): a status read produces no evidence and mutates nothing.
+        Raises :class:`~databasise.seam.refusals.UnknownJobError` when the driver reports zero
+        total matching documents for ``job_id`` — never returns an empty ``JobStatus`` for an
+        unknown job, mirroring ``TraceStore.resolve``'s own raise-not-None precedent.
+        """
+        page = page or Page()
+        result = await asyncio.to_thread(
+            run_corpus_op,
+            "status",
+            {"track_id": job_id, "limit": page.limit, "offset": page.offset},
+            timeout=STATUS_WALL_CLOCK_CEILING_SECONDS,
+        )
+        total = int(result.get("total", 0))
+        if total == 0:
+            raise UnknownJobError(job_id=job_id)
+
+        documents = [DocumentStatusEntry(**doc) for doc in result.get("documents", [])]
+        next_offset = page.offset + len(documents)
+        return JobStatus(
+            job_id=job_id,
+            documents=documents,
+            counts=dict(result.get("counts") or {}),
+            next_offset=next_offset if next_offset < total else None,
+        )
+
+    async def corpus_status(self, page: Page | None = None) -> CorpusStatus:
+        """The seventh §18 operation (05-04-PLAN.md Task 1, API-06) — a bounded, paginated
+        document list, never a full corpus dump. ``page`` above ``MAX_PAGE_SIZE`` is already
+        refused by :class:`~databasise.seam.corpus.Page`'s own validator before this method is
+        ever reached."""
+        page = page or Page()
+        result = await asyncio.to_thread(
+            run_corpus_op,
+            "status",
+            {"track_id": None, "limit": page.limit, "offset": page.offset},
+            timeout=STATUS_WALL_CLOCK_CEILING_SECONDS,
+        )
+        total = int(result.get("total", 0))
+        documents = [DocumentStatusEntry(**doc) for doc in result.get("documents", [])]
+        next_offset = page.offset + len(documents)
+        return CorpusStatus(
+            documents=documents,
+            counts=dict(result.get("counts") or {}),
+            total=total,
+            next_offset=next_offset if next_offset < total else None,
+        )
+
+    async def document_counts(self) -> DocumentCounts:
+        """The eighth §18 operation (05-04-PLAN.md Task 1, API-06) — a fixed-size record, never a
+        per-document list. Calls the same ``"status"`` op ``corpus_status`` calls, with a
+        zero-length page, and reads only its ``counts`` field."""
+        result = await asyncio.to_thread(
+            run_corpus_op,
+            "status",
+            {"track_id": None, "limit": 0, "offset": 0},
+            timeout=STATUS_WALL_CLOCK_CEILING_SECONDS,
+        )
+        by_status = dict(result.get("counts") or {})
+        return DocumentCounts(by_status=by_status, total=sum(by_status.values()))
+
+    async def health(self) -> HealthReport:
+        """The ninth §18 operation (05-04-PLAN.md Task 1, API-06) — a fixed-size liveness record.
+        Probes the machine's own kv/vector/graph stores directly (never through the scheduler),
+        catching each store's own construction exception into ``stores`` rather than propagating
+        it, then calls the foreign engine's own ``"health"`` op, catching any failure of that call
+        into ``engine`` the same way. Never raises for an unreachable store or an unreachable
+        foreign engine — an unreachable participant is reported as unreachable, which is what a
+        health check is for.
+        """
+        store_factories: dict[str, Any] = {
+            "kv": lambda: SqliteKVStore(
+                namespace=_TEXT_CHUNKS_KIND, workspace=self.workspace, store_root=self.store_root
+            ),
+            "vector": lambda: MultiNamespaceVectorStore(
+                workspace=self.workspace, store_root=self.store_root
+            ),
+            "graph": lambda: CozoGraphStore(
+                namespace=_GRAPH_KIND, workspace=self.workspace, store_root=self.store_root
+            ),
+        }
+        opened_stores: dict[str, Any] = {}
+        store_reachability: dict[str, bool] = {}
+        for name, factory in store_factories.items():
+            try:
+                opened_stores[name] = factory()
+                store_reachability[name] = True
+            except Exception:
+                store_reachability[name] = False
+        try:
+            pass
+        finally:
+            for store in opened_stores.values():
+                await store.finalize()
+
+        engine_report: dict[str, bool] = {"interpreter_present": DEFAULT_V1_INTERPRETER.exists()}
+        try:
+            result = await asyncio.to_thread(
+                run_corpus_op, "health", {}, timeout=STATUS_WALL_CLOCK_CEILING_SECONDS
+            )
+            engine_report["working_dir_present"] = bool(result.get("working_dir_present", False))
+            engine_report["storages_initialized"] = bool(result.get("storages_initialized", False))
+        except Exception:
+            engine_report["working_dir_present"] = False
+            engine_report["storages_initialized"] = False
+
+        overall_ok = all(store_reachability.values()) and all(engine_report.values())
+        return HealthReport(
+            status="ok" if overall_ok else "degraded",
+            stores=store_reachability,
+            engine=engine_report,
         )
 
     async def _execute(
