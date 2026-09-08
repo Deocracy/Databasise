@@ -16,3 +16,8 @@ v1/.parity_*/
 # Named without a .env prefix, so the patterns above do not cover it.
 v1/parity-env.txt
 v1/.env.parity
+.gsd-graph/
+
+# graphify build output and its 27MB copy under .planning/ (regenerate: /gsd-graphify build)
+graphify-out/
+.planning/graphs/
