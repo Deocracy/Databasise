@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-current_phase: 5
+current_phase: 05
 current_phase_name: Opaque-Side Admission
 status: executing
-stopped_at: Phase 04 complete, ready to plan Phase 3
-last_updated: "2026-09-08T19:43:56.498Z"
-last_activity: 2026-09-06
-last_activity_desc: Phase 04 complete, transitioned to Phase 3
-state_head: 0afc3510a703f277d7aecf7c9cdee88af89fcdd7
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-09-08T21:56:11.881Z"
+last_activity: 2026-09-08
+last_activity_desc: Phase 05 execution started
+state_head: fbb96c4abe0780c078a11033c1992bf8e4c9f53d
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 39
-  completed_plans: 32
+  completed_plans: 33
 milestone_name: milestone
 ---
 
@@ -24,14 +24,14 @@ milestone_name: milestone
 See: .planning/PROJECT.md (updated 2026-08-29)
 
 **Core value:** Modalities are swappable without consumers noticing — LightRAG and HippoRAG 2 both live behind one unchanging §18 envelope, comparable side-by-side on the rig.
-**Current focus:** Phase 04 — The Seam
+**Current focus:** Phase 05 — Opaque-Side Admission
 
 ## Current Position
 
-Phase: 5 (Opaque-Side Admission) — READY TO EXECUTE
-Plan: Not started
+Phase: 05 (Opaque-Side Admission) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-09-06 — Phase 04 complete, transitioned to Phase 3
+Last activity: 2026-09-08 — Phase 05 execution started
 
 Progress: [██████████] 100%
 
@@ -70,6 +70,7 @@ Progress: [██████████] 100%
 | Phase 04 P03 | 70min | 3 tasks | 9 files |
 | Phase 04 P04 | 90min | 3 tasks | 7 files |
 | Phase 04 P05 | 45min | 3 tasks | 7 files |
+| Phase 05-opaque-side-admission P01 | 165min | 3 tasks | 24 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,7 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 04]: 04-05: rest and uvicorn go under [project.optional-dependencies] (never [dependency-groups], which a pip install cannot reach externally); httpx joins the existing dev group. — Package legitimacy for fastapi/uvicorn/httpx confirmed by the developer 2026-09-06 (04-CHECKPOINT-ANSWERS.md). A PEP 735 dependency group is not pip-installable by an external consumer, which would make EMBED-02's "optional layer anyone can opt into" false in practice.
 - [Phase 04]: 04-05: query_stream() shares query()'s identical _execute() path, yielding evidence events then one final event, rather than fabricating token-level LLM streaming. — The underlying scheduler produces one completed run, not incremental LLM tokens. D-16 only requires streamed content to assemble to the same answer/evidence the non-streaming endpoint returns, which this design proves without inventing streaming the execution model does not support.
 - [Phase 04]: 04-05: EMBED-02 marked complete for its REST half only (FA-10) — the MCP transport is Deferred Idea API-07, out of this phase's scope. — Per the plan's own instruction to state the qualification in the SUMMARY rather than leave it unqualified. Dual-transport conformance is proven for REST vs in-process; a later phase shipping API-07 inherits the same thin-adapter invariant rather than a fresh design question.
+- [Phase 05-opaque-side-admission]: UnadmittedOpaquePartError gates on Part.kind=='opaque', not structural_depth — Gating on structural_depth (as the plan's Task 2 action text literally said) would have broken registration of the already-shipped lightrag/embedder-index@0.1.0 (structural_depth=opaque, kind=embedder, no admission record); kind is what derive_execution_mode already keys its subprocess-placement decision on.
 
 ### Pending Todos
 
@@ -137,6 +139,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-07T02:02:04.929Z
-Stopped at: Phase 04 complete, ready to plan Phase 3
+Last session: 2026-09-08T21:56:05.047Z
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None

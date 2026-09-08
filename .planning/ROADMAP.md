@@ -201,7 +201,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 05-01-PLAN.md — Tracer: LightRAG's ingest core admitted opaque and running end-to-end through the machine as a subprocess-placed node (wave 1)
+- [x] 05-01-PLAN.md — Tracer: LightRAG's ingest core admitted opaque and running end-to-end through the machine as a subprocess-placed node (wave 1)
 - [ ] 05-02-PLAN.md — MACH-04's injected-LLM-endpoint survey across five engines, and DR-04 decided (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
