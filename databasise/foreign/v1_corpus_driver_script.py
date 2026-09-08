@@ -18,8 +18,8 @@ query side exactly.
 
 Protocol: read one JSON object ``{"op": str, "working_dir": str, ...}`` from stdin. This module
 implements ``op == "ingest"`` (05-01-PLAN.md Task 1), ``op == "delete"`` and ``op == "entities"``
-(05-03-PLAN.md Task 1) — any other ``op`` value exits 1 with a named message rather than a silent
-no-op (05-04 adds the status branch).
+(05-03-PLAN.md Task 1), and ``op == "entity_info"`` (05-03-PLAN.md Task 3) — any other ``op``
+value exits 1 with a named message rather than a silent no-op (05-04 adds the status branch).
 
 ``op == "ingest"``'s job carries ``{"documents": [{"id": str, "text": str}, ...], "track_id": str |
 None, "file_paths": [str, ...] | None, "docs_format": str | None}`` (``file_paths``/``docs_format``
@@ -49,9 +49,21 @@ graph-aware-cleanup proof. Reads the named document's own chunk ids from v1's do
 (the same ``chunks_list`` field ``adelete_by_doc_id`` itself reads), then walks every entity label
 in the graph (``chunk_entity_relation_graph.get_all_labels()``) via v1's own public
 ``rag.get_entity_info()`` accessor — never reaching into a storage implementation directly — and
-returns ``{"entities": {<entity_name>: [<source_id>, ...]}}`` for exactly the entity names whose
-own ``source_id`` set names at least one of the document's chunk ids. An absent document (no
-doc-status record) returns an empty entity map rather than raising.
+returns ``{"chunk_ids": [...], "entities": {<entity_name>: [<source_id>, ...]}}`` for exactly the
+entity names whose own ``source_id`` set names at least one of the document's chunk ids.
+``chunk_ids`` is the same document's own chunk id list, returned alongside the entity map so the
+caller can partition it into "shared" (an entity's ``source_id`` set names a chunk outside
+``chunk_ids``) versus "orphan-only" (every chunk id in the set is one of ``chunk_ids``) without a
+second round trip. An absent document (no doc-status record) returns
+``{"chunk_ids": None, "entities": {}}`` rather than raising.
+
+``op == "entity_info"``'s job carries ``{"entity_names": [str, ...]}`` — used only by
+05-03-PLAN.md Task 3's real graph-aware-cleanup proof, for its post-deletion re-check: a completed
+deletion removes the document's own doc-status record, so ``op == "entities"`` can no longer look
+entities up by ``doc_id`` for that document. This op instead looks each named entity up directly
+via v1's own ``get_entity_info`` accessor and returns
+``{"entities": {<entity_name>: [<source_id>, ...] | None}}`` — ``None`` for a name whose graph
+node no longer exists, never omitted from the map.
 
 A malformed job, a v1-side failure, or any other exception prints a traceback to stderr and exits
 1 — the caller (``v1_corpus_adapter.py``) treats any non-zero exit as a refusal carrying that
@@ -73,7 +85,7 @@ from lightrag.constants import FULL_DOCS_FORMAT_RAW, GRAPH_FIELD_SEP
 from lightrag.llm.openai import openai_complete_if_cache, openai_embed
 from lightrag.utils import EmbeddingFunc
 
-_KNOWN_OPS = ("ingest", "delete", "entities")
+_KNOWN_OPS = ("ingest", "delete", "entities", "entity_info")
 
 
 class UnknownOpError(ValueError):
@@ -194,8 +206,9 @@ async def _run_entities(job: dict[str, Any]) -> dict[str, Any]:
     try:
         doc_status_data = await rag.doc_status.get_by_id(doc_id)
         if not doc_status_data:
-            return {"entities": {}}
-        chunk_ids = set(doc_status_data.get("chunks_list") or [])
+            return {"chunk_ids": None, "entities": {}}
+        doc_chunk_ids = list(doc_status_data.get("chunks_list") or [])
+        chunk_ids_set = set(doc_chunk_ids)
 
         labels = await rag.chunk_entity_relation_graph.get_all_labels()
         entities: dict[str, list[str]] = {}
@@ -205,8 +218,36 @@ async def _run_entities(job: dict[str, Any]) -> dict[str, Any]:
             if not source_id:
                 continue
             source_ids = [chunk for chunk in source_id.split(GRAPH_FIELD_SEP) if chunk]
-            if chunk_ids & set(source_ids):
+            if chunk_ids_set & set(source_ids):
                 entities[label] = source_ids
+    finally:
+        await rag.finalize_storages()
+
+    return {"chunk_ids": doc_chunk_ids, "entities": entities}
+
+
+async def _run_entity_info(job: dict[str, Any]) -> dict[str, Any]:
+    """05-03-PLAN.md Task 3's "after" leg: ``op == "entities"`` keys off a document's own
+    doc-status record, which a completed deletion has already removed — there is no longer a
+    ``doc_id`` to look entities up by. This op instead looks up a caller-supplied list of entity
+    *names* (captured from an earlier ``entities`` call, before deletion) directly via v1's own
+    ``get_entity_info`` accessor, so post-deletion state can be re-checked by name regardless of
+    whether the originating document's doc-status record still exists. Returns
+    ``{"entities": {<entity_name>: [<source_id>, ...] | None}}`` — ``None`` for a name whose graph
+    node no longer exists (or carries no ``source_id``), never omitted from the map.
+    """
+    entity_names = job.get("entity_names") or []
+    working_dir = str(job["working_dir"])
+
+    rag = await _build_rag(working_dir)
+    try:
+        entities: dict[str, list[str] | None] = {}
+        for name in entity_names:
+            info = await rag.get_entity_info(name)
+            source_id = info.get("source_id")
+            entities[name] = (
+                [chunk for chunk in source_id.split(GRAPH_FIELD_SEP) if chunk] if source_id else None
+            )
     finally:
         await rag.finalize_storages()
 
@@ -221,6 +262,8 @@ async def _run(job: dict[str, Any]) -> dict[str, Any]:
         return await _run_delete(job)
     if op == "entities":
         return await _run_entities(job)
+    if op == "entity_info":
+        return await _run_entity_info(job)
     raise UnknownOpError(op)
 
 

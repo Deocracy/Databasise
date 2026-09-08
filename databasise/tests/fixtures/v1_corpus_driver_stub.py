@@ -10,9 +10,12 @@ defaulting to ``"success"``) back as ``{"status": ..., "doc_id": ..., "message":
 ..., "file_path": None}``. Both ``ingest`` and ``delete`` optionally sleep first
 (``_stub_sleep_seconds`` on the job) so a timeout can be provoked deliberately. For
 ``op == "entities"`` echoes a configurable entity map (``_stub_entities``, defaulting to ``{}``)
-back as ``{"entities": ...}``. Any other ``op`` exits 1 with a traceback on stderr. Imports nothing
-from ``lightrag`` and nothing from ``databasise`` — a genuine leaf, run under whatever interpreter
-the test process itself uses (no special venv required).
+and a configurable chunk-id list (``_stub_chunk_ids``, defaulting to ``None``) back as
+``{"chunk_ids": ..., "entities": ...}``. For ``op == "entity_info"`` echoes a configurable
+name-keyed map (``_stub_entity_info``, defaulting to ``{}``) back as ``{"entities": ...}``. Any
+other ``op`` exits 1 with a traceback on stderr. Imports nothing from ``lightrag`` and nothing
+from ``databasise`` — a genuine leaf, run under whatever interpreter the test process itself uses
+(no special venv required).
 """
 
 from __future__ import annotations
@@ -48,7 +51,14 @@ def _run_delete(job: dict) -> dict:
 
 
 def _run_entities(job: dict) -> dict:
-    return {"entities": job.get("_stub_entities") or {}}
+    return {
+        "chunk_ids": job.get("_stub_chunk_ids"),
+        "entities": job.get("_stub_entities") or {},
+    }
+
+
+def _run_entity_info(job: dict) -> dict:
+    return {"entities": job.get("_stub_entity_info") or {}}
 
 
 def main() -> int:
@@ -61,6 +71,8 @@ def main() -> int:
             result = _run_delete(job)
         elif op == "entities":
             result = _run_entities(job)
+        elif op == "entity_info":
+            result = _run_entity_info(job)
         else:
             raise ValueError(f"unknown op {op!r}")
     except Exception:
