@@ -1,0 +1,21 @@
+{
+  "wiring_id": "lightrag-corpus-delete",
+  "title": "LightRAG corpus-side delete — the one-node opaque wiring Databasise.delete_document() runs",
+  "wiring_version": "1",
+  "nodes": {
+    "full-delete": {
+      "component": "lightrag/full-delete@0.1.0",
+      "kind": "opaque",
+      "effects": [
+        "mutates_store",
+        "reads_kv",
+        "reads_graph"
+      ],
+      "deps": []
+    }
+  },
+  "harnesses": [],
+  "provides": [
+    "full-delete"
+  ]
+}

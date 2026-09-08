@@ -13,13 +13,24 @@ not merely dropped from ``DECLARED_ONLY_PARTS``: no reference to its name surviv
 
 05-01-PLAN.md Task 1: ``LIGHTRAG_FULL_INGEST_PART`` is no longer declaration-only — it now carries
 a real ``body`` (``databasise.parts_core.lightrag.full_ingest.full_ingest_body``) and a real §8
-``admission`` record (``LIGHTRAG_FULL_INGEST_ADMISSION``). ``CODEBASE_MEMORY_MCP_PART`` remains
-declaration-only (``body=None``) until plan 05-06 admits it.
+``admission`` record (``LIGHTRAG_FULL_INGEST_ADMISSION``).
+
+05-03-PLAN.md Task 1: ``LIGHTRAG_FULL_DELETE_PART`` joins it as a second real, executable
+corpus-side port (§19.6's separate-port rule — same underlying v1 engine, different declared
+effects). This module's own name is now partly historical: two of its three entries carry real
+bodies and admission records, and only ``CODEBASE_MEMORY_MCP_PART`` remains genuinely
+declaration-only (``body=None``) until plan 05-06 admits it. ``DECLARED_ONLY_PARTS``'s own name
+and membership contract are unchanged — ``default_registry()`` and the Falsifier-2 evidence
+wirings still resolve every entry named here, executable or not.
 """
 
 from __future__ import annotations
 
 from databasise.parts.schema import Part
+from databasise.parts_core.lightrag.full_delete import (
+    LIGHTRAG_FULL_DELETE_ADMISSION,
+    full_delete_body,
+)
 from databasise.parts_core.lightrag.full_ingest import (
     LIGHTRAG_FULL_INGEST_ADMISSION,
     full_ingest_body,
@@ -55,7 +66,27 @@ LIGHTRAG_FULL_INGEST_PART = Part(
     admission=LIGHTRAG_FULL_INGEST_ADMISSION,
 )
 
+# The deleting sibling port (05-03-PLAN.md Task 1): same underlying v1 subprocess engine as
+# LIGHTRAG_FULL_INGEST_PART, a different name_at_version and a different declared effect
+# (mutates_store, not writes_artifact) — §19.6's separate-port rule. artifact_scope=None: this
+# port registers no artifact at all, it mutates the corpus's existing store in place.
+LIGHTRAG_FULL_DELETE_PART = Part(
+    name_at_version="lightrag/full-delete@0.1.0",
+    kind="opaque",
+    structural_depth="opaque",
+    effects=["mutates_store", "reads_kv", "reads_graph"],
+    upstream_ref="v1/lightrag/lightrag.py",
+    body=full_delete_body,
+    artifact_scope=None,
+    admission=LIGHTRAG_FULL_DELETE_ADMISSION,
+)
+
+# The two real, executable LightRAG corpus-side ports, factored out as their own tuple so a
+# reader can see at a glance which entries here are "two ports of one engine" (05-03-SUMMARY.md)
+# without that grouping being implicit in DECLARED_ONLY_PARTS's own flat member order.
+LIGHTRAG_CORPUS_PARTS: tuple[Part, ...] = (LIGHTRAG_FULL_INGEST_PART, LIGHTRAG_FULL_DELETE_PART)
+
 DECLARED_ONLY_PARTS: tuple[Part, ...] = (
     CODEBASE_MEMORY_MCP_PART,
-    LIGHTRAG_FULL_INGEST_PART,
+    *LIGHTRAG_CORPUS_PARTS,
 )
