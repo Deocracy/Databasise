@@ -1,27 +1,65 @@
 """``databasise.seam.corpus`` — the corpus-side seam DTOs: ``IngestDocument`` (the caller's input)
-and ``IngestJob`` (the job handle ``Databasise.ingest()`` returns), plus ``MAX_DOCUMENT_BYTES``.
+and ``IngestJob`` (the job handle ``Databasise.ingest()`` returns), plus ``MAX_DOCUMENT_BYTES`` and
+``generated_on_disk_name`` — the raw-upload path safety mechanism (05-01-PLAN.md Task 3).
 
-05-01-PLAN.md Task 1 authors the structured-text shape; Task 3 extends ``IngestDocument`` with the
-raw-byte-upload shape (``raw``/``content_type``) and adds ``generated_on_disk_name`` — the
-path-safety mechanism for that upload path.
+``IngestDocument`` accepts exactly one of two input shapes — ``text`` (a structured, already-
+extracted payload) or ``raw``+``content_type`` (an opaque byte blob v1's own parser handles) —
+never both, never neither. ``file_name`` and ``content_type`` are advisory metadata only, carried
+into the job payload for citation; neither is ever used to build a filesystem path.
+``generated_on_disk_name`` is what makes that true structurally: the on-disk name is derived only
+from a server-minted ``document_id``, refusing any id that does not match the same bare-token
+discipline ``databasise/namespaces.py``'s ``_NAMESPACE_TOKEN_RE`` already enforces for a namespace
+directory name.
 """
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+import re
+
+from pydantic import BaseModel, ConfigDict, model_validator
+
+from databasise.seam.refusals import AmbiguousIngestPayloadError, OversizedDocumentError
 
 MAX_DOCUMENT_BYTES = 25 * 1024 * 1024
 
+# A generated on-disk name is derived only from a server-minted document id — mirrors
+# databasise/namespaces.py's own _NAMESPACE_TOKEN_RE bare-token discipline exactly: no path
+# separator, no parent-directory reference, so a value handed to generated_on_disk_name() can
+# never escape the corpus-inbox directory it is joined under.
+_DOCUMENT_ID_TOKEN_RE = re.compile(r"^[A-Za-z0-9-]+$")
+
+_ON_DISK_SUFFIX = ".bin"
+
 
 class IngestDocument(BaseModel):
-    """The caller's ingest input. Task 1 ships the structured-text shape only; Task 3 adds the
-    raw-byte-upload shape and the mutual-exclusion/size-cap validation across both."""
+    """The caller's ingest input. Exactly one of ``text``/``raw`` must be set — never both, never
+    neither (``AmbiguousIngestPayloadError``, naming what was missing/duplicated). A ``raw``
+    payload (or a ``text`` payload whose UTF-8 encoding) larger than ``MAX_DOCUMENT_BYTES`` is
+    refused (``OversizedDocumentError``) before any bytes are written to disk and before the
+    subprocess is launched.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     text: str | None = None
     document_id: str | None = None
     file_name: str | None = None  # advisory metadata only, never a path component
+    raw: bytes | None = None
+    content_type: str | None = None
+
+    @model_validator(mode="after")
+    def _exactly_one_payload_shape_within_the_size_cap(self) -> "IngestDocument":
+        set_members = [name for name in ("text", "raw") if getattr(self, name) is not None]
+        if len(set_members) != 1:
+            raise AmbiguousIngestPayloadError(set_members=set_members)
+
+        if self.raw is not None and len(self.raw) > MAX_DOCUMENT_BYTES:
+            raise OversizedDocumentError(actual_bytes=len(self.raw), limit_bytes=MAX_DOCUMENT_BYTES)
+        if self.text is not None:
+            actual_bytes = len(self.text.encode("utf-8"))
+            if actual_bytes > MAX_DOCUMENT_BYTES:
+                raise OversizedDocumentError(actual_bytes=actual_bytes, limit_bytes=MAX_DOCUMENT_BYTES)
+        return self
 
 
 class IngestJob(BaseModel):
@@ -34,4 +72,19 @@ class IngestJob(BaseModel):
     enqueued: int
 
 
-__all__ = ["MAX_DOCUMENT_BYTES", "IngestDocument", "IngestJob"]
+def generated_on_disk_name(document_id: str) -> str:
+    """The on-disk file name for a raw-upload document, built only from the server-minted
+    ``document_id`` and a fixed suffix. Refuses any ``document_id`` that does not match the bare-
+    token discipline ``databasise/namespaces.py``'s ``_NAMESPACE_TOKEN_RE`` already enforces — no
+    path separator, no parent-directory reference, so the returned name can never resolve outside
+    the directory it is joined under.
+    """
+    if not _DOCUMENT_ID_TOKEN_RE.match(document_id):
+        raise ValueError(
+            f"invalid document id {document_id!r}: must match {_DOCUMENT_ID_TOKEN_RE.pattern} "
+            "(no path separator, no parent-directory reference)"
+        )
+    return f"{document_id}{_ON_DISK_SUFFIX}"
+
+
+__all__ = ["MAX_DOCUMENT_BYTES", "IngestDocument", "IngestJob", "generated_on_disk_name"]
