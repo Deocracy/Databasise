@@ -196,7 +196,7 @@ Plans:
   4. Caller reads health, corpus status, and document counts in bounded paginated form; a full corpus or index dump is never returned
   5. The MCP surface exposes the same capabilities as REST as intention-level tools; a capability expressible as a §18.4 selector never becomes a new tool, and adding a modality adds no tool
 
-**Plans**: 3/7 plans executed
+**Plans**: 4/7 plans executed
 
 Plans:
 **Wave 1**
@@ -210,7 +210,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 05-04-PLAN.md — Bounded job status, health, counts and paginated corpus reads, plus the corpus-side REST routes (wave 3)
+- [x] 05-04-PLAN.md — Bounded job status, health, counts and paginated corpus reads, plus the corpus-side REST routes (wave 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
