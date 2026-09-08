@@ -7,3 +7,12 @@ node_modules/
 # GSD runtime sentinels
 .gsd/
 .env.secrets
+
+# Local scratch — agent worktrees and parity-run stores (233M+, never committed)
+.claude/worktrees/
+v1/.parity_*/
+
+# Real credentials: pinned parity run config (v1/.env.parity symlinks here).
+# Named without a .env prefix, so the patterns above do not cover it.
+v1/parity-env.txt
+v1/.env.parity
