@@ -1,0 +1,22 @@
+{
+  "wiring_id": "lightrag-corpus-ingest",
+  "title": "LightRAG corpus-side ingest — the one-node opaque wiring Databasise.ingest() runs",
+  "wiring_version": "1",
+  "nodes": {
+    "full-ingest": {
+      "component": "lightrag/full-ingest@0.1.0",
+      "kind": "opaque",
+      "effects": [
+        "calls_llm",
+        "writes_artifact",
+        "reads_kv",
+        "reads_graph"
+      ],
+      "deps": []
+    }
+  },
+  "harnesses": [],
+  "provides": [
+    "full-ingest"
+  ]
+}

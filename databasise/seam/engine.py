@@ -58,6 +58,15 @@ envelope's own fields incrementally (one event per evidence reference, in the en
 order, then one final event carrying every remaining field) rather than fabricating a second,
 divergent execution path or a token-level stream the underlying scheduler does not itself produce.
 
+**05-01-PLAN.md: ``ingest`` — the fourth §18 operation, an operation rather than a selector.**
+``query``/``query_stream``/``resolve_evidence``/``resolve_trace`` are all reads over an already-
+admitted corpus; ``ingest`` is the first write. It dispatches the single named
+``lightrag/full-ingest`` opaque Part directly (loading ``databasise/wirings/lightrag/corpus-
+ingest.json``, stamping a fresh caller document id and v1 track id onto the node's config, then the
+same ``parse_wiring`` -> ``_build_stores`` -> ``scheduler.run_wiring`` sequence ``_execute`` uses)
+rather than resolving a selector, because no selector shape can express "put this document into the
+corpus" — there is no candidate wiring to choose among, only one fixed operation to perform.
+
 **CR-01 gap closure: the REST transport reuses this event-shaping, never reimplements it.** The
 CR-01 review fix moved envelope resolution into a FastAPI ``Depends()`` dependency so a
 ``SeamRefusalError`` is known and mapped to a 422 *before* the SSE response begins — but an async
@@ -74,15 +83,18 @@ maintained copies that could silently diverge.
 from __future__ import annotations
 
 import hashlib
+import json
 import uuid
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 from typing import Any
 
+from databasise.foreign import CorpusOpSubprocessError, CorpusOpTimeoutError
 from databasise.identity.canon import canonicalise
 from databasise.parts.registry import PartRegistry, default_registry
 from databasise.runner import scheduler as _scheduler
 from databasise.runner.trace import NodeTrace, RunRecord
+from databasise.seam.corpus import IngestDocument, IngestJob
 from databasise.seam.envelope import ResponseEnvelope, SeamEvent
 from databasise.seam.evidence import (
     CHUNKS_NAMESPACE,
@@ -91,6 +103,7 @@ from databasise.seam.evidence import (
     resolve_evidence_ref,
 )
 from databasise.seam.query import QueryObject, check_consumable
+from databasise.seam.refusals import ForeignEngineRefusalError
 from databasise.seam.selectors import Selector, resolve_selector
 from databasise.seam.tokens import TokenBreakdownEntry, assemble_token_breakdown
 from databasise.seam.trace_store import TraceStore
@@ -98,6 +111,14 @@ from databasise.stores.graph import CozoGraphStore
 from databasise.stores.kv import SqliteKVStore
 from databasise.stores.vector import MultiNamespaceVectorStore
 from databasise.validator.parse import ParsedWiring, parse_wiring
+
+# 05-01-PLAN.md: the one-node ingest wiring Databasise.ingest() parses and runs — resolved
+# relative to this file, mirroring databasise/wirings/resolve.py's own Path(__file__)-relative
+# load shape.
+_INGEST_WIRING_PATH = (
+    Path(__file__).resolve().parent.parent / "wirings" / "lightrag" / "corpus-ingest.json"
+)
+_INGEST_NODE_ID = "full-ingest"
 
 # 04-04 Task 2 (MACH-11): a reads_*/writes_* effect suffix names the store key it accounts for —
 # mirrors databasise/parts_core/__init__.py's own CapabilityScopedStores.require suffix rule
@@ -352,6 +373,55 @@ class Databasise:
         envelope = await self._execute(query_object, selector)
         for event in stream_envelope_events(envelope):
             yield event
+
+    async def ingest(self, document: IngestDocument) -> IngestJob:
+        """The fourth §18 operation this seam exposes (05-01-PLAN.md) — and the first that is not
+        a query: no selector can express "put this document into the corpus", so this method
+        dispatches the single named ``lightrag/full-ingest`` opaque Part directly through the real
+        scheduler, rather than through ``_execute()``'s selector-resolution/envelope-assembly
+        path. Returns an ``IngestJob`` job handle, never a ``ResponseEnvelope`` — ingest is a
+        distinct operation, not a query, and never touches ``databasise/seam/envelope.py``'s
+        closed field set.
+        """
+        document_id = document.document_id or uuid.uuid4().hex
+        track_id = uuid.uuid4().hex
+
+        resolved = json.loads(_INGEST_WIRING_PATH.read_text(encoding="utf-8"))
+        node_config = dict(resolved["nodes"][_INGEST_NODE_ID].get("config") or {})
+        node_config["documents"] = [{"id": document_id, "text": document.text}]
+        node_config["track_id"] = track_id
+        resolved["nodes"][_INGEST_NODE_ID]["config"] = node_config
+
+        resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
+        parsed = parse_wiring(resolved, self.registry)
+
+        stores = _build_stores(self.store_root, self.workspace)
+        try:
+            scheduled = await _scheduler.run_wiring(
+                parsed,
+                self.registry,
+                stores,
+                determinism_setting=_DETERMINISM_SETTING,
+                concurrency_setting=_CONCURRENCY_SETTING,
+                clients=self.clients,
+            )
+        finally:
+            for store in stores.values():
+                await store.finalize()
+
+        # A subprocess-level refusal (timeout or non-zero exit) never propagates raw out of
+        # run_wiring (CONTRACT §9's "partial outcomes are never discarded" rule) — it is recorded
+        # in the run's own node_exceptions map instead. Re-raise it here as the seam-facing
+        # ForeignEngineRefusalError, never as the machine-internal exception type.
+        node_exception = scheduled.get("node_exceptions", {}).get(_INGEST_NODE_ID)
+        if isinstance(node_exception, (CorpusOpSubprocessError, CorpusOpTimeoutError)):
+            raise ForeignEngineRefusalError(operation="ingest", cause=node_exception) from node_exception
+
+        result = scheduled["results"].get(_INGEST_NODE_ID) or {}
+        return IngestJob(
+            job_id=str(result.get("track_id") or track_id),
+            enqueued=int(result.get("enqueued", 0)),
+        )
 
     async def _execute(
         self,

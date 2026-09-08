@@ -23,20 +23,28 @@ than reverse-engineering one from behaviour:
                          store-boundary effect that must not share the runner's own process-wide
                          store handles, but is not iterative, networked, or opaque.
 
-D-08: Phase 1 hosts ``in-process`` only. ``host()`` refuses the other three placements by name;
-the derivation above is always computed and stamped on the run record regardless of whether
-``host()`` would refuse it — a refusal never suppresses the stamp.
+D-08: Phase 1 hosted ``in-process`` only, refusing the other three placements by name. Phase 5
+(05-01-PLAN.md, real opaque-node admission) earns real hosting for ``subprocess``: a node's own
+launch of an OS process under a foreign interpreter is the containment, and the machine's own
+contribution is the declared wall-clock ceiling §8 condition 4 requires — the ceiling is the gate,
+so a subprocess node with no declared ceiling is still refused, by
+:class:`~databasise.parts.admission.MissingWallClockCeilingError`, never silently hosted. The
+derivation above is always computed and stamped on the run record regardless of whether ``host()``
+would refuse it — a refusal never suppresses the stamp. ``confined-unit`` and
+``long-lived-service`` remain unimplemented and are still refused by name.
 """
 
 from __future__ import annotations
+
+from databasise.parts.admission import MissingWallClockCeilingError
 
 _NOT_IN_PROCESS_EFFECTS: frozenset[str] = frozenset(
     {"net", "fs", "self_storage", "mutates_store"}
 )
 _UNIMPLEMENTED_PLACEMENTS: frozenset[str] = frozenset(
-    {"subprocess", "confined-unit", "long-lived-service"}
+    {"confined-unit", "long-lived-service"}
 )
-_ALL_PLACEMENTS: frozenset[str] = _UNIMPLEMENTED_PLACEMENTS | {"in-process"}
+_ALL_PLACEMENTS: frozenset[str] = _UNIMPLEMENTED_PLACEMENTS | {"in-process", "subprocess"}
 
 
 class UnimplementedPlacementError(RuntimeError):
@@ -63,14 +71,21 @@ def derive_execution_mode(effects: list[str], kind: str) -> str:
     return "in-process"
 
 
-def host(placement: str) -> None:
-    """Host a node at its derived ``placement``. Phase 1 implements ``in-process`` only (D-08):
-    every other known placement raises ``UnimplementedPlacementError`` naming itself explicitly,
-    per 01-PATTERNS.md's "explicit, actionable refusal messages naming the missing capability"
-    rule — never a bare ``NotImplementedError``.
+def host(placement: str, *, wall_clock_ceiling_seconds: float | None = None) -> None:
+    """Host a node at its derived ``placement``. ``in-process`` always succeeds. ``subprocess``
+    succeeds only when ``wall_clock_ceiling_seconds`` is a positive number — the ceiling §8
+    condition 4 requires — otherwise raises
+    :class:`~databasise.parts.admission.MissingWallClockCeilingError`. Every other known placement
+    raises ``UnimplementedPlacementError`` naming itself explicitly, per 01-PATTERNS.md's
+    "explicit, actionable refusal messages naming the missing capability" rule — never a bare
+    ``NotImplementedError``.
     """
     if placement == "in-process":
         return
+    if placement == "subprocess":
+        if wall_clock_ceiling_seconds is not None and wall_clock_ceiling_seconds > 0:
+            return
+        raise MissingWallClockCeilingError(wall_clock_ceiling_seconds)
     if placement in _UNIMPLEMENTED_PLACEMENTS:
         raise UnimplementedPlacementError(
             f"execution_mode={placement!r} is not yet hosted. Phase 1's runner implements "

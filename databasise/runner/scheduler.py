@@ -126,6 +126,7 @@ from databasise.clients import CLIENT_EFFECT_TO_KEY, CapabilityScopedClients
 from databasise.identity.canon import config_hash
 from databasise.identity.env import environment_hash
 from databasise.identity.instance import instance_hash
+from databasise.parts.admission import MissingWallClockCeilingError
 from databasise.parts.registry import PartRegistry, dispatch
 from databasise.parts.schema import NodeContext
 from databasise.parts_core import CapabilityScopedStores, UndeclaredEffectError
@@ -409,9 +410,16 @@ async def _run_node(
     part = parsed.parts[node_id]
 
     execution_mode = derive_execution_mode(part.effects, part.kind)
+    # 05-01-PLAN.md Task 1: the ceiling for a subprocess placement is sourced from the resolved
+    # Part's own admission record (never the wiring's) — a ceiling-less subprocess node still
+    # surfaces as a placement refusal on that node's trace, mirroring D-08's original in-process-
+    # only refusal shape.
+    wall_clock_ceiling_seconds = (
+        part.admission.wall_clock_ceiling_seconds if part.admission is not None else None
+    )
     try:
-        host(execution_mode)  # succeeds for in-process; raises by name for the other three (D-08)
-    except UnimplementedPlacementError as exc:
+        host(execution_mode, wall_clock_ceiling_seconds=wall_clock_ceiling_seconds)
+    except (UnimplementedPlacementError, MissingWallClockCeilingError) as exc:
         raise NodePlacementRefusedError(node_id, execution_mode, exc) from exc
 
     # Per node per run, never shared (D-09/D-11). Not used to gate the outer body call below —
@@ -487,10 +495,12 @@ async def run_wiring(
     see module docstring's "Optional per-node touch recording" paragraph.
 
     Returns a dict always carrying ``results``, ``nodes``, ``partial``, ``stop_reason``,
-    ``degraded`` and ``degradation_reason`` — or, for a cyclic wiring, ``{"cycle": [...]}`` as
-    data (see module docstring). A pre-flight refusal (empty ``nodes``, any other accumulated
-    parse violation, or a declared ``max_concurrency`` below 1) raises before any node is
-    dispatched — see module docstring for why that one case raises rather than returning.
+    ``degraded``, ``degradation_reason`` and ``node_exceptions`` (05-01-PLAN.md: the real
+    underlying exception object a failed node's dispatch raised, keyed by node_id — additive,
+    empty for a clean run) — or, for a cyclic wiring, ``{"cycle": [...]}`` as data (see module
+    docstring). A pre-flight refusal (empty ``nodes``, any other accumulated parse violation, or a
+    declared ``max_concurrency`` below 1) raises before any node is dispatched — see module
+    docstring for why that one case raises rather than returning.
     """
     if not parsed.report.ok:
         raise WiringRefusedError(parsed.report.violations)
@@ -524,6 +534,14 @@ async def run_wiring(
     partial = False
     stop_reason: str | None = None
     budget_halted = False
+    # 05-01-PLAN.md Task 1: the real underlying exception a failed node's dispatch raised (e.g. a
+    # CorpusOpTimeoutError/CorpusOpSubprocessError from an opaque node's subprocess body), keyed by
+    # node_id — additive to the returned dict. CONTRACT §9's "partial outcomes are never discarded"
+    # rule means a per-node dispatch failure never propagates out of this function (see module
+    # docstring); a caller that needs the *real* exception object (not merely its stringified
+    # ``cross_process_failure_cause``) to build its own typed refusal reads it from here rather
+    # than parsing NodeTrace's own prose string.
+    node_exceptions: dict[str, BaseException] = {}
 
     while ts.is_active():
         ready = sorted(ts.get_ready())
@@ -558,6 +576,7 @@ async def run_wiring(
                     if placement is not None
                     else f"NodeExecutionError: {exc.cause}"
                 )
+                node_exceptions[node_id] = exc.cause
                 node_traces.append(
                     NodeTrace(
                         **_pending_node_trace(node_id, parsed, identities, depths),
@@ -644,4 +663,5 @@ async def run_wiring(
         "stop_reason": stop_reason,
         "degraded": partial,  # required-together per RIG §TR.3 — see runner/trace.py's own note
         "degradation_reason": stop_reason,
+        "node_exceptions": node_exceptions,
     }

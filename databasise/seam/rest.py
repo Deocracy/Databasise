@@ -97,6 +97,11 @@ def _refusal_response(_request: Request, exc: SeamRefusalError) -> JSONResponse:
             continue
         if isinstance(value, BaseModel):
             value = value.model_dump()
+        # 05-01-PLAN.md: ForeignEngineRefusalError's own `cause` attribute carries a raw
+        # exception object (a foreign-engine subprocess failure) — not JSON-serializable as-is;
+        # stringified here exactly like every other refusal's own message, never dropped.
+        elif isinstance(value, BaseException):
+            value = str(value)
         detail[key] = value
     return JSONResponse(status_code=_REFUSAL_STATUS_CODE, content=detail)
 

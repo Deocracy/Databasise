@@ -47,12 +47,15 @@ def test_register_refuses_a_duplicate_key_rather_than_overwriting_it():
         registry.register(existing_part)
 
 
-def test_the_two_declaration_only_entries_have_no_body_and_a_non_empty_upstream_ref():
+def test_the_one_remaining_declaration_only_entry_has_no_body_and_a_non_empty_upstream_ref():
+    """05-01-PLAN.md Task 1 gave ``lightrag/full-ingest@0.1.0`` a real body and a real §8
+    admission record — ``codebase-memory-mcp@0.1.0`` is now the only remaining declaration-only
+    entry, until plan 05-06 admits it too."""
     registry = default_registry()
     declaration_only = [
         registry.get(key) for key in registry.keys() if registry.get(key).body is None  # noqa: SIM118 — PartRegistry.keys() is not a dict; `in registry` is not a defined operation
     ]
-    assert len(declaration_only) == 2
+    assert len(declaration_only) == 1
     assert all(part.upstream_ref for part in declaration_only)
 
 
