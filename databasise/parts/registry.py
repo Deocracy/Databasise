@@ -4,12 +4,20 @@ extensibility D-13 rejects for this milestone: every part in this milestone is a
 project, so a plain dict costs nothing an editable install or entry_points-based approach would
 have imposed for extensibility nothing needs yet. entry_points support can be added later
 without changing the Part interface.
+
+05-01-PLAN.md Task 2: this is the point where §8's "an opaque node's self-report is not trusted at
+face value" becomes machine-enforced. ``register`` refuses an executable (``body is not None``)
+opaque part carrying no admission record (``UnadmittedOpaquePartError``), and validates a present
+record via ``databasise.parts.admission.validate_admission`` before filing it — a record that lies
+is refused at registration time, never merely at run time. A declaration-only part (``body is
+None``) carries no admission requirement at all, regardless of its ``kind``.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
+from databasise.parts.admission import validate_admission
 from databasise.parts.schema import NodeContext, Part
 
 
@@ -32,6 +40,20 @@ class DuplicatePartError(ValueError):
     def __init__(self, name_at_version: str):
         self.name_at_version = name_at_version
         super().__init__(f"part {name_at_version!r} is already registered")
+
+
+class UnadmittedOpaquePartError(RuntimeError):
+    """Raised by ``PartRegistry.register`` when an executable (``body is not None``) opaque part
+    carries no §8 admission record. Names the part; the message points at
+    ``databasise.parts.admission.AdmissionRecord`` as where to supply one.
+    """
+
+    def __init__(self, name_at_version: str):
+        self.name_at_version = name_at_version
+        super().__init__(
+            f"{name_at_version!r} is an executable opaque part with no §8 admission record; "
+            "supply one via databasise.parts.admission.AdmissionRecord before registering it"
+        )
 
 
 class DeclarationOnlyPartError(RuntimeError):
@@ -99,9 +121,31 @@ class PartRegistry:
             raise UnknownPartError(name_at_version, list(self._parts.keys())) from None
 
     def register(self, part: Part) -> None:
-        """Add ``part``, refusing a duplicate ``name_at_version`` rather than overwriting it."""
+        """Add ``part``, refusing a duplicate ``name_at_version`` rather than overwriting it.
+
+        05-01-PLAN.md Task 2: an executable (``body is not None``) part whose ``kind`` is the
+        literal ``"opaque"`` value with no admission record is refused
+        (``UnadmittedOpaquePartError``); a present record is validated via ``validate_admission``
+        before the part is filed, so an invalid record is refused here rather than surfacing only
+        at run time. A declaration-only part (``body is None``) is exempt from both checks
+        regardless of its ``kind``.
+
+        Gated on ``kind``, not ``structural_depth`` — the two are independent fields (see
+        ``databasise/parts/schema.py``'s own docstring): ``lightrag/embedder-index@0.1.0``
+        (``databasise/parts_core/lightrag/embedder_index.py``) is an already-registered executable
+        part with ``structural_depth="opaque"`` (CONTRACT §3's taint-rule depth ladder) but
+        ``kind="embedder"`` — it is not itself an unverified-internals opaque *node* in §8's sense
+        and must not be swept into this admission requirement. ``kind == "opaque"`` is exactly the
+        literal value ``databasise.validator.execution_mode.derive_execution_mode`` already keys
+        its own ``subprocess`` placement decision on, so the two checks agree on what "opaque"
+        means.
+        """
         if part.name_at_version in self._parts:
             raise DuplicatePartError(part.name_at_version)
+        if part.body is not None and part.kind == "opaque":
+            if part.admission is None:
+                raise UnadmittedOpaquePartError(part.name_at_version)
+            validate_admission(part, part.admission)
         self._parts[part.name_at_version] = part
 
     def keys(self) -> list[str]:
