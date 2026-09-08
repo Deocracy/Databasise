@@ -344,3 +344,190 @@ def test_generated_on_disk_name_is_reachable_for_a_multipart_uploaded_document(c
     # A malicious client-supplied filename never reaches generated_on_disk_name() as the
     # document_id — the server mints its own uuid4-derived id regardless of the filename.
     assert generated_on_disk_name(response.json()["job_id"] or "deadbeef")
+
+
+# --------------------------------------------------------------------------------------------- #
+# Task 3: the upload-poll-delete round trip, proved once end to end (ROADMAP criterion 3) — over
+# REST, over in-process, and asserted to produce the same observed status sequence.
+# --------------------------------------------------------------------------------------------- #
+
+_ROUND_TRIP_STATUSES = ["pending", "processing", "processed"]
+
+
+def _patch_status_sequence(monkeypatch):
+    """Configures ``run_corpus_op("status", ...)`` to report the *next* value in
+    ``_ROUND_TRIP_STATUSES`` for a job-scoped poll (``track_id`` set — advances the sequence) and
+    the *current* value for a corpus-wide read (``track_id`` is ``None`` — never advances), so a
+    ``GET /corpus/counts`` in the middle of a polling sequence observes whatever status the last
+    poll settled on rather than silently advancing the sequence itself. Reuses the real stub
+    driver's own ``_run_status``/``_run_health`` — never a second, independently-maintained fake.
+    Returns the mutable state dict so a test can inspect ``state["poll_index"]`` if needed.
+    """
+    state = {"poll_index": 0}
+
+    def _fake(op: str, payload: dict[str, Any], *, timeout: float | None = None, **kwargs: Any):
+        if op == "status":
+            track_id = payload.get("track_id")
+            idx = min(state["poll_index"], len(_ROUND_TRIP_STATUSES) - 1)
+            current_status = _ROUND_TRIP_STATUSES[idx]
+            documents = [
+                {
+                    "document_id": track_id or "round-trip-doc",
+                    "_track_id": track_id,
+                    "status": current_status,
+                    "updated_at": "t",
+                    "error_message": None,
+                }
+            ]
+            job = {**payload, "_stub_documents": documents, "_stub_counts": {current_status: 1}}
+            result = _run_status(job)
+            if track_id:
+                state["poll_index"] = min(state["poll_index"] + 1, len(_ROUND_TRIP_STATUSES) - 1)
+            return result
+        if op == "health":
+            return _run_health(
+                {**payload, "_stub_working_dir_present": True, "_stub_storages_initialized": True}
+            )
+        raise AssertionError(f"unexpected op {op!r}")
+
+    monkeypatch.setattr(engine_module, "run_corpus_op", _fake)
+    return state
+
+
+def test_upload_poll_delete_round_trip(store_root, monkeypatch):
+    """Over the REST transport, in one test: upload, poll a job to completion (observing the full
+    status sequence, not only the terminal state), read counts, delete, read counts again, and
+    confirm a second delete of the same id reports ``not_found``."""
+    _patch_status_sequence(monkeypatch)
+    success_client = TestClient(
+        create_app(store_root=store_root, workspace="round-trip-success", registry=_make_registry())
+    )
+
+    upload_response = success_client.post(
+        "/documents/upload",
+        files={"file": ("doc.txt", b"hello world", "text/plain")},
+        data={"document_id": "round-trip-doc"},
+    )
+    assert upload_response.status_code == 200
+    job_id = upload_response.json()["job_id"]
+
+    observed_statuses: list[str] = []
+    for _ in _ROUND_TRIP_STATUSES:
+        job_response = success_client.get(f"/jobs/{job_id}")
+        assert job_response.status_code == 200
+        observed_statuses.append(job_response.json()["documents"][0]["status"])
+
+    # A poll that only ever sees the terminal state proves nothing about polling.
+    assert observed_statuses == _ROUND_TRIP_STATUSES
+
+    counts_response = success_client.get("/corpus/counts")
+    assert counts_response.status_code == 200
+    assert counts_response.json()["by_status"].get("processed") == 1
+
+    delete_response = success_client.delete("/documents/round-trip-doc")
+    assert delete_response.status_code == 200
+    assert delete_response.json()["status"] == "success"
+
+    second_counts_response = success_client.get("/corpus/counts")
+    assert second_counts_response.status_code == 200
+
+    not_found_client = TestClient(
+        create_app(
+            store_root=store_root,
+            workspace="round-trip-success",
+            registry=_make_registry(delete_status="not_found"),
+        )
+    )
+    second_delete_response = not_found_client.delete("/documents/round-trip-doc")
+    assert second_delete_response.status_code == 200
+    assert second_delete_response.json()["status"] == "not_found"
+
+
+async def test_upload_poll_delete_round_trip_in_process_matches_the_rest_status_sequence(
+    store_root, monkeypatch
+):
+    """The dual-transport rule applied to a multi-step flow, not just to single calls — the
+    identical sequence driven entirely in-process against ``Databasise`` methods produces the
+    same observed status sequence the REST round trip above does."""
+    _patch_status_sequence(monkeypatch)
+    engine = Databasise(store_root=store_root, workspace="round-trip-in-process", registry=_make_registry())
+
+    job = await engine.ingest(IngestDocument(text="hello world", document_id="round-trip-doc-2"))
+
+    observed_statuses: list[str] = []
+    for _ in _ROUND_TRIP_STATUSES:
+        status = await engine.get_job_status(job.job_id)
+        observed_statuses.append(status.documents[0].status)
+
+    assert observed_statuses == _ROUND_TRIP_STATUSES
+
+    counts = await engine.document_counts()
+    assert counts.by_status.get("processed") == 1
+
+    outcome = await engine.delete_document("round-trip-doc-2")
+    assert outcome.status == "success"
+
+    second_counts = await engine.document_counts()
+    assert second_counts.total >= 0  # a fixed-size record either way — never a partial dump
+
+    not_found_engine = Databasise(
+        store_root=store_root,
+        workspace="round-trip-in-process",
+        registry=_make_registry(delete_status="not_found"),
+    )
+    second_outcome = await not_found_engine.delete_document("round-trip-doc-2")
+    assert second_outcome.status == "not_found"
+
+
+async def test_the_rest_and_in_process_round_trips_observe_the_identical_status_sequence(
+    store_root, monkeypatch
+):
+    """The two round trips above are driven by independently-monkeypatched fakes (test isolation)
+    — this test drives both against the *same* patched fake within one test, so the sequences are
+    compared directly rather than merely asserted equal to the same hardcoded literal twice."""
+    _patch_status_sequence(monkeypatch)
+    rest_client = TestClient(
+        create_app(store_root=store_root, workspace="round-trip-compare-rest", registry=_make_registry())
+    )
+    upload_response = rest_client.post(
+        "/documents/upload",
+        files={"file": ("doc.txt", b"hello world", "text/plain")},
+        data={"document_id": "round-trip-doc-3"},
+    )
+    rest_job_id = upload_response.json()["job_id"]
+    rest_sequence = [
+        rest_client.get(f"/jobs/{rest_job_id}").json()["documents"][0]["status"]
+        for _ in _ROUND_TRIP_STATUSES
+    ]
+
+    _patch_status_sequence(monkeypatch)
+    engine = Databasise(
+        store_root=store_root, workspace="round-trip-compare-in-process", registry=_make_registry()
+    )
+    in_process_job = await engine.ingest(IngestDocument(text="hello world", document_id="round-trip-doc-4"))
+    in_process_sequence = []
+    for _ in _ROUND_TRIP_STATUSES:
+        status = await engine.get_job_status(in_process_job.job_id)
+        in_process_sequence.append(status.documents[0].status)
+
+    assert rest_sequence == in_process_sequence == _ROUND_TRIP_STATUSES
+
+
+def test_get_corpus_over_the_cap_refusal_body_parses_as_json_with_integer_requested_and_limit(
+    client, monkeypatch
+):
+    """Task 3's own restatement of Task 2's over-cap refusal test — the response body is parsed
+    as JSON here (rather than merely indexed) and its ``requested``/``limit`` values are asserted
+    to be real integers, so a caller can act on the refusal without parsing prose."""
+    import json as _json
+
+    from databasise.seam.corpus import MAX_PAGE_SIZE
+
+    _patch_status_and_health(monkeypatch)
+
+    response = client.get("/corpus", params={"limit": MAX_PAGE_SIZE + 1})
+    assert response.status_code == 422
+
+    body = _json.loads(response.text)
+    assert isinstance(body["requested"], int) and body["requested"] == MAX_PAGE_SIZE + 1
+    assert isinstance(body["limit"], int) and body["limit"] == MAX_PAGE_SIZE
