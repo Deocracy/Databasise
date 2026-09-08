@@ -199,12 +199,26 @@ Plans:
 **Plans**: 7 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 05-01-PLAN.md — Tracer: LightRAG's ingest core admitted opaque and running end-to-end through the machine as a subprocess-placed node (wave 1)
 - [ ] 05-02-PLAN.md — MACH-04's injected-LLM-endpoint survey across five engines, and DR-04 decided (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 05-03-PLAN.md — The delete port: a separate §19.6 registration, MACH-11's first real correlation, graph-aware cleanup proved (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 05-04-PLAN.md — Bounded job status, health, counts and paginated corpus reads, plus the corpus-side REST routes (wave 3)
-- [ ] 05-05-PLAN.md — The inside-vs-across-boundary change rule and the compat test that enforces it (wave 5)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 05-06-PLAN.md — codebase-memory-mcp admitted whole-engine, Falsifier 4 run twice, and the phase COVERAGE record (wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 05-05-PLAN.md — The inside-vs-across-boundary change rule and the compat test that enforces it (wave 5)
 - [ ] 05-07-PLAN.md — The MCP transport: five intention-level tools with the §18.5 growth rule under test (wave 5)
 
 ### Phase 6: HippoRAG 2 & Side-by-Side
