@@ -1,470 +1,258 @@
-<!-- refreshed: 2026-09-03 -->
+---
+last_mapped_commit: 8044f9a
+---
+
 # Codebase Concerns
 
-**Analysis Date:** 2026-09-03
-
-## Known Bugs & Frozen Defects
-
-**Cozo 0.7.6 Latent Correctness Bugs:**
-
-- **Issue:** Four known silent-wrong-result bugs in frozen Cozo 0.7.6 engine (not data corruption, but incorrect query results)
-  - Bug #244: aggregation returning 0 rows (MITIGATED — CozoGraphStorage never uses Cozo count() aggregation)
-  - Bug #275: wrong DataValue types on round-trip (MITIGATED — attrs survive round-trip, types asserted in tests)
-  - Bug #253: JSON object key-order loss (MITIGATED — consuming as dict, completeness verified)
-  - Bug #296/#269: UUID sort/coercion (AVOIDED — all keys stored as Cozo String, never UUID type)
-- **Files:** `v1/lightrag/kg/cozo_impl.py`, `v1/tests/kg/test_cozo_frozen_bugs.py`, `databasise/stores/graph.py`, `databasise/tests/stores/test_graph_frozen_bugs.py`
-- **Impact:** Silent query result errors if mitigations are bypassed; data correctness depends on maintaining the exact query shapes documented in test_cozo_frozen_bugs.py
-- **Status:** PINNED BY DESIGN — Cozo version is frozen at 0.7.6 forever (decision D-P1.1-08, D-05); regression tests lock in mitigations in both v1 and databasise
-
-**LLM Cache Persistence Bug:**
-
-- **Issue:** `LengthFinishReasonError` should not persist into LLM cache, but currently does
-- **File:** `v1/lightrag/llm/openai.py:225`
-- **Impact:** Cached errors can cause misleading responses on cache hits
-- **Priority:** Low — likely edge case related to token length handling
-
-**Phase 3 Entity/Relation Hydration Crashes:**
-
-- **Issue:** Three decomposed query arms (`hybrid`, `local`, `global`) crash before completing retrieval
-  - `hybrid`/`local`: node 'entity-hydrate-expand' raises `NodeExecutionError: 'entity_name'`
-  - `global`: node 'relation-hydrate-expand' raises `NodeExecutionError: 'src_id'`
-- **Files:** `databasise/parts_core/lightrag/entity_hydrate_expand.py`, `databasise/parts_core/lightrag/relation_hydrate_expand.py`
-- **Impact:** Cannot measure retrieval-level parity for these arms; they degrade and halt before reaching answer generation
-- **Scope:** Out of Phase 3 scope; discovered and documented in `databasise/evidence/PARITY-EVIDENCE.md`'s per-arm degradation notes
-- **Priority:** High — blocks Phase 3's full MODAL-01 verification; requires repair before Phase 6's cross-modality comparison
-
-## Tech Debt & Code Complexity
-
-**Overly Large Functions (Ingest Pipeline):**
-
-- **Component:** `merge_nodes_and_edges()` (1,817 lines)
-  - File: `v1/lightrag/operate.py:2914-4731`
-  - Impact: Core ingest orchestration; extremely difficult to test, refactor, or reason about; single point of failure
-  - Dependencies: Calls `_merge_nodes_then_upsert()` (329 lines), `_merge_edges_then_upsert()` (585 lines), heavily coupled
-  - Status: MARKED AS OPAQUE (Phase 2 build ladder item 3) — will remain untouched in Databasise 2.0 during decomposition
-
-- **Component:** `_merge_all_chunks()` (1,264 lines)
-  - File: `v1/lightrag/operate.py:4731-5995`
-  - Impact: Complex multi-stage chunk processing; intertwined extraction, merging, and upsert orchestration
-  - Risk: High defect risk if modified; hard to isolate bugs
-
-- **Component:** `_merge_edges_then_upsert()` (585 lines)
-  - File: `v1/lightrag/operate.py:2329-2914`
-  - Impact: Entity relationship extraction and graph upsert; relies on global concurrency state
-  - Risk: Concurrency bugs, race conditions with parallel chunk processing
-
-**Large Utility Modules:**
-
-- `v1/lightrag/utils.py` (5,033 lines): Utility functions scattered across, low cohesion
-- `v1/lightrag/lightrag.py` (4,469 lines): Main orchestrator; many concerns mixed (storage init, pipeline orchestration, API surface)
-- `v1/lightrag/kg/shared_storage.py` (2,381 lines): Complex concurrency management; multiprocessing + asyncio hybrid
-
-## Architecture & Design Issues
-
-**Hybrid Concurrency Model (Multiprocessing + Asyncio):**
-
-- **Location:** `v1/lightrag/kg/shared_storage.py`
-- **Concern:** Mixed multiprocessing.Manager locks and asyncio.Lock objects; requires careful coordination
-  - Single-process mode: asyncio.Lock only
-  - Multi-process mode: multiprocessing.Manager.Lock + Process-local asyncio.Lock hybrids
-  - `UnifiedLock` wrapper attempts to abstract both (L175–390)
-- **Risk:** 
-  - Deadlocks if async/sync lock boundaries crossed incorrectly
-  - Process crashes can leave multiprocessing.Manager locks held indefinitely (no cleanup guaranteed)
-  - Context switch between sync and async lock acquisition under high contention could cause performance cliffs
-- **Mitigation:** Comprehensive logging available via `DEBUG_LOCKS=True` (`v1/lightrag/kg/shared_storage.py:21`)
-- **No Fix in v1:** Design is intentional; Phase 2+ will decompose this
-
-**Global State & Singletons:**
-
-- `v1/lightrag/kg/shared_storage.py`: Module-level singletons for locks, managers, and storage instances
-  - `_manager` (Manager instance — multiprocessing)
-  - `_registry_guard`, `_internal_lock`, `_data_init_lock` (module-level locks)
-  - `_storage_instance` (per-namespace singleton dict)
-  - `_global_concurrency_limits` (Dict[str, asyncio.Semaphore])
-- **Risk:** Difficult to test in isolation; process lifecycle dependencies; resurrection via `initialize_share_data()` has side effects
-- **Impact:** Integration tests must call `finalize_share_data()` then `initialize_share_data()` between test runs (every fixture in test_cozo_frozen_bugs.py does this)
-
-**Broad Exception Catches:**
-
-- **Instances:** ~30 bare `except Exception:` blocks across codebase
-- **Files:** `v1/lightrag/llm_roles.py`, `v1/lightrag/api/lightrag_server.py`, `v1/lightrag/utils.py`, `v1/lightrag/kg/shared_storage.py`, etc.
-- **Risk:** Hides bugs; swallows OOM errors, KeyboardInterrupt, SystemExit; makes debugging difficult
-- **Examples:**
-  - `v1/lightrag/llm_roles.py:343` — swallows any exception during LLM role initialization
-  - `v1/lightrag/kg/shared_storage.py:213,1766,1784` — swallows storage operation failures
-  - `v1/lightrag/utils.py:400, 1923, 1930, 1935, 2061, 2214, 2660, 2674, 2814, 2841` — utility function failures masked
-
-## Databasise (Phase 1) Constraints & Limitations
-
-**Placeholder Trace Fields — Intentional, Phase 2+ Deliverables:**
-
-- **Fields:** `bundle_ref`, `corpus_snapshot_hash`, `tier`, `feed_tier` in run records
-- **Location:** `databasise/runner/trace.py` (lines 42-44)
-- **Status:** Documented sentinels (`BUNDLE_REF_SENTINEL`, `CORPUS_SNAPSHOT_HASH_SENTINEL`, `TIER_PLACEHOLDER`)
-- **Impact:** Emitted run records are schema-valid but carry placeholder values for fields Phase 2 evaluates
-  - `bundle_ref`: "sentinel:no-eval-bundle-until-phase-2"
-  - `corpus_snapshot_hash`: "sentinel:no-corpus-snapshot-until-phase-2"
-  - `tier`/`feed_tier`: "T3" (no scored evidence item flows through a tracer node)
-- **Mitigation:** Every placeholder is explicitly documented in `trace.py`'s own module docstring and field defaults
-- **No Fix in Phase 1:** By design; Phase 2's RIG machinery will mint real values
-
-**"No External DB Servers" Claim Depends on Dependency List:**
-
-- **Claim:** EMBED-01 requirement: "no external DB servers"
-- **Enforcement Location:** `databasise/pyproject.toml` (dependencies only, D-14)
-- **Current Runtime Dependencies:** `pycozo[embedded]==0.7.6`, `faiss-cpu>=1.7.0,<2.0.0`, `rfc8785==0.1.4`, `pydantic>=2.0,<3.0`
-- **Risk:** If v1's server-dependent dependencies (Neo4j client, asyncpg, pymilvus, etc.) are ever transitively pulled in via a later phase's changes, the embedding nature would revert from property-of-dependency-list to property-of-resolver-decision
-- **Mitigation:** D-14 keeps `databasise/` independent from `v1/` workspace; no shared `uv` workspace means v1's server backends don't land on databasise's graph
-- **Verification:** `databasise/tools/check_import_boundary.py` enforces no imports from `v1/` at load time
-
-**RFC 8785 (JCS) Config Canonicalisation Thread-Safety:**
-
-- **Location:** `databasise/identity/canon.py:32-35` (`_domain_patch_lock`)
-- **Issue:** RFC 8785 library's int64 domain must be temporarily widened to accept CONTRACT-legal signed 64-bit integers
-- **Concern:** This widening happens inside a lock; thread-safety is necessary but adds latency on multi-threaded hashing
-- **Risk:** If config_hash is called from many threads concurrently (unlikely in asyncio but possible with `loop.run_in_executor`), contention on `_domain_patch_lock` could become a bottleneck
-- **Mitigation:** Lock is held only during the hash computation, not the whole canonicalisation; single-threaded asyncio callers never contend
-- **Impact:** Low in Phase 1 (tracer is single-threaded); potential concern if future phases use thread pools for config hashing
-
-**FTS5 Availability is Strict (No Fallback):**
-
-- **Location:** `databasise/stores/lexical.py:33-64`
-- **Pattern:** SQLite FTS5 availability is checked at store construction, not at query time
-- **Behavior:** If FTS5 is unavailable, raises `Fts5UnavailableError` immediately; never silently falls back to LIKE scan
-- **Risk:** SQLite builds without FTS5 compiled in will fail store construction, not just fail searches
-- **Impact:** Deployment must verify target Python's sqlite3 has FTS5 built in before initializing a lexical store
-- **Mitigation:** Error message names FTS5 explicitly and suggests `pip install` of `pycozo[embedded]` (which vendors a compilable sqlite3)
-
-**Ledger Append-Only Design Incomplete for Production:**
-
-- **Location:** `databasise/ledger/ledger.py`
-- **Status:** Append-only table is built and tested; SQLite BEFORE UPDATE/DELETE triggers prevent any mutation
-- **Missing:** Operator path, `change_origin`, tombstone-lifting prohibition, atomic alias repoint (MACH-07, Phase 7)
-- **Scope:** Phase 1 stands the table and projection up; no runner code calls `append()` (only promotions do, and Phase 1 does not exercise real promotion)
-- **Risk:** The ledger API is intentionally incomplete; any code attempting to call `ledger.append()` in Phase 1 is an architectural violation
-
-**Cozo Query Shape Constraints are Permanent in databasise:**
-
-- **Issue:** `databasise/stores/graph.py` reproduces v1's Cozo mitigations by copy, not import
-- **Testing:** `databasise/tests/stores/test_graph_frozen_bugs.py` explicitly forbids skip/xfail markers (lines 11-13)
-- **Risk:** A future adapter reintroducing any of the four frozen bugs would silently produce wrong results, not test failures
-- **Mitigation:** Every mitigation in `databasise/stores/graph.py` is documented in its own module docstring; regression suite locks them in
-- **Fragility:** If someone refactors the query construction to "improve" it without understanding the frozen bugs, the schema would silently corrupt
-
-**Concurrency is Per-Node, Never Process-Wide:**
-
-- **Design:** D-09 and D-11 explicitly reject a process-wide concurrency cap
-- **Implementation:** `databasise/runner/scheduler.py` (lines 1-71 docstring) creates per-node `asyncio.Semaphore` sized from node config
-- **Semaphore Exposure:** Exposed as `ctx._semaphore` (private extension attribute, not part of public NodeContext schema)
-- **Risk:** A node body that ignores the semaphore and spawns unbounded concurrency will not be throttled by the runner
-- **Impact:** LLM rate limits, vector DB connections, and other shared resources can be exhausted by a single misbehaving node
-- **Mitigation:** Reference parts use the semaphore; custom bodies must opt in
-
-## Deprecated & Legacy APIs
-
-**Deprecated Methods Still in API:**
-
-- `extract_incremental()` — deprecated, use `insert()` instead (`v1/lightrag/lightrag.py:1497`)
-- `aextract_incremental()` — deprecated, use `ainsert()` instead (`v1/lightrag/lightrag.py:1511`)
-- `_setup_logger()` — deprecated, use `setup_logger()` in utils instead (`v1/lightrag/lightrag.py:294`)
-- `__aexit__` auto-finalize — deprecated; finalize must be called explicitly (`v1/lightrag/lightrag.py:731`)
-- `/documents/paginated` endpoint — deprecated API route (`v1/lightrag/api/routers/document_routes.py:3361`)
-- `anthropic_embed()` — deprecated alias, removed in next release (`v1/lightrag/llm/anthropic.py:360-371`)
-- `PREPROCESSED` status enum — deprecated, use `ANALYZING` instead (`v1/lightrag/base.py:796-803`)
-
-**Impact:** Downstream projects may still call these; removal without grace period will break compatibility
-
-**Deprecated Boolean Flags:**
-
-- `keyword_extraction` boolean in `anthropic_complete_if_cache()` — replaced by response_format parameter
-- `entity_extraction` boolean in `anthropic_complete_if_cache()` — replaced by response_format parameter
-- Files: `v1/lightrag/llm/anthropic.py:91-103`
-- **Risk:** Legacy code path still executed; parameter parsing and validation duplicated
-
-## Performance Bottlenecks
-
-**VDB Upsert Timeouts Under Concurrency:**
-
-- **Location:** `v1/lightrag/operate.py:95-110` (`_get_relationship_vdb_timeout_seconds()`)
-- **Issue:** NetworkX storage is in-memory and fast; relationship VDB performs embedding calls + remote I/O. Defensive timeout derived from global config.
-- **Risk:** Under high concurrent chunk processing, VDB upserts can timeout, causing partial entity/edge ingestion
-- **Current:** Timeout calculation is defensive but opaque; no metrics on actual VDB latency
-
-**Sequential Python-Side Aggregation:**
-
-- **Location:** `v1/lightrag/kg/cozo_impl.py` — `node_degree()`, `get_popular_labels()`
-- **Pattern:** Enumerate edges from Cozo, count in Python instead of using SQL COUNT aggregate (due to bug #244)
-- **Risk:** O(N) scan for every label popularity query; scales linearly with edge count
-- **Impact:** Queries slow down as knowledge graph grows; no index optimization possible
-
-**JSON Repair & String Parsing:**
-
-- **Location:** Multiple LLM completion handlers use `json_repair` + regex post-processing
-- **Risk:** LLM-generated JSON corruption is repaired lazily; cascading repairs can mask malformed data
-- **Examples:** `_handle_single_entity_extraction()`, `_handle_single_relationship_extraction()`, `_parse_keywords_payload()`
-- **Cost:** CPU overhead; no per-handler metrics
-
-**Multi-Stage Extraction Pipeline:**
-
-- **Merge orchestration:** `merge_nodes_and_edges()` coordinates extraction → normalization → merge → upsert across:
-  - Entity extraction (LLM call)
-  - Relation extraction (LLM call)
-  - Keyword extraction (LLM call)
-  - Node/edge merge logic (graph storage)
-  - Vector DB upserts (two phases: entity embeddings, relation embeddings)
-- **Coordination:** Serialized by design; high LLM token cost per chunk
-- **Scaling:** Bounded by LLM concurrency limits and embedding throughput
-
-## Fragile Areas & Modification Risks
-
-**Entity Name Length Truncation:**
-
-- **Location:** `v1/lightrag/operate.py:120-160` (`_truncate_entity_identifier()`)
-- **Concern:** Entity IDs are truncated to fit MD5 constraints; truncation logic is separate from naming logic
-- **Risk:** Two truncation paths exist:
-  1. `_truncate_entity_identifier()` — max 256 chars (DEFAULT_ENTITY_NAME_MAX_LENGTH)
-  2. Normalization in `_normalize_text_extraction_record_attributes()` — max 512 bytes (DEFAULT_ENTITY_NAME_MAX_BYTES)
-- **Fragility:** If either limit is changed without coordinating the other, entity name collisions can occur
-- **Tests:** `v1/tests/kg/test_cozo_frozen_bugs.py` validates round-trip but does not stress name collision scenarios
-
-**Chunk Size & Token Truncation:**
-
-- **Functions:** `_truncate_section_context()`, `_truncate_vdb_content()`, others
-- **Risk:** Multiple truncation strategies (token-based, char-based, byte-based); if Tokenizer changes, silent data loss
-- **Impact:** Extraction quality degrades silently if context is truncated too early
-
-**LLM Completion Parsing:**
-
-- **Pattern:** Multiple fallback strategies for parsing LLM JSON output:
-  1. Direct JSON parse
-  2. `json_repair` with automatic correction
-  3. Regex extraction from markdown code fences
-  4. Manual field extraction with defaults
-- **Risk:** If LLM format changes, parser may degrade gracefully but silently with incomplete data
-- **Example:** `_normalize_keyword_list()` tries four different parse paths (`v1/lightrag/operate.py:4033-4080`)
-
-**Relationship Extraction & Edge Canonicalization:**
-
-- **Location:** `v1/lightrag/kg/cozo_impl.py:63-74` (`_canonical_edge_key()`), `databasise/stores/graph.py:78-84` (copy)
-- **Pattern:** Edge direction is normalized; direction reversal is order-dependent
-- **Risk:** If edge model changes (e.g., adding direction enum instead of binary swap), silent graph corruption
-- **Impact:** Duplicate edges with opposite directions could be created if canonicalization is bypassed
-
-**Configuration & Environment Loading:**
-
-- **Location:** `v1/lightrag/operate.py:87-92` (loads .env from module directory)
-- **Concern:** Each LightRAG instance loads its own .env file; instance-specific configs can conflict
-- **Risk:** Credential confusion if multiple instances point to different .env files but share storage
-- **Mitigation:** OS environment variables take precedence; `.env` is fallback only
-
-## Security Considerations
-
-**No Secrets in Repo (Post-Sanitization):**
-
-- **Status:** Root `.env` removed; credential values in `env.docker-compose-full` blanked
-- **Files:** `env.example` documents required keys without values
-- **Risk Mitigated:** Secrets are not accidentally committed
-
-**LLM Prompt Injection via Extracted Text:**
-
-- **Pattern:** User documents are extracted → chunked → passed to LLM prompts for entity/relation extraction
-- **Mitigation:** Text is sanitized via `sanitize_text_for_encoding()`, `sanitize_and_normalize_extracted_text()` before LLM calls
-- **Risk:** If sanitization is incomplete, adversarial document content could inject LLM instructions
-- **Files:** `v1/lightrag/utils.py`, multiple call sites in `operate.py`
-
-**SQL-Like Injection via Cozo Queries:**
-
-- **Pattern:** CozoGraphStorage constructs queries with string interpolation (node IDs, edge keys)
-- **Defense:** IDs are enforced as canonical strings; no user-supplied SQL/Datalog
-- **Risk:** Low — all node IDs are derived from MD5 hashes or entity names; no free-form SQL accepted
-
-**Vector DB Client Credentials:**
-
-- **Location:** Multiple vector DB implementations (Milvus, Weaviate, Qdrant, etc.)
-- **Risk:** Credentials passed via environment variables; no per-request auth rotation
-- **Impact:** Compromise of any one credential exposes entire vector space
-
-**JWT & API Authentication:**
-
-- **Location:** `v1/lightrag/api/` — uses `python-jose[cryptography]` + `PyJWT` for token handling
-- **Risk:** Token expiry and refresh not explicitly shown in config examples; default to long lifetimes if not set
-- **Files:** `v1/lightrag/api/config.py`, token validators in routers
-
-## Missing or Incomplete Features
-
-**No Built-In Query Caching:**
-
-- **Status:** LLM call results cached (prompt + completion), but query results not cached
-- **Impact:** Identical queries to the same corpus issue new LLM calls every time
-- **Workaround:** Would need to implement at API layer or add query-level cache decorator
-
-**No Explicit TTL for Embeddings:**
-
-- **Pattern:** Entity and relation embeddings are computed once and stored; no refresh mechanism
-- **Risk:** If embedding model changes, stale embeddings degrade retrieval quality
-- **Mitigation:** Requires manual re-extraction and merge to update; no automatic versioning
-
-**Limited Error Recovery:**
-
-- **Pattern:** Failed chunk processing is logged but does not auto-retry with exponential backoff
-- **Impact:** Network blips or transient LLM errors can skip document chunks silently
-- **Current:** Application must retry entire document manually
-
-**No Multi-Tenancy Isolation:**
-
-- **Pattern:** `namespace` and `workspace` separate storage, but no authorization layer
-- **Risk:** If storage is exposed via API, any authenticated user can access any namespace
-- **Current:** API does not enforce namespace ACLs; delegated to application layer
-
-## Test Coverage Gaps
-
-**Ingest Pipeline Edge Cases:**
-
-- **Untested:** `merge_nodes_and_edges()` under concurrent chunk streams with LLM rate-limit errors
-- **Untested:** Partial entity/edge extraction (one of three LLM calls fails)
-- **Untested:** Node merging when extracted entities partially overlap existing graph
-- **Risk:** Silent data inconsistency (orphaned edges, duplicate nodes)
-- **Files:** `v1/lightrag/operate.py:2914-4731`, `v1/tests/` — no integration tests covering end-to-end concurrency
-
-**Cozo Query Shape Variations:**
-
-- **Covered:** Bug regression tests lock in specific query patterns
-- **Uncovered:** Edge enumeration performance with >10M edges; aggregation correctness across shards (if Cozo ever partitions)
-- **Files:** `v1/tests/kg/test_cozo_frozen_bugs.py`, `databasise/tests/stores/test_graph_frozen_bugs.py` (comprehensive but narrow scope)
-
-**Multi-Process Lock Scenarios:**
-
-- **Untested:** Process crashes while holding multiprocessing.Manager locks; recovery behavior
-- **Untested:** Timeouts on Manager.Lock acquisition under extreme contention
-- **Untested:** Context switch between async and sync lock contexts under load
-- **Files:** `v1/lightrag/kg/shared_storage.py` — unit tests exist but not stress-tested
-- **Risk:** Production deadlocks with no monitoring visibility
-
-**Chunk Truncation Boundaries:**
-
-- **Untested:** Entity name truncation boundary conditions (exactly at 256 char, exactly at 512 byte)
-- **Untested:** Section context truncation when context token size equals budget exactly
-- **Untested:** VDB content truncation with multi-byte UTF-8 sequences at boundary
-- **Risk:** Off-by-one truncation errors, data loss at scale
-
-**Databasise Integration Tests:**
-
-- **Coverage:** Phase 1's four acceptance criteria are tested (transparent wiring, arms wiring, multi-engine touch, artifact registry)
-- **Gap:** No stress tests for concurrent node execution with real semaphore contention
-- **Gap:** No integration test for ledger append-only correctness under concurrent access (Phase 1 does not exercise real promotion)
-- **Gap:** No end-to-end test of artifact scope filtering (write scope vs. discover scope)
-- **Gap:** No recovery test for hydration nodes with missing or malformed entity/relation attributes
-
-## Scaling Limits
-
-**Entity Graph Scalability:**
-
-- **Current Limit:** `max_graph_nodes` configuration (default 1,000) enforced
-- **Enforcement:** `v1/lightrag/operate.py` — nodes pruned if exceeding limit
-- **Issue:** No documented algorithm for which nodes to prune; appears to be FIFO or LRU
-- **Risk:** Important entities evicted without warning; query quality degrades silently
-
-**Embedding Vector Dimension:**
-
-- **Current:** Fixed per embedding model (e.g., OpenAI text-embedding-3-small = 1536 dims)
-- **Cozo Integration:** Vector DB (Milvus, Qdrant, Faiss) indexed by dimension
-- **Risk:** Changing embedding model mid-pipeline requires re-embedding entire corpus and reindexing
-- **No Versioning:** No schema migration tool for embedding model changes
-
-**VDB Index Types:**
-
-- **Current Default:** Faiss IndexFlatIP cosine (exact, brute-force L2 dot product) per `databasise/stores/vector.py:14` and `v1/pyproject.toml` comment
-- **Limitation:** O(N) per query; no approximate indexes (HNSW, IVF)
-- **Scaling:** ~100K vectors practical; >1M vectors become slow
-- **Workaround:** Manual index tuning not exposed via API
-
-**Concurrent LLM Calls:**
-
-- **Controlled By:** `MAX_ASYNC_LLM` and per-role `max_async` settings in `v1/lightrag/llm_roles.py`
-- **Default:** Falls back to base `MAX_ASYNC_LLM` if unset
-- **Risk:** Unbounded concurrency can exhaust LLM rate limits; no adaptive backoff implemented
-- **Monitoring:** No built-in metrics on LLM call latency or error rates
-
-## Dependencies at Risk
-
-**Frozen Cozo 0.7.6:**
-
-- **Status:** Pinned forever by design (decision D-P1.1-08, D-05)
-- **Risk:** No upstream bug fixes; if critical correctness bug discovered in Cozo, stuck with workaround-in-app
-- **Mitigation:** Regression tests lock in known bugs; avoiding those query patterns avoids triggering them
-- **Alternative:** HippoRAG 2 reference implementation may use different storage; Phase 3+ may change
-
-**Deprecated LLM SDKs:**
-
-- **OpenAI:** `openai>=2.0.0,<3.0.0` — current but will eventually be EOL
-- **Google Genai:** `google-genai>=1.0.0,<3.0.0` — relatively new; may have stability issues
-- **Anthropic SDK:** Used only for embedding (deprecated path); LLM calls go through OpenAI SDK
-- **Risk:** If LLM provider changes API, downstream code breaks; no abstraction layer
-
-**Pandas Version Constraint:**
-
-- **Current:** `pandas>=2.0.0,<2.4.0` (narrow range)
-- **Issue:** Excludes 3.x; compatibility with 2.4+ not tested
-- **Risk:** Pandas 2.4+ may introduce breaking changes; codebase will need updates when Pandas 3 ships
-
-**Tenacity (Retry Library):**
-
-- **Usage:** LLM API calls retry with exponential backoff
-- **Version:** No constraint; latest version used
-- **Risk:** Major version bump could change retry behavior; tests do not mock this lib
-
-**RFC 8785 (JCS) Package:**
-
-- **Status:** Pinned at `==0.1.4` in `databasise/pyproject.toml` (D-05 decision)
-- **Risk:** Library is young and may have bugs or breaking changes in minor updates
-- **Mitigation:** Pinned version locks behavior; `canonicalise()` contract is frozen per CONTRACT.md §1
-- **Dependency Flow:** Only used by databasise, not by v1; no transitive risk
-
-## Operational Concerns
-
-**Gunicorn Timeout Configuration:**
-
-- **Location:** `v1/lightrag/api/run_with_gunicorn.py:223-224`
-- **Pattern:** Gunicorn timeout = LLM timeout + 30 seconds
-- **Risk:** If LLM call takes exactly timeout time, race condition possible; request cancelled while response being written
-- **Mitigation:** 30-second grace period is heuristic; no adaptive adjustment
-
-**Background Process Lifecycle:**
-
-- **Issue:** Multiprocessing.Manager spawns background process; no explicit cleanup if main process crashes
-- **Risk:** Orphaned Manager process; zombie processes on unclean shutdown
-- **Mitigation:** Cleanup via `finalize_share_data()` — must be called in __del__ or atexit handler (not guaranteed)
-
-**Logging Configuration:**
-
-- **Location:** `v1/lightrag/api/config.py`, `v1/lightrag/utils.py`
-- **Pattern:** DEBUG logs are noisy with lock/concurrency details; no separate concurrency trace logger
-- **Risk:** Production logs filled with DEBUG_LOCKS output if verbose mode enabled; makes troubleshooting harder
-
-**SQLite Connection Lifecycle in databasise Stores:**
-
-- **Pattern:** Each store (KV, lexical) opens its own SQLite connection at `__init__`, holds it until `finalize()`
-- **Risk:** If finalize() is not called, connection remains open indefinitely (SQLite WAL files also held)
-- **Mitigation:** Store lifecycle must be coordinated by runner; databasise doesn't provide resource pooling
-- **Impact:** Long-running processes accumulating store instances (unlikely in Phase 1, possible if stores are created per-namespace dynamically)
-
-## Stray Artifacts & Environment Issues
-
-**Audit Stderr Output Files:**
-
-- **Files:** `databasise/audit_stderr_bypass.txt`, `audit_stderr_global.txt`, `audit_stderr_hybrid.txt`, `audit_stderr_local.txt`, `audit_stderr_naive.txt` (all empty, Sep 1 2026)
-- **Purpose:** Captured stderr from Phase 3 parity comparison runs (one per arm)
-- **Status:** Untracked; left in repo by audit/comparison script
-- **Impact:** No functional impact; should be gitignored or removed
-
-**Pinned Parity Environment Configuration:**
-
-- **File:** `v1/parity-env.txt` (997 bytes, Sep 1 2026)
-- **Purpose:** Frozen config for deterministic parity runs (provider pin, storage family, rerank disabled, LLM cache disabled)
-- **Status:** Untracked; symlinked to `v1/.env.parity` for parity run isolation
-- **Impact:** Necessary for Phase 3 reproducibility; should be documented and possibly tracked
+**Analysis Date:** 2026-09-08
+
+## Tech Debt
+
+### Deprecated v1 Adapter Methods Still Exposed
+
+**Area:** v1 LightRAG
+- Issue: Three deprecated adapter methods remain in the public API and carry no deprecation warning
+  - `insert_custom_chunks()` (async: `ainsert_custom_chunks()`) — marked `# TODO: deprecated, use insert instead`
+  - `setup_logger()` — marked `# TODO: Deprecated, use setup_logger in utils.py instead`
+  - `auto_manage_storages_states` config parameter — marked `# TODO: Deprecated (will never initialize storage automatically)`
+- Files: `v1/lightrag/lightrag.py` (lines ~445, ~450, ~140)
+- Impact: Callers may discover these are deprecated only through failed usage; no migration path is documented
+- Fix approach: Add `@deprecated()` decorator with clear message pointing to the replacement, or remove if no known callers exist outside the repo
+
+### Large Monolithic Files Limit Maintainability
+
+**Area:** v1 LightRAG core modules
+- Issue: Several files exceed 4000 lines, creating cognitive overhead and increasing change blast radius
+  - `v1/lightrag/kg/postgres_impl.py` — 8396 lines (one backend implementation)
+  - `v1/lightrag/operate.py` — 6001 lines (query orchestration)
+  - `v1/lightrag/utils.py` — 5033 lines (general utilities)
+  - `v1/lightrag/pipeline.py` — 4479 lines (async ingestion)
+- Files: `v1/lightrag/{kg/postgres_impl.py, operate.py, utils.py, pipeline.py}`
+- Impact: Making changes requires reading/understanding large context; refactoring risk is high; testing individual functions requires setup of entire module state
+- Fix approach: Extract utility submodules (e.g., tokenization, entity-formatting helpers out of utils.py; query-stage isolation in operate.py); decompose postgres_impl into schema-specific modules
+
+### Global State in API Configuration (v1)
+
+**Area:** v1 FastAPI initialization
+- Issue: Module-level `_global_args`, `_initialized` globals in `v1/lightrag/api/config.py` create thread-safety concerns in multi-worker deployments
+  - Initialization not atomic across Gunicorn/Uvicorn workers
+  - No guard against partial/duplicate initialization in concurrent startup
+- Files: `v1/lightrag/api/config.py` (lines ~798, ~840, ~858, ~864)
+- Impact: On worker fork/spawn, initialization race is possible (one worker sees uninitialized config while another initializes); state is not worker-local
+- Fix approach: Thread the config through dependency injection (FastAPI `Depends()`) instead of module-level globals; initialize once at app startup hook before workers receive requests
+
+### Incomplete XML Parsing Safeguards
+
+**Area:** v1 Document parsing
+- Issue: `v1/lightrag/parser/docx/omml/ommlparser.py` imports deprecated `cElementTree` and does not participate in the defusedxml safety layer used elsewhere
+  - Line 1: `from xml.etree.cElementTree import Element` (deprecated since Python 3.9)
+  - Other DOCX parsing modules (`parse_document.py`, `drawing_image_extractor.py`, `numbering_resolver.py`) correctly use `defusedxml.ElementTree`
+  - OMMLParser receives already-parsed Element objects (not raw XML), so XXE risk is indirect (inherited from calling code), but the inconsistency is fragile
+- Files: `v1/lightrag/parser/docx/omml/ommlparser.py` (line 1); safe parsers at `v1/lightrag/parser/docx/{parse_document.py:305, drawing_image_extractor.py:20, numbering_resolver.py:8}`
+- Impact: If calling code ever changes to pass raw DOCX XML directly to OMMLParser, XXE vulnerability becomes direct; cElementTree import will fail on Python 3.13+
+- Fix approach: Import from `xml.etree.ElementTree` (modern) or `defusedxml.ElementTree` depending on upstream parsing context; add type hint `defusedxml.Element | xml.etree.ElementTree.Element` if both paths remain
 
 ---
 
-*Concerns audit: 2026-09-03*
+## Known Bugs & Incomplete Fixes
+
+### Databasise 2.0 — Parity Measurement Latent Completeness Gap
+
+**Area:** Phase 03 — Parity Evidence
+- Issue: The `_render_not_measured()` function uses a priority-chain branch (`if degraded_arms: ... elif excursion_arms: ... else:`) rather than a per-arm loop
+  - Currently correct on the real data (all arms clean/excursion, no mixed degradation)
+  - But would silently drop mention of excursion arms if a future re-run produced mixed degraded + non-degraded arms simultaneously
+- Files: `databasise/evidence/parity_report.py` (lines 1228–1253)
+- Trigger: A future run where one graph arm degrades while others show excursion
+- Workaround: None (latent — would only surface if measurement conditions change)
+- Fix approach: Mirror `_render_verdict()`'s per-arm loop: build one clause per arm keyed on that arm's own degradation state and join them; add synthetic regression test exercising mixed degraded+excursion case to prevent silent re-occurrence
+
+### Databasise 2.0 — Stated Safety Margin Is Arithmetically Wrong
+
+**Area:** Phase 03 — Vector Parity Tolerance
+- Issue: `_VECTOR_TOLERANCE` comment states `"1e-4 is two orders of magnitude above the measured ~1e-5 noise ceiling"`
+  - Actual ratio: `1e-4 / 1e-5 = 10` (one order of magnitude, not two)
+  - Two orders of magnitude above `1e-5` would be `1e-3`
+  - The true 10x margin is still defensible but the code misstates its own math
+- Files: `databasise/parity/import_index.py` (line 289–290); same error in commit `45925d6` message
+- Impact: Next person to consider tightening/loosening `_VECTOR_TOLERANCE` reasons from wrong numbers; confidence in the margin is misplaced
+- Fix approach: Correct comment to say "one order of magnitude" or "10x"; if wider margin is needed, update `_VECTOR_TOLERANCE` value with explicit rationale
+
+### Databasise 2.0 — Perturbation Test Doesn't Prove Strictness Improvement
+
+**Area:** Phase 03 — Vector Import Verification
+- Issue: `test_real_v1_build_perturbed_vector_is_caught_and_named()` perturbs by `+1.0` to a component of a unit-normalized vector
+  - This shift is `> 1000 * _VECTOR_TOLERANCE` and would fail the old 2-decimal-rounding check as well
+  - Test only proves the new mechanism catches obvious, gross differences, not the actual claimed improvement (catching subtler differences in the `0.005`–`0.0156` range that old rounding would miss)
+- Files: `databasise/tests/parity/test_import_verification.py` (new test, not explicitly named in review)
+- Impact: The specific claim that the new tolerance check is "strictly stronger" than the old rounding check is unproven; could both be equally coarse-grained
+- Fix approach: Change perturbation to `5e-3` (above tolerance but within 2-decimal grid resolution), then assert (a) new check flags it, (b) old quantized comparison would not
+
+### Databasise 2.0 — Graph Topology Assertion Never Checks Attributes
+
+**Area:** Phase 03 — Parity Verification
+- Issue: `verify_import()`'s `_v1_graph()` and `_v2_graph()` return only node-id sets and edge-endpoint-pair sets
+  - Does not compare each node/edge's `attrs` payload (`description`, `weight`, `entity_type`, etc.)
+  - An import that preserves every id and edge pair but corrupts an attribute would pass `verify_import` cleanly
+- Files: `databasise/parity/import_index.py` (lines 365–462)
+- Impact: "Verified import" claims less fidelity than readers expect; the exact attribute-corruption class (weight confusion, type mismatch) that Phase 03 fixed is invisible to this assertion
+- Fix approach: If attribute-level fidelity matters, extend assertion to also compare `attrs` dict between v1 and v2; if intentional scope limitation, document it explicitly in module docstring
+
+---
+
+## Evidence Rendering & Validation Gaps
+
+### Databasise 2.0 — Markdown Table Corruption on Special Characters
+
+**Area:** Phase 02 — Falsifier 2 Evidence Renderer
+- Issue: Evidence markdown tables have no escaping for `|` or newlines in wiring-derived strings
+  - Functions `_render_node_table`, `_render_boundaries`, `_render_probe_table`, `_wiring_shape_summary` directly interpolate strings from wiring documents
+  - A `|` in `component`, `between`, `rationale`, or `wiring_shape` silently splits the table row
+- Files: `databasise/evidence/falsifier2.py` (lines 398–467)
+- Trigger: Author adds a wiring with `component="a | b"` or rationale containing `|`
+- Workaround: None in the evidence renderer (the three committed wirings happen not to contain these chars)
+- Fix approach: Escape `|` → `\|` and normalize newlines to spaces in every interpolated cell before building table rows
+
+### Databasise 2.0 — Uncaught KeyError on Malformed Boundary Knobs
+
+**Area:** Phase 02 — Falsifier 2 Evidence Renderer
+- Issue: `enumerate_boundaries()` reads `boundary_knobs` raw from wiring document with no validation
+  - Direct indexing of `knob["between"]` and `knob["rationale"]` without fallback
+  - A missing key crashes `render_markdown()` with bare `KeyError` instead of an actionable error message
+- Files: `databasise/evidence/falsifier2.py` (lines 384–393)
+- Trigger: Hand-edited wiring fixture with typo'd knob key
+- Workaround: Validate wiring JSON manually before running render
+- Fix approach: Validate knob shape upfront (pydantic or explicit checks) rather than relying on bare `KeyError` propagation
+
+### Databasise 2.0 — Ledger Import Guard Misses One Import Shape
+
+**Area:** Phase 02 — MACH-09 Measurement Posture Guard
+- Issue: `_ledger_import_findings()` in `test_measurement_posture.py` only inspects `ast.ImportFrom.module` names
+  - Misses the `from databasise import ledger` shape where `module="databasise"` (parent package)
+  - Imported alias names are not checked for `ast.ImportFrom` nodes with parent-package `module`
+- Files: `databasise/tests/runner/test_measurement_posture.py` (lines 69–91)
+- Trigger: Future code using `from databasise import ledger; ledger.ledger.Ledger()` bypasses the structural pin with the test staying green
+- Impact: The guard's claim ("this test keeps that statement true going forward") fails silently for this import shape
+- Fix approach: When `module` is a prefix of `"databasise.ledger"` (e.g., `"databasise"`), also check imported alias names (e.g., `f"{module}.{alias.name}"` against `"databasise.ledger."` predicate)
+
+### Databasise 2.0 — Promotion Verb Guard Incomplete
+
+**Area:** Phase 02 — MACH-09 Structural Pin
+- Issue: `_promotion_verb_findings()` only matches `ast.FunctionDef` and `ast.AsyncFunctionDef` nodes
+  - Does not catch `promote = _internal_impl` (plain name binding, not a function definition)
+- Files: `databasise/tests/runner/test_measurement_posture.py` (lines 94–107)
+- Severity: Lower than ledger-import gap (requires deliberate evasion) but same class of structural pin brittleness
+- Fix approach: Optionally scan top-level/class-level `ast.Assign` targets whose name matches `_PROMOTION_VERB_NAMES`
+
+---
+
+## Data Loss & Documentation Drift
+
+### Lost Fact Layer — Incomplete Reconstruction
+
+**Area:** Critical incident on developer machine (pre-Phase 1)
+- Issue: A rogue LLM session deleted files and git repositories on the owner's Windows machine
+  - **v1 engine survived** (414 Python files, intact)
+  - **Fact layer lost with no recovery:** `version_routes.py`, `sourcerer.py`, resolver, wiki routes (`/wiki/resolve`, `/wiki/unresolved`, `/wiki/unplaced`, `/wiki/preview`)
+  - The lost layer implemented time-travel (`as_of` queries), contradiction resolution, vocabulary management, document-level provenance tracking
+- Files: None (deleted)
+- Impact: Critical capabilities for time-travel queries, conflict resolution, and single source of truth are not in v1 or Phase 2–4 requirements; planning that assumes requirements are complete will silently drop these capabilities
+- Workaround: Consult `.claude/skills/spike-findings-*/` in related repos (spikes survived the deletion)
+- Fix approach: Before concluding a feature never existed, check spike artifacts; owner is rebuilding from damaged record and `.planning/` may be incomplete (see `RECOVERED-FACT-LAYER.md`)
+
+### Stale Defaults in Documentation and Configuration
+
+**Area:** Configuration drift across v1 and documentation
+- Issue: Real defaults are **Cozo + Faiss**, set in `v1/lightrag/lightrag.py:275–284` and `v1/lightrag/api/config.py:64–68`
+  - But at least six places in the tree contradict this:
+    - `v1/env.example:817–820` — says Json/NetworkX/Nano (upstream defaults)
+    - `v1/lightrag/tools/rebuild_vdb.py:584–586` — says Json/NetworkX
+    - `v1/tests/setup/test_validate.py:31–34` — says Json/NetworkX
+    - `v1/tests/kg/test_graph_storage.py:73` — says Json/NetworkX
+    - `v1/docs/ProgramingWithCore.md:73` — says Json/NetworkX
+    - `.claude/CLAUDE.md` (project instructions) — says "Cozo + Nano VectorDB, NetworkX is default replaced by Cozo"
+  - Embedding path has same problem: code defaults to ollama/bge-m3, but `env.example:722–723` says openai/text-embedding-3-large
+  - This propagated into `.planning/research/STACK.md:26` (recommends LanceDB on stale data), then into Phase 1 requirement EMBED-01
+- Files: `v1/env.example`, `v1/lightrag/tools/rebuild_vdb.py`, `v1/tests/setup/test_validate.py`, `v1/tests/kg/test_graph_storage.py`, `v1/docs/ProgramingWithCore.md`, `.claude/CLAUDE.md`
+- Impact: A run silently uses the wrong store or embedding space if docs are followed instead of code; Phase 3's parity measurement is invalid if the two sides differ
+- Fix approach: Update all docs/configs to match code reality (Cozo + Faiss + ollama/bge-m3); or change code to match documented defaults. Verify a default in `lightrag.py`/`api/config.py` before trusting any doc statement
+
+---
+
+## Security Considerations
+
+### LLM Cache May Persist Truncated Structured Output
+
+**Area:** v1 OpenAI LLM integration
+- Issue: When OpenAI raises `LengthFinishReasonError` (structured output truncated), partial JSON is returned from `message.content`
+  - Current code does cache this truncated response
+  - Later runs with higher token budget reuse the incomplete cached JSON instead of re-querying
+- Files: `v1/lightrag/llm/openai.py` (lines 225–279; comment at line 225)
+- Trigger: Any query with `response_format={"type": "json_object"}` that produces output longer than the token limit
+- Impact: Broken/repaired JSON persists in the cache; subsequent queries against the same prompt get incomplete data marked as "cached"
+- Fix approach: Do not cache responses with `finish_reason == "length"`; mark truncated completions specially or skip caching them entirely; add a regression test exercising structured output with a token-budget constraint
+
+### Default JWT Secret Used When Auth Is Unconfigured
+
+**Area:** v1 FastAPI authentication
+- Issue: `DEFAULT_TOKEN_SECRET = "lightrag-jwt-default-secret-key!"` is used when `TOKEN_SECRET` is not explicitly set and `AUTH_ACCOUNTS` is empty
+  - This is a well-known constant (visible in the repo)
+  - Any attacker who knows this repo can forge JWT tokens for unauthenticated instances
+- Files: `v1/lightrag/api/config.py` (line 58); auth handler at `v1/lightrag/api/auth.py` (lines 27–36)
+- Severity: Medium (only affects unauthenticated deployments; if `AUTH_ACCOUNTS` is configured, rejection at line 164-165 forces a real secret)
+- Workaround: Always set `TOKEN_SECRET` explicitly in production, even if `AUTH_ACCOUNTS` is empty
+- Fix approach: Refuse to start the API if `TOKEN_SECRET` is the hardcoded default and the API is not in development mode; or generate a random secret on first startup and persist it
+
+---
+
+## Performance Concerns
+
+### Redundant Wiring Parse/Registry Construction
+
+**Area:** Databasise 2.0 — Evidence generation
+- Issue: `render_markdown()` redundantly parses the same wiring JSON file multiple times
+  - Each call to `render_markdown()` invokes `_parse(stem)` directly (line 487)
+  - Also calls `evaluate_wiring(stem)` (line 488), which internally calls `_parse(stem)` again (line 302)
+  - `enumerate_boundaries()` independently calls `load_wiring(evidence.stem)` a third time (line 384)
+  - Each `_parse` reconstructs a `default_registry()` and re-parses JSON
+- Files: `databasise/evidence/falsifier2.py` (lines 298–341, 384, 486–488)
+- Impact: Purely a duplication/maintainability nit (performance negligible for current wiring sizes, result is deterministic); but makes the code harder to follow and changes become fragile
+- Fix approach: Thread the single `(doc, parsed)` pair produced by `render_markdown`'s loop into `evaluate_wiring` and `enumerate_boundaries` instead of re-deriving
+
+---
+
+## Fragile Areas
+
+### Incomplete Per-Node Annotation Support
+
+**Area:** Databasise 2.0 — Wiring Author Experience
+- Issue: With `WiringNode.extra="forbid"`, any node-level key outside the explicit schema (`component`/`kind`/`effects`/`config`/`deps`) is refused
+  - Includes author documentation fields like `"notes"` or `"description"`
+  - No supported channel for per-node comments other than repurposing `config` (semantically wrong)
+- Files: `databasise/parts/schema.py` (line 132), `databasise/validator/parse.py` (lines 126–138)
+- Impact: Wiring authors cannot self-document their nodes; `config` is co-opted for documentation instead of purpose
+- Fix approach: Add an explicitly-allowed `"metadata"` or `"notes"` field to `WiringNode` schema if future phases want to support wiring documentation
+
+### Databasise 2.0 — OMMLParser Misses Formatting Support
+
+**Area:** v1 DOCX math parsing
+- Issue: OMMLParser does not support `m:rPr` (run properties) and `m:scr` (script style)
+  - Results in loss of character styling information in mathematical equations
+- Files: `v1/lightrag/parser/docx/omml/ommlparser.py` (line 66, marked TODO)
+- Impact: Subscripts, superscripts, and formatting are stripped from OMML math; rendered LaTeX loses structure
+- Workaround: None (will require extending OMMLParser to handle these tags)
+- Fix approach: Add handlers for `m:rPr` (extract font properties) and `m:scr` (map script types to LaTeX commands like `^\text{superscript}`, `_\text{subscript}`)
+
+---
+
+## Deferred / Not-in-Scope (correctly disclosed, not gaps)
+
+- The Databasise alias registry is empty this phase by design (Phase 7 populates it).
+- Unauthenticated REST surface in Databasise is disclosed and accepted (marked `transfer` disposition).
+- MACH-11's event proof is limited to fixture parts (no `parts_core` part declares `mutates_store` yet) — correct correlation.
+- EMBED-02's MCP half is deferred to a later phase; COVERAGE.md records this as an explicit `OPT-OUT`.
+
+---
+
+*Concerns audit: 2026-09-08*
+*Commit: 8044f9a*

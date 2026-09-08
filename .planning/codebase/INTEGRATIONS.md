@@ -1,353 +1,310 @@
+---
+last_mapped_commit: 8044f9a
+---
+
 # External Integrations
 
-**Analysis Date:** 2026-09-03
+**Analysis Date:** 2026-09-08
 
 ## APIs & External Services
 
-**LLM Providers (Switchable, v1):**
+**LLM Providers (v1 only; v2 will integrate via OpenAI-compatible base_url):**
+- OpenAI - GPT-4, GPT-4o, GPT-4-mini, GPT-5.4, Grok, etc.
+  - SDK: `openai` 2.0–3.0
+  - Auth: `LLM_BINDING_API_KEY` or `OPENAI_LLM_BINDING_API_KEY`
+  - Endpoint: `LLM_BINDING_HOST=https://api.openai.com/v1` (default) or override for OpenRouter, local vLLM, etc.
+  - Role-specific config: `KEYWORD_LLM_*`, `QUERY_LLM_*`, `EXTRACT_LLM_*` prefixes
+  - Options: temperature, max_tokens, extra_body, reasoning_effort (o1 models)
 
-- OpenAI (default)
-  - SDK: `openai` package
-  - Endpoint: `https://api.openai.com/v1` (configurable)
-  - Auth: `LLM_BINDING_API_KEY` or `OPENAI_API_KEY`
-  - Models: `gpt-4o`, `gpt-4o-mini`, o1 family
-  - Config: `LLM_BINDING=openai`, `LLM_MODEL`, `LLM_TIMEOUT`, `MAX_ASYNC_LLM`
-  - Features: Streaming, reasoning effort control, max_completion_tokens, extra_body for reasoning
-  - Role variants: `QUERY_LLM_*`, `KEYWORD_LLM_*` prefixes
+- Anthropic Claude - Claude 3, Claude 3.5 Sonnet, Opus, Haiku
+  - SDK: `anthropic` 0.18–1.0
+  - Auth: `LLM_BINDING_API_KEY=<anthropic-key>`
+  - Endpoint: Default CloudFront CDN via SDK (no override)
+  - Via OpenRouter also supported (set `LLM_BINDING_HOST=https://openrouter.ai/api/v1`)
 
-- Azure OpenAI
-  - SDK: `openai` package (Azure backend)
-  - Endpoint: `https://<resource>.openai.azure.com/`
-  - Auth: `AZURE_OPENAI_API_KEY`
-  - Config: `AZURE_OPENAI_DEPLOYMENT`, `AZURE_OPENAI_API_VERSION`, `AZURE_OPENAI_ENDPOINT`
+- Google Gemini - Gemini Flash, Pro, Gemini 2.5, etc.
+  - SDK: `google-genai` 1.0–3.0
+  - Auth: `LLM_BINDING_API_KEY=<gemini-api-key>`
+  - Endpoint: `LLM_BINDING_HOST=DEFAULT_GEMINI_ENDPOINT` (SDK default) or manual
+  - Config: GEMINI_LLM_TEMPERATURE, GEMINI_LLM_MAX_OUTPUT_TOKENS, GEMINI_LLM_THINKING_CONFIG (JSON object for thinking budget)
+  - Vertex AI support via `GOOGLE_GENAI_USE_VERTEXAI=true` + `GOOGLE_APPLICATION_CREDENTIALS`
 
-- Google Gemini
-  - SDK: `google-genai` package
-  - Endpoint: Auto-detected (AI Studio) or Vertex AI
-  - Auth: `EMBEDDING_BINDING_API_KEY` (AI Studio) or `GOOGLE_APPLICATION_CREDENTIALS` (Vertex AI)
-  - Config: `LLM_BINDING=gemini`, `LLM_MODEL=gemini-flash-latest`, `GEMINI_LLM_THINKING_CONFIG`
-  - Vertex AI: Requires `GOOGLE_GENAI_USE_VERTEXAI=true`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`
+- AWS Bedrock - Nova, Claude on Bedrock, Llama 3, etc.
+  - SDK: `aioboto3` 12.0–16.0 (async)
+  - Auth: AWS_BEARER_TOKEN_BEDROCK or AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY or IAM role
+  - Region: `AWS_REGION=us-west-1` (required; Bedrock endpoints are regional)
+  - Endpoint: `LLM_BINDING_HOST=DEFAULT_BEDROCK_ENDPOINT`
+  - Config: BEDROCK_LLM_TEMPERATURE, BEDROCK_LLM_MAX_TOKENS, BEDROCK_LLM_TOP_P, reasoningConfig (extended thinking)
 
-- Anthropic Claude
-  - SDK: `anthropic` package
-  - Endpoint: Native API or AWS Bedrock
-  - Auth: `ANTHROPIC_API_KEY` or AWS credentials
-  - Config: `LLM_BINDING=bedrock`, `LLM_MODEL=us.anthropic.claude-*-v1:0`
+- Ollama - Local LLM (Qwen 3, Llama 2, Mistral, Phi, etc.)
+  - SDK: `ollama` 0.1–1.0
+  - Endpoint: `LLM_BINDING_HOST=http://localhost:11434` (default)
+  - Config: OLLAMA_LLM_NUM_CTX (required, context window), OLLAMA_LLM_NUM_PREDICT, OLLAMA_LLM_TEMPERATURE, OLLAMA_LLM_STOP
 
-- Ollama (local)
-  - SDK: `ollama` package
-  - Endpoint: `http://localhost:11434` (default, configurable)
-  - Auth: None (local) or optional API key
-  - Config: `LLM_BINDING=ollama`, `LLM_BINDING_HOST`, `LLM_MODEL`, `OLLAMA_LLM_NUM_CTX`
-
-- AWS Bedrock
-  - SDK: `aioboto3` (async) + boto3 (sync)
-  - Endpoint: Regional (auto-detected)
-  - Auth: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, or `AWS_BEARER_TOKEN_BEDROCK`
-  - Config: `LLM_BINDING=bedrock`, `AWS_REGION`, `BEDROCK_LLM_*` parameters
-  - Models: Claude, Nova, Llama
-
-- OpenRouter (OpenAI-compatible)
-  - SDK: `openai` package with custom host
-  - Endpoint: `https://openrouter.ai/api/v1`
-  - Auth: `LLM_BINDING_API_KEY` as OpenRouter API key
-  - Config: `LLM_BINDING=openai`, `LLM_BINDING_HOST=https://openrouter.ai/api/v1`
-  - Models: 200+ models via routing
-
-- Zhipu AI (ChatGLM)
-  - SDK: `zhipuai` package
-  - Endpoint: Zhipu API (SDK-provided)
-  - Auth: `ZHIPUAI_API_KEY`
-  - Config: Optional LLM binding
-
-**Embedding Providers:**
-
-- OpenAI (default)
-  - SDK: `openai` package
-  - Endpoint: `https://api.openai.com/v1` (configurable)
+- Voyage AI - Proprietary embeddings
+  - SDK: `voyageai` 0.2–1.0
   - Auth: `EMBEDDING_BINDING_API_KEY`
-  - Model: `text-embedding-3-large` (default), `text-embedding-3-small`
-  - Dim: 3072 (large), 1536 (small)
-  - Config: `EMBEDDING_BINDING=openai`, `EMBEDDING_MODEL`, `EMBEDDING_DIM`, `EMBEDDING_USE_BASE64`
+  - Used primarily for embeddings, not LLM generation
 
-- Google Gemini Embeddings
-  - SDK: `google-genai` package
-  - Endpoint: Google API (SDK-provided)
-  - Auth: `EMBEDDING_BINDING_API_KEY`
-  - Config: `EMBEDDING_BINDING=gemini`, `EMBEDDING_SEND_DIM=true`
+- Jina AI - Embeddings and reranking
+  - Embeddings: `EMBEDDING_BINDING=jina`
+  - Reranking: `RERANK_BINDING=jina`
+  - Endpoint: `https://api.jina.ai/v1/...`
 
-- Azure OpenAI Embeddings
-  - SDK: `openai` package (Azure backend)
-  - Endpoint: `https://<resource>.openai.azure.com/`
-  - Auth: `EMBEDDING_BINDING_API_KEY`
-  - Config: `EMBEDDING_BINDING=azure_openai`, `AZURE_EMBEDDING_DEPLOYMENT`, `AZURE_EMBEDDING_API_VERSION`
+- Aliyun Dashscope - Chinese LLM and reranking provider
+  - Reranking: `RERANK_BINDING=aliyun`, `RERANK_BINDING_HOST=https://dashscope.aliyuncs.com/api/v1/services/rerank/...`
 
-- Ollama Embeddings
-  - SDK: `ollama` package
-  - Endpoint: `http://localhost:11434` (configurable)
-  - Auth: Optional API key
-  - Config: `EMBEDDING_BINDING=ollama`, `EMBEDDING_BINDING_HOST`, `EMBEDDING_MODEL`, `EMBEDDING_DIM`, `OLLAMA_EMBEDDING_NUM_CTX`
+- Cohere - Reranking only
+  - Reranking: `RERANK_BINDING=cohere`, `RERANK_BINDING_HOST=https://api.cohere.com/v2/rerank`
+  - Config: RERANK_MODEL (default rerank-v3.5), RERANK_ENABLE_CHUNKING, RERANK_MAX_TOKENS_PER_DOC
 
-- Bedrock Embeddings
-  - SDK: `aioboto3` (async)
-  - Endpoint: Regional (auto-detected)
-  - Auth: AWS credentials (same as LLM Bedrock config)
-  - Model: `amazon.titan-embed-text-v2:0`, `cohere.embed-*`
-  - Config: `EMBEDDING_BINDING=bedrock`, `AWS_REGION`
+- Zhipuai - Chinese LLM provider
+  - SDK: `zhipuai` 2.0–3.0
 
-- Voyage AI Embeddings
-  - SDK: `voyageai` package
-  - Endpoint: Voyage API
-  - Auth: `EMBEDDING_BINDING_API_KEY`
-  - Config: Optional
+**Embedding Providers (v1 only):**
+- OpenAI text-embedding-3-large (default) or text-embedding-3-small
+  - Binding: `EMBEDDING_BINDING=openai`
+  - Endpoint: `EMBEDDING_BINDING_HOST=https://api.openai.com/v1` (default)
+  - Dimensions: EMBEDDING_DIM=3072 (large), supports dynamic dimension via EMBEDDING_SEND_DIM=true
+  - Base64 encoding: EMBEDDING_USE_BASE64=true (default, improves performance)
 
-- Jina AI Embeddings
-  - SDK: `httpx` (HTTP client)
+- Ollama embedding models (qwen-embedding:4b, bge-m3, etc.)
+  - Binding: `EMBEDDING_BINDING=ollama`
+  - Endpoint: `http://localhost:11434` (default)
+  - Config: OLLAMA_EMBEDDING_NUM_CTX=8192
+
+- Gemini (google-genai SDK)
+  - Binding: `EMBEDDING_BINDING=gemini`
+  - Requires EMBEDDING_SEND_DIM=true
+  - Dimensions typically 1536
+
+- Bedrock embedding models (amazon.titan-embed-text-v2, etc.)
+  - Binding: `EMBEDDING_BINDING=bedrock`
+  - Shares AWS region and auth with LLM config
+
+- Jina embedding API
+  - Binding: `EMBEDDING_BINDING=jina`
   - Endpoint: `https://api.jina.ai/v1/embeddings`
-  - Auth: `EMBEDDING_BINDING_API_KEY`
-  - Config: `EMBEDDING_BINDING=jina`, `EMBEDDING_BINDING_HOST`, `EMBEDDING_MODEL`
+  - Supports asymmetric mode (EMBEDDING_ASYMMETRIC=true)
 
-**Reranking Providers:**
+- VoyageAI embedding (v2 only, via OpenAI-compatible wrapper)
 
-- Cohere Rerank
-  - Endpoint: `https://api.cohere.com/v2/rerank`
-  - Auth: `RERANK_BINDING_API_KEY`
-  - Config: `RERANK_BINDING=cohere`, `RERANK_MODEL=rerank-v3.5`, `RERANK_ENABLE_CHUNKING`, `RERANK_MAX_TOKENS_PER_DOC`
+**Document Parsing Services:**
+- MinerU (precision PDF parser)
+  - Modes: `MINERU_API_MODE=official` (MinerU Precision API v4) or `local` (self-hosted mineru-api)
+  - Official endpoint: `MINERU_OFFICIAL_ENDPOINT=https://mineru.net`, requires `MINERU_API_TOKEN`
+  - Local endpoint: `MINERU_LOCAL_ENDPOINT=http://127.0.0.1:8000`
+  - Backend options: `hybrid-auto-engine` (VLM + pipeline), `pipeline` (CPU-only), `vlm-auto-engine`
+  - OCR: MINERU_LOCAL_PARSE_METHOD (auto, txt, ocr), MINERU_LOCAL_IMAGE_ANALYSIS (VLM for images/charts)
+  - Polling: MINERU_POLL_INTERVAL_SECONDS=2, MINERU_MAX_POLLS=600
 
-- Jina Rerank
-  - Endpoint: `https://api.jina.ai/v1/rerank`
-  - Auth: `RERANK_BINDING_API_KEY`
-  - Config: `RERANK_BINDING=jina`, `RERANK_MODEL=jina-reranker-v2-base-multilingual`
+- Docling (structured PDF to Markdown + JSON)
+  - Endpoint: `DOCLING_ENDPOINT=http://localhost:5001`
+  - OCR: DOCLING_DO_OCR=true, DOCLING_FORCE_OCR=true, DOCLING_OCR_PRESET (engine selection)
+  - Formula enrichment: DOCLING_DO_FORMULA_ENRICHMENT=false (optional)
+  - Polling: DOCLING_POLL_INTERVAL_SECONDS=5 (server-side long-poll), DOCLING_MAX_POLLS=240
+  - Cache: DOCLING_ENGINE_VERSION (version mismatch forces cache miss)
 
-- Aliyun Dashscope
-  - Endpoint: `https://dashscope.aliyuncs.com/api/v1/services/rerank/text-rerank/text-rerank`
-  - Auth: `RERANK_BINDING_API_KEY`
-  - Config: `RERANK_BINDING=aliyun`, `RERANK_MODEL=gte-rerank-v2`
+**Reranking Services (optional):**
+- vLLM or SGLang (local deployment)
+  - Binding: `RERANK_BINDING=cohere` (OpenAI-compatible API on vLLM)
+  - Endpoint: `http://localhost:8000/rerank`
+  - Used for vector-based or neural reranking (BAAI/bge-reranker-v2-m3, etc.)
 
-- vLLM (local, OpenAI-compatible)
-  - Endpoint: `http://localhost:8000/rerank` (configurable)
-  - Auth: Optional (vLLM API key)
-  - Config: `RERANK_BINDING=cohere` (uses Cohere binding), `RERANK_BINDING_HOST`, `RERANK_BINDING_API_KEY`
+**Image Download & Embedding (Native Markdown):**
+- SSRF-guarded external image downloads for native .md files
+  - Configuration: NATIVE_MD_IMAGE_DOWNLOAD_ENABLED=true (default), NATIVE_MD_IMAGE_DOWNLOAD_TIMEOUT=30
+  - Private/loopback IP guard: NATIVE_MD_IMAGE_ALLOWED_NON_PUBLIC_CIDRS=<comma-sep CIDR list> (optional override)
+  - SVG rasterization via cairosvg
 
 ## Data Storage
 
-**Graph Databases:**
+**Graph Databases (pluggable via LIGHTRAG_GRAPH_STORAGE):**
+- Cozo (embedded, RocksDB, v1 & v2 default)
+  - Connection: In-process, no external service
+  - Package: `pycozo[embedded]==0.7.6`
+  - Query language: Datalog
 
-- Cozo (embedded, default for Databasise 2.0)
-  - Package: `pycozo[embedded]` 0.7.6
-  - Backend: RocksDB (embedded)
-  - License: MPL-2.0 (file-level weak copyleft, compatible with MIT shipping)
-  - Config: Auto-initialized, no external config needed
-  - File location: `WORKING_DIR` or `LIGHTRAG_GRAPH_STORAGE=CozoStorage`
-
-- Neo4j (production graph database)
-  - Package: `neo4j` 5.0-7.0
-  - Endpoint: `neo4j+s://`, `neo4j+ssc://`, `bolt://`
+- Neo4j (remote, Bolt protocol, 5.0–7.0)
+  - Connection: `NEO4J_URI=neo4j+s://xxxxxxxx.databases.neo4j.io`
   - Auth: `NEO4J_USERNAME`, `NEO4J_PASSWORD`
-  - Config: `LIGHTRAG_GRAPH_STORAGE=Neo4jStorage`, `NEO4J_URI`, `NEO4J_DATABASE`, `NEO4J_MAX_CONNECTION_POOL_SIZE`, connection retry settings
-  - Features: ACID transactions, full-text search
+  - Config: NEO4J_MAX_CONNECTION_POOL_SIZE=100, NEO4J_CONNECTION_TIMEOUT=30
+  - Package: `neo4j` 5.0–7.0
 
-- NetworkX (in-memory, testing/quick-start)
-  - Built-in (no external package)
-  - Backend: Python dictionary (in-memory)
-  - Config: `LIGHTRAG_GRAPH_STORAGE=NetworkXStorage`
-  - Note: Data not persisted; replaced by Cozo or Neo4j in production
+- PostgreSQL (via pgvector extension for both KG and vector)
+  - Connection: `POSTGRES_HOST=localhost`, `POSTGRES_PORT=5432`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DATABASE=rag`
+  - Vector index type: POSTGRES_VECTOR_INDEX_TYPE (HNSW, IVFFlat, VCHORDRQ)
+  - Connection pool & retry: POSTGRES_MAX_CONNECTIONS=25, POSTGRES_CONNECTION_RETRIES=10, exponential backoff
+  - Package: `asyncpg` 0.31–1.0, `pgvector` 0.4–1.0
 
-- PostgreSQL + pgvector (hybrid graph/vector)
-  - Packages: `asyncpg`, `pgvector`
-  - Extension: pgvector 0.7.0+ required
-  - Endpoint: `postgresql://user:pass@host:5432/database`
-  - Auth: `POSTGRES_USER`, `POSTGRES_PASSWORD`
-  - Config: `LIGHTRAG_GRAPH_STORAGE=PostgresStorage`, `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DATABASE`, connection pool/retry settings
-  - Features: ACID, full-text search, pgvector for embeddings
+- MongoDB (graph via custom schema)
+  - Connection: `MONGO_URI=mongodb://localhost:27017/`, `MONGO_DATABASE=LightRAG`
+  - Atlas Vector Search or local MongoDB 5.0+ required for vector operations
+  - Package: `pymongo` 4.0–5.0
 
-- Memgraph (graph database, Cypher-compatible)
-  - Package: (built-in via BOLT protocol client)
-  - Endpoint: `bolt://localhost:7687`
-  - Auth: `MEMGRAPH_USERNAME`, `MEMGRAPH_PASSWORD`
-  - Config: `LIGHTRAG_GRAPH_STORAGE=MemgraphStorage`, `MEMGRAPH_URI`, `MEMGRAPH_DATABASE`
+- OpenSearch (multi-purpose: KV, vector, graph via PPL graphlookup)
+  - Connection: `OPENSEARCH_HOSTS=localhost:9200` (comma-sep list)
+  - Auth: `OPENSEARCH_USER`, `OPENSEARCH_PASSWORD`, `OPENSEARCH_USE_SSL=true`
+  - k-NN index for vectors: OPENSEARCH_KNN_M=16, OPENSEARCH_KNN_EF_CONSTRUCTION=200
+  - Package: `opensearch-py` 3.0–4.0
 
-**Vector Databases:**
+- NetworkX (in-memory, v1 only, testing default)
+  - Connection: In-process dictionary
+  - Package: `networkx`
 
-- Faiss (CPU, default for v1)
-  - Package: `faiss-cpu` 1.7.0-2.0
-  - Index: IndexFlatIP (cosine similarity, exact)
-  - Backend: File-based or in-memory
-  - Config: `LIGHTRAG_VECTOR_STORAGE=FaissStorage`, `FAISS_INDEX_PATH`
-  - Deployment: Embedded in-process, no external service
+**Vector Databases (pluggable via LIGHTRAG_VECTOR_STORAGE):**
+- Faiss (embedded, exact IndexFlatIP cosine, v1 & v2 default)
+  - Connection: In-process, no external service
+  - Package: `faiss-cpu` 1.7.0–2.0.0 (CPU-only by default)
+  - Index type: Exact cosine similarity (IndexFlatIP)
 
-- Nano VectorDB (lightweight fallback)
+- Nano VectorDB (embedded, lightweight fallback)
+  - Connection: In-process
   - Package: `nano-vectordb`
-  - Backend: JSON-based (file-backed)
-  - Config: `LIGHTRAG_VECTOR_STORAGE=NanoVectorDBStorage`
 
-- Milvus (distributed vector database)
-  - Package: `pymilvus` 2.6.2-4.0
-  - Endpoint: `http://localhost:19530`
-  - Auth: `MILVUS_USER`, `MILVUS_PASSWORD` (optional)
-  - Config: `LIGHTRAG_VECTOR_STORAGE=MilvusStorage`, `MILVUS_URI`, `MILVUS_DB_NAME`, index type (HNSW, IVF_FLAT, AUTOINDEX), metric (COSINE)
-  - Dependencies: MinIO (S3-compatible storage for Milvus)
-  - Features: Distributed, scalable, schema migration with retry logic
+- Milvus (remote, gRPC/HTTP)
+  - Connection: `MILVUS_URI=http://localhost:19530`, `MILVUS_DB_NAME=lightrag`
+  - Auth: `MILVUS_USER`, `MILVUS_PASSWORD`, `MILVUS_TOKEN` (optional)
+  - MinIO S3 storage (Milvus dependency): `MINIO_ACCESS_KEY_ID`, `MINIO_SECRET_ACCESS_KEY`
+  - Index config: MILVUS_INDEX_TYPE (AUTOINDEX, HNSW, IVF_FLAT, DISKANN), MILVUS_METRIC_TYPE (COSINE, L2, IP)
+  - Upsert batching: MILVUS_UPSERT_MAX_PAYLOAD_BYTES=33554432, MILVUS_UPSERT_MAX_RECORDS_PER_BATCH=128
+  - Package: `pymilvus` 2.6.2–4.0
 
-- Qdrant (vector database)
-  - Package: `qdrant-client` 1.11-2.0
-  - Endpoint: `http://localhost:6333`
-  - Auth: `QDRANT_API_KEY` (optional)
-  - Config: `LIGHTRAG_VECTOR_STORAGE=QdrantStorage`, `QDRANT_URL`, upsert/delete batching limits
-  - Features: Local or cloud hosted
+- Qdrant (remote, gRPC/HTTP)
+  - Connection: HTTP API (gRPC also supported)
+  - Config: Snapshot management, collection recreation on schema mismatch
+  - Package: `qdrant-client` 1.11–2.0
 
-- PostgreSQL + pgvector (vector storage)
-  - Same as graph storage; pgvector extension provides vector operations
-  - Config: `LIGHTRAG_VECTOR_STORAGE=PostgresVectorStorage`, same PostgreSQL connection settings
-  - Index types: HNSW, IVFFlat, VCHORDRQ (custom)
+- PostgreSQL pgvector (same as graph DB, but vector-specific operations)
+  - Index types: HNSW (recommended), IVFFlat (approximate), VCHORDRQ (experimental)
+  - HNSW tuning: POSTGRES_HNSW_M=16, POSTGRES_HNSW_EF=200
 
 - MongoDB Atlas Vector Search
-  - Package: `pymongo` 4.0-5.0
-  - Endpoint: `mongodb+srv://user:pass@cluster.mongodb.net/`
-  - Auth: `MONGO_URI`
-  - Config: `LIGHTRAG_VECTOR_STORAGE=MongoVectorDBStorage`, `MONGO_DATABASE`
-  - Features: Native vector search, serverless
+  - Connection: Same as graph MongoDB (`MONGO_URI`)
+  - Requires Atlas Search feature enabled
 
-- OpenSearch (search + vector database)
-  - Package: `opensearch-py` 3.0-4.0
-  - Endpoint: Comma-separated hosts (e.g., `localhost:9200`)
-  - Auth: `OPENSEARCH_USER`, `OPENSEARCH_PASSWORD`
-  - Config: `LIGHTRAG_VECTOR_STORAGE=OpenSearchStorage`, `OPENSEARCH_HOSTS`, `OPENSEARCH_USE_SSL`, k-NN settings (HNSW)
-  - Features: Full-text search, vector search, PPL graph lookups
+- OpenSearch k-NN (same as graph OpenSearch, but vector-specific operations)
+  - Plugin: requires OpenSearch k-NN plugin installed
+  - Approximate nearest neighbor search via HNSW or Faiss plugin
 
-**Key-Value / Document Status Storage:**
+**Key-Value Storage (pluggable via LIGHTRAG_KV_STORAGE):**
+- JSON files (v1 default for testing)
+  - Connection: Local filesystem, `./rag_storage/<workspace>/kv/`
+  - Storage type: `JsonKVStorage`
 
-- JSON (file-based, default testing)
-  - Backend: JSON files in `WORKING_DIR`
-  - Config: `LIGHTRAG_KV_STORAGE=JsonKVStorage`, `LIGHTRAG_DOC_STATUS_STORAGE=JsonDocStatusStorage`
-  - Deployment: No external dependencies
+- PostgreSQL (same connection as graph/vector, separate table namespace)
+  - Storage type: `PostgresKVStorage`
+  - Supports key filtering and batch operations
 
-- PostgreSQL (production)
-  - Config: `LIGHTRAG_KV_STORAGE=PostgresKVStorage`, same PostgreSQL connection settings
-  - Tables: auto-created for KV and doc status
+- MongoDB
+  - Storage type: `MongoKVStorage`
+  - Batch write limits: MONGO_UPSERT_MAX_RECORDS_PER_BATCH=128
 
-- Redis (in-memory cache)
-  - Package: `redis` 5.0-9.0
-  - Endpoint: `redis://localhost:6379`
-  - Auth: Optional (inline in URI or REDIS_* env vars)
-  - Config: `LIGHTRAG_KV_STORAGE=RedisKVStorage`, `REDIS_URI`, `REDIS_SOCKET_TIMEOUT`, `REDIS_MAX_CONNECTIONS`
+- Redis
+  - Connection: `REDIS_HOST=localhost`, `REDIS_PORT=6379`, `REDIS_PASSWORD` (optional)
+  - Package: `redis` 5.0–9.0
+  - Expiration: Configurable TTL per key
 
-- MongoDB (document storage)
-  - Config: `LIGHTRAG_KV_STORAGE=MongoKVStorage`, same MongoDB connection settings
+- OpenSearch
+  - Storage type: `OpenSearchKVStorage`
+  - Same connection as graph/vector OpenSearch
 
-- OpenSearch (also supports KV)
-  - Config: `LIGHTRAG_KV_STORAGE=OpenSearchKVStorage`
+**Document Status Storage (pluggable via LIGHTRAG_DOC_STATUS_STORAGE):**
+- JSON files (default)
+  - Storage type: `JsonDocStatusStorage`
+  - Location: `./rag_storage/<workspace>/doc_status/`
+
+- PostgreSQL
+  - Storage type: `PostgresDocStatusStorage`
+  - Tracks parse, analyze, insert stages and error messages per document
+
+- MongoDB
+  - Storage type: `MongoDocStatusStorage`
+
+- Redis
+  - Storage type: `RedisDocStatusStorage`
+  - TTL-based expiration for doc status records
+
+## Caching & Session Management
+
+**LLM Response Cache:**
+- Enabled by default: `ENABLE_LLM_CACHE=true` (v1)
+- Backend: Same as selected KV storage
+- Cache key: Identity hash of input content (via `get_llm_cache_identity()`)
+- Invalidation: `index_done_callback()` on document completion or explicit cache flush
+- Disabled: For streaming responses (incompatible with incremental output)
+
+**Tiktoken Cache:**
+- Pre-cached in Docker: `/app/data/tiktoken/`
+- Offline mode: Download via `lightrag-download-cache --cache-dir /app/data/tiktoken`
+- Directory: `TIKTOKEN_CACHE_DIR=/app/data/tiktoken` (optional, speeds up token counting)
 
 ## Authentication & Identity
 
-**API Authentication:**
+**API Authentication (v1):**
+- Type: Custom bearer token or API key
+- Header: `X-API-Key: <token>`
+- Alternative: JWT token in Authorization header
+- JWT Secret: `TOKEN_SECRET=lightrag-jwt-default-secret-key!`
+- Algorithm: `JWT_ALGORITHM=HS256`
+- Expiration: `TOKEN_EXPIRE_HOURS=48` (sliding window auto-renewal if `TOKEN_AUTO_RENEW=true`)
 
-- JWT (PyJWT)
-  - Package: `PyJWT` 2.8-3.0
-  - Secret: `TOKEN_SECRET`
-  - Env vars: `TOKEN_SECRET`, `JWT_ALGORITHM`, `TOKEN_EXPIRE_HOURS`, `GUEST_TOKEN_EXPIRE_HOURS`, `TOKEN_AUTO_RENEW`, `TOKEN_RENEW_THRESHOLD`
-  - Middleware: Header `Authorization: Bearer <token>`
-
-- API Key (X-API-Key header)
-  - Env vars: `LIGHTRAG_API_KEY`, `WHITELIST_PATHS`
-  - Header: `X-API-Key: <key>`
-
-- Password Hashing
-  - Package: `bcrypt` 4.0+
-  - Usage: User authentication via `AUTH_ACCOUNTS` (bcrypt hashes)
-  - Config: `AUTH_ACCOUNTS='admin:admin123,user1:{bcrypt}$2b$...'`
-
-- JOSE/Cryptography
-  - Package: `python-jose[cryptography]`
-  - Backend: Cryptography library for JWT signing/verification
-
-## Document Processing Services
-
-**Native Parser (built-in):**
-- Markdown (.md, .textpack)
-- PDF (via `pypdf`)
-- DOCX (via `python-docx`)
-- PPTX (via `python-pptx`)
-- XLSX (via `openpyxl`)
-- Config: `LIGHTRAG_PARSER=*:native-teP;*:legacy-R` (default routing)
-- Remote image handling: `NATIVE_MD_IMAGE_DOWNLOAD_ENABLED`, SSRF-guarded
-
-**MinerU (async PDF/document parsing):**
-- Modes: Official API or local deployment
-- Endpoint: `MINERU_LOCAL_ENDPOINT=http://127.0.0.1:8000` or official
-- Auth: `MINERU_API_TOKEN` (official mode)
-- Config: `MINERU_API_MODE=local`, `MINERU_LOCAL_BACKEND`, `MINERU_LOCAL_PARSE_METHOD`, `MINERU_LOCAL_IMAGE_ANALYSIS`
-- Features: OCR, table extraction, formula recognition, VLM image analysis
-
-**Docling (async document parsing):**
-- Endpoint: `http://localhost:5001` (configurable via `DOCLING_ENDPOINT`)
-- Auth: None
-- Config: `DOCLING_DO_OCR`, `DOCLING_FORCE_OCR`, `DOCLING_DO_FORMULA_ENRICHMENT`, `DOCLING_OCR_PRESET`, polling budget
-- Features: OCR, formula enrichment, semantic layout analysis
+**User Accounts (v1):**
+- Format: `AUTH_ACCOUNTS='admin:admin123,user1:{bcrypt}$2b$...'`
+- Password hashing: bcrypt via `bcrypt` 4.0+
+- Guest tokens: `GUEST_TOKEN_EXPIRE_HOURS=24` (optional shorter expiry)
 
 ## Monitoring & Observability
 
-**Error Tracking & Tracing:**
+**Logging (v1):**
+- Framework: Standard `logging` module (no external aggregation in dependencies)
+- Level: `LOG_LEVEL=INFO` (default)
+- Output: Console + file (if `LOG_DIR=/path/to/log` set)
+- Performance timing: `LIGHTRAG_PERFORMANCE_TIMING_LOGS=false` (optional, records LLM/vector/graph latencies)
+- File rotation: `LOG_MAX_BYTES=10485760` (10MB), `LOG_BACKUP_COUNT=5`
 
-- Langfuse (optional observability)
-  - Package: `langfuse` 3.8.1+
-  - Endpoint: `https://cloud.langfuse.com` (or self-hosted)
-  - Auth: `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`
-  - Config: `LANGFUSE_ENABLE_TRACE=true`
-  - Features: LLM call tracing, token usage tracking, cost analysis
+**Tracing & Eval (optional):**
+- Langfuse (optional): `langfuse` 3.8.1+ for LLM trace/eval platform integration
+  - Not in default pyproject.toml, installed separately if needed
+  - Used for tracing query execution and LLM calls
 
-**Logging:**
-
-- Standard Python logging module (no external dependency)
-- Configuration: `LOG_LEVEL`, `VERBOSE`, `LOG_DIR`, `LOG_MAX_BYTES`, `LOG_BACKUP_COUNT`
-- Performance timing: `LIGHTRAG_PERFORMANCE_TIMING_LOGS`
-
-**Evaluation (optional):**
-
-- RAGAS (RAG Assessment)
-  - Package: `ragas` 0.3.7+
-  - Usage: RAG quality metrics (evaluation suite)
-  - Config: `EVAL_LLM_MODEL`, `EVAL_EMBEDDING_MODEL`, `EVAL_MAX_CONCURRENT`, `EVAL_QUERY_TOP_K`
+**No Built-in Metrics:**
+- Prometheus/Grafana: Not included; can be added via reverse proxy or sidecar
+- Datadog, New Relic: Not included; API calls can be instrumented separately
 
 ## CI/CD & Deployment
 
-**Container Registry:**
-- GitHub Container Registry (ghcr.io)
-- Image: `ghcr.io/hkuds/lightrag:latest`
+**Hosting (Development & Production):**
+- Production Docker image: Multi-stage (Bun → uv Python → python:3.12-slim)
+- Entrypoint: `gunicorn --workers N --timeout 150 --bind 0.0.0.0:9621 lightrag.api.lightrag_server:app`
+  - Or: `uvicorn lightrag.api.lightrag_server:app --host 0.0.0.0 --port 9621`
+- Reverse proxy (optional): nginx, Caddy (for SSL, multi-site via LIGHTRAG_API_PREFIX, rate limiting)
 
-**Reverse Proxy:**
-- Nginx or Caddy (for multi-instance deployment)
-- Config: `LIGHTRAG_API_PREFIX` for site prefix routing
+**No Built-in CI/CD:**
+- git hooks: `pre-commit` framework (linting, formatting enforcement at commit time)
+- Makefiles: Developer task automation (build, test, serve, etc.)
+- GitHub Actions, GitLab CI, etc.: Not present; can be added externally
 
-## Environment Configuration
-
-**Required Variables (Core Functionality):**
-- `LLM_BINDING`, `LLM_BINDING_HOST`, `LLM_BINDING_API_KEY`, `LLM_MODEL`
-- `EMBEDDING_BINDING`, `EMBEDDING_BINDING_HOST`, `EMBEDDING_BINDING_API_KEY`, `EMBEDDING_MODEL`
-- `LIGHTRAG_GRAPH_STORAGE`, `LIGHTRAG_VECTOR_STORAGE`, `LIGHTRAG_KV_STORAGE`
-- Storage backend config (database connection strings as needed)
-
-**Secrets Location:**
-- `.env` file (not committed, local development only)
-- Environment variables (production)
-- Secrets manager (Docker Compose secrets, Kubernetes secrets)
-- No hardcoded API keys in source code
-
-**Workspaces:**
-- `WORKSPACE` env var for data isolation (optional)
-- Storage backends support per-workspace schemas
+**Offline Deployment:**
+- Vendor dependencies: `uv sync --offline` with pre-cached wheels in Docker build
+- Pre-cache tiktoken: `lightrag-download-cache` utility
+- No internet access required after Docker image build (dependencies and models pre-staged)
 
 ## Webhooks & Callbacks
 
-**Incoming:**
-- Document upload endpoints: `/documents/upload`, `/documents/upload_url`
-- Query endpoints: `/query`, `/query_with_hybrid_search`
-- No third-party webhook inbound configured
+**Incoming Webhooks:**
+- Not implemented in v1
+- REST endpoints can be called externally (POST /query, POST /documents, etc.)
 
-**Outgoing:**
-- None detected in codebase
-- Index callbacks: `index_done_callback()` for flush/cleanup (internal event)
+**Outgoing Webhooks:**
+- Document status callbacks: `index_done_callback()` fired when document parsing/analysis completes
+  - Used internally to flush LLM cache and update doc status
+  - No external webhook integration currently
+
+**Async Document Processing Callbacks:**
+- MinerU/Docling task polling: Client polls `/v1/status/poll/{task_id}` for async parse completion
+- No push notification; pull-based polling only
 
 ---
 
-*Integration audit: 2026-09-03*
+*Integration audit: 2026-09-08*

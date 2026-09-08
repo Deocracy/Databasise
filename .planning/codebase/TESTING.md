@@ -1,267 +1,402 @@
-<!-- refreshed: 2026-09-03 -->
+---
+last_mapped_commit: 8044f9a
+---
 # Testing Patterns
 
-**Analysis Date:** 2026-09-03
+**Analysis Date:** 2026-09-08
+
+## Overview
+
+This codebase contains two test suites with distinct maturity levels and scopes:
+
+- **v1/** — Minimal, focused regression tests (5 files)
+- **databasise/** — Comprehensive phase acceptance tests (30+ files organized by module)
+
+Both use pytest with asyncio support and share the same core configuration patterns.
 
 ## Test Framework
 
-**Runner:**
-- Python: pytest 8.4.2+
-- Config: `[tool.pytest.ini_options]` in pyproject.toml (both v1 and databasise)
-- Async support: pytest-asyncio 1.2.0+
-- Mode: `asyncio_mode = "auto"` (fixtures and tests auto-run in event loop)
+### Runner
 
-**Assertion Library:**
-- Built-in pytest assertions: `assert result == expected`
-- Schema validation: `jsonschema.Draft7Validator` for run-record validation (databasise)
+**Framework:** pytest 8.4.2+
+- Config location: `[tool.pytest.ini_options]` in each `pyproject.toml`
+- Both v1 and databasise use: `asyncio_mode = "auto"`
+- v1 also sets: `asyncio_default_fixture_loop_scope = "function"` (per-function event loop isolation)
+- Databasise inherits default scope (less restrictive)
 
-**Run Commands:**
+**Run commands:**
 ```bash
-pytest tests/                           # Run all tests
-pytest --run-integration tests/         # Run integration tests (skipped by default)
-pytest --keep-artifacts tests/          # Keep temp files for inspection
-pytest --stress-test --test-workers 5   # Run stress tests with 5 workers
-pytest databasise/tests/                # Run databasise tests
+# v1: Run offline tests only (default)
+pytest tests/ -m offline
+
+# v1: Run with coverage
+pytest tests/ --cov=lightrag
+
+# databasise: Run all tests
+pytest tests/
+
+# databasise: Run specific test module
+pytest tests/stores/test_graph.py
 ```
+
+### Async test support
+
+**Library:** pytest-asyncio 1.2+
+- Automatically detects and runs async test functions
+- No explicit `@pytest.mark.asyncio` required when `asyncio_mode = "auto"`
+- Event loops created per test (v1) or session-scoped as needed (databasise)
 
 ## Test File Organization
 
-**Location (v1):**
-- Root-level tests directory: `v1/tests/`
-- Mirrors source structure: `tests/pipeline/`, `tests/kg/`, `tests/api/`, etc.
+### Location & Naming
 
-**Location (databasise):**
-- Co-located with source: `databasise/tests/`
-- Organized by feature: `stores/`, `identity/`, `parts/`, `validator/`, `registry_artifact/`, `ledger/`
+**v1:**
+- Directory: `v1/tests/`
+- Files: `test_*.py` (flat structure, 5 test files)
+- Test path config: `testpaths = ["tests"]`
+- Files: `test_create_prefixed_exception.py`, `test_strip_control_characters.py`, `test_sync_wrapper_guard.py`
 
-**Naming:**
-- Test files: `test_*.py` (e.g., `test_sync_wrapper_guard.py`)
-- Test classes: `Test*` (pattern specified in pyproject.toml)
-- Test functions: `test_*` (pattern specified in pyproject.toml)
+**Databasise:**
+- Directory: `databasise/tests/`
+- Files: Mirror source structure (`tests/stores/`, `tests/identity/`, `tests/parts/`, etc.)
+- Test path config: `testpaths = ["tests"]`
+- 30+ test files organized by module:
+  - `stores/` — storage backend tests (graph, vector, KV, blob, namespaces)
+  - `identity/` — config hashing and instance identity
+  - `parts/` — component registry and reference implementations
+  - `validator/` — wiring validation (cycles, depth, blast radius, falsifiers)
+  - `ledger/` — execution ledger and artifact tracking
+  - Top-level acceptance tests (`test_phase_success_criteria.py`, `test_tracer_end_to_end.py`)
 
-**Structure (v1):**
+### File Structure Convention
+
+**Module-level docstring:**
+- v1: Detailed explanation of what the test guards against
+- Databasise: Acceptance criteria and fixture roles
+
+**Example from v1/tests/test_sync_wrapper_guard.py:**
+```python
+"""Regression tests for the synchronous-wrapper event-loop guard.
+
+``LightRAG``'s synchronous wrappers (``insert``, ``query``,
+``delete_by_entity`` …) all delegate to :func:`lightrag.lightrag._run_sync`,
+which drives the matching ``a*`` coroutine via ``loop.run_until_complete()``.
+
+That call is only valid when (a) no event loop is already running on the
+current thread, and (b) the loop it drives is the same one the instance's
+storages were initialized on (``LightRAG._owning_loop``). Two misuse modes
+break this...
+"""
 ```
-tests/
-├── conftest.py                         # Global fixtures (45+ lines)
-├── test_sync_wrapper_guard.py          # Sync/async wrapper guards (197 lines)
-├── test_create_prefixed_exception.py   # Exception creation tests
-├── test_strip_control_characters.py    # Utility tests
-├── pipeline/                           # Feature-organized subsystem tests
-│   └── test_*.py
-├── kg/                                 # Knowledge graph subsystem tests
-│   └── test_*.py
-└── api/                                # API subsystem tests
-    └── routes/test_*.py
-```
 
-**Structure (databasise):**
-```
-databasise/tests/
-├── conftest.py                         # Global fixtures (schema, store_root, validators)
-├── test_conftest_fixtures.py           # Smoke tests for fixtures
-├── test_tracer_end_to_end.py           # End-to-end wiring execution
-├── test_embed_startup.py               # Initialization tests
-├── test_import_boundary.py             # Import boundary tests
-├── test_phase_success_criteria.py      # Gate criteria validation
-└── stores/                             # Storage adapter tests
-    ├── test_blob.py
-    ├── test_kv.py
-    ├── test_vector.py
-    ├── test_graph.py
-    └── test_*.py
+**Example from databasise/tests/test_phase_success_criteria.py:**
+```python
+"""The phase's acceptance module: all four ROADMAP.md Phase 1 success criteria, asserted end to
+end through ``databasise.run_wiring`` — the public entry point a consumer calls — rather than
+through an internal helper, so a refactor that breaks the public path fails here even if every
+unit test still passes.
+
+Two fixture wirings (built by the two ``_*_wiring`` helpers below):
+- The **transparent wiring**: ...
+- The **arms wiring**: ...
+"""
 ```
 
 ## Test Structure
 
-**Test Layout (v1):**
+### Suite Organization
+
+**v1 pattern: Single-concern functions**
 ```python
 @pytest.mark.offline
 def test_run_sync_runs_coroutine_when_no_loop_running():
     """With no running loop, the coroutine runs to completion and returns."""
-    # Arrange
     def factory():
         async def _coro():
             return 42
         return _coro()
 
-    # Act
     result = _run_sync(factory, sync_name="insert", async_name="ainsert")
-
-    # Assert
     assert result == 42
 ```
 
-**Patterns (v1):**
-1. **Docstring-as-specification** — Every test documents expected behavior in past tense
-2. **Arrange-Act-Assert (AAA)** — Clear setup, execution, validation phases (often implicit)
-3. **Descriptive names** — `test_run_sync_runs_coroutine_when_no_loop_running()` tells scenario + expectation
-4. **Pytest markers** — `@pytest.mark.offline`, `@pytest.mark.integration` for selective runs
-5. **Guard-first assertions** — Factory calls tracked; asserts guard prevents unwanted execution
-
-**Test Layout (databasise):**
+**Databasise pattern: End-to-end wiring tests with complex setup**
 ```python
-async def test_tracer_runs_end_to_end_and_produces_a_schema_valid_run_record(
-    store_root, assert_valid_trace
-):
-    """End-to-end run produces a schema-valid run record."""
-    import databasise
+async def _multi_engine_touch_body(ctx: NodeContext) -> dict[str, Any]:
+    """The join node: writes to the run's own kv store..."""
+    kv = ctx.stores["kv"]
+    await kv.upsert({ctx.node_id: {"inputs": dict(ctx.inputs)}})
+    
+    # Complex multi-store orchestration
+    store_root = Path(ctx.config["store_root"])
+    graph = CozoGraphStore(namespace="criterion1-graph", ...)
+    await graph.upsert_node("n1", {"touched": True})
+    
+    return {"joined": sorted(ctx.inputs)}
 
-    wiring_doc = _load_fixture()
-    record = await databasise.run_wiring(
-        wiring_doc,
-        store_root=store_root,
-        determinism_setting="cache-bypassed",
-    )
-
-    assert_valid_trace(record)
-    assert record["partial"] is False
+# Fixture wiring built as a Part (databasise's component model)
+_MULTI_ENGINE_TOUCH_PART = Part(
+    name="...",
+    fn=_multi_engine_touch_body,
+    ...
+)
 ```
 
-**Patterns (databasise):**
-1. **Native async tests** — `async def test_*()` with `await` calls
-2. **Schema-driven validation** — Fixtures return validator callables
-3. **Fixture-injected parameters** — `store_root`, `assert_valid_trace` provide setup
+### Fixture Scope & Patterns
 
-## Mocking
+**v1 fixtures (v1/tests/conftest.py):**
 
-**Framework:**
-- Built-in: `pytest.fixture` with `monkeypatch` for environment isolation
-- JSON Schema: `jsonschema.Draft7Validator` (no traditional mocks)
-- No external mocking library in core tests
+- `_hermetic_mineru_env` (autouse): Strips parser routing env vars per test
+  - Prevents .env file leaks affecting test isolation
+  - Uses `monkeypatch.delenv()` to clear vars safely
+  - Allows tests to `monkeypatch.setenv()` individually
 
-**Patterns (v1):**
-```python
-@pytest.fixture(autouse=True)
-def _hermetic_mineru_env(monkeypatch):
-    """Make every test start with parser-routing env vars in their unset state."""
-    monkeypatch.delenv("MINERU_API_MODE", raising=False)
-    monkeypatch.delenv("MINERU_API_TOKEN", raising=False)
-    monkeypatch.delenv("LIGHTRAG_PARSER", raising=False)
-    # ... strips 7+ more parser-related env vars
+**Databasise fixtures (databasise/tests/conftest.py):**
+
+- `store_root` (function-scoped): Temp directory for all storage writes
+  - Every test gets a fresh `tmp_path / "store_root"`
+  - Allows inspection of storage layout after test runs
+
+- `rig_trace_schema` (session-scoped): Parsed RIG run-record schema
+  - Loaded once per test session from `docs/system-model/rig-trace.schema.json`
+  - Reused across all tests
+
+- `assert_valid_trace` (function-scoped): Callable validator
+  - Validates run-record dict against rig-trace schema
+  - Returns JSON-Schema error paths on failure
+  - Used in conformance tests to verify emitted traces
+
+## Test Markers
+
+**v1 test markers (via `pytest_configure` in conftest.py):**
+- `@pytest.mark.offline` — No external dependencies (default)
+- `@pytest.mark.integration` — Requires external services
+- `@pytest.mark.requires_db` — Database dependency
+- `@pytest.mark.requires_api` — LightRAG API server dependency
+
+**Run offline tests only:**
+```bash
+pytest tests/ -m offline
 ```
 
-**What to Mock:**
-- External service endpoints: `MINERU_API_TOKEN`, `MINERU_LOCAL_ENDPOINT`, `DOCLING_ENDPOINT`
-- Environment-dependent modes: `MINERU_API_MODE`, parser options
-- Reason: Hermetic tests; developer `.env` leakage breaks test isolation
+**Databasise** does not define custom markers; all tests run by default (no filtering by external service).
 
-**What NOT to Mock:**
-- Built-in functions (use real asyncio loops)
-- Library implementations (test real behavior, not stubs)
-- Reason: Mock creep hides real bugs
+## Mocking & Test Doubles
+
+**v1:**
+- Minimal mocking (no external dependencies in base suite)
+- Focuses on guard testing and utility functions
+- When async is required: Uses `asyncio.run()` and `asyncio.new_event_loop()`
+- ThreadPoolExecutor used in cross-thread tests to simulate real concurrency
+
+**Example from v1/tests/test_sync_wrapper_guard.py:**
+```python
+def test_run_sync_raises_when_driven_from_a_different_loop():
+    """Driving a sync wrapper from a thread with no event loop of its own..."""
+    owning_loop = asyncio.new_event_loop()
+    calls: list[bool] = []
+
+    def factory():  # pragma: no cover - must never be reached
+        calls.append(True)
+        raise AssertionError("coro_factory must not run on the wrong loop")
+
+    def call_off_thread():
+        return _run_sync(
+            factory,
+            sync_name="insert",
+            async_name="ainsert",
+            owning_loop=owning_loop,
+        )
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        with pytest.raises(RuntimeError) as exc_info:
+            executor.submit(call_off_thread).result()
+```
+
+**Databasise:**
+- Uses reference implementations (fake LLM, fake retriever) from `databasise.parts_core`
+- Complex fixture wirings built using the Part model itself
+- Stores (graph, vector, KV) are real embedded backends, not mocked
+- Validates actual serialization and schema conformance
+
+**Example from databasise/tests/test_phase_success_criteria.py:**
+```python
+from databasise.parts_core.fake_llm_caller import FAKE_LLM_CALLER_PART
+from databasise.parts_core.fake_retriever import FAKE_RETRIEVER_PART
+
+# Wiring uses reference parts, not mocks
+_TRANSPARENT_WIRING = {
+    "producer": FAKE_RETRIEVER_PART,
+    "retrieve_a": FAKE_RETRIEVER_PART,
+    "retrieve_b": FAKE_RETRIEVER_PART,
+    "join": _MULTI_ENGINE_TOUCH_PART,
+}
+```
 
 ## Fixtures and Factories
 
-**Test Data Factories (v1):**
+**v1:**
+- Option flags: `keep_test_artifacts`, `stress_test_mode`, `parallel_workers` (via pytest options)
+- Fixtures accessed via `request.config.getoption()` with fallback to env vars
+- Autouse hermetic env fixture
+
+**Databasise:**
+- Store roots managed per test (auto-cleanup via tmp_path)
+- Schema validation helper (assert_valid_trace)
+- No global state; each test's stores are isolated to its own store_root
+- Fixtures mirror the public API: `store_root`, `assert_valid_trace`, `rig_trace_schema`
+
+**Example pytest options in v1/tests/conftest.py:**
 ```python
-def factory():
-    async def _coro():
-        return 42
-    return _coro()
+@pytest.fixture(autouse=True)
+def _hermetic_mineru_env(monkeypatch):
+    """Strip env vars that leak from .env into tests..."""
+    monkeypatch.delenv("MINERU_API_MODE", raising=False)
+    monkeypatch.delenv("MINERU_LOCAL_ENDPOINT", raising=False)
+    # ... more vars stripped
 
-result = _run_sync(factory, sync_name="insert", async_name="ainsert")
+def pytest_addoption(parser):
+    """Add command-line options for stress test configuration."""
+    parser.addoption(
+        "--keep-artifacts",
+        action="store_true",
+        default=False,
+        help="Keep test artifacts for inspection",
+    )
+    parser.addoption(
+        "--stress-test",
+        action="store_true",
+        default=False,
+        help="Enable stress test mode",
+    )
+    parser.addoption(
+        "--test-workers",
+        action="store",
+        default=3,
+        type=int,
+        help="Number of parallel workers",
+    )
 ```
-
-**Session-scope Fixtures (v1):**
-```python
-@pytest.fixture(scope="session")
-def keep_test_artifacts(request):
-    """Determine whether to keep test artifacts."""
-    if request.config.getoption("--keep-artifacts"):
-        return True
-    return os.getenv("LIGHTRAG_KEEP_ARTIFACTS", "false").lower() == "true"
-
-@pytest.fixture(scope="session")
-def parallel_workers(request):
-    """Number of parallel workers for stress tests."""
-    cli_workers = request.config.getoption("--test-workers")
-    if cli_workers != 3:  # Non-default
-        return cli_workers
-    return int(os.getenv("LIGHTRAG_TEST_WORKERS", "3"))
-```
-
-**Pattern:** CLI option > Environment variable > Default value
-
-**Fixtures (databasise):**
-```python
-@pytest.fixture
-def store_root(tmp_path: Path) -> Path:
-    """Per-test directory for storage adapters."""
-    root = tmp_path / "store_root"
-    root.mkdir()
-    return root
-
-@pytest.fixture(scope="session")
-def rig_trace_schema() -> dict[str, Any]:
-    """Load RIG run-record schema."""
-    schema_path = _repository_root() / "docs" / "system-model" / "rig-trace.schema.json"
-    with schema_path.open("r", encoding="utf-8") as f:
-        return json.load(f)
-
-@pytest.fixture
-def assert_valid_trace(rig_trace_schema: dict[str, Any]) -> Callable:
-    """Return callable that validates run-record against schema."""
-    def _assert_valid_trace(record: dict[str, Any]) -> None:
-        validator = Draft7Validator(rig_trace_schema)
-        errors = sorted(validator.iter_errors(record), key=lambda e: list(e.path))
-        if errors:
-            messages = "\n".join(
-                f"  - {'/'.join(str(p) for p in e.path) or '<root>'}: {e.message}"
-                for e in errors
-            )
-            raise AssertionError(f"Schema validation failed:\n{messages}")
-    return _assert_valid_trace
-```
-
-**Location:**
-- Global: `tests/conftest.py` (v1), `databasise/tests/conftest.py` (databasise)
-- Subsystem: Implied in subsystem-specific conftest files
 
 ## Coverage
 
-**Requirements:**
-- Not explicitly enforced in pyproject.toml (no pytest-cov config)
-- Best practice: >80% coverage for modified code (assumed convention)
+**v1:**
+- No explicit coverage requirements configured
+- Pragma comments: `# pragma: no cover` marks guard failure paths (never reached on success)
 
-**View Coverage:**
-```bash
-pytest --cov=lightrag --cov-report=term-missing tests/
-pytest --cov=lightrag --cov-report=html tests/
-# Open htmlcov/index.html in browser
-```
+**Databasise:**
+- No explicit coverage requirements configured
+- Comprehensive acceptance tests ensure public API paths are exercised
 
 ## Test Types
 
-**Unit Tests:**
-- Scope: Single function/method behavior in isolation
-- Pattern: One scenario per test function
-- Example: `test_run_sync_runs_coroutine_when_no_loop_running()` tests success path only
-- Guard conditions tested separately
+### Unit Tests
 
-**Integration Tests:**
-- Scope: Multiple components/systems interacting
-- Markers: `@pytest.mark.integration`, `@pytest.mark.requires_db`, `@pytest.mark.requires_api`
-- Skipped by default; run with `pytest --run-integration`
-- Requires: External services (DB, API server, parser endpoints)
+**v1:**
+- Sync wrapper guards (`test_sync_wrapper_guard.py`)
+- Utility functions (`test_strip_control_characters.py`, `test_create_prefixed_exception.py`)
+- Scope: Single function or component
+- No external services
 
-**E2E Tests:**
-- Example (databasise): `test_tracer_runs_end_to_end_and_produces_a_schema_valid_run_record()`
-- Exercises full `run_wiring()` path with schema validation
+**Databasise:**
+- Storage backend tests (`tests/stores/test_*.py`)
+- Identity and config hashing (`tests/identity/`)
+- Validator logic (`tests/validator/`)
+- Part registry and schemas (`tests/parts/`)
 
-**Offline Tests:**
-- Marker: `@pytest.mark.offline`
-- Scope: No external dependencies
-- Default: Run offline, skip integration tests
-
-## Common Patterns
-
-**Async Testing (v1):**
+**Example v1 unit test:**
 ```python
 @pytest.mark.offline
+def test_run_sync_does_not_create_coroutine_when_it_raises():
+    """The factory is invoked lazily, so a guard failure never leaves an
+    un-awaited coroutine behind (which would emit a RuntimeWarning)."""
+    calls: list[bool] = []
+
+    def factory():
+        calls.append(True)
+        async def _coro():
+            return None
+        return _coro()
+
+    async def _inside_loop():
+        return _run_sync(factory, sync_name="query", async_name="aquery")
+
+    with pytest.raises(RuntimeError):
+        asyncio.run(_inside_loop())
+
+    assert calls == [], "coro_factory should not run when the guard rejects"
+```
+
+### Integration Tests
+
+**v1:**
+- Marked with `@pytest.mark.integration` (skipped by default)
+- Not present in current test suite (focused on guards)
+
+**Databasise:**
+- End-to-end wiring tests (`test_phase_success_criteria.py`)
+- Traced execution (`test_tracer_end_to_end.py`)
+- Trusted source invariants (`test_trusted_source_invariant.py`)
+- All tests run against real embedded stores (Cozo, Faiss, file-based KV)
+
+**Example databasise integration test:**
+```python
+async def test_all_four_success_criteria():
+    """Assert all four ROADMAP.md Phase 1 criteria through the public entry point."""
+    # 1. Transparent multi-engine wiring (fan-out + join)
+    transparent_wiring = _transparent_wiring()
+    run_transparent = await databasise.run_wiring(
+        wiring=transparent_wiring,
+        config={...},
+    )
+    assert run_transparent.success
+    assert run_transparent.trace["effects"][...] # validate effects
+    
+    # 2. Arms wiring with artifact scope
+    arms_wiring = _arms_wiring()
+    run_arms = await databasise.run_wiring(wiring=arms_wiring, config={...})
+    assert run_arms.success
+```
+
+### E2E Tests
+
+**v1:** Not present in codebase
+
+**Databasise:** See integration tests above (e2e wiring conformance is the primary test type)
+
+## Async Testing Patterns
+
+**Pattern: Async test function**
+```python
+async def test_store_upserts_and_queries():
+    """Async test runs on the auto-created event loop."""
+    store = FaissVectorStore(namespace="test", workspace="", store_root=store_root)
+    await store.upsert(["v1"], [[1.0, 0.0, 0.0]])
+    results = await store.query([[1.0, 0.0, 0.0]], top_k=1)
+    assert results == ["v1"]
+```
+
+**Pattern: Wrapping sync code with async**
+```python
+@pytest.mark.asyncio
+def test_sync_function_from_async_context():
+    """Manually mark if asyncio_mode != 'auto'."""
+    async def _run():
+        result = _run_sync(factory, ...)
+        return result
+    
+    result = asyncio.run(_run())
+    assert result == 42
+```
+
+## Error Testing
+
+**v1 pattern: Guard failure assertions**
+```python
 def test_run_sync_raises_clear_error_inside_running_loop():
-    """Inside a running loop the guard raises a RuntimeError."""
-    def factory():  # pragma: no cover - must never be reached
-        raise AssertionError("coro_factory must not be called inside a loop")
+    """Inside a running loop the guard raises RuntimeError with actionable message."""
+    def factory():  # pragma: no cover
+        raise AssertionError("must not be called")
 
     async def _inside_loop():
         return _run_sync(factory, sync_name="insert", async_name="ainsert")
@@ -272,89 +407,89 @@ def test_run_sync_raises_clear_error_inside_running_loop():
     message = str(exc_info.value)
     assert "insert()" in message
     assert "await ainsert(" in message
+    assert "deadlock" not in message.lower()
 ```
 
-**Pattern:**
-- Wrap async code in `async def` function
-- Call with `asyncio.run()` from sync test
-- Use `pytest.raises()` to validate exception type and message
-
-**Async Testing (databasise):**
+**Databasise pattern: Schema validation**
 ```python
-async def test_upsert_and_query_returns_nearest_neighbours(store_root):
-    store = FaissVectorStore(namespace="vec", workspace="ws", store_root=store_root)
-    await store.upsert(
-        ids=["a", "b"],
-        embeddings=[_vec(1.0, 0.0), _vec(0.0, 1.0)],
-    )
-    await store.index_done_callback()
-
-    results = await store.query(_vec(1.0, 0.0), top_k=2)
-
-    assert [r["id"] for r in results] == ["a", "b"]
+def test_invalid_trace_fails_validation(assert_valid_trace):
+    """Traces not matching rig-trace.schema.json raise with full error path."""
+    invalid_record = {"trace": "malformed"}  # Missing required fields
+    
+    with pytest.raises(AssertionError) as exc_info:
+        assert_valid_trace(invalid_record)
+    
+    assert "failed rig-trace.schema.json validation" in str(exc_info.value)
 ```
 
-**Pattern:**
-- Native `async def test_*()` (pytest-asyncio auto-runs in event loop)
-- Fixtures injected and work with async tests
-- Call async functions with `await` directly
+## Common Test Utilities
 
-**Error Testing:**
-```python
-with pytest.raises(RuntimeError) as exc_info:
-    executor.submit(call_off_thread).result()
+**v1:**
+- `_hermetic_mineru_env` — Test isolation via env var stripping
+- `pytest_configure()` — Marker registration
+- `pytest_addoption()` — CLI option setup
 
-message = str(exc_info.value)
-assert "insert()" in message
-assert "await ainsert(" in message
-assert "deadlock" not in message.lower()  # Regression guard
-assert calls == [], "factory should not run"
+**Databasise:**
+- `store_root` — Isolated storage directory
+- `rig_trace_schema` — Cached schema for validation
+- `assert_valid_trace()` — JSON-Schema validator callable
+- Repository root detection (`_repository_root()`) — Walk up from test file
+
+## Running Tests
+
+**v1:**
+```bash
+# Run all offline tests
+pytest tests/ -m offline
+
+# Run with coverage report
+pytest tests/ --cov=lightrag --cov-report=html
+
+# Run specific test function
+pytest tests/test_sync_wrapper_guard.py::test_run_sync_runs_coroutine_when_no_loop_running
+
+# Run with verbosity
+pytest tests/ -vv
+
+# Keep test artifacts for inspection
+pytest tests/ --keep-artifacts
+
+# Stress test mode
+pytest tests/ --stress-test --test-workers=8
 ```
 
-**Pattern:**
-- Check exception type with `pytest.raises()`
-- Validate error message substrings
-- Verify side effects (factory was not called)
-- Document regression fix
+**Databasise:**
+```bash
+# Run all tests
+pytest tests/
 
-**pytest Configuration:**
-```python
-def pytest_configure(config):
-    """Register custom markers."""
-    config.addinivalue_line("markers", "offline: marks tests as offline (no external dependencies)")
-    config.addinivalue_line("markers", "integration: marks tests requiring external services (skipped by default)")
-    config.addinivalue_line("markers", "requires_db: marks tests requiring database")
-    config.addinivalue_line("markers", "requires_api: marks tests requiring LightRAG API server")
+# Run specific module
+pytest tests/stores/
 
-def pytest_addoption(parser):
-    """Add custom command-line options."""
-    parser.addoption("--keep-artifacts", action="store_true", default=False,
-        help="Keep test artifacts (temporary directories and files) after test completion for inspection")
-    parser.addoption("--stress-test", action="store_true", default=False,
-        help="Enable stress test mode with more intensive workloads")
-    parser.addoption("--test-workers", action="store", default=3, type=int,
-        help="Number of parallel workers for stress tests (default: 3)")
-    parser.addoption("--run-integration", action="store_true", default=False,
-        help="Run integration tests that require external services (database, API server, etc.)")
+# Run specific test file
+pytest tests/stores/test_graph.py
 
-def pytest_collection_modifyitems(config, items):
-    """Modify test collection to skip integration tests by default."""
-    if config.getoption("--run-integration"):
-        return
-    skip_integration = pytest.mark.skip(
-        reason="Requires external services(DB/API), use --run-integration to run"
-    )
-    for item in items:
-        if "integration" in item.keywords:
-            item.add_marker(skip_integration)
+# Run with verbosity
+pytest tests/ -vv
+
+# Run with coverage
+pytest tests/ --cov=databasise --cov-report=html
 ```
 
-**Pattern:**
-- Register custom markers in `pytest_configure()`
-- Add CLI options in `pytest_addoption()`
-- Implement test filtering in `pytest_collection_modifyitems()`
-- Allows dynamic skip/run based on flags
+## Test Configuration Summary
+
+| Aspect | v1 | Databasise |
+|--------|--|----|
+| Framework | pytest 8.4.2+ | pytest 8.4.2+ |
+| Async support | pytest-asyncio 1.2+ | pytest-asyncio 1.2+ |
+| Async mode | `auto` | `auto` |
+| Loop scope | `function` | default |
+| Test directory | `v1/tests/` | `databasise/tests/` |
+| Organization | Flat (5 files) | Modular (30+ files, mirrored structure) |
+| Markers | offline, integration, requires_db, requires_api | None (all run by default) |
+| Fixtures | Env var hermeting, CLI options | Store root, schema validation |
+| Coverage | No requirements | No requirements |
 
 ---
 
-*Testing analysis: 2026-09-03*
+*Testing analysis: 2026-09-08*
