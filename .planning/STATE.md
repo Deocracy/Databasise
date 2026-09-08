@@ -4,8 +4,8 @@ milestone: v1.0
 current_phase: 05
 current_phase_name: Opaque-Side Admission
 status: executing
-stopped_at: Completed 05-03-PLAN.md
-last_updated: "2026-09-08T22:56:44.923Z"
+stopped_at: Completed 05-04-PLAN.md
+last_updated: "2026-09-08T23:42:27Z"
 last_activity: 2026-09-08
 last_activity_desc: Phase 05 execution started
 state_head: 4f43097dfb0b1bbcb64e33756f111e819418911c
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 05 (Opaque-Side Admission) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
-Last activity: 2026-09-08 — Phase 05 execution started
+Last activity: 2026-09-08 — Completed 05-04-PLAN.md
 
 Progress: [██████████] 100%
 
@@ -73,6 +73,7 @@ Progress: [██████████] 100%
 | Phase 05-opaque-side-admission P01 | 165min | 3 tasks | 24 files |
 | Phase 05-opaque-side-admission P02 | 16min | 2 tasks | 4 files |
 | Phase 05 P03 | 95min | 3 tasks | 15 files |
+| Phase 05 P04 | 40min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -116,6 +117,9 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 05]: 05-02: MACH-04's five-engine survey list adopted as recommended (A2), provenance stated in the doc; DR-04/HARD-03 selected two-covering-rationale but selection_is_clean=false since covering 1's partial-coverage refusal is unimplemented and covering 2 (EvidenceRef) is missing all four ChunkRef members per FA-03.
 - [Phase 05]: 05-03: widened corpus.py's document-id token regex to permit underscore (real v1 document ids contain it; no path-traversal risk) after the real-corpus delete test surfaced every real document id being refused by the prior hex-only pattern.
 - [Phase 05]: 05-03: MACH-11 now distinguishes machine-observed store touches (TOUCH_KIND_OBSERVED) from node-reported ones (TOUCH_KIND_NODE_REPORTED) via NodeContext.record_store_touch, re-checked for the first time against a real (non-fixture) mutates_store part, lightrag/full-delete@0.1.0.
+- [Phase 05]: 05-04: Checkpoint resolved — mcp 2.2.0 and python-multipart 0.0.32 both confirmed legitimate before either package was added to databasise/pyproject.toml (the research audit's [SUS] verdicts were download-count blind spots, not slopsquat signatures).
+- [Phase 05]: 05-04: get_job_status/health/corpus_status/document_counts reach databasise.foreign.run_corpus_op directly, never through a registered Part/wiring/scheduler step — a bounded liveness/status read produces no evidence, mutates nothing, and declares no effect.
+- [Phase 05]: 05-04: Fixed a real bug (Rule 1) in REST's page-cap refusal path — Page(limit=..., offset=...) constructed directly inside a route body gets its PageSizeExceededError wrapped by pydantic into a ValidationError Starlette's exception middleware cannot match against the registered SeamRefusalError handler (would have 500'd instead of 422'ing); added a small _checked_page helper that raises the refusal directly.
 
 ### Pending Todos
 
@@ -144,6 +148,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-08T22:56:34.202Z
-Stopped at: Completed 05-03-PLAN.md
+Last session: 2026-09-08T23:42:27Z
+Stopped at: Completed 05-04-PLAN.md
 Resume file: None

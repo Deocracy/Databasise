@@ -34,12 +34,12 @@ Audited 2026-08-29 against SYSTEM-MODEL.md, CONTRACT.md, RIG.md, PARTS.md, ANATO
 
 ### Product Surface (API)
 
-- [ ] **API-01**: Caller can ingest documents (raw upload and structured payload) with async job status polling
+- [x] **API-01**: Caller can ingest documents (raw upload and structured payload) with async job status polling
 - [x] **API-02**: Caller can delete a document with graph-aware cleanup of entities/edges shared across documents
 - [x] **API-03**: Caller queries with CONTRACT §18.1's query **object** (never a query string); selection via §18.4's four selectors (alias, capability, harness, default) with an unsatisfiable selector returning an explicit refusal naming what was missing, never a silent fallback; an unconsumable query-object member is refused by name; opaque nodes are excluded from the default selector (§8 condition 7); the response is the §18.2 closed envelope, invariant across modality swap
 - [x] **API-04**: Caller can stream query responses
 - [x] **API-05**: Every answer carries citations/provenance (evidence references per §18.2)
-- [ ] **API-06**: Caller can introspect health, corpus status, and document counts (bounded/paginated, never full dumps)
+- [x] **API-06**: Caller can introspect health, corpus status, and document counts (bounded/paginated, never full dumps)
 - [ ] **API-07**: MCP surface exposes a curated intention-level tool set (ingest, query, delete, status, compare) with capability parity to REST; admission rule per §18.5 — a capability expressible as a §18.4 selector is never a new tool, and the surface never grows per-modality
 - [ ] **API-08**: Caller can run one query against two or more modalities on the same corpus in one call and receive per-arm results side-by-side, **keyed by the caller-supplied selectors** — never by arm_id, wiring name, node id, or modality name (§18.2/§18.3); comparison is inspection-only (per-arm outputs, traces, scores — no verdict) and is unaffected by §F3's default posture (RIG §RUN.4); one arm is a run, never a comparison (§RUN.3)
 - [ ] **API-09**: Caller can promote and roll back a wiring via RIG §PR.3's operator path: `promotion_provenance: operator_asserted` with non-empty `promotion_trace_ids`, no `verdict` and no `tier-of-decision`; explicit caller-invoked action only; promote-next/promote-now remain unavailable for answer-level and index-side classes under the default posture (MACH-09)
@@ -98,12 +98,12 @@ Maps REQ-IDs to phases (see .planning/ROADMAP.md). Every v1 requirement maps to 
 | MODAL-03 | Phase 5 | Pending |
 | MODAL-04 | Phase 6 | Pending |
 | MODAL-05 | Phase 6 | Pending |
-| API-01 | Phase 5 | Pending |
+| API-01 | Phase 5 | Complete |
 | API-02 | Phase 5 | Complete |
 | API-03 | Phase 4 | Complete |
 | API-04 | Phase 4 | Complete |
 | API-05 | Phase 4 | Complete |
-| API-06 | Phase 5 | Pending |
+| API-06 | Phase 5 | Complete |
 | API-07 | Phase 5 | Pending |
 | API-08 | Phase 6 | Pending |
 | API-09 | Phase 7 | Pending |
