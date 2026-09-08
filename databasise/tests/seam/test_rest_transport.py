@@ -41,9 +41,11 @@ from databasise.seam.redact import (
     forbidden_identities,
 )
 from databasise.seam.refusals import (
+    AmbiguousIngestPayloadError,
     EmptyQueryObjectError,
     ForbiddenSelectorInputError,
     ForeignEngineRefusalError,
+    OversizedDocumentError,
     SeamRefusalError,
     UnconsumableQueryMemberError,
     UnsatisfiableSelectorError,
@@ -383,6 +385,8 @@ _REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
     ForeignEngineRefusalError: lambda: ForeignEngineRefusalError(
         operation="ingest", cause=RuntimeError("stub subprocess failure")
     ),
+    AmbiguousIngestPayloadError: lambda: AmbiguousIngestPayloadError(set_members=["text", "raw"]),
+    OversizedDocumentError: lambda: OversizedDocumentError(actual_bytes=100, limit_bytes=10),
 }
 
 

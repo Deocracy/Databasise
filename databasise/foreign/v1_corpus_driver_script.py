@@ -120,6 +120,8 @@ async def _run_ingest(job: dict[str, Any]) -> dict[str, Any]:
     documents = job.get("documents") or []
     track_id = job.get("track_id")
     working_dir = str(job["working_dir"])
+    file_paths = job.get("file_paths")
+    docs_format = job.get("docs_format") or FULL_DOCS_FORMAT_RAW
 
     ids = [str(doc["id"]) for doc in documents]
     texts = [str(doc.get("text") or "") for doc in documents]
@@ -129,8 +131,9 @@ async def _run_ingest(job: dict[str, Any]) -> dict[str, Any]:
         result_track_id = await rag.apipeline_enqueue_documents(
             input=texts,
             ids=ids,
+            file_paths=file_paths,
             track_id=track_id,
-            docs_format=FULL_DOCS_FORMAT_RAW,
+            docs_format=docs_format,
         )
         await rag.apipeline_process_enqueue_documents()
     finally:

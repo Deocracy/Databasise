@@ -203,3 +203,93 @@ def test_the_real_driver_script_parses_and_speaks_the_protocol_for_an_empty_docu
         working_dir=tmp_path / "corpus_working_dir",
     )
     assert "track_id" in result
+
+# ---------------------------------------------------------------------------------------------
+# 05-01-PLAN.md Task 3: raw upload and structured payload, both refused safely at the boundary.
+# ---------------------------------------------------------------------------------------------
+
+from databasise.seam.corpus import generated_on_disk_name  # noqa: E402
+from databasise.seam.refusals import OversizedDocumentError  # noqa: E402
+
+
+async def test_a_structured_text_ingest_reaches_the_driver_with_inline_text_and_raw_format(store_root):
+    engine = _make_engine(store_root, body=_make_stub_full_ingest_body(timeout=5.0))
+    job = await engine.ingest(IngestDocument(text="a structured document"))
+    assert job.enqueued == 1
+
+
+async def test_a_raw_upload_ingest_reaches_the_driver_via_a_server_side_path_never_a_caller_string(
+    store_root,
+):
+    captured_configs: list[dict[str, Any]] = []
+
+    def _capturing_body_factory(*, timeout: float):
+        async def _body(ctx: NodeContext) -> dict[str, Any]:
+            captured_configs.append(dict(ctx.config or {}))
+            return await _make_stub_full_ingest_body(timeout=timeout)(ctx)
+
+        return _body
+
+    engine = _make_engine(store_root, body=_capturing_body_factory(timeout=5.0))
+
+    job = await engine.ingest(IngestDocument(raw=b"raw pdf bytes", content_type="application/pdf"))
+
+    assert job.enqueued == 1
+    [config] = captured_configs
+    assert config["docs_format"] == "pending_parse"
+    [file_path] = config["file_paths"]
+    resolved_path = Path(file_path)
+    assert resolved_path.parent == engine.store_root / "corpus-inbox"
+    document_id = config["documents"][0]["id"]
+    assert resolved_path.name == generated_on_disk_name(document_id)
+    assert resolved_path.read_bytes() == b"raw pdf bytes"
+
+
+def test_ingest_document_with_both_text_and_raw_or_neither_raises_ambiguous_payload():
+    """A ``SeamRefusalError`` raised inside a pydantic ``model_validator`` surfaces as
+    ``pydantic.ValidationError`` at the construction call site — the same pattern
+    ``databasise.seam.selectors.Selector``'s own ``ForbiddenSelectorInputError`` validator
+    already establishes (``tests/seam/test_selectors.py``'s
+    ``test_an_instance_hash_shaped_selector_value_raises_validation_error``); the refusal's own
+    name still appears in the wrapped error's message."""
+    import pydantic
+
+    for kwargs in ({"text": "a", "raw": b"b"}, {}):
+        with pytest.raises(pydantic.ValidationError) as exc_info:
+            IngestDocument(**kwargs)
+        assert "exactly one of 'text'/'raw'" in str(exc_info.value)
+
+
+def test_an_oversized_raw_payload_raises_before_any_bytes_reach_disk_or_a_subprocess(store_root, monkeypatch):
+    import pydantic
+    from databasise.seam import corpus as corpus_module
+
+    monkeypatch.setattr(corpus_module, "MAX_DOCUMENT_BYTES", 4)
+
+    with pytest.raises(pydantic.ValidationError) as exc_info:
+        IngestDocument(raw=b"way too many bytes")
+
+    message = str(exc_info.value)
+    assert str(len(b"way too many bytes")) in message
+    assert "exceeding the 4-byte cap" in message
+
+
+def test_oversized_document_error_carries_actual_and_limit_bytes_as_real_integers():
+    """The typed refusal itself, constructed directly (pydantic's model_validator wrapping loses
+    the original exception object, so this proves the attributes on the class itself, matching
+    the plan's own acceptance criterion: real integers, asserted directly, never inferred from a
+    message string)."""
+    error = OversizedDocumentError(actual_bytes=19, limit_bytes=4)
+    assert error.actual_bytes == 19
+    assert error.limit_bytes == 4
+    assert isinstance(error.actual_bytes, int)
+    assert isinstance(error.limit_bytes, int)
+
+
+def test_generated_on_disk_name_refuses_a_document_id_that_could_escape_the_inbox_directory():
+    name = generated_on_disk_name("deadbeef")
+    assert Path(name).name == name
+
+    for bad in ("../x", "a/b", "a\\b", "."):
+        with pytest.raises(ValueError):
+            generated_on_disk_name(bad)

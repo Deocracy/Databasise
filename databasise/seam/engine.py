@@ -94,7 +94,7 @@ from databasise.identity.canon import canonicalise
 from databasise.parts.registry import PartRegistry, default_registry
 from databasise.runner import scheduler as _scheduler
 from databasise.runner.trace import NodeTrace, RunRecord
-from databasise.seam.corpus import IngestDocument, IngestJob
+from databasise.seam.corpus import IngestDocument, IngestJob, generated_on_disk_name
 from databasise.seam.envelope import ResponseEnvelope, SeamEvent
 from databasise.seam.evidence import (
     CHUNKS_NAMESPACE,
@@ -119,6 +119,13 @@ _INGEST_WIRING_PATH = (
     Path(__file__).resolve().parent.parent / "wirings" / "lightrag" / "corpus-ingest.json"
 )
 _INGEST_NODE_ID = "full-ingest"
+
+# v1's own docs_format vocabulary (lightrag.constants.FULL_DOCS_FORMAT_RAW/_PENDING_PARSE),
+# duplicated as bare string literals here rather than imported — databasise/tools/
+# check_import_boundary.py forbids importing lightrag anywhere under databasise/ except the named
+# subprocess-entry-point leaf scripts, and this module is not one of them.
+_DOCS_FORMAT_RAW = "raw"
+_DOCS_FORMAT_PENDING_PARSE = "pending_parse"
 
 # 04-04 Task 2 (MACH-11): a reads_*/writes_* effect suffix names the store key it accounts for —
 # mirrors databasise/parts_core/__init__.py's own CapabilityScopedStores.require suffix rule
@@ -382,13 +389,33 @@ class Databasise:
         path. Returns an ``IngestJob`` job handle, never a ``ResponseEnvelope`` — ingest is a
         distinct operation, not a query, and never touches ``databasise/seam/envelope.py``'s
         closed field set.
+
+        Both of ``IngestDocument``'s two input shapes (structured text, raw bytes) take this
+        identical path (Task 3) — one operation, two input shapes, never two execution paths. A
+        raw payload's bytes are written server-side under ``store_root/corpus-inbox/`` using
+        ``generated_on_disk_name`` (never the caller's own ``document_id`` string joined directly,
+        and never ``file_name`` at all) before the node config is stamped.
         """
         document_id = document.document_id or uuid.uuid4().hex
+        # A caller-supplied document_id is validated through the same bare-token rule a
+        # server-minted one already satisfies by construction — a caller-supplied id can never
+        # widen the on-disk path.
+        generated_on_disk_name(document_id)
         track_id = uuid.uuid4().hex
 
         resolved = json.loads(_INGEST_WIRING_PATH.read_text(encoding="utf-8"))
         node_config = dict(resolved["nodes"][_INGEST_NODE_ID].get("config") or {})
-        node_config["documents"] = [{"id": document_id, "text": document.text}]
+        if document.raw is not None:
+            inbox_dir = self.store_root / "corpus-inbox"
+            inbox_dir.mkdir(parents=True, exist_ok=True)
+            on_disk_path = inbox_dir / generated_on_disk_name(document_id)
+            on_disk_path.write_bytes(document.raw)
+            node_config["documents"] = [{"id": document_id, "text": ""}]
+            node_config["file_paths"] = [str(on_disk_path)]
+            node_config["docs_format"] = _DOCS_FORMAT_PENDING_PARSE
+        else:
+            node_config["documents"] = [{"id": document_id, "text": document.text}]
+            node_config["docs_format"] = _DOCS_FORMAT_RAW
         node_config["track_id"] = track_id
         resolved["nodes"][_INGEST_NODE_ID]["config"] = node_config
 

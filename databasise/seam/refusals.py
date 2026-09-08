@@ -74,6 +74,37 @@ class ForbiddenSelectorInputError(SeamRefusalError):
         )
 
 
+class AmbiguousIngestPayloadError(SeamRefusalError):
+    """Raised at ``IngestDocument`` validation when both ``text`` and ``raw`` are set, or when
+    neither is — ``set_members`` names which of the two mutually-exclusive members were actually
+    set (empty for "neither")."""
+
+    def __init__(self, *, set_members: list[str]):
+        self.set_members = list(set_members)
+        # The literal "AmbiguousIngestPayload" substring is load-bearing: pydantic's
+        # model_validator wraps this exception into a pydantic.ValidationError at the
+        # IngestDocument construction call site (losing the original exception object), so a
+        # caller distinguishing this refusal from another by inspecting the wrapped error's own
+        # message needs the refusal's own name to survive in that message text.
+        super().__init__(
+            "AmbiguousIngestPayloadError: an ingest document must set exactly one of "
+            f"'text'/'raw'; got {self.set_members!r} set"
+        )
+
+
+class OversizedDocumentError(SeamRefusalError):
+    """Raised at ``IngestDocument`` validation when a ``raw`` payload (or a ``text`` payload's
+    UTF-8 encoding) exceeds ``databasise.seam.corpus.MAX_DOCUMENT_BYTES`` — before any bytes are
+    written to disk and before the subprocess is launched."""
+
+    def __init__(self, *, actual_bytes: int, limit_bytes: int):
+        self.actual_bytes = actual_bytes
+        self.limit_bytes = limit_bytes
+        super().__init__(
+            f"ingest document is {actual_bytes} bytes, exceeding the {limit_bytes}-byte cap"
+        )
+
+
 class ForeignEngineRefusalError(SeamRefusalError):
     """The seam-facing wrapper for a foreign-engine subprocess failure
     (``databasise.foreign.CorpusOpSubprocessError``/``CorpusOpTimeoutError``) — so
@@ -95,5 +126,7 @@ __all__ = [
     "UnconsumableQueryMemberError",
     "UnsatisfiableSelectorError",
     "ForbiddenSelectorInputError",
+    "AmbiguousIngestPayloadError",
+    "OversizedDocumentError",
     "ForeignEngineRefusalError",
 ]
