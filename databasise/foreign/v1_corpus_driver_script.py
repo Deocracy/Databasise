@@ -17,12 +17,14 @@ job JSON on stdin, mirroring ``databasise/parity/v1_driver_script.py``'s own pre
 query side exactly.
 
 Protocol: read one JSON object ``{"op": str, "working_dir": str, ...}`` from stdin. This module
-implements only ``op == "ingest"``, whose job carries
-``{"documents": [{"id": str, "text": str}, ...], "track_id": str | None, "file_paths": [str, ...] |
-None, "docs_format": str | None}`` (``file_paths``/``docs_format`` are the raw-upload extension,
-05-01-PLAN.md Task 3) — any other ``op`` value exits 1 with a named message rather than a silent
-no-op (plans 05-03 and 05-04 add the delete and status branches). Builds v1's ``LightRAG`` facade
-against ``working_dir`` using the same env-var-driven configuration
+implements ``op == "ingest"`` (05-01-PLAN.md Task 1), ``op == "delete"`` and ``op == "entities"``
+(05-03-PLAN.md Task 1) — any other ``op`` value exits 1 with a named message rather than a silent
+no-op (05-04 adds the status branch).
+
+``op == "ingest"``'s job carries ``{"documents": [{"id": str, "text": str}, ...], "track_id": str |
+None, "file_paths": [str, ...] | None, "docs_format": str | None}`` (``file_paths``/``docs_format``
+are the raw-upload extension, 05-01-PLAN.md Task 3). Builds v1's ``LightRAG`` facade against
+``working_dir`` using the same env-var-driven configuration
 ``v1/scripts/run_parity_ingest.py``/``databasise/parity/v1_driver_script.py`` already use, runs the
 ingest via ``apipeline_enqueue_documents`` + ``apipeline_process_enqueue_documents`` — never
 ``ainsert`` — because the two-call form is the path that accepts an explicit ``track_id`` the seam
@@ -31,8 +33,28 @@ hands back to the caller as its job id, and writes one JSON object to stdout:
 accounting v1 exposes for the run, or ``None`` when v1 reports none (which is every call today —
 ``apipeline_process_enqueue_documents`` returns no per-run token count) — never a fabricated zero.
 
-A malformed job, a v1-side ingest failure, or any other exception prints a traceback to stderr and
-exits 1 — the caller (``v1_corpus_adapter.py``) treats any non-zero exit as a refusal carrying that
+``op == "delete"``'s job carries ``{"doc_id": str, "delete_llm_cache": bool}``. Calls v1's own
+``rag.adelete_by_doc_id(doc_id, delete_llm_cache=...)`` — never reimplementing or wrapping its
+reference-counting logic, which already subtracts the deleted document's chunk ids from each
+affected entity's/relation's ``source_id`` set and deletes the entity/edge only when the remaining
+set is empty, rebuilding it from surviving sources otherwise (a helper in ``v1/lightrag/utils.py``,
+called only on the v1 side, never copied onto the machine side). Writes one JSON object built from
+the returned ``DeletionResult``:
+``{"status": str, "doc_id": str, "message": str, "status_code": int, "file_path": str | None}``. A
+v1-side status of ``"not_found"`` or ``"not_allowed"`` is a *successful* driver run reporting that
+status — exit 0, letting the machine map it; only an exception exits 1.
+
+``op == "entities"``'s job carries ``{"doc_id": str}`` — used only by 05-03-PLAN.md Task 3's real
+graph-aware-cleanup proof. Reads the named document's own chunk ids from v1's doc-status store
+(the same ``chunks_list`` field ``adelete_by_doc_id`` itself reads), then walks every entity label
+in the graph (``chunk_entity_relation_graph.get_all_labels()``) via v1's own public
+``rag.get_entity_info()`` accessor — never reaching into a storage implementation directly — and
+returns ``{"entities": {<entity_name>: [<source_id>, ...]}}`` for exactly the entity names whose
+own ``source_id`` set names at least one of the document's chunk ids. An absent document (no
+doc-status record) returns an empty entity map rather than raising.
+
+A malformed job, a v1-side failure, or any other exception prints a traceback to stderr and exits
+1 — the caller (``v1_corpus_adapter.py``) treats any non-zero exit as a refusal carrying that
 stderr, never as an empty success.
 """
 
@@ -47,11 +69,11 @@ from functools import partial
 from typing import Any
 
 from lightrag import LightRAG
-from lightrag.constants import FULL_DOCS_FORMAT_RAW
+from lightrag.constants import FULL_DOCS_FORMAT_RAW, GRAPH_FIELD_SEP
 from lightrag.llm.openai import openai_complete_if_cache, openai_embed
 from lightrag.utils import EmbeddingFunc
 
-_KNOWN_OPS = ("ingest",)
+_KNOWN_OPS = ("ingest", "delete", "entities")
 
 
 class UnknownOpError(ValueError):
@@ -144,10 +166,61 @@ async def _run_ingest(job: dict[str, Any]) -> dict[str, Any]:
     return {"track_id": result_track_id, "enqueued": len(documents), "usage": None}
 
 
+async def _run_delete(job: dict[str, Any]) -> dict[str, Any]:
+    doc_id = str(job["doc_id"])
+    delete_llm_cache = bool(job.get("delete_llm_cache", False))
+    working_dir = str(job["working_dir"])
+
+    rag = await _build_rag(working_dir)
+    try:
+        result = await rag.adelete_by_doc_id(doc_id, delete_llm_cache=delete_llm_cache)
+    finally:
+        await rag.finalize_storages()
+
+    return {
+        "status": result.status,
+        "doc_id": result.doc_id,
+        "message": result.message,
+        "status_code": result.status_code,
+        "file_path": result.file_path,
+    }
+
+
+async def _run_entities(job: dict[str, Any]) -> dict[str, Any]:
+    doc_id = str(job["doc_id"])
+    working_dir = str(job["working_dir"])
+
+    rag = await _build_rag(working_dir)
+    try:
+        doc_status_data = await rag.doc_status.get_by_id(doc_id)
+        if not doc_status_data:
+            return {"entities": {}}
+        chunk_ids = set(doc_status_data.get("chunks_list") or [])
+
+        labels = await rag.chunk_entity_relation_graph.get_all_labels()
+        entities: dict[str, list[str]] = {}
+        for label in labels:
+            info = await rag.get_entity_info(label)
+            source_id = info.get("source_id")
+            if not source_id:
+                continue
+            source_ids = [chunk for chunk in source_id.split(GRAPH_FIELD_SEP) if chunk]
+            if chunk_ids & set(source_ids):
+                entities[label] = source_ids
+    finally:
+        await rag.finalize_storages()
+
+    return {"entities": entities}
+
+
 async def _run(job: dict[str, Any]) -> dict[str, Any]:
     op = job["op"]
     if op == "ingest":
         return await _run_ingest(job)
+    if op == "delete":
+        return await _run_delete(job)
+    if op == "entities":
+        return await _run_entities(job)
     raise UnknownOpError(op)
 
 

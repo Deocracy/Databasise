@@ -16,7 +16,7 @@ from databasise.parts.registry import (
 from databasise.parts.schema import NodeContext
 
 
-def test_default_registry_holds_exactly_twenty_one_entries():
+def test_default_registry_holds_exactly_twenty_two_entries():
     """D-04's six remaining Phase-1 entries (four executable ``parts_core`` reference parts, two
     declaration-only Falsifier-2 wiring placeholders — 03-08-PLAN.md Task 3 retired the third,
     ``lightrag/query-side`` (version ``0.1.0``), once Phase 3 ported its real eighteen positions)
@@ -24,12 +24,14 @@ def test_default_registry_holds_exactly_twenty_one_entries():
     03-04-PLAN.md Task 2's seven ported LightRAG parts plus 03-05-PLAN.md's five graph-half parts
     (``keywords``, ``entity-lookup``, ``relation-lookup``, ``entity-hydrate-expand``,
     ``relation-hydrate-expand``) plus 03-06-PLAN.md's three remaining base-wiring components
-    (``join-roundrobin``, ``truncator-token-budget``, ``chunk-selector-kg``) — this is by design
-    the final count: all eighteen §L.1 positions resolve against a registered part, and the stub
-    they superseded is gone.
+    (``join-roundrobin``, ``truncator-token-budget``, ``chunk-selector-kg``) plus 05-03-PLAN.md
+    Task 1's ``lightrag/full-delete@0.1.0`` (the second, separately-admitted port of the same
+    corpus-side engine ``lightrag/full-ingest@0.1.0`` already registers) — this is by design the
+    final count: all eighteen §L.1 positions resolve against a registered part, plus the two
+    corpus-side write ports, and the stub they superseded is gone.
     """
     registry = default_registry()
-    assert len(registry.keys()) == 21
+    assert len(registry.keys()) == 22
 
 
 def test_get_on_an_unknown_key_raises_with_the_requested_key_quoted_in_the_message():
