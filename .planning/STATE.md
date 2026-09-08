@@ -1,19 +1,19 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: 05
 current_phase_name: Opaque-Side Admission
 status: executing
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-09-08T21:56:11.881Z"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-09-08T22:13:38.386Z"
 last_activity: 2026-09-08
 last_activity_desc: Phase 05 execution started
-state_head: fbb96c4abe0780c078a11033c1992bf8e4c9f53d
+state_head: ed90929f4ef601db4fee519c2dc374f4aa44c30a
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 2
   total_plans: 39
-  completed_plans: 33
+  completed_plans: 34
 milestone_name: milestone
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 05 (Opaque-Side Admission) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-09-08 — Phase 05 execution started
 
@@ -71,6 +71,7 @@ Progress: [██████████] 100%
 | Phase 04 P04 | 90min | 3 tasks | 7 files |
 | Phase 04 P05 | 45min | 3 tasks | 7 files |
 | Phase 05-opaque-side-admission P01 | 165min | 3 tasks | 24 files |
+| Phase 05-opaque-side-admission P02 | 16min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,7 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 04]: 04-05: query_stream() shares query()'s identical _execute() path, yielding evidence events then one final event, rather than fabricating token-level LLM streaming. — The underlying scheduler produces one completed run, not incremental LLM tokens. D-16 only requires streamed content to assemble to the same answer/evidence the non-streaming endpoint returns, which this design proves without inventing streaming the execution model does not support.
 - [Phase 04]: 04-05: EMBED-02 marked complete for its REST half only (FA-10) — the MCP transport is Deferred Idea API-07, out of this phase's scope. — Per the plan's own instruction to state the qualification in the SUMMARY rather than leave it unqualified. Dual-transport conformance is proven for REST vs in-process; a later phase shipping API-07 inherits the same thin-adapter invariant rather than a fresh design question.
 - [Phase 05-opaque-side-admission]: UnadmittedOpaquePartError gates on Part.kind=='opaque', not structural_depth — Gating on structural_depth (as the plan's Task 2 action text literally said) would have broken registration of the already-shipped lightrag/embedder-index@0.1.0 (structural_depth=opaque, kind=embedder, no admission record); kind is what derive_execution_mode already keys its subprocess-placement decision on.
+- [Phase 05]: 05-02: MACH-04's five-engine survey list adopted as recommended (A2), provenance stated in the doc; DR-04/HARD-03 selected two-covering-rationale but selection_is_clean=false since covering 1's partial-coverage refusal is unimplemented and covering 2 (EvidenceRef) is missing all four ChunkRef members per FA-03.
 
 ### Pending Todos
 
@@ -139,6 +141,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-08T21:56:05.047Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-09-08T22:13:38.313Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
