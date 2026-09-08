@@ -196,7 +196,16 @@ Plans:
   4. Caller reads health, corpus status, and document counts in bounded paginated form; a full corpus or index dump is never returned
   5. The MCP surface exposes the same capabilities as REST as intention-level tools; a capability expressible as a §18.4 selector never becomes a new tool, and adding a modality adds no tool
 
-**Plans**: TBD
+**Plans**: 7 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Tracer: LightRAG's ingest core admitted opaque and running end-to-end through the machine as a subprocess-placed node (wave 1)
+- [ ] 05-02-PLAN.md — MACH-04's injected-LLM-endpoint survey across five engines, and DR-04 decided (wave 1)
+- [ ] 05-03-PLAN.md — The delete port: a separate §19.6 registration, MACH-11's first real correlation, graph-aware cleanup proved (wave 2)
+- [ ] 05-04-PLAN.md — Bounded job status, health, counts and paginated corpus reads, plus the corpus-side REST routes (wave 3)
+- [ ] 05-05-PLAN.md — The inside-vs-across-boundary change rule and the compat test that enforces it (wave 5)
+- [ ] 05-06-PLAN.md — codebase-memory-mcp admitted whole-engine, Falsifier 4 run twice, and the phase COVERAGE record (wave 4)
+- [ ] 05-07-PLAN.md — The MCP transport: five intention-level tools with the §18.5 growth rule under test (wave 5)
 
 ### Phase 6: HippoRAG 2 & Side-by-Side
 
