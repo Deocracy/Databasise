@@ -25,11 +25,17 @@ from databasise.seam.refusals import AmbiguousIngestPayloadError, OversizedDocum
 
 MAX_DOCUMENT_BYTES = 25 * 1024 * 1024
 
-# A generated on-disk name is derived only from a server-minted document id — mirrors
-# databasise/namespaces.py's own _NAMESPACE_TOKEN_RE bare-token discipline exactly: no path
-# separator, no parent-directory reference, so a value handed to generated_on_disk_name() can
-# never escape the corpus-inbox directory it is joined under.
-_DOCUMENT_ID_TOKEN_RE = re.compile(r"^[A-Za-z0-9-]+$")
+# A generated on-disk name is derived only from a server-minted OR caller-supplied document id —
+# same bare-token *security* discipline databasise/namespaces.py's own _NAMESPACE_TOKEN_RE
+# enforces (no path separator, no parent-directory reference, so a value handed to
+# generated_on_disk_name() can never escape the corpus-inbox directory it is joined under), but
+# widened to also permit underscore: unlike namespaces.py's own tokens (always machine-generated
+# hex — config_hash, sha256, uuid.hex), a document_id may be caller-supplied (Databasise.ingest())
+# or may name an already-ingested real-world document whose id legitimately contains underscores
+# (05-03-PLAN.md Task 3's own corpus fixture ids — "a_kiss_for_corliss" and its siblings — are
+# exactly this case). Underscore introduces no path-traversal risk; forbidding it was stricter
+# than the actual security requirement.
+_DOCUMENT_ID_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 
 _ON_DISK_SUFFIX = ".bin"
 
