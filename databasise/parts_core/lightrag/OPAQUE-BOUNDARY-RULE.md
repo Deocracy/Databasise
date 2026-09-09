@@ -44,10 +44,18 @@ same-version edit, no matter how small the diff looks.
 **Every field of the part's `AdmissionRecord`** (`databasise/parts/admission.py`), for each part's
 own record (`LIGHTRAG_FULL_INGEST_ADMISSION` / `LIGHTRAG_FULL_DELETE_ADMISSION`):
 
-- `storage`, `wall_clock_ceiling_seconds`, `feed_tier`, `ttl_days`, `network_namespace`,
-  `environment_hash`, `manifest_source`, and every one of the eleven `ConditionVerdict` entries
-  (matched by `(condition, verdict)` pair — the concrete `verdict` string for each of the eleven
-  numbered §8 conditions this record carries).
+- `part_name_at_version` and `entry_path` — the record's own identity fields.
+- `storage`, `wall_clock_ceiling_seconds`, `wall_clock_ceiling_basis`, `feed_tier`, `ttl_days`,
+  `network_namespace`, `manifest_source`.
+- `verdicts` — every one of the eleven `ConditionVerdict` entries, matched by `(condition,
+  verdict)` pair (the concrete `verdict` string for each of the eleven numbered §8 conditions this
+  record carries) — never by the `evidence` prose accompanying it, which is free to reword.
+- `environment_hash` carries the field, but the compat test (§5) deliberately does not pin its
+  computed digest value: it is a content hash over `v1/uv.lock` and `v1/.python-version`, both
+  named in §3 below as free to change (a routine `uv sync` bump inside v1's own venv). Pinning the
+  digest's exact value would turn that free change into a false-positive boundary violation. What
+  the test does check is that both ports' `environment_hash` values are present, share the
+  `sha256:` prefix, and agree with each other.
 
 **The driver script's protocol** (`databasise/foreign/v1_corpus_driver_script.py`):
 
