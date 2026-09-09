@@ -133,6 +133,9 @@ packages = [
     # a `uv sync` between plan 05-04 (which added the `mcp` extra) and this plan never names a
     # package directory that does not yet exist.
     "databasise.mcp",
+    # 06-04-PLAN.md: the eval bundle (MACH-02), named in the same commit that creates it (05-04's
+    # own recorded rule — never name a package directory that does not yet exist).
+    "databasise.eval",
 ]
 
 # The wiring documents ship with the package rather than existing only in a source checkout
