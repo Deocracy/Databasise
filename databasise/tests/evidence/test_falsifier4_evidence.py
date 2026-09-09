@@ -9,18 +9,21 @@ whole-file grep.
 
 from __future__ import annotations
 
-import importlib.util
 import re
 from pathlib import Path
 
 import pytest
 from databasise.foreign import codebase_memory_mcp_adapter as adapter
+from databasise.foreign._mcp_sdk_guard import mcp_sdk_is_installed
 
 # A live-engine test needs both the binary AND the `mcp` extra (lazily imported by the adapter —
 # see that module's own docstring for why importing it never requires the extra, only calling it
 # does). Checking only the binary would let this skip fall through to a bare ModuleNotFoundError
 # on a `uv run pytest -q` with no extras installed but the binary present on PATH.
-_MCP_INSTALLED = importlib.util.find_spec("mcp") is not None
+# `mcp_sdk_is_installed()` (never a bare `importlib.util.find_spec("mcp")` — 05-07-PLAN.md's own
+# fix, Rule 1) is shadow-safe against `databasise/mcp/`, a sibling package added by that same plan
+# that shares the SDK's own top-level name.
+_MCP_INSTALLED = mcp_sdk_is_installed()
 
 
 def _evidence_dir() -> Path:

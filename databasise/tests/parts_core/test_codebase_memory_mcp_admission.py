@@ -10,7 +10,6 @@ the engine is absent.
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import os
 import subprocess
@@ -18,6 +17,7 @@ from pathlib import Path
 
 import pytest
 from databasise.foreign import codebase_memory_mcp_adapter as adapter
+from databasise.foreign._mcp_sdk_guard import mcp_sdk_is_installed
 from databasise.parts.admission import cross_check_conditions, validate_admission
 from databasise.parts.registry import PartRegistry, default_registry
 from databasise.parts_core.codebase_memory_mcp import (
@@ -37,7 +37,10 @@ _WIRING_PATH = Path(__file__).resolve().parents[2] / "wirings" / "codebase-memor
 # dependency, lazily imported by the adapter — see that module's own docstring/comment for why).
 # Checking only the binary would let this skip fall through to a bare ModuleNotFoundError on a
 # `uv run pytest -q` with no extras installed but the binary present on PATH.
-_MCP_INSTALLED = importlib.util.find_spec("mcp") is not None
+# `mcp_sdk_is_installed()` (never a bare `importlib.util.find_spec("mcp")` — 05-07-PLAN.md's own
+# fix, Rule 1) is shadow-safe against `databasise/mcp/`, a sibling package added by that same plan
+# that shares the SDK's own top-level name.
+_MCP_INSTALLED = mcp_sdk_is_installed()
 _NO_LIVE_ENGINE_REASON = (
     f"codebase-memory-mcp binary not found (DEFAULT_CBM_BINARY={adapter.DEFAULT_CBM_BINARY!r}) "
     f"or the 'mcp' extra is not installed (found={_MCP_INSTALLED}); install the binary and run "

@@ -44,6 +44,8 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from databasise.foreign._mcp_sdk_guard import import_real_mcp
+
 if TYPE_CHECKING:
     from mcp import ClientSession
 
@@ -216,12 +218,22 @@ async def _run_with_session(binary: str | None, tool_name: str, timeout: float, 
     ``mcp`` extra to be installed. The binary is resolved *before* that import, so
     :class:`ForeignEngineUnavailableError` still fires cleanly for an unresolvable binary even
     when the ``mcp`` extra itself is not installed.
+
+    Resolved via ``databasise.foreign._mcp_sdk_guard.import_real_mcp`` (05-07-PLAN.md's own fix,
+    Rule 1) rather than a bare ``from mcp import ...`` — a sibling ``databasise/mcp/`` package
+    introduced by that same plan shares this SDK's own top-level name, and a bare import can
+    resolve to that package instead of the real SDK under some invocation shapes (see the guard
+    module's own docstring).
     """
     resolved = _resolve_binary(binary)
 
     import anyio
-    from mcp import ClientSession, StdioServerParameters
-    from mcp.client.stdio import stdio_client
+
+    mcp_module = import_real_mcp("mcp")
+    stdio_module = import_real_mcp("mcp.client.stdio")
+    ClientSession = mcp_module.ClientSession
+    StdioServerParameters = mcp_module.StdioServerParameters
+    stdio_client = stdio_module.stdio_client
 
     params = StdioServerParameters(command=resolved, args=[])
     try:
