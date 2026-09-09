@@ -1,19 +1,19 @@
 ---
-gsd_state_version: "1.0"
+gsd_state_version: 1.0
 milestone: v1.0
 current_phase: 05
 current_phase_name: Opaque-Side Admission
 status: executing
-stopped_at: Completed 05-04-PLAN.md
-last_updated: "2026-09-08T23:42:27Z"
+stopped_at: Completed 05-06-PLAN.md
+last_updated: "2026-09-09T01:08:29.162Z"
 last_activity: 2026-09-08
 last_activity_desc: Phase 05 execution started
-state_head: 4f43097dfb0b1bbcb64e33756f111e819418911c
+state_head: 0b2660fa6a973dc8912bb66fcf4c8135e2125e63
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 39
-  completed_plans: 35
+  completed_plans: 37
 milestone_name: milestone
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 05 (Opaque-Side Admission) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-09-08 — Completed 05-04-PLAN.md
 
@@ -74,6 +74,7 @@ Progress: [██████████] 100%
 | Phase 05-opaque-side-admission P02 | 16min | 2 tasks | 4 files |
 | Phase 05 P03 | 95min | 3 tasks | 15 files |
 | Phase 05 P04 | 40min | 3 tasks | 13 files |
+| Phase 05-opaque-side-admission P06 | 105min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -120,6 +121,9 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 05]: 05-04: Checkpoint resolved — mcp 2.2.0 and python-multipart 0.0.32 both confirmed legitimate before either package was added to databasise/pyproject.toml (the research audit's [SUS] verdicts were download-count blind spots, not slopsquat signatures).
 - [Phase 05]: 05-04: get_job_status/health/corpus_status/document_counts reach databasise.foreign.run_corpus_op directly, never through a registered Part/wiring/scheduler step — a bounded liveness/status read produces no evidence, mutates nothing, and declares no effect.
 - [Phase 05]: 05-04: Fixed a real bug (Rule 1) in REST's page-cap refusal path — Page(limit=..., offset=...) constructed directly inside a route body gets its PageSizeExceededError wrapped by pydantic into a ValidationError Starlette's exception middleware cannot match against the registered SeamRefusalError handler (would have 500'd instead of 422'ing); added a small _checked_page helper that raises the refusal directly.
+- [Phase 05-opaque-side-admission]: 05-06: mcp is imported lazily, function-scoped inside codebase_memory_mcp_adapter._run_with_session — never at module level, since the module is reached from default_registry() unconditionally, and a module-level import would fail nearly the entire test suite on a bare install with no extras.
+- [Phase 05-opaque-side-admission]: 05-06: Every normalized item from codebase-memory-mcp is tier-capped below_T1 unconditionally, not per-call — this engine supplies neither recipe_at_version nor ordinal for any tool at all (no recipe concept anywhere in its model), so no item can ever reach full T1 ChunkRef coverage regardless of which tool or repository is used.
+- [Phase 05-opaque-side-admission]: 05-06: CODEBASE_MEMORY_MCP_PART.effects gained mutates_store additively, keeping the pre-existing self_storage/fs over-declarations pinned by committed Falsifier-2 evidence — the discrepancy with PARTS.md ## §X's mutates_store-only declaration is recorded in ADMISSION-CODEBASE-MEMORY-MCP.md rather than silently resolved.
 
 ### Pending Todos
 
@@ -148,6 +152,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-08T23:42:27Z
-Stopped at: Completed 05-04-PLAN.md
+Last session: 2026-09-09T00:43:38.569Z
+Stopped at: Completed 05-06-PLAN.md
 Resume file: None
