@@ -9,11 +9,13 @@ index.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
-from databasise.clients.base import EmbeddingResult
+from databasise.clients.base import ChatResult, EmbeddingResult
 from databasise.parts.schema import NodeContext
 from databasise.parts_core.hipporag.chunk_embed import HIPPORAG_CHUNKER_EMBEDDER_PART
+from databasise.parts_core.hipporag.openie import HIPPORAG_OPENIE_EXTRACTOR_PART
 from databasise.runner.trace import TokenAccounting
 from databasise.stores.kv import SqliteKVStore
 from databasise.stores.vector import MultiNamespaceVectorStore
@@ -145,3 +147,124 @@ async def test_chunk_embed_reports_the_embedding_clients_own_token_accounting(st
 
     assert result["tokens"].counted_by == "stub-embed"
     assert result["tokens"].prompt_tokens == 1
+
+
+# --------------------------------------------------------------------------------------------- #
+# Task 2: openie
+# --------------------------------------------------------------------------------------------- #
+
+
+class _StubOpenieLLMClient:
+    """Alternates NER/triple responses by call index: call ``2*i`` is chunk ``i``'s NER call,
+    call ``2*i + 1`` is chunk ``i``'s triple-extraction call — mirrors ``openie.py``'s own strict
+    per-chunk NER-then-triples order. ``triple_responses[i]`` may be a raw malformed string
+    instead of a triple list, to exercise the malformed-response-degrades-only-this-chunk path.
+    """
+
+    def __init__(
+        self,
+        ner_responses: list[list[str]],
+        triple_responses: list[Any],
+    ) -> None:
+        self._ner_responses = ner_responses
+        self._triple_responses = triple_responses
+        self.calls: list[str] = []
+
+    async def chat(self, messages: list[dict[str, str]], **kwargs: Any) -> ChatResult:
+        content = messages[0]["content"]
+        self.calls.append(content)
+        call_index = len(self.calls) - 1
+        chunk_index, is_triple_call = divmod(call_index, 2)
+        if is_triple_call:
+            payload = self._triple_responses[chunk_index]
+            text = payload if isinstance(payload, str) else json.dumps({"triples": payload})
+        else:
+            text = json.dumps({"entities": self._ner_responses[chunk_index]})
+        return ChatResult(
+            text=text,
+            tokens=TokenAccounting(
+                prompt_tokens=5, completion_tokens=3, call_count=1, counted_by="stub-llm"
+            ),
+            resolved_model_identity="stub-llm-model",
+        )
+
+
+_CAT_CHUNK = {"chunk_id": "c1", "document_id": "doc-1", "ordinal": 0, "text": "The cat sat on the mat."}
+_DOG_CHUNK = {"chunk_id": "c2", "document_id": "doc-2", "ordinal": 0, "text": "A dog sat on the rug."}
+
+
+async def test_openie_makes_exactly_two_calls_per_chunk_ner_then_triples():
+    client = _StubOpenieLLMClient(
+        ner_responses=[["cat", "mat"], ["dog", "rug"]],
+        triple_responses=[[["cat", "sat_on", "mat"]], [["dog", "sat_on", "rug"]]],
+    )
+    ctx = _ctx(
+        "openie",
+        inputs={"chunk-embed": {"chunks": [_CAT_CHUNK, _DOG_CHUNK]}},
+        clients={"llm": client},
+    )
+
+    await HIPPORAG_OPENIE_EXTRACTOR_PART.body(ctx)
+
+    assert len(client.calls) == 4
+    assert "---Recognised Entities---" not in client.calls[0]
+    assert "---Recognised Entities---" in client.calls[1]
+    # The triple call for chunk 1 carries chunk 1's own NER result.
+    assert '"cat"' in client.calls[1]
+    assert '"mat"' in client.calls[1]
+    assert "---Recognised Entities---" not in client.calls[2]
+    assert "---Recognised Entities---" in client.calls[3]
+    assert '"dog"' in client.calls[3]
+
+
+async def test_openie_emits_one_finding_per_triple_with_a_stable_fact_id():
+    client = _StubOpenieLLMClient(
+        ner_responses=[["cat", "mat"]], triple_responses=[[["cat", "sat_on", "mat"]]]
+    )
+    ctx = _ctx("openie", inputs={"chunk-embed": {"chunks": [_CAT_CHUNK]}}, clients={"llm": client})
+
+    result = await HIPPORAG_OPENIE_EXTRACTOR_PART.body(ctx)
+
+    assert len(result["findings"]) == 1
+    finding = result["findings"][0]
+    assert finding["subject"] == "cat"
+    assert finding["predicate"] == "sat_on"
+    assert finding["object"] == "mat"
+    assert finding["chunk_id"] == "c1"
+    assert isinstance(finding["fact_id"], str) and len(finding["fact_id"]) == 64
+
+    client2 = _StubOpenieLLMClient(
+        ner_responses=[["cat", "mat"]], triple_responses=[[["cat", "sat_on", "mat"]]]
+    )
+    ctx2 = _ctx("openie", inputs={"chunk-embed": {"chunks": [_CAT_CHUNK]}}, clients={"llm": client2})
+    result2 = await HIPPORAG_OPENIE_EXTRACTOR_PART.body(ctx2)
+    assert result2["findings"][0]["fact_id"] == finding["fact_id"]
+
+
+async def test_openie_malformed_triple_response_degrades_only_its_own_chunk():
+    client = _StubOpenieLLMClient(
+        ner_responses=[["cat", "mat"], ["dog", "rug"]],
+        triple_responses=["not valid json at all", [["dog", "sat_on", "rug"]]],
+    )
+    ctx = _ctx(
+        "openie",
+        inputs={"chunk-embed": {"chunks": [_CAT_CHUNK, _DOG_CHUNK]}},
+        clients={"llm": client},
+    )
+
+    result = await HIPPORAG_OPENIE_EXTRACTOR_PART.body(ctx)
+
+    chunk1_findings = [f for f in result["findings"] if f["chunk_id"] == "c1"]
+    chunk2_findings = [f for f in result["findings"] if f["chunk_id"] == "c2"]
+    assert chunk1_findings == []
+    assert len(chunk2_findings) == 1
+
+
+async def test_openie_makes_zero_calls_with_empty_chunks_input():
+    client = _StubOpenieLLMClient(ner_responses=[], triple_responses=[])
+    ctx = _ctx("openie", inputs={"chunk-embed": {"chunks": []}}, clients={"llm": client})
+
+    result = await HIPPORAG_OPENIE_EXTRACTOR_PART.body(ctx)
+
+    assert result["findings"] == []
+    assert client.calls == []
