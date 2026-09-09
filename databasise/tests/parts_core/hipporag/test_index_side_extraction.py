@@ -15,6 +15,12 @@ from typing import Any
 from databasise.clients.base import ChatResult, EmbeddingResult
 from databasise.parts.schema import NodeContext
 from databasise.parts_core.hipporag.chunk_embed import HIPPORAG_CHUNKER_EMBEDDER_PART
+from databasise.parts_core.hipporag.entity_fact_embed import (
+    CHUNK_VERTEX_PREFIX,
+    ENTITY_VERTEX_PREFIX,
+    HIPPORAG_ENTITY_FACT_EMBEDDER_PART,
+)
+from databasise.parts_core.hipporag.openie import _fact_id as openie_fact_id
 from databasise.parts_core.hipporag.openie import HIPPORAG_OPENIE_EXTRACTOR_PART
 from databasise.runner.trace import TokenAccounting
 from databasise.stores.kv import SqliteKVStore
@@ -268,3 +274,163 @@ async def test_openie_makes_zero_calls_with_empty_chunks_input():
 
     assert result["findings"] == []
     assert client.calls == []
+
+
+def _finding(subject: str, predicate: str, obj: str, chunk_id: str) -> dict[str, Any]:
+    return {
+        "subject": subject,
+        "predicate": predicate,
+        "object": obj,
+        "chunk_id": chunk_id,
+        "fact_id": openie_fact_id(subject, predicate, obj),
+    }
+
+
+# --------------------------------------------------------------------------------------------- #
+# Task 3: entity-fact-embed
+# --------------------------------------------------------------------------------------------- #
+
+
+def test_entity_and_chunk_vertex_prefixes_are_distinct():
+    assert ENTITY_VERTEX_PREFIX != CHUNK_VERTEX_PREFIX
+
+
+async def test_entity_fact_embed_writes_four_entities_and_three_facts_never_chunks(store_root):
+    findings = [
+        _finding("cat", "sat_on", "mat", "c1"),
+        _finding("cat", "likes", "rug", "c1"),
+        _finding("dog", "sat_on", "rug", "c2"),
+    ]
+    client = _StubEmbeddingClient()
+    vector_store = MultiNamespaceVectorStore(workspace="ws", store_root=store_root)
+    ctx = _ctx(
+        "entity-fact-embed",
+        inputs={"openie": {"findings": findings}},
+        stores={"vector": vector_store},
+        clients={"embedding": client},
+    )
+
+    result = await HIPPORAG_ENTITY_FACT_EMBEDDER_PART.body(ctx)
+    await vector_store.index_done_callback()
+
+    assert len(result["entities"]) == 4  # cat, mat, rug, dog
+    assert len(result["facts"]) == 3
+    assert not (store_root / "ws" / "hipporag-chunks").exists()
+
+
+async def test_entity_fact_embed_fact_vector_ids_equal_openies_own_fact_ids(store_root):
+    findings = [_finding("cat", "sat_on", "mat", "c1")]
+    expected_fact_id = findings[0]["fact_id"]
+    client = _StubEmbeddingClient()
+    vector_store = MultiNamespaceVectorStore(workspace="ws", store_root=store_root)
+    ctx = _ctx(
+        "entity-fact-embed",
+        inputs={"openie": {"findings": findings}},
+        stores={"vector": vector_store},
+        clients={"embedding": client},
+    )
+
+    result = await HIPPORAG_ENTITY_FACT_EMBEDDER_PART.body(ctx)
+    await vector_store.index_done_callback()
+
+    assert result["facts"][0]["fact_id"] == expected_fact_id
+    facts_ns = vector_store.select("hipporag-facts")
+    assert facts_ns.get_by_id(expected_fact_id) is not None
+
+
+async def test_entity_fact_embed_entity_ids_carry_the_entity_vertex_prefix(store_root):
+    findings = [_finding("cat", "sat_on", "mat", "c1")]
+    client = _StubEmbeddingClient()
+    ctx = _ctx(
+        "entity-fact-embed",
+        inputs={"openie": {"findings": findings}},
+        stores={"vector": MultiNamespaceVectorStore(workspace="ws", store_root=store_root)},
+        clients={"embedding": client},
+    )
+
+    result = await HIPPORAG_ENTITY_FACT_EMBEDDER_PART.body(ctx)
+
+    assert result["entities"], "expected at least one entity"
+    for entity in result["entities"]:
+        assert entity["ref"].startswith(ENTITY_VERTEX_PREFIX)
+        assert not entity["ref"].startswith(CHUNK_VERTEX_PREFIX)
+
+
+async def test_entity_fact_embed_dedupes_an_entity_appearing_in_two_findings(store_root):
+    findings = [
+        _finding("cat", "sat_on", "mat", "c1"),
+        _finding("cat", "likes", "rug", "c2"),
+    ]
+    client = _StubEmbeddingClient()
+    ctx = _ctx(
+        "entity-fact-embed",
+        inputs={"openie": {"findings": findings}},
+        stores={"vector": MultiNamespaceVectorStore(workspace="ws", store_root=store_root)},
+        clients={"embedding": client},
+    )
+
+    result = await HIPPORAG_ENTITY_FACT_EMBEDDER_PART.body(ctx)
+
+    cat_entities = [e for e in result["entities"] if e["surface_form"] == "cat"]
+    assert len(cat_entities) == 1
+    assert client.calls, "expected at least one batched embed call"
+    entity_call = client.calls[0]
+    assert entity_call.count("cat") == 1
+
+
+# --------------------------------------------------------------------------------------------- #
+# Chain test: chunk-embed -> openie -> entity-fact-embed over the seeded source documents
+# --------------------------------------------------------------------------------------------- #
+
+
+async def test_full_chain_dispatch_has_bounded_embed_calls_and_matching_fact_ids(
+    store_root, seeded_hipporag_source_documents
+):
+    embedding_client = _StubEmbeddingClient()
+    vector_store = MultiNamespaceVectorStore(workspace="ws", store_root=store_root)
+    kv_store = SqliteKVStore(namespace="hipporag-text-chunks", workspace="ws", store_root=store_root)
+
+    chunk_ctx = _ctx(
+        "chunk-embed",
+        config={"documents": seeded_hipporag_source_documents},
+        stores={"vector": vector_store, "kv": kv_store},
+        clients={"embedding": embedding_client},
+    )
+    chunk_result = await HIPPORAG_CHUNKER_EMBEDDER_PART.body(chunk_ctx)
+    await vector_store.index_done_callback()
+    await kv_store.index_done_callback()
+
+    assert len(chunk_result["chunks"]) == 3  # three short documents, one chunk each
+
+    llm_client = _StubOpenieLLMClient(
+        ner_responses=[["cat", "mat"], ["cat", "rug"], ["dog", "rug"]],
+        triple_responses=[
+            [["cat", "sat_on", "mat"]],
+            [["cat", "likes", "rug"]],
+            [["dog", "sat_on", "rug"]],
+        ],
+    )
+    openie_ctx = _ctx("openie", inputs={"chunk-embed": chunk_result}, clients={"llm": llm_client})
+    openie_result = await HIPPORAG_OPENIE_EXTRACTOR_PART.body(openie_ctx)
+
+    assert len(openie_result["findings"]) == 3
+    expected_fact_ids = {f["fact_id"] for f in openie_result["findings"]}
+
+    entity_ctx = _ctx(
+        "entity-fact-embed",
+        inputs={"openie": openie_result},
+        stores={"vector": vector_store},
+        clients={"embedding": embedding_client},
+    )
+    entity_result = await HIPPORAG_ENTITY_FACT_EMBEDDER_PART.body(entity_ctx)
+    await vector_store.index_done_callback()
+
+    # One batched call at chunk-embed, two batched calls at entity-fact-embed — never one per item.
+    assert len(embedding_client.calls) == 3
+    assert len(embedding_client.calls[0]) == 3
+
+    facts_ns = vector_store.select("hipporag-facts")
+    stored_fact_ids = {record["fact_id"] for record in entity_result["facts"]}
+    assert stored_fact_ids == expected_fact_ids
+    for fact_id in expected_fact_ids:
+        assert facts_ns.get_by_id(fact_id) is not None
