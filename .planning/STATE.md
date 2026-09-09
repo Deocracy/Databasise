@@ -1,19 +1,19 @@
 ---
-gsd_state_version: "1.0"
+gsd_state_version: 1.0
 milestone: v1.0
 current_phase: 05
 current_phase_name: Opaque-Side Admission
-status: executing
-stopped_at: Completed 05-05-PLAN.md
-last_updated: "2026-09-09T01:31:49.086Z"
+status: verifying
+stopped_at: Completed 05-07-PLAN.md
+last_updated: "2026-09-09T03:25:06.047Z"
 last_activity: 2026-09-08
 last_activity_desc: Phase 05 execution started
-state_head: 106cacb34e3be199bf9470efcecf78dc132dcc9b
+state_head: e3c3a9aad56c00abc6cf93c8b6509790ae85314f
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 39
-  completed_plans: 38
+  completed_plans: 39
 milestone_name: milestone
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 
 Phase: 05 (Opaque-Side Admission) — EXECUTING
 Plan: 7 of 7
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-08 — Completed 05-04-PLAN.md
 
 Progress: [██████████] 100%
@@ -76,6 +76,7 @@ Progress: [██████████] 100%
 | Phase 05 P04 | 40min | 3 tasks | 13 files |
 | Phase 05-opaque-side-admission P06 | 105min | 3 tasks | 9 files |
 | Phase 05-opaque-side-admission P05 | 45min | 2 tasks | 2 files |
+| Phase 05-opaque-side-admission P07 | 130min | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -126,6 +127,8 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 05-opaque-side-admission]: 05-06: Every normalized item from codebase-memory-mcp is tier-capped below_T1 unconditionally, not per-call — this engine supplies neither recipe_at_version nor ordinal for any tool at all (no recipe concept anywhere in its model), so no item can ever reach full T1 ChunkRef coverage regardless of which tool or repository is used.
 - [Phase 05-opaque-side-admission]: 05-06: CODEBASE_MEMORY_MCP_PART.effects gained mutates_store additively, keeping the pre-existing self_storage/fs over-declarations pinned by committed Falsifier-2 evidence — the discrepancy with PARTS.md ## §X's mutates_store-only declaration is recorded in ADMISSION-CODEBASE-MEMORY-MCP.md rather than silently resolved.
 - [Phase 05]: 05-05: OPAQUE-BOUNDARY-RULE.md enumerates every across-boundary Part/AdmissionRecord field and driver-script protocol key; test_full_ingest_compat.py enforces it, pinning environment_hash structurally (not by literal digest) since that value legitimately drifts with a free v1/uv.lock bump.
+- [Phase 05]: 05-07: databasise/tests/mcp/ carries no __init__.py and both new test files guard with try/import-databasise.mcp instead of pytest.importorskip("mcp") — a bare import mcp/importorskip can resolve to this project's own mcp/ package or the tests/mcp/ namespace-package shadow instead of skipping cleanly.
+- [Phase 05]: 05-07: fixed a real regression this plan's own databasise/mcp/ package introduced into 05-06's pre-existing codebase_memory_mcp_adapter.py and its test files' bare importlib.util.find_spec("mcp") availability checks, via a shared shadow-safe resolver (databasise/foreign/_mcp_sdk_guard.py) that strips every sys.path entry resolving inside databasise/ (excluding the active venv) before resolving the real SDK.
 
 ### Pending Todos
 
@@ -154,6 +157,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-09T01:31:49.005Z
-Stopped at: Completed 05-05-PLAN.md
+Last session: 2026-09-09T03:25:05.939Z
+Stopped at: Completed 05-07-PLAN.md
 Resume file: None
