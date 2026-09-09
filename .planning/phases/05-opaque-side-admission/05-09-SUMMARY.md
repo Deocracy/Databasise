@@ -148,3 +148,10 @@ None - no external service configuration required.
 ---
 *Phase: 05-opaque-side-admission*
 *Completed: 2026-09-09*
+
+## Self-Check: PASSED
+
+- `databasise/mcp/server.py` — FOUND
+- `databasise/seam/refusals.py` — FOUND
+- `.planning/phases/05-opaque-side-admission/05-09-SUMMARY.md` — FOUND
+- Commits `cf83fe6`, `17dfa65`, `1922d2a` — all present in `git log --oneline --all --grep="05-09"`
