@@ -1,0 +1,18 @@
+You are judging whether a candidate answer correctly answers a question, given the gold (reference) answer.
+
+Question:
+{question}
+
+Gold answer:
+{gold_answer}
+
+Candidate answer:
+{candidate_answer}
+
+Judge the candidate answer against the gold answer for factual correctness only — ignore
+phrasing, verbosity, and style differences. Respond with exactly one of the following verdicts,
+and nothing else:
+
+- CORRECT — the candidate answer states the same fact(s) as the gold answer.
+- INCORRECT — the candidate answer contradicts or omits the fact(s) the gold answer states.
+- PARTIAL — the candidate answer is factually correct but incomplete relative to the gold answer.

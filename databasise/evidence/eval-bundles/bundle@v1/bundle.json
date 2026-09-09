@@ -1,0 +1,370 @@
+{
+  "concurrency_setting": "sequential",
+  "content_hash": "b8eb30303f22e8740665928a6fcd7eadb657329d8671eb33e8c1360f8940e59e",
+  "corpus_snapshot_hash": "405ee4b9deb1bf5b8e82839b61b26213eb5b379a01d8c4a5bf9180afe9eb0f63",
+  "determinism_setting": "cache-bypassed",
+  "gold_answers": {
+    "q10": "yes",
+    "q11": "Kansas Song",
+    "q12": "David Weissman",
+    "q13": "1999",
+    "q14": "no",
+    "q15": "from 1986 to 2013",
+    "q16": "9,984",
+    "q17": "the North Atlantic Conference",
+    "q18": "yes",
+    "q19": "1969 until 1974",
+    "q20": "Robert Erskine Childers DSC",
+    "q21": "Pedro Rodr\u00edguez",
+    "q22": "Sonic",
+    "q23": "keyboard function keys",
+    "q24": "Badly Drawn Boy",
+    "q25": "World's Best Goalkeeper",
+    "q26": "Barton Lee Hazlewood",
+    "q27": "1838",
+    "q28": "yes",
+    "q29": "Henry J. Kaiser",
+    "q3": "Animorphs",
+    "q30": "Arena of Khazan",
+    "q31": "2000",
+    "q32": "Fujioka, Gunma",
+    "q4": "no",
+    "q5": "Greenwich Village, New York City",
+    "q6": "YG Entertainment",
+    "q7": "Eenasul Fateh",
+    "q8": "3,677 seated",
+    "q9": "Terry Richardson"
+  },
+  "judge_instance": "unresolved",
+  "judge_prompt_hash": "a826736e1e2bb7884b233123aad1cedd0c59fac702ed8d9de0406de4f1fa57ea",
+  "questions": [
+    {
+      "id": "q3",
+      "text": "What science fantasy young adult series, told in first person, has a set of companion books narrating the stories of enslaved worlds and alien species?"
+    },
+    {
+      "id": "q4",
+      "text": "Are the Laleli Mosque and Esma Sultan Mansion located in the same neighborhood?"
+    },
+    {
+      "id": "q5",
+      "text": "The director of the romantic comedy \"Big Stone Gap\" is based in what New York city?"
+    },
+    {
+      "id": "q6",
+      "text": "2014 S/S is the debut album of a South Korean boy group that was formed by who?"
+    },
+    {
+      "id": "q7",
+      "text": "Who was known by his stage name Aladin and helped organizations improve their performance as a consultant?"
+    },
+    {
+      "id": "q8",
+      "text": "The arena where the Lewiston Maineiacs played their home games can seat how many people?"
+    },
+    {
+      "id": "q9",
+      "text": "Who is older, Annie Morton or Terry Richardson?"
+    },
+    {
+      "id": "q10",
+      "text": "Are Local H and For Against both from the United States?"
+    },
+    {
+      "id": "q11",
+      "text": "What is the name of the fight song of the university whose main campus is in Lawrence, Kansas and whose branch campuses are in the Kansas City metropolitan area?"
+    },
+    {
+      "id": "q12",
+      "text": "What screenwriter with credits for \"Evolution\" co-wrote a film starring Nicolas Cage and T\u00e9a Leoni?"
+    },
+    {
+      "id": "q13",
+      "text": "What year did Guns N Roses perform a promo for a movie starring Arnold Schwarzenegger as a former New York Police detective?"
+    },
+    {
+      "id": "q14",
+      "text": "Are Random House Tower and 888 7th Avenue both used for real estate?"
+    },
+    {
+      "id": "q15",
+      "text": "The football manager who recruited David Beckham managed Manchester United during what timeframe?"
+    },
+    {
+      "id": "q16",
+      "text": "Brown State Fishing Lake is in a country that has a population of how many inhabitants ?"
+    },
+    {
+      "id": "q17",
+      "text": "The Vermont Catamounts men's soccer team currently competes in a conference that was formerly known as what from 1988 to 1996?"
+    },
+    {
+      "id": "q18",
+      "text": "Are Giuseppe Verdi and Ambroise Thomas both Opera composers ?"
+    },
+    {
+      "id": "q19",
+      "text": "Roger O. Egeberg was Assistant Secretary for Health and Scientific Affairs during the administration of a president that served during what years?"
+    },
+    {
+      "id": "q20",
+      "text": "Which writer was from England, Henry Roth or Robert Erskine Childers?"
+    },
+    {
+      "id": "q21",
+      "text": "Which other Mexican Formula One race car driver has held the podium besides the Force India driver born in 1990?"
+    },
+    {
+      "id": "q22",
+      "text": "This singer of A Rather Blustery Day also voiced what hedgehog?"
+    },
+    {
+      "id": "q23",
+      "text": "Aside from the Apple Remote, what other device can control the program Apple Remote was originally designed to interact with?"
+    },
+    {
+      "id": "q24",
+      "text": "Which performance act has a higher instrument to person ratio, Badly Drawn Boy or Wolf Alice? "
+    },
+    {
+      "id": "q25",
+      "text": "What was the father of Kasper Schmeichel voted to be by the IFFHS in 1992?"
+    },
+    {
+      "id": "q26",
+      "text": "Who was the writer of These Boots Are Made for Walkin' and who died in 2007?"
+    },
+    {
+      "id": "q27",
+      "text": "The 2011\u201312 VCU Rams men's basketball team, led by third year head coach Shaka Smart, represented Virginia Commonwealth University which was founded in what year?"
+    },
+    {
+      "id": "q28",
+      "text": "Are both Dictyosperma, and Huernia described as a genus?"
+    },
+    {
+      "id": "q29",
+      "text": "Kaiser Ventures corporation was founded by an American industrialist who became known as the father of modern American shipbuilding?"
+    },
+    {
+      "id": "q30",
+      "text": "What is the name for the adventure in \"Tunnels and Trolls\", a game designed by Ken St. Andre?"
+    },
+    {
+      "id": "q31",
+      "text": "When was Poison's album \"Shut Up, Make Love\" released?"
+    },
+    {
+      "id": "q32",
+      "text": "Hayden is a singer-songwriter from Canada, but where does Buck-Tick hail from?"
+    }
+  ],
+  "split_proportions": {
+    "dev": 0.6,
+    "holdout": 0.2,
+    "sealed": 0.2
+  },
+  "splits": {
+    "dev": [
+      "q4",
+      "q6",
+      "q7",
+      "q8",
+      "q11",
+      "q13",
+      "q15",
+      "q16",
+      "q17",
+      "q18",
+      "q19",
+      "q22",
+      "q23",
+      "q25",
+      "q27",
+      "q30",
+      "q32"
+    ],
+    "holdout": [
+      "q3",
+      "q5",
+      "q9",
+      "q12",
+      "q14",
+      "q24",
+      "q26",
+      "q28",
+      "q29"
+    ],
+    "sealed": [
+      "q10",
+      "q20",
+      "q21",
+      "q31"
+    ]
+  },
+  "target_families": [
+    {
+      "name": "gold_passage",
+      "targets": {
+        "q10": [
+          "local_h",
+          "for_against"
+        ],
+        "q11": [
+          "kansas_song",
+          "university_of_kansas"
+        ],
+        "q12": [
+          "david_weissman",
+          "the_family_man"
+        ],
+        "q13": [
+          "oh_my_god_guns_n_roses_song",
+          "end_of_days_film"
+        ],
+        "q14": [
+          "random_house_tower",
+          "888_7th_avenue"
+        ],
+        "q15": [
+          "1995_96_manchester_united_f_c_season",
+          "alex_ferguson"
+        ],
+        "q16": [
+          "brown_state_fishing_lake",
+          "brown_county_kansas"
+        ],
+        "q17": [
+          "vermont_catamounts_men_s_soccer",
+          "america_east_conference"
+        ],
+        "q18": [
+          "giuseppe_verdi",
+          "ambroise_thomas"
+        ],
+        "q19": [
+          "roger_o_egeberg",
+          "richard_nixon"
+        ],
+        "q20": [
+          "henry_roth",
+          "robert_erskine_childers"
+        ],
+        "q21": [
+          "formula_one_drivers_from_mexico",
+          "sergio_p_rez"
+        ],
+        "q22": [
+          "a_rather_blustery_day",
+          "jim_cummings"
+        ],
+        "q23": [
+          "apple_remote",
+          "front_row_software"
+        ],
+        "q24": [
+          "badly_drawn_boy",
+          "wolf_alice"
+        ],
+        "q25": [
+          "kasper_schmeichel",
+          "peter_schmeichel"
+        ],
+        "q26": [
+          "these_boots_are_made_for_walkin",
+          "lee_hazlewood"
+        ],
+        "q27": [
+          "2011_12_vcu_rams_men_s_basketball_team",
+          "virginia_commonwealth_university"
+        ],
+        "q28": [
+          "dictyosperma",
+          "huernia"
+        ],
+        "q29": [
+          "kaiser_ventures",
+          "henry_j_kaiser"
+        ],
+        "q3": [
+          "the_hork_bajir_chronicles",
+          "animorphs"
+        ],
+        "q30": [
+          "arena_of_khazan",
+          "tunnels_amp_trolls"
+        ],
+        "q31": [
+          "shut_up_make_love",
+          "poison_american_band"
+        ],
+        "q32": [
+          "hayden_musician",
+          "buck_tick"
+        ],
+        "q4": [
+          "laleli_mosque",
+          "esma_sultan_mansion"
+        ],
+        "q5": [
+          "big_stone_gap_film",
+          "adriana_trigiani"
+        ],
+        "q6": [
+          "2014_s_s",
+          "winner_band"
+        ],
+        "q7": [
+          "eenasul_fateh",
+          "management_consulting"
+        ],
+        "q8": [
+          "lewiston_maineiacs",
+          "androscoggin_bank_colis_e"
+        ],
+        "q9": [
+          "annie_morton",
+          "terry_richardson"
+        ]
+      },
+      "tier": "T1"
+    },
+    {
+      "name": "answer_level",
+      "targets": {
+        "q10": "yes",
+        "q11": "Kansas Song",
+        "q12": "David Weissman",
+        "q13": "1999",
+        "q14": "no",
+        "q15": "from 1986 to 2013",
+        "q16": "9,984",
+        "q17": "the North Atlantic Conference",
+        "q18": "yes",
+        "q19": "1969 until 1974",
+        "q20": "Robert Erskine Childers DSC",
+        "q21": "Pedro Rodr\u00edguez",
+        "q22": "Sonic",
+        "q23": "keyboard function keys",
+        "q24": "Badly Drawn Boy",
+        "q25": "World's Best Goalkeeper",
+        "q26": "Barton Lee Hazlewood",
+        "q27": "1838",
+        "q28": "yes",
+        "q29": "Henry J. Kaiser",
+        "q3": "Animorphs",
+        "q30": "Arena of Khazan",
+        "q31": "2000",
+        "q32": "Fujioka, Gunma",
+        "q4": "no",
+        "q5": "Greenwich Village, New York City",
+        "q6": "YG Entertainment",
+        "q7": "Eenasul Fateh",
+        "q8": "3,677 seated",
+        "q9": "Terry Richardson"
+      },
+      "tier": "T0"
+    }
+  ],
+  "version": "bundle@v1"
+}
