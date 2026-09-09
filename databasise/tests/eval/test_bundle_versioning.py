@@ -1,12 +1,19 @@
 """06-04-PLAN.md Task 2's <behavior> block: EvalBundle mints both §EV.2 target families over three
 disjoint splits, and every one of §EV.1's five invalidating changes mints a new version while
 leaving the prior version's bytes byte-identical on disk (never edited in place).
+
+Also covers 06-04-PLAN.md Task 3: the committed `bundle@v1` at
+`databasise/evidence/eval-bundles/` loads and hash-verifies, its recorded determinism/concurrency
+settings equal the engine's own live constants, and `EVAL-BUNDLE-V1.md`'s findings table carries
+one row per §EV.1 required member — parsed structurally, never by whole-file grep (mirrors
+`tests/evidence/test_f14_record.py`'s own discipline).
 """
 
 from __future__ import annotations
 
 import dataclasses
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -231,3 +238,109 @@ def test_negative_control_identical_content_hashes_equal_differing_content_hashe
     third = _mint(bundle_root, eval_snapshot, judge_instance="a-different-judge@v1")
     assert third.version == "bundle@v2"
     assert third.content_hash != first.content_hash
+
+
+# --------------------------------------------------------------------------------------------- #
+# 06-04-PLAN.md Task 3: the committed bundle@v1 and its evidence document
+# --------------------------------------------------------------------------------------------- #
+
+_REPO_EVAL_DIR = Path(__file__).resolve().parent.parent.parent
+_COMMITTED_BUNDLE_ROOT = _REPO_EVAL_DIR / "evidence" / "eval-bundles"
+
+# §EV.1's six required content members, by the evidence document's own findings-table naming —
+# not derivable from a single Python collection, since EvalBundle splits the sixth ("the
+# determinism/concurrency setting") into two dataclass fields (RIG.md ## §EV.1's own prose names
+# it as one combined member: "the determinism/concurrency setting it was calibrated under").
+_EV1_REQUIRED_MEMBERS = (
+    "questions",
+    "gold_answers",
+    "judge_instance",
+    "judge_prompt_hash",
+    "corpus_snapshot_hash",
+    "determinism_concurrency_setting",
+)
+
+
+def _evidence_text(name: str) -> str:
+    return (_REPO_EVAL_DIR / "evidence" / name).read_text(encoding="utf-8")
+
+
+def _section(text: str, heading_pattern: str) -> str:
+    """Return the body of the first ``##``-level section whose heading matches
+    ``heading_pattern``, up to (not including) the next ``## `` heading or EOF. Mirrors
+    ``tests/evidence/test_f14_record.py``'s own helper of the same name.
+    """
+    lines = text.splitlines()
+    start = None
+    for i, line in enumerate(lines):
+        if line.startswith("## ") and re.search(heading_pattern, line, re.IGNORECASE):
+            start = i
+            break
+    assert start is not None, f"no section heading matching {heading_pattern!r} found"
+    end = len(lines)
+    for j in range(start + 1, len(lines)):
+        if lines[j].startswith("## "):
+            end = j
+            break
+    return "\n".join(lines[start:end])
+
+
+def _parse_markdown_table(section_text: str) -> list[list[str]]:
+    table_lines = [line for line in section_text.splitlines() if line.strip().startswith("|")]
+    assert len(table_lines) >= 3, f"expected a header + separator + rows, found {table_lines!r}"
+
+    def _is_separator(line: str) -> bool:
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        return all(re.fullmatch(r"-+", c) for c in cells)
+
+    header, *rest = table_lines
+    assert _is_separator(rest[0]), f"second table line is not a separator row: {rest[0]!r}"
+    return [[c.strip() for c in line.strip().strip("|").split("|")] for line in rest[1:]]
+
+
+def test_bundle_v1_loads_and_matches_the_engines_own_settings():
+    from databasise.parity.corpus import load_snapshot
+    from databasise.seam.engine import _CONCURRENCY_SETTING, _DETERMINISM_SETTING
+
+    bundle = load_bundle(_COMMITTED_BUNDLE_ROOT, "bundle@v1")  # raises BundleDriftError if drifted
+
+    assert bundle.determinism_setting == _DETERMINISM_SETTING
+    assert bundle.concurrency_setting == _CONCURRENCY_SETTING
+
+    snapshot = load_snapshot(_REPO_EVAL_DIR / "tests" / "fixtures" / "eval-corpus")
+    assert bundle.corpus_snapshot_hash == snapshot.corpus_hash
+
+
+def test_eval_bundle_v1_evidence_doc_findings_table_has_one_row_per_ev1_member():
+    text = _evidence_text("EVAL-BUNDLE-V1.md")
+    findings = _section(text, r"^## Findings")  # the §EV.1-members table is the first "## Findings"
+    rows = _parse_markdown_table(findings)
+
+    member_cells = [row[0].strip("`") for row in rows]
+    assert set(member_cells) == set(_EV1_REQUIRED_MEMBERS), (
+        f"findings table member set {set(member_cells)} does not match "
+        f"the §EV.1 required members {set(_EV1_REQUIRED_MEMBERS)}"
+    )
+    assert len(member_cells) == len(_EV1_REQUIRED_MEMBERS), "a member appears more than once"
+
+    for row in rows:
+        assert any("[code-verified]" in cell for cell in row), (
+            f"row for {row[0]!r} carries no [code-verified] tag: {row}"
+        )
+
+
+def test_eval_bundle_v1_evidence_doc_carries_a_dated_header_and_verdict():
+    text = _evidence_text("EVAL-BUNDLE-V1.md")
+    header = "\n".join(text.splitlines()[:6])
+    assert re.search(r"\*\*Date:\*\*\s*\d{4}-\d{2}-\d{2}", header)
+
+    verdict = _section(text, r"^## Verdict")
+    assert "MACH-02" in verdict
+    assert "met in full" in verdict.lower() or "not met" in verdict.lower()
+
+
+def test_eval_bundle_v1_evidence_doc_limits_name_the_absent_corpus_and_absent_aa_null():
+    text = _evidence_text("EVAL-BUNDLE-V1.md")
+    limits = _section(text, r"^## Method and limits")
+    assert "owner" in limits.lower() and "corpus" in limits.lower()
+    assert "A/A" in limits
