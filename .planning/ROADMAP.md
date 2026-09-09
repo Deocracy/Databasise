@@ -196,7 +196,7 @@ Plans:
   4. Caller reads health, corpus status, and document counts in bounded paginated form; a full corpus or index dump is never returned
   5. The MCP surface exposes the same capabilities as REST as intention-level tools; a capability expressible as a §18.4 selector never becomes a new tool, and adding a modality adds no tool
 
-**Plans**: 7/7 plans executed
+**Plans**: 9 plans — 7/7 executed, plus 2 gap-closure plans pending (05-VERIFICATION.md found 2 BLOCKER gaps)
 
 Plans:
 **Wave 1**
@@ -220,6 +220,11 @@ Plans:
 
 - [x] 05-05-PLAN.md — The inside-vs-across-boundary change rule and the compat test that enforces it (wave 5)
 - [x] 05-07-PLAN.md — The MCP transport: five intention-level tools with the §18.5 growth rule under test (wave 5)
+
+**Gap closure** *(from 05-VERIFICATION.md; both plans wave 1, no dependencies, run in parallel)*
+
+- [ ] 05-08-PLAN.md — G-05-1: ingest()/delete_document() refuse on any node failure instead of fabricating a job (wave 1)
+- [ ] 05-09-PLAN.md — G-05-2: the MCP transport refuses a page-cap violation and a malformed base64 payload where it used to crash (wave 1)
 
 ### Phase 6: HippoRAG 2 & Side-by-Side
 
