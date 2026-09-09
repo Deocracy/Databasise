@@ -196,7 +196,7 @@ Plans:
   4. Caller reads health, corpus status, and document counts in bounded paginated form; a full corpus or index dump is never returned
   5. The MCP surface exposes the same capabilities as REST as intention-level tools; a capability expressible as a §18.4 selector never becomes a new tool, and adding a modality adds no tool
 
-**Plans**: 9 plans — 7/7 executed, plus 2 gap-closure plans pending (05-VERIFICATION.md found 2 BLOCKER gaps)
+**Plans**: 9/9 plans executed — 7/7 executed, plus 2 gap-closure plans pending (05-VERIFICATION.md found 2 BLOCKER gaps)
 
 Plans:
 **Wave 1**
@@ -223,8 +223,8 @@ Plans:
 
 **Gap closure** *(from 05-VERIFICATION.md; both plans wave 1, no dependencies, run in parallel)*
 
-- [ ] 05-08-PLAN.md — G-05-1: ingest()/delete_document() refuse on any node failure instead of fabricating a job (wave 1)
-- [ ] 05-09-PLAN.md — G-05-2: the MCP transport refuses a page-cap violation and a malformed base64 payload where it used to crash (wave 1)
+- [x] 05-08-PLAN.md — G-05-1: ingest()/delete_document() refuse on any node failure instead of fabricating a job (wave 1)
+- [x] 05-09-PLAN.md — G-05-2: the MCP transport refuses a page-cap violation and a malformed base64 payload where it used to crash (wave 1)
 
 ### Phase 6: HippoRAG 2 & Side-by-Side
 
@@ -268,7 +268,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Falsifier Gate | 4/4 | Complete    | 2026-08-31 |
 | 3. LightRAG Query Side | 13/13 | In Progress|  |
 | 4. The Seam | 5/5 | Complete    | 2026-09-06 |
-| 5. Opaque-Side Admission | 7/7 | In Progress|  |
+| 5. Opaque-Side Admission | 9/9 | In Progress|  |
 | 6. HippoRAG 2 & Side-by-Side | 0/TBD | Not started | - |
 | 7. Promotion & Rollback | 0/TBD | Not started | - |
 
