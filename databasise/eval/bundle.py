@@ -348,7 +348,14 @@ def mint_bundle(
     Raises :class:`MissingTargetFamilyError` if any question in ``snapshot`` carries no
     ``gold_document_ids`` — §EV.2's both-target-families rule, enforced before anything is written.
     """
-    # RED-DRAFT: validation intentionally omitted for the RED run (06-04-PLAN.md Task 2, TDD).
+    missing = [q.id for q in snapshot.queries if not q.gold_document_ids]
+    if missing:
+        raise MissingTargetFamilyError(
+            f"cannot mint a bundle: question id(s) {missing} carry no gold_document_ids — a bundle "
+            "must carry both §EV.2 target families (gold-passage and answer-level) for every "
+            "question, never one alone as a configuration choice"
+        )
+
     questions = [BundleQuestion(id=q.id, text=q.question) for q in snapshot.queries]
     gold_answers = {q.id: q.answer for q in snapshot.queries}
     question_ids = [q.id for q in questions]
@@ -363,13 +370,12 @@ def mint_bundle(
         concurrency_setting=concurrency_setting,
     )
 
-    # RED-DRAFT: dedup lookup intentionally disabled for the RED run.
-    existing_version = None
+    existing_version = _find_version_by_content_hash(bundle_root, content_hash)
     if existing_version is not None:
         return load_bundle(bundle_root, existing_version)
 
     splits: dict[str, list[str]] = {name: [] for name in _SPLIT_NAMES}
-    for question_id in question_ids[:-1]:  # RED-DRAFT: drops the last question id
+    for question_id in question_ids:
         splits[_assign_split(question_id)].append(question_id)
 
     all_assigned = splits["dev"] + splits["holdout"] + splits["sealed"]
@@ -421,7 +427,11 @@ def load_bundle(bundle_root: Path, version: str) -> EvalBundle:
         raise FileNotFoundError(f"no minted bundle found at {version_dir}")
 
     body = bundle_path.read_bytes()
-    # RED-DRAFT: checksum verification intentionally disabled for the RED run.
+    actual_checksum = hashlib.sha256(body).hexdigest()
+    expected_checksum = checksum_path.read_text(encoding="utf-8").strip()
+    if actual_checksum != expected_checksum:
+        raise BundleDriftError(version, expected_checksum, actual_checksum)
+
     data = json.loads(body.decode("utf-8"))
     return _bundle_from_json_dict(data)
 
@@ -465,7 +475,12 @@ def read_holdout(bundle_root: Path, version: str) -> tuple[str, ...]:
     :func:`record_holdout_use` has already appended at least one usage entry for this version.
     """
     bundle = load_bundle(bundle_root, version)
-    # RED-DRAFT: usage-log gate intentionally disabled for the RED run.
+    usage = [e for e in _load_usage_entries(bundle_root, version) if e.get("kind") == "holdout_read"]
+    if not usage:
+        raise HoldoutUsageRequiredError(
+            f"{version}'s holdout partition has no recorded usage entry — call record_holdout_use "
+            "before reading holdout content (RIG §EV.1's partition discipline)"
+        )
     return bundle.splits["holdout"].question_ids
 
 
@@ -476,7 +491,11 @@ def open_sealed(bundle_root: Path, version: str, *, event: str) -> SealedOpening
     is a property of whether the partition has been touched, not of the content itself), and
     appends a usage entry naming ``event`` to that new version before returning the sealed content.
     """
-    # RED-DRAFT: event validation intentionally disabled for the RED run.
+    if not event:
+        raise MissingSealedEventError(
+            "open_sealed requires a stated opening event naming what opened the sealed partition — "
+            "a sealed read that quietly succeeds is the one outcome sealing exists to prevent"
+        )
     old_bundle = load_bundle(bundle_root, version)
     sealed_ids = old_bundle.splits["sealed"].question_ids
 
