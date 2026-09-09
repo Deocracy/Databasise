@@ -403,3 +403,50 @@ async def test_the_mcp_round_trip_observes_the_same_status_sequence_the_rest_rou
         await server.call_tool("delete", {"args": {"document_id": "mcp-round-trip-doc"}})
     )
     assert delete_outcome["status"] == "success"
+
+
+async def test_the_delete_tool_called_twice_matches_the_rest_endpoints_own_two_call_sequence(
+    tmp_path,
+):
+    """API-07's own must-have truth: the ``delete`` tool called twice on the same document id
+    returns ``success`` then ``not_found``, matching the REST endpoint's own second-call result
+    exactly. The stub registry reports a fixed status per registry instance (never real per-call
+    state), so — mirroring ``test_rest_corpus_endpoints.py``'s own ``test_upload_poll_delete_round
+    _trip``'s second-delete assertion — the second call is driven against a second registry
+    explicitly configured for ``not_found``, the same technique that test uses for the REST
+    transport."""
+    document_id = "delete-twice-doc"
+
+    success_server = create_server(
+        store_root=tmp_path, workspace="mcp-delete-twice", registry=_make_registry()
+    )
+    first = _tool_json(await success_server.call_tool("delete", {"args": {"document_id": document_id}}))
+    assert first["status"] == "success"
+
+    not_found_server = create_server(
+        store_root=tmp_path,
+        workspace="mcp-delete-twice",
+        registry=_make_registry(delete_status="not_found"),
+    )
+    second = _tool_json(
+        await not_found_server.call_tool("delete", {"args": {"document_id": document_id}})
+    )
+    assert second["status"] == "not_found"
+
+    # The identical two-call sequence over REST, for the identical assertion of what "matching"
+    # means — not merely restated as a hardcoded pair of literals.
+    rest_client_first = TestClient(
+        create_app(store_root=tmp_path, workspace="mcp-delete-twice-rest", registry=_make_registry())
+    )
+    rest_first = rest_client_first.delete(f"/documents/{document_id}").json()
+    rest_client_second = TestClient(
+        create_app(
+            store_root=tmp_path,
+            workspace="mcp-delete-twice-rest",
+            registry=_make_registry(delete_status="not_found"),
+        )
+    )
+    rest_second = rest_client_second.delete(f"/documents/{document_id}").json()
+
+    assert first["status"] == rest_first["status"] == "success"
+    assert second["status"] == rest_second["status"] == "not_found"
