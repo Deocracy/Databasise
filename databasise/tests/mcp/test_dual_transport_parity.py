@@ -58,7 +58,14 @@ from databasise.seam.engine import Databasise
 from databasise.seam.query import QueryObject
 from databasise.seam.refusals import EmptyQueryObjectError
 from databasise.seam.rest import create_app
+from databasise.seam.selectors import Selector
 from databasise.tests.seam.conftest import synthetic_naive_store  # noqa: F401 - fixture
+from databasise.tests.seam.test_compare import (
+    _HIPPORAG_CAPABILITY,
+    _LIGHTRAG_CAPABILITY,
+    _QUERY_VECTOR as _COMPARE_QUERY_VECTOR,
+    dual_arm_store,  # noqa: F401 - fixture
+)
 from databasise.tests.seam.test_evidence_refs import (
     many_chunks_store,  # noqa: F401 - fixture
 )
@@ -146,11 +153,12 @@ async def test_create_server_holds_exactly_one_databasise_instance_reachable_for
     assert isinstance(server.engine, Databasise)
 
 
-async def test_the_registered_tool_set_equals_tool_names_and_has_five_members(tmp_path):
+async def test_the_registered_tool_set_equals_tool_names_and_has_six_members(tmp_path):
     server = create_server(store_root=tmp_path, workspace="mcp-tool-set")
     tools = await server.list_tools()
     assert sorted(tool.name for tool in tools) == sorted(TOOL_NAMES)
-    assert len(TOOL_NAMES) == 5
+    # 06-03-PLAN.md: grew from five to six — `compare` is a genuinely new operation.
+    assert len(TOOL_NAMES) == 6
 
 
 async def test_ingest_tool_accepts_structured_text_and_base64_raw_shapes(tmp_path):
@@ -381,18 +389,52 @@ async def _resolve_scenario(engine, rest_client, server):
     return mcp_dict, rest_dict, in_process_dict, set()
 
 
+def _strip_trace_token(envelope_dict: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in envelope_dict.items() if key != "trace_token"}
+
+
+async def _compare_scenario(engine, rest_client, server):
+    """06-03-PLAN.md: `compare` exercised through both transports, both results asserted equal —
+    exactly as the five pre-existing tools are, over `dual_arm_store`'s own two-arm data. Each
+    arm's own `trace_token` is stripped before comparison (mirroring `_query_scenario`'s own
+    top-level exclusion): three independent calls each mint a fresh, random trace token (D-06), so
+    unlike a flat envelope's top-level fields, `compare`'s per-arm nesting needs the exclusion
+    applied inside every arm rather than at the outer selector-keyed level — the generic sweep
+    below compares whole per-arm dicts field-by-field with no exclusion set of its own."""
+    selectors_payload = [{"capability": _LIGHTRAG_CAPABILITY}, {"capability": _HIPPORAG_CAPABILITY}]
+    body = {"query": {"text": _QUERY_TEXT}, "selectors": selectors_payload}
+
+    mcp_raw = _tool_json(await server.call_tool("compare", {"args": body}))
+    rest_raw = rest_client.post("/compare", json=body).json()
+    in_process_result = await engine.compare(
+        QueryObject(text=_QUERY_TEXT),
+        [Selector(capability=_LIGHTRAG_CAPABILITY), Selector(capability=_HIPPORAG_CAPABILITY)],
+    )
+    in_process_raw = {key: envelope.model_dump() for key, envelope in in_process_result.items()}
+
+    mcp_dict = {key: _strip_trace_token(value) for key, value in mcp_raw.items()}
+    rest_dict = {key: _strip_trace_token(value) for key, value in rest_raw.items()}
+    in_process_dict = {key: _strip_trace_token(value) for key, value in in_process_raw.items()}
+    return mcp_dict, rest_dict, in_process_dict, set()
+
+
 _SCENARIOS = {
     "ingest": _ingest_scenario,
     "query": _query_scenario,
     "delete": _delete_scenario,
     "status": _status_scenario,
     "resolve": _resolve_scenario,
+    "compare": _compare_scenario,
 }
 
 
 @pytest.mark.parametrize("tool_name", TOOL_NAMES)
 async def test_mcp_rest_and_in_process_agree_for_every_tool(
-    tool_name, tmp_path, synthetic_naive_store, monkeypatch  # noqa: F811 - fixture-by-name
+    tool_name,
+    tmp_path,
+    synthetic_naive_store,  # noqa: F811 - fixture-by-name
+    dual_arm_store,  # noqa: F811 - fixture-by-name
+    monkeypatch,
 ):
     if tool_name in ("query", "resolve"):
         store_root = synthetic_naive_store["store_root"]
@@ -402,6 +444,11 @@ async def test_mcp_rest_and_in_process_agree_for_every_tool(
     elif tool_name == "status":
         store_root, workspace, clients, registry = tmp_path, "parity-status", None, None
         _patch_status_and_health(monkeypatch, documents=[], counts={"processed": 1})
+    elif tool_name == "compare":
+        store_root = dual_arm_store["store_root"]
+        workspace = dual_arm_store["workspace"]
+        clients = _stub_clients(_COMPARE_QUERY_VECTOR)
+        registry = None
     else:
         store_root, workspace, clients, registry = tmp_path, f"parity-{tool_name}", None, _make_registry()
 

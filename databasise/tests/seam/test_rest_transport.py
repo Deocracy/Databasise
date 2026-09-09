@@ -42,6 +42,8 @@ from databasise.seam.redact import (
 )
 from databasise.seam.refusals import (
     AmbiguousIngestPayloadError,
+    DuplicateComparisonKeyError,
+    EmptyComparisonRequestError,
     EmptyQueryObjectError,
     ForbiddenSelectorInputError,
     ForeignEngineRefusalError,
@@ -364,6 +366,8 @@ def test_the_trace_resolve_endpoints_non_debug_output_passes_both_leak_gate_tier
 # this test's own coverage.
 _REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
     EmptyQueryObjectError: lambda: EmptyQueryObjectError(QueryObject()),
+    EmptyComparisonRequestError: lambda: EmptyComparisonRequestError(),
+    DuplicateComparisonKeyError: lambda: DuplicateComparisonKeyError(key="reads_vector"),
     UnconsumableQueryMemberError: lambda: UnconsumableQueryMemberError("embedding"),
     UnsatisfiableSelectorError: lambda: UnsatisfiableSelectorError(
         selector_kind="capability", requested=["reads_space"]
