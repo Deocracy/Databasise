@@ -20,7 +20,11 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from databasise.foreign import CorpusOpTimeoutError, run_corpus_op
+from databasise.foreign import (
+    CorpusOpTimeoutError,
+    MissingV1InterpreterError,
+    run_corpus_op,
+)
 from databasise.parts.admission import MissingWallClockCeilingError
 from databasise.parts.registry import PartRegistry
 from databasise.parts.schema import NodeContext
@@ -39,11 +43,16 @@ _V1_CORPUS_DRIVER_SCRIPT = (
 _V1_ENV_PARITY = Path(__file__).resolve().parents[4] / "v1" / ".env.parity"
 
 
-def _make_stub_full_ingest_body(*, timeout: float, sleep_seconds: float = 0.0):
+def _make_stub_full_ingest_body(
+    *, timeout: float, sleep_seconds: float = 0.0, interpreter: Path | None = None
+):
     """A test-local ``full_ingest_body`` variant pointed at the stub driver — same shape as
     ``databasise.parts_core.lightrag.full_ingest.full_ingest_body``, but with fixed
     ``timeout=``/``driver_script=``/``interpreter=`` closure values rather than reading the
-    production constant."""
+    production constant. ``interpreter`` defaults to the current test process's own interpreter
+    (unchanged behaviour for every existing call site) — passing a nonexistent path is this
+    module's own reproduction of a real ``MissingV1InterpreterError`` (G-05-1 / CR-02)."""
+    resolved_interpreter = interpreter if interpreter is not None else Path(sys.executable)
 
     async def _body(ctx: NodeContext) -> dict[str, Any]:
         config = ctx.config or {}
@@ -59,7 +68,7 @@ def _make_stub_full_ingest_body(*, timeout: float, sleep_seconds: float = 0.0):
             "ingest",
             payload,
             timeout=timeout,
-            interpreter=Path(sys.executable),
+            interpreter=resolved_interpreter,
             driver_script=_STUB_DRIVER,
         )
 
@@ -130,6 +139,47 @@ async def test_a_stub_job_outlasting_a_tiny_ceiling_raises_foreign_engine_refusa
 
     assert isinstance(exc_info.value.cause, CorpusOpTimeoutError)
     assert exc_info.value.cause.timeout == tiny_ceiling
+
+
+async def test_an_unclassified_node_failure_through_ingest_raises_rather_than_fabricating_a_job(
+    store_root, tmp_path
+):
+    """G-05-1 / 05-REVIEW.md CR-02: the committed regression gate for the live failure
+    05-VERIFICATION.md reproduced by hand — pointing the ingest node's interpreter at a nonexistent
+    path (a real ``MissingV1InterpreterError``, not one of the two exception types the prior narrow
+    check enumerated) previously returned ``RETURNED (no exception): job_id=... enqueued=0``. It
+    now raises ``ForeignEngineRefusalError`` carrying the real cause, through the same shared
+    ``_node_result_or_refuse`` helper both ``ingest()`` and ``delete_document()`` route through.
+    """
+    missing_interpreter = tmp_path / "does-not-exist" / "python"
+    engine = _make_engine(
+        store_root,
+        body=_make_stub_full_ingest_body(timeout=5.0, interpreter=missing_interpreter),
+    )
+
+    with pytest.raises(ForeignEngineRefusalError) as exc_info:
+        await engine.ingest(IngestDocument(text="a document"))
+
+    assert exc_info.value.operation == "ingest"
+    assert isinstance(exc_info.value.cause, MissingV1InterpreterError)
+
+
+def test_a_node_that_produced_neither_a_result_nor_an_exception_still_refuses():
+    """The second leg of ``_node_result_or_refuse`` (a node with no recorded exception and no
+    recorded result — the cancelled-sibling / silently-dropped-dispatch condition) is not
+    reachable through the single-node ingest wiring: ``databasise/wirings/lightrag/corpus-
+    ingest.json`` declares exactly one node, ``full-ingest``, so there is no sibling for the
+    scheduler to cancel. Driven directly against the helper instead of through a contrived wiring.
+    """
+    from databasise.seam.engine import _node_result_or_refuse
+
+    scheduled: dict[str, Any] = {"results": {}, "node_exceptions": {}}
+
+    with pytest.raises(ForeignEngineRefusalError) as exc_info:
+        _node_result_or_refuse(scheduled, "full-ingest", "ingest")
+
+    assert exc_info.value.operation == "ingest"
+    assert exc_info.value.cause is not None
 
 
 async def test_two_separately_minted_ingests_return_distinct_job_ids(store_root):

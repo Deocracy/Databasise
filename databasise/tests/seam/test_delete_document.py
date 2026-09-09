@@ -19,7 +19,7 @@ from typing import Any
 import pytest
 
 import databasise.foreign.v1_corpus_adapter as _v1_corpus_adapter
-from databasise.foreign import CorpusOpTimeoutError, run_corpus_op
+from databasise.foreign import CorpusOpTimeoutError, MissingV1InterpreterError, run_corpus_op
 from databasise.parts.registry import PartRegistry
 from databasise.parts.schema import NodeContext
 from databasise.parts_core.declared_only import LIGHTRAG_FULL_DELETE_PART
@@ -44,13 +44,21 @@ _REAL_DELETE_ENV_VAR = "DATABASISE_RUN_REAL_DELETE"
 
 
 def _make_stub_full_delete_body(
-    *, timeout: float, stub_status: str = "success", sleep_seconds: float = 0.0
+    *,
+    timeout: float,
+    stub_status: str = "success",
+    sleep_seconds: float = 0.0,
+    interpreter: Path | None = None,
 ):
     """A test-local ``full_delete_body`` variant pointed at the stub driver — same shape as
     ``databasise.parts_core.lightrag.full_delete.full_delete_body``, but with fixed
     ``timeout=``/``driver_script=``/``interpreter=``/``_stub_status`` closure values rather than
-    reading the production constant or a caller-configured status.
+    reading the production constant or a caller-configured status. ``interpreter`` defaults to the
+    current test process's own interpreter (unchanged behaviour for every existing call site) —
+    passing a nonexistent path is this module's own reproduction of a real
+    ``MissingV1InterpreterError`` (G-05-1 / WR-01).
     """
+    resolved_interpreter = interpreter if interpreter is not None else Path(sys.executable)
 
     async def _body(ctx: NodeContext) -> dict[str, Any]:
         config = ctx.config or {}
@@ -67,7 +75,7 @@ def _make_stub_full_delete_body(
             "delete",
             payload,
             timeout=timeout,
-            interpreter=Path(sys.executable),
+            interpreter=resolved_interpreter,
             driver_script=_STUB_DRIVER,
         )
 
@@ -154,6 +162,34 @@ async def test_a_stub_job_outlasting_a_tiny_ceiling_raises_foreign_engine_refusa
 
     assert isinstance(exc_info.value.cause, CorpusOpTimeoutError)
     assert exc_info.value.cause.timeout == tiny_ceiling
+
+
+async def test_an_unclassified_node_failure_through_delete_document_raises_rather_than_a_causeless_fail(
+    store_root, tmp_path
+):
+    """WR-01 / G-05-1: same root cause as CR-02, one file over. Pointing the delete node's
+    interpreter at a nonexistent path previously produced ``DeletionOutcome(status='fail',
+    message='')`` with no cause (05-REVIEW.md's own recorded transcript) — it now raises
+    ``ForeignEngineRefusalError`` carrying the real cause, through the same shared
+    ``_node_result_or_refuse`` helper ``ingest()`` routes through.
+
+    ``test_a_not_allowed_status_from_the_driver_surfaces_unchanged_never_remapped_or_raised`` and
+    ``test_deleting_the_same_document_twice_yields_success_then_not_found`` are the tests that hold
+    the line between "v1 answered not_found/not_allowed" (a normal outcome, never a refusal) and
+    "the machine could not get an answer at all" (this refusal) — both still pass unmodified,
+    proving this change does not blur that distinction.
+    """
+    missing_interpreter = tmp_path / "does-not-exist" / "python"
+    engine = _make_engine(
+        store_root,
+        body=_make_stub_full_delete_body(timeout=5.0, interpreter=missing_interpreter),
+    )
+
+    with pytest.raises(ForeignEngineRefusalError) as exc_info:
+        await engine.delete_document("deadbeef")
+
+    assert exc_info.value.operation == "delete"
+    assert isinstance(exc_info.value.cause, MissingV1InterpreterError)
 
 
 # ---------------------------------------------------------------------------------------------

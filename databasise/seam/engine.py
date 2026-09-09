@@ -128,7 +128,7 @@ from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 from typing import Any
 
-from databasise.foreign import CorpusOpSubprocessError, CorpusOpTimeoutError, run_corpus_op
+from databasise.foreign import run_corpus_op
 from databasise.foreign.v1_corpus_adapter import (
     DEFAULT_V1_INTERPRETER,
     STATUS_WALL_CLOCK_CEILING_SECONDS,
@@ -272,6 +272,38 @@ def _build_stores(store_root: Path, workspace: str) -> dict[str, Any]:
         "vector": MultiNamespaceVectorStore(workspace=workspace, store_root=store_root),
         "graph": CozoGraphStore(namespace=_GRAPH_KIND, workspace=workspace, store_root=store_root),
     }
+
+
+def _node_result_or_refuse(scheduled: dict[str, Any], node_id: str, operation: str) -> dict[str, Any]:
+    """G-05-1 / 05-REVIEW.md CR-02: the one shared refusal decision both ``ingest()`` and
+    ``delete_document()`` route through, so a node failure the scheduler could not resolve refuses
+    identically at both write call sites instead of being enumerated per exception type at each
+    one separately (which is how this defect reached two call sites in the first place).
+
+    Reads the run's own ``node_exceptions``/``results`` maps (``databasise/runner/scheduler.py``)
+    directly — never a type test against whichever exception class the failure happened to raise.
+    Any recorded node exception refuses, whatever its type, because the scheduler has already
+    unwrapped it down to the real cause before storing it; a node with neither a recorded
+    exception nor a recorded result also refuses, since that condition (a cancelled sibling, a
+    silently-dropped dispatch) is itself evidence that nothing ran. A synthesized ``RuntimeError``
+    cause is used only in that second branch, where no real exception object exists to carry
+    forward — never substituted for one that does exist.
+
+    The narrowing this replaces enumerated a fixed list of known-refusal exception types and let
+    anything else fall through to a fabricated success (``ingest()``) or an undifferentiated,
+    causeless failure (``delete_document()``, WR-01) — exactly the "no result was produced"
+    condition this helper closes over instead.
+    """
+    node_exception = scheduled.get("node_exceptions", {}).get(node_id)
+    if node_exception is not None:
+        raise ForeignEngineRefusalError(operation=operation, cause=node_exception) from node_exception
+    result = scheduled["results"].get(node_id)
+    if result is None:
+        raise ForeignEngineRefusalError(
+            operation=operation,
+            cause=RuntimeError(f"the {operation!r} node produced no result and no exception"),
+        )
+    return result
 
 
 def _accounted_store_keys(parsed: ParsedWiring, node_id: str) -> set[str]:
@@ -509,15 +541,12 @@ class Databasise:
             for store in stores.values():
                 await store.finalize()
 
-        # A subprocess-level refusal (timeout or non-zero exit) never propagates raw out of
+        # G-05-1 / CR-02: a node failure, or no result at all, never propagates raw out of
         # run_wiring (CONTRACT §9's "partial outcomes are never discarded" rule) — it is recorded
-        # in the run's own node_exceptions map instead. Re-raise it here as the seam-facing
-        # ForeignEngineRefusalError, never as the machine-internal exception type.
-        node_exception = scheduled.get("node_exceptions", {}).get(_INGEST_NODE_ID)
-        if isinstance(node_exception, (CorpusOpSubprocessError, CorpusOpTimeoutError)):
-            raise ForeignEngineRefusalError(operation="ingest", cause=node_exception) from node_exception
-
-        result = scheduled["results"].get(_INGEST_NODE_ID) or {}
+        # in the run's own node_exceptions/results maps instead, and this module's own shared
+        # _node_result_or_refuse re-raises it here as the seam-facing ForeignEngineRefusalError,
+        # whatever the underlying failure actually was.
+        result = _node_result_or_refuse(scheduled, _INGEST_NODE_ID, "ingest")
         return IngestJob(
             job_id=str(result.get("track_id") or track_id),
             enqueued=int(result.get("enqueued", 0)),
@@ -575,11 +604,12 @@ class Databasise:
             for store in stores.values():
                 await store.finalize()
 
-        node_exception = scheduled.get("node_exceptions", {}).get(_DELETE_NODE_ID)
-        if isinstance(node_exception, (CorpusOpSubprocessError, CorpusOpTimeoutError)):
-            raise ForeignEngineRefusalError(operation="delete", cause=node_exception) from node_exception
-
-        result = scheduled["results"].get(_DELETE_NODE_ID) or {}
+        # G-05-1 / WR-01: the same shared _node_result_or_refuse helper ingest() routes through —
+        # any node failure, or no result at all, raises ForeignEngineRefusalError with the real
+        # cause, rather than degrading to an undifferentiated, causeless DeletionOutcome(fail).
+        # Called before the MACH-11 correlation below so a refused run mints no seam events for a
+        # node that did not run.
+        result = _node_result_or_refuse(scheduled, _DELETE_NODE_ID, "delete")
         node_by_id = {node.node_id: node for node in scheduled["nodes"]}
         seam_events = _mach11_events(parsed, touches, node_by_id)
 
@@ -681,11 +711,8 @@ class Databasise:
                 store_reachability[name] = True
             except Exception:
                 store_reachability[name] = False
-        try:
-            pass
-        finally:
-            for store in opened_stores.values():
-                await store.finalize()
+        for store in opened_stores.values():
+            await store.finalize()
 
         engine_report: dict[str, bool] = {"interpreter_present": DEFAULT_V1_INTERPRETER.exists()}
         try:
