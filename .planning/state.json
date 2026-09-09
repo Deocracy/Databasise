@@ -26,7 +26,7 @@
     {
       "number": "5",
       "name": "Opaque-Side Admission",
-      "status": "in_progress"
+      "status": "complete"
     },
     {
       "number": "6",
@@ -41,8 +41,8 @@
   ],
   "next": {
     "command": "/gsd:progress --next",
-    "label": "Advance to the next step (verify)",
-    "reason": "Phase 5 of 7 · ready to verify"
+    "label": "Advance to the next step",
+    "reason": "Phase 6 of 7 · executing"
   },
-  "updated_at": "2026-09-09T03:24:24.489Z"
+  "updated_at": "2026-09-09T19:35:17.398Z"
 }
