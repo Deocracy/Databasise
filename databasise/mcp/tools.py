@@ -25,6 +25,14 @@ truth REST and MCP both defer to.
 - ``resolve``: follows an evidence or trace reference the ``query`` tool already returned. One
   intention ("follow this reference"), so one tool with a ``scope`` argument — never two tools for
   what is the selector-versus-tool test applied honestly (05-07-PLAN.md's own deviation note).
+- ``compare`` (06-03-PLAN.md, API-08): one query against N selectors in one call. Not expressible
+  as a ``query`` call with a selector — a selector picks *one* arm, and comparison fans out over
+  N of them in a single call, returning per-arm results the caller cannot get by calling ``query``
+  N times and reassembling them itself (no shared query-object validation, no single refusal
+  covering the whole request). A genuinely new operation, not a per-modality tool: registering a
+  second modality (HippoRAG) added zero tools to this roster, and ``compare`` itself is
+  modality-agnostic — it names no wiring, arm or modality of its own, only caller-supplied
+  selectors, exactly like ``query``.
 """
 
 from __future__ import annotations
@@ -41,11 +49,13 @@ from databasise.seam.query import QueryObject
 from databasise.seam.refusals import MalformedBase64PayloadError
 from databasise.seam.selectors import Selector
 
-# API-07's pinned five-member surface (§18.5's growth rule, applied to this transport): this tuple
-# — never the registry, never the wiring set — is what the MCP server actually registers.
-# Registering a second modality changes neither its length nor its members (proven by
-# databasise/tests/mcp/test_tool_growth_invariant.py).
-TOOL_NAMES: tuple[str, ...] = ("ingest", "query", "delete", "status", "resolve")
+# §18.5's growth rule, applied to this transport: this tuple — never the registry, never the
+# wiring set — is what the MCP server actually registers. Registering a second modality changes
+# neither its length nor its members (proven by databasise/tests/mcp/test_tool_growth_invariant.py).
+# Grew from five to six members in 06-03-PLAN.md: ``compare`` is a genuinely new operation (see
+# module docstring), not a per-modality tool — the roster still grows by one for one operation,
+# never by one per modality.
+TOOL_NAMES: tuple[str, ...] = ("ingest", "query", "delete", "status", "resolve", "compare")
 
 StatusScope = Literal["job", "corpus", "counts", "health"]
 ResolveScope = Literal["evidence", "trace"]
@@ -97,6 +107,14 @@ class QueryToolArgs(_ToolArgs):
     selector: Selector | None = None
 
 
+class CompareToolArgs(_ToolArgs):
+    """Carries the seam's own ``QueryObject`` unchanged plus a list of ``Selector``s — the
+    identical shapes ``databasise.seam.rest.CompareRequest`` deserializes into."""
+
+    query: QueryObject
+    selectors: list[Selector]
+
+
 class DeleteToolArgs(_ToolArgs):
     """Carries only the document id — the identical shape ``databasise.seam.rest.DeleteRequest``
     carries."""
@@ -129,6 +147,7 @@ class ResolveToolArgs(_ToolArgs):
 
 __all__ = [
     "TOOL_NAMES",
+    "CompareToolArgs",
     "DeleteToolArgs",
     "IngestToolArgs",
     "QueryToolArgs",

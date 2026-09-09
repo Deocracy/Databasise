@@ -48,6 +48,7 @@ from typing import Any, TypeVar
 
 from databasise.mcp._sdk import import_sdk
 from databasise.mcp.tools import (
+    CompareToolArgs,
     DeleteToolArgs,
     IngestToolArgs,
     QueryToolArgs,
@@ -197,6 +198,19 @@ def create_server(
     async def query_tool(args: QueryToolArgs) -> dict[str, Any]:
         envelope = await engine.query(args.query, args.selector)
         return envelope.model_dump()
+
+    @server.tool(name="compare")
+    @_refusal_mapped
+    async def compare_tool(args: CompareToolArgs) -> dict[str, Any]:
+        """API-08's comparison operation (06-03-PLAN.md) — a legitimate sixth tool under §18.5:
+        comparison is not expressible as a §18.4 selector (a selector picks one arm; this call
+        fans out over N of them in one request), and the roster grows by one for this one
+        genuinely new operation, not by one name per modality — registering HippoRAG as a second
+        modality added zero tools (see ``databasise.mcp.tools``'s own module docstring)."""
+        result = await engine.compare(args.query, args.selectors)
+        if isinstance(result, dict):
+            return {key: envelope.model_dump() for key, envelope in result.items()}
+        return result.model_dump()
 
     @server.tool(name="delete")
     @_refusal_mapped

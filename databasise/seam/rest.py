@@ -16,6 +16,13 @@ bytes before it can build an ``IngestDocument``); it still contains no selector 
 redaction and no envelope assembly, so ``test_rest_transport.py``'s AST proof keeps passing over
 the enlarged module.
 
+**06-03-PLAN.md: ``POST /compare`` — API-08's comparison operation.** One awaited call to
+``engine.compare(body.query, body.selectors)`` and a return, mirroring ``POST /query``'s own shape
+exactly. The registered application-level ``SeamRefusalError`` handler already maps
+``EmptyComparisonRequestError``/``UnsatisfiableSelectorError`` to the documented 422 with no
+per-route handling — see ``databasise/tests/seam/test_rest_transport.py``'s own
+``_REFUSAL_FACTORIES``.
+
 **Thin adapter, provably (D-17).** Every endpoint body below is exactly: deserialize the request
 into the same ``QueryObject``/``Selector``/``EvidenceRef`` shapes an in-process caller constructs,
 await the identical ``Databasise`` method an in-process caller awaits, and return the result for
@@ -94,6 +101,14 @@ class _RequestModel(BaseModel):
 class QueryRequest(_RequestModel):
     query: QueryObject
     selector: Selector | None = None
+
+
+class CompareRequest(_RequestModel):
+    """API-08's comparison request body (06-03-PLAN.md) — the same ``QueryObject`` ``QueryRequest``
+    deserializes into, plus a list of ``Selector``s rather than one."""
+
+    query: QueryObject
+    selectors: list[Selector]
 
 
 class TraceRequest(_RequestModel):
@@ -179,6 +194,10 @@ def create_app(
     @app.post("/query")
     async def post_query(body: QueryRequest) -> ResponseEnvelope:
         return await engine.query(body.query, body.selector)
+
+    @app.post("/compare")
+    async def post_compare(body: CompareRequest) -> Any:
+        return await engine.compare(body.query, body.selectors)
 
     async def _resolve_streamed_envelope(body: QueryRequest) -> ResponseEnvelope:
         """CR-01: resolves the envelope eagerly, as a FastAPI dependency, so a
@@ -274,4 +293,11 @@ def create_app(
     return app
 
 
-__all__ = ["QueryRequest", "TraceRequest", "IngestRequest", "DeleteRequest", "create_app"]
+__all__ = [
+    "QueryRequest",
+    "CompareRequest",
+    "TraceRequest",
+    "IngestRequest",
+    "DeleteRequest",
+    "create_app",
+]

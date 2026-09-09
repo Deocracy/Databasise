@@ -96,6 +96,7 @@ added — none of them modality-named, all reachable through both transports.
 | health | in-process, REST (`GET /health`), MCP (`status` tool, `scope="health"`) | 05-04, 05-07 | A liveness probe over the machine's own stores plus the foreign engine, not a modality-scoped answer; no selector expresses "is the machine up." |
 | corpus status (paginated) | in-process, REST (`GET /corpus`), MCP (`status` tool, `scope="corpus"`) | 05-04, 05-07 | A bounded, paginated read over the whole corpus's document list — API-06's own bounded/paginated-by-construction requirement, not a variant of any answering operation. |
 | document counts | in-process, REST (`GET /corpus/counts`), MCP (`status` tool, `scope="counts"`) | 05-04, 05-07 | A fixed-size aggregate read, distinct from the paginated document list above (no `page`/`offset` parameter exists because there is nothing to page through). |
+| compare | in-process, REST (`POST /compare`), MCP (`compare` tool) | 06-03 | API-08's comparison operation. Landed once the rig had two real arms to fan out over ("rig before comparison surface," ROADMAP.md line 296) — this row's own decision was `OPT-OUT` in this table below until this plan discharged it (see "Operations deliberately absent"). Not expressible as a §18.4 selector: a selector picks one arm, and this call fans out over N of them in one request, keyed by the caller's own selector values. |
 
 ### Operations deliberately absent
 
@@ -106,7 +107,6 @@ than a silent disappearance. Every remaining row's reason is unchanged from Phas
 | operation | decision | reason |
 |---|---|---|
 | MCP transport (API-07) | **DISCHARGED** | Was `OPT-OUT` in Phase 4's table ("still a later plan's (05-07's) own deliverable, out of this phase's scope"). Discharged by this plan — five intention-level tools (`databasise/mcp/`) over the identical `Databasise` engine object REST already wraps; see the operation rows above for which tool reaches which operation. |
-| `compare` (a sixth MCP tool for API-08's comparison operation) | OPT-OUT | API-08 is scheduled to Phase 6 and exists behind no transport today — a `compare` tool with nothing behind it would be a stub, not a capability, breaking ROADMAP criterion 5's "same capabilities as REST" in the *other* direction. Adding it once the operation exists is legal growth under §18.5 (a genuinely new operation earns a tool), not a per-modality tool. |
 | ingest | **DISCHARGED** | Was `OPT-OUT` in Phase 4's table ("the seam is locked before ingest ships precisely so the ingest endpoints land against a frozen envelope"). Discharged by 05-01/05-04 — see the operation row above. The envelope itself was not reopened to discharge it. |
 | delete / document status | **DISCHARGED** | Was `OPT-OUT` alongside ingest in Phase 4's table. Discharged by 05-03/05-04 — see the delete/health/corpus-status/document-counts rows above. |
 | promote / rollback | OPT-OUT | Unchanged from Phase 4's record — still Phase 7's own deliverable. |

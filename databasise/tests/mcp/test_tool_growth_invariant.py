@@ -31,6 +31,7 @@ from databasise.mcp import server as mcp_server_module
 from databasise.mcp import tools as mcp_tools_module
 from databasise.mcp.tools import (
     TOOL_NAMES,
+    CompareToolArgs,
     DeleteToolArgs,
     IngestToolArgs,
     QueryToolArgs,
@@ -51,7 +52,14 @@ _COVERAGE_PATH = (
     _REPO_ROOT / ".planning" / "phases" / "05-opaque-side-admission" / "COVERAGE.md"
 )
 
-_TOOL_ARG_MODELS = (IngestToolArgs, QueryToolArgs, DeleteToolArgs, StatusToolArgs, ResolveToolArgs)
+_TOOL_ARG_MODELS = (
+    IngestToolArgs,
+    QueryToolArgs,
+    DeleteToolArgs,
+    StatusToolArgs,
+    ResolveToolArgs,
+    CompareToolArgs,
+)
 _MCP_MODULES = (mcp_package_module, mcp_tools_module, mcp_server_module)
 
 
@@ -64,7 +72,9 @@ async def test_the_registered_tool_set_equals_tool_names_as_a_set_and_by_count(t
     server = create_server(store_root=tmp_path, workspace="growth-pin")
     names = [tool.name for tool in await server.list_tools()]
     assert set(names) == set(TOOL_NAMES)
-    assert len(names) == len(TOOL_NAMES) == 5
+    # 06-03-PLAN.md: grew from five to six — `compare` is a genuinely new operation, not a
+    # per-modality tool (see databasise/mcp/tools.py's own module docstring).
+    assert len(names) == len(TOOL_NAMES) == 6
 
 
 # --------------------------------------------------------------------------------------------- #
@@ -238,6 +248,7 @@ _OPERATION_TO_TOOLS: dict[str, tuple[str, ...]] = {
     "health": ("status",),
     "corpus status (paginated)": ("status",),
     "document counts": ("status",),
+    "compare": ("compare",),
 }
 
 
@@ -281,14 +292,19 @@ def test_every_tool_has_a_coverage_row_and_every_both_transport_row_has_a_tool()
     assert covered_tools == set(TOOL_NAMES)
 
 
-def test_compare_is_absent_from_tool_names_if_coverage_records_it_as_an_absent_operation():
-    """If ``compare`` appears in COVERAGE.md's "deliberately absent" table, it must also be absent
-    from ``TOOL_NAMES`` — the record and the code must state the same thing."""
+def test_compare_is_present_in_tool_names_and_absent_from_the_deliberately_absent_table():
+    """06-03-PLAN.md landed `compare`: it is now present in `TOOL_NAMES` and its row moved out of
+    COVERAGE.md's "deliberately absent" table into the §18.5 operations table (asserted by
+    `test_every_tool_has_a_coverage_row_and_every_both_transport_row_has_a_tool` above) — the
+    record and the code must state the same, current thing, never the retired Phase-5 state this
+    test asserted before this plan."""
     markdown = _COVERAGE_PATH.read_text(encoding="utf-8")
     absent_rows = _parse_markdown_table(markdown, "| operation | decision | reason |")
 
     for operation, *_rest in absent_rows:
-        if "compare" in operation.lower():
-            assert "compare" not in TOOL_NAMES
+        assert "compare" not in operation.lower(), (
+            "COVERAGE.md still lists `compare` as a deliberately absent operation, but it is "
+            "present in TOOL_NAMES — the record and the code disagree"
+        )
 
-    assert "compare" not in TOOL_NAMES
+    assert "compare" in TOOL_NAMES
