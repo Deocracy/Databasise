@@ -214,7 +214,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 05-06-PLAN.md — codebase-memory-mcp admitted whole-engine, Falsifier 4 run twice, and the phase COVERAGE record (wave 4)
+- [x] 05-06-PLAN.md — codebase-memory-mcp admitted whole-engine, Falsifier 4 run twice, and the phase COVERAGE record (wave 4)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
