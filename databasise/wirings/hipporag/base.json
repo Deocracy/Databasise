@@ -1,8 +1,14 @@
 {
   "wiring_id": "hipporag-base",
-  "title": "HippoRAG 2 query side base wiring (tracer slice: 5 of docs/system-model/wirings/hipporag-base.json's 13 positions)",
+  "title": "HippoRAG 2 base wiring (6 of docs/system-model/wirings/hipporag-base.json's 13 positions: 06-01's 5-node query-side chain plus 06-02 Task 1's chunk-embed)",
   "wiring_version": "1",
   "nodes": {
+    "chunk-embed": {
+      "component": "hipporag/chunker-embedder@0.1.0",
+      "kind": "embedder",
+      "effects": ["calls_embedding", "writes_vector", "writes_kv"],
+      "deps": []
+    },
     "fact-score": {
       "component": "hipporag/fact-scorer@0.1.0",
       "kind": "retriever",

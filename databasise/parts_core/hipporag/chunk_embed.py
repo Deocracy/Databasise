@@ -64,12 +64,7 @@ def _split_into_chunks(text: str, chunk_size: int, chunk_overlap: int) -> list[s
 
 
 async def _chunk_embed_body(ctx: NodeContext) -> dict[str, Any]:
-    # RED STUB (06-02-PLAN.md Task 1, TDD): deliberately ignores config["documents"] so the
-    # RED test run fails on a real assertion (empty result vs. expected chunks/store writes/
-    # token accounting), not a collection error. Replaced by the real body in the GREEN commit.
-    return {"chunks": []}
-
-    config = ctx.config or {}  # noqa: F841 — unreachable until GREEN restores real logic below
+    config = ctx.config or {}
     documents = config.get("documents") or []
     if not documents:
         return {"chunks": []}
