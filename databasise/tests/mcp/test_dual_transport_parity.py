@@ -175,6 +175,37 @@ async def test_ingest_tool_accepts_structured_text_and_base64_raw_shapes(tmp_pat
     assert raw_job["enqueued"] == 1
 
 
+async def test_a_malformed_raw_base64_refuses_by_name_rather_than_crashing_the_tool(tmp_path):
+    """G-05-2 / CR-01b reproduction: a malformed ``raw_base64`` argument must refuse by name
+    through the shared mapper, never crash the tool as the SDK's generic ``UnexpectedToolError``.
+
+    Parity note: REST has no base64 ingest shape at all (its raw path is a multipart upload), so
+    this refusal has no REST counterpart to compare against. The parity claim proved here is the
+    one ROADMAP criterion 5 actually makes — the MCP transport refuses cleanly by name where it
+    previously crashed — not that two transports return an identical body for an argument only one
+    of them accepts.
+    """
+    server = create_server(store_root=tmp_path, workspace="mcp-malformed-base64", registry=_make_registry())
+
+    with pytest.raises(ToolError) as exc_info:
+        await server.call_tool(
+            "ingest", {"args": {"raw_base64": "not-valid-base64!!!", "file_name": "x.txt"}}
+        )
+    detail = _tool_error_detail(exc_info.value)
+    assert detail["refusal_type"] == "MalformedBase64PayloadError"
+    assert detail["field"] == "raw_base64"
+
+    # The well-formed round trip still works — proves the refusal is about malformedness, not
+    # about the raw shape being broken outright.
+    well_formed_job = _tool_json(
+        await server.call_tool(
+            "ingest",
+            {"args": {"raw_base64": base64.b64encode(b"well formed bytes").decode("ascii")}},
+        )
+    )
+    assert well_formed_job["job_id"]
+
+
 async def test_status_tool_scope_requirements_and_dispatch(tmp_path, monkeypatch):
     server = create_server(store_root=tmp_path, workspace="mcp-status-scopes")
     _patch_status_and_health(monkeypatch, documents=[], counts={"processed": 1})
