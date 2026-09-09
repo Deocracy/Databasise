@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 06
 current_phase_name: HippoRAG 2 & Side-by-Side
 status: executing
-stopped_at: Completed 06-03-PLAN.md
-last_updated: "2026-09-09T23:08:46.647Z"
+stopped_at: Completed 06-04-PLAN.md
+last_updated: "2026-09-09T23:41:41.397Z"
 last_activity: 2026-09-09
 last_activity_desc: Phase 06 execution started
-state_head: 9085fd532ff7a44f4eff20eb79eedeafa8acb6c4
+state_head: fe7dc06b4f4e24e1949a179dc7a6d144374b962e
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 50
-  completed_plans: 44
+  completed_plans: 45
 milestone_name: milestone
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 06 (HippoRAG 2 & Side-by-Side) — EXECUTING
-Plan: 4 of 9
+Plan: 5 of 9
 Status: Ready to execute
 Last activity: 2026-09-09 — Phase 06 execution started
 
@@ -81,6 +81,7 @@ Progress: [██████████] 100%
 | Phase 06 P01 | continuation session | 3 tasks | 29 files |
 | Phase 06 P02 | ~70min | 3 tasks | 9 files |
 | Phase 06 P03 | 75min | 3 tasks | 15 files |
+| Phase 06 P04 | ~65min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -138,6 +139,8 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 06]: 06-02: registered wiring nodes carry no "note" field (WiringNode schema extra=forbid), unlike the illustrative docs/system-model/wirings/hipporag-base.json copy the plan's action text quotes from. — Copying the governing doc's "note" field into the registered wiring raised WiringRefusedError at parse time, cascading into two seam cross-modality tests; caught and fixed before landing.
 - [Phase 06]: 06-03: capability-selector comparison-response keys join the caller's own requested values, in their own supplied order, with a module-constant separator (+) — Section 18.4 names no rendering rule for a multi-capability selector; this plan's own flagged assumption, declared as a module constant so a later change is one edit rather than a search.
 - [Phase 06]: 06-03: added DuplicateComparisonKeyError so a selector-key collision refuses by name rather than silently collapsing two arms into one response entry — Required by Task 1's own action text (not covered by any of the seven named behavior tests) - a Rule 2 auto-fix for missing critical functionality, since a silent collapse is the same undistinguishable-partial-mapping failure the plan's unsatisfiable-selector rule already refuses against.
+- [Phase 06]: 06-04: judge_instance recorded as an explicit 'unresolved' sentinel — no live judge call was made in this environment, and this project's own resolved-identity convention forbids substituting a plausible model string
+- [Phase 06]: 06-04: eval-corpus query ids are offset-anchored (q{offset+i+1}) so the 30-question fixture shares no query id with the Phase 3 corpus's own q1/q2
 
 ### Pending Todos
 
@@ -166,6 +169,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-09T23:08:46.558Z
-Stopped at: Completed 06-03-PLAN.md
+Last session: 2026-09-09T23:41:41.310Z
+Stopped at: Completed 06-04-PLAN.md
 Resume file: None
