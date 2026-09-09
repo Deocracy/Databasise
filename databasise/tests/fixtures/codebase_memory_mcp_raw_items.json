@@ -1,0 +1,1035 @@
+{
+  "check_index_coverage": [
+    {
+      "caveat": "Best-effort signal only. No recorded issue does not prove graph or source completeness; read flagged source and qualify claims when metadata is changed or unavailable.",
+      "indexed_at": "2026-09-08T23:52:12Z",
+      "metadata": {
+        "coverage_version": 3,
+        "generation": "2026-09-08T23:52:12Z",
+        "generation_matches": true,
+        "hash_records_complete": true,
+        "ignored_files_stored": 0,
+        "ignored_files_total": 0,
+        "index_mode": "full",
+        "recorded_at": "2026-09-08T23:52:12Z",
+        "recording_status": "complete"
+      },
+      "paths": [
+        {
+          "coverage": [],
+          "freshness": "metadata_match",
+          "path": "foreign/v1_corpus_adapter.py",
+          "recommended_action": "use_graph_with_best_effort_caveat",
+          "requested_path": "foreign/v1_corpus_adapter.py",
+          "status": "no_recorded_issue"
+        }
+      ],
+      "project": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise",
+      "scopes": [],
+      "signal": "best_effort"
+    }
+  ],
+  "get_architecture": [
+    {
+      "_block": "node_labels",
+      "count": "1181",
+      "label": "Variable"
+    },
+    {
+      "_block": "node_labels",
+      "count": "1020",
+      "label": "Function"
+    },
+    {
+      "_block": "node_labels",
+      "count": "264",
+      "label": "Method"
+    },
+    {
+      "_block": "node_labels",
+      "count": "211",
+      "label": "File"
+    },
+    {
+      "_block": "node_labels",
+      "count": "207",
+      "label": "Class"
+    },
+    {
+      "_block": "node_labels",
+      "count": "192",
+      "label": "Module"
+    },
+    {
+      "_block": "node_labels",
+      "count": "55",
+      "label": "Section"
+    },
+    {
+      "_block": "node_labels",
+      "count": "35",
+      "label": "Folder"
+    },
+    {
+      "_block": "node_labels",
+      "count": "16",
+      "label": "Route"
+    },
+    {
+      "_block": "node_labels",
+      "count": "13",
+      "label": "EnvVar"
+    },
+    {
+      "_block": "node_labels",
+      "count": "8",
+      "label": "Decorator"
+    },
+    {
+      "_block": "node_labels",
+      "count": "1",
+      "label": "Branch"
+    },
+    {
+      "_block": "node_labels",
+      "count": "1",
+      "label": "Project"
+    },
+    {
+      "_block": "edge_types",
+      "count": "4803",
+      "type": "DEFINES"
+    },
+    {
+      "_block": "edge_types",
+      "count": "3592",
+      "type": "CALLS"
+    },
+    {
+      "_block": "edge_types",
+      "count": "1655",
+      "type": "USAGE"
+    },
+    {
+      "_block": "edge_types",
+      "count": "1401",
+      "type": "TESTS"
+    },
+    {
+      "_block": "edge_types",
+      "count": "881",
+      "type": "WRITES"
+    },
+    {
+      "_block": "edge_types",
+      "count": "702",
+      "type": "IMPORTS"
+    },
+    {
+      "_block": "edge_types",
+      "count": "521",
+      "type": "CONFIGURES"
+    },
+    {
+      "_block": "edge_types",
+      "count": "259",
+      "type": "DEFINES_METHOD"
+    },
+    {
+      "_block": "edge_types",
+      "count": "211",
+      "type": "CONTAINS_FILE"
+    },
+    {
+      "_block": "edge_types",
+      "count": "89",
+      "type": "SEMANTICALLY_RELATED"
+    },
+    {
+      "_block": "edge_types",
+      "count": "84",
+      "type": "DECORATES"
+    },
+    {
+      "_block": "edge_types",
+      "count": "73",
+      "type": "RAISES"
+    },
+    {
+      "_block": "edge_types",
+      "count": "35",
+      "type": "CONTAINS_FOLDER"
+    },
+    {
+      "_block": "edge_types",
+      "count": "34",
+      "type": "SIMILAR_TO"
+    },
+    {
+      "_block": "edge_types",
+      "count": "30",
+      "type": "INHERITS"
+    },
+    {
+      "_block": "edge_types",
+      "count": "23",
+      "type": "OVERRIDE"
+    },
+    {
+      "_block": "edge_types",
+      "count": "6",
+      "type": "CALL_REFERENCE"
+    },
+    {
+      "_block": "edge_types",
+      "count": "1",
+      "type": "HAS_BRANCH"
+    },
+    {
+      "_block": "edge_types",
+      "count": "1",
+      "type": "THROWS"
+    },
+    {
+      "_block": "languages",
+      "files": "177",
+      "language": "Python"
+    },
+    {
+      "_block": "languages",
+      "files": "1",
+      "language": "TOML"
+    },
+    {
+      "_block": "packages",
+      "fan_in": "0",
+      "fan_out": "0",
+      "name": "tests",
+      "nodes": "888"
+    },
+    {
+      "_block": "packages",
+      "fan_in": "0",
+      "fan_out": "0",
+      "name": "seam",
+      "nodes": "102"
+    },
+    {
+      "_block": "packages",
+      "fan_in": "0",
+      "fan_out": "0",
+      "name": "parity",
+      "nodes": "91"
+    },
+    {
+      "_block": "packages",
+      "fan_in": "0",
+      "fan_out": "0",
+      "name": "stores",
+      "nodes": "90"
+    },
+    {
+      "_block": "packages",
+      "fan_in": "0",
+      "fan_out": "0",
+      "name": "evidence",
+      "nodes": "54"
+    },
+    {
+      "_block": "packages",
+      "fan_in": "0",
+      "fan_out": "0",
+      "name": "runner",
+      "nodes": "46"
+    },
+    {
+      "_block": "packages",
+      "fan_in": "0",
+      "fan_out": "0",
+      "name": "parts_core",
+      "nodes": "43"
+    },
+    {
+      "_block": "packages",
+      "fan_in": "0",
+      "fan_out": "0",
+      "name": "parts",
+      "nodes": "37"
+    },
+    {
+      "_block": "packages",
+      "fan_in": "0",
+      "fan_out": "0",
+      "name": "clients",
+      "nodes": "22"
+    },
+    {
+      "_block": "packages",
+      "fan_in": "0",
+      "fan_out": "0",
+      "name": "foreign",
+      "nodes": "21"
+    },
+    {
+      "_block": "packages",
+      "fan_in": "0",
+      "fan_out": "0",
+      "name": "registry_artifact",
+      "nodes": "20"
+    },
+    {
+      "_block": "packages",
+      "fan_in": "0",
+      "fan_out": "0",
+      "name": "validator",
+      "nodes": "16"
+    },
+    {
+      "_block": "packages",
+      "fan_in": "0",
+      "fan_out": "0",
+      "name": "identity",
+      "nodes": "12"
+    },
+    {
+      "_block": "packages",
+      "fan_in": "0",
+      "fan_out": "0",
+      "name": "ledger",
+      "nodes": "9"
+    },
+    {
+      "_block": "packages",
+      "fan_in": "0",
+      "fan_out": "0",
+      "name": "wirings",
+      "nodes": "8"
+    },
+    {
+      "_block": "entry_points",
+      "file": "evidence/falsifier2.py",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.evidence.falsifier2.main"
+    },
+    {
+      "_block": "entry_points",
+      "file": "evidence/parity_report.py",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.evidence.parity_report.main"
+    },
+    {
+      "_block": "entry_points",
+      "file": "foreign/v1_corpus_driver_script.py",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.foreign.v1_corpus_driver_script.main"
+    },
+    {
+      "_block": "entry_points",
+      "file": "parity/import_index.py",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.parity.import_index.main"
+    },
+    {
+      "_block": "entry_points",
+      "file": "parity/run_arm.py",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.parity.run_arm.main"
+    },
+    {
+      "_block": "entry_points",
+      "file": "parity/run_comparison.py",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.parity.run_comparison.main"
+    },
+    {
+      "_block": "entry_points",
+      "file": "parity/storage_audit.py",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.parity.storage_audit.main"
+    },
+    {
+      "_block": "entry_points",
+      "file": "parity/v1_arm.py",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.parity.v1_arm.main"
+    },
+    {
+      "_block": "entry_points",
+      "file": "parity/v1_driver_script.py",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.parity.v1_driver_script.main"
+    },
+    {
+      "_block": "entry_points",
+      "file": "tools/check_import_boundary.py",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.tools.check_import_boundary.main"
+    }
+  ],
+  "get_code_snippet": [
+    {
+      "callees": 6,
+      "callers": 7,
+      "end_line": 149,
+      "file_path": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/databasise/foreign/v1_corpus_adapter.py",
+      "label": "Function",
+      "name": "run_corpus_op",
+      "qualified_name": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.foreign.v1_corpus_adapter.run_corpus_op",
+      "source": "def run_corpus_op(\n    op: str,\n    payload: dict[str, Any],\n    *,\n    timeout: float,\n    interpreter: Path | None = None,\n    driver_script: Path | None = None,\n    env_path: Path | None = None,\n    working_dir: Path | None = None,\n) -> dict[str, Any]:\n    \"\"\"Launch ``databasise/foreign/v1_corpus_driver_script.py`` under v1's pinned interpreter with\n    one job JSON on stdin (``{\"op\": op, \"working_dir\": ..., **payload}``), and parse its stdout\n    JSON result. ``timeout`` is required, not optional \u2014 every call site declares \u00a78 condition 4's\n    wall-clock ceiling explicitly.\n\n    ``interpreter``/``driver_script``/``env_path``/``working_dir`` are override points for tests.\n    \"\"\"\n    interpreter = interpreter or DEFAULT_V1_INTERPRETER\n    if not interpreter.exists():\n        raise MissingV1InterpreterError(interpreter)\n    driver_script = driver_script or DEFAULT_V1_DRIVER_SCRIPT\n\n    env = dict(os.environ)\n    env.update(_load_env_file(env_path or DEFAULT_V1_ENV_PARITY))\n    env.setdefault(\"ENABLE_LLM_CACHE\", \"false\")\n\n    job: dict[str, Any] = {\n        \"op\": op,\n        \"working_dir\": str(working_dir or DEFAULT_V1_WORKING_DIR),\n        **payload,\n    }\n\n    try:\n        proc = subprocess.run(\n            [str(interpreter), str(driver_script)],\n            input=json.dumps(job),\n            capture_output=True,\n            text=True,\n            cwd=str(_REPO_ROOT / \"v1\"),\n            env=env,\n            timeout=timeout,\n        )\n    except subprocess.TimeoutExpired as exc:\n        raise CorpusOpTimeoutError(op, timeout) from exc\n\n    if proc.returncode != 0:\n        raise CorpusOpSubprocessError(proc.returncode, proc.stderr)\n\n    return json.loads(proc.stdout)\n",
+      "start_line": 101
+    }
+  ],
+  "get_graph_schema": [
+    {
+      "adr_hint": "No ADR found. Use manage_adr(mode='update') to persist architectural decisions across sessions. Run get_architecture(aspects=['all']) first.",
+      "adr_present": false,
+      "edge_types": [
+        {
+          "count": 4803,
+          "properties": [
+            "source_id",
+            "target_id"
+          ],
+          "type": "DEFINES"
+        },
+        {
+          "count": 3592,
+          "properties": [
+            "source_id",
+            "target_id",
+            "args",
+            "callee",
+            "candidates",
+            "confidence",
+            "line",
+            "strategy",
+            "url_path",
+            "via"
+          ],
+          "type": "CALLS"
+        },
+        {
+          "count": 1655,
+          "properties": [
+            "source_id",
+            "target_id",
+            "callee"
+          ],
+          "type": "USAGE"
+        },
+        {
+          "count": 1401,
+          "properties": [
+            "source_id",
+            "target_id"
+          ],
+          "type": "TESTS"
+        },
+        {
+          "count": 881,
+          "properties": [
+            "source_id",
+            "target_id"
+          ],
+          "type": "WRITES"
+        },
+        {
+          "count": 702,
+          "properties": [
+            "source_id",
+            "target_id",
+            "local_name"
+          ],
+          "type": "IMPORTS"
+        },
+        {
+          "count": 521,
+          "properties": [
+            "source_id",
+            "target_id",
+            "confidence",
+            "config_key",
+            "strategy"
+          ],
+          "type": "CONFIGURES"
+        },
+        {
+          "count": 259,
+          "properties": [
+            "source_id",
+            "target_id"
+          ],
+          "type": "DEFINES_METHOD"
+        },
+        {
+          "count": 211,
+          "properties": [
+            "source_id",
+            "target_id"
+          ],
+          "type": "CONTAINS_FILE"
+        },
+        {
+          "count": 89,
+          "properties": [
+            "source_id",
+            "target_id",
+            "same_file",
+            "score"
+          ],
+          "type": "SEMANTICALLY_RELATED"
+        },
+        {
+          "count": 84,
+          "properties": [
+            "source_id",
+            "target_id",
+            "decorator"
+          ],
+          "type": "DECORATES"
+        },
+        {
+          "count": 73,
+          "properties": [
+            "source_id",
+            "target_id"
+          ],
+          "type": "RAISES"
+        },
+        {
+          "count": 35,
+          "properties": [
+            "source_id",
+            "target_id"
+          ],
+          "type": "CONTAINS_FOLDER"
+        },
+        {
+          "count": 34,
+          "properties": [
+            "source_id",
+            "target_id",
+            "jaccard",
+            "same_file"
+          ],
+          "type": "SIMILAR_TO"
+        },
+        {
+          "count": 30,
+          "properties": [
+            "source_id",
+            "target_id"
+          ],
+          "type": "INHERITS"
+        },
+        {
+          "count": 23,
+          "properties": [
+            "source_id",
+            "target_id"
+          ],
+          "type": "OVERRIDE"
+        },
+        {
+          "count": 6,
+          "properties": [
+            "source_id",
+            "target_id",
+            "callee"
+          ],
+          "type": "CALL_REFERENCE"
+        },
+        {
+          "count": 1,
+          "properties": [
+            "source_id",
+            "target_id",
+            "base_sha",
+            "branch",
+            "canonical_root",
+            "git_common_dir",
+            "head_sha",
+            "is_detached",
+            "is_git",
+            "is_worktree",
+            "root_exists",
+            "worktree_root"
+          ],
+          "type": "HAS_BRANCH"
+        },
+        {
+          "count": 1,
+          "properties": [
+            "source_id",
+            "target_id"
+          ],
+          "type": "THROWS"
+        }
+      ],
+      "node_labels": [
+        {
+          "count": 1181,
+          "label": "Variable",
+          "properties": [
+            "name",
+            "qualified_name",
+            "file_path",
+            "start_line",
+            "end_line",
+            "complexity",
+            "is_entry_point",
+            "is_exported",
+            "is_test",
+            "lines"
+          ]
+        },
+        {
+          "count": 1020,
+          "label": "Function",
+          "properties": [
+            "name",
+            "qualified_name",
+            "file_path",
+            "start_line",
+            "end_line",
+            "alloc_in_loop",
+            "cognitive",
+            "complexity",
+            "decorator_tags",
+            "decorators",
+            "docstring",
+            "is_entry_point",
+            "is_exported",
+            "is_test",
+            "linear_scan_in_loop",
+            "lines",
+            "loop_count",
+            "loop_depth",
+            "max_access_depth",
+            "param_count",
+            "param_names",
+            "param_types",
+            "recursion_in_loop",
+            "recursive",
+            "return_type",
+            "self_recursive",
+            "signature",
+            "transitive_loop_depth",
+            "unguarded_recursion"
+          ]
+        },
+        {
+          "count": 264,
+          "label": "Method",
+          "properties": [
+            "name",
+            "qualified_name",
+            "file_path",
+            "start_line",
+            "end_line",
+            "alloc_in_loop",
+            "cognitive",
+            "complexity",
+            "decorator_tags",
+            "decorators",
+            "docstring",
+            "is_entry_point",
+            "is_exported",
+            "is_test",
+            "linear_scan_in_loop",
+            "lines",
+            "loop_count",
+            "loop_depth",
+            "max_access_depth",
+            "param_count",
+            "param_types",
+            "parent_class",
+            "recursion_in_loop",
+            "recursive",
+            "return_type",
+            "self_recursive",
+            "signature",
+            "transitive_loop_depth",
+            "unguarded_recursion"
+          ]
+        },
+        {
+          "count": 211,
+          "label": "File",
+          "properties": [
+            "name",
+            "qualified_name",
+            "file_path",
+            "start_line",
+            "end_line",
+            "extension"
+          ]
+        },
+        {
+          "count": 207,
+          "label": "Class",
+          "properties": [
+            "name",
+            "qualified_name",
+            "file_path",
+            "start_line",
+            "end_line",
+            "base_classes",
+            "complexity",
+            "decorator_tags",
+            "decorators",
+            "docstring",
+            "is_entry_point",
+            "is_exported",
+            "is_test",
+            "lines"
+          ]
+        },
+        {
+          "count": 192,
+          "label": "Module",
+          "properties": [
+            "name",
+            "qualified_name",
+            "file_path",
+            "start_line",
+            "end_line",
+            "complexity",
+            "is_entry_point",
+            "is_exported",
+            "is_test",
+            "lines"
+          ]
+        },
+        {
+          "count": 55,
+          "label": "Section",
+          "properties": [
+            "name",
+            "qualified_name",
+            "file_path",
+            "start_line",
+            "end_line",
+            "complexity",
+            "is_entry_point",
+            "is_exported",
+            "is_test",
+            "lines"
+          ]
+        },
+        {
+          "count": 35,
+          "label": "Folder",
+          "properties": [
+            "name",
+            "qualified_name",
+            "file_path",
+            "start_line",
+            "end_line"
+          ]
+        },
+        {
+          "count": 16,
+          "label": "Route",
+          "properties": [
+            "name",
+            "qualified_name",
+            "file_path",
+            "start_line",
+            "end_line",
+            "method"
+          ]
+        },
+        {
+          "count": 13,
+          "label": "EnvVar",
+          "properties": [
+            "name",
+            "qualified_name",
+            "file_path",
+            "start_line",
+            "end_line",
+            "env_key"
+          ]
+        },
+        {
+          "count": 8,
+          "label": "Decorator",
+          "properties": [
+            "name",
+            "qualified_name",
+            "file_path",
+            "start_line",
+            "end_line"
+          ]
+        },
+        {
+          "count": 1,
+          "label": "Branch",
+          "properties": [
+            "name",
+            "qualified_name",
+            "file_path",
+            "start_line",
+            "end_line",
+            "base_sha",
+            "branch",
+            "canonical_root",
+            "git_common_dir",
+            "head_sha",
+            "is_detached",
+            "is_git",
+            "is_worktree",
+            "root_exists",
+            "worktree_root"
+          ]
+        },
+        {
+          "count": 1,
+          "label": "Project",
+          "properties": [
+            "name",
+            "qualified_name",
+            "file_path",
+            "start_line",
+            "end_line"
+          ]
+        }
+      ]
+    }
+  ],
+  "index_status": [
+    {
+      "edges": 14401,
+      "nodes": 3204,
+      "not_indexed": {
+        "dirs": [
+          ".pytest_cache",
+          ".ruff_cache",
+          ".venv",
+          "__pycache__",
+          "clients/__pycache__",
+          "databasise.egg-info",
+          "evidence/__pycache__",
+          "foreign/__pycache__",
+          "identity/__pycache__",
+          "ledger/__pycache__",
+          "parity/.comparison_results",
+          "parity/__pycache__",
+          "parts/__pycache__",
+          "parts_core/__pycache__",
+          "parts_core/lightrag/__pycache__",
+          "registry_artifact/__pycache__",
+          "runner/__pycache__",
+          "seam/__pycache__",
+          "stores/__pycache__",
+          "tests/__pycache__",
+          "tests/clients/__pycache__",
+          "tests/evidence/__pycache__",
+          "tests/fixtures/__pycache__",
+          "tests/identity/__pycache__",
+          "tests/ledger/__pycache__",
+          "tests/parity/__pycache__",
+          "tests/parts/__pycache__",
+          "tests/parts_core/__pycache__",
+          "tests/parts_core/lightrag/__pycache__",
+          "tests/registry_artifact/__pycache__",
+          "tests/runner/__pycache__",
+          "tests/seam/__pycache__",
+          "tests/stores/__pycache__",
+          "tests/validator/__pycache__",
+          "tools/__pycache__",
+          "validator/__pycache__",
+          "wirings/__pycache__"
+        ],
+        "dirs_count": 37,
+        "files": [],
+        "files_count": 0,
+        "note": "Purposely not indexed \u2014 excluded BY DESIGN via gitignore/.cbmignore/skip-lists (see each file's reason). Not an error: change the ignore rules and re-index to include them.",
+        "truncated": false
+      },
+      "parse_partial": {
+        "count": 0,
+        "files": [],
+        "truncated": false
+      },
+      "project": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise",
+      "root_path": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/databasise",
+      "skipped": {
+        "count": 0,
+        "files": [],
+        "truncated": false
+      },
+      "status": "ready"
+    }
+  ],
+  "list_projects": [
+    {
+      "has_more": false,
+      "limit": 50,
+      "offset": 0,
+      "projects": [
+        {
+          "name": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise",
+          "root_path": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/databasise"
+        }
+      ],
+      "returned": 18,
+      "total": 18
+    }
+  ],
+  "query_graph": [
+    {
+      "_block": "rows",
+      "f.name": "run_corpus_op"
+    }
+  ],
+  "search_code": [
+    {
+      "_block": "results",
+      "file": "runner/scheduler.py",
+      "in": "9",
+      "label": "Function",
+      "lines": "492-687",
+      "matches": "\"558\"",
+      "out": "16",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.runner.scheduler.run_wiring"
+    },
+    {
+      "_block": "results",
+      "file": "seam/engine.py",
+      "in": "9",
+      "label": "Method",
+      "lines": "457-524",
+      "matches": "\"517\"",
+      "out": "13",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.seam.engine.Databasise.ingest"
+    },
+    {
+      "_block": "results",
+      "file": "seam/engine.py",
+      "in": "9",
+      "label": "Method",
+      "lines": "526-591",
+      "matches": "\"579\"",
+      "out": "14",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.seam.engine.Databasise.delete_document"
+    },
+    {
+      "_block": "results",
+      "file": "foreign/v1_corpus_adapter.py",
+      "in": "7",
+      "label": "Function",
+      "lines": "101-149",
+      "matches": "\"144\"",
+      "out": "6",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.foreign.v1_corpus_adapter.run_corpus_op"
+    },
+    {
+      "_block": "results",
+      "file": "tests/parts_core/lightrag/test_full_ingest.py",
+      "in": "0",
+      "label": "Function",
+      "lines": "118-132",
+      "matches": "\"131\"",
+      "out": "4",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.tests.parts_core.lightrag.test_full_ingest.test_a_stub_job_outlasting_a_tiny_ceiling_raises_foreign_engine_refusal_with_timeout_cause"
+    },
+    {
+      "_block": "results",
+      "file": "tests/seam/test_delete_document.py",
+      "in": "0",
+      "label": "Function",
+      "lines": "142-156",
+      "matches": "\"155\"",
+      "out": "3",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.tests.seam.test_delete_document.test_a_stub_job_outlasting_a_tiny_ceiling_raises_foreign_engine_refusal_with_timeout_cause"
+    },
+    {
+      "_block": "results",
+      "file": "seam/refusals.py",
+      "in": "3",
+      "label": "Class",
+      "lines": "157-169",
+      "matches": "\"159\"",
+      "out": "0",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.seam.refusals.ForeignEngineRefusalError"
+    },
+    {
+      "_block": "results",
+      "file": "foreign/v1_corpus_adapter.py",
+      "in": "1",
+      "label": "Class",
+      "lines": "68-76",
+      "matches": "\"68\"",
+      "out": "0",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.foreign.v1_corpus_adapter.CorpusOpTimeoutError"
+    },
+    {
+      "_block": "results",
+      "file": "foreign/__init__.py",
+      "in": "0",
+      "label": "Module",
+      "lines": "1-24",
+      "matches": "\"13\"",
+      "out": "0",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.foreign.__init__"
+    },
+    {
+      "_block": "results",
+      "file": "foreign/__init__.py",
+      "in": "0",
+      "label": "Variable",
+      "lines": "18-23",
+      "matches": "\"20\"",
+      "out": "0",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.foreign.__all__"
+    },
+    {
+      "_block": "dirs",
+      "dir": "runner/",
+      "hits": "1"
+    },
+    {
+      "_block": "dirs",
+      "dir": "seam/",
+      "hits": "4"
+    },
+    {
+      "_block": "dirs",
+      "dir": "foreign/",
+      "hits": "5"
+    },
+    {
+      "_block": "dirs",
+      "dir": "tests/",
+      "hits": "4"
+    },
+    {
+      "_block": "dirs",
+      "dir": "parts_core/",
+      "hits": "2"
+    }
+  ],
+  "search_graph": [
+    {
+      "_block": "results",
+      "file": "foreign/v1_corpus_adapter.py",
+      "label": "Function",
+      "lines": "101-149",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.foreign.v1_corpus_adapter.run_corpus_op",
+      "rank": "-20.97"
+    },
+    {
+      "_block": "results",
+      "file": "tests/seam/test_corpus_status.py",
+      "label": "Function",
+      "lines": "25-49",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.tests.seam.test_corpus_status._make_fake_run_corpus_op",
+      "rank": "-20.41"
+    },
+    {
+      "_block": "results",
+      "file": "tests/seam/test_ingest_job_status.py",
+      "label": "Function",
+      "lines": "22-38",
+      "qn": "home-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.tests.seam.test_ingest_job_status._make_fake_run_corpus_op",
+      "rank": "-20.28"
+    }
+  ],
+  "trace_path": [
+    {
+      "_raw_text": "function: run_corpus_op\ndirection: both\nmode: calls\ncallees_total: 7\ncallees: 7  (rows: name hop; qn = group prefix + \".\" + name)\nbuiltins:\n  dict 1\n  len 2\n  str 1\nhome-chris-coding-Databasise-2.0-fully-agnostic-system-databasise.foreign.v1_corpus_adapter:\n  CorpusOpSubprocessError 1\n  CorpusOpTimeoutError 1\n  MissingV1InterpreterError 1\n  _load_env_file 1\ncallers_total: 0\ncallers: 0  (rows: name hop; qn = group prefix + \".\" + name)\n"
+    }
+  ]
+}
