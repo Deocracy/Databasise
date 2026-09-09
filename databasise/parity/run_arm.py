@@ -183,7 +183,9 @@ def _build_clients(env: dict[str, str]) -> dict[str, Any]:
     return {"llm": llm, "embedding": embedding}
 
 
-def _build_stores(store_root: Path, workspace: str) -> dict[str, Any]:
+def _build_stores(
+    store_root: Path, workspace: str, resolved: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """kv/vector/graph, all three, at the namespace plan 03-02 imported into — even an arm that
     touches only a subset (``naive`` never reaches ``graph``) gets every store wired, since
     ``CapabilityScopedStores`` already denies access to anything a node's own effects don't
@@ -195,11 +197,20 @@ def _build_stores(store_root: Path, workspace: str) -> dict[str, Any]:
     index regardless of which namespace each position is actually defined over. Each of those
     parts now selects its own namespace (``entities``/``relationships``/``chunks``) off this handle
     before reading.
+
+    06-01-PLAN.md: ``kv``/``graph`` read their namespace from the resolved wiring's own declared
+    ``store_namespaces`` when ``resolved`` is supplied — the same declaration
+    ``databasise.seam.engine._build_stores`` reads, so this harness and the seam cannot drift
+    apart. Falls back to ``_TEXT_CHUNKS_KIND``/``_GRAPH_KIND`` (the values LightRAG's own base now
+    declares under ``store_namespaces`` too) when ``resolved`` is absent.
     """
+    store_namespaces = (resolved or {}).get("store_namespaces") or {}
+    kv_namespace = store_namespaces.get("kv", _TEXT_CHUNKS_KIND)
+    graph_namespace = store_namespaces.get("graph", _GRAPH_KIND)
     return {
-        "kv": SqliteKVStore(namespace=_TEXT_CHUNKS_KIND, workspace=workspace, store_root=store_root),
+        "kv": SqliteKVStore(namespace=kv_namespace, workspace=workspace, store_root=store_root),
         "vector": MultiNamespaceVectorStore(workspace=workspace, store_root=store_root),
-        "graph": CozoGraphStore(namespace=_GRAPH_KIND, workspace=workspace, store_root=store_root),
+        "graph": CozoGraphStore(namespace=graph_namespace, workspace=workspace, store_root=store_root),
     }
 
 
@@ -280,7 +291,7 @@ async def run_arm(
 
     resolved_workspace = workspace if workspace is not None else _parity_workspace()
     resolved_store_root = store_root if store_root is not None else DEFAULT_STORE_ROOT
-    stores = _build_stores(resolved_store_root, resolved_workspace)
+    stores = _build_stores(resolved_store_root, resolved_workspace, resolved)
 
     resolved_clients = clients
     if resolved_clients is None:

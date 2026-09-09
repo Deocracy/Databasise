@@ -13,8 +13,9 @@ dict, never through ``ParsedWiring`` (Pitfall 1) — ``run_arm.py``'s own preced
 
 **04-02: evidence references and the token breakdown.** Before the ``RunRecord`` (and the
 scheduler's raw ``results`` dict) go out of scope, ``query()`` mints the envelope's ``evidence``
-list from the naive arm's own retrieval position's output (``_EVIDENCE_RETRIEVAL_NODE_ID``,
-preserving that node's own output order verbatim — Task 2's own no-re-sort rule) and assembles the
+list from the resolved wiring's own declared retrieval position's output (06-01-PLAN.md:
+``evidence_position``, preserving that node's own output order verbatim — Task 2's own no-re-sort
+rule) and assembles the
 ``token_accounting`` breakdown from every node's own ``TokenAccounting`` (``databasise.seam.tokens
 .assemble_token_breakdown``). The breakdown assembly raises before any envelope is constructed if a
 node reports the ``unbudgetable`` sentinel (D-08) — that exception is left to propagate out of
@@ -199,13 +200,10 @@ _ACCOUNTABLE_STORE_EFFECT_PREFIXES = ("reads_", "writes_")
 _TEXT_CHUNKS_KIND = "text_chunks"
 _GRAPH_KIND = "chunk_entity_relation"
 
-# The naive arm's own retrieval position (databasise/wirings/lightrag/arm-naive.json-patch.json's
-# "chunk-vector" node, kind "retriever") — the only arm the default selector resolves in this
-# phase (04-03's alias/capability/harness selectors are the only other resolvable arms, and none
-# lands in this plan). A future selector resolving a wiring with a differently-named or absent
-# retrieval position is out of this plan's scope — mirrors the same hardcoded-node-id precedent
-# already established by ``_inject_query``'s "keywords"/"embedder-query"/"generate" below.
-_EVIDENCE_RETRIEVAL_NODE_ID = "chunk-vector"
+# 06-01-PLAN.md: the retrieval position and its namespace are now read off each resolved wiring's
+# own declared evidence_position ({"node": ..., "namespace": ...}) rather than hardcoded here —
+# see _execute()'s own evidence-minting block. This module no longer names any single arm's
+# retrieval node id directly.
 
 _EXECUTOR_VERSION = "databasise@0.1.0"
 _DETERMINISM_SETTING = "cache-bypassed"
@@ -240,11 +238,19 @@ _NON_DEBUG_TRACE_FIELDS = frozenset(
 
 
 def _inject_query(resolved: dict[str, Any], query: str) -> dict[str, Any]:
-    """Mirrors ``run_arm.py``'s own ``_inject_query`` exactly: stamps ``query`` onto every
-    resolved node whose config reads one (``keywords``, ``embedder-query``, ``generate``) — a
-    no-op for a node the resolved wiring does not contain."""
+    """06-01-PLAN.md: stamps ``query`` onto every node the resolved wiring's own declared
+    ``consumes_query`` array names — a no-op for a node the resolved wiring does not contain
+    (an arm patch that removes a node, e.g. ``naive`` removing ``keywords``). Reads the array off
+    the resolved dict rather than a hardcoded id list: LightRAG's own base now declares
+    ``["keywords", "embedder-query", "generate"]`` — the exact three ids this function
+    previously hardcoded — so LightRAG's own behaviour is byte-identical; HippoRAG's base
+    declares ``["fact-score", "reset-vector-join"]``. Defaults to an empty list for a resolved
+    wiring declaring no ``consumes_query`` at all (the fixture wirings this module's own tests
+    build directly), preserving the prior no-op-for-an-absent-declaration behaviour.
+    """
     nodes = resolved.get("nodes", {})
-    for node_id in ("keywords", "embedder-query", "generate"):
+    consumes_query = resolved.get("consumes_query") or []
+    for node_id in consumes_query:
         if node_id not in nodes:
             continue
         config = dict(nodes[node_id].get("config") or {})
@@ -263,14 +269,33 @@ def _inject_token_allowance(resolved: dict[str, Any], allowance: int) -> dict[st
     return resolved
 
 
-def _build_stores(store_root: Path, workspace: str) -> dict[str, Any]:
+def _build_stores(
+    store_root: Path, workspace: str, resolved: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """kv/vector/graph, all three, at the engine's own namespace/workspace — mirrors
-    ``run_arm.py``'s own ``_build_stores`` exactly (see that module's docstring for why every arm
-    gets every store wired regardless of which subset it actually touches)."""
+    ``run_arm.py``'s own ``_build_stores`` (see that module's docstring for why every wiring gets
+    every store wired regardless of which subset it actually touches).
+
+    06-01-PLAN.md: ``kv``/``graph`` are each a single namespaced store per run, resolved from the
+    wiring's own declared ``store_namespaces`` (``{"kv": ..., "graph": ...}``) when ``resolved``
+    is supplied — falling back to the existing ``_TEXT_CHUNKS_KIND``/``_GRAPH_KIND`` constants
+    when it is absent (``ingest``/``delete_document``/``health``/``resolve_evidence`` call this
+    with no ``resolved`` at all, so their directories are unchanged). LightRAG's own base now
+    declares ``{"kv": "text_chunks", "graph": "chunk_entity_relation"}`` — the exact values those
+    two constants already hold — so a LightRAG run through ``_execute`` resolves to an identical
+    on-disk directory either way. ``vector`` stays a :class:`MultiNamespaceVectorStore`, selected
+    per-node by name: vector isolation between modalities is already a side effect of each part
+    selecting its own namespace by name (``hipporag-facts``/``hipporag-chunks`` vs.
+    ``entities``/``relationships``/``chunks``), so the multi-namespace handle needs no wiring-level
+    declaration of its own.
+    """
+    store_namespaces = (resolved or {}).get("store_namespaces") or {}
+    kv_namespace = store_namespaces.get("kv", _TEXT_CHUNKS_KIND)
+    graph_namespace = store_namespaces.get("graph", _GRAPH_KIND)
     return {
-        "kv": SqliteKVStore(namespace=_TEXT_CHUNKS_KIND, workspace=workspace, store_root=store_root),
+        "kv": SqliteKVStore(namespace=kv_namespace, workspace=workspace, store_root=store_root),
         "vector": MultiNamespaceVectorStore(workspace=workspace, store_root=store_root),
-        "graph": CozoGraphStore(namespace=_GRAPH_KIND, workspace=workspace, store_root=store_root),
+        "graph": CozoGraphStore(namespace=graph_namespace, workspace=workspace, store_root=store_root),
     }
 
 
@@ -754,7 +779,7 @@ class Databasise:
         def _recorder(node_id: str, kind: str, key: str) -> None:
             touches.append((node_id, kind, key))
 
-        stores = _build_stores(self.store_root, self.workspace)
+        stores = _build_stores(self.store_root, self.workspace, resolved)
         try:
             scheduled = await _scheduler.run_wiring(
                 parsed,
@@ -806,14 +831,24 @@ class Databasise:
         provided = {node_id: scheduled["results"].get(node_id) for node_id in provides}
         answer, depth_label = _select_answer(provides, provided, node_by_id)
 
-        # Task 1/2 (04-02): mint evidence refs from the naive arm's own retrieval position, in its
-        # own output order — no re-sort here (see _EVIDENCE_RETRIEVAL_NODE_ID's own docstring note
-        # and this module's docstring). A wiring that never dispatches this node (none does today —
-        # the default selector always resolves the naive arm) yields no retrieval output at all,
-        # which mints to an empty list, never a refusal (the empty-evidence behavior Task 1 proves).
-        retrieval_output = scheduled["results"].get(_EVIDENCE_RETRIEVAL_NODE_ID)
+        # Task 1/2 (04-02); 06-01-PLAN.md: mint evidence refs from the resolved wiring's own
+        # declared evidence_position ({"node": ..., "namespace": ...}) — read off the resolved
+        # dict rather than a module-level retrieval-node constant, so a modality-agnostic wiring
+        # can declare its own retrieval position and namespace (HippoRAG's base declares its own
+        # ppr node under the hipporag-chunks namespace). LightRAG's own base now declares the
+        # equivalent position under the module-level CHUNKS_NAMESPACE default — the exact value
+        # that constant already held — so LightRAG's behaviour is unchanged. No re-sort here (see
+        # this module's docstring). A resolved wiring declaring no evidence_position at all, or
+        # one whose declared node never dispatches, yields no retrieval output at all, which mints
+        # to an empty list, never a refusal (the empty-evidence behavior Task 1 proves).
+        evidence_position = resolved.get("evidence_position") or {}
+        evidence_node_id = evidence_position.get("node")
+        evidence_namespace = evidence_position.get("namespace", CHUNKS_NAMESPACE)
+        retrieval_output = (
+            scheduled["results"].get(evidence_node_id) if evidence_node_id else None
+        )
         retrieval_items = retrieval_output["items"] if isinstance(retrieval_output, dict) else []
-        evidence = mint_evidence_refs(retrieval_items, namespace=CHUNKS_NAMESPACE)
+        evidence = mint_evidence_refs(retrieval_items, namespace=evidence_namespace)
 
         # Task 3 (04-02): raises UnbudgetableParticipantError before any envelope is constructed if
         # a node reports the unbudgetable sentinel (D-08) — left to propagate unmodified.

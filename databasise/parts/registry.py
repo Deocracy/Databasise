@@ -167,17 +167,18 @@ def default_registry() -> PartRegistry:
     """A registry preloaded with D-04's four executable ``parts_core`` reference parts, the two
     remaining declaration-only Falsifier-2 wiring placeholders (03-08-PLAN.md Task 3 retired the
     third, ``lightrag/query-side`` (version ``0.1.0``), once Phase 3 ported its real eighteen
-    positions), and
-    (03-04-PLAN.md Task 2 onward) the fifteen ported LightRAG parts — no tracer-only parts.
+    positions), (03-04-PLAN.md Task 2 onward) the fifteen ported LightRAG parts, and
+    (06-01-PLAN.md) the tracer's five ported HippoRAG parts — no tracer-only parts.
     """
     # Local import: parts_core imports Part/Effect from parts.schema (not this module), so
     # importing it here keeps the registry/parts_core dependency direction one-way and obvious
     # at the one call site that needs it, rather than at every import of this module.
     from databasise.parts_core import PARTS
     from databasise.parts_core.declared_only import DECLARED_ONLY_PARTS
+    from databasise.parts_core.hipporag import HIPPORAG_PARTS
     from databasise.parts_core.lightrag import LIGHTRAG_PARTS
 
     registry = PartRegistry(seed_tracer_parts=False)
-    for part in (*PARTS, *DECLARED_ONLY_PARTS, *LIGHTRAG_PARTS):
+    for part in (*PARTS, *DECLARED_ONLY_PARTS, *LIGHTRAG_PARTS, *HIPPORAG_PARTS):
         registry.register(part)
     return registry

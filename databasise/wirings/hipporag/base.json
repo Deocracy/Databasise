@@ -1,0 +1,61 @@
+{
+  "wiring_id": "hipporag-base",
+  "title": "HippoRAG 2 query side base wiring (tracer slice: 5 of docs/system-model/wirings/hipporag-base.json's 13 positions)",
+  "wiring_version": "1",
+  "nodes": {
+    "fact-score": {
+      "component": "hipporag/fact-scorer@0.1.0",
+      "kind": "retriever",
+      "effects": ["reads_vector", "calls_embedding"],
+      "deps": []
+    },
+    "fact-filter": {
+      "component": "hipporag/fact-filter@0.1.0",
+      "kind": "ranker-reranker",
+      "effects": ["calls_llm"],
+      "config": {
+        "linking_top_k": 5
+      },
+      "deps": ["fact-score"]
+    },
+    "reset-vector-join": {
+      "component": "hipporag/reset-vector-join@0.1.0",
+      "kind": "join",
+      "effects": ["reads_vector", "calls_embedding", "reads_kv"],
+      "config": {
+        "socket_shape": "ref-keyed vector-sum, per CONTRACT.md §13.3's H2 repair",
+        "arm_precedence": "disjoint-support sum, order-insensitive — phrase_weights/passage_weights resolve to disjoint vertex indices",
+        "apportionment_policy": "n/a - non-effectful join in the budget sense, no token spend at this node",
+        "arity": 2,
+        "passage_node_weight": 1.0
+      },
+      "deps": ["fact-filter"]
+    },
+    "ppr": {
+      "component": "hipporag/ppr-retriever@0.1.0",
+      "kind": "retriever",
+      "effects": ["reads_graph"],
+      "config": {
+        "declared_capability": "§14.2 Graph bulk-export",
+        "readback": "partitioned — passage-node vertex subset only",
+        "damping": 0.5
+      },
+      "deps": ["reset-vector-join"]
+    },
+    "assemble-result": {
+      "component": "hipporag/result-assembler@0.1.0",
+      "kind": "assembler",
+      "effects": ["reads_kv"],
+      "config": {
+        "order_policy": "hipporag-doc-score-order"
+      },
+      "deps": ["ppr"]
+    }
+  },
+  "recipe": { "chunker": "chunk-embed", "embedding": "chunk-embed", "extraction": "openie" },
+  "harnesses": [],
+  "provides": ["assemble-result"],
+  "consumes_query": ["fact-score", "reset-vector-join"],
+  "evidence_position": { "node": "ppr", "namespace": "hipporag-chunks" },
+  "store_namespaces": { "kv": "hipporag-text-chunks", "graph": "hipporag-graph" }
+}

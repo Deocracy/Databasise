@@ -74,7 +74,7 @@ from databasise.parts.registry import PartRegistry
 from databasise.seam.refusals import ForbiddenSelectorInputError, UnsatisfiableSelectorError
 from databasise.validator.depth import effective_depth
 from databasise.validator.parse import parse_wiring
-from databasise.wirings.resolve import resolve_arm
+from databasise.wirings.resolve import all_wirings, resolve_arm
 
 _DEFAULT_ARM = "naive"
 _ARM_NAMES: tuple[str, ...] = ("naive", "bypass", "hybrid", "local", "global")
@@ -128,10 +128,12 @@ class Selector(BaseModel):
 
 
 def _capability_candidates() -> list[_Candidate]:
-    """The five Phase 3 arms, resolved — the fixed candidate pool for the capability and
-    (production) harness/default branches. Independent of ``registry``: every arm name is a
-    committed patch file, not a registry-dependent computation."""
-    return [(name, resolve_arm(name)) for name in _ARM_NAMES]
+    """The registered candidate pool for the capability and (production) harness/default
+    branches (06-01-PLAN.md): every LightRAG arm plus every non-LightRAG base wiring, via
+    ``databasise.wirings.resolve.all_wirings()`` — no longer a LightRAG-only, five-arm list.
+    Independent of ``registry``: every candidate name is a committed wiring/patch file, not a
+    registry-dependent computation."""
+    return all_wirings()
 
 
 def _wiring_effects(resolved: dict[str, Any], registry: PartRegistry) -> set[str]:
