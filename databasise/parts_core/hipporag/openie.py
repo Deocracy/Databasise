@@ -132,12 +132,7 @@ def _sum_token_accountings(accountings: list[TokenAccounting]) -> TokenAccountin
 
 
 async def _openie_body(ctx: NodeContext) -> dict[str, Any]:
-    # RED STUB (06-02-PLAN.md Task 2, TDD): deliberately ignores the chunk-embed input entirely
-    # and never calls the LLM client, so the RED test run fails on real assertions (zero findings,
-    # zero chat calls), not a collection error. Replaced by the real body in the GREEN commit.
-    return {"findings": []}
-
-    chunk_embed_output = ctx.inputs["chunk-embed"]  # noqa: F841 — unreachable until GREEN
+    chunk_embed_output = ctx.inputs["chunk-embed"]
     chunks = list(chunk_embed_output.get("chunks", []))
     if not chunks:
         return {"findings": []}

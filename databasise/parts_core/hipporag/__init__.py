@@ -18,6 +18,7 @@ from databasise.parts_core.hipporag.assemble_result import HIPPORAG_RESULT_ASSEM
 from databasise.parts_core.hipporag.chunk_embed import HIPPORAG_CHUNKER_EMBEDDER_PART
 from databasise.parts_core.hipporag.fact_filter import HIPPORAG_FACT_FILTER_PART
 from databasise.parts_core.hipporag.fact_score import HIPPORAG_FACT_SCORER_PART
+from databasise.parts_core.hipporag.openie import HIPPORAG_OPENIE_EXTRACTOR_PART
 from databasise.parts_core.hipporag.ppr import HIPPORAG_PPR_RETRIEVER_PART
 from databasise.parts_core.hipporag.reset_vector_join import HIPPORAG_RESET_VECTOR_JOIN_PART
 
@@ -28,6 +29,7 @@ HIPPORAG_PARTS: tuple[Part, ...] = (
     HIPPORAG_PPR_RETRIEVER_PART,
     HIPPORAG_RESULT_ASSEMBLER_PART,
     HIPPORAG_CHUNKER_EMBEDDER_PART,
+    HIPPORAG_OPENIE_EXTRACTOR_PART,
 )
 
 __all__ = ["HIPPORAG_PARTS"]
