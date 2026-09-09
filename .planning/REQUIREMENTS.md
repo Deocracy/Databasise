@@ -85,7 +85,7 @@ Maps REQ-IDs to phases (see .planning/ROADMAP.md). Every v1 requirement maps to 
 | MACH-01 | Phase 2 | Complete |
 | MACH-02 | Phase 6 | Pending |
 | MACH-03 | Phase 6 | Pending |
-| MACH-04 | Phase 5 | Gaps Found |
+| MACH-04 | Phase 5 | Complete |
 | MACH-05 | Phase 1 | Complete |
 | MACH-06 | Phase 1 | Complete |
 | MACH-07 | Phase 7 | Pending |
@@ -94,8 +94,8 @@ Maps REQ-IDs to phases (see .planning/ROADMAP.md). Every v1 requirement maps to 
 | MACH-10 | Phase 6 | Pending |
 | MACH-11 | Phase 4 | Complete |
 | MODAL-01 | Phase 3 | Pending |
-| MODAL-02 | Phase 5 | Gaps Found |
-| MODAL-03 | Phase 5 | Gaps Found |
+| MODAL-02 | Phase 5 | Complete |
+| MODAL-03 | Phase 5 | Complete |
 | MODAL-04 | Phase 6 | Pending |
 | MODAL-05 | Phase 6 | Pending |
 | API-01 | Phase 5 | Complete |
@@ -103,7 +103,7 @@ Maps REQ-IDs to phases (see .planning/ROADMAP.md). Every v1 requirement maps to 
 | API-03 | Phase 4 | Complete |
 | API-04 | Phase 4 | Complete |
 | API-05 | Phase 4 | Complete |
-| API-06 | Phase 5 | Gaps Found |
+| API-06 | Phase 5 | Complete |
 | API-07 | Phase 5 | Complete |
 | API-08 | Phase 6 | Pending |
 | API-09 | Phase 7 | Pending |
@@ -113,7 +113,7 @@ Maps REQ-IDs to phases (see .planning/ROADMAP.md). Every v1 requirement maps to 
 | EMBED-02 | Phase 4 | Complete |
 | HARD-01 | Phase 7 | Pending |
 | HARD-02 | Phase 7 | Pending |
-| HARD-03 | Phase 5 | Gaps Found |
+| HARD-03 | Phase 5 | Complete |
 | HARD-04 | Phase 7 | Pending |
 
 ---
