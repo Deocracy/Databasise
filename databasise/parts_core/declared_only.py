@@ -17,16 +17,24 @@ a real ``body`` (``databasise.parts_core.lightrag.full_ingest.full_ingest_body``
 
 05-03-PLAN.md Task 1: ``LIGHTRAG_FULL_DELETE_PART`` joins it as a second real, executable
 corpus-side port (§19.6's separate-port rule — same underlying v1 engine, different declared
-effects). This module's own name is now partly historical: two of its three entries carry real
-bodies and admission records, and only ``CODEBASE_MEMORY_MCP_PART`` remains genuinely
-declaration-only (``body=None``) until plan 05-06 admits it. ``DECLARED_ONLY_PARTS``'s own name
-and membership contract are unchanged — ``default_registry()`` and the Falsifier-2 evidence
-wirings still resolve every entry named here, executable or not.
+effects).
+
+05-06-PLAN.md Task 2: ``CODEBASE_MEMORY_MCP_PART`` is admitted whole-engine — the second,
+differently-shaped foreign engine — gaining a real ``body``
+(``databasise.parts_core.codebase_memory_mcp.codebase_memory_mcp_body``) and a real §8
+``admission`` record (``CODEBASE_MEMORY_MCP_ADMISSION``). Every entry this module declares now
+carries a real body and admission record — ``DECLARED_ONLY_PARTS``'s own name is now purely
+historical (D-04's original three Falsifier-2 wiring placeholders), not a live description of what
+any entry still carries.
 """
 
 from __future__ import annotations
 
 from databasise.parts.schema import Part
+from databasise.parts_core.codebase_memory_mcp import (
+    CODEBASE_MEMORY_MCP_ADMISSION,
+    codebase_memory_mcp_body,
+)
 from databasise.parts_core.lightrag.full_delete import (
     LIGHTRAG_FULL_DELETE_ADMISSION,
     full_delete_body,
@@ -36,19 +44,25 @@ from databasise.parts_core.lightrag.full_ingest import (
     full_ingest_body,
 )
 
-# The opaque codebase-memory-mcp part (MACH-01's second named wiring): opaque structural depth,
-# declaring self_storage and fs — which is why it is legal at any depth: a self_storage write is
-# never a shared write (CONTRACT §3's three-scope table). Declaration-only until plan 05-06 admits
-# it (body=None, no admission requirement for a declaration-only part — PartRegistry.register only
-# enforces admission for an executable, body-carrying opaque part).
+# The opaque codebase-memory-mcp part (MACH-01's second named wiring): opaque structural depth.
+# effects gains mutates_store additively (05-06-PLAN.md Task 2E) — PARTS.md ## §X's X1 repair
+# landed mutates_store and the mutable-store capability for manage_adr/delete_project's real
+# mutation surface, but this built stub still also declares self_storage and fs, which §X does
+# not (§X declares mutates_store only). The two extra effects are over-declarations of the same
+# self-contained-storage fact, which §2's deny-by-default rule permits (an over-declaration is
+# never a wire-time refusal risk the way an under-declaration is), and they are retained because
+# databasise/evidence/wirings/w2-codebase-memory-mcp.json and FALSIFIER-2-EVIDENCE.md pin them as
+# committed Falsifier-2 evidence — this discrepancy is recorded, not silently resolved, in
+# ADMISSION-CODEBASE-MEMORY-MCP.md.
 CODEBASE_MEMORY_MCP_PART = Part(
     name_at_version="codebase-memory-mcp@0.1.0",
     kind="opaque",
     structural_depth="opaque",
-    effects=["self_storage", "fs"],
+    effects=["self_storage", "fs", "mutates_store"],
     upstream_ref="external:codebase-memory-mcp",
-    body=None,
+    body=codebase_memory_mcp_body,
     artifact_scope="self_storage",
+    admission=CODEBASE_MEMORY_MCP_ADMISSION,
 )
 
 # The full LightRAG ingest core (MACH-01's third named wiring): opaque structural depth, declaring

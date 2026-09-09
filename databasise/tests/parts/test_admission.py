@@ -81,12 +81,16 @@ def test_registering_the_same_opaque_part_with_a_valid_record_registers_cleanly(
     assert registry.get("test/opaque-part@1.0.0") is part
 
 
-def test_registering_a_declaration_only_opaque_part_still_succeeds():
-    """``CODEBASE_MEMORY_MCP_PART`` (body=None, no admission) must keep loading in
-    ``default_registry()`` until plan 05-06 admits it."""
+def test_registering_the_now_admitted_codebase_memory_mcp_part_succeeds():
+    """05-06-PLAN.md Task 2: ``CODEBASE_MEMORY_MCP_PART`` is no longer declaration-only — it now
+    carries a real body and a real, valid §8 admission record, so registration succeeds via
+    ``validate_admission`` passing, not via the declaration-only exemption this test used to
+    exercise."""
     registry = PartRegistry(seed_tracer_parts=False)
     registry.register(CODEBASE_MEMORY_MCP_PART)
     assert registry.get(CODEBASE_MEMORY_MCP_PART.name_at_version) is CODEBASE_MEMORY_MCP_PART
+    assert CODEBASE_MEMORY_MCP_PART.body is not None
+    assert CODEBASE_MEMORY_MCP_PART.admission is not None
 
 
 def test_validate_admission_raises_forbidden_shared_scope_for_shared_and_accepts_quarantined():
