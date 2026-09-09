@@ -20,7 +20,11 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from databasise.foreign import CorpusOpTimeoutError, MissingV1InterpreterError, run_corpus_op
+from databasise.foreign import (
+    CorpusOpTimeoutError,
+    MissingV1InterpreterError,
+    run_corpus_op,
+)
 from databasise.parts.admission import MissingWallClockCeilingError
 from databasise.parts.registry import PartRegistry
 from databasise.parts.schema import NodeContext
