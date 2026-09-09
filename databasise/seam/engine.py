@@ -128,7 +128,7 @@ from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 from typing import Any
 
-from databasise.foreign import CorpusOpSubprocessError, CorpusOpTimeoutError, run_corpus_op
+from databasise.foreign import run_corpus_op
 from databasise.foreign.v1_corpus_adapter import (
     DEFAULT_V1_INTERPRETER,
     STATUS_WALL_CLOCK_CEILING_SECONDS,
@@ -604,11 +604,12 @@ class Databasise:
             for store in stores.values():
                 await store.finalize()
 
-        node_exception = scheduled.get("node_exceptions", {}).get(_DELETE_NODE_ID)
-        if isinstance(node_exception, (CorpusOpSubprocessError, CorpusOpTimeoutError)):
-            raise ForeignEngineRefusalError(operation="delete", cause=node_exception) from node_exception
-
-        result = scheduled["results"].get(_DELETE_NODE_ID) or {}
+        # G-05-1 / WR-01: the same shared _node_result_or_refuse helper ingest() routes through —
+        # any node failure, or no result at all, raises ForeignEngineRefusalError with the real
+        # cause, rather than degrading to an undifferentiated, causeless DeletionOutcome(fail).
+        # Called before the MACH-11 correlation below so a refused run mints no seam events for a
+        # node that did not run.
+        result = _node_result_or_refuse(scheduled, _DELETE_NODE_ID, "delete")
         node_by_id = {node.node_id: node for node in scheduled["nodes"]}
         seam_events = _mach11_events(parsed, touches, node_by_id)
 
@@ -710,11 +711,8 @@ class Databasise:
                 store_reachability[name] = True
             except Exception:
                 store_reachability[name] = False
-        try:
-            pass
-        finally:
-            for store in opened_stores.values():
-                await store.finalize()
+        for store in opened_stores.values():
+            await store.finalize()
 
         engine_report: dict[str, bool] = {"interpreter_present": DEFAULT_V1_INTERPRETER.exists()}
         try:
