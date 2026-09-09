@@ -196,7 +196,7 @@ Plans:
   4. Caller reads health, corpus status, and document counts in bounded paginated form; a full corpus or index dump is never returned
   5. The MCP surface exposes the same capabilities as REST as intention-level tools; a capability expressible as a §18.4 selector never becomes a new tool, and adding a modality adds no tool
 
-**Plans**: 6/7 plans executed
+**Plans**: 7/7 plans executed
 
 Plans:
 **Wave 1**
@@ -219,7 +219,7 @@ Plans:
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [x] 05-05-PLAN.md — The inside-vs-across-boundary change rule and the compat test that enforces it (wave 5)
-- [ ] 05-07-PLAN.md — The MCP transport: five intention-level tools with the §18.5 growth rule under test (wave 5)
+- [x] 05-07-PLAN.md — The MCP transport: five intention-level tools with the §18.5 growth rule under test (wave 5)
 
 ### Phase 6: HippoRAG 2 & Side-by-Side
 
@@ -263,7 +263,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Falsifier Gate | 4/4 | Complete    | 2026-08-31 |
 | 3. LightRAG Query Side | 13/13 | In Progress|  |
 | 4. The Seam | 5/5 | Complete    | 2026-09-06 |
-| 5. Opaque-Side Admission | 6/7 | In Progress|  |
+| 5. Opaque-Side Admission | 7/7 | In Progress|  |
 | 6. HippoRAG 2 & Side-by-Side | 0/TBD | Not started | - |
 | 7. Promotion & Rollback | 0/TBD | Not started | - |
 
