@@ -45,6 +45,7 @@ from databasise.seam.refusals import (
     EmptyQueryObjectError,
     ForbiddenSelectorInputError,
     ForeignEngineRefusalError,
+    MalformedBase64PayloadError,
     OversizedDocumentError,
     PageSizeExceededError,
     SeamRefusalError,
@@ -383,6 +384,7 @@ _REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
     UnknownDocumentError: lambda: UnknownDocumentError(document_id="../escape"),
     UnknownJobError: lambda: UnknownJobError(job_id="no-such-job"),
     PageSizeExceededError: lambda: PageSizeExceededError(requested=101, limit=100),
+    MalformedBase64PayloadError: lambda: MalformedBase64PayloadError(field="raw_base64"),
 }
 
 
