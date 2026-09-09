@@ -94,3 +94,17 @@ async def seeded_hipporag_store(store_root):
         "workspace": _WORKSPACE,
         "query_vector": QUERY_VECTOR,
     }
+
+
+@pytest.fixture
+def seeded_hipporag_source_documents() -> list[dict[str, str]]:
+    """Three short source documents (06-02-PLAN.md Task 1) whose entities overlap across
+    documents — "cat", "mat" and "rug" each recur — so 06-05's shared-entity edge cases (an entity
+    introduced by one document's findings, referenced again by another's) have real data to
+    exercise instead of three disjoint one-entity graphs.
+    """
+    return [
+        {"document_id": "doc-1", "text": "The cat sat on the mat."},
+        {"document_id": "doc-2", "text": "The cat also likes the rug near the mat."},
+        {"document_id": "doc-3", "text": "A dog sat on the rug."},
+    ]
