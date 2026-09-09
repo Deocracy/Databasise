@@ -86,16 +86,16 @@ added — none of them modality-named, all reachable through both transports.
 
 | operation | transports | plan | why an operation and not a selector |
 |---|---|---|---|
-| query (non-streaming) | in-process, REST | 04-01, 04-05 | *(carried forward from Phase 4's table, unchanged.)* |
-| query (streaming, SSE) | in-process (async generator), REST | 04-05 | *(carried forward, unchanged.)* |
-| evidence dereference | in-process, REST | 04-02, 04-05 | *(carried forward, unchanged.)* |
-| trace resolution | in-process, REST | 04-04, 04-05 | *(carried forward, unchanged.)* |
-| ingest (structured text + raw upload) | in-process, REST (`POST /documents`, `POST /documents/upload`) | 05-01, 05-04 | The seam's fourth answering-adjacent operation. Every modality's corpus ingests through it; §18.5's growth rule means a second modality adds no second ingest operation — it is reached by the same `Databasise.ingest()` call regardless of which modality's own opaque port the resolved wiring names. |
-| job status (poll) | in-process, REST (`GET /jobs/{job_id}`) | 05-01, 05-04 | A distinct read shape from ingest itself — polling an already-returned job handle cannot be expressed as a selector over a call that has already returned, the same reasoning Phase 4's table already applies to streaming. |
-| delete document | in-process, REST (`DELETE /documents/{document_id}`) | 05-03 | §19.6 requires delete be a separate port from ingest (different declared effect, `mutates_store` vs `writes_artifact`) — and separately, a mutation is not an answering variant a selector could express. |
-| health | in-process, REST (`GET /health`) | 05-04 | A liveness probe over the machine's own stores plus the foreign engine, not a modality-scoped answer; no selector expresses "is the machine up." |
-| corpus status (paginated) | in-process, REST (`GET /corpus`) | 05-04 | A bounded, paginated read over the whole corpus's document list — API-06's own bounded/paginated-by-construction requirement, not a variant of any answering operation. |
-| document counts | in-process, REST (`GET /corpus/counts`) | 05-04 | A fixed-size aggregate read, distinct from the paginated document list above (no `page`/`offset` parameter exists because there is nothing to page through). |
+| query (non-streaming) | in-process, REST, MCP (`query` tool) | 04-01, 04-05, 05-07 | *(carried forward from Phase 4's table; MCP added by 05-07.)* |
+| query (streaming, SSE) | in-process (async generator), REST | 04-05 | *(carried forward, unchanged — the `query` MCP tool returns one result, not a stream; SSE has no MCP analog in this milestone.)* |
+| evidence dereference | in-process, REST, MCP (`resolve` tool, `scope="evidence"`) | 04-02, 04-05, 05-07 | *(carried forward; MCP added by 05-07 as one scope of the `resolve` tool — the selector-versus-tool test applied honestly: one intention, "follow this reference," not two tools.)* |
+| trace resolution | in-process, REST, MCP (`resolve` tool, `scope="trace"`) | 04-04, 04-05, 05-07 | *(carried forward; MCP added by 05-07, same `resolve` tool as evidence dereference above.)* |
+| ingest (structured text + raw upload) | in-process, REST (`POST /documents`, `POST /documents/upload`), MCP (`ingest` tool) | 05-01, 05-04, 05-07 | The seam's fourth answering-adjacent operation. Every modality's corpus ingests through it; §18.5's growth rule means a second modality adds no second ingest operation — it is reached by the same `Databasise.ingest()` call regardless of which modality's own opaque port the resolved wiring names. MCP's raw-bytes shape is base64-encoded (an MCP tool argument has no native bytes type), decoded at the boundary into the identical `IngestDocument` REST deserializes into. |
+| job status (poll) | in-process, REST (`GET /jobs/{job_id}`), MCP (`status` tool, `scope="job"`) | 05-01, 05-04, 05-07 | A distinct read shape from ingest itself — polling an already-returned job handle cannot be expressed as a selector over a call that has already returned, the same reasoning Phase 4's table already applies to streaming. |
+| delete document | in-process, REST (`DELETE /documents/{document_id}`), MCP (`delete` tool) | 05-03, 05-07 | §19.6 requires delete be a separate port from ingest (different declared effect, `mutates_store` vs `writes_artifact`) — and separately, a mutation is not an answering variant a selector could express. |
+| health | in-process, REST (`GET /health`), MCP (`status` tool, `scope="health"`) | 05-04, 05-07 | A liveness probe over the machine's own stores plus the foreign engine, not a modality-scoped answer; no selector expresses "is the machine up." |
+| corpus status (paginated) | in-process, REST (`GET /corpus`), MCP (`status` tool, `scope="corpus"`) | 05-04, 05-07 | A bounded, paginated read over the whole corpus's document list — API-06's own bounded/paginated-by-construction requirement, not a variant of any answering operation. |
+| document counts | in-process, REST (`GET /corpus/counts`), MCP (`status` tool, `scope="counts"`) | 05-04, 05-07 | A fixed-size aggregate read, distinct from the paginated document list above (no `page`/`offset` parameter exists because there is nothing to page through). |
 
 ### Operations deliberately absent
 
@@ -105,12 +105,13 @@ than a silent disappearance. Every remaining row's reason is unchanged from Phas
 
 | operation | decision | reason |
 |---|---|---|
-| MCP transport (API-07) | OPT-OUT | Unchanged from Phase 4's record — still a later plan's (05-07's) own deliverable, out of this phase's scope. |
+| MCP transport (API-07) | **DISCHARGED** | Was `OPT-OUT` in Phase 4's table ("still a later plan's (05-07's) own deliverable, out of this phase's scope"). Discharged by this plan — five intention-level tools (`databasise/mcp/`) over the identical `Databasise` engine object REST already wraps; see the operation rows above for which tool reaches which operation. |
+| `compare` (a sixth MCP tool for API-08's comparison operation) | OPT-OUT | API-08 is scheduled to Phase 6 and exists behind no transport today — a `compare` tool with nothing behind it would be a stub, not a capability, breaking ROADMAP criterion 5's "same capabilities as REST" in the *other* direction. Adding it once the operation exists is legal growth under §18.5 (a genuinely new operation earns a tool), not a per-modality tool. |
 | ingest | **DISCHARGED** | Was `OPT-OUT` in Phase 4's table ("the seam is locked before ingest ships precisely so the ingest endpoints land against a frozen envelope"). Discharged by 05-01/05-04 — see the operation row above. The envelope itself was not reopened to discharge it. |
 | delete / document status | **DISCHARGED** | Was `OPT-OUT` alongside ingest in Phase 4's table. Discharged by 05-03/05-04 — see the delete/health/corpus-status/document-counts rows above. |
 | promote / rollback | OPT-OUT | Unchanged from Phase 4's record — still Phase 7's own deliverable. |
 | comparison-rig operations | OPT-OUT | Unchanged from Phase 4's record — the rig remains a peer client of this seam (§18.3), not an operation on it. |
-| a per-modality tool of any kind | **FORBIDDEN** | Unchanged from Phase 4's record — §18.5's invariance rule; not an opt-out a later phase may revisit. |
+| a per-modality tool of any kind | **FORBIDDEN** | Unchanged from Phase 4's record — §18.5's invariance rule; not an opt-out a later phase may revisit. Enforced by `databasise/tests/mcp/test_tool_growth_invariant.py`'s growth test (05-07). |
 
 ### Authentication and transport hardening
 

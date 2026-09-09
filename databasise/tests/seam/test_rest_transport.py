@@ -56,6 +56,7 @@ from databasise.seam.refusals import (
 from databasise.seam.rest import create_app
 from databasise.seam.tokens import UnbudgetableParticipantError
 from databasise.seam.trace_store import UnknownTraceReferenceError
+from databasise.tests._ast_helpers import called_names
 from fastapi.testclient import TestClient
 
 _STUB_COMPLETION = "This is a stub completion for the REST transport's tracer test."
@@ -142,29 +143,18 @@ def test_databasise_and_databasise_seam_are_importable_with_no_web_framework_pre
                 )
 
 
-def _called_names(source: str) -> set[str]:
-    """Every function/method name a module's own source directly *calls* — never names merely
-    referenced as a type annotation or imported for re-export (annotations/imports produce no
-    `ast.Call` node)."""
-    names: set[str] = set()
-    for node in ast.walk(ast.parse(source)):
-        if isinstance(node, ast.Call):
-            func = node.func
-            if isinstance(func, ast.Name):
-                names.add(func.id)
-            elif isinstance(func, ast.Attribute):
-                names.add(func.attr)
-    return names
-
-
 def test_rest_module_calls_no_selector_resolution_redaction_or_envelope_assembly_function():
     """D-17's structural half: `rest.py` may hold `Selector`/`ResponseEnvelope` as type
     annotations (it must, to deserialize/serialize) but must never itself *call* the functions
     that resolve a selector, redact a run record, or assemble an envelope — those calls happen
     exactly once, inside `databasise.seam.engine`. The forbidden name set is read off the
     producing modules' own `__all__`, never a hand-restated list, so a rename there cannot make
-    this test silently stop checking anything."""
-    called = _called_names(inspect.getsource(rest_module))
+    this test silently stop checking anything.
+
+    ``called_names`` is imported from ``databasise.tests._ast_helpers`` (05-07-PLAN.md Task 2,
+    action D) — the same function object ``test_tool_growth_invariant.py`` imports for the
+    identical proof over ``databasise/mcp/``, never a second, independently maintained copy."""
+    called = called_names(inspect.getsource(rest_module))
 
     forbidden = {"ResponseEnvelope"}
     forbidden.update(name for name in selectors_module.__all__ if name != "Selector")
