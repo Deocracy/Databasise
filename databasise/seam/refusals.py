@@ -154,6 +154,28 @@ class PageSizeExceededError(SeamRefusalError):
         )
 
 
+class MalformedBase64PayloadError(SeamRefusalError):
+    """Raised by ``databasise.mcp.tools.IngestToolArgs.to_ingest_document()`` when ``field`` is
+    not decodable in its declared base64 encoding — ``binascii.Error`` never escapes the tool body
+    unnamed. ``field`` names the caller's own input slot only, per this module's own house style;
+    it never carries the rejected payload's content or value, since a rejected payload may be
+    arbitrarily large or hostile. Unlike ``PageSizeExceededError``/``AmbiguousIngestPayloadError``,
+    this refusal is raised directly rather than inside a pydantic validator, so its own exception
+    object is never lost to a wrapped ``pydantic.ValidationError`` — the class name is therefore
+    not embedded in the message text (that convention exists only for the validator-raised pair).
+    Lives in the seam rather than in the MCP transport for two reasons: the seam owns the refusal
+    vocabulary both transports map generically (the same relationship ``rest.py``'s own
+    ``_checked_page`` already has with ``PageSizeExceededError``), and a refusal defined inside
+    ``databasise/mcp/`` would only be discovered by ``test_rest_transport.py``'s transitive
+    ``SeamRefusalError`` subclass walk in runs where the ``mcp`` extra happens to be installed,
+    making that parametrized proof depend on which extras were active.
+    """
+
+    def __init__(self, *, field: str):
+        self.field = field
+        super().__init__(f"field {field!r} is not decodable in its declared base64 encoding")
+
+
 class ForeignEngineRefusalError(SeamRefusalError):
     """The seam-facing wrapper for a foreign-engine subprocess failure
     (``databasise.foreign.CorpusOpSubprocessError``/``CorpusOpTimeoutError``) — so
@@ -180,5 +202,6 @@ __all__ = [
     "UnknownDocumentError",
     "UnknownJobError",
     "PageSizeExceededError",
+    "MalformedBase64PayloadError",
     "ForeignEngineRefusalError",
 ]

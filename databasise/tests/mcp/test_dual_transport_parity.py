@@ -53,7 +53,7 @@ from databasise.clients.base import ChatResult, EmbeddingResult
 from databasise.mcp import TOOL_NAMES, create_server
 from databasise.mcp._sdk import import_sdk
 from databasise.runner.trace import TokenAccounting
-from databasise.seam.corpus import IngestDocument
+from databasise.seam.corpus import MAX_PAGE_SIZE, IngestDocument
 from databasise.seam.engine import Databasise
 from databasise.seam.query import QueryObject
 from databasise.seam.refusals import EmptyQueryObjectError
@@ -175,6 +175,37 @@ async def test_ingest_tool_accepts_structured_text_and_base64_raw_shapes(tmp_pat
     assert raw_job["enqueued"] == 1
 
 
+async def test_a_malformed_raw_base64_refuses_by_name_rather_than_crashing_the_tool(tmp_path):
+    """G-05-2 / CR-01b reproduction: a malformed ``raw_base64`` argument must refuse by name
+    through the shared mapper, never crash the tool as the SDK's generic ``UnexpectedToolError``.
+
+    Parity note: REST has no base64 ingest shape at all (its raw path is a multipart upload), so
+    this refusal has no REST counterpart to compare against. The parity claim proved here is the
+    one ROADMAP criterion 5 actually makes — the MCP transport refuses cleanly by name where it
+    previously crashed — not that two transports return an identical body for an argument only one
+    of them accepts.
+    """
+    server = create_server(store_root=tmp_path, workspace="mcp-malformed-base64", registry=_make_registry())
+
+    with pytest.raises(ToolError) as exc_info:
+        await server.call_tool(
+            "ingest", {"args": {"raw_base64": "not-valid-base64!!!", "file_name": "x.txt"}}
+        )
+    detail = _tool_error_detail(exc_info.value)
+    assert detail["refusal_type"] == "MalformedBase64PayloadError"
+    assert detail["field"] == "raw_base64"
+
+    # The well-formed round trip still works — proves the refusal is about malformedness, not
+    # about the raw shape being broken outright.
+    well_formed_job = _tool_json(
+        await server.call_tool(
+            "ingest",
+            {"args": {"raw_base64": base64.b64encode(b"well formed bytes").decode("ascii")}},
+        )
+    )
+    assert well_formed_job["job_id"]
+
+
 async def test_status_tool_scope_requirements_and_dispatch(tmp_path, monkeypatch):
     server = create_server(store_root=tmp_path, workspace="mcp-status-scopes")
     _patch_status_and_health(monkeypatch, documents=[], counts={"processed": 1})
@@ -188,6 +219,68 @@ async def test_status_tool_scope_requirements_and_dispatch(tmp_path, monkeypatch
 
     counts = _tool_json(await server.call_tool("status", {"args": {"scope": "counts"}}))
     assert counts["by_status"] == {"processed": 1}
+
+
+async def test_a_page_cap_violation_refuses_by_name_over_mcp_exactly_as_it_does_over_rest(tmp_path):
+    """G-05-2 / CR-01a reproduction: a page-cap violation must refuse by the same named refusal
+    over MCP that REST already returns for the identical request, never the SDK's generic
+    ``UnexpectedToolError``. Compares the two transports' own values against each other rather than
+    against a hardcoded literal, so this proves parity rather than restating two independent
+    expectations."""
+    workspace = "mcp-page-cap"
+    server = create_server(store_root=tmp_path, workspace=workspace)
+    rest_client = TestClient(create_app(store_root=tmp_path, workspace=workspace))
+
+    with pytest.raises(ToolError) as exc_info:
+        await server.call_tool("status", {"args": {"scope": "corpus", "limit": 999999}})
+    mcp_detail = _tool_error_detail(exc_info.value)
+    assert mcp_detail["refusal_type"] == "PageSizeExceededError"
+
+    rest_response = rest_client.get("/corpus", params={"limit": 999999})
+    assert rest_response.status_code == 422
+    rest_detail = rest_response.json()
+    assert rest_detail["refusal_type"] == "PageSizeExceededError"
+
+    assert mcp_detail["requested"] == rest_detail["requested"] == 999999
+    assert mcp_detail["limit"] == rest_detail["limit"]
+
+    # scope="job" refuses identically — the pre-check runs before the job is ever looked up, so
+    # an arbitrary/nonexistent job_id never reaches the driver.
+    with pytest.raises(ToolError) as job_exc_info:
+        await server.call_tool(
+            "status", {"args": {"scope": "job", "job_id": "arbitrary-job-id", "limit": 999999}}
+        )
+    assert _tool_error_detail(job_exc_info.value)["refusal_type"] == "PageSizeExceededError"
+
+
+async def test_the_page_cap_boundary_separates_rather_than_clamps_over_both_transports(
+    tmp_path, monkeypatch
+):
+    """API-07's adjacency edge, resolved explicitly: a call at exactly ``MAX_PAGE_SIZE`` succeeds
+    over both transports, and a call at ``MAX_PAGE_SIZE + 1`` is refused by name over both — the
+    cap is a boundary that separates, never one that merges into a silent clamp."""
+    workspace = "mcp-page-cap-boundary"
+    _patch_status_and_health(monkeypatch, documents=[], counts={"processed": 1})
+    server = create_server(store_root=tmp_path, workspace=workspace)
+    rest_client = TestClient(create_app(store_root=tmp_path, workspace=workspace))
+
+    at_cap = _tool_json(
+        await server.call_tool("status", {"args": {"scope": "corpus", "limit": MAX_PAGE_SIZE}})
+    )
+    assert at_cap["counts"] == {"processed": 1}
+
+    rest_at_cap = rest_client.get("/corpus", params={"limit": MAX_PAGE_SIZE})
+    assert rest_at_cap.status_code == 200
+
+    with pytest.raises(ToolError) as exc_info:
+        await server.call_tool(
+            "status", {"args": {"scope": "corpus", "limit": MAX_PAGE_SIZE + 1}}
+        )
+    assert _tool_error_detail(exc_info.value)["refusal_type"] == "PageSizeExceededError"
+
+    rest_over_cap = rest_client.get("/corpus", params={"limit": MAX_PAGE_SIZE + 1})
+    assert rest_over_cap.status_code == 422
+    assert rest_over_cap.json()["refusal_type"] == "PageSizeExceededError"
 
 
 async def test_resolve_tool_evidence_scope_returns_what_the_in_process_operation_returns(
