@@ -1,0 +1,1448 @@
+{
+  "corpus_hash": "405ee4b9deb1bf5b8e82839b61b26213eb5b379a01d8c4a5bf9180afe9eb0f63",
+  "document_count": 291,
+  "documents": {
+    "1995_96_manchester_united_f_c_season": {
+      "sha256": "15c76f84f285feb34b12bb5cf6ddba313b0f3486278e26ccadbb631a9876775a",
+      "title": "1995\u201396 Manchester United F.C. season"
+    },
+    "1995_96_vcu_rams_men_s_basketball_team": {
+      "sha256": "48e12e4eb22a7ec7486596fbda6dc351d78e3942bb7a40b47eb8b7ca7ffc2424",
+      "title": "1995\u201396 VCU Rams men's basketball team"
+    },
+    "1996_fa_charity_shield": {
+      "sha256": "0b08765cf42248794b9a53dbbf84658862b73a8b693ca35d88e720436c6544c8",
+      "title": "1996 FA Charity Shield"
+    },
+    "2004_05_vcu_rams_men_s_basketball_team": {
+      "sha256": "c88aca65da981211dee7da44394ca178473a481e6a4e1a4942f5d295e8d38611",
+      "title": "2004\u201305 VCU Rams men's basketball team"
+    },
+    "2006_07_qmjhl_season": {
+      "sha256": "33534f782d6c921cf8c3d5dd4d6c08e86350f9379b79f7f3823d40bdaa8fc094",
+      "title": "2006\u201307 QMJHL season"
+    },
+    "2007_memorial_cup": {
+      "sha256": "18302018c775f4f7e76cc945af57ead98312103149ce61f0dfc7f0ad8ea7fa1c",
+      "title": "2007 Memorial Cup"
+    },
+    "2009_10_vcu_rams_men_s_basketball_team": {
+      "sha256": "d07cbf378c6b23583829ed86fa8c2572ee4bba63231a0967c92189fc09b3742f",
+      "title": "2009\u201310 VCU Rams men's basketball team"
+    },
+    "2009_singapore_grand_prix": {
+      "sha256": "8f5f324088f0cad10d7e0609956389213ebf814b5dd212e7c29c3025d17673bf",
+      "title": "2009 Singapore Grand Prix"
+    },
+    "2010_11_vcu_rams_men_s_basketball_team": {
+      "sha256": "bfe7dd54275f6c02c3794d0286e2e89ffde0f5a8d1ca9edf39185e330f5deee9",
+      "title": "2010\u201311 VCU Rams men's basketball team"
+    },
+    "2010_11_vermont_catamounts_men_s_basketball_team": {
+      "sha256": "92797e82596ba0b387eca69dcca847d0ae2090f752d9f8f5cd4ae174d10a2a38",
+      "title": "2010\u201311 Vermont Catamounts men's basketball team"
+    },
+    "2011_12_qmjhl_season": {
+      "sha256": "33b064db4388398033ed286be9822f2724a8f971ae3672633accbb6c780d890f",
+      "title": "2011\u201312 QMJHL season"
+    },
+    "2011_12_vcu_rams_men_s_basketball_team": {
+      "sha256": "cdb5b0ecfa14091ec646e159bcd85b5afb0e3051329a1e9529ed31a64fd0a091",
+      "title": "2011\u201312 VCU Rams men's basketball team"
+    },
+    "2011_12_vermont_catamounts_men_s_basketball_team": {
+      "sha256": "ff0e8c826bedc58fb8050900bc1ac90cd4efbb161fb04a08ecf30bf0107dda01",
+      "title": "2011\u201312 Vermont Catamounts men's basketball team"
+    },
+    "2012_13_vcu_rams_men_s_basketball_team": {
+      "sha256": "aa75966e9e720a248e6cd6d1c361ee10944b3cf71b6fe28c02e8ef1f85ab1ef3",
+      "title": "2012\u201313 VCU Rams men's basketball team"
+    },
+    "2012_13_vermont_catamounts_men_s_basketball_team": {
+      "sha256": "efb93d430821b2b857bdcf178a5f3447faa2695f4434515123c34e433a266c19",
+      "title": "2012\u201313 Vermont Catamounts men's basketball team"
+    },
+    "2013_14_vcu_rams_men_s_basketball_team": {
+      "sha256": "4ae8c2e66ab0bf19b55eebae1419dd90848a4b943a3c486aa979a4299c1d72e5",
+      "title": "2013\u201314 VCU Rams men's basketball team"
+    },
+    "2013_14_vermont_catamounts_men_s_basketball_team": {
+      "sha256": "8444ce65953e22a0347e968842821806c5e5b64fe99a8cd8fec0e2bea74ccff3",
+      "title": "2013\u201314 Vermont Catamounts men's basketball team"
+    },
+    "2014_15_vcu_rams_men_s_basketball_team": {
+      "sha256": "1aff33ce3faa3a544c128804d5f11c6514d09a4a01c950ae37c9cc021008b9fb",
+      "title": "2014\u201315 VCU Rams men's basketball team"
+    },
+    "2014_bahrain_grand_prix": {
+      "sha256": "404ffc57c0eb15c082db932b544e7cee6056c736ead8c0a56856bf6ca400c365",
+      "title": "2014 Bahrain Grand Prix"
+    },
+    "2014_s_s": {
+      "sha256": "5598441d4eea521baeb2893bcfec573075ab5dbdf7b200047374f0d52265c9bc",
+      "title": "2014 S/S"
+    },
+    "2015_16_vcu_rams_men_s_basketball_team": {
+      "sha256": "019bdbc87488f0445efc722a6cd6feab1bc885d346b3f7987313d8099478949b",
+      "title": "2015\u201316 VCU Rams men's basketball team"
+    },
+    "2015_16_vermont_catamounts_men_s_basketball_team": {
+      "sha256": "4a6ac7ac303dbaaa033807e0d6bdc1a6720ddcd64688aef54d50bf85f1337f34",
+      "title": "2015\u201316 Vermont Catamounts men's basketball team"
+    },
+    "2016_17_vermont_catamounts_men_s_basketball_team": {
+      "sha256": "246e33549ccda10676687518207fe8acf0cb3d805557121ba6b35de687c2c3d7",
+      "title": "2016\u201317 Vermont Catamounts men's basketball team"
+    },
+    "888_7th_avenue": {
+      "sha256": "d7d3d705330b92ee3256aadf48ddbd3633e9fbd76d85485393a34432c8be9a28",
+      "title": "888 7th Avenue"
+    },
+    "a_rather_blustery_day": {
+      "sha256": "f109f26114ee0b0b5f93c4fc5d01f35b86a5d959695643a50d3adb5f9296ce15",
+      "title": "A Rather Blustery Day"
+    },
+    "about_a_boy_film": {
+      "sha256": "d88d1910853e91883045b6e61f5e3ce704ba3b99036b99f181904f94a345a30f",
+      "title": "About a Boy (film)"
+    },
+    "about_a_boy_soundtrack": {
+      "sha256": "5aef7d1ef3fd2f36a13cb52ecea6afc78b80abbd385aba1ac5093821a9c53a00",
+      "title": "About a Boy (soundtrack)"
+    },
+    "adriana_trigiani": {
+      "sha256": "ae48639a2253939530229d3e72c4d5e56e8bede9f7c6625b2ad65853bb80e2be",
+      "title": "Adriana Trigiani"
+    },
+    "alberta_hail_project": {
+      "sha256": "40466ace2f1ae9e358afd97e22672d36a6643690877a5951562fdec720cfe8ef",
+      "title": "Alberta Hail Project"
+    },
+    "alex_ferguson": {
+      "sha256": "76ea1dc593775d802d54ac3b251adfc3049d3ae3339467aff9337a721978196f",
+      "title": "Alex Ferguson"
+    },
+    "all_i_wanna_do_is_make_love_to_you": {
+      "sha256": "7419464d843e770372d492ae36a9b11471602a1e13e55fffe2f4773a4261e46a",
+      "title": "All I Wanna Do Is Make Love to You"
+    },
+    "amanda_lepore": {
+      "sha256": "f33fde4b2a6b6a6133be15b02c8a2eed9758f684183992f589f9f0876d008c75",
+      "title": "Amanda Lepore"
+    },
+    "amaruk_kayshapanta": {
+      "sha256": "266a8d862408f437ad9d6f75bb97e41b3336ec5f03908e02711b4c13b34d6910",
+      "title": "Amaruk Kayshapanta"
+    },
+    "ambroise_thomas": {
+      "sha256": "424fbe7e3183cff475e83a7b307c1a4bb6846e5a8471988b81e45431317d984e",
+      "title": "Ambroise Thomas"
+    },
+    "america_east_conference": {
+      "sha256": "89273281fd171a7b4cf7733ac76e11bfb787c9d3e7c87539574f68d81996fa10",
+      "title": "America East Conference"
+    },
+    "amherst_massachusetts": {
+      "sha256": "97947a3d1d7ded23d2ae242a42a243c54189c566cceac8020c0b4467928495b7",
+      "title": "Amherst, Massachusetts"
+    },
+    "andre_norton_award": {
+      "sha256": "87cc6b781cf85207325be3048e3784e48d969455b029a944a3a127cf2862462e",
+      "title": "Andre Norton Award"
+    },
+    "androscoggin_bank_colis_e": {
+      "sha256": "03869ecdc0621abdada3375ac7e557dba64f8f43469d686cb78285760e18332a",
+      "title": "Androscoggin Bank Colis\u00e9e"
+    },
+    "animorphs": {
+      "sha256": "3f3b012814f5f55dd71d73e0cbb8cb20d757c2d33a3340cb3f3b9597023dc2df",
+      "title": "Animorphs"
+    },
+    "annie_morton": {
+      "sha256": "d0c7924b091420940ef58debcd471607bb0b51f169a6598cd6df3fe128418f13",
+      "title": "Annie Morton"
+    },
+    "apple_remote": {
+      "sha256": "c377dcb7e4e5537c5adb8f9fd981d6911617c2f8a60fc2152578fdbf98696f8e",
+      "title": "Apple Remote"
+    },
+    "apple_remote_desktop": {
+      "sha256": "4c22f718a1db5fab4a9fe009e279b0481816811317982cd789c6dec377bcd227",
+      "title": "Apple Remote Desktop"
+    },
+    "apple_watch": {
+      "sha256": "5ca0bda34d30a7994747d767d0dfa6c20c72fe0b70186b40cc3204fa372b8d74",
+      "title": "Apple Watch"
+    },
+    "arena_of_khazan": {
+      "sha256": "50987b483291a374c60f1a73ebeb482e9b9010e31dc2e7daa60ccf67b434cdd5",
+      "title": "Arena of Khazan"
+    },
+    "armand_castelmary": {
+      "sha256": "38711b9c26796b6dc55f2ab2d527ef035001a05882997d7b2f78d7099e414432",
+      "title": "Armand Castelmary"
+    },
+    "arnold_schwarzenegger_filmography": {
+      "sha256": "ea104e9c8f19636994792a5a0679ef6c635219577cae24b6ad454110d7d2ceb4",
+      "title": "Arnold Schwarzenegger filmography"
+    },
+    "asgard_yacht": {
+      "sha256": "f08b69f77ea0e17ca495181b7c8a781848ac9dc9f326fd03cfe8222db8cda082",
+      "title": "Asgard (yacht)"
+    },
+    "atsushi_sakurai": {
+      "sha256": "90463a063223000159ce23a97cc0f8ddebf4b7bf2b7a927b569971fa78ca3f85",
+      "title": "Atsushi Sakurai"
+    },
+    "badly_drawn_boy": {
+      "sha256": "69810cbaf541d4aa307f9e3ec9e4cabe4e6a5958b602a7eb3ea382e9c350616e",
+      "title": "Badly Drawn Boy"
+    },
+    "badly_drawn_boy_discography": {
+      "sha256": "bcac14c8d958cc6cdf902dd32a5fbb9db9b92aeababcf412163bebd59203a4f6",
+      "title": "Badly Drawn Boy discography"
+    },
+    "be_the_one_poison_song": {
+      "sha256": "686b4efa6403335f404da2bc081f1fbe38e3db20f87cf23a5b183d7bcd21fe6b",
+      "title": "Be the One (Poison song)"
+    },
+    "bernhard_b_tel": {
+      "sha256": "f41eb599e0591b9e4e1bf7ab26fec0f33a4b86794f096a4d84ace8b7bb1a6815",
+      "title": "Bernhard B\u00f6tel"
+    },
+    "big_stone_gap_film": {
+      "sha256": "a601b48fb36cd4eaee4ae21165acb13756218a977957cb54d799dc22d9c117b9",
+      "title": "Big Stone Gap (film)"
+    },
+    "billings_bulls": {
+      "sha256": "7054f2e942ec3a9ae6802b1c1c9836cac6288c09f9a13c24ed3fa720e8874ddf",
+      "title": "Billings Bulls"
+    },
+    "boots_album": {
+      "sha256": "fefe529dfc3b79f02434e5c7bb1e6dd1f0555dacc162601bd021ab6716287975",
+      "title": "Boots (album)"
+    },
+    "boots_ep": {
+      "sha256": "630af45fb022dc5368c6a518b7a7dac194e9d91b650723da2d39be2502513866",
+      "title": "Boots (EP)"
+    },
+    "bradford_p_campbell": {
+      "sha256": "8f0cf2c51f3855c989e4735d44513933ce32fd8cbb09f7920823bfadefb8e839",
+      "title": "Bradford P. Campbell"
+    },
+    "brown_county_kansas": {
+      "sha256": "72b23ac8e3eab857667e501b985819867624ae5eca200491401a37a873480d27",
+      "title": "Brown County, Kansas"
+    },
+    "brown_state_fishing_lake": {
+      "sha256": "a0c38d968d1934b679973a00379d13bb6c268f3b4df11bae31022e795d4445c9",
+      "title": "Brown State Fishing Lake"
+    },
+    "bts_discography": {
+      "sha256": "1b9f58ceb7bdd1c62d83eebb328103e714265e6a98eb375fa552e5b00a7679fd",
+      "title": "BTS discography"
+    },
+    "buck_tick": {
+      "sha256": "ef3fddffade8b231c2762ea2109f9c134f73d7180b0657fd7ddae62cc4dbbdbd",
+      "title": "Buck-Tick"
+    },
+    "carl_b_stokes_united_states_courthouse": {
+      "sha256": "334aafdec56ae9d3c2d63635d050d3ebe1bf0a807b4d11e972706380c14b65fa",
+      "title": "Carl B. Stokes United States Courthouse"
+    },
+    "case_gym": {
+      "sha256": "33c6c63815fe0a64286ad0d6464f5aa44091ad7e134e159d7da2ffaf3b6e41b4",
+      "title": "Case Gym"
+    },
+    "catharina_felser": {
+      "sha256": "24987f190d4f90ed7547e07f144bbccbf56b9a4b7cda68f06418d8215c9c23c1",
+      "title": "Catharina Felser"
+    },
+    "cho_kyuhyun": {
+      "sha256": "72cd59163db51a190588b4b447859de7b4cbd937abc387f219bf02d583684f18",
+      "title": "Cho Kyuhyun"
+    },
+    "chuck_berry_on_stage": {
+      "sha256": "d5b45d074c57acb6648ce7cb5d09bee2f327fabac2662251f75f16ac33b8f424",
+      "title": "Chuck Berry on Stage"
+    },
+    "city_of_angels_film": {
+      "sha256": "446eef235ad2d955d25dad9102da132d45dba15650818d8f081257690faf2905",
+      "title": "City of Angels (film)"
+    },
+    "clinton_minnesota": {
+      "sha256": "d79e5e25c60331da055e6119c9b12a1c92dce7cefc6a196b55c9f1ba54aaad64",
+      "title": "Clinton, Minnesota"
+    },
+    "commanda_lake": {
+      "sha256": "744c7d73b9517b49b85aca3c519088348ec603388dc0ee11ce47bde5255baf25",
+      "title": "Commanda Lake"
+    },
+    "crank_caverns": {
+      "sha256": "55806a1928eeada9620bf8968172e520cdbcbe3610b467e507d199260fdae7b0",
+      "title": "Crank Caverns"
+    },
+    "criss_angel": {
+      "sha256": "5e41d83fe5f48f8facd8bb592c584ddf34261bd8b6b5519cd3c8c84848c30ea4",
+      "title": "Criss Angel"
+    },
+    "david_beckham_academy": {
+      "sha256": "f716f445d075fc01154e6d799a7781294b17b6ffd0ea909106231ba83f646796",
+      "title": "David Beckham Academy"
+    },
+    "david_beckham_s_soccer_usa": {
+      "sha256": "dc84e567a228a6ec74398fb68a08ed9df6c881b8e51eed1f2184e2eabf114c81",
+      "title": "David Beckham's Soccer USA"
+    },
+    "david_weissman": {
+      "sha256": "ac6122c9fba8cc4649d9870f7889fe31b37751893c5d670fdd3a7d5779eb8632",
+      "title": "David Weissman"
+    },
+    "deadfall_1993_film": {
+      "sha256": "591f484293668a6d4cccb7a2c4916b556064c9a26f56fd4ccd3aed997dbbbeb3",
+      "title": "Deadfall (1993 film)"
+    },
+    "death_of_abdul_wali": {
+      "sha256": "f96f717e6e6fa0c053f5d17b661ca51d220028fe26d6f48eaad51262d8eeefdb",
+      "title": "Death of Abdul Wali"
+    },
+    "dewey_beard": {
+      "sha256": "aa1de92425920b9d2622f7042a23d51dcf6667acf161ddce296e2b09579196fd",
+      "title": "Dewey Beard"
+    },
+    "dictyosperma": {
+      "sha256": "faf6dc31ba51efac70d6c151e23d0f06dd76c36e6ec0f855408c3056a6f7861a",
+      "title": "Dictyosperma"
+    },
+    "djama_el_kebir": {
+      "sha256": "31d898a1fb9323e232dbb48e7b1828eea5d6c7fd28cf63057b8023b1f71569ef",
+      "title": "Djama\u00e2 el Kebir"
+    },
+    "douglas_j_bennet": {
+      "sha256": "ea458c099db014aa54ff5eb47c20fb08e9455686e0158d2d81e9dfedbdb14333",
+      "title": "Douglas J. Bennet"
+    },
+    "downtown_kansas_city": {
+      "sha256": "676eaa14fe24d4fb4f0b72a92b199d7c57ad1d45acc94de9bbab7be090fa0add",
+      "title": "Downtown Kansas City"
+    },
+    "drive_angry": {
+      "sha256": "d654bd1567afddb9e24d7b3997354312691b818478108d91175d92158b145262",
+      "title": "Drive Angry"
+    },
+    "dwyer_arena": {
+      "sha256": "4a08951bbe226198213b7f40ae58713a081d2495541ed647e6d7b46fb105760f",
+      "title": "Dwyer Arena"
+    },
+    "eagle_mountain_railroad": {
+      "sha256": "1454026e24c6927ae0adaf4f714063a0ed061222e4c1184f4260c970cc323aee",
+      "title": "Eagle Mountain Railroad"
+    },
+    "edgar_kaiser_jr": {
+      "sha256": "98ca4462e24670a2aee7f9d87e9eb187173f35d4d26dda0f5c185b8cb3544665",
+      "title": "Edgar Kaiser Jr."
+    },
+    "edgar_kaiser_sr": {
+      "sha256": "ee2b31ac3e88d715dfecbb458a15fa12d5c0449f72f064d1ae7a0d43626be6d0",
+      "title": "Edgar Kaiser Sr."
+    },
+    "eduardo_troconis": {
+      "sha256": "dba68f222aa493f07b47b288bb4fe514632b5f67b7620fa17fce4f14dc7239e8",
+      "title": "Eduardo Troconis"
+    },
+    "edward_d_martin": {
+      "sha256": "79594d4477072b6a4f41b244b8780781eee0e4dc315e33b6e51afecc2f27acb2",
+      "title": "Edward D. Martin"
+    },
+    "eenasul_fateh": {
+      "sha256": "94a41b194417a7c930b83d5ff55566f196b59f98b7b180780e50eb268c72e3a2",
+      "title": "Eenasul Fateh"
+    },
+    "eldee": {
+      "sha256": "bb03fd396d1b148687c4478fe8dad95e8657e24dc91c210bb2d02985b75d75d5",
+      "title": "ELDee"
+    },
+    "end_of_days_film": {
+      "sha256": "c239d78d55c64db991849dae6037909ff35d8a056d3e412e4a0ce79d79f8329c",
+      "title": "End of Days (film)"
+    },
+    "ernest_mangnall": {
+      "sha256": "5c6203e3318963d7c11712ba45062d5652a1199dcba7b71f953e44fc0aebf59a",
+      "title": "Ernest Mangnall"
+    },
+    "erskine_barton_childers": {
+      "sha256": "a8833d781fe57d572c81b64e61c87de6dfeabb1158248502993699feea28bd7f",
+      "title": "Erskine Barton Childers"
+    },
+    "esma_sultan": {
+      "sha256": "80bc625cdb1b41e8283df6fa558859dcf2fadfa0e1c9980cd65ff3dfb5b23717",
+      "title": "Esma Sultan"
+    },
+    "esma_sultan_daughter_of_abd_laziz": {
+      "sha256": "3175d15470d946f49a66bfdfbd17ee3ea7ddfab6a68c14ce0709d14987b490b5",
+      "title": "Esma Sultan (daughter of Abd\u00fclaziz)"
+    },
+    "esma_sultan_daughter_of_abdul_hamid_i": {
+      "sha256": "6b8381d0ee7d83ae55043a8de582c3ecbe7e4c4bea9de1718fea23044f5163b2",
+      "title": "Esma Sultan (daughter of Abdul Hamid I)"
+    },
+    "esma_sultan_daughter_of_ahmed_iii": {
+      "sha256": "3e46e42244e9eefd229fc9e87665788f0aba7bb5ed6edc0e1f28a8ecd683b5aa",
+      "title": "Esma Sultan (daughter of Ahmed III)"
+    },
+    "esma_sultan_mansion": {
+      "sha256": "477ff79a426ee0525afc734e63308fb8d96f7efe79aa3f138891e148a44acb22",
+      "title": "Esma Sultan Mansion"
+    },
+    "etiquette_amp_espionage": {
+      "sha256": "05055eb5517e3c81a4970e34437064cec8ff022d94126daa09282f7917a6bb60",
+      "title": "Etiquette &amp; Espionage"
+    },
+    "faction_punk": {
+      "sha256": "48568b4425ee63c3a8f9741962bbc52a0887754e776cb69fff765e8e6def80e4",
+      "title": "Faction Punk"
+    },
+    "ferdinando_provesi": {
+      "sha256": "46ae9207190580601f6ae223bdcf8d9e59157d33b7f25b10f60532657d08bb46",
+      "title": "Ferdinando Provesi"
+    },
+    "fishing_lake": {
+      "sha256": "9a78ca51b03d5aaaf17bc691d11730bab32ac06a82052002203bfaff1e84b939",
+      "title": "Fishing Lake"
+    },
+    "for_against": {
+      "sha256": "34512150a5086cba494271eb4a3920c70eb4f38a34c362baa77383c4ec7f5c85",
+      "title": "For Against"
+    },
+    "force_india_vjm04": {
+      "sha256": "735ee714f67aa1c80751c4296c307c3f990a10b17a8033553c83cabe270539b0",
+      "title": "Force India VJM04"
+    },
+    "formula_one_drivers_from_mexico": {
+      "sha256": "eac784421e7a824f93970818c2bd741a6fef91d64c32d8c7d96a045579d838c4",
+      "title": "Formula One drivers from Mexico"
+    },
+    "front_row_software": {
+      "sha256": "31520f8200aaefe5c477775d0f7ae5300bb63142a4cf29aa47b49ce5cd362a14",
+      "title": "Front Row (software)"
+    },
+    "get_christie_love": {
+      "sha256": "8b00f8df535c9f4cd3a12ecf7ccb69a4e32ed5d0b3f7c6a96d9f766d5830f9c3",
+      "title": "Get Christie Love!"
+    },
+    "gevheri_kad_n": {
+      "sha256": "0f2912ee3e450f46239af39d9df608be215cff562cc8cb19aec069328a978839",
+      "title": "Gevheri Kad\u0131n"
+    },
+    "giuseppe_verdi": {
+      "sha256": "e657ffe08453e9b0654d362424a470b7d1ab3989270be9171ca051b75559e50c",
+      "title": "Giuseppe Verdi"
+    },
+    "giuseppe_verdi_film": {
+      "sha256": "99c95ebf84b3ed6755bb84d4cd8c268563b7ad7da09831e7ee19a60202e24101",
+      "title": "Giuseppe Verdi (film)"
+    },
+    "go_tautai": {
+      "sha256": "53e3d3593a833a68d7ef59aca4d28ceecefb38bd8d2309aef6798e4d7cb6d661",
+      "title": "Go\u0161tautai"
+    },
+    "gone_in_60_seconds_2000_film": {
+      "sha256": "effef65658da4318e1b7ab1596d5091dede10d05d11f2403c37dd39b5600f435",
+      "title": "Gone in 60 Seconds (2000 film)"
+    },
+    "great_eastern_conventions": {
+      "sha256": "8ffc8e5251c701cc0c45d9611967fee69dc66bd00b0f7921c44b76093837baae",
+      "title": "Great Eastern Conventions"
+    },
+    "greatest_hits_dan_fogelberg_album": {
+      "sha256": "bc0b770b69538bbe5da4fe3014c459ca0cf9e975042b061f9ee5951c2da7d863",
+      "title": "Greatest Hits (Dan Fogelberg album)"
+    },
+    "gretchen_osgood_warren": {
+      "sha256": "45952a4e3c745c4b2692e208dbf48271fde1a0a20ba7a392c26d55e905d1f198",
+      "title": "Gretchen Osgood Warren"
+    },
+    "gumbo_pj_morton_album": {
+      "sha256": "238dff397e0979c0d7d52b3675bd4f0bbe8b44432ce5d961222c0b5a5eb406c6",
+      "title": "Gumbo (PJ Morton album)"
+    },
+    "guns_n_roses_discography": {
+      "sha256": "bdc4fb70fddcc6797f589245d51855b4cc4f100fc9ccf16d3dad64c4e56cb303",
+      "title": "Guns N' Roses discography"
+    },
+    "gus_williams_musician": {
+      "sha256": "f76f8267a71dd58cda354af5df6e19f012fddad26d6b754438df28c90f058eca",
+      "title": "Gus Williams (musician)"
+    },
+    "hailstorm_alley": {
+      "sha256": "8972e6752a6ec7dd897482f9d55792b998205c1946c57b99e5662650e631f8a2",
+      "title": "Hailstorm Alley"
+    },
+    "hallelujah_i_m_a_bum_album": {
+      "sha256": "c800814c2353b72a6e6537fcefb0acffb535f1a8646501a1d368e4735839e3d5",
+      "title": "Hallelujah! I'm a Bum (album)"
+    },
+    "hamish_and_andy_s_gap_year": {
+      "sha256": "e82638f94bfed22efc735b34d2047d3411c599a3ba3cfad3f2f155375717910e",
+      "title": "Hamish and Andy's Gap Year"
+    },
+    "hammerjack_s": {
+      "sha256": "ae97209f9fbe76b21e24ac654bf186f0b3eb47336921d0ae6f283c7e0a5f4ffe",
+      "title": "Hammerjack's"
+    },
+    "hayden_musician": {
+      "sha256": "7f5015dbcb8ece1b8f40855aa0a17c913227a84e1eb06185bf9b967e155aadab",
+      "title": "Hayden (musician)"
+    },
+    "heffalumps_and_woozles": {
+      "sha256": "cfc289f965a85ee2ab985bfad1aef9ff7734bbe9a721c6c8691273bd54a8736a",
+      "title": "Heffalumps and Woozles"
+    },
+    "henry_j_kaiser": {
+      "sha256": "162770276b0db7eb3ecc214144889d8c5771b36c93e8892517962a570b30d1e2",
+      "title": "Henry J. Kaiser"
+    },
+    "henry_roth": {
+      "sha256": "b5f6555d3f4dc842fd6057c2eb80b50b64b6855c90f919cd6f857d8a8022931d",
+      "title": "Henry Roth"
+    },
+    "higgins_lake": {
+      "sha256": "4a3b2773454dc2d8901cac70b6cc80e60c1ba78e66cef0c20410348b8be81354",
+      "title": "Higgins Lake"
+    },
+    "higgins_lake_michigan": {
+      "sha256": "a164c0c7ce48e3238ba57634a7a4e61a0e73ce6285e79b9a1332b9ccdeb5dd3a",
+      "title": "Higgins Lake, Michigan"
+    },
+    "hip_hip_pooh_ray": {
+      "sha256": "c0421af95fbe8dc207b253caad5dc594761e3c7387d60a825472ad61addadba6",
+      "title": "Hip Hip Pooh-Ray!"
+    },
+    "history_band": {
+      "sha256": "2a3ac77c3dc0604f14fe8e381caf3e88ca20edad7905f6993486a800b0eb792e",
+      "title": "History (band)"
+    },
+    "history_of_the_kansas_city_metropolitan_area": {
+      "sha256": "fb1d8b0971e6d294edd14501064d7cdd2462d48c6181e4af6579f5320013b3d9",
+      "title": "History of the Kansas City metropolitan area"
+    },
+    "hounsfield_heights_briar_hill_calgary": {
+      "sha256": "12c67a2d01a8b09276771feaf063778f4debfb4821a3e892ccd66407dc1ed03d",
+      "title": "Hounsfield Heights/Briar Hill, Calgary"
+    },
+    "huernia": {
+      "sha256": "52f117c4f07536b97590f34ceca462d9c39e15d656cd4a92fd12aef3c1c4ebde",
+      "title": "Huernia"
+    },
+    "i_love_ny_2015_film": {
+      "sha256": "5f51c33074af08984fd1c83c418fd74e467d0c480f1b04038cc1cb77fb309745",
+      "title": "I Love NY (2015 film)"
+    },
+    "iffhs_world_s_best_club_coach": {
+      "sha256": "f406167875f27d0e496bf19c4b44dd54ee56231c14505e44f540cd8a28b672a8",
+      "title": "IFFHS World's Best Club Coach"
+    },
+    "iffhs_world_s_best_goalkeeper": {
+      "sha256": "b8d31e7bc6556a5ae4833235b3a9940a1150ede12ef04c0e064eff6c9d0d1645",
+      "title": "IFFHS World's Best Goalkeeper"
+    },
+    "index_magazine": {
+      "sha256": "d18542f7869c13d4184c202aaa5de68fe5f1d8ef769cd08a2eec9396de268dae",
+      "title": "Index Magazine"
+    },
+    "indriati_iskak": {
+      "sha256": "afcbb0d0bde15e17d9dee2bfcc92a506407f5d11495ecee09329b213d79f9463",
+      "title": "Indriati Iskak"
+    },
+    "irish_bulletin": {
+      "sha256": "c5136082eb28cb54a5d002eee0b7fd755f724f8b9696c7e021d9a9e03e02c698",
+      "title": "Irish Bulletin"
+    },
+    "isaak_hassler": {
+      "sha256": "db91414b967cc234a9ec195d1b8b7a2b74479c2b8b22129e8e312366802a6f4f",
+      "title": "Isaak Hassler"
+    },
+    "it_could_happen_to_you_1994_film": {
+      "sha256": "4ba047dd5ad399d52539343b4885255241d0e74d142ff64776b03904faf5adfd",
+      "title": "It Could Happen to You (1994 film)"
+    },
+    "james_p_comer": {
+      "sha256": "472a84093a4dd5e543be7810a76d831aa47c0861ba4df33979b2ed6da873aca6",
+      "title": "James P. Comer"
+    },
+    "jim_cummings": {
+      "sha256": "75c856ba63b83b43459d70cf55c6febe2e1ce79d109085c375501199d9a70e4d",
+      "title": "Jim Cummings"
+    },
+    "jim_shoulders": {
+      "sha256": "ff09ba9141ced7cab58e414af090fbfa531924dc6dda51f3569e54933d288764",
+      "title": "Jim Shoulders"
+    },
+    "john_roach_amp_sons": {
+      "sha256": "02a629d9b18be1c7bc25886fda12c34a0013056adefd1fcb4e904b377ada893a",
+      "title": "John Roach &amp; Sons"
+    },
+    "jon_st_andre": {
+      "sha256": "45d039873003a0dd0c1947ae27afbd86dd6f39d6293d8837d00736916051a182",
+      "title": "Jon St. Andre"
+    },
+    "joshua_parlby": {
+      "sha256": "c3619359c11d17f378e36484c77934c46a6cb47c524814fcd0c6c7b7e6637966",
+      "title": "Joshua Parlby"
+    },
+    "just_another_romantic_wrestling_comedy": {
+      "sha256": "aa35b494a209737e0d30497753df8847828efa0c853962b0a61ac9efb8b07ca5",
+      "title": "Just Another Romantic Wrestling Comedy"
+    },
+    "k_k_h_seyin_pasha": {
+      "sha256": "71f768358b429e995be507ec53545e5e9fc4d18b74a8713d4228d0f91f1376c4",
+      "title": "K\u00fc\u00e7\u00fck H\u00fcseyin Pasha"
+    },
+    "kaiser_shipyards": {
+      "sha256": "abc32ce1b30738594e47fa7c808b3584ed763b85cbae99f024db90a141ee9bb2",
+      "title": "Kaiser Shipyards"
+    },
+    "kaiser_ventures": {
+      "sha256": "af633d67eca16cf686dc37b496ecef5faecee1c0c80128688b033b48fe84f91a",
+      "title": "Kaiser Ventures"
+    },
+    "kansas_city_jazz": {
+      "sha256": "2351ed66c01da7cf8247718f6e9d1acf02e254c14953151ed7d7d7a36157816b",
+      "title": "Kansas City jazz"
+    },
+    "kansas_city_metropolitan_area": {
+      "sha256": "83bfa51b54a928b52bb7a2756fd7de59a035e9211e60c9a2397f40295a17f53d",
+      "title": "Kansas City metropolitan area"
+    },
+    "kansas_city_scout": {
+      "sha256": "0cd6448eb7f93a3b5aed14751f37b202cd0b7b84e3068ab0f4f604ee583cd71e",
+      "title": "Kansas City Scout"
+    },
+    "kansas_song": {
+      "sha256": "00462d0375770a286097caea26d1f58fb9a83f19f46dd77611aad0ba7aa919c4",
+      "title": "Kansas Song"
+    },
+    "kasper_hvidt": {
+      "sha256": "f05db21e9f9b70b42d810fb1546c3e9a74a994fe0560ef09296b6c067739bff1",
+      "title": "Kasper Hvidt"
+    },
+    "kasper_schmeichel": {
+      "sha256": "ca088a8f05299577bbb55e2ac9850c45b57409e96a11bfe58844eb03952db103",
+      "title": "Kasper Schmeichel"
+    },
+    "kate_higgins": {
+      "sha256": "664712c27e9c55d547f5ecfc309b4d6126719b8e02a8cf316d84515fe4c7a0c0",
+      "title": "Kate Higgins"
+    },
+    "ken_st_andre": {
+      "sha256": "b3a9fcf7eaf57438210409764a030a63d658107cd0de80d3844d471f58288e84",
+      "title": "Ken St. Andre"
+    },
+    "kenton_richardson": {
+      "sha256": "73fc09419ae3efb661be373848b88dea397da7eab170ddf7a28817db341be8ef",
+      "title": "Kenton Richardson"
+    },
+    "kingston_morning": {
+      "sha256": "8240e73980479507beaa692656c26e6bbee125aeaf8207f0dc65ccd9878732bc",
+      "title": "Kingston Morning"
+    },
+    "kon_kan": {
+      "sha256": "1e5acef4e558ded4f41f1f08ec1c3247059a0b118e0aa4e805299b86d83fe4db",
+      "title": "Kon Kan"
+    },
+    "kyo_musician": {
+      "sha256": "7f268fbfdd5196c11a4c20420886022adbe6670044dbc3785b1c1715b4d5ae48",
+      "title": "Kyo (musician)"
+    },
+    "lady_gaga_x_terry_richardson": {
+      "sha256": "ad07e064c24edb11444166b904fa52f38aa917c4c6038d196a2add83799a22db",
+      "title": "Lady Gaga x Terry Richardson"
+    },
+    "laleli_mosque": {
+      "sha256": "26b792bd63e753781a040795e14c38f4996f700e7ef70c91986ff408b27b1721",
+      "title": "Laleli Mosque"
+    },
+    "last_action_hero": {
+      "sha256": "58838bd3f32948e17517b566300b3626dcca5a498f6c5515d4669bf60b6d13f4",
+      "title": "Last Action Hero"
+    },
+    "lee_hazlewood": {
+      "sha256": "ee2ecd241098e14a9c8d706f7e844da658e260fd66759eaf5dfc2e8554ebc3c3",
+      "title": "Lee Hazlewood"
+    },
+    "left_behind_the_kids": {
+      "sha256": "49da796aa86c5e223076f9b8a359c84e8b5a1d3b0dc495540e0d272934daf47e",
+      "title": "Left Behind: The Kids"
+    },
+    "lewiston_maineiacs": {
+      "sha256": "093892f6446be5086ed901dcc651d2e70548569558b216a7001ef51c45e70d39",
+      "title": "Lewiston Maineiacs"
+    },
+    "lil_ru": {
+      "sha256": "8110974170a4b6ea2b11fed347fbb68e76a76459a3bd464ba783105525bbbe64",
+      "title": "Lil Ru"
+    },
+    "list_of_awards_and_nominations_received_by_shinee": {
+      "sha256": "c604ea2bda573e2941f815f0f3a86ac7ddb4d42cc09b618b4eaa86798ea2c98c",
+      "title": "List of awards and nominations received by Shinee"
+    },
+    "list_of_major_opera_composers": {
+      "sha256": "f0992e43863f6128e4ccbd4516adb5d0a1f974834911c3cb29112e2a930baed9",
+      "title": "List of major opera composers"
+    },
+    "list_of_songs_written_by_ravi": {
+      "sha256": "f95f9811a004b85b83d8f71cf60c9b91b795f060ab74a9fb57c6197bcffe37dd",
+      "title": "List of songs written by Ravi"
+    },
+    "list_of_square_enix_companion_books": {
+      "sha256": "eb84255ee16f03e7e98ac2a803fd3bacb495b4e7e509e8f7debb0800b828013a",
+      "title": "List of Square Enix companion books"
+    },
+    "little_black_rain_cloud": {
+      "sha256": "648e648ee38b1636331e0da2e7884f8348ea6c203ac2c3774c19c2cf2bea0e07",
+      "title": "Little Black Rain Cloud"
+    },
+    "loan_modification_in_the_united_states": {
+      "sha256": "c76387d38eab020ef545ae2813df82581227afa39c47dcb2b2a9b9d769e545ac",
+      "title": "Loan modification in the United States"
+    },
+    "local_h": {
+      "sha256": "f1e1239d5d1381cf149dd22bceaa23eb576509d92c87be65d03167a7a19140a8",
+      "title": "Local H"
+    },
+    "macscan": {
+      "sha256": "e61e3860dcd5d8841d3eaea74ce57a2c715238d0eafe13863caa21ab977c2710",
+      "title": "MacScan"
+    },
+    "madonna_book": {
+      "sha256": "ed4a423894bd475951e0043138d64d9ac84b7596b90d6a559a7b35295901b4a8",
+      "title": "Madonna (book)"
+    },
+    "madtown": {
+      "sha256": "67eda63864b227c8f02b56c82624e7c8eaf0cd74f792ed4be28017f93295c72c",
+      "title": "Madtown"
+    },
+    "make_love": {
+      "sha256": "159dc5d8b75a3d50d0cb93b2a31f8696721b6c26e697914c23e53efc04d0c14f",
+      "title": "Make Love"
+    },
+    "make_love_not_war_album": {
+      "sha256": "8f38e0aba627cfd42071138d329477d6d6f132cc1bf6a07520c9687ae4d6c43e",
+      "title": "Make Love Not War (album)"
+    },
+    "management_consulting": {
+      "sha256": "24b72b112b9d808af9e8eaa0da9afd81562aa8689f3fd244667ae9f4cd893dc3",
+      "title": "Management consulting"
+    },
+    "masami_tsuchiya": {
+      "sha256": "276675679be6644b32b8a3f312467f38d6099705f0fc3eb4278892e4a73d8359",
+      "title": "Masami Tsuchiya"
+    },
+    "matt_busby": {
+      "sha256": "86e09cd22742b0e63ad5525dcb21a1b4348f39956b5b13a36ddb115f1d6467a0",
+      "title": "Matt Busby"
+    },
+    "mendocino_county_gmo_ban": {
+      "sha256": "c11423745f9631e373dccb7d54838fd5309ba415c4e1187a0658ce91a48d56ba",
+      "title": "Mendocino County GMO Ban"
+    },
+    "mercenaries_spies_and_private_eyes": {
+      "sha256": "67912430d7018cd8c7b8d14f5c581cedd92ec28db87e82f3ae568defbf447de5",
+      "title": "Mercenaries, Spies and Private Eyes"
+    },
+    "method_man": {
+      "sha256": "38abcbea02e105dfd5d742d7fa3a1f05a83830326f740e6a40ab6df59738d52f",
+      "title": "Method Man"
+    },
+    "michael_james_lewis": {
+      "sha256": "cc5209db2aadf0a73abba2dae9ad56c38666c29e8ae3a8740f512be558882721",
+      "title": "Michael James Lewis"
+    },
+    "mick_dj": {
+      "sha256": "a600cd84412f0146decbbb8a73d56cae3b60f7c3e6895339d369ccb8fe790d0b",
+      "title": "Mick (DJ)"
+    },
+    "mike_shank": {
+      "sha256": "bfc9a1334d0ad9ce18901afbd1d8dacab31db1de61226d20a40bb12bc07260bd",
+      "title": "Mike Shank"
+    },
+    "mild_and_hazy": {
+      "sha256": "c84fb8dd06f8b5e3c4789ab18f95545e33af8824948235b7836ca45e9cd8d575",
+      "title": "Mild and Hazy"
+    },
+    "mind_if_we_make_love_to_you": {
+      "sha256": "31d17d529d75389e72fe6b14fbc66e156159ad748bf514e60ed55a781b869e40",
+      "title": "Mind If We Make Love to You"
+    },
+    "molly_childers": {
+      "sha256": "0b658c4b755fc485a68bc14b47366fbde0ed94e026bb61c3e546db2dbce10546",
+      "title": "Molly Childers"
+    },
+    "nancy_sinatra": {
+      "sha256": "35aef461900a0b24a971d76b56a927c5b35553b32a776b00be8ebd99db6452b8",
+      "title": "Nancy Sinatra"
+    },
+    "narrow_hills_provincial_park": {
+      "sha256": "8e0cf5051a1c240f578eae321591faa090ac2be3e33d951af924bbefa5e6c046",
+      "title": "Narrow Hills Provincial Park"
+    },
+    "neafie_amp_levy": {
+      "sha256": "31370713187f991ce9d472fc586023738eae4ee975ea11ac2927d92167aa36dc",
+      "title": "Neafie &amp; Levy"
+    },
+    "neosho_state_fishing_lake": {
+      "sha256": "cff6ee06fbf7b655075fde42428859de45cda5d6e455f074400bb45b89932c72",
+      "title": "Neosho State Fishing Lake"
+    },
+    "netsupport_manager": {
+      "sha256": "68aa8b135b47dca25575c433010dfb62ef933f5cacdb252b133cc6926370d589",
+      "title": "NetSupport Manager"
+    },
+    "new_york_shipbuilding_corporation": {
+      "sha256": "cce7d256b5d206dad5c176fd3321ab954dba8872daa46c9ae6810a88068d01ce",
+      "title": "New York Shipbuilding Corporation"
+    },
+    "new_york_society_of_model_engineers": {
+      "sha256": "78a456dbab617394ebb5f4ae23c4d99f97847f612c56cbfeab66022241b161e6",
+      "title": "New York Society of Model Engineers"
+    },
+    "nola_film": {
+      "sha256": "426d20f254a9030b8f798c9f4014cd43883d63904ed37496f793716281643a65",
+      "title": "Nola (film)"
+    },
+    "north_kansas_city_missouri": {
+      "sha256": "c10e005961eb3def2022ac1581fedc3953955d578028e73c8016bda1ef885d80",
+      "title": "North Kansas City, Missouri"
+    },
+    "nutri_ventures_the_quest_for_the_7_kingdoms": {
+      "sha256": "622b35f63b5440ea4be0863784956b365d80d51c02de104ee018d1c01f522297",
+      "title": "Nutri Ventures \u2013 The Quest for the 7 Kingdoms"
+    },
+    "office_of_population_affairs": {
+      "sha256": "1549e9250e761bb89f263864cc70784c8761a1bd05d306b00eaa97e0017de3b5",
+      "title": "Office of Population Affairs"
+    },
+    "oh_my_god_guns_n_roses_song": {
+      "sha256": "b2d1bc8d0cfd94783963c1814e36763437acc5c31e91f5b93062858f0b242254",
+      "title": "Oh My God (Guns N' Roses song)"
+    },
+    "ophur": {
+      "sha256": "737f2c8830bc3a6650eab1c7b6fe227ce34d655321dcf66c4dd920a711567d7d",
+      "title": "Ophur"
+    },
+    "osage_state_fishing_lake": {
+      "sha256": "1d175ad7861149c7122c44dd1b16be81fef720063942b77cb13fa5922fa6a52c",
+      "title": "Osage State Fishing Lake"
+    },
+    "parma_airport": {
+      "sha256": "ee92e2033584c00d07041acff8f5df10b8ac18d2c9b605d43319f169c8b0ad21",
+      "title": "Parma Airport"
+    },
+    "pel": {
+      "sha256": "be5eb5df5ce1860f304aa3f0efba490c50c816e4c5b34ba954162e4419dcdd3a",
+      "title": "Pel\u00e9"
+    },
+    "pershing_square_capital_management": {
+      "sha256": "83d6a9acfaf22299d9abc33134d5b1e6ab5aa031c4302b6c02a59491e6801cfc",
+      "title": "Pershing Square Capital Management"
+    },
+    "peter_schmeichel": {
+      "sha256": "72a9f313d4f6b5ffeaf22b0fb77329da2153b8b56aaac5034c97c4e94d251ab7",
+      "title": "Peter Schmeichel"
+    },
+    "piano_girl": {
+      "sha256": "c3424e83c766716f650a5fab4b84b42af2d61466ed30e29fbeea0ccf6c2d7516",
+      "title": "Piano Girl"
+    },
+    "poison_american_band": {
+      "sha256": "2708dd059554ed341de185bdce3b042f333444b2d295e1594d5db6375cb5f154",
+      "title": "Poison (American band)"
+    },
+    "puss_n_boots_these_boots_are_made_for_walkin": {
+      "sha256": "87b798bc3e1975a7149eac2337675177bf05411c6547f5c56de5394025b8a038",
+      "title": "Puss N' Boots/These Boots Are Made for Walkin'"
+    },
+    "r509_road_ireland": {
+      "sha256": "7659f5a397a5b0a6133fa868b01dabc3d4cb88e4759d0f4951d129371b4a945a",
+      "title": "R509 road (Ireland)"
+    },
+    "random_house_tower": {
+      "sha256": "1624b695390896d5a2f17a3aebcdcb21491a74024fc01d1cf5dbba2198a615d2",
+      "title": "Random House Tower"
+    },
+    "real_estate_benchmarking": {
+      "sha256": "ca7873c04239b377bdf1a5e12f02fc9734f123427f4f4a741724e5612d6418c8",
+      "title": "Real estate benchmarking"
+    },
+    "real_estate_technology": {
+      "sha256": "0bca2fdd7c8cd17564f2f56b55df2d4d9ada033d7c8e33ffb0cb69a294305ace",
+      "title": "Real estate technology"
+    },
+    "remote_control": {
+      "sha256": "7a1d34843476b3d822a2ae151d0b98738abb123269570aa2e8f15f8f573c9be6",
+      "title": "Remote control"
+    },
+    "richard_nixon": {
+      "sha256": "295c6edd337042f86287565c8332fdefbd175ff25f834e28ae4e0faf80e052cc",
+      "title": "Richard Nixon"
+    },
+    "robert_barton": {
+      "sha256": "205d3d1f2bc01c7cc9b0d1c36ee5c0696d623b40f89b486d18777f5bdf589940",
+      "title": "Robert Barton"
+    },
+    "robert_caesar_childers": {
+      "sha256": "27eec09941acce7361fca539ff80e380b6e07ddfd9ce666a2310d73aa817da8a",
+      "title": "Robert Caesar Childers"
+    },
+    "robert_erskine_childers": {
+      "sha256": "d858185125e687e688d356cf78cfbb2c91b69ee67e374a885d4aafc7a262c422",
+      "title": "Robert Erskine Childers"
+    },
+    "robert_hormats": {
+      "sha256": "9edfea1c84d7cb25a773f1f33808177449ceac118e48a00913acb219aab81122",
+      "title": "Robert Hormats"
+    },
+    "robert_r_hood": {
+      "sha256": "d876ec9423ab11d619dcb583c557aa1e3e9324138dc9da36ff9a1dcd41fa5070",
+      "title": "Robert R. Hood"
+    },
+    "robins_center": {
+      "sha256": "a9a1444c02b33007e0e64b0679005397249aa4ad5f39eb6286f61921ccb6ade8",
+      "title": "Robins Center"
+    },
+    "roger_o_egeberg": {
+      "sha256": "b23c425b002d8bf5b0752d619baac8acd698be1f970e81ef2915c57ba2ee4c25",
+      "title": "Roger O. Egeberg"
+    },
+    "science_fantasy_magazine": {
+      "sha256": "29e12099253c14f4790dd9756624971fbdae8b35008dc354e0642c3040996afb",
+      "title": "Science Fantasy (magazine)"
+    },
+    "season_of_the_witch_2011_film": {
+      "sha256": "2c65f925504415095596b5e7ab22a60f0f7fe4527c60d3cf2b1994c556004dfb",
+      "title": "Season of the Witch (2011 film)"
+    },
+    "sergio_p_rez": {
+      "sha256": "82ec6ef10ed251bf60f001b8e45bfc7ab8eef7f72f766e20371d68ae7654377b",
+      "title": "Sergio P\u00e9rez"
+    },
+    "seventeen_discography": {
+      "sha256": "f55d7838135ce3fdec091d48ca159ed02eaac35f320f3f8bd31849ccb5dfe5f8",
+      "title": "Seventeen discography"
+    },
+    "sf9_band": {
+      "sha256": "e34bde94a2494a6046276b683aa964eb0c47e30b08db4f77ab2fafb593a1edfa",
+      "title": "SF9 (band)"
+    },
+    "shadowshaper": {
+      "sha256": "aeae443cff2f7d503a371de4f08f2ffe2ccf9ea48e9aa8809445550f3a713d48",
+      "title": "Shadowshaper"
+    },
+    "shawnee_state_fishing_lake": {
+      "sha256": "02af929fa1f699fc8f33a8cdd31d28cd6da60d311ecf2e9040ad4d0e757b553c",
+      "title": "Shawnee State Fishing Lake"
+    },
+    "shut_up_make_love": {
+      "sha256": "f41f1288910d272e6619ad5aa051a2c783a58e4392dbb3d8685d06162176b3cd",
+      "title": "Shut Up, Make Love"
+    },
+    "silent_sigh": {
+      "sha256": "c97dae56de21c3936f5e0f6a95ae330b57bf4d896d8157226fb22dfaea8b1b53",
+      "title": "Silent Sigh"
+    },
+    "sir_matt_busby_sports_complex": {
+      "sha256": "505cf03b6f1ad254cf8a1fe7bb801d2190284ddc106ecf10b9ba54bf5494089b",
+      "title": "Sir Matt Busby Sports Complex"
+    },
+    "siri_remote": {
+      "sha256": "ad1fdcfe0bdb1341f462e766ce34c471e28e3984ee9e33de13933cb89734b0fc",
+      "title": "Siri Remote"
+    },
+    "skyscraper_national_park": {
+      "sha256": "13a91a61a1b400433cb0076b5aa10f8139b3e5d9105758ba3f9949994b150f6a",
+      "title": "Skyscraper National Park"
+    },
+    "snoecks": {
+      "sha256": "b1b397816e15cf00381e2e585bcd50e3c2bf96b71345e9cfd7de11789eb976f8",
+      "title": "Snoecks"
+    },
+    "something_to_talk_about_badly_drawn_boy_song": {
+      "sha256": "6cecf242c5f7bd0dbb51c0167a4b369e178324927763f685dd1c4493538a5765",
+      "title": "Something to Talk About (Badly Drawn Boy song)"
+    },
+    "sommeren_92": {
+      "sha256": "244f566bc23d812197675f0ab9bbc55778ea446a042b45c040222e1800773219",
+      "title": "Sommeren '92"
+    },
+    "south_phoenix": {
+      "sha256": "07696aa8362e27e09c40155061a769d996313e05e509799a11164a4572747f9b",
+      "title": "South Phoenix"
+    },
+    "st_andre_goa_assembly_constituency": {
+      "sha256": "5b51e40ee8667a529e9eb6a003b3352948e7a44a45cad3f6bd8cfd5afd08f141",
+      "title": "St. Andre (Goa Assembly constituency)"
+    },
+    "st_andre_s_parish": {
+      "sha256": "3c93e531457b3b64740ab4a86cf33ad45dbdbdb68fe51fd3738b4d4225c68d56",
+      "title": "St. Andre's Parish"
+    },
+    "starfaring": {
+      "sha256": "eefcf0e831a134978c0b5f3f4a5bc8855a7b7fbbf46a330e98e9faa74aad00fa",
+      "title": "Starfaring"
+    },
+    "steven_adler": {
+      "sha256": "9a268b947266911efeb6b7af71a3cae02821564b9b55cd284bacef3258dfe7ed",
+      "title": "Steven Adler"
+    },
+    "steven_k_galson": {
+      "sha256": "378cedb90ee04c04b6add711aa3359b09deaf9032576ccaeb92c1db61f5557d3",
+      "title": "Steven K. Galson"
+    },
+    "suffrajett": {
+      "sha256": "a0a402aa55a4fa8acf0b206b29e311b5350c45d72e2f3527122a06a1e5fb816c",
+      "title": "Suffrajett"
+    },
+    "sultan_ahmed_mosque": {
+      "sha256": "e58732c442aa6c0d15ee3494800fa5b552fb10068cded54bb91a3fd00b35c3fb",
+      "title": "Sultan Ahmed Mosque"
+    },
+    "teatro_giuseppe_verdi": {
+      "sha256": "2347855f004ae2241d5647572955e9b7031216dd0165519db052557dd5ce5f8c",
+      "title": "Teatro Giuseppe Verdi"
+    },
+    "terry_richardson": {
+      "sha256": "6fd32da2018a2308bdc2bce68be3fb8816520d70e1fde16d50d9ccf8b8bfce31",
+      "title": "Terry Richardson"
+    },
+    "the_class_of_92": {
+      "sha256": "d7752650cfebe49ae5786f0454ae7ea77f60a437ff3ffcb49aba62056920fa31",
+      "title": "The Class of '92"
+    },
+    "the_divide_trilogy": {
+      "sha256": "dbf24bab0ddc26f9b99774dd3750cea145c68525305120ae59771889081d9df7",
+      "title": "The Divide trilogy"
+    },
+    "the_family_man": {
+      "sha256": "f9dbec04c553e47c0b3dcfd0ad8cad5417e1f9de88f96ce45f8c6b836798d833",
+      "title": "The Family Man"
+    },
+    "the_hork_bajir_chronicles": {
+      "sha256": "992259ee5229d594b0b2098ff6225b53dd394485002d6cfc3bbfd8235f2f670c",
+      "title": "The Hork-Bajir Chronicles"
+    },
+    "the_hour_of_bewilderbeast": {
+      "sha256": "af64cf5c626f73538d038afeb3ce710f4e678bb47eb00a7336c593b5b69d2d74",
+      "title": "The Hour of Bewilderbeast"
+    },
+    "the_house_that_jack_built_1967_film": {
+      "sha256": "79d028dd5e4f94d0a78bb95085efb4934b02dc99cc70ebae05eacd685c48354f",
+      "title": "The House That Jack Built (1967 film)"
+    },
+    "the_longer_we_make_love": {
+      "sha256": "11027c89d07013160d8c857a7e44819d6f02ae51c96337fe4d2e66f93aa0b319",
+      "title": "The Longer We Make Love"
+    },
+    "the_rain_rain_rain_came_down_down_down": {
+      "sha256": "3810207bd1473a69edd67839020e4628e7cefcacb7ea0f07a23ed4ffb072edd8",
+      "title": "The Rain Rain Rain Came Down Down Down"
+    },
+    "the_twenty_fifth_anniversary_anthology": {
+      "sha256": "a91a79924b8ee749809ed12497020230cce2e3518950ed0407a221be94afcc1d",
+      "title": "The Twenty-fifth Anniversary Anthology"
+    },
+    "the_wonderful_thing_about_tiggers": {
+      "sha256": "683d2b58d6d7d019466c089b20f1e2986b41f9c743679f3b81d966de2dc9d83e",
+      "title": "The Wonderful Thing About Tiggers"
+    },
+    "these_boots_are_made_for_walkin": {
+      "sha256": "1f38e173efa9f396404b823df9b5ce0539dd41fa5ea566a08f3c56263038f02e",
+      "title": "These Boots Are Made for Walkin'"
+    },
+    "time_to_kill_1989_film": {
+      "sha256": "cca3fb5286eaad55633b32b483fe3a0c64ba889f12ad6869b40e61226d3ee30d",
+      "title": "Time to Kill (1989 film)"
+    },
+    "tom_rothrock": {
+      "sha256": "298d9c266332b75387fac077ae93eafa71485f2d3b60620ad3b3fa31385613c8",
+      "title": "Tom Rothrock"
+    },
+    "tony_ave": {
+      "sha256": "9f31e86365a8f4d283433ef2b1fed0b3c23e481a34e69e28d4fc8b5c73480ba2",
+      "title": "Tony Ave"
+    },
+    "trainmaster_command_control": {
+      "sha256": "bb5f2e620e7a68929f92374b3a48c91b1ae899fc6fd06480c3f6e341f340c8ba",
+      "title": "Trainmaster Command Control"
+    },
+    "true_lies": {
+      "sha256": "952959041fd7522c7631b26193e01c289b7850383c38c305603f79c329811fb5",
+      "title": "True Lies"
+    },
+    "tunnels_amp_trolls": {
+      "sha256": "5f6384a8462ea4fde54d29c959f42edd1cdb15adfa76829241b0cd9d1077f85f",
+      "title": "Tunnels &amp; Trolls"
+    },
+    "tunnels_amp_trolls_crusaders_of_khazan": {
+      "sha256": "be018198c8f9620129d5cf1b17b7ad576cf00db33f9e1db920401cc89d6aaa01",
+      "title": "Tunnels &amp; Trolls: Crusaders of Khazan"
+    },
+    "under_an_hour": {
+      "sha256": "a4b686a907d191f8fdea1866333d415ea1f565e8de177a2a859c5402e3784d97",
+      "title": "Under an Hour"
+    },
+    "ungod": {
+      "sha256": "7105cb89f43fba9c9a0b619acda90366bef449af5cab1f1631ab5216127e69cc",
+      "title": "Ungod"
+    },
+    "united_states_assistant_secretary_of_state": {
+      "sha256": "4041f0b2b4b5182365f7466e72a4d6161a22965952feebe66bc403f353557688",
+      "title": "United States Assistant Secretary of State"
+    },
+    "united_states_senate_election_in_illinois_1978": {
+      "sha256": "fea869db360329d00c57a77c56a0d86a9f5d50ed997188db4ff5f1cedb40ab76",
+      "title": "United States Senate election in Illinois, 1978"
+    },
+    "universal_remote": {
+      "sha256": "79a0236b5d0e4e8d34f450369ca651076d165d6607a8ec1eaa32855396b7346b",
+      "title": "Universal remote"
+    },
+    "university_of_kansas": {
+      "sha256": "4a2f02cbdbc685f26cafb9e5a49d5859f68be64f533981220b331c3f7872d807",
+      "title": "University of Kansas"
+    },
+    "university_of_missouri_kansas_city": {
+      "sha256": "7b1a5ac1953673e2736fe6ec3858edbc37d3dd3f5bfcf54231dce959a5197424",
+      "title": "University of Missouri\u2013Kansas City"
+    },
+    "university_of_the_incarnate_word": {
+      "sha256": "a608d91829de9fd636d124e7162bc54e2032fbd7732a9c36a1b81677515d8ee2",
+      "title": "University of the Incarnate Word"
+    },
+    "verdi_the_king_of_melody": {
+      "sha256": "2c69e56a2548f28f391727e65fec5cd15f75dc6ae92d41d82cc7310a0be03831",
+      "title": "Verdi, the King of Melody"
+    },
+    "vermont_catamounts_men_s_basketball": {
+      "sha256": "066d58a5402cd37faf5ba599e13c343c453f424f5d55073a479c61c72cb4ec1d",
+      "title": "Vermont Catamounts men's basketball"
+    },
+    "vermont_catamounts_men_s_ice_hockey": {
+      "sha256": "4f585c4a30f5c38cbc3011ce4c72eaa89f878d89f00547c3ed8502af20195201",
+      "title": "Vermont Catamounts men's ice hockey"
+    },
+    "vermont_catamounts_men_s_soccer": {
+      "sha256": "84712f9767b1fedc10180e5f8acafb477bac68a34db357c87f139d0a9655d963",
+      "title": "Vermont Catamounts men's soccer"
+    },
+    "victoria_hanley": {
+      "sha256": "05e320e0470e2d06d06e8f4a08c30def598213c3653776c13fb996e31eaea0a0",
+      "title": "Victoria Hanley"
+    },
+    "villard_imprint": {
+      "sha256": "c1de811a7973488514533a8e72191bb0166ebfff5ac35945215e771815ed91fd",
+      "title": "Villard (imprint)"
+    },
+    "virginia_commonwealth_university": {
+      "sha256": "c01e6369535871593bc1d50b86f8bf172c88c1c04e17b08462a3a2b3c3bc1669",
+      "title": "Virginia Commonwealth University"
+    },
+    "wilford_h_fawcett_house": {
+      "sha256": "c5214399e63ad6494a2e38b92738e6e7f165a95dfd5a33f6bcf2b07e7313efaf",
+      "title": "Wilford H. Fawcett House"
+    },
+    "william_h_cook_water_tank_house": {
+      "sha256": "3abdee9cc7155099679d7ea0f3cd7fb561f1865436638007a1608c4950613018",
+      "title": "William H. Cook Water Tank House"
+    },
+    "winner_band": {
+      "sha256": "621b70ab282222a5d5bbbb47f7bd9d678ea79370958476998e4845a0840111be",
+      "title": "Winner (band)"
+    },
+    "winnie_the_pooh_and_the_blustery_day": {
+      "sha256": "5048876d6a9358a53a7207076f8b53ee1301c370a0f3aa3ad0155f35f3cbc415",
+      "title": "Winnie the Pooh and the Blustery Day"
+    },
+    "wolf_alice": {
+      "sha256": "fca527d12774b4de71c5258d11ab7dda21e4fd02125f7b86ad6f7610ec758f37",
+      "title": "Wolf Alice"
+    }
+  },
+  "queries": [
+    {
+      "answer": "Animorphs",
+      "gold_document_ids": [
+        "the_hork_bajir_chronicles",
+        "animorphs"
+      ],
+      "id": "q3",
+      "question": "What science fantasy young adult series, told in first person, has a set of companion books narrating the stories of enslaved worlds and alien species?"
+    },
+    {
+      "answer": "no",
+      "gold_document_ids": [
+        "laleli_mosque",
+        "esma_sultan_mansion"
+      ],
+      "id": "q4",
+      "question": "Are the Laleli Mosque and Esma Sultan Mansion located in the same neighborhood?"
+    },
+    {
+      "answer": "Greenwich Village, New York City",
+      "gold_document_ids": [
+        "big_stone_gap_film",
+        "adriana_trigiani"
+      ],
+      "id": "q5",
+      "question": "The director of the romantic comedy \"Big Stone Gap\" is based in what New York city?"
+    },
+    {
+      "answer": "YG Entertainment",
+      "gold_document_ids": [
+        "2014_s_s",
+        "winner_band"
+      ],
+      "id": "q6",
+      "question": "2014 S/S is the debut album of a South Korean boy group that was formed by who?"
+    },
+    {
+      "answer": "Eenasul Fateh",
+      "gold_document_ids": [
+        "eenasul_fateh",
+        "management_consulting"
+      ],
+      "id": "q7",
+      "question": "Who was known by his stage name Aladin and helped organizations improve their performance as a consultant?"
+    },
+    {
+      "answer": "3,677 seated",
+      "gold_document_ids": [
+        "lewiston_maineiacs",
+        "androscoggin_bank_colis_e"
+      ],
+      "id": "q8",
+      "question": "The arena where the Lewiston Maineiacs played their home games can seat how many people?"
+    },
+    {
+      "answer": "Terry Richardson",
+      "gold_document_ids": [
+        "annie_morton",
+        "terry_richardson"
+      ],
+      "id": "q9",
+      "question": "Who is older, Annie Morton or Terry Richardson?"
+    },
+    {
+      "answer": "yes",
+      "gold_document_ids": [
+        "local_h",
+        "for_against"
+      ],
+      "id": "q10",
+      "question": "Are Local H and For Against both from the United States?"
+    },
+    {
+      "answer": "Kansas Song",
+      "gold_document_ids": [
+        "kansas_song",
+        "university_of_kansas"
+      ],
+      "id": "q11",
+      "question": "What is the name of the fight song of the university whose main campus is in Lawrence, Kansas and whose branch campuses are in the Kansas City metropolitan area?"
+    },
+    {
+      "answer": "David Weissman",
+      "gold_document_ids": [
+        "david_weissman",
+        "the_family_man"
+      ],
+      "id": "q12",
+      "question": "What screenwriter with credits for \"Evolution\" co-wrote a film starring Nicolas Cage and T\u00e9a Leoni?"
+    },
+    {
+      "answer": "1999",
+      "gold_document_ids": [
+        "oh_my_god_guns_n_roses_song",
+        "end_of_days_film"
+      ],
+      "id": "q13",
+      "question": "What year did Guns N Roses perform a promo for a movie starring Arnold Schwarzenegger as a former New York Police detective?"
+    },
+    {
+      "answer": "no",
+      "gold_document_ids": [
+        "random_house_tower",
+        "888_7th_avenue"
+      ],
+      "id": "q14",
+      "question": "Are Random House Tower and 888 7th Avenue both used for real estate?"
+    },
+    {
+      "answer": "from 1986 to 2013",
+      "gold_document_ids": [
+        "1995_96_manchester_united_f_c_season",
+        "alex_ferguson"
+      ],
+      "id": "q15",
+      "question": "The football manager who recruited David Beckham managed Manchester United during what timeframe?"
+    },
+    {
+      "answer": "9,984",
+      "gold_document_ids": [
+        "brown_state_fishing_lake",
+        "brown_county_kansas"
+      ],
+      "id": "q16",
+      "question": "Brown State Fishing Lake is in a country that has a population of how many inhabitants ?"
+    },
+    {
+      "answer": "the North Atlantic Conference",
+      "gold_document_ids": [
+        "vermont_catamounts_men_s_soccer",
+        "america_east_conference"
+      ],
+      "id": "q17",
+      "question": "The Vermont Catamounts men's soccer team currently competes in a conference that was formerly known as what from 1988 to 1996?"
+    },
+    {
+      "answer": "yes",
+      "gold_document_ids": [
+        "giuseppe_verdi",
+        "ambroise_thomas"
+      ],
+      "id": "q18",
+      "question": "Are Giuseppe Verdi and Ambroise Thomas both Opera composers ?"
+    },
+    {
+      "answer": "1969 until 1974",
+      "gold_document_ids": [
+        "roger_o_egeberg",
+        "richard_nixon"
+      ],
+      "id": "q19",
+      "question": "Roger O. Egeberg was Assistant Secretary for Health and Scientific Affairs during the administration of a president that served during what years?"
+    },
+    {
+      "answer": "Robert Erskine Childers DSC",
+      "gold_document_ids": [
+        "henry_roth",
+        "robert_erskine_childers"
+      ],
+      "id": "q20",
+      "question": "Which writer was from England, Henry Roth or Robert Erskine Childers?"
+    },
+    {
+      "answer": "Pedro Rodr\u00edguez",
+      "gold_document_ids": [
+        "formula_one_drivers_from_mexico",
+        "sergio_p_rez"
+      ],
+      "id": "q21",
+      "question": "Which other Mexican Formula One race car driver has held the podium besides the Force India driver born in 1990?"
+    },
+    {
+      "answer": "Sonic",
+      "gold_document_ids": [
+        "a_rather_blustery_day",
+        "jim_cummings"
+      ],
+      "id": "q22",
+      "question": "This singer of A Rather Blustery Day also voiced what hedgehog?"
+    },
+    {
+      "answer": "keyboard function keys",
+      "gold_document_ids": [
+        "apple_remote",
+        "front_row_software"
+      ],
+      "id": "q23",
+      "question": "Aside from the Apple Remote, what other device can control the program Apple Remote was originally designed to interact with?"
+    },
+    {
+      "answer": "Badly Drawn Boy",
+      "gold_document_ids": [
+        "badly_drawn_boy",
+        "wolf_alice"
+      ],
+      "id": "q24",
+      "question": "Which performance act has a higher instrument to person ratio, Badly Drawn Boy or Wolf Alice? "
+    },
+    {
+      "answer": "World's Best Goalkeeper",
+      "gold_document_ids": [
+        "kasper_schmeichel",
+        "peter_schmeichel"
+      ],
+      "id": "q25",
+      "question": "What was the father of Kasper Schmeichel voted to be by the IFFHS in 1992?"
+    },
+    {
+      "answer": "Barton Lee Hazlewood",
+      "gold_document_ids": [
+        "these_boots_are_made_for_walkin",
+        "lee_hazlewood"
+      ],
+      "id": "q26",
+      "question": "Who was the writer of These Boots Are Made for Walkin' and who died in 2007?"
+    },
+    {
+      "answer": "1838",
+      "gold_document_ids": [
+        "2011_12_vcu_rams_men_s_basketball_team",
+        "virginia_commonwealth_university"
+      ],
+      "id": "q27",
+      "question": "The 2011\u201312 VCU Rams men's basketball team, led by third year head coach Shaka Smart, represented Virginia Commonwealth University which was founded in what year?"
+    },
+    {
+      "answer": "yes",
+      "gold_document_ids": [
+        "dictyosperma",
+        "huernia"
+      ],
+      "id": "q28",
+      "question": "Are both Dictyosperma, and Huernia described as a genus?"
+    },
+    {
+      "answer": "Henry J. Kaiser",
+      "gold_document_ids": [
+        "kaiser_ventures",
+        "henry_j_kaiser"
+      ],
+      "id": "q29",
+      "question": "Kaiser Ventures corporation was founded by an American industrialist who became known as the father of modern American shipbuilding?"
+    },
+    {
+      "answer": "Arena of Khazan",
+      "gold_document_ids": [
+        "arena_of_khazan",
+        "tunnels_amp_trolls"
+      ],
+      "id": "q30",
+      "question": "What is the name for the adventure in \"Tunnels and Trolls\", a game designed by Ken St. Andre?"
+    },
+    {
+      "answer": "2000",
+      "gold_document_ids": [
+        "shut_up_make_love",
+        "poison_american_band"
+      ],
+      "id": "q31",
+      "question": "When was Poison's album \"Shut Up, Make Love\" released?"
+    },
+    {
+      "answer": "Fujioka, Gunma",
+      "gold_document_ids": [
+        "hayden_musician",
+        "buck_tick"
+      ],
+      "id": "q32",
+      "question": "Hayden is a singer-songwriter from Canada, but where does Buck-Tick hail from?"
+    }
+  ],
+  "queries_hash": "4bd7adcdd06033e81309219c3428dae046714797ff2331d9f9e237ffad1cac7c",
+  "source": {
+    "config": "distractor",
+    "dataset": "hotpotqa/hotpot_qa",
+    "split": "validation"
+  }
+}
