@@ -30,6 +30,7 @@ truth REST and MCP both defer to.
 from __future__ import annotations
 
 import base64
+import binascii
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -37,6 +38,7 @@ from pydantic import BaseModel, ConfigDict
 from databasise.seam.corpus import IngestDocument
 from databasise.seam.evidence import EvidenceRef
 from databasise.seam.query import QueryObject
+from databasise.seam.refusals import MalformedBase64PayloadError
 from databasise.seam.selectors import Selector
 
 # API-07's pinned five-member surface (§18.5's growth rule, applied to this transport): this tuple
@@ -71,7 +73,13 @@ class IngestToolArgs(_ToolArgs):
     content_type: str | None = None
 
     def to_ingest_document(self) -> IngestDocument:
-        raw = base64.b64decode(self.raw_base64) if self.raw_base64 is not None else None
+        if self.raw_base64 is not None:
+            try:
+                raw = base64.b64decode(self.raw_base64)
+            except binascii.Error as exc:
+                raise MalformedBase64PayloadError(field="raw_base64") from exc
+        else:
+            raw = None
         return IngestDocument(
             text=self.text,
             document_id=self.document_id,
