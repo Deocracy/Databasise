@@ -59,12 +59,7 @@ def _sum_token_accountings(accountings: list[TokenAccounting]) -> TokenAccountin
 
 
 async def _entity_fact_embed_body(ctx: NodeContext) -> dict[str, Any]:
-    # RED STUB (06-02-PLAN.md Task 3, TDD): deliberately ignores the openie input entirely and
-    # never calls the embedding client, so the RED test run fails on real assertions (zero
-    # entities/facts written), not a collection error. Replaced by the real body in GREEN.
-    return {"entities": [], "facts": []}
-
-    openie_output = ctx.inputs["openie"]  # noqa: F841 — unreachable until GREEN restores below
+    openie_output = ctx.inputs["openie"]
     findings = list(openie_output.get("findings", []))
     if not findings:
         return {"entities": [], "facts": []}
