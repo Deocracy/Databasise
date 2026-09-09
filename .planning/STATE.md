@@ -1,19 +1,19 @@
 ---
-gsd_state_version: "1.0"
+gsd_state_version: 1.0
 milestone: v1.0
 current_phase: 06
 current_phase_name: HippoRAG 2 & Side-by-Side
 status: executing
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-09-09T21:58:33.617Z"
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-09-09T22:35:44.887Z"
 last_activity: 2026-09-09
 last_activity_desc: Phase 06 execution started
-state_head: 7d79ee610ca649c3eb95def9a870ef983405bf6f
+state_head: 90b1edea08387867e82bc2324df4a85a1a85616e
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 4
   total_plans: 50
-  completed_plans: 42
+  completed_plans: 43
 milestone_name: milestone
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 06 (HippoRAG 2 & Side-by-Side) — EXECUTING
-Plan: 2 of 9
+Plan: 3 of 9
 Status: Ready to execute
 Last activity: 2026-09-09 — Phase 06 execution started
 
@@ -79,6 +79,7 @@ Progress: [██████████] 100%
 | Phase 05-opaque-side-admission P05 | 45min | 2 tasks | 2 files |
 | Phase 05-opaque-side-admission P07 | 130min | 3 tasks | 14 files |
 | Phase 06 P01 | continuation session | 3 tasks | 29 files |
+| Phase 06 P02 | ~70min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -132,6 +133,8 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 05]: 05-07: databasise/tests/mcp/ carries no __init__.py and both new test files guard with try/import-databasise.mcp instead of pytest.importorskip("mcp") — a bare import mcp/importorskip can resolve to this project's own mcp/ package or the tests/mcp/ namespace-package shadow instead of skipping cleanly.
 - [Phase 05]: 05-07: fixed a real regression this plan's own databasise/mcp/ package introduced into 05-06's pre-existing codebase_memory_mcp_adapter.py and its test files' bare importlib.util.find_spec("mcp") availability checks, via a shared shadow-safe resolver (databasise/foreign/_mcp_sdk_guard.py) that strips every sys.path entry resolving inside databasise/ (excluding the active venv) before resolving the real SDK.
 - [Phase 06]: HippoRAG 2 tracer: igraph/numpy approved for core deps; ppr.py graph-store access corrected to a single namespaced store (no .select())
+- [Phase 06]: 06-02: entity-fact-embed's fact vector metadata carries both chunk_ids and the fact's own entity refs (not just chunk_ids as the literal action text named) so reset-vector-join.py's existing fact.get("entities") read has something to consume. — 06-01's already-committed reset_vector_join.py reads fact.get("entities") off each scored fact item to accumulate phrase weight; omitting it from entity-fact-embed's own writes would leave that read with nothing real to consume.
+- [Phase 06]: 06-02: registered wiring nodes carry no "note" field (WiringNode schema extra=forbid), unlike the illustrative docs/system-model/wirings/hipporag-base.json copy the plan's action text quotes from. — Copying the governing doc's "note" field into the registered wiring raised WiringRefusedError at parse time, cascading into two seam cross-modality tests; caught and fixed before landing.
 
 ### Pending Todos
 
@@ -160,6 +163,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-09T21:58:33.536Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-09-09T22:35:44.761Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None
