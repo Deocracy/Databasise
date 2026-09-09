@@ -49,22 +49,30 @@ def test_register_refuses_a_duplicate_key_rather_than_overwriting_it():
         registry.register(existing_part)
 
 
-def test_the_one_remaining_declaration_only_entry_has_no_body_and_a_non_empty_upstream_ref():
-    """05-01-PLAN.md Task 1 gave ``lightrag/full-ingest@0.1.0`` a real body and a real §8
-    admission record — ``codebase-memory-mcp@0.1.0`` is now the only remaining declaration-only
-    entry, until plan 05-06 admits it too."""
+def test_no_declaration_only_entries_remain():
+    """05-06-PLAN.md Task 2 gave ``codebase-memory-mcp@0.1.0`` a real body and a real §8
+    admission record — the last of D-04's three original Falsifier-2 wiring placeholders is now
+    executable. Every entry ``default_registry()`` holds carries a real body."""
     registry = default_registry()
     declaration_only = [
         registry.get(key) for key in registry.keys() if registry.get(key).body is None  # noqa: SIM118 — PartRegistry.keys() is not a dict; `in registry` is not a defined operation
     ]
-    assert len(declaration_only) == 1
-    assert all(part.upstream_ref for part in declaration_only)
+    assert declaration_only == []
 
 
 async def test_dispatching_a_declaration_only_part_raises_naming_the_part_not_a_null_result():
-    registry = default_registry()
-    declaration_only_part = next(
-        registry.get(key) for key in registry.keys() if registry.get(key).body is None  # noqa: SIM118 — PartRegistry.keys() is not a dict; `in registry` is not a defined operation
+    """No production entry is declaration-only anymore (see the test above) — this exercises
+    ``dispatch()``'s own refusal directly against a synthetic ``body=None`` Part rather than
+    depending on a real registry entry staying unexecuted."""
+    from databasise.parts.schema import Part
+
+    declaration_only_part = Part(
+        name_at_version="test/declaration-only@1.0.0",
+        kind="passthrough",
+        structural_depth="stage",
+        effects=[],
+        upstream_ref="test-fixture",
+        body=None,
     )
     ctx = NodeContext(node_id="n1", config=None, inputs={}, stores={})
 

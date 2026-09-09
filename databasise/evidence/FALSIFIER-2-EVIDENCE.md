@@ -70,7 +70,7 @@ Resolved against `default_registry()`'s Phase-1 entries (3 node(s)).
 | node id | component | wiring kind | structural_depth | effective_depth | execution_mode | part effects | artifact_scope | blast-radius |
 |---|---|---|---|---|---|---|---|---|
 | answer | parts-core/fake-llm-caller@1.0.0 | llm-caller | stage | opaque | in-process | calls_llm, writes_kv | — | n/a |
-| cbm | codebase-memory-mcp@0.1.0 | opaque | opaque | opaque | subprocess | fs, self_storage | self_storage | n/a |
+| cbm | codebase-memory-mcp@0.1.0 | opaque | opaque | opaque | subprocess | fs, mutates_store, self_storage | self_storage | n/a |
 | normalise | parts-core/passthrough@1.0.0 | passthrough | stage | opaque | in-process | — | — | n/a |
 
 **Divergence from declared structural_depth:**
@@ -85,7 +85,7 @@ Before applying §19.1–§19.6, the author MUST enumerate candidate boundaries 
 |---|---|---|---|
 | w2-codebase-memory-mcp-effects-normalise-answer | effects-change | normalise -> answer | declared effects[] differs across this dep edge; symmetric difference: ['calls_llm', 'writes_kv'] |
 | w2-codebase-memory-mcp-crossing-normalise-answer | value-crossing | normalise -> answer | 'answer''s dep edge on 'normalise' is by construction a point where a value crosses between operations |
-| w2-codebase-memory-mcp-effects-cbm-normalise | effects-change | cbm -> normalise | declared effects[] differs across this dep edge; symmetric difference: ['fs', 'self_storage'] |
+| w2-codebase-memory-mcp-effects-cbm-normalise | effects-change | cbm -> normalise | declared effects[] differs across this dep edge; symmetric difference: ['fs', 'mutates_store', 'self_storage'] |
 | w2-codebase-memory-mcp-crossing-cbm-normalise | value-crossing | cbm -> normalise | 'normalise''s dep edge on 'cbm' is by construction a point where a value crosses between operations |
 | w2-knob-chunking-strategy | knob | cbm -> normalise | the machine-chunks-versus-native-chunking boundary SELECTION.md Falsifier 4 names: cbm can be run once consuming machine-produced chunks and once chunking natively, a genuine bypass/substitution point at its own boundary |
 

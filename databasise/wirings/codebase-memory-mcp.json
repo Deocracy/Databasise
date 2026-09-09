@@ -1,0 +1,21 @@
+{
+  "wiring_id": "codebase-memory-mcp",
+  "title": "codebase-memory-mcp — the admitted whole-engine opaque node, reachable through the same parse_wiring -> run_wiring path the LightRAG ports use",
+  "wiring_version": "1",
+  "nodes": {
+    "cbm": {
+      "component": "codebase-memory-mcp@0.1.0",
+      "kind": "opaque",
+      "effects": [
+        "self_storage",
+        "fs",
+        "mutates_store"
+      ],
+      "deps": []
+    }
+  },
+  "harnesses": [],
+  "provides": [
+    "cbm"
+  ]
+}
