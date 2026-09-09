@@ -125,7 +125,7 @@ import asyncio
 import hashlib
 import json
 import uuid
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Iterator, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -157,8 +157,14 @@ from databasise.seam.evidence import (
     mint_evidence_refs,
     resolve_evidence_ref,
 )
+from databasise.seam.compare import compare_arms
 from databasise.seam.query import QueryObject, check_consumable
-from databasise.seam.refusals import ForeignEngineRefusalError, UnknownDocumentError, UnknownJobError
+from databasise.seam.refusals import (
+    EmptyComparisonRequestError,
+    ForeignEngineRefusalError,
+    UnknownDocumentError,
+    UnknownJobError,
+)
 from databasise.seam.selectors import Selector, resolve_selector
 from databasise.seam.tokens import TokenBreakdownEntry, assemble_token_breakdown
 from databasise.seam.trace_store import TraceStore
@@ -510,6 +516,45 @@ class Databasise:
         envelope = await self._execute(query_object, selector)
         for event in stream_envelope_events(envelope):
             yield event
+
+    async def compare(
+        self,
+        query_object: QueryObject,
+        selectors: Sequence[Selector],
+        *,
+        debug: bool = False,
+    ) -> ResponseEnvelope | dict[str, ResponseEnvelope]:
+        """API-08's comparison operation (06-03-PLAN.md) — one query object against N selectors,
+        returning per-arm envelopes keyed by the caller's own selector values (never an arm id,
+        wiring name, node id or modality name). Inspection-only: no verdict, no aggregate, no
+        winner (RIG.md ## §RUN.4's "comparison as inspection is always available... free — only
+        adjudication costs").
+
+        Runs ``check_consumable`` once, before any arm, so an unconsumable query object refuses
+        before any wiring is touched. A zero-length ``selectors`` sequence refuses with
+        :class:`~databasise.seam.refusals.EmptyComparisonRequestError`. Exactly one selector
+        degenerates to a run, not a comparison (RIG.md ## §RUN.3's degenerate-width rule): it
+        returns ``await self._execute(query_object, selectors[0])`` unchanged — the identical bare
+        ``ResponseEnvelope`` ``query()`` already returns, never a one-key mapping. Two or more
+        selectors delegate to :func:`~databasise.seam.compare.compare_arms`, which awaits this
+        engine's own bound ``_execute`` once per selector — the identical path every other §18
+        query already runs, so the §4 ``provenance`` redaction and the §18.2 closed-envelope rule
+        apply to every arm by construction (see ``compare.py``'s own module docstring).
+
+        ``debug`` is accepted and discarded for signature stability with ``query``/``query_stream``,
+        exactly as those two methods already do. Arms run sequentially, in the caller's own
+        supplied order — matching this engine's own declared ``_CONCURRENCY_SETTING``; this method
+        never introduces parallel arm execution (06-03-PLAN.md's own flagged assumption: a future
+        change to concurrent arm dispatch would change the declared concurrency setting a later
+        phase's own calibration is keyed to).
+        """
+        del debug
+        check_consumable(query_object, self.registry)
+        if len(selectors) == 0:
+            raise EmptyComparisonRequestError()
+        if len(selectors) == 1:
+            return await self._execute(query_object, selectors[0])
+        return await compare_arms(self._execute, query_object, selectors)
 
     async def ingest(self, document: IngestDocument) -> IngestJob:
         """The fourth §18 operation this seam exposes (05-01-PLAN.md) — and the first that is not

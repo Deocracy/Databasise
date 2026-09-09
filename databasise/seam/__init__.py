@@ -12,9 +12,10 @@ REST transport (04-05) is only imported by a consumer who has installed the ``re
 
 from __future__ import annotations
 
+from databasise.seam.compare import compare_arms
 from databasise.seam.engine import Databasise
 from databasise.seam.envelope import ResponseEnvelope
 from databasise.seam.query import QueryObject
 from databasise.seam.selectors import Selector
 
-__all__ = ["Databasise", "QueryObject", "ResponseEnvelope", "Selector"]
+__all__ = ["Databasise", "QueryObject", "ResponseEnvelope", "Selector", "compare_arms"]
