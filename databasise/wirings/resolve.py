@@ -24,9 +24,15 @@ from typing import Any
 
 import jsonpatch
 
-_WIRINGS_DIR = Path(__file__).resolve().parent / "lightrag"
+_WIRINGS_ROOT = Path(__file__).resolve().parent
+_WIRINGS_DIR = _WIRINGS_ROOT / "lightrag"
 
 _ARM_NAMES: tuple[str, ...] = ("naive", "bypass", "hybrid", "local", "global")
+
+# 06-01-PLAN.md: every modality this machine ships a base wiring for — the seam's candidate pool
+# is generalised over this set (databasise/seam/selectors.py's own _capability_candidates), not
+# just LightRAG's five arms.
+WIRING_NAMES: tuple[str, ...] = ("lightrag", "hipporag")
 
 
 class UnknownArmError(ValueError):
@@ -87,10 +93,43 @@ def declared_node_ids(arm_name: str) -> tuple[str, ...]:
     return tuple(patch_doc["resulting_node_id_set"])
 
 
+def load_wiring(wiring_name: str) -> dict[str, Any]:
+    """The committed base wiring for ``wiring_name`` (06-01-PLAN.md) — e.g. ``load_wiring
+    ("hipporag")`` reads ``databasise/wirings/hipporag/base.json``. Unlike LightRAG, a non-
+    LightRAG modality has no per-arm patch (03-RESEARCH.md §H.5's settled "none (single base
+    wiring)" verdict for HippoRAG) — this returns the base itself, resolved, ready for
+    ``parse_wiring``.
+    """
+    return json.loads((_WIRINGS_ROOT / wiring_name / "base.json").read_text(encoding="utf-8"))
+
+
+def all_wirings() -> list[tuple[str, dict[str, Any]]]:
+    """Every candidate wiring the seam's selectors resolve over (06-01-PLAN.md): every LightRAG
+    arm (resolved via :func:`resolve_arm`, preserving ``_ARM_NAMES``' own declared order) plus
+    every non-LightRAG base wiring named in :data:`WIRING_NAMES` (each modality's own single base,
+    loaded via :func:`load_wiring` — no arm resolution, since only LightRAG has arms today).
+    Returns ``(candidate_name, resolved_dict)`` pairs, mirroring
+    ``databasise/seam/selectors.py``'s own former ``_capability_candidates`` shape exactly, so
+    that module's ``smallest resolved wiring wins`` tie-break logic is unaffected by this widened
+    pool's source.
+    """
+    candidates: list[tuple[str, dict[str, Any]]] = [
+        (name, resolve_arm(name)) for name in _ARM_NAMES
+    ]
+    for wiring_name in WIRING_NAMES:
+        if wiring_name == "lightrag":
+            continue
+        candidates.append((wiring_name, load_wiring(wiring_name)))
+    return candidates
+
+
 __all__ = [
     "UnknownArmError",
+    "WIRING_NAMES",
     "load_base",
+    "load_wiring",
     "resolve_arm",
     "resolved_node_ids",
     "declared_node_ids",
+    "all_wirings",
 ]

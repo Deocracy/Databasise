@@ -237,6 +237,38 @@ class FaissVectorStore(StorageNameSpace):
         results.sort(key=lambda r: (-r["score"], r["id"]))
         return results
 
+    async def score_all(self, vector: Any) -> list[dict[str, Any]]:
+        """§14.2's exhaustive dense inner-product sub-capability (06-01-PLAN.md): one scored entry
+        per currently-committed vector, never a top-k truncation — the store-side counterpart
+        HippoRAG's ``fact-scorer`` needs (it scores every fact against the query, not merely the
+        nearest few). One batched Faiss search with ``k`` set to this index's own ``ntotal``,
+        reusing the identical normalisation and result shape :meth:`query` already establishes —
+        never composed by calling :meth:`query` in a loop with increasing ``top_k``. Sorted
+        descending by score, ``id`` as the deterministic tie-break, matching
+        ``parts_core/lightrag/chunk_vector.py``'s own sort key.
+        """
+        if self._index is None or self._index.ntotal == 0:
+            return []
+
+        query_vec = np.asarray(vector, dtype="float32").reshape(1, -1)
+        faiss.normalize_L2(query_vec)
+        k = self._index.ntotal
+        scores, int_ids = self._index.search(query_vec, k)
+
+        int_to_doc = {v["int_id"]: doc_id for doc_id, v in self._entries.items()}
+        results: list[dict[str, Any]] = []
+        for score, int_id in zip(scores[0], int_ids[0], strict=True):
+            if int_id == -1:
+                continue
+            doc_id = int_to_doc.get(int(int_id))
+            if doc_id is None:
+                continue
+            entry = self._entries[doc_id]
+            results.append({"id": doc_id, "score": float(score), **entry["metadata"]})
+
+        results.sort(key=lambda r: (-r["score"], r["id"]))
+        return results
+
     def iter_vectors(self) -> Iterator[tuple[str, np.ndarray]]:
         """Yield ``(doc_id, vector)`` for every committed (flushed) entry — WR-02: a public
         accessor for callers that need the raw stored vectors (e.g. the parity import verifier),

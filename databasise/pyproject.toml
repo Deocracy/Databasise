@@ -34,6 +34,15 @@ dependencies = [
     # 2026-08-30/31 — see 03-01-SUMMARY.md for the recorded evidence (prior executor run
     # surfaced the checkpoint; user approved both openai and jsonpatch).
     "jsonpatch",
+    # Whole-graph personalized PageRank (native prpack implementation) for HippoRAG 2's `ppr`
+    # node, §14.2 Graph bulk-export. Package-legitimacy gate approved 2026-09-09 — see
+    # 06-CHECKPOINT-ANSWERS.md. Depend on `igraph`, never the legacy `python-igraph`
+    # distribution (same PyPI project, `igraph` is the current name).
+    "igraph>=0.11,<2.0",
+    # HippoRAG 2's dense array math (reset-vector-join, ppr). Package-legitimacy gate approved
+    # 2026-09-09 — see 06-CHECKPOINT-ANSWERS.md. Already pinned independently at
+    # v1/pyproject.toml; this range is databasise's own.
+    "numpy>=1.24,<3.0",
 ]
 
 # PEP 735 dependency group, not [project.optional-dependencies]: uv installs the `dev`
@@ -104,6 +113,9 @@ packages = [
     "databasise.parts",
     "databasise.parts_core",
     "databasise.parts_core.lightrag",
+    # 06-01-PLAN.md: named in the same commit that creates it (05-04's own recorded rule) —
+    # HippoRAG 2's five query-side parts land in this same plan.
+    "databasise.parts_core.hipporag",
     "databasise.validator",
     "databasise.runner",
     "databasise.stores",
@@ -114,6 +126,8 @@ packages = [
     "databasise.parity",
     "databasise.foreign",
     "databasise.wirings",
+    # 06-01-PLAN.md: HippoRAG's base wiring package, named alongside the parts package it wires.
+    "databasise.wirings.hipporag",
     "databasise.seam",
     # 05-07-PLAN.md: the MCP transport, added in the same commit that names this package below —
     # a `uv sync` between plan 05-04 (which added the `mcp` extra) and this plan never names a
@@ -129,4 +143,4 @@ packages = [
 # mcp.json now sits at the package root, not under lightrag/ — without this the new wiring ships
 # in a source checkout and vanishes from an installed package, exactly the failure this same
 # package-data entry was already widened once to prevent (Falsifier-2 evidence run precedent).
-"databasise.wirings" = ["*.json", "lightrag/*.json"]
+"databasise.wirings" = ["*.json", "lightrag/*.json", "hipporag/*.json"]

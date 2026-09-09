@@ -42,7 +42,6 @@ from databasise.seam.engine import (
     _CONCURRENCY_SETTING,
     _DEFAULT_TOKEN_ALLOWANCE,
     _DETERMINISM_SETTING,
-    _EVIDENCE_RETRIEVAL_NODE_ID,
     _EXECUTOR_VERSION,
     Databasise,
     _build_stores,
@@ -196,7 +195,11 @@ async def _drive_one_real_run_with_a_complete_envelope(
         if isinstance(output, dict) and "completion" in output:
             answer = str(output["completion"])
 
-    retrieval_output = scheduled["results"].get(_EVIDENCE_RETRIEVAL_NODE_ID)
+    # 06-01-PLAN.md: the retrieval position is now read off the resolved wiring's own declared
+    # evidence_position, mirroring databasise/seam/engine.py's own _execute() — never a
+    # module-level constant naming the naive arm's "chunk-vector" node directly.
+    evidence_node_id = (resolved.get("evidence_position") or {}).get("node")
+    retrieval_output = scheduled["results"].get(evidence_node_id) if evidence_node_id else None
     retrieval_items = retrieval_output["items"] if isinstance(retrieval_output, dict) else []
     evidence = mint_evidence_refs(retrieval_items, namespace=CHUNKS_NAMESPACE)
 

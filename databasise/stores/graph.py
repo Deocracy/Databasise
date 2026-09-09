@@ -223,6 +223,56 @@ class CozoGraphStore(StorageNameSpace):
                 effective[key] = dict(attrs)
         return [{"src": src, "tgt": tgt, "attrs": attrs} for (src, tgt), attrs in effective.items()]
 
+    async def export_to_igraph(self, *, weight_attr: str = "weight") -> "igraph.Graph":  # noqa: F821 — quoted forward ref, resolved by the function-scoped import below
+        """§14.2's Graph bulk-export sub-capability (06-01-PLAN.md): the whole graph as one
+        undirected ``igraph.Graph``, built from exactly two Cozo queries — one for the node
+        relation, one for the edge relation — never a pointwise per-node/per-edge loop. Mirrors
+        05-06's lazy-optional-import discipline: ``igraph`` is imported function-scoped so a
+        machine that never dispatches a bulk-export-consuming node (every wiring but HippoRAG's)
+        never pays the import cost.
+
+        Consults the pending write buffers first, exactly as ``get_node``/``get_node_edges`` do
+        (read-your-writes before flush), so a graph written earlier in this same run and not yet
+        flushed is exported. Builds the vertex-name-to-dense-index map once, sets ``vs["name"]``
+        to the stored node ids and ``es["weight"]`` to each edge's own ``weight_attr`` value
+        (default ``1.0`` when an edge's stored ``attrs`` carries no ``weight_attr`` key — the
+        edge is kept, never dropped, per PARTS.md ``## §H``'s "single ``weight`` edge attribute
+        collapsing all three edge types" clause). Cites CONTRACT.md §14.2's bulk-export row.
+        """
+        import igraph
+
+        node_rows = await self._run("?[id] := *nodes{id}", {})
+        db_ids = {r[0] for r in node_rows}
+        effective_ids = (db_ids - self._pending_node_rms) | set(self._pending_node_puts.keys())
+
+        edge_rows = await self._run("?[src, tgt, attrs] := *edges{src, tgt, attrs}", {})
+        effective_edges: dict[tuple[str, str], dict[str, Any]] = {
+            (r[0], r[1]): _attrs_to_dict(r[2]) for r in edge_rows
+        }
+        for key in self._pending_edge_rms:
+            effective_edges.pop(key, None)
+        for key, attrs in self._pending_edge_puts.items():
+            effective_edges[key] = dict(attrs)
+
+        vertex_names = sorted(effective_ids)
+        index_by_id = {node_id: i for i, node_id in enumerate(vertex_names)}
+
+        edge_pairs: list[tuple[int, int]] = []
+        weights: list[float] = []
+        for (src, tgt), attrs in effective_edges.items():
+            if src not in index_by_id or tgt not in index_by_id:
+                # An edge endpoint absent from the node relation (a data inconsistency this
+                # store's own write paths should never produce) — skipped rather than raising,
+                # since a bulk export has no per-edge caller to refuse to.
+                continue
+            edge_pairs.append((index_by_id[src], index_by_id[tgt]))
+            weights.append(float(attrs.get(weight_attr, 1.0)))
+
+        graph = igraph.Graph(n=len(vertex_names), edges=edge_pairs, directed=False)
+        graph.vs["name"] = vertex_names
+        graph.es["weight"] = weights
+        return graph
+
     async def get_all_labels(self) -> list[str]:
         """All node ids, disk + buffer, sorted. Avoids ``count()`` aggregation (frozen-bug #244)."""
         rows = await self._run("?[id] := *nodes{id}", {})

@@ -16,7 +16,7 @@ from databasise.parts.registry import (
 from databasise.parts.schema import NodeContext
 
 
-def test_default_registry_holds_exactly_twenty_two_entries():
+def test_default_registry_holds_exactly_twenty_seven_entries():
     """D-04's six remaining Phase-1 entries (four executable ``parts_core`` reference parts, two
     declaration-only Falsifier-2 wiring placeholders — 03-08-PLAN.md Task 3 retired the third,
     ``lightrag/query-side`` (version ``0.1.0``), once Phase 3 ported its real eighteen positions)
@@ -26,12 +26,13 @@ def test_default_registry_holds_exactly_twenty_two_entries():
     ``relation-hydrate-expand``) plus 03-06-PLAN.md's three remaining base-wiring components
     (``join-roundrobin``, ``truncator-token-budget``, ``chunk-selector-kg``) plus 05-03-PLAN.md
     Task 1's ``lightrag/full-delete@0.1.0`` (the second, separately-admitted port of the same
-    corpus-side engine ``lightrag/full-ingest@0.1.0`` already registers) — this is by design the
-    final count: all eighteen §L.1 positions resolve against a registered part, plus the two
-    corpus-side write ports, and the stub they superseded is gone.
+    corpus-side engine ``lightrag/full-ingest@0.1.0`` already registers) plus 05-06-PLAN.md's
+    ``codebase-memory-mcp@0.1.0`` opaque part — twenty-two entries, the Phase 3/5 count — plus
+    06-01-PLAN.md's five ported HippoRAG parts (``fact-score``, ``fact-filter``,
+    ``reset-vector-join``, ``ppr``, ``assemble-result``): twenty-seven.
     """
     registry = default_registry()
-    assert len(registry.keys()) == 22
+    assert len(registry.keys()) == 27
 
 
 def test_get_on_an_unknown_key_raises_with_the_requested_key_quoted_in_the_message():

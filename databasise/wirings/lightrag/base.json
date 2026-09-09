@@ -214,5 +214,8 @@
   "harnesses": [],
   "provides": [
     "generate"
-  ]
+  ],
+  "consumes_query": ["keywords", "embedder-query", "generate"],
+  "evidence_position": { "node": "chunk-vector", "namespace": "chunks" },
+  "store_namespaces": { "kv": "text_chunks", "graph": "chunk_entity_relation" }
 }
