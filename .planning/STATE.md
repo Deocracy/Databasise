@@ -1,19 +1,19 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v1.0
-current_phase: 6
+current_phase: 06
 current_phase_name: HippoRAG 2 & Side-by-Side
 status: executing
-stopped_at: Phase 05 complete, ready to plan Phase 3
-last_updated: "2026-09-09T19:35:17.387Z"
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-09-09T21:58:33.617Z"
 last_activity: 2026-09-09
-last_activity_desc: Phase 6 planning complete
-state_head: 647f4bb5e6d87bec462c2004220464077cf74070
+last_activity_desc: Phase 06 execution started
+state_head: 7d79ee610ca649c3eb95def9a870ef983405bf6f
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 2
   total_plans: 50
-  completed_plans: 41
+  completed_plans: 42
 milestone_name: milestone
 ---
 
@@ -24,14 +24,14 @@ milestone_name: milestone
 See: .planning/PROJECT.md (updated 2026-08-29)
 
 **Core value:** Modalities are swappable without consumers noticing — LightRAG and HippoRAG 2 both live behind one unchanging §18 envelope, comparable side-by-side on the rig.
-**Current focus:** Phase 05 — Opaque-Side Admission
+**Current focus:** Phase 06 — HippoRAG 2 & Side-by-Side
 
 ## Current Position
 
-Phase: 6 (HippoRAG 2 & Side-by-Side) — READY TO EXECUTE
-Plan: Not started
+Phase: 06 (HippoRAG 2 & Side-by-Side) — EXECUTING
+Plan: 2 of 9
 Status: Ready to execute
-Last activity: 2026-09-09 — Phase 6 planning complete
+Last activity: 2026-09-09 — Phase 06 execution started
 
 Progress: [██████████] 100%
 
@@ -78,6 +78,7 @@ Progress: [██████████] 100%
 | Phase 05-opaque-side-admission P06 | 105min | 3 tasks | 9 files |
 | Phase 05-opaque-side-admission P05 | 45min | 2 tasks | 2 files |
 | Phase 05-opaque-side-admission P07 | 130min | 3 tasks | 14 files |
+| Phase 06 P01 | continuation session | 3 tasks | 29 files |
 
 ## Accumulated Context
 
@@ -130,6 +131,7 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 05]: 05-05: OPAQUE-BOUNDARY-RULE.md enumerates every across-boundary Part/AdmissionRecord field and driver-script protocol key; test_full_ingest_compat.py enforces it, pinning environment_hash structurally (not by literal digest) since that value legitimately drifts with a free v1/uv.lock bump.
 - [Phase 05]: 05-07: databasise/tests/mcp/ carries no __init__.py and both new test files guard with try/import-databasise.mcp instead of pytest.importorskip("mcp") — a bare import mcp/importorskip can resolve to this project's own mcp/ package or the tests/mcp/ namespace-package shadow instead of skipping cleanly.
 - [Phase 05]: 05-07: fixed a real regression this plan's own databasise/mcp/ package introduced into 05-06's pre-existing codebase_memory_mcp_adapter.py and its test files' bare importlib.util.find_spec("mcp") availability checks, via a shared shadow-safe resolver (databasise/foreign/_mcp_sdk_guard.py) that strips every sys.path entry resolving inside databasise/ (excluding the active venv) before resolving the real SDK.
+- [Phase 06]: HippoRAG 2 tracer: igraph/numpy approved for core deps; ppr.py graph-store access corrected to a single namespaced store (no .select())
 
 ### Pending Todos
 
@@ -158,6 +160,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-09T03:25:05.939Z
-Stopped at: Phase 05 complete, ready to plan Phase 3
+Last session: 2026-09-09T21:58:33.536Z
+Stopped at: Completed 06-01-PLAN.md
 Resume file: None

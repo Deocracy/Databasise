@@ -240,12 +240,12 @@ Plans:
   5. Mutable-store components either have a defined snapshot/reset protocol or are recorded as permanently excluded from A/B — F-07 discharged rather than left open
   6. Owner mints an eval bundle with dev/holdout/sealed splits carrying questions, gold answers, judge instance, judge prompt hash, corpus snapshot hash, determinism/concurrency setting, and both §EV.2 target families (MACH-02), then runs one A/A calibration and reads a bootstrap-resampled p95 floor keyed to `(bundle@v, tier, metric)` with T1's null width materially narrower than T0's — Falsifier 5, MACH-03, carried forward from Phase 3 per `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`
 
-**Plans**: 9 plans across 6 waves
+**Plans**: 1/9 plans executed across 6 waves
 
 Plans:
 **Wave 1** *(tracer — runs alone, before any expansion)*
 
-- [ ] 06-01-PLAN.md — Tracer: HippoRAG's five-node query-side chain answers a query end to end through the §18 seam, over isolated stores, via §14.2 bulk-export into the native igraph/prpack call
+- [x] 06-01-PLAN.md — Tracer: HippoRAG's five-node query-side chain answers a query end to end through the §18 seam, over isolated stores, via §14.2 bulk-export into the native igraph/prpack call
 
 **Wave 2** *(blocked on Wave 1; three plans run in parallel — no shared files)*
 
@@ -297,7 +297,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. LightRAG Query Side | 13/13 | In Progress|  |
 | 4. The Seam | 5/5 | Complete    | 2026-09-06 |
 | 5. Opaque-Side Admission | 9/9 | Complete    | 2026-09-08 |
-| 6. HippoRAG 2 & Side-by-Side | 0/9 | Planned | - |
+| 6. HippoRAG 2 & Side-by-Side | 1/9 | In Progress|  |
 | 7. Promotion & Rollback | 0/TBD | Not started | - |
 
 ## Requirement Coverage
