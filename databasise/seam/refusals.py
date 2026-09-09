@@ -176,6 +176,41 @@ class MalformedBase64PayloadError(SeamRefusalError):
         super().__init__(f"field {field!r} is not decodable in its declared base64 encoding")
 
 
+class EmptyComparisonRequestError(SeamRefusalError):
+    """Raised by ``Databasise.compare()`` (06-03-PLAN.md, API-08) when zero selectors are
+    supplied — a comparison needs at least one arm to compare (or run, at exactly one; a
+    single-selector request never reaches this refusal, since RIG §RUN.3's degenerate-width rule
+    means it is answered as a run instead). Names only the fact that the input was empty, never a
+    candidate wiring — §18.2's closed-set rule applied to this refusal path. The literal class-name
+    substring is load-bearing for the same reason ``AmbiguousIngestPayloadError``'s own docstring
+    documents: this refusal is raised directly inside ``Databasise.compare()``, never inside a
+    pydantic validator, so it is not itself at risk of the wrapping this note otherwise warns
+    about — the substring is kept anyway for a uniform "name your own type in your own message"
+    house style across every refusal in this module.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(
+            "EmptyComparisonRequestError: a comparison request must supply at least one selector"
+        )
+
+
+class DuplicateComparisonKeyError(SeamRefusalError):
+    """Raised by ``databasise.seam.compare.compare_arms()`` (06-03-PLAN.md) when two supplied
+    selectors render to the same comparison-response key — refused by name rather than silently
+    collapsed into one entry. A partial mapping with a silently-absent arm is the one shape a
+    consumer cannot distinguish from a modality that legitimately returned nothing, so a key
+    collision refuses the whole comparison instead. Names only the colliding key value, never a
+    candidate wiring or selector's own internal resolution.
+    """
+
+    def __init__(self, *, key: str) -> None:
+        self.key = key
+        super().__init__(
+            f"DuplicateComparisonKeyError: two selectors both render to comparison key {key!r}"
+        )
+
+
 class ForeignEngineRefusalError(SeamRefusalError):
     """The seam-facing wrapper for a foreign-engine subprocess failure
     (``databasise.foreign.CorpusOpSubprocessError``/``CorpusOpTimeoutError``) — so
@@ -203,5 +238,7 @@ __all__ = [
     "UnknownJobError",
     "PageSizeExceededError",
     "MalformedBase64PayloadError",
+    "EmptyComparisonRequestError",
+    "DuplicateComparisonKeyError",
     "ForeignEngineRefusalError",
 ]
