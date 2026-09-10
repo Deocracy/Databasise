@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 06
 current_phase_name: HippoRAG 2 & Side-by-Side
 status: executing
-stopped_at: Completed 06-11-PLAN.md (MACH-10 flipped to Complete in REQUIREMENTS.md, citing owner confirmation)
-last_updated: "2026-09-10T13:06:53.268Z"
+stopped_at: Completed 06-12-PLAN.md (Falsifier 5 preconditions closed, spend-free)
+last_updated: "2026-09-10T13:33:42.607Z"
 last_activity: 2026-09-10
 last_activity_desc: Phase 06 execution started
-state_head: bb8494b88d35754b3043c7cf2b836a1b22719cd1
+state_head: 9ac260f46731be94e1eaea936c80f6c57a058a45
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 54
-  completed_plans: 52
+  completed_plans: 53
 milestone_name: milestone
 ---
 
@@ -29,9 +29,11 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 06 (HippoRAG 2 & Side-by-Side) — EXECUTING
-Plan: 3 of 13
+Plan: 13 of 13 (12 of 13 complete — 06-12 just landed; 06-13 remains. Note: this counter was
+  drifted before this session — corrected here from find-phase's actual plan/summary counts
+  rather than the stale auto-incremented value)
 Status: Ready to execute
-Last activity: 2026-09-10 — Phase 06 execution started
+Last activity: 2026-09-10 — 06-12 (Falsifier 5 precondition closure) complete
 
 Progress: [██████████] 100%
 
@@ -89,6 +91,7 @@ Progress: [██████████] 100%
 | Phase 06-hipporag-2-side-by-side P09 | ~70min | 3 tasks | 10 files |
 | Phase 06 P10 | 80min | 3 tasks | 15 files |
 | Phase 06-hipporag-2-side-by-side P11 | 8min | 1 tasks | 1 files |
+| Phase 06 P12 | 24min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -161,6 +164,8 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 06]: 06-10: ingest becomes a real two-arm wiring (all seven HippoRAG index-side positions already exist), delete becomes a named refusal (no HippoRAG delete node exists anywhere in the repo) — Matches the plan's own objective split: build only what the existing node inventory can honestly support, never a delete wiring needing new node code
 - [Phase 06]: 06-10: MODAL-05 stays Pending in REQUIREMENTS.md — this plan closes the structural write-surface gap (Gap 1(a)) but explicitly does not perform the real cross-modality run (Gap 1(b)), which is 06-13's own blocking checkpoint — The plan's own objective names Gap 1(b) as explicitly out of scope; marking MODAL-05 complete here would overclaim
 - [Phase 06]: 06-11: MACH-10 flipped Pending -> Complete in REQUIREMENTS.md, citing 06-UAT.md Test 1 owner confirmation and F-07-MUTABLE-STORE-DISPOSITION.md — Appended a new dated confirmation annotation rather than rewriting the existing 06-09 measurement annotation, preserving the row's full history; MACH-03 and MODAL-05 left unchanged and Pending.
+- [Phase 06]: 06-12: gsd_run check tdd-red-evidence cannot classify pytest output for this Python project (TAP/Node-oriented) — RED evidence produced via the commit-broken-draft-then-restore technique 06-01/06-04 already established, verified manually against real pytest AssertionErrors.
+- [Phase 06]: 06-12: corpus_ingest.py's real --spend path uses its own dedicated store root (v1/.eval_corpus_store, workspace eval-corpus-ingest), separate from the Phase 3 parity store and the Phase 6 build-harness store.
 
 ### Pending Todos
 
@@ -189,6 +194,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-10T08:43:47.034Z
-Stopped at: Completed 06-11-PLAN.md (MACH-10 flipped to Complete in REQUIREMENTS.md, citing owner confirmation)
+Last session: 2026-09-10T13:33:42.517Z
+Stopped at: Completed 06-12-PLAN.md (Falsifier 5 preconditions closed, spend-free)
 Resume file: None
