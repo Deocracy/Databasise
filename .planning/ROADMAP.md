@@ -256,7 +256,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2; two plans run in parallel)*
 
 - [x] 06-05-PLAN.md — HippoRAG index side, part 2: the three edge builders, §14.2 batched self-KNN, and the quarantined graph materialiser
-- [ ] 06-06-PLAN.md — MACH-03's first A/A calibration and Falsifier 5's verdict against a pre-registered threshold
+- [x] 06-06-PLAN.md — MACH-03's first A/A calibration and Falsifier 5's verdict against a pre-registered threshold
 
 **Wave 4** *(blocked on Wave 3)*
 
