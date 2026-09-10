@@ -116,6 +116,18 @@ async def _entity_fact_embed_body(ctx: NodeContext) -> dict[str, Any]:
     embedding_client = ctx.clients["embedding"]
     entity_embed_result = await embedding_client.embed(entity_texts)
     fact_embed_result = await embedding_client.embed(fact_texts)
+    # WR-02 (06-REVIEW.md): two embed() calls, one resolved_model_identity reported — a silent
+    # last-wins/first-wins pick would hide a genuine per-call identity divergence (a
+    # routing/fallback client, a test double simulating drift). reset_vector_join.py's own
+    # arity-mismatch precedent (raise ValueError naming the disagreement, never a best-effort
+    # merge) is mirrored here rather than silently discarding one call's identity.
+    if entity_embed_result.resolved_model_identity != fact_embed_result.resolved_model_identity:
+        raise ValueError(
+            f"{ctx.node_id!r} embedded entities under model identity "
+            f"{entity_embed_result.resolved_model_identity!r} but facts under "
+            f"{fact_embed_result.resolved_model_identity!r} — a per-call identity divergence is a "
+            "refusal, never a silently-dropped report"
+        )
 
     entity_store = ctx.stores["vector"].select(_ENTITIES_NAMESPACE)
     await entity_store.upsert(
