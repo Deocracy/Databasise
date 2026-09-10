@@ -4,6 +4,8 @@ This phase carries its own §18.5 operations-table record, rather than only amen
 (`.planning/phases/05-opaque-side-admission/COVERAGE.md`), so the phase that actually lands a new
 operation is the phase whose own coverage record states it landed there.
 
+**No external API integration** — HippoRAG 2 is ported in-repo over the machine's own primitives; the one external API consumed (the OpenAI-compatible model endpoint) is Phase 3's, whose COVERAGE.md stays authoritative.
+
 ## The §18.5 surface record
 
 CONTRACT §18.5: *"The tool surface MAY grow per part and MUST NOT grow per modality."* This phase
