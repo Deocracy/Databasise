@@ -240,7 +240,7 @@ Plans:
   5. Mutable-store components either have a defined snapshot/reset protocol or are recorded as permanently excluded from A/B — F-07 discharged rather than left open
   6. Owner mints an eval bundle with dev/holdout/sealed splits carrying questions, gold answers, judge instance, judge prompt hash, corpus snapshot hash, determinism/concurrency setting, and both §EV.2 target families (MACH-02), then runs one A/A calibration and reads a bootstrap-resampled p95 floor keyed to `(bundle@v, tier, metric)` with T1's null width materially narrower than T0's — Falsifier 5, MACH-03, carried forward from Phase 3 per `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`
 
-**Plans**: 7/9 plans executed across 6 waves
+**Plans**: 9/9 plans executed across 6 waves
 
 Plans:
 **Wave 1** *(tracer — runs alone, before any expansion)*
