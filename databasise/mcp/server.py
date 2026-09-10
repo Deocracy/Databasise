@@ -190,7 +190,7 @@ def create_server(
     @server.tool(name="ingest")
     @_refusal_mapped
     async def ingest_tool(args: IngestToolArgs) -> dict[str, Any]:
-        job = await engine.ingest(args.to_ingest_document())
+        job = await engine.ingest(args.to_ingest_document(), args.selector)
         return job.model_dump()
 
     @server.tool(name="query")
@@ -215,7 +215,7 @@ def create_server(
     @server.tool(name="delete")
     @_refusal_mapped
     async def delete_tool(args: DeleteToolArgs) -> dict[str, Any]:
-        outcome = await engine.delete_document(args.document_id)
+        outcome = await engine.delete_document(args.document_id, args.selector)
         return outcome.model_dump()
 
     @server.tool(name="status")

@@ -118,10 +118,16 @@ class TraceRequest(_RequestModel):
 
 class IngestRequest(_RequestModel):
     document: IngestDocument
+    selector: Selector | None = None
 
 
 class DeleteRequest(_RequestModel):
-    document_id: str
+    """06-10-PLAN.md Task 2: an optional body on ``DELETE /documents/{document_id}`` — the
+    document id itself stays a path parameter (unchanged), this carries only the §18.4 selector
+    naming which fitted modality's index the delete reaches, the same optional member
+    ``QueryRequest``/``IngestRequest`` already carry."""
+
+    selector: Selector | None = None
 
 
 def _checked_page(limit: int, offset: int) -> Page:
@@ -240,19 +246,24 @@ def create_app(
 
     @app.post("/documents")
     async def post_documents(body: IngestRequest) -> IngestJob:
-        return await engine.ingest(body.document)
+        return await engine.ingest(body.document, body.selector)
 
     @app.post("/documents/upload")
     async def post_documents_upload(
         file: UploadFile,
         document_id: str | None = Form(default=None),
+        selector: str | None = Form(default=None),
     ) -> IngestJob:
         """The one route in this module with more than one statement (05-04-PLAN.md Task 2): it
         must read the uploaded file's bytes before an ``IngestDocument`` can be built — still no
-        selector resolution, no redaction and no envelope assembly, so
-        ``test_rest_transport.py``'s AST proof keeps passing. The byte-size cap is enforced by
-        ``IngestDocument``'s own validator refusing an oversized ``raw`` payload, never by a size
-        branch written here.
+        redaction and no envelope assembly, so ``test_rest_transport.py``'s AST proof keeps
+        passing. The byte-size cap is enforced by ``IngestDocument``'s own validator refusing an
+        oversized ``raw`` payload, never by a size branch written here.
+
+        06-10-PLAN.md Task 2: ``selector`` arrives as a JSON-encoded form field (multipart form
+        data has no native nested-object type, mirroring ``IngestToolArgs``'s own base64-for-bytes
+        convention for the identical "no native shape" problem) — parsed via ``Selector``'s own
+        ``model_validate_json``, never a hand-rolled parse.
         """
         raw = await file.read()
         document = IngestDocument(
@@ -261,7 +272,8 @@ def create_app(
             file_name=file.filename,
             content_type=file.content_type,
         )
-        return await engine.ingest(document)
+        parsed_selector = Selector.model_validate_json(selector) if selector else None
+        return await engine.ingest(document, parsed_selector)
 
     @app.get("/jobs/{job_id}")
     async def get_job_status(
@@ -272,8 +284,12 @@ def create_app(
         return await engine.get_job_status(job_id, _checked_page(limit, offset))
 
     @app.delete("/documents/{document_id}")
-    async def delete_document(document_id: str) -> DeletionOutcome:
-        return await engine.delete_document(document_id)
+    async def delete_document(document_id: str, body: DeleteRequest = DeleteRequest()) -> DeletionOutcome:
+        """06-10-PLAN.md Task 2: ``body`` defaults to an empty ``DeleteRequest`` (``selector=None``)
+        so a caller sending no body at all — every existing REST delete call — keeps working
+        byte-for-byte; a caller sending ``{"selector": ...}`` names which fitted modality's index
+        the delete reaches."""
+        return await engine.delete_document(document_id, body.selector)
 
     @app.get("/health")
     async def get_health() -> HealthReport:
