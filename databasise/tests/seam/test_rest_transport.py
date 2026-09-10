@@ -48,6 +48,7 @@ from databasise.seam.refusals import (
     ForbiddenSelectorInputError,
     ForeignEngineRefusalError,
     MalformedBase64PayloadError,
+    MutableStoreComparisonExcludedError,
     OversizedDocumentError,
     PageSizeExceededError,
     SeamRefusalError,
@@ -368,6 +369,9 @@ _REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
     EmptyQueryObjectError: lambda: EmptyQueryObjectError(QueryObject()),
     EmptyComparisonRequestError: lambda: EmptyComparisonRequestError(),
     DuplicateComparisonKeyError: lambda: DuplicateComparisonKeyError(key="reads_vector"),
+    MutableStoreComparisonExcludedError: lambda: MutableStoreComparisonExcludedError(
+        component="codebase-memory-mcp@0.1.0"
+    ),
     UnconsumableQueryMemberError: lambda: UnconsumableQueryMemberError("embedding"),
     UnsatisfiableSelectorError: lambda: UnsatisfiableSelectorError(
         selector_kind="capability", requested=["reads_space"]

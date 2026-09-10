@@ -211,6 +211,34 @@ class DuplicateComparisonKeyError(SeamRefusalError):
         )
 
 
+class MutableStoreComparisonExcludedError(SeamRefusalError):
+    """Raised by ``Databasise.compare()`` (06-09-PLAN.md, MACH-10/F-07) when a comparison's
+    selectors resolve to a wiring whose parts declare ``mutates_store``. `CONTRACT.md §14.4`
+    point 3 requires this exclusion to be an explicit refusal, never a silent skip or a filter
+    that quietly drops the arm: a node that mutates its own backing store is not safely
+    re-runnable for a `§5` parity/determinism comparison without a defined snapshot/reset
+    protocol, and this project's own recorded decision
+    (``databasise/evidence/F-07-MUTABLE-STORE-DISPOSITION.md``) is permanent exclusion rather than
+    building one. Names only the excluded component's own ``name@version`` — never another
+    candidate wiring, arm name, or node id — per `§18.2`'s closed-set rule applied to this refusal
+    path, the same discipline every other refusal in this module already follows.
+
+    Checked in the comparison path only (two or more selectors); a single-selector call is a run
+    under RIG `§RUN.3`'s degenerate-width rule, and `§14.4` point 3 excludes the component from
+    `§5`'s parity/determinism *comparisons*, not from being run — ``query()`` and the one-selector
+    ``compare()`` path never raise this.
+    """
+
+    def __init__(self, *, component: str) -> None:
+        self.component = component
+        super().__init__(
+            "MutableStoreComparisonExcludedError: component "
+            f"{component!r} declares mutates_store and is excluded from §5 parity/determinism "
+            "comparisons per the recorded disposition in "
+            "databasise/evidence/F-07-MUTABLE-STORE-DISPOSITION.md"
+        )
+
+
 class ForeignEngineRefusalError(SeamRefusalError):
     """The seam-facing wrapper for a foreign-engine subprocess failure
     (``databasise.foreign.CorpusOpSubprocessError``/``CorpusOpTimeoutError``) — so
@@ -240,5 +268,6 @@ __all__ = [
     "MalformedBase64PayloadError",
     "EmptyComparisonRequestError",
     "DuplicateComparisonKeyError",
+    "MutableStoreComparisonExcludedError",
     "ForeignEngineRefusalError",
 ]
