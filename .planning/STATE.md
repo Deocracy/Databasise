@@ -1,19 +1,19 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: 06
 current_phase_name: HippoRAG 2 & Side-by-Side
 status: executing
-stopped_at: Completed 06-06-PLAN.md (Falsifier 5 BLOCKED — real calibration deferred)
-last_updated: "2026-09-10T00:57:49.074Z"
+stopped_at: Completed 06-07-PLAN.md (HippoRAG 2 decomposition complete — thirteenth position, §19.8 guard, port record)
+last_updated: "2026-09-10T01:41:23.270Z"
 last_activity: 2026-09-09
 last_activity_desc: Phase 06 execution started
-state_head: 1f1408458298bbb7e10831ab52b6bf86542358ba
+state_head: ccd0b6eb9baa7132aeb0b3213d813c883d9342f0
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 2
   total_plans: 50
-  completed_plans: 47
+  completed_plans: 48
 milestone_name: milestone
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 06 (HippoRAG 2 & Side-by-Side) — EXECUTING
-Plan: 7 of 9
+Plan: 8 of 9
 Status: Ready to execute
 Last activity: 2026-09-09 — Phase 06 execution started
 
@@ -84,6 +84,7 @@ Progress: [██████████] 100%
 | Phase 06 P04 | ~65min | 3 tasks | 15 files |
 | Phase 06 P05 | ~80min | 3 tasks | 11 files |
 | Phase 06-hipporag-2-side-by-side P06 | ~20min (continuation) | 2 tasks | 8 files |
+| Phase 06 P07 | ~90 min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -148,6 +149,9 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 06]: 06-05: the fact-chunk-association discrepancy between entity-fact-embed (06-02, writes chunk_ids to vector metadata) and reset-vector-join (06-01, reads a KV fact:<id> record no code writes) is explicitly left open — disposition determined (reset-vector-join's KV-read interface is authoritative; entity-fact-embed needs to also write the KV record) but not implemented, since neither file is in 06-05's own <files> scope. 06-07 is named as owner.
 - [Phase 06-hipporag-2-side-by-side]: 06-06: Owner selected defer-run at Task 2's checkpoint — no real A/A calibration executes; Falsifier 5/MACH-03 recorded as BLOCKED, not passed or failed. — T0 (answer-level) blocked by bundle@v1's unresolved judge_instance; T1 (gold-passage) blocked by the unbudgetable cost of ingesting the 291-document eval-corpus through the opaque v1 full-ingest path. Two preconditions named for a future run.
 - [Phase 06-hipporag-2-side-by-side]: 06-06: Task 3 adapted from a passing-verdict record to a BLOCKED record per the owner's explicit instruction — an authorized deviation, not an executor judgment call. — The plan's literal Task 3 text assumed two committed calibration results existed to compare; none exist under defer-run, so the findings table instead carries one row per blocker and the record states plainly that no floor value is reported.
+- [Phase 06]: 06-07: the zero_surviving_facts_dpr_fallback guard is declared on fact-filter's own config.guards (declare_guard's real shape: name/evaluating_node/value_when_not_fired/granularity), never the illustrative doc's top-level richer-shaped guards array — runner/guards.py's own module docstring requires config.guards so config_hash covers the declaration. — The illustrative docs/system-model/wirings/hipporag-base.json's top-level guards array is evidence PARTS.md cites; it is never parsed by validator/parse.py or reached by runner/scheduler.py's per-node guard validation.
+- [Phase 06]: 06-07: fact_filter.py's _GuardAwareResult (a dict subclass overriding __eq__/__ne__) lets a JSON-literal value_when_not_fired sentinel correctly express a per-query, data-dependent condition through evaluate_guards's whole-runtime-output `!=` comparison, without a second guard-evaluation mechanism. — This node's own items/tokens legitimately vary per query in both branches, so ordinary whole-dict equality could never match a static JSON value; dict's own C-level __ne__ slot does not fall back to a subclass __eq__ override, so both had to be defined explicitly.
+- [Phase 06]: 06-07: entity-fact-embed now also writes a fact:<id> -> {chunk_ids} KV record (writes_kv effect added), closing the two-plan-old gap between reset-vector-join's already-committed KV read and entity-fact-embed's vector-metadata-only write. — 06-05-SUMMARY.md's own "Next Phase Readiness" section disposed this gap explicitly to 06-07 as owner, since a real end-to-end run needs the write and neither 06-01 nor 06-05's own <files> scope touched the file that needed it.
 
 ### Pending Todos
 
@@ -176,6 +180,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-10T00:57:48.916Z
-Stopped at: Completed 06-06-PLAN.md (Falsifier 5 BLOCKED — real calibration deferred)
+Last session: 2026-09-10T01:41:23.183Z
+Stopped at: Completed 06-07-PLAN.md (HippoRAG 2 decomposition complete — thirteenth position, §19.8 guard, port record)
 Resume file: None
