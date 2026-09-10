@@ -154,6 +154,16 @@ requires the index-side effective depth to stay `opaque` until parity is shown �
 risk narrowing that depth on evidence this record cannot stand behind. Plan `06-09` carries the
 deferral forward with its own trigger for when that measurement should be run.
 
+**The named deferral entry (06-09-PLAN.md), tracked rather than left as an absence.**
+
+| Field | Value |
+|---|---|
+| What it consists of | The real upstream `hipporag` package (PyPI `2.0.0a4` / `main` `2.0.0a5`), pinned by exact commit SHA, installed in its own isolated interpreter never imported into `databasise/`'s own environment — the same D-14 import-boundary rule Phase 5 enforced for v1's `lightrag` package (`databasise/parity/v1_arm.py`'s own subprocess-boundary pattern) — run end to end on the same corpus and queries this port's own tests use, and compared at the retrieval level exactly as Phase 3's `PARITY-EVIDENCE.md` did for LightRAG |
+| What it would buy | `stage`-eligibility for the index side, and with it true shared-artifact eligibility under `§3`'s blast-radius rule and a genuine `reuse` classification from `§6`'s reindex planner, replacing the `opaque`/`quarantined` status this phase carries forward under the taint rule |
+| Why it is not run here | MODAL-04's own text conditions the index side's `opaque` status on parity being shown; keeping it `opaque` absent that measurement is exactly what this phase correctly delivers, not a gap in it. `06-RESEARCH.md`'s own assumption A6 records the stronger reading — that "showing parity means running the upstream package" — as that session's own inference, not a clause any frozen document states as a requirement |
+| Trigger | The first requirement asking for HippoRAG index-side artifact sharing or `stage`-depth eligibility |
+| Standing risk to this future measurement | The upstream package's own alpha status (`2.0.0a4` on PyPI / `2.0.0a5` on `main`) — a pre-1.0 API is being depended on for a measurement, not for production behaviour, so an upstream break between the pinned SHA and a future `2.0.0` would invalidate the harness rather than the engine, and any future run must re-pin and re-verify the call shape (`run_ppr`/`add_synonymy_edges`/`save_igraph`) rather than assume it is unchanged |
+
 **The synonymy-edges guard proxy (06-05) is unchanged by this plan.** `synonymy-edges`' own
 `num_new_chunks > 0` guard condition is read off `entity-fact-embed`'s own entity count, since no
 node in this node's own dep chain carries a literal chunk count — recorded in `06-05-SUMMARY.md`,
