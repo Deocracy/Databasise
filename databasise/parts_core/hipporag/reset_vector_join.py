@@ -14,7 +14,11 @@ score by its own chunk count, adding the result onto every entity vertex the fac
 **Passage weights.** This node performs its own dense passage retrieval — embeds
 ``ctx.config["query"]`` (``calls_embedding``) and reads §14.2's exhaustive ``score_all``
 sub-capability over the ``hipporag-chunks`` vector namespace (``reads_vector``) — min-max
-normalises the resulting scores, and multiplies by ``config["passage_node_weight"]``.
+normalises the resulting scores, and multiplies by ``config["passage_node_weight"]``. The
+embed-then-``score_all`` call itself is ``dpr_fallback.py``'s own ``dense_passage_retrieval``
+helper, imported rather than re-computed here (06-07-PLAN.md Task 1) — the same helper upstream
+calls in both places (``HippoRAG.py:1467-1499``, ``:1591-1608``), so this node and ``dpr-fallback``
+cannot silently diverge on what dense passage retrieval means.
 
 **The sum.** Disjoint-support and order-insensitive: entity-prefixed and chunk-prefixed vertex
 refs resolve to disjoint indices in the same dense vertex-index space ``CozoGraphStore
@@ -37,6 +41,7 @@ from __future__ import annotations
 from typing import Any
 
 from databasise.parts.schema import NodeContext, Part
+from databasise.parts_core.hipporag.dpr_fallback import dense_passage_retrieval
 
 _NAME_AT_VERSION = "hipporag/reset-vector-join@0.1.0"
 _CHUNKS_NAMESPACE = "hipporag-chunks"
@@ -77,11 +82,10 @@ async def _reset_vector_join_body(ctx: NodeContext) -> dict[str, Any]:
             phrase_weights[vertex_name] = phrase_weights.get(vertex_name, 0.0) + weight
 
     embedding_client = ctx.clients["embedding"]
-    embed_result = await embedding_client.embed([query])
-    vector = embed_result.vectors[0]
-
     chunks_store = ctx.stores["vector"].select(_CHUNKS_NAMESPACE)
-    passage_items = await chunks_store.score_all(vector)
+    passage_items, embed_result = await dense_passage_retrieval(
+        embedding_client=embedding_client, chunks_store=chunks_store, query=query
+    )
     passage_ids = [item["id"] for item in passage_items]
     normalised = _min_max_normalise([item["score"] for item in passage_items])
     passage_weights: dict[str, float] = {

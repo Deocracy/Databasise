@@ -383,11 +383,12 @@ async def test_end_to_end_index_run_produces_a_graph_with_passage_and_entity_ver
     entity_ctx = _ctx(
         "entity-fact-embed",
         inputs={"openie": openie_result},
-        stores={"vector": vector_store},
+        stores={"vector": vector_store, "kv": kv_store},
         clients={"embedding": embedding_client},
     )
     entity_result = await HIPPORAG_ENTITY_FACT_EMBEDDER_PART.body(entity_ctx)
     await vector_store.index_done_callback()
+    await kv_store.index_done_callback()
 
     fact_edges_result = await HIPPORAG_FACT_EDGE_BUILDER_PART.body(
         _ctx("fact-edges", inputs={"openie": openie_result})

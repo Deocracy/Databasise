@@ -16,6 +16,18 @@ added here in addition to the declared ``calls_embedding`` — this node writes 
 namespaces, and ``CapabilityScopedStores.require`` hands a body no store handle for an undeclared
 effect.
 
+SECOND ADDITIVE EFFECTS DISCREPANCY (06-07-PLAN.md, closing the gap 06-05-SUMMARY.md's own "Next
+Phase Readiness" section named and disposed to this plan): ``writes_kv`` is added here too.
+``reset_vector_join.py`` (06-01, already committed) reads each surviving fact's own chunk
+association from a KV ``fact:<id>`` -> ``{chunk_ids}`` record; before this plan, no code in this
+repository wrote that record — only ``tests/parts_core/hipporag/conftest.py``'s
+``seeded_hipporag_store`` fixture hand-seeded it for ``reset-vector-join``'s own isolated tests.
+06-05-SUMMARY.md's disposition named ``reset-vector-join``'s KV-read interface as the more
+load-bearing of the two (already committed, already declaring ``reads_kv``) and this node as the
+one needing the additive write — this node already computes ``chunk_ids`` per fact for its own
+fact-vector metadata, so writing the same data to the KV store under the ``fact:<id>`` key costs
+one more store call, not a new computation.
+
 Vertex-ref identity space: ``ENTITY_VERTEX_PREFIX``/``CHUNK_VERTEX_PREFIX`` below are the node
 identity space ``export_to_igraph``, ``reset-vector-join`` and ``ppr`` all share — defined once
 here and imported (never re-spelled) by 06-05's graph-construction nodes. Entity-prefixed and
@@ -131,6 +143,13 @@ async def _entity_fact_embed_body(ctx: NodeContext) -> dict[str, Any]:
         ],
     )
 
+    # 06-07-PLAN.md: the additive fact:<id> -> {chunk_ids} KV write reset-vector-join.py already
+    # reads — see this module's own docstring for the full disposition.
+    kv_store = ctx.stores["kv"]
+    await kv_store.upsert(
+        {f"fact:{fid}": {"chunk_ids": fact_records[fid]["chunk_ids"]} for fid in fact_ids}
+    )
+
     return {
         "entities": [
             {"ref": ref, "surface_form": text}
@@ -146,7 +165,7 @@ HIPPORAG_ENTITY_FACT_EMBEDDER_PART = Part(
     name_at_version=_NAME_AT_VERSION,
     kind="embedder",
     structural_depth="opaque",
-    effects=["calls_embedding", "writes_vector"],
+    effects=["calls_embedding", "writes_vector", "writes_kv"],
     upstream_ref="hipporag/src/hipporag/HippoRAG.py",
     body=_entity_fact_embed_body,
 )
