@@ -268,7 +268,7 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5)*
 
-- [ ] 06-09-PLAN.md — MACH-10 / F-07 discharged with an enforcing refusal, plus the phase's record and requirement reconciliation
+- [x] 06-09-PLAN.md — MACH-10 / F-07 discharged with an enforcing refusal, plus the phase's record and requirement reconciliation
 
 ### Phase 7: Promotion & Rollback
 
