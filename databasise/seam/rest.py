@@ -93,9 +93,18 @@ _REFUSAL_STATUS_CODE = 422
 class _RequestModel(BaseModel):
     """The shared strict base for this module's own request DTOs — never the seam's own frozen
     models (``QueryObject``/``Selector``), which stay exactly as 04-01/04-03 declared them. These
-    DTOs carry no logic: they exist only so FastAPI has a body shape to deserialize into."""
+    DTOs carry no logic: they exist only so FastAPI has a body shape to deserialize into.
 
-    model_config = ConfigDict(extra="forbid")
+    06-REVIEW.md WR-01: ``frozen=True``, mirroring ``databasise/mcp/tools.py``'s own
+    ``_ToolArgs`` base. ``DeleteRequest``'s own module-level default (``DeleteRequest()`` on
+    ``delete_document``'s ``body`` parameter) is a single mutable instance constructed once at
+    route-registration time and reused as the default for every request that omits a body — the
+    mutable-default-argument shape applied to a route handler. No route currently mutates a
+    request DTO, so freezing every subclass here is a no-op today; it turns a future read-modify
+    write on a shared default into an immediate, loud ``ValidationError`` instead of silently
+    corrupting every subsequent no-body request in the same process."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
 
 class QueryRequest(_RequestModel):

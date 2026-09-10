@@ -125,6 +125,22 @@ def test_an_http_client_posts_a_query_and_receives_the_same_closed_envelope(clie
     assert [item["ref"] for item in body["evidence"]] == ["chunk-1"]
 
 
+def test_delete_request_default_body_is_frozen_and_cannot_be_silently_mutated():
+    """06-REVIEW.md WR-01: ``DeleteRequest()``, used as ``delete_document``'s own module-level
+    default ``body`` value, is a single mutable ``BaseModel`` instance constructed once at
+    route-registration time and reused as the default for every request that omits a body.
+    Unless the model is frozen, a future edit that reads then writes a field on that shared
+    default would silently corrupt every subsequent no-body request in the same process. Fails
+    without the fix: pydantic v2 permits attribute reassignment on a non-frozen ``BaseModel``."""
+    import pydantic
+
+    from databasise.seam.rest import DeleteRequest
+
+    body = DeleteRequest()
+    with pytest.raises(pydantic.ValidationError):
+        body.selector = None
+
+
 def test_databasise_and_databasise_seam_are_importable_with_no_web_framework_present():
     """AST walk over the source, not `sys.modules` manipulation (per the plan's own instruction)
     — the assertion is about what the module declares, not a fragile runtime state. Neither module
