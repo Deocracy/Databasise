@@ -133,22 +133,29 @@ def estimate(snapshot: CorpusSnapshot, *, limit: int, arm: str) -> IngestEstimat
     exceeds ``snapshot``'s own document count — before any byte is summed.
     """
     available = len(snapshot.documents)
-    # RED-DRAFT DEFECT (06-12-PLAN.md Task 1, TDD RED phase): the over-limit refusal is disabled
-    # here on purpose, so test_limit_exceeding_corpus_size_is_refused_by_name fails on a real
-    # assertion (pytest.raises does not fire) rather than an import/collection error. Restored in
-    # the GREEN commit.
-    # if limit > available:
-    #     raise LimitExceedsCorpusError(requested=limit, available=available)
+    if limit > available:
+        raise LimitExceedsCorpusError(requested=limit, available=available)
 
     documents = snapshot.documents[:limit]
     total_bytes = sum(len(doc.text.encode("utf-8")) for doc in documents)
     input_tokens_floor = total_bytes // CHARS_PER_TOKEN
 
-    # RED-DRAFT DEFECT: bound/note left empty regardless of arm, so
-    # test_estimate_labels_its_own_bound_and_note_per_arm fails on a real assertion. Restored in
-    # the GREEN commit.
-    bound = ""
-    note = ""
+    if arm == "lightrag":
+        bound = f"document count (--limit={limit})"
+        note = (
+            "v1's full-ingest reports its own spend as the 'unbudgetable' sentinel "
+            "(databasise.parts_core.lightrag.full_ingest._UNBUDGETABLE_TOKENS_SENTINEL) — this "
+            "figure is a floor on input tokens, computed from chars_per_token, and is never a bill."
+        )
+    elif arm == "hipporag":
+        bound = "the per-node token allowance the scheduler budget-halts against"
+        note = (
+            "HippoRAG's scheduler enforces a real per-node token_allowance, unlike v1's "
+            "unbudgetable full-ingest path — this figure is still a floor on input tokens, "
+            "computed from chars_per_token, and is never a bill."
+        )
+    else:  # pragma: no cover - argparse's own choices= already closes this off at the CLI
+        raise ValueError(f"unknown arm {arm!r}; known arms: {sorted(_ARM_CHOICES)}")
 
     return IngestEstimate(
         documents=len(documents),
@@ -172,12 +179,8 @@ async def ingest_documents(
     est = estimate(snapshot, limit=limit, arm=arm)  # raises before any spend on an over-large limit
     selector = _ARM_SELECTORS[arm]
 
-    # RED-DRAFT DEFECT: off-by-one, ignores est.documents — makes
-    # test_estimate_then_ingest_lands_in_hipporags_own_namespaces and
-    # test_spend_flag_ingests_exactly_the_limit_never_the_whole_corpus fail on a real assertion
-    # (one extra document ingested). Restored in the GREEN commit.
     jobs: list[IngestJob] = []
-    for document in snapshot.documents[: limit + 1]:
+    for document in snapshot.documents[: est.documents]:
         job = await engine.ingest(
             IngestDocument(document_id=document.id, text=document.text), selector=selector
         )
@@ -209,10 +212,7 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps(result.to_dict(), indent=2))
 
     if not args.spend:
-        # RED-DRAFT DEFECT: wrong mode label — makes test_default_path_spends_nothing fail on a
-        # real assertion (the exact "mode: estimate-only" string is absent from stdout). Restored
-        # in the GREEN commit.
-        print("mode: not-yet-implemented")
+        print("mode: estimate-only")
         return 0
 
     try:
