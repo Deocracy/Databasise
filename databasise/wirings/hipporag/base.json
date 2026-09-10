@@ -66,7 +66,15 @@
       "kind": "ranker-reranker",
       "effects": ["calls_llm"],
       "config": {
-        "linking_top_k": 5
+        "linking_top_k": 5,
+        "guards": [
+          {
+            "name": "zero_surviving_facts_dpr_fallback",
+            "evaluating_node": "fact-filter",
+            "value_when_not_fired": false,
+            "granularity": "per-query"
+          }
+        ]
       },
       "deps": ["fact-score"]
     },
@@ -107,13 +115,13 @@
       "config": {
         "order_policy": "hipporag-doc-score-order"
       },
-      "deps": ["ppr"]
+      "deps": ["ppr", "dpr-fallback", "fact-filter"]
     }
   },
   "recipe": { "chunker": "chunk-embed", "embedding": "chunk-embed", "extraction": "openie" },
   "harnesses": [],
   "provides": ["assemble-result"],
   "consumes_query": ["fact-score", "reset-vector-join", "dpr-fallback"],
-  "evidence_position": { "node": "ppr", "namespace": "hipporag-chunks" },
+  "evidence_position": { "node": "assemble-result", "namespace": "hipporag-chunks" },
   "store_namespaces": { "kv": "hipporag-text-chunks", "graph": "hipporag-graph" }
 }
