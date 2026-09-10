@@ -51,9 +51,6 @@ _REPO_EVAL_DIR = Path(__file__).resolve().parent.parent
 _COMMITTED_BUNDLE_ROOT = _REPO_EVAL_DIR / "evidence" / "eval-bundles"
 _JUDGE_PROMPT_PATH = _COMMITTED_BUNDLE_ROOT / "judge-prompt-v1.txt"
 
-# RED-DRAFT DEFECT scaffolding: removed in the GREEN commit along with the defect it supports.
-_DRAFT_MINT_CALL_COUNTER = {"n": 0}
-
 
 class UnresolvedJudgeIdentityError(RuntimeError):
     """Raised by :func:`resolve_judge_identity` when the provider response carries no
@@ -80,12 +77,9 @@ async def resolve_judge_identity(chat_client: Any) -> str:
     """
     result = await chat_client.chat(_MINIMAL_JUDGE_PROBE_MESSAGES)
     identity = result.resolved_model_identity
-    # RED-DRAFT DEFECT (06-12-PLAN.md Task 2, TDD RED phase): never raises, and mangles the
-    # resolved identity with a placeholder-ish literal suffix — makes
-    # test_resolve_judge_identity_returns_the_identity_a_real_response_reports and
-    # test_resolve_judge_identity_raises_when_response_carries_no_identity both fail on real
-    # assertions. Restored in the GREEN commit.
-    return (identity or "placeholder-judge@v1") + "-draft"
+    if not identity:
+        raise UnresolvedJudgeIdentityError()
+    return identity
 
 
 def remint(
@@ -102,17 +96,11 @@ def remint(
     content-addressed over ``judge_instance``, so a changed identity mints the next version and an
     unchanged one returns the already-minted version — do not add a redundant bump here.
     """
-    # RED-DRAFT DEFECT: ignores the caller's own judge_instance (hardcoded literal instead) and
-    # perturbs judge_prompt_hash per call, breaking mint_bundle's own content-hash idempotence —
-    # makes test_remint_mints_a_new_version_and_leaves_v1_bytes_untouched and
-    # test_reminting_twice_with_the_same_identity_reuses_the_version both fail on real assertions.
-    # Restored in the GREEN commit.
-    _DRAFT_MINT_CALL_COUNTER["n"] += 1
     return mint_bundle(
         snapshot,
         bundle_root,
-        judge_instance="draft-not-implemented",
-        judge_prompt_hash=judge_prompt_hash + str(_DRAFT_MINT_CALL_COUNTER["n"]),
+        judge_instance=judge_instance,
+        judge_prompt_hash=judge_prompt_hash,
         determinism_setting=determinism_setting,
         concurrency_setting=concurrency_setting,
     )
@@ -135,10 +123,7 @@ def main(argv: list[str] | None = None) -> int:
         clients = _build_clients(env)
     except (MissingParityEnvError, MissingParityEnvKeyError) as exc:
         print(str(exc), file=sys.stderr)
-        # RED-DRAFT DEFECT: wrong exit code on a refusal — makes
-        # test_main_with_no_live_credentials_exits_1_and_never_mints fail on a real assertion.
-        # Restored in the GREEN commit.
-        return 0
+        return 1
 
     try:
         judge_instance = asyncio.run(resolve_judge_identity(clients["llm"]))
