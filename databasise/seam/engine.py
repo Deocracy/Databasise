@@ -162,10 +162,11 @@ from databasise.seam.query import QueryObject, check_consumable
 from databasise.seam.refusals import (
     EmptyComparisonRequestError,
     ForeignEngineRefusalError,
+    MutableStoreComparisonExcludedError,
     UnknownDocumentError,
     UnknownJobError,
 )
-from databasise.seam.selectors import Selector, resolve_selector
+from databasise.seam.selectors import Selector, _wiring_effects, resolve_selector
 from databasise.seam.tokens import TokenBreakdownEntry, assemble_token_breakdown
 from databasise.seam.trace_store import TraceStore
 from databasise.stores.graph import CozoGraphStore
@@ -460,6 +461,25 @@ def _select_answer(
     return answer, depth_label
 
 
+def _mutates_store_component(resolved: dict[str, Any], registry: PartRegistry) -> str:
+    """06-09-PLAN.md Task 2: the ``name@version`` of the first node in ``resolved`` whose
+    registered ``Part`` declares ``mutates_store`` — used only to name the excluded component in
+    :class:`~databasise.seam.refusals.MutableStoreComparisonExcludedError`'s message. This is a
+    separate, small lookup from ``selectors.py``'s own :func:`_wiring_effects`, which stays the
+    sole place the effect *union* is computed (this plan's own acceptance criterion) — this
+    function never recomputes that union, it only re-walks the same ``nodes`` mapping once more to
+    identify which single node the caller already knows (via ``_wiring_effects``) is responsible.
+    """
+    for node in resolved.get("nodes", {}).values():
+        part = registry.get(node["component"])
+        if "mutates_store" in part.effects:
+            return part.name_at_version
+    raise AssertionError(
+        "_mutates_store_component called on a wiring whose _wiring_effects union does not "
+        "actually contain mutates_store"
+    )
+
+
 class Databasise:
     """The consumer-facing async seam object (D-01). Holds ``store_root``/``workspace``, an
     optional ``PartRegistry`` (defaulting to ``default_registry()``) and an optional ``clients``
@@ -547,6 +567,17 @@ class Databasise:
         never introduces parallel arm execution (06-03-PLAN.md's own flagged assumption: a future
         change to concurrent arm dispatch would change the declared concurrency setting a later
         phase's own calibration is keyed to).
+
+        **06-09-PLAN.md Task 2 (MACH-10/F-07):** `§14.4` point 3's explicit-refusal requirement.
+        Once two or more selectors are in play (an actual comparison, not the one-selector run
+        above), every selector is resolved up front — before any arm executes — and each resolved
+        wiring's declared effect union is computed via ``selectors.py``'s own
+        :func:`~databasise.seam.selectors._wiring_effects` (never a second copy of that
+        computation). A ``mutates_store`` effect anywhere in that union raises
+        :class:`~databasise.seam.refusals.MutableStoreComparisonExcludedError` naming the
+        offending component — before ``compare_arms`` is called at all, so no envelope is produced
+        and no store is written for any arm, including one that would otherwise have run first in
+        the caller's own order.
         """
         del debug
         check_consumable(query_object, self.registry)
@@ -554,6 +585,12 @@ class Databasise:
             raise EmptyComparisonRequestError()
         if len(selectors) == 1:
             return await self._execute(query_object, selectors[0])
+        for selector in selectors:
+            resolved = resolve_selector(selector, registry=self.registry, store_root=self.store_root)
+            if "mutates_store" in _wiring_effects(resolved, self.registry):
+                raise MutableStoreComparisonExcludedError(
+                    component=_mutates_store_component(resolved, self.registry)
+                )
         return await compare_arms(self._execute, query_object, selectors)
 
     async def ingest(self, document: IngestDocument) -> IngestJob:
