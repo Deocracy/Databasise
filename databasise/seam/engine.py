@@ -182,6 +182,7 @@ from databasise.seam.refusals import (
     EmptyComparisonRequestError,
     ForeignEngineRefusalError,
     MutableStoreComparisonExcludedError,
+    NoRawUploadPathForModalityError,
     NoWritePathForModalityError,
     UnknownDocumentError,
     UnknownJobError,
@@ -661,6 +662,16 @@ class Databasise:
         resolved = _corpus_wiring(query_wiring, "ingest")
         target_node_id = resolved["consumes_documents"][0]
         result_node_id = resolved["provides"][0]
+
+        if document.raw is not None and resolved["nodes"][target_node_id].get("kind") != "opaque":
+            # 06-REVIEW.md CR-01: a raw-bytes upload's real bytes are stamped only into
+            # file_paths/docs_format=pending_parse below — a convention only an "opaque" node (a
+            # v1 subprocess that parses the file itself, e.g. lightrag/full-ingest) knows how to
+            # read. A non-opaque target node (e.g. hipporag/chunker-embedder) reads only
+            # document["text"], which a raw upload always leaves "" — silently indexing nothing
+            # while still reporting a normal-looking success. Refuse by name before any node
+            # config is stamped, rather than let that silent data loss through.
+            raise NoRawUploadPathForModalityError(operation="ingest")
 
         node_config = dict(resolved["nodes"][target_node_id].get("config") or {})
         # 06-10-PLAN.md (Rule 3 deviation): stamped under both "id" (lightrag/full-ingest's own
