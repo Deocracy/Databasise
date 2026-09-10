@@ -225,7 +225,7 @@ async def test_facts_survive_assemble_result_uses_ppr_and_guard_does_not_fire(se
     envelope = await engine.query(
         QueryObject(text=_QUERY_TEXT), Selector(capability=_HIPPORAG_CAPABILITY)
     )
-    record = await engine.resolve_trace(envelope.trace_token)
+    record = await engine.resolve_trace(envelope.trace_token, debug=True)
     fact_filter_trace = next(n for n in record["nodes"] if n["node_id"] == "fact-filter")
 
     assert fact_filter_trace["guards_fired"] == []
@@ -241,7 +241,7 @@ async def test_zero_facts_survive_assemble_result_uses_dpr_fallback_and_guard_fi
     envelope = await engine.query(
         QueryObject(text=_QUERY_TEXT), Selector(capability=_HIPPORAG_CAPABILITY)
     )
-    record = await engine.resolve_trace(envelope.trace_token)
+    record = await engine.resolve_trace(envelope.trace_token, debug=True)
     fact_filter_trace = next(n for n in record["nodes"] if n["node_id"] == "fact-filter")
 
     assert fact_filter_trace["guards_fired"] == ["zero_surviving_facts_dpr_fallback"]
