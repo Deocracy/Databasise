@@ -1,324 +1,259 @@
 ---
 phase: 06-hipporag-2-side-by-side
-reviewed: 2026-09-10T03:28:20Z
+reviewed: 2026-09-10T18:30:00Z
 depth: standard
-files_reviewed: 81
+files_reviewed: 23
 files_reviewed_list:
-  - databasise/eval/bundle.py
-  - databasise/eval/calibration.py
-  - databasise/eval/__init__.py
+  - databasise/eval/corpus_ingest.py
+  - databasise/eval/remint.py
   - databasise/evidence/CROSS-MODALITY-EVIDENCE.md
-  - databasise/evidence/eval-bundles/bundle@v1/bundle.json
-  - databasise/evidence/eval-bundles/bundle@v1/bundle.sha256
-  - databasise/evidence/eval-bundles/bundle@v1/usage.jsonl
-  - databasise/evidence/eval-bundles/judge-prompt-v1.txt
-  - databasise/evidence/EVAL-BUNDLE-V1.md
-  - databasise/evidence/F-07-MUTABLE-STORE-DISPOSITION.md
-  - databasise/evidence/f07_report.py
-  - databasise/evidence/F-14-SEAM-INVARIANCE.md
   - databasise/evidence/FALSIFIER-5-EVIDENCE.md
-  - databasise/evidence/HIPPORAG-PORT-RECORD.md
   - databasise/mcp/server.py
   - databasise/mcp/tools.py
-  - databasise/parity/build_corpus_fixture.py
-  - databasise/parity/build_hipporag_index.py
-  - databasise/parity/run_arm.py
-  - databasise/parity/run_cross_modality.py
-  - databasise/parts_core/hipporag/assemble_result.py
   - databasise/parts_core/hipporag/chunk_embed.py
-  - databasise/parts_core/hipporag/dpr_fallback.py
-  - databasise/parts_core/hipporag/entity_fact_embed.py
-  - databasise/parts_core/hipporag/fact_edges.py
-  - databasise/parts_core/hipporag/fact_filter.py
-  - databasise/parts_core/hipporag/fact_score.py
-  - databasise/parts_core/hipporag/graph_augment_persist.py
-  - databasise/parts_core/hipporag/__init__.py
-  - databasise/parts_core/hipporag/openie.py
-  - databasise/parts_core/hipporag/passage_edges.py
-  - databasise/parts_core/hipporag/ppr.py
-  - databasise/parts_core/hipporag/reset_vector_join.py
-  - databasise/parts_core/hipporag/synonymy_edges.py
-  - databasise/parts/registry.py
-  - databasise/pyproject.toml
-  - databasise/seam/compare.py
   - databasise/seam/engine.py
-  - databasise/seam/__init__.py
   - databasise/seam/refusals.py
   - databasise/seam/rest.py
-  - databasise/seam/selectors.py
-  - databasise/stores/graph.py
-  - databasise/stores/vector.py
-  - databasise/tests/eval/conftest.py
-  - databasise/tests/eval/__init__.py
-  - databasise/tests/eval/test_bundle_versioning.py
-  - databasise/tests/eval/test_calibration.py
-  - databasise/tests/evidence/test_cross_modality_record.py
-  - databasise/tests/evidence/test_f07_record.py
-  - databasise/tests/evidence/test_f14_record.py
-  - databasise/tests/evidence/test_falsifier5_record.py
-  - databasise/tests/evidence/test_hipporag_port_record.py
-  - databasise/tests/fixtures/eval-corpus/MANIFEST.json
-  - databasise/tests/fixtures/eval-corpus/README.md
-  - databasise/tests/mcp/test_dual_transport_parity.py
-  - databasise/tests/mcp/test_tool_growth_invariant.py
-  - databasise/tests/parity/test_cross_modality_isolation.py
-  - databasise/tests/parts_core/hipporag/conftest.py
-  - databasise/tests/parts_core/hipporag/__init__.py
-  - databasise/tests/parts_core/hipporag/test_dpr_fallback_guard.py
-  - databasise/tests/parts_core/hipporag/test_graph_construction.py
-  - databasise/tests/parts_core/hipporag/test_index_side_extraction.py
-  - databasise/tests/parts_core/hipporag/test_ppr.py
-  - databasise/tests/parts_core/hipporag/test_registration.py
-  - databasise/tests/parts_core/hipporag/test_thirteen_positions.py
-  - databasise/tests/parts/test_registry.py
-  - databasise/tests/seam/test_compare.py
-  - databasise/tests/seam/test_cross_modality_run.py
-  - databasise/tests/seam/test_leak.py
-  - databasise/tests/seam/test_mutable_store_exclusion.py
+  - databasise/tests/eval/test_corpus_ingest.py
+  - databasise/tests/eval/test_remint.py
+  - databasise/tests/parts_core/lightrag/test_full_ingest.py
+  - databasise/tests/seam/test_delete_document.py
+  - databasise/tests/seam/test_hipporag_write_path.py
+  - databasise/tests/seam/test_rest_corpus_endpoints.py
   - databasise/tests/seam/test_rest_transport.py
-  - databasise/tests/seam/test_store_isolation.py
-  - databasise/tests/stores/test_graph_bulk_export.py
-  - databasise/tests/stores/test_vector_score_all.py
-  - databasise/tests/stores/test_vector_self_knn.py
-  - databasise/tests/test_embed_startup.py
-  - databasise/wirings/hipporag/base.json
-  - databasise/wirings/hipporag/__init__.py
-  - databasise/wirings/lightrag/base.json
+  - databasise/wirings/hipporag/corpus-ingest.json
+  - databasise/wirings/lightrag/corpus-ingest.json
   - databasise/wirings/resolve.py
+  - .planning/phases/06-hipporag-2-side-by-side/COVERAGE.md
+  - .planning/REQUIREMENTS.md
+  - .planning/WINDOWS.md
 findings:
   critical: 1
-  warning: 2
-  info: 2
+  warning: 1
+  info: 3
   total: 5
 status: issues_found
 ---
 
-# Phase 06: Code Review Report
+# Phase 06: Code Review Report (Incremental — Gap-Closure Plans 06-10..06-13)
 
-**Reviewed:** 2026-09-10T03:28:20Z
+**Reviewed:** 2026-09-10T18:30:00Z
 **Depth:** standard
-**Files Reviewed:** 81
+**Files Reviewed:** 23
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the HippoRAG 2 port (13 registered parts, the new `hipporag/base.json` wiring), the
-`seam.compare`/`seam.engine` comparison surface, the new `stores/graph.py` bulk-export and
-`stores/vector.py` `score_all`/`self_knn` capabilities, the REST/MCP transports, and the eval/parity
-harness code. The part bodies themselves are careful, well-tested, and consistent with the
-project's refusal-over-silent-narrowing house style — I traced the query-side chain
-(`fact-score` → `fact-filter` → `reset-vector-join`/`dpr-fallback` → `ppr` → `assemble-result`) and
-the index-side chain (`chunk-embed` → `openie` → `entity-fact-embed` → `{fact,passage,synonymy}-edges`
-→ `graph-augment-persist`) end to end, confirmed the guard-aware `__eq__`/`__ne__` fix in
-`fact_filter.py` behaves correctly under both `!=` orderings, and confirmed store isolation between
-the LightRAG and HippoRAG arms holds at the directory level (`store_namespaces` in each wiring
-resolve to disjoint on-disk paths, and vector namespace strings never collide) via both the code
-path (`Databasise._build_stores`) and the existing isolation tests.
+This is an incremental review of phase 06's gap-closure work (06-10 through 06-13), scoped to the
+files listed above. The prior review (commit `ab6a9ce`) is superseded by this document; its
+findings are dispositioned as follows:
 
-The one finding I consider blocking is not inside the HippoRAG port itself but in what the seam
-exposes around it: `Databasise.ingest()`/`delete_document()` are hardcoded to the LightRAG-only
-`wirings/lightrag/corpus-ingest.json`/`corpus-delete.json` files, and no equivalent HippoRAG wiring
-exists — so the public write surface (in-process, REST, and MCP alike) has no way to populate or
-mutate HippoRAG's index at all. This directly contradicts this phase's own `COVERAGE.md`, which
-states `ingest`/`delete` "remain reachable identically for both LightRAG and HippoRAG arms." A
-caller who ingests a document and then queries/compares against HippoRAG's capability set gets a
-silent, unrefused empty HippoRAG result rather than an error naming the gap.
+- **CR-01** (`ingest()`/`delete_document()` hardcoded to LightRAG only) — **confirmed fixed.**
+  `databasise/seam/engine.py`'s `_corpus_wiring()` now resolves the write path per the selector's
+  own resolved modality via `databasise.wirings.resolve.wiring_family`, `databasise/wirings/hipporag/
+  corpus-ingest.json` now exists, and `NoWritePathForModalityError` refuses by name rather than
+  silently falling back — verified in code and by `test_hipporag_write_path.py`'s own tracer tests.
+- **WR-01** (`entity-fact-embed`'s wiring-declared `effects` under-declared `writes_kv`) — **confirmed
+  fixed.** `databasise/wirings/hipporag/base.json`'s `entity-fact-embed` node now declares
+  `["calls_embedding", "writes_vector", "writes_kv"]`, matching its own `Part`.
+- **WR-02** (`entity_fact_embed.py` silently reported only the entity-embedding call's
+  `resolved_model_identity`) — **confirmed fixed.** The body now raises `ValueError` naming both
+  identities on divergence rather than silently discarding one, per the diff against
+  `ab6a9ce..HEAD`.
+- **IN-01** (`graph_augment_persist.py` iterates `weight_by_pair` unsorted) and **IN-02**
+  (`self_knn`'s self-exclusion assumes the self-match is always within the requested window) — both
+  files are untouched by this incremental scope (`git diff ab6a9ce..HEAD` shows no changes to
+  `graph_augment_persist.py` or `stores/vector.py`); both findings are **carried forward, still
+  open**, unchanged in substance from the prior review. Not re-detailed here since neither file is
+  in this review's scope; see the prior review's text (`git show ab6a9ce:.planning/phases/06-hipporag-2-side-by-side/06-REVIEW.md`) for the original write-up.
 
-I also found one wiring/registry inconsistency (`entity-fact-embed`'s node-level `effects` in
-`hipporag/base.json` under-declares relative to its own registered `Part`, and to what the port's
-own evidence record says it should be) and two minor code-quality items. Everything else I traced —
-Faiss/Cozo store buffering and read-your-writes semantics, the `MultiNamespaceVectorStore.select`
-lazy-cache (verified race-free given this codebase's cooperative-async model, since `select()`
-itself never awaits), the MACH-11 store-touch correlation, and the `compare()`/`compare_arms`
-fan-out — held up under adversarial tracing.
+While tracing the new per-modality write dispatch (`_corpus_wiring`, `ingest()`, `delete_document()`)
+end to end against `hipporag/chunker-embedder`'s own body (`chunk_embed.py`), I found one new
+BLOCKER: a caller who uploads a raw-bytes document (PDF, DOCX, etc.) with a selector that resolves
+to HippoRAG gets a normal-looking successful `IngestJob` — but the document's content is silently
+never chunked, embedded, or written to any store. This is the same general defect class the
+`known_context` flagged (an unguarded input shape reaching a part body) manifesting as silent data
+loss rather than a provider-side 400, and it is untested: every test exercising the HippoRAG write
+path (`test_hipporag_write_path.py`, `test_corpus_ingest.py`) uses `IngestDocument(text=...)` only,
+never `IngestDocument(raw=...)`, so the gap has no regression coverage anywhere in this phase.
+
+The `corpus_ingest.py`/`remint.py` spend-gating (dry-run default, `--spend`/checkpoint discipline,
+no client construction before authorization) and `remint.py`'s content-addressed
+never-edit-`bundle@v1`-in-place behavior both held up under adversarial tracing — confirmed by
+`test_default_path_spends_nothing`'s `Databasise` construction guard and
+`test_remint_mints_a_new_version_and_leaves_v1_bytes_untouched`'s byte-level before/after
+comparison. The evidence documents (`FALSIFIER-5-EVIDENCE.md`, `CROSS-MODALITY-EVIDENCE.md`) are
+honest, internally consistent records of blocked/refused real runs, with no fabricated numbers.
 
 ## Critical Issues
 
-### CR-01: `ingest()`/`delete_document()` never reach HippoRAG's index — contradicts this phase's own coverage claim
+### CR-01: A raw-bytes document ingested against a HippoRAG-resolving selector silently loses all content — no refusal, no partial flag, a normal-looking success
 
-**File:** `databasise/seam/engine.py:180-190`, `databasise/seam/engine.py:596-729`
-**Also see:** `.planning/phases/06-hipporag-2-side-by-side/COVERAGE.md:19-22`
+**File:** `databasise/seam/engine.py:665-685` (the `document.raw is not None` branch of `ingest()`),
+`databasise/parts_core/hipporag/chunk_embed.py:66-91` (`_chunk_embed_body`)
 
-**Issue:** `Databasise.ingest()` and `Databasise.delete_document()` both dispatch a single, hardcoded
-wiring file:
+**Issue:** `Databasise.ingest()` dispatches both of `IngestDocument`'s two input shapes (`text`,
+`raw`) through one identical code path regardless of which modality the caller's selector resolves
+to (06-10-PLAN.md's own stated design: "Both of `IngestDocument`'s two input shapes ... take this
+identical path ... one operation, two input shapes, never two execution paths"). For a `raw`
+payload it always stamps:
 
 ```python
-_INGEST_WIRING_PATH = (
-    Path(__file__).resolve().parent.parent / "wirings" / "lightrag" / "corpus-ingest.json"
-)
-_INGEST_NODE_ID = "full-ingest"
-...
-_DELETE_WIRING_PATH = (
-    Path(__file__).resolve().parent.parent / "wirings" / "lightrag" / "corpus-delete.json"
-)
-_DELETE_NODE_ID = "full-delete"
+node_config["documents"] = [{"id": document_id, "document_id": document_id, "text": ""}]
+node_config["file_paths"] = [str(on_disk_path)]
+node_config["docs_format"] = _DOCS_FORMAT_PENDING_PARSE
 ```
 
-There is no `databasise/wirings/hipporag/corpus-ingest.json` (or delete equivalent) anywhere in the
-repository — `find databasise/wirings -iname '*.json'` lists only `hipporag/base.json` and the
-LightRAG arm/corpus files. HippoRAG's own `chunk-embed` node (the sole entry point for all seven of
-its index-side positions) is only ever populated via `databasise/parity/build_hipporag_index.py`, a
-standalone harness that bypasses `Databasise` entirely and drives `runner.scheduler.run_wiring`
-directly — and that harness has never been invoked in this environment (06-08-SUMMARY.md).
+— i.e. `text` is *always* the empty string for a raw upload; the real bytes are only reachable via
+`file_paths`/`docs_format`. This is correct for LightRAG's opaque `full-ingest` node, which is a v1
+subprocess that knows how to parse `pending_parse`-tagged files. It is silently wrong for HippoRAG's
+`hipporag/chunker-embedder` (`chunk_embed.py`), whose body reads only `document["text"]` and
+`document["document_id"]` — it has no knowledge of `file_paths` or `docs_format` at all:
 
-This phase's own `COVERAGE.md` states the opposite is true:
+```python
+document_id = str(document["document_id"])
+text = str(document.get("text", ""))
+for ordinal, piece in enumerate(_split_into_chunks(text, chunk_size, chunk_overlap)):
+    ...
+```
 
-> "Every other operation (`query`, `ingest`, `delete`, ...) is unchanged by this phase — ... all of
-> which remain reachable identically for both LightRAG and HippoRAG arms with no operation-level
-> change (§18.5's own modality-agnosticism holding by construction...)"
+For a raw-payload document, `text` is always `""`, so `_split_into_chunks("", ...)` returns `[]`
+(its own explicit `if not text: return []` guard), `chunk_records` stays empty for that document,
+and the node returns `{"chunks": []}` early — making **no** embedding call, writing **no** vector or
+KV record. Every downstream HippoRAG node degrades gracefully on an empty `chunks`/`findings` list
+(confirmed for `openie.py`: `if not chunks: return {"findings": []}`), so the entire seven-node
+index-side chain completes "successfully" having written nothing at all for that document.
 
-That claim is false for `ingest`/`delete`: those two operations are LightRAG-only by construction,
-not by any HippoRAG-specific refusal — a caller cannot tell "HippoRAG has no ingest path" from "the
-document just has not landed yet," because no error is raised. Concretely: a consumer that (1)
-calls `POST /documents` (or the `ingest` MCP tool, or `engine.ingest()`) to add a document, then (2)
-calls `compare()`/`query()` with a selector resolving to HippoRAG (e.g.
-`Selector(capability=["reads_graph"])`) gets a normal-looking `ResponseEnvelope` with an empty
-`evidence` list and `partial=False`/`degraded=False` — because `chunk-embed` runs every query with
-no `documents` in its config and legitimately short-circuits to zero cost (this is the documented,
-correct behavior for a *query*-time dispatch of that node — see `chunk_embed.py`'s own
-"Unconfigured-run precedent" note). The empty result is indistinguishable from "HippoRAG found
-nothing relevant" versus "HippoRAG's index has never been built," which undermines the phase's own
-stated core value ("the same corpus, the same seam, N modalities running side-by-side and
-comparable").
+Back in `engine.py`, `ingest()`'s own no-fabricated-zero rule then reports the request as a success:
 
-This is a different, and more severe, condition than the two evidence records
-(`FALSIFIER-5-EVIDENCE.md`, `CROSS-MODALITY-EVIDENCE.md`) that are *deliberately* recorded BLOCKED
-because a real run was never authorized — those are honest "not run yet" states with a defined entry
-criterion. This finding is a structural gap: there is no wiring file that *could* be run through the
-seam's own `ingest`/`delete` operations to populate HippoRAG's index at all, even if spend were
-authorized today.
+```python
+enqueued = result.get("enqueued")
+if enqueued is None:
+    enqueued = 1
+return IngestJob(job_id=str(result.get("track_id") or track_id), enqueued=int(enqueued))
+```
 
-**Fix:** Either (a) add a `databasise/wirings/hipporag/corpus-ingest.json` (and delete) analog and
-have `ingest()`/`delete_document()` route to the wiring matching the caller's intended modality (the
-`ingest` operation would need its own selector concept, since — unlike `query` — there is no query
-object to resolve a capability from), or (b) if HippoRAG's index is intentionally out of scope for
-the public write surface in this phase (research/parity-only), correct `COVERAGE.md` to say so
-explicitly rather than claim identical reachability, and have `ingest()`/`delete_document()` raise a
-named refusal (mirroring `UnknownDocumentError`'s house style) when no ingest path exists for the
-resolved/target modality, rather than silently no-op-ing on every subsequent HippoRAG query.
+`graph-augment-persist` (HippoRAG's `provides` node) reports no `enqueued` field, so this falls
+through to the literal `1` — the caller receives `IngestJob(enqueued=1)`, identical in shape to a
+real, successful ingest, with no `partial`/`degraded` signal anywhere (ingest returns an `IngestJob`,
+never a `ResponseEnvelope`, so there is no `partial`/`degraded` field to carry the signal even if
+one were computed). A subsequent `query()`/`compare()` against the same selector returns an
+empty-evidence result indistinguishable from "HippoRAG legitimately found nothing relevant" — the
+exact failure mode CR-01 in the prior review already named as the worst case for this phase's own
+core value ("the same corpus, the same seam, N modalities running side-by-side and comparable").
+
+This is untested in every direction: `test_hipporag_write_path.py`'s three ingest tests all use
+`IngestDocument(document_id=..., text=_DOCUMENT_TEXT)`; `test_full_ingest.py`'s own raw-upload test
+(`test_a_raw_upload_ingest_reaches_the_driver_via_a_server_side_path_never_a_caller_string`) only
+exercises the no-selector (LightRAG) default path; `test_rest_corpus_endpoints.py`'s
+`test_post_documents_upload_returns_an_ingest_job_via_the_deferred_parse_path` and
+`test_hipporag_ingest_parity_across_rest_mcp_and_in_process_transports` in
+`test_hipporag_write_path.py` never combine `raw=` with a HippoRAG-resolving selector. Both the REST
+`/documents` and `/documents/upload` routes and the MCP `ingest` tool reach the identical
+`Databasise.ingest()` code path, so this affects all three transports uniformly — it is not a
+transport-specific gap.
+
+**Fix:** Either (a) give `hipporag/chunker-embedder` real (or explicitly stubbed/quarantined, as
+HippoRAG's own upstream chunker already is per this node's own docstring) file-parsing awareness of
+`file_paths`/`docs_format`, so a raw upload actually reaches the modality's index, or — matching
+this codebase's own refusals-over-silent-narrowing house style, and the minimal fix given
+`chunk-embed`'s own stated scope is a "fused chunk-store-and-embed" position, not a file-format
+parser — refuse a raw-bytes `IngestDocument` against a selector resolving to a modality whose
+corpus-ingest wiring's target node cannot consume `file_paths`/`docs_format` (e.g. a new
+`NoRawUploadPathForModalityError`, raised in `ingest()` before any node config is stamped, mirroring
+`NoWritePathForModalityError`'s own house style: name only the operation, never the resolved
+modality). A silent, reported-successful data loss is strictly worse than either of these.
 
 ## Warnings
 
-### WR-01: `entity-fact-embed`'s wiring-declared `effects` under-declares relative to its own Part and its own evidence record
+### WR-01: `DELETE /documents/{document_id}`'s default request body is a mutable module-level singleton, evaluated once at route-registration time
 
-**File:** `databasise/wirings/hipporag/base.json:18-24`
+**File:** `databasise/seam/rest.py:287`
 
-**Issue:** Every other HippoRAG node whose registered `Part` carries an "additive effects
-discrepancy" has its wiring-node-level `effects` list updated to match (e.g. `chunk-embed`'s node
-declares `["calls_embedding", "writes_vector", "writes_kv"]`, matching
-`HIPPORAG_CHUNKER_EMBEDDER_PART.effects` exactly). `entity-fact-embed`'s node, however, still
-declares only:
-
-```json
-"entity-fact-embed": {
-  "component": "hipporag/entity-fact-embedder@0.1.0",
-  "effects": ["calls_embedding", "writes_vector"],
-  ...
-}
-```
-
-while its registered `Part` (`databasise/parts_core/hipporag/entity_fact_embed.py:168`) declares
-`effects=["calls_embedding", "writes_vector", "writes_kv"]` — the `writes_kv` effect 06-07-PLAN.md
-explicitly added (the `fact:<id> -> {chunk_ids}` KV write `reset_vector_join.py` reads back). The
-port's own evidence record, `databasise/evidence/HIPPORAG-PORT-RECORD.md:60`, states in its own
-reconciliation table that `entity-fact-embed`'s effects should be
-`calls_embedding, writes_vector, writes_kv` — so this is a documented intent the wiring file itself
-does not carry out.
-
-This is not a runtime bug: `CapabilityScopedStores.require` and every effect-union computation in
-this codebase (`_wiring_effects`, `_accounted_store_keys`, `parse_wiring`'s extra-effects check) is
-explicitly keyed off the registered `Part`'s own effects, never the wiring node's own (CR-01,
-documented repeatedly across `selectors.py`, `engine.py`, `scheduler.py`, `validator/parse.py`,
-`validator/blast_radius.py`), and a wiring node's `effects` is permitted to be a strict subset of its
-Part's. It is, however, a real audit-trail gap: `HIPPORAG-PORT-RECORD.md`'s own
-`test_declared_effects_union_equals_the_governing_union_plus_exactly_the_additive_set` only checks
-the *union* of effects across the whole wiring, and since `chunk-embed` already contributes
-`writes_kv` to that union independently, this specific node's incomplete declaration passes that
-test undetected — exactly the kind of drift the additive-effects convention exists to make visible
-per-node, not just in aggregate.
-
-**Fix:** Update `entity-fact-embed`'s `effects` array in `databasise/wirings/hipporag/base.json` to
-`["calls_embedding", "writes_vector", "writes_kv"]`, matching its own Part and its own evidence
-record. Consider tightening `test_declared_effects_union_equals_the_governing_union_plus_exactly_the_additive_set`
-(or adding a sibling test) to check per-node correspondence, not only the aggregate union, so a
-future addition in one node cannot mask a missing declaration in another.
-
-### WR-02: `entity_fact_embed.py` reports only the entity-embedding call's `resolved_model_identity`, silently dropping the fact-embedding call's own
-
-**File:** `databasise/parts_core/hipporag/entity_fact_embed.py:159`
-
-**Issue:** `_entity_fact_embed_body` makes two separate `embedding_client.embed(...)` calls — one for
-`entity_texts`, one for `fact_texts` — and correctly sums both calls' token accounting via
-`_sum_token_accountings`, but the returned `resolved_model_identity` is hardcoded to
-`entity_embed_result.resolved_model_identity` only:
+**Issue:**
 
 ```python
-return {
-    ...
-    "tokens": _sum_token_accountings([entity_embed_result.tokens, fact_embed_result.tokens]),
-    "resolved_model_identity": entity_embed_result.resolved_model_identity,
-}
+@app.delete("/documents/{document_id}")
+async def delete_document(document_id: str, body: DeleteRequest = DeleteRequest()) -> DeletionOutcome:
 ```
 
-In production this is almost certainly harmless (one embedding client resolves to one stable model
-identity per process), but if a future client ever resolves a different identity per call (a
-routing/fallback client, a test double simulating drift), the fact-vector write's own resolved
-identity is silently discarded from this node's reported output — no assertion, no refusal, no
-comparison between the two calls' identities the way `openie.py`'s own `_sum_token_accountings`
-pattern at least keeps consistent per-call token counts.
+`DeleteRequest` (via `_RequestModel`) declares `extra="forbid"` but not `frozen=True`, so
+`DeleteRequest()` is a single mutable `BaseModel` instance constructed once when this route is
+registered (module/app-construction time), then reused as the default for every request that omits
+a body — the classic Python mutable-default-argument shape, applied to a route handler rather than a
+plain function. No code in this route currently mutates `body`, so this is not observed to cause
+incorrect behavior today, but it is fragile: a future edit that reads-then-writes a field on `body`
+(e.g. a default-filling step) would silently corrupt every subsequent no-body request in the same
+process, and the bug would not reproduce in a single-request test.
 
-**Fix:** Either assert `entity_embed_result.resolved_model_identity ==
-fact_embed_result.resolved_model_identity` (raising or recording a refusal on mismatch, matching
-this codebase's fail-loud house style), or report both identities distinctly if a genuine divergence
-is possible.
+**Fix:** `body: DeleteRequest | None = None` with `selector = (body.selector if body else None)`
+inside the function body, or mark `DeleteRequest`/`_RequestModel` `frozen=True` (mirroring
+`databasise/mcp/tools.py`'s own `_ToolArgs` base, which already sets `frozen=True`) so a future
+mutation raises immediately instead of silently corrupting shared state.
 
 ## Info
 
-### IN-01: `graph_augment_persist.py` iterates `weight_by_pair` in insertion order rather than sorted, unlike its own sibling `_canonical_pair` writers
+### IN-01 (carried forward from `ab6a9ce`): `graph_augment_persist.py` iterates `weight_by_pair` in insertion order rather than sorted
 
 **File:** `databasise/parts_core/hipporag/graph_augment_persist.py:78-82`
 
-**Issue:** `fact_edges.py`/`passage_edges.py`/`synonymy_edges.py` all emit their own `edges` list
-sorted by canonical pair (`sorted(weight_by_pair.items())`), but `graph_augment_persist.py`'s own
-edge-upsert loop iterates `weight_by_pair.items()` unsorted:
+Untouched by this incremental scope. Still open, unchanged in substance from the prior review: this
+module's own sibling edge-builders (`fact_edges.py`/`passage_edges.py`/`synonymy_edges.py`) all emit
+`sorted(weight_by_pair.items())`, but `graph_augment_persist.py`'s own upsert loop does not — no
+observed correctness effect (each `upsert_edge` call is independent and idempotent), but it breaks
+the otherwise-consistent canonical-sorted-order convention this port's other modules follow.
 
-```python
-for pair, weight in weight_by_pair.items():
-    src, tgt = pair
-    await graph_store.upsert_edge(src, tgt, {...})
-```
+**Fix:** `for pair, weight in sorted(weight_by_pair.items()):` for consistency.
 
-Each `upsert_edge` call is independent and idempotent per key, so this has no observed correctness
-effect today (order does not change the final persisted graph), but it breaks the otherwise
-consistent "always emit/iterate in canonical sorted order" convention every sibling module in this
-port follows, which is otherwise relied on for reproducibility/determinism elsewhere in this
-codebase.
-
-**Fix:** `for pair, weight in sorted(weight_by_pair.items()):` for consistency with this module's own
-siblings, at negligible cost.
-
-### IN-02: `self_knn`'s self-exclusion assumes the self-match is always within the returned `top_k + 1` window
+### IN-02 (carried forward from `ab6a9ce`): `self_knn`'s self-exclusion assumes the self-match is always within the returned `top_k + 1` window
 
 **File:** `databasise/stores/vector.py:272-315`
 
-**Issue:** `FaissVectorStore.self_knn` requests `top_k + 1` neighbours per row and filters out
-`neighbour_id == self_doc_id` wherever it appears in the returned window. Since a self-match on a
-cosine-normalised index always scores the maximum possible value (1.0), it is safe under ordinary
-conditions — but if two or more stored entities carry bit-identical embeddings (a plausible
-degenerate case for near-duplicate entity surface forms), Faiss's internal tie-break order for
-equal-score candidates is not documented as stable, and it is theoretically possible for the true
-self-match to fall outside the requested `top_k + 1` window if there are more than `top_k` other
-exact-score ties. In that case the method does not error or misbehave — it simply returns `top_k`
-genuine (non-self) neighbours, since there is nothing to filter — but the module's own docstring
-("requests `top_k + 1` ... so the self-match can be dropped") implicitly assumes the self-match is
-always present in the window, which is not guaranteed under duplicate-embedding ties.
+Untouched by this incremental scope. Still open, unchanged in substance from the prior review: under
+a degenerate case of more than `top_k` bit-identical-embedding ties, the true self-match could
+theoretically fall outside the requested `top_k + 1` window, in which case the method silently
+returns `top_k` genuine neighbours rather than erroring — graceful in practice, but in tension with
+the module's own docstring, which implies the self-match is always present to be dropped.
 
-**Fix:** No functional change needed given the graceful degradation already present; consider a
-one-line docstring caveat noting the behavior under duplicate-embedding ties, since a future reader
-relying on "always excludes exactly one self-match" as a strict guarantee would be mistaken.
+**Fix:** No functional change needed; consider a docstring caveat.
+
+### IN-03: `resolved.get("consumes_documents")`/`resolved.get("provides")` indexing in `ingest()`/`delete_document()` assumes exactly one element with no bounds check
+
+**File:** `databasise/seam/engine.py:662-663`, `databasise/seam/engine.py:772`
+
+**Issue:** `_corpus_wiring()`'s returned dict is indexed unconditionally:
+
+```python
+target_node_id = resolved["consumes_documents"][0]
+result_node_id = resolved["provides"][0]
+```
+
+and, in `delete_document()`:
+
+```python
+delete_node_id = resolved["provides"][0]
+```
+
+Both `databasise/wirings/lightrag/corpus-ingest.json` and `databasise/wirings/hipporag/
+corpus-ingest.json` (and the two corresponding `corpus-delete.json` files) declare exactly one entry
+in each list today, so this holds for every wiring this machine currently ships. There is no
+validation, however — at `_corpus_wiring()`'s own load site or via `parse_wiring` before this
+indexing runs — that a `corpus-<operation>.json` file added for a future third modality actually
+declares a non-empty `consumes_documents`/`provides` list; a malformed file (an empty list, or a
+missing key entirely, since `.get(...)` would then return `None` and `None[0]` raises `TypeError`)
+would surface as an unhandled `IndexError`/`TypeError`/`KeyError` rather than a named refusal, at
+odds with this codebase's otherwise-consistent "refuse by name" convention for a malformed
+machine-owned artifact.
+
+**Fix:** Low priority given today's actual wiring files are all well-formed by construction (hand-
+authored, reviewed) — but a schema check inside `_corpus_wiring()` (or `parse_wiring`, if corpus
+wirings are meant to be validated the same way query wirings are) asserting a non-empty
+`consumes_documents`/`provides` list before this indexing runs would turn a future malformed-file
+mistake into a named, debuggable refusal rather than a raw Python exception surfacing through the
+seam boundary.
 
 ---
 
-_Reviewed: 2026-09-10T03:28:20Z_
+_Reviewed: 2026-09-10T18:30:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
