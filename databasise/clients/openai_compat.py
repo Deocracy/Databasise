@@ -18,6 +18,15 @@ declared"). A response whose ``model`` field is empty or absent raises
 response's ``usage`` object carries one (a ``tokenizer_id`` attribute — no such field exists on
 the real OpenAI SDK's ``CompletionUsage`` today, so this branch only fires against a
 provider/proxy that adds one), and to ``resolved_model_identity`` otherwise.
+
+06-14-PLAN.md: ``embed`` refuses an empty batch, or a batch containing a zero-length or
+whitespace-only item, by raising :class:`EmptyEmbeddingInputError` before any request reaches the
+provider. Seven call sites across this codebase reach this one method — three of them stamp an
+unguarded ``str(config.get("query", ""))`` and one hands it a list that is empty whenever OpenIE
+extracts nothing — so a guard here, at the single method they all route through, turns every one
+of those seven into a diagnosable refusal instead of an opaque provider ``400`` (the exact failure
+recorded in ``databasise/evidence/CROSS-MODALITY-EVIDENCE.md``'s "Real run attempted — refused"
+section).
 """
 
 from __future__ import annotations
@@ -50,6 +59,32 @@ class ModelIdentityMissingError(RuntimeError):
             f"response for requested model {requested_model!r} carried no model field to derive "
             "resolved_model_identity from; refusing to substitute the requested id"
         )
+
+
+class EmptyEmbeddingInputError(ValueError):
+    """Raised by :meth:`OpenAICompatibleClient.embed` when handed an empty batch, or a batch
+    containing an item whose ``str(...).strip()`` is falsy, before any request reaches the
+    provider. Named after :class:`ModelIdentityMissingError`'s own shape: the specifics carried on
+    attributes, a constructed message, a class docstring explaining why this refuses.
+
+    A silent skip of the offending item is prohibited: :class:`~databasise.clients.base
+    .EmbeddingResult`'s own contract promises one vector per input text, in the same order as the
+    input, so dropping an item would return fewer vectors than inputs and every downstream
+    ``vectors[0]`` / positional zip would silently bind to the wrong text — a worse failure than
+    the provider ``400`` this refusal replaces.
+    """
+
+    def __init__(self, *, index: int | None, batch_size: int):
+        self.index = index
+        self.batch_size = batch_size
+        if index is None:
+            message = f"embed() was handed an empty batch (batch_size={batch_size})"
+        else:
+            message = (
+                f"embed() batch item at index {index} is empty or whitespace-only "
+                f"(batch_size={batch_size}); refusing before any provider request is constructed"
+            )
+        super().__init__(message)
 
 
 class OpenAICompatibleClient:
@@ -97,6 +132,17 @@ class OpenAICompatibleClient:
         return ChatResult(text=text, tokens=tokens, resolved_model_identity=resolved_model_identity)
 
     async def embed(self, texts: list[str], **kwargs: Any) -> EmbeddingResult:
+        # 06-14-PLAN.md: refuse before any other work — an empty batch, or the first item whose
+        # str(...).strip() is falsy, raises EmptyEmbeddingInputError rather than reaching the
+        # provider. strip() truthiness over the decoded string, never a byte-length or bare len()
+        # test: a string of spaces is what a provider rejects as too_small just as readily as a
+        # zero-length one.
+        if not texts:
+            raise EmptyEmbeddingInputError(index=None, batch_size=0)
+        for index, text in enumerate(texts):
+            if not str(text).strip():
+                raise EmptyEmbeddingInputError(index=index, batch_size=len(texts))
+
         response = await self._client.embeddings.create(model=self._model, input=texts, **kwargs)
         resolved_model_identity = self._resolved_identity(getattr(response, "model", None))
         tokens = self._token_accounting(getattr(response, "usage", None), resolved_model_identity)
@@ -127,4 +173,4 @@ class OpenAICompatibleClient:
         )
 
 
-__all__ = ["OpenAICompatibleClient", "ModelIdentityMissingError"]
+__all__ = ["OpenAICompatibleClient", "ModelIdentityMissingError", "EmptyEmbeddingInputError"]

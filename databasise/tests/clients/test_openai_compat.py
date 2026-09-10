@@ -10,7 +10,11 @@ from typing import Any
 
 import pytest
 
-from databasise.clients.openai_compat import ModelIdentityMissingError, OpenAICompatibleClient
+from databasise.clients.openai_compat import (
+    EmptyEmbeddingInputError,
+    ModelIdentityMissingError,
+    OpenAICompatibleClient,
+)
 
 
 class _StubChatCompletions:
@@ -187,3 +191,63 @@ async def test_10_the_pin_is_not_applied_to_embed_matching_v1_driver_scripts_own
     await client.embed(["one text"])
 
     assert "extra_body" not in stub.embeddings.captured_kwargs
+
+
+# --------------------------------------------------------------------------------------------- #
+# 06-14-PLAN.md Task 2: EmptyEmbeddingInputError — one named refusal at the single method every
+# embedding call site routes through, before any provider request is constructed.
+# --------------------------------------------------------------------------------------------- #
+
+
+async def test_11_embed_handed_a_zero_length_string_raises_before_reaching_the_provider():
+    stub = _StubOpenAIClient(embedding_response=_embedding_response(model="embed-model"))
+    client = OpenAICompatibleClient(base_url="http://ignored", model="requested-embed", client=stub)
+
+    with pytest.raises(EmptyEmbeddingInputError):
+        await client.embed(["ok", ""])
+
+    assert stub.embeddings.captured_kwargs is None
+
+
+async def test_12_embed_handed_a_whitespace_only_string_raises_the_same_error():
+    stub = _StubOpenAIClient(embedding_response=_embedding_response(model="embed-model"))
+    client = OpenAICompatibleClient(base_url="http://ignored", model="requested-embed", client=stub)
+
+    for whitespace_only in (" ", "\t", "\n", "   \t\n  "):
+        with pytest.raises(EmptyEmbeddingInputError):
+            await client.embed(["ok", whitespace_only])
+
+    assert stub.embeddings.captured_kwargs is None
+
+
+async def test_13_embed_handed_an_empty_list_raises_the_same_error():
+    stub = _StubOpenAIClient(embedding_response=_embedding_response(model="embed-model"))
+    client = OpenAICompatibleClient(base_url="http://ignored", model="requested-embed", client=stub)
+
+    with pytest.raises(EmptyEmbeddingInputError):
+        await client.embed([])
+
+    assert stub.embeddings.captured_kwargs is None
+
+
+async def test_14_the_raised_error_names_the_offending_batch_index_as_a_reachable_attribute():
+    stub = _StubOpenAIClient(embedding_response=_embedding_response(model="embed-model"))
+    client = OpenAICompatibleClient(base_url="http://ignored", model="requested-embed", client=stub)
+
+    with pytest.raises(EmptyEmbeddingInputError) as exc_info:
+        await client.embed(["first ok", "second ok", "   "])
+
+    assert exc_info.value.index == 2
+    assert exc_info.value.batch_size == 3
+
+
+async def test_15_embed_handed_ordinary_non_empty_strings_still_reaches_the_provider_unchanged():
+    stub = _StubOpenAIClient(embedding_response=_embedding_response(model="embed-model"))
+    client = OpenAICompatibleClient(base_url="http://ignored", model="requested-embed", client=stub)
+
+    result = await client.embed(["one text", "another text"])
+
+    assert result.vectors == [[0.1, 0.2, 0.3]]
+    assert result.resolved_model_identity == "embed-model"
+    assert stub.embeddings.captured_kwargs is not None
+    assert stub.embeddings.captured_kwargs["input"] == ["one text", "another text"]
