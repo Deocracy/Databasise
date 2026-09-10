@@ -98,7 +98,17 @@ async def _chunk_embed_body(ctx: NodeContext) -> dict[str, Any]:
         ids=[record["chunk_id"] for record in chunk_records],
         embeddings=embed_result.vectors,
         metadatas=[
-            {"document_id": record["document_id"], "ordinal": record["ordinal"]}
+            {
+                "document_id": record["document_id"],
+                "ordinal": record["ordinal"],
+                # 06-10-PLAN.md (Rule 2 deviation): the chunk's own text, mirroring LightRAG's own
+                # real vector-metadata convention (databasise/parity/import_index.py imports v1's
+                # own "content"-carrying Faiss meta json verbatim). Without this, a real chunk
+                # ingested through this node can never resolve to its own text via
+                # databasise.seam.evidence.resolve_evidence_ref, which reads the vector store's
+                # own metadata directly, never the sibling KV record this node also writes.
+                "content": record["text"],
+            }
             for record in chunk_records
         ],
     )
