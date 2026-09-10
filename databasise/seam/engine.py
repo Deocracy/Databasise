@@ -130,9 +130,12 @@ supported write path, a file that does not exist is
 :class:`~databasise.seam.refusals.NoWritePathForModalityError`. ``ingest()`` reads the node whose
 config is stamped from the resolved corpus wiring's own ``consumes_documents[0]``, and the node
 whose result is read from its own ``provides[0]`` — never a module constant, so a modality added
-later needs only two files on disk. ``delete_document()`` (unchanged selector-free signature until
-Task 2) resolves the default modality the same way, so it still dispatches LightRAG's own
-``corpus-delete.json`` byte-for-byte identically to before.
+later needs only two files on disk. ``delete_document()`` gains the identical ``selector``
+parameter (Task 2): a HippoRAG-selected delete raises ``NoWritePathForModalityError`` by name,
+since no HippoRAG delete node exists anywhere in this repository (removing a document from
+HippoRAG's index would mean retracting its chunk/entity/fact vectors and its fact/passage/synonymy
+edges — new node code, out of this plan's scope); an unselected or LightRAG-selected delete
+resolves to the identical wiring the former ``_DELETE_WIRING_PATH`` constant named, byte-for-byte.
 """
 
 from __future__ import annotations
@@ -730,11 +733,16 @@ class Databasise:
             enqueued = 1
         return IngestJob(job_id=str(result.get("track_id") or track_id), enqueued=int(enqueued))
 
-    async def delete_document(self, document_id: str) -> DeletionOutcome:
-        """The fifth §18 operation this seam exposes (05-03-PLAN.md) — a write, like ``ingest``,
-        dispatching the single named ``lightrag/full-delete`` opaque Part directly through the
-        real scheduler rather than through ``_execute()``'s selector-resolution path, for the same
-        reason ``ingest`` does: no selector can express "delete this document from the corpus".
+    async def delete_document(
+        self, document_id: str, selector: Selector | None = None
+    ) -> DeletionOutcome:
+        """The fifth §18 operation this seam exposes (05-03-PLAN.md; selector parameter added
+        06-10-PLAN.md Task 2) — a write, like ``ingest``, dispatching the target modality's own
+        corpus-delete wiring directly through the real scheduler rather than through
+        ``_execute()``'s envelope-assembly path, for the same reason ``ingest`` does: no selector
+        value can itself express "delete this document from the corpus" — ``selector`` here names
+        which fitted modality's index the delete reaches, the same thing it already names for
+        ``ingest``/``query``/``compare``.
 
         A document v1 itself reports ``not_found`` (already deleted, or never ingested) is a
         normal outcome carried in ``DeletionOutcome.status`` — never a refusal. Only a
@@ -747,18 +755,19 @@ class Databasise:
         without it, MACH-11 sees nothing, and the deleting node's own ``mutates_store`` effect
         would never correlate into a ``SeamEvent`` at all.
 
-        06-10-PLAN.md: dispatches through :func:`_corpus_wiring` against the *default* selector's
-        resolved wiring, exactly like ``ingest()`` does for a caller supplying no selector — the
-        selector-parameter surface joins this method in Task 2. LightRAG is the only modality that
-        ships a ``corpus-delete.json`` today, so this call resolves to the identical wiring the
-        former ``_DELETE_WIRING_PATH`` constant named, byte-for-byte.
+        A caller supplying no selector resolves to the default modality exactly as before this
+        change: LightRAG is the only modality that ships a ``corpus-delete.json`` today, so this
+        call resolves to the identical wiring the former ``_DELETE_WIRING_PATH`` constant named,
+        byte-for-byte. A selector resolving to a modality with no ``corpus-delete.json`` raises
+        :class:`~databasise.seam.refusals.NoWritePathForModalityError` rather than deleting from a
+        different modality's index than the caller selected.
         """
         try:
             generated_on_disk_name(document_id)
         except ValueError as exc:
             raise UnknownDocumentError(document_id=document_id) from exc
 
-        query_wiring = resolve_selector(None, registry=self.registry, store_root=self.store_root)
+        query_wiring = resolve_selector(selector, registry=self.registry, store_root=self.store_root)
         resolved = _corpus_wiring(query_wiring, "delete")
         delete_node_id = resolved["provides"][0]
         node_config = dict(resolved["nodes"][delete_node_id].get("config") or {})

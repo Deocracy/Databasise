@@ -12,13 +12,18 @@ truth REST and MCP both defer to.
 
 - ``ingest``: writes a document into the corpus. No selector can express "put this document in" —
   there is no candidate wiring to choose among, only one fixed operation to perform (mirrors
-  ``Databasise.ingest``'s own docstring).
+  ``Databasise.ingest``'s own docstring). 06-10-PLAN.md: ``selector`` does not make this tool a
+  query — it names *which fitted modality's index* the write lands in, the same thing it already
+  names for ``query``; the tool remains one fixed operation across every modality.
 - ``query``: retrieves an answer for a query object. The one intention every consumer has
   regardless of which modality is fitted underneath — the selector argument picks a *wiring*, the
   tool itself never becomes modality-specific.
 - ``delete``: removes a document from the corpus. §19.6 requires this be a separate port from
   ingest (different declared effect, ``mutates_store`` vs ``writes_artifact``) — and a mutation is
-  not an answering variant a selector could express.
+  not an answering variant a selector could express. 06-10-PLAN.md: ``selector`` names which fitted
+  modality's index the delete reaches, exactly as it does for ``ingest`` — a modality with no
+  delete wiring refuses by name (``NoWritePathForModalityError``) rather than silently deleting
+  from a different modality's index.
 - ``status``: bounded introspection (job/corpus/counts/health) — a liveness/status read, never a
   modality selection; the ``scope`` argument distinguishes four *shapes of the same intention*
   ("tell me what's happening"), not four operations.
@@ -81,6 +86,7 @@ class IngestToolArgs(_ToolArgs):
     file_name: str | None = None
     raw_base64: str | None = None
     content_type: str | None = None
+    selector: Selector | None = None
 
     def to_ingest_document(self) -> IngestDocument:
         if self.raw_base64 is not None:
@@ -116,10 +122,11 @@ class CompareToolArgs(_ToolArgs):
 
 
 class DeleteToolArgs(_ToolArgs):
-    """Carries only the document id — the identical shape ``databasise.seam.rest.DeleteRequest``
-    carries."""
+    """Carries the document id plus an optional §18.4 selector (06-10-PLAN.md Task 2) — the
+    identical shape ``databasise.seam.rest.DeleteRequest``/path-parameter pair carries."""
 
     document_id: str
+    selector: Selector | None = None
 
 
 class StatusToolArgs(_ToolArgs):
