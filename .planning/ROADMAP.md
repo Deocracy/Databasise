@@ -285,7 +285,7 @@ Plans:
 
 **Gap-closure Wave 4** *(added 2026-09-10, second round; tracer — runs alone, before any expansion)*
 
-- [ ] 06-14-PLAN.md — the fact-score defect fixed at its root: index builds resolve HippoRAG's seven-position corpus-ingest wiring, and an empty or blank embedding batch refuses by name at the one method every caller routes through
+- [x] 06-14-PLAN.md — the fact-score defect fixed at its root: index builds resolve HippoRAG's seven-position corpus-ingest wiring, and an empty or blank embedding batch refuses by name at the one method every caller routes through
 
 **Gap-closure Wave 5** *(blocked on 06-14; two plans run in parallel — no shared files; not autonomous: 06-15 holds a blocking spend checkpoint)*
 
