@@ -118,3 +118,39 @@ superseded by a real calibration record carrying two real committed floors.
 ---
 *Falsifier 5 (MACH-03) — BLOCKED, not discharged*
 *Recorded: 2026-09-09*
+
+## Deferred again — 2026-09-10
+
+**Date:** 2026-09-10
+
+The owner declined the real A/A calibration a second time, at this plan's Task 2
+`gate="blocking-human"` checkpoint (`decline`). Their stated reason, verbatim:
+
+> a real run in this same session (Task 1) had just incurred spend and then died on a live-data
+> edge case — the `fact-score` empty-string defect — that no test caught; the same class of defect
+> could waste the far more expensive T0 leg, so fixing `fact-score` first makes both spends cheaper
+> to attempt.
+
+No corpus is ingested, no judge-identity call is made, no LLM call of any kind occurs, no spend is
+incurred, and no bundle version is minted. Both the T0 and T1 legs stay unrun. The entry criterion
+for the real calibration run is **unchanged** — it is still: a resolved judge identity in the
+bundle, and a cost-bounded indexing story for the eval-corpus, followed by the owner's
+authorization of the spend itself.
+
+**What did change since 2026-09-09:** 06-12 closed both of the preconditions this document's own
+"Two preconditions that must hold before this run can happen" section named as outstanding —
+`databasise/eval/remint.py` resolves a real judge identity from a live provider response (never a
+declared/substituted one) and mints the next bundle version carrying it, and
+`databasise/eval/corpus_ingest.py` turns the 291-document eval-corpus's ingest from
+`full_ingest`'s `unbudgetable` accounting into a cost-bounded, dry-run-by-default path with a
+printed projection under an enforced `--limit` cap. Both preconditions this document names are now
+met in code. The only remaining blocker is the spend decision itself, which the owner has now
+declined twice — at 06-06 and again here.
+
+MACH-03 stays **Pending** in `.planning/REQUIREMENTS.md`, with a dated annotation naming the spend
+as the single outstanding item. A recorded decline is this task's success state, not its failure
+state — Falsifier 5 remains **open**, not failed: no comparison ran, so there is no adverse verdict
+to record.
+
+---
+*Recorded: 2026-09-10*
