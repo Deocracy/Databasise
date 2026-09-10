@@ -240,7 +240,7 @@ Plans:
   5. Mutable-store components either have a defined snapshot/reset protocol or are recorded as permanently excluded from A/B — F-07 discharged rather than left open
   6. Owner mints an eval bundle with dev/holdout/sealed splits carrying questions, gold answers, judge instance, judge prompt hash, corpus snapshot hash, determinism/concurrency setting, and both §EV.2 target families (MACH-02), then runs one A/A calibration and reads a bootstrap-resampled p95 floor keyed to `(bundle@v, tier, metric)` with T1's null width materially narrower than T0's — Falsifier 5, MACH-03, carried forward from Phase 3 per `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`
 
-**Plans**: 4/9 plans executed across 6 waves
+**Plans**: 5/9 plans executed across 6 waves
 
 Plans:
 **Wave 1** *(tracer — runs alone, before any expansion)*
@@ -255,7 +255,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2; two plans run in parallel)*
 
-- [ ] 06-05-PLAN.md — HippoRAG index side, part 2: the three edge builders, §14.2 batched self-KNN, and the quarantined graph materialiser
+- [x] 06-05-PLAN.md — HippoRAG index side, part 2: the three edge builders, §14.2 batched self-KNN, and the quarantined graph materialiser
 - [ ] 06-06-PLAN.md — MACH-03's first A/A calibration and Falsifier 5's verdict against a pre-registered threshold
 
 **Wave 4** *(blocked on Wave 3)*
@@ -297,7 +297,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. LightRAG Query Side | 13/13 | In Progress|  |
 | 4. The Seam | 5/5 | Complete    | 2026-09-06 |
 | 5. Opaque-Side Admission | 9/9 | Complete    | 2026-09-08 |
-| 6. HippoRAG 2 & Side-by-Side | 4/9 | In Progress|  |
+| 6. HippoRAG 2 & Side-by-Side | 5/9 | In Progress|  |
 | 7. Promotion & Rollback | 0/TBD | Not started | - |
 
 ## Requirement Coverage
