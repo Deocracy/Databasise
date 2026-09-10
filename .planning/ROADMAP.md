@@ -264,7 +264,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4)*
 
-- [ ] 06-08-PLAN.md — MODAL-05: both modalities indexed and answering one corpus, with isolation and comparability observed
+- [x] 06-08-PLAN.md — MODAL-05: both modalities indexed and answering one corpus, with isolation and comparability observed
 
 **Wave 6** *(blocked on Wave 5)*
 

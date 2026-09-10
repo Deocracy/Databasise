@@ -1,19 +1,19 @@
 ---
-gsd_state_version: "1.0"
+gsd_state_version: 1.0
 milestone: v1.0
 current_phase: 06
 current_phase_name: HippoRAG 2 & Side-by-Side
 status: executing
-stopped_at: Completed 06-07-PLAN.md (HippoRAG 2 decomposition complete — thirteenth position, §19.8 guard, port record)
-last_updated: "2026-09-10T01:41:23.270Z"
+stopped_at: Completed 06-08-PLAN.md (MODAL-05 cross-modality run deferred, recorded BLOCKED)
+last_updated: "2026-09-10T02:35:50.580Z"
 last_activity: 2026-09-09
 last_activity_desc: Phase 06 execution started
-state_head: ccd0b6eb9baa7132aeb0b3213d813c883d9342f0
+state_head: b58fdf3ca012bb45452c8b18f156f38d7cbb6d60
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 4
   total_plans: 50
-  completed_plans: 48
+  completed_plans: 49
 milestone_name: milestone
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 06 (HippoRAG 2 & Side-by-Side) — EXECUTING
-Plan: 8 of 9
+Plan: 9 of 9
 Status: Ready to execute
 Last activity: 2026-09-09 — Phase 06 execution started
 
@@ -85,6 +85,7 @@ Progress: [██████████] 100%
 | Phase 06 P05 | ~80min | 3 tasks | 11 files |
 | Phase 06-hipporag-2-side-by-side P06 | ~20min (continuation) | 2 tasks | 8 files |
 | Phase 06 P07 | ~90 min | 3 tasks | 15 files |
+| Phase 06-hipporag-2-side-by-side P08 | ~55min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -152,6 +153,7 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 06]: 06-07: the zero_surviving_facts_dpr_fallback guard is declared on fact-filter's own config.guards (declare_guard's real shape: name/evaluating_node/value_when_not_fired/granularity), never the illustrative doc's top-level richer-shaped guards array — runner/guards.py's own module docstring requires config.guards so config_hash covers the declaration. — The illustrative docs/system-model/wirings/hipporag-base.json's top-level guards array is evidence PARTS.md cites; it is never parsed by validator/parse.py or reached by runner/scheduler.py's per-node guard validation.
 - [Phase 06]: 06-07: fact_filter.py's _GuardAwareResult (a dict subclass overriding __eq__/__ne__) lets a JSON-literal value_when_not_fired sentinel correctly express a per-query, data-dependent condition through evaluate_guards's whole-runtime-output `!=` comparison, without a second guard-evaluation mechanism. — This node's own items/tokens legitimately vary per query in both branches, so ordinary whole-dict equality could never match a static JSON value; dict's own C-level __ne__ slot does not fall back to a subclass __eq__ override, so both had to be defined explicitly.
 - [Phase 06]: 06-07: entity-fact-embed now also writes a fact:<id> -> {chunk_ids} KV record (writes_kv effect added), closing the two-plan-old gap between reset-vector-join's already-committed KV read and entity-fact-embed's vector-metadata-only write. — 06-05-SUMMARY.md's own "Next Phase Readiness" section disposed this gap explicitly to 06-07 as owner, since a real end-to-end run needs the write and neither 06-01 nor 06-05's own <files> scope touched the file that needed it.
+- [Phase 06-hipporag-2-side-by-side]: 06-08: Owner selected defer-and-record-blocked at Task 1's spend checkpoint — no real HippoRAG index build or cross-modality comparison executes; both build_hipporag_index.py and run_cross_modality.py are written as genuine runnable code and committed unexecuted; MODAL-05 recorded as BLOCKED in CROSS-MODALITY-EVIDENCE.md, mirroring FALSIFIER-5-EVIDENCE.md's house format. — One real invocation requires live v1/.env.parity credentials and was not authorized during this plan's execution; MODAL-05 stays Pending in REQUIREMENTS.md.
 
 ### Pending Todos
 
@@ -180,6 +182,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-10T01:41:23.183Z
-Stopped at: Completed 06-07-PLAN.md (HippoRAG 2 decomposition complete — thirteenth position, §19.8 guard, port record)
+Last session: 2026-09-10T02:35:35.713Z
+Stopped at: Completed 06-08-PLAN.md (MODAL-05 cross-modality run deferred, recorded BLOCKED)
 Resume file: None
