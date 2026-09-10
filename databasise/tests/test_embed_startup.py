@@ -144,7 +144,7 @@ async def test_4_no_container_runtime_is_invoked_across_a_complete_run(store_roo
     assert after == before, f"task count changed across a complete run: {before} -> {after}"
 
 
-def test_5_the_declared_runtime_dependency_set_is_exactly_eight_and_none_is_a_db_client():
+def test_5_the_declared_runtime_dependency_set_is_exactly_nine_and_none_is_a_db_client():
     """Test 5: read from the installed distribution's own metadata, not the project file — the
     claim is about the environment that actually runs. Phase 1's set of four grew to six in
     Phase 3 (03-01-PLAN.md Task 2): ``openai`` (D-06/D-07's LLM/embedding client primitive) and
@@ -153,7 +153,9 @@ def test_5_the_declared_runtime_dependency_set_is_exactly_eight_and_none_is_a_db
     eight: ``igraph`` (whole-graph personalized PageRank, HippoRAG 2's ``ppr`` node) and ``numpy``
     (dense array math, ``reset-vector-join``/``ppr``) — both approved through the package-legitimacy
     gate (06-CHECKPOINT-ANSWERS.md), both landing in core per that checkpoint's own Open Question 4
-    answer (HippoRAG 2 is a first-class modality, not an optional transport).
+    answer (HippoRAG 2 is a first-class modality, not an optional transport). 06-06-PLAN.md Task 1
+    grew the set to nine: ``scipy`` (RIG §AA.1's paired bootstrap, MACH-03's A/A calibration) —
+    also approved through the package-legitimacy gate (06-CHECKPOINT-ANSWERS.md 06-01 Task 1).
 
     04-05 (D-15): ``dist.requires`` now also lists the optional ``rest`` extra's own dependencies
     (``fastapi``, ``uvicorn``) — ``importlib.metadata`` includes every ``[project.optional
@@ -173,10 +175,12 @@ def test_5_the_declared_runtime_dependency_set_is_exactly_eight_and_none_is_a_db
     requires = dist.requires or []
 
     unconditional = [req for req in requires if "extra ==" not in req]
-    assert len(unconditional) == 8, f"expected exactly 8 unconditional runtime dependencies, got {unconditional}"
+    assert len(unconditional) == 9, f"expected exactly 9 unconditional runtime dependencies, got {unconditional}"
 
     names = {req.split(";")[0].split("[")[0].split("=")[0].split("<")[0].split(">")[0].strip().lower() for req in unconditional}
-    assert names == {"pycozo", "faiss-cpu", "rfc8785", "pydantic", "openai", "jsonpatch", "igraph", "numpy"}
+    assert names == {
+        "pycozo", "faiss-cpu", "rfc8785", "pydantic", "openai", "jsonpatch", "igraph", "numpy", "scipy",
+    }
 
     # D-15: every optional extra's own dependencies exist in the metadata, but only as
     # extra-gated (never unconditional) requirements — never installed unless a consumer opts in.

@@ -43,6 +43,10 @@ dependencies = [
     # 2026-09-09 — see 06-CHECKPOINT-ANSWERS.md. Already pinned independently at
     # v1/pyproject.toml; this range is databasise's own.
     "numpy>=1.24,<3.0",
+    # A/A calibration's paired bootstrap (RIG §AA.1) — scipy.stats.bootstrap(..., paired=True,
+    # method="percentile"). Package-legitimacy gate approved 2026-09-09 — see
+    # 06-CHECKPOINT-ANSWERS.md (cleared for 06-04/06-06's use, added here by 06-06).
+    "scipy>=1.11",
 ]
 
 # PEP 735 dependency group, not [project.optional-dependencies]: uv installs the `dev`
