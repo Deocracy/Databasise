@@ -136,3 +136,60 @@ is given — no further code is needed to unblock this run, only the spend decis
 ---
 *MODAL-05 (Cross-Modality Side-by-Side) — BLOCKED, not discharged*
 *Recorded: 2026-09-09*
+
+## Real run attempted — refused — 2026-09-10
+
+**Claim.** The owner authorized the real cross-modality run at Task 1's `gate="blocking-human"`
+checkpoint (`approve`, 06-13-PLAN.md). One real invocation of
+`databasise.parity.build_hipporag_index` ran against the 20-document Phase 3 parity corpus using
+live `v1/.env.parity` credentials. It did not complete: the harness's own post-run verification
+refused to report success.
+
+**Method.** `cd databasise && uv run python -m databasise.parity.build_hipporag_index` was invoked
+directly, exactly as this document's own "Entry criterion for the deferred run" section names. No
+flag was weakened, no guard was bypassed, and the invocation was not retried after its refusal,
+per this plan's own prohibition against re-running with a weakened guard.
+
+**Findings.** The harness exited non-zero (exit code 1). Its own refusal message, verbatim:
+
+> the index build reported partial=True degraded=True stop_reason='node \'fact-score\':
+> NodeExecutionError: Error code: 400 - {\'error\': {\'message\': \'[\n  {\n    "origin": "string",\n
+> "code": "too_small",\n    "minimum": 1,\n    "inclusive": true,\n    "path": [\n      "input",\n
+> 0\n    ],\n    "message": "Too small: expected string to have >=1 characters"\n  }\n]\', \'code\':
+> 400}, \'user_id\': \'user_3IHRlVFnqS7CEPs4DFLIvo1JB4i\'}' degradation_reason=(same) — refusing to
+> report success on a run that did not complete cleanly
+
+The failing node is `fact-score`: the scoring provider rejected an input carrying an empty
+(zero-length) string somewhere in its batch — a `400` validation error, not an authentication or
+quota failure. `build_index()` raised `HippoRAGIndexBuildRefusedError` before constructing an
+`IndexBuildResult`, so no graph node/edge count, no chunk/entity/fact vector count, and no
+token-spend breakdown was ever returned by the harness's own accounting — there is nothing
+verified to report for any of those fields. A real, non-zero spend against live `v1/.env.parity`
+credentials did occur before the refusal (multiple upstream nodes — including chunk, entity, and
+fact embedding — ran to completion ahead of `fact-score`), but its exact size is not known to this
+document: the harness's own token accounting was never assembled because the run was never
+allowed to complete, and estimating a figure here would be exactly the kind of
+fabricated-plausible-value substitution this document's own Limits section already forbids.
+
+Because the index build did not certify as complete, `databasise.parity.run_cross_modality` was
+not invoked — its own `preflight()` step requires a verified HippoRAG index, which this run did
+not produce, and this plan's own instruction is to stop the branch on a harness refusal rather
+than proceed past it.
+
+**Verdict.** MODAL-05 is **still not discharged**. This was a genuine, spend-incurring attempt at
+the real invocation — not a second deferral and not a decline — but the harness itself refused to
+certify the result, so no comparison ran and no side-by-side output exists. The blocker has
+changed shape: it is no longer "unauthorized," it is now a concrete code defect in the
+`fact-score` node's handling of an empty-string input, surfaced for the first time by this real
+run against the real 20-document corpus (fixture-driven tests never exercised this input shape).
+
+**Limits.** No graph node/edge count, no vector count, no duration, no per-query comparison
+result, and no token-spend figure is reported anywhere in this section — none of those exist as
+harness-verified values for this attempt. The owner's `approve` decision is recorded honestly as
+*attempted and refused*, not rounded up to success. `.planning/REQUIREMENTS.md`'s MODAL-05 row
+stays Pending; its outstanding item is updated to name the `fact-score` empty-string defect as the
+concrete next blocker, superseding (not replacing) the prior "authorization" blocker, which is now
+resolved.
+
+---
+*Real run attempted, refused before verification — 2026-09-10*
