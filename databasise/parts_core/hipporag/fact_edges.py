@@ -44,7 +44,23 @@ def _canonical_pair(a: str, b: str) -> tuple[str, str]:
 
 
 async def _fact_edges_body(ctx: NodeContext) -> dict[str, Any]:
-    return {"edges": []}
+    openie_output = ctx.inputs["openie"]
+    findings = list(openie_output.get("findings", []))
+
+    weight_by_pair: dict[tuple[str, str], float] = {}
+    for finding in findings:
+        subject_ref = _entity_ref(finding["subject"])
+        object_ref = _entity_ref(finding["object"])
+        if subject_ref == object_ref:
+            continue
+        pair = _canonical_pair(subject_ref, object_ref)
+        weight_by_pair[pair] = weight_by_pair.get(pair, 0.0) + 1.0
+
+    edges = [
+        {"src": src, "tgt": tgt, "weight": weight, "edge_type": _EDGE_TYPE}
+        for (src, tgt), weight in sorted(weight_by_pair.items())
+    ]
+    return {"edges": edges}
 
 
 HIPPORAG_FACT_EDGE_BUILDER_PART = Part(
