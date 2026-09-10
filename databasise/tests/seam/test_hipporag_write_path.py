@@ -177,3 +177,144 @@ async def test_hipporag_ingest_does_not_touch_lightrags_store_directories(store_
     assert "hipporag-graph" in on_disk
     assert "chunk_entity_relation" not in on_disk
     assert "text_chunks" not in on_disk
+
+
+# --------------------------------------------------------------------------------------------- #
+# Task 2: the named delete refusal, selector parity on REST/MCP, and the write-path invariant.
+# --------------------------------------------------------------------------------------------- #
+
+
+async def test_hipporag_selected_delete_raises_the_named_refusal_naming_only_the_operation(
+    store_root,
+):
+    engine = _make_engine(store_root, workspace="delete-refusal-ws")
+    selector = Selector(capability=_HIPPORAG_CAPABILITY)
+
+    with pytest.raises(NoWritePathForModalityError) as exc_info:
+        await engine.delete_document("hipporag-doc-1", selector=selector)
+
+    assert exc_info.value.operation == "delete"
+    message = str(exc_info.value)
+    assert "hipporag" not in message.lower()
+    assert "lightrag" not in message.lower()
+    for node_id in ("chunk-embed", "openie", "entity-fact-embed", "full-delete"):
+        assert node_id not in message
+
+
+async def test_no_selector_delete_still_reaches_the_lightrag_delete_wiring(store_root):
+    from seam.test_delete_document import _make_stub_full_delete_body, _registry_with
+
+    import dataclasses
+
+    from databasise.parts_core.declared_only import LIGHTRAG_FULL_DELETE_PART
+
+    test_part = dataclasses.replace(
+        LIGHTRAG_FULL_DELETE_PART, body=_make_stub_full_delete_body(timeout=5.0, stub_status="success")
+    )
+    registry = _registry_with(test_part)
+    engine = Databasise(store_root=store_root, workspace="no-selector-delete-ws", registry=registry)
+
+    outcome = await engine.delete_document("some-doc")
+
+    assert isinstance(outcome, DeletionOutcome)
+    assert outcome.status == "success"
+
+
+async def test_write_path_invariant_holds_over_every_wiring_name():
+    """The invariant Task 1's assumption-delta checkpoint accepted: for every entry of
+    ``WIRING_NAMES``, either its own ``corpus-<operation>.json`` exists (and loads through
+    ``_corpus_wiring`` without raising) or the operation raises ``NoWritePathForModalityError`` —
+    never a silent fallback to another modality's file. Iterates ``WIRING_NAMES`` itself, never a
+    hand-written modality list, so a modality added later fails this test instead of passing by
+    omission."""
+    from pathlib import Path
+
+    from databasise.seam.engine import _corpus_wiring
+
+    wirings_root = Path(__file__).resolve().parents[2] / "wirings"
+
+    for name in WIRING_NAMES:
+        fake_query_wiring = {"wiring_id": f"{name}-base"}
+        for operation in ("ingest", "delete"):
+            wiring_path = wirings_root / name / f"corpus-{operation}.json"
+            if wiring_path.is_file():
+                resolved = _corpus_wiring(fake_query_wiring, operation)
+                assert resolved.get("nodes")
+            else:
+                with pytest.raises(NoWritePathForModalityError):
+                    _corpus_wiring(fake_query_wiring, operation)
+
+
+async def test_hipporag_ingest_parity_across_rest_mcp_and_in_process_transports(store_root):
+    pytest.importorskip("fastapi")
+    try:
+        import databasise.mcp  # noqa: F401 - import-for-availability-check only
+    except ImportError:
+        pytest.skip("the `mcp` extra is not installed")
+
+    from fastapi.testclient import TestClient
+
+    from databasise.mcp import create_server
+    from databasise.seam.rest import create_app
+
+    clients = {"embedding": _StubEmbeddingClient(), "llm": _StubIngestQueryLLMClient()}
+    selector_payload = {"capability": _HIPPORAG_CAPABILITY}
+
+    rest_app = create_app(store_root=store_root, workspace="parity-rest-ws", clients=clients)
+    rest_client = TestClient(rest_app)
+    rest_response = rest_client.post(
+        "/documents",
+        json={
+            "document": {"document_id": "hipporag-doc-rest", "text": _DOCUMENT_TEXT},
+            "selector": selector_payload,
+        },
+    )
+    assert rest_response.status_code == 200
+    rest_job = rest_response.json()
+    assert rest_job["enqueued"] == 1
+    assert rest_job["job_id"]
+
+    mcp_server = create_server(store_root=store_root, workspace="parity-mcp-ws", clients=clients)
+    mcp_result = await mcp_server.call_tool(
+        "ingest",
+        {
+            "args": {
+                "document_id": "hipporag-doc-mcp",
+                "text": _DOCUMENT_TEXT,
+                "selector": selector_payload,
+            }
+        },
+    )
+    mcp_job = _tool_json(mcp_result)
+    assert mcp_job["enqueued"] == 1
+    assert mcp_job["job_id"]
+
+    in_process_engine = _make_engine(store_root, workspace="parity-in-process-ws")
+    in_process_job = await in_process_engine.ingest(
+        IngestDocument(document_id="hipporag-doc-in-process", text=_DOCUMENT_TEXT),
+        selector=Selector(capability=_HIPPORAG_CAPABILITY),
+    )
+    assert set(rest_job.keys()) == set(in_process_job.model_dump().keys()) == set(mcp_job.keys())
+
+    # HippoRAG delete refuses over both transports, mapping to the documented 422 the generic
+    # SeamRefusalError handler already produces — never a per-endpoint branch.
+    rest_delete_response = rest_client.request(
+        "DELETE", "/documents/hipporag-doc-rest", json={"selector": selector_payload}
+    )
+    assert rest_delete_response.status_code == 422
+    assert rest_delete_response.json()["refusal_type"] == "NoWritePathForModalityError"
+
+    from databasise.mcp._sdk import import_sdk
+
+    ToolError = import_sdk("mcp.server.mcpserver.exceptions").ToolError
+    with pytest.raises(ToolError):
+        await mcp_server.call_tool(
+            "delete", {"args": {"document_id": "hipporag-doc-mcp", "selector": selector_payload}}
+        )
+
+
+def _tool_json(result) -> dict:
+    """Mirrors ``databasise/tests/mcp/test_dual_transport_parity.py``'s own helper: every tool
+    returns a plain dict, rendered by the SDK as one JSON text content block."""
+    text = "".join(getattr(item, "text", "") or "" for item in result.content)
+    return json.loads(text)
