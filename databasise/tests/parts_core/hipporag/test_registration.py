@@ -8,7 +8,8 @@ than silently drifting. Also proves none of the parts needs subprocess containme
 ``opaque`` effective depth. 06-02-PLAN.md added ``hipporag/chunker-embedder@0.1.0``,
 ``hipporag/openie-extractor@0.1.0`` and ``hipporag/entity-fact-embedder@0.1.0`` to the pinned
 mapping (five members -> eight). 06-05-PLAN.md Task 1 adds ``hipporag/fact-edge-builder@0.1.0``
-and ``hipporag/passage-edge-builder@0.1.0`` (eight -> ten).
+and ``hipporag/passage-edge-builder@0.1.0`` (eight -> ten); Task 2 adds
+``hipporag/synonymy-edge-builder@0.1.0`` (ten -> eleven).
 """
 
 from __future__ import annotations
@@ -71,12 +72,17 @@ _EXPECTED_SHAPE: dict[str, dict[str, object]] = {
         "effects": [],
         "structural_depth": "opaque",
     },
+    "hipporag/synonymy-edge-builder@0.1.0": {
+        "kind": "extractor",
+        "effects": ["reads_vector"],
+        "structural_depth": "opaque",
+    },
 }
 
 
-def test_hipporag_parts_has_exactly_ten_members_matching_the_pinned_names():
+def test_hipporag_parts_has_exactly_eleven_members_matching_the_pinned_names():
     assert {part.name_at_version for part in HIPPORAG_PARTS} == set(_EXPECTED_SHAPE)
-    assert len(HIPPORAG_PARTS) == 10
+    assert len(HIPPORAG_PARTS) == 11
 
 
 def test_every_part_matches_its_pinned_kind_effects_and_structural_depth():
@@ -87,13 +93,13 @@ def test_every_part_matches_its_pinned_kind_effects_and_structural_depth():
         assert part.structural_depth == expected["structural_depth"], part.name_at_version
 
 
-def test_none_of_the_ten_parts_requires_containment_beyond_in_process():
+def test_none_of_the_eleven_parts_requires_containment_beyond_in_process():
     for part in HIPPORAG_PARTS:
         mode = derive_execution_mode(part.effects, part.kind)
         assert mode == "in-process", (part.name_at_version, mode)
 
 
-def test_default_registry_registers_all_ten_hipporag_names():
+def test_default_registry_registers_all_eleven_hipporag_names():
     registry = default_registry()
     for name in _EXPECTED_SHAPE:
         assert name in registry.keys()
