@@ -3,17 +3,17 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: 06
 current_phase_name: HippoRAG 2 & Side-by-Side
-status: executing
-stopped_at: Completed 06-12-PLAN.md (Falsifier 5 preconditions closed, spend-free)
-last_updated: "2026-09-10T13:33:42.607Z"
+status: verifying
+stopped_at: Completed 06-13-PLAN.md
+last_updated: "2026-09-10T17:48:44.762Z"
 last_activity: 2026-09-10
 last_activity_desc: Phase 06 execution started
-state_head: 9ac260f46731be94e1eaea936c80f6c57a058a45
+state_head: c2b15bf18ce0a7a3bf7359dd000f48721ba2b9e0
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 54
-  completed_plans: 53
+  completed_plans: 54
 milestone_name: milestone
 ---
 
@@ -32,7 +32,7 @@ Phase: 06 (HippoRAG 2 & Side-by-Side) — EXECUTING
 Plan: 13 of 13 (12 of 13 complete — 06-12 just landed; 06-13 remains. Note: this counter was
   drifted before this session — corrected here from find-phase's actual plan/summary counts
   rather than the stale auto-incremented value)
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-10 — 06-12 (Falsifier 5 precondition closure) complete
 
 Progress: [██████████] 100%
@@ -92,6 +92,7 @@ Progress: [██████████] 100%
 | Phase 06 P10 | 80min | 3 tasks | 15 files |
 | Phase 06-hipporag-2-side-by-side P11 | 8min | 1 tasks | 1 files |
 | Phase 06 P12 | 24min | 2 tasks | 4 files |
+| Phase 06-hipporag-2-side-by-side P13 | 42min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -166,6 +167,8 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 06]: 06-11: MACH-10 flipped Pending -> Complete in REQUIREMENTS.md, citing 06-UAT.md Test 1 owner confirmation and F-07-MUTABLE-STORE-DISPOSITION.md — Appended a new dated confirmation annotation rather than rewriting the existing 06-09 measurement annotation, preserving the row's full history; MACH-03 and MODAL-05 left unchanged and Pending.
 - [Phase 06]: 06-12: gsd_run check tdd-red-evidence cannot classify pytest output for this Python project (TAP/Node-oriented) — RED evidence produced via the commit-broken-draft-then-restore technique 06-01/06-04 already established, verified manually against real pytest AssertionErrors.
 - [Phase 06]: 06-12: corpus_ingest.py's real --spend path uses its own dedicated store root (v1/.eval_corpus_store, workspace eval-corpus-ingest), separate from the Phase 3 parity store and the Phase 6 build-harness store.
+- [Phase 06]: MODAL-05: owner approved the real cross-modality run; build_hipporag_index refused before completion on a fact-score empty-string defect. Real spend incurred, no comparison produced. MODAL-05 stays Pending against the concrete defect. — The plan's own stop-on-refusal rule forbids retrying with a weakened guard; the refusal itself is the honest recorded outcome.
+- [Phase 06]: MACH-03/Falsifier 5: owner declined the A/A calibration spend a second time, reasoning the fact-score failure Task 1 just hit could waste the far larger T0-leg spend if not fixed first. — 06-12 closed both named preconditions; only the spend remains, and the owner is sequencing the defect fix ahead of it.
 
 ### Pending Todos
 
@@ -194,6 +197,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-10T13:33:42.517Z
-Stopped at: Completed 06-12-PLAN.md (Falsifier 5 preconditions closed, spend-free)
+Last session: 2026-09-10T17:48:44.655Z
+Stopped at: Completed 06-13-PLAN.md
 Resume file: None
