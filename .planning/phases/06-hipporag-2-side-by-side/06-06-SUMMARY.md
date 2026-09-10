@@ -157,3 +157,14 @@ None - no external service configuration required.
 ---
 *Phase: 06-hipporag-2-side-by-side*
 *Completed: 2026-09-09*
+
+## Self-Check: PASSED
+
+- `databasise/evidence/FALSIFIER-5-EVIDENCE.md` — FOUND
+- `databasise/tests/evidence/test_falsifier5_record.py` — FOUND
+- `.planning/phases/06-hipporag-2-side-by-side/06-06-SUMMARY.md` — FOUND
+- Commit `c5a6d4f` (Task 3, adapted) — FOUND in `git log`
+- Commit `28524d7` (Task 1, prior session) — FOUND in `git log`
+- Commit `1f14084` (plan metadata) — FOUND in `git log`
+- `uv run pytest -q tests/evidence/test_falsifier5_record.py` — 11 passed
+- `uv run pytest -q` (full suite) — 855 passed, 1 skipped

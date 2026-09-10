@@ -31,7 +31,7 @@
     {
       "number": "6",
       "name": "HippoRAG 2 & Side-by-Side",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "number": "7",
@@ -44,5 +44,5 @@
     "label": "Advance to the next step",
     "reason": "Phase 6 of 7 · executing"
   },
-  "updated_at": "2026-09-09T19:35:17.398Z"
+  "updated_at": "2026-09-10T00:57:33.161Z"
 }

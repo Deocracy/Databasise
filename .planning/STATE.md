@@ -1,19 +1,19 @@
 ---
-gsd_state_version: "1.0"
+gsd_state_version: 1.0
 milestone: v1.0
 current_phase: 06
 current_phase_name: HippoRAG 2 & Side-by-Side
 status: executing
-stopped_at: Completed 06-05-PLAN.md
-last_updated: "2026-09-10T00:13:16.225Z"
+stopped_at: Completed 06-06-PLAN.md (Falsifier 5 BLOCKED — real calibration deferred)
+last_updated: "2026-09-10T00:57:49.074Z"
 last_activity: 2026-09-09
 last_activity_desc: Phase 06 execution started
-state_head: 655c544a9ef868781f5bd26776eaa2dfe915b4cb
+state_head: 1f1408458298bbb7e10831ab52b6bf86542358ba
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 4
   total_plans: 50
-  completed_plans: 46
+  completed_plans: 47
 milestone_name: milestone
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 06 (HippoRAG 2 & Side-by-Side) — EXECUTING
-Plan: 6 of 9
+Plan: 7 of 9
 Status: Ready to execute
 Last activity: 2026-09-09 — Phase 06 execution started
 
@@ -83,6 +83,7 @@ Progress: [██████████] 100%
 | Phase 06 P03 | 75min | 3 tasks | 15 files |
 | Phase 06 P04 | ~65min | 3 tasks | 15 files |
 | Phase 06 P05 | ~80min | 3 tasks | 11 files |
+| Phase 06-hipporag-2-side-by-side P06 | ~20min (continuation) | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -145,6 +146,8 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 06]: 06-05: synonymy-edges' num_new_chunks > 0 guard is read as entity-fact-embed's own entity count, not a literal chunk count — this node's sole dep carries no chunk-count field, and entity-fact-embed already short-circuits to zero entities exactly when upstream produced nothing new.
 - [Phase 06]: 06-05: fact-edges/passage-edges declare effects=[] genuinely (not additively like chunk-embed/entity-fact-embed) — both bodies reach no store and no client at all; the graph write happens once, downstream, at graph-augment-persist.
 - [Phase 06]: 06-05: the fact-chunk-association discrepancy between entity-fact-embed (06-02, writes chunk_ids to vector metadata) and reset-vector-join (06-01, reads a KV fact:<id> record no code writes) is explicitly left open — disposition determined (reset-vector-join's KV-read interface is authoritative; entity-fact-embed needs to also write the KV record) but not implemented, since neither file is in 06-05's own <files> scope. 06-07 is named as owner.
+- [Phase 06-hipporag-2-side-by-side]: 06-06: Owner selected defer-run at Task 2's checkpoint — no real A/A calibration executes; Falsifier 5/MACH-03 recorded as BLOCKED, not passed or failed. — T0 (answer-level) blocked by bundle@v1's unresolved judge_instance; T1 (gold-passage) blocked by the unbudgetable cost of ingesting the 291-document eval-corpus through the opaque v1 full-ingest path. Two preconditions named for a future run.
+- [Phase 06-hipporag-2-side-by-side]: 06-06: Task 3 adapted from a passing-verdict record to a BLOCKED record per the owner's explicit instruction — an authorized deviation, not an executor judgment call. — The plan's literal Task 3 text assumed two committed calibration results existed to compare; none exist under defer-run, so the findings table instead carries one row per blocker and the record states plainly that no floor value is reported.
 
 ### Pending Todos
 
@@ -173,6 +176,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-10T00:13:09.084Z
-Stopped at: Completed 06-05-PLAN.md
+Last session: 2026-09-10T00:57:48.916Z
+Stopped at: Completed 06-06-PLAN.md (Falsifier 5 BLOCKED — real calibration deferred)
 Resume file: None
