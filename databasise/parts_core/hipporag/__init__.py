@@ -21,6 +21,7 @@ from databasise.parts_core.hipporag.entity_fact_embed import HIPPORAG_ENTITY_FAC
 from databasise.parts_core.hipporag.fact_edges import HIPPORAG_FACT_EDGE_BUILDER_PART
 from databasise.parts_core.hipporag.fact_filter import HIPPORAG_FACT_FILTER_PART
 from databasise.parts_core.hipporag.fact_score import HIPPORAG_FACT_SCORER_PART
+from databasise.parts_core.hipporag.graph_augment_persist import HIPPORAG_GRAPH_MATERIALIZER_PART
 from databasise.parts_core.hipporag.openie import HIPPORAG_OPENIE_EXTRACTOR_PART
 from databasise.parts_core.hipporag.passage_edges import HIPPORAG_PASSAGE_EDGE_BUILDER_PART
 from databasise.parts_core.hipporag.ppr import HIPPORAG_PPR_RETRIEVER_PART
@@ -39,6 +40,7 @@ HIPPORAG_PARTS: tuple[Part, ...] = (
     HIPPORAG_FACT_EDGE_BUILDER_PART,
     HIPPORAG_PASSAGE_EDGE_BUILDER_PART,
     HIPPORAG_SYNONYMY_EDGE_BUILDER_PART,
+    HIPPORAG_GRAPH_MATERIALIZER_PART,
 )
 
 __all__ = ["HIPPORAG_PARTS"]

@@ -1,6 +1,6 @@
 {
   "wiring_id": "hipporag-base",
-  "title": "HippoRAG 2 base wiring (11 of docs/system-model/wirings/hipporag-base.json's 13 positions: 06-01's 5-node query-side chain, 06-02's first 3 index-side positions, plus 06-05 Task 1's fact-edges/passage-edges and Task 2's synonymy-edges)",
+  "title": "HippoRAG 2 base wiring (12 of docs/system-model/wirings/hipporag-base.json's 13 positions: 06-01's 5-node query-side chain, 06-02's 3 index-side positions, plus 06-05's 4 graph-construction positions completing the index side)",
   "wiring_version": "1",
   "nodes": {
     "chunk-embed": {
@@ -45,6 +45,15 @@
         "synonymy_threshold": 0.8
       },
       "deps": ["entity-fact-embed"]
+    },
+    "graph-augment-persist": {
+      "component": "hipporag/graph-materializer@0.1.0",
+      "kind": "extractor",
+      "effects": ["writes_graph", "writes_artifact"],
+      "config": {
+        "declared_capability": "§14.2 Graph bulk-export"
+      },
+      "deps": ["fact-edges", "passage-edges", "synonymy-edges"]
     },
     "fact-score": {
       "component": "hipporag/fact-scorer@0.1.0",
