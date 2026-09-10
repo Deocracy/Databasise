@@ -28,7 +28,7 @@ pytest.importorskip("fastapi")
 
 import databasise.seam.engine as engine_module
 from databasise.foreign import run_corpus_op
-from databasise.parts.registry import PartRegistry
+from databasise.parts.registry import PartRegistry, default_registry
 from databasise.parts.schema import NodeContext
 from databasise.parts_core.declared_only import LIGHTRAG_FULL_DELETE_PART, LIGHTRAG_FULL_INGEST_PART
 from databasise.runner.trace import TokenAccounting
@@ -103,13 +103,23 @@ def _make_stub_delete_body(*, timeout: float = 5.0, stub_status: str = "success"
 
 
 def _make_registry(*, delete_status: str = "success") -> PartRegistry:
-    registry = PartRegistry(seed_tracer_parts=False)
-    registry.register(dataclasses.replace(LIGHTRAG_FULL_INGEST_PART, body=_make_stub_ingest_body()))
-    registry.register(
-        dataclasses.replace(
-            LIGHTRAG_FULL_DELETE_PART, body=_make_stub_delete_body(stub_status=delete_status)
-        )
+    """A full ``default_registry()`` with both ``lightrag/full-ingest@0.1.0`` and
+    ``lightrag/full-delete@0.1.0`` swapped for their stub-driver variants (06-10-PLAN.md
+    deviation) — ``Databasise.ingest()``/``delete_document()`` now resolve a §18.4 selector before
+    dispatching, which (for the no-selector default path) requires every candidate wiring
+    ``databasise.wirings.resolve.all_wirings()`` enumerates to parse against the registry; a
+    registry holding only the two parts under test can no longer satisfy that."""
+    ingest_part = dataclasses.replace(LIGHTRAG_FULL_INGEST_PART, body=_make_stub_ingest_body())
+    delete_part = dataclasses.replace(
+        LIGHTRAG_FULL_DELETE_PART, body=_make_stub_delete_body(stub_status=delete_status)
     )
+    swapped = {ingest_part.name_at_version: ingest_part, delete_part.name_at_version: delete_part}
+
+    base = default_registry()
+    registry = PartRegistry(seed_tracer_parts=False)
+    for name in base.keys():
+        candidate = base.get(name)
+        registry.register(swapped.get(candidate.name_at_version, candidate))
     return registry
 
 

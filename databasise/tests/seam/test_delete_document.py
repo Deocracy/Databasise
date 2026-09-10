@@ -20,7 +20,7 @@ import pytest
 
 import databasise.foreign.v1_corpus_adapter as _v1_corpus_adapter
 from databasise.foreign import CorpusOpTimeoutError, MissingV1InterpreterError, run_corpus_op
-from databasise.parts.registry import PartRegistry
+from databasise.parts.registry import PartRegistry, default_registry
 from databasise.parts.schema import NodeContext
 from databasise.parts_core.declared_only import LIGHTRAG_FULL_DELETE_PART
 from databasise.runner.trace import TokenAccounting
@@ -89,14 +89,27 @@ def _make_stub_full_delete_body(
     return _body
 
 
+def _registry_with(part: Any) -> PartRegistry:
+    """A full ``default_registry()`` with ``part``'s own ``name_at_version`` swapped in
+    (06-10-PLAN.md deviation). ``Databasise.delete_document()`` now resolves the default §18.4
+    selector before dispatching (closing Gap 1(a) required removing the module constant it used
+    to read directly) — ``resolve_selector``'s default branch walks every candidate wiring
+    ``databasise.wirings.resolve.all_wirings()`` enumerates and requires each to parse against the
+    registry; a registry holding only the part under test can no longer satisfy that."""
+    base = default_registry()
+    registry = PartRegistry(seed_tracer_parts=False)
+    for name in base.keys():
+        candidate = base.get(name)
+        registry.register(part if candidate.name_at_version == part.name_at_version else candidate)
+    return registry
+
+
 def _make_engine(store_root, *, body, ceiling: float = 5.0) -> Databasise:
-    """A ``Databasise`` whose registry holds only the test-local ``lightrag/full-delete@0.1.0``
-    variant — sufficient for ``delete_document()``, which never resolves a selector against the
-    full registry (mirrors ``Databasise.ingest``'s own precedent)."""
+    """A ``Databasise`` whose registry holds the test-local ``lightrag/full-delete@0.1.0`` variant
+    swapped into a full default registry (see :func:`_registry_with`)."""
     admission = dataclasses.replace(LIGHTRAG_FULL_DELETE_PART.admission, wall_clock_ceiling_seconds=ceiling)
     test_part = dataclasses.replace(LIGHTRAG_FULL_DELETE_PART, body=body, admission=admission)
-    registry = PartRegistry(seed_tracer_parts=False)
-    registry.register(test_part)
+    registry = _registry_with(test_part)
     return Databasise(store_root=store_root, workspace="test-delete", registry=registry)
 
 
@@ -287,8 +300,7 @@ async def test_deleting_a_real_document_reduces_shared_entities_and_removes_orph
     # original v1/.parity_working_dir is never opened for writing — only working_dir_copy is.
     monkeypatch.setattr(_v1_corpus_adapter, "DEFAULT_V1_WORKING_DIR", working_dir_copy)
 
-    registry = PartRegistry(seed_tracer_parts=False)
-    registry.register(LIGHTRAG_FULL_DELETE_PART)
+    registry = _registry_with(LIGHTRAG_FULL_DELETE_PART)
     engine = Databasise(store_root=store_root, workspace="test-delete-real", registry=registry)
 
     start = time.monotonic()

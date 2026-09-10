@@ -1,0 +1,64 @@
+{
+  "wiring_id": "hipporag-corpus-ingest",
+  "title": "HippoRAG corpus-side ingest — base.json's seven index-side positions (chunk-embed through graph-augment-persist) re-composed as the write path Databasise.ingest() runs",
+  "wiring_version": "1",
+  "nodes": {
+    "chunk-embed": {
+      "component": "hipporag/chunker-embedder@0.1.0",
+      "kind": "embedder",
+      "effects": ["calls_embedding", "writes_vector", "writes_kv"],
+      "deps": []
+    },
+    "openie": {
+      "component": "hipporag/openie-extractor@0.1.0",
+      "kind": "extractor",
+      "effects": ["calls_llm"],
+      "deps": ["chunk-embed"]
+    },
+    "entity-fact-embed": {
+      "component": "hipporag/entity-fact-embedder@0.1.0",
+      "kind": "embedder",
+      "effects": ["calls_embedding", "writes_vector", "writes_kv"],
+      "config": { "namespaces": ["entities", "facts"] },
+      "deps": ["openie"]
+    },
+    "fact-edges": {
+      "component": "hipporag/fact-edge-builder@0.1.0",
+      "kind": "extractor",
+      "effects": [],
+      "deps": ["openie"]
+    },
+    "passage-edges": {
+      "component": "hipporag/passage-edge-builder@0.1.0",
+      "kind": "extractor",
+      "effects": [],
+      "deps": ["openie"]
+    },
+    "synonymy-edges": {
+      "component": "hipporag/synonymy-edge-builder@0.1.0",
+      "kind": "extractor",
+      "effects": ["reads_vector"],
+      "config": {
+        "declared_capability": "§14.2 Vector self-KNN [PARTS-02 H1]",
+        "guard": "num_new_chunks > 0",
+        "synonymy_top_k": 5,
+        "synonymy_threshold": 0.8
+      },
+      "deps": ["entity-fact-embed"]
+    },
+    "graph-augment-persist": {
+      "component": "hipporag/graph-materializer@0.1.0",
+      "kind": "extractor",
+      "effects": ["writes_graph", "writes_artifact"],
+      "config": {
+        "declared_capability": "§14.2 Graph bulk-export"
+      },
+      "deps": ["fact-edges", "passage-edges", "synonymy-edges"]
+    }
+  },
+  "recipe": { "chunker": "chunk-embed", "embedding": "chunk-embed", "extraction": "openie" },
+  "harnesses": [],
+  "provides": ["graph-augment-persist"],
+  "consumes_documents": ["chunk-embed"],
+  "store_namespaces": { "kv": "hipporag-text-chunks", "graph": "hipporag-graph" }
+}

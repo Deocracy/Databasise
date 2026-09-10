@@ -47,6 +47,38 @@ class UnknownArmError(ValueError):
         )
 
 
+class UnknownWiringFamilyError(ValueError):
+    """Raised by :func:`wiring_family` (06-10-PLAN.md) when a resolved wiring's own ``wiring_id``
+    matches none of :data:`WIRING_NAMES` — an internal invariant check, never consumer-reachable:
+    every wiring this machine's own selectors can resolve to (``databasise/seam/selectors.py``'s
+    ``_capability_candidates`` -> ``all_wirings()``) comes from this exact ``WIRING_NAMES`` set, so
+    this refusal only fires for a malformed or hand-built resolved dict. Mirrors
+    :class:`UnknownArmError`'s own house style (name the offending value on an attribute, enumerate
+    the known set in the message) rather than a bare ``ValueError``.
+    """
+
+    def __init__(self, *, wiring_id: str):
+        self.wiring_id = wiring_id
+        super().__init__(
+            f"wiring id {wiring_id!r} does not resolve to any known wiring family: "
+            f"{sorted(WIRING_NAMES)}"
+        )
+
+
+def wiring_family(resolved: dict[str, Any]) -> str:
+    """The entry of :data:`WIRING_NAMES` that ``resolved``'s own ``wiring_id`` equals or is
+    prefixed by with a ``-`` separator (06-10-PLAN.md) — ``"lightrag-base"``,
+    ``"lightrag-corpus-ingest"`` and every arm-patched LightRAG wiring (which keeps the base's own
+    ``wiring_id`` unchanged, per :func:`resolve_arm`) resolve to ``"lightrag"``; ``"hipporag-base"``
+    resolves to ``"hipporag"``. Raises :class:`UnknownWiringFamilyError` when no entry matches.
+    """
+    wiring_id = str(resolved.get("wiring_id") or "")
+    for name in WIRING_NAMES:
+        if wiring_id == name or wiring_id.startswith(f"{name}-"):
+            return name
+    raise UnknownWiringFamilyError(wiring_id=wiring_id)
+
+
 def _base_path() -> Path:
     return _WIRINGS_DIR / "base.json"
 
@@ -125,6 +157,7 @@ def all_wirings() -> list[tuple[str, dict[str, Any]]]:
 
 __all__ = [
     "UnknownArmError",
+    "UnknownWiringFamilyError",
     "WIRING_NAMES",
     "load_base",
     "load_wiring",
@@ -132,4 +165,5 @@ __all__ = [
     "resolved_node_ids",
     "declared_node_ids",
     "all_wirings",
+    "wiring_family",
 ]

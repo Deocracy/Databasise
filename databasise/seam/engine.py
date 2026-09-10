@@ -117,6 +117,22 @@ iterate over. REST resolves the envelope eagerly via the identical ``_execute()`
 ``query()``, in its own ``Depends()`` dependency) and then shapes it with the exact same function
 ``query_stream()`` shapes it with — one shared shaping implementation, never two independently
 maintained copies that could silently diverge.
+
+**06-10-PLAN.md: ``ingest`` becomes a two-arm write, closing Gap 1(a).** Before this plan
+``ingest()``/``delete_document()`` dispatched exactly one hardcoded LightRAG wiring each, via the
+module constants ``_INGEST_WIRING_PATH``/``_INGEST_NODE_ID``/``_DELETE_WIRING_PATH``/
+``_DELETE_NODE_ID``. This plan promotes the corpus wiring path to a function of the resolved
+*target modality* (:func:`_corpus_wiring`, keyed by :func:`databasise.wirings.resolve.wiring_family`)
+— the same §18.4 selector ``query``/``compare`` already accept now also names which fitted
+modality's index a write lands in. The on-disk layout ``databasise/wirings/<family>/corpus-
+<operation>.json`` **is** the lookup table (no dict, no registry): a file that exists is a
+supported write path, a file that does not exist is
+:class:`~databasise.seam.refusals.NoWritePathForModalityError`. ``ingest()`` reads the node whose
+config is stamped from the resolved corpus wiring's own ``consumes_documents[0]``, and the node
+whose result is read from its own ``provides[0]`` — never a module constant, so a modality added
+later needs only two files on disk. ``delete_document()`` (unchanged selector-free signature until
+Task 2) resolves the default modality the same way, so it still dispatches LightRAG's own
+``corpus-delete.json`` byte-for-byte identically to before.
 """
 
 from __future__ import annotations
@@ -163,6 +179,7 @@ from databasise.seam.refusals import (
     EmptyComparisonRequestError,
     ForeignEngineRefusalError,
     MutableStoreComparisonExcludedError,
+    NoWritePathForModalityError,
     UnknownDocumentError,
     UnknownJobError,
 )
@@ -173,21 +190,16 @@ from databasise.stores.graph import CozoGraphStore
 from databasise.stores.kv import SqliteKVStore
 from databasise.stores.vector import MultiNamespaceVectorStore
 from databasise.validator.parse import ParsedWiring, parse_wiring
+from databasise.wirings.resolve import wiring_family
 
-# 05-01-PLAN.md: the one-node ingest wiring Databasise.ingest() parses and runs — resolved
-# relative to this file, mirroring databasise/wirings/resolve.py's own Path(__file__)-relative
-# load shape.
-_INGEST_WIRING_PATH = (
-    Path(__file__).resolve().parent.parent / "wirings" / "lightrag" / "corpus-ingest.json"
-)
-_INGEST_NODE_ID = "full-ingest"
-
-# 05-03-PLAN.md Task 2: the one-node delete wiring Databasise.delete_document() parses and runs —
-# same relative-load shape as the ingest wiring above.
-_DELETE_WIRING_PATH = (
-    Path(__file__).resolve().parent.parent / "wirings" / "lightrag" / "corpus-delete.json"
-)
-_DELETE_NODE_ID = "full-delete"
+# 06-10-PLAN.md: the per-modality corpus-wiring root — databasise/wirings/<family>/corpus-
+# <operation>.json is itself the write-path lookup table (see _corpus_wiring below); no dict or
+# registry duplicates it. Resolved relative to this file, mirroring
+# databasise/wirings/resolve.py's own Path(__file__)-relative load shape. Replaces the former
+# _INGEST_WIRING_PATH/_INGEST_NODE_ID/_DELETE_WIRING_PATH/_DELETE_NODE_ID module constants, which
+# named only LightRAG's own two corpus wirings — the node id each operation targets is now read
+# off the resolved corpus wiring's own consumes_documents[0]/provides[0], never a module constant.
+_WIRINGS_ROOT = Path(__file__).resolve().parent.parent / "wirings"
 
 # v1's own docs_format vocabulary (lightrag.constants.FULL_DOCS_FORMAT_RAW/_PENDING_PARSE),
 # duplicated as bare string literals here rather than imported — databasise/tools/
@@ -304,6 +316,22 @@ def _build_stores(
         "vector": MultiNamespaceVectorStore(workspace=workspace, store_root=store_root),
         "graph": CozoGraphStore(namespace=graph_namespace, workspace=workspace, store_root=store_root),
     }
+
+
+def _corpus_wiring(query_wiring: dict[str, Any], operation: str) -> dict[str, Any]:
+    """06-10-PLAN.md: the per-modality write-path lookup. Computes ``query_wiring``'s own
+    ``wiring_family`` (the resolved wiring a selector already produced for ``query``/``compare``)
+    and loads ``databasise/wirings/<family>/corpus-<operation>.json`` — the on-disk layout IS the
+    lookup table, deliberately, so a modality added later needs only a file, never a registry
+    entry. Raises :class:`NoWritePathForModalityError` when that file does not exist, rather than
+    falling back to another modality's corpus wiring: a write silently landing in a different
+    modality's index than the caller selected is undetectable from the return value.
+    """
+    family = wiring_family(query_wiring)
+    path = _WIRINGS_ROOT / family / f"corpus-{operation}.json"
+    if not path.is_file():
+        raise NoWritePathForModalityError(operation=operation)
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _node_result_or_refuse(scheduled: dict[str, Any], node_id: str, operation: str) -> dict[str, Any]:
@@ -593,14 +621,25 @@ class Databasise:
                 )
         return await compare_arms(self._execute, query_object, selectors)
 
-    async def ingest(self, document: IngestDocument) -> IngestJob:
-        """The fourth §18 operation this seam exposes (05-01-PLAN.md) — and the first that is not
-        a query: no selector can express "put this document into the corpus", so this method
-        dispatches the single named ``lightrag/full-ingest`` opaque Part directly through the real
-        scheduler, rather than through ``_execute()``'s selector-resolution/envelope-assembly
-        path. Returns an ``IngestJob`` job handle, never a ``ResponseEnvelope`` — ingest is a
-        distinct operation, not a query, and never touches ``databasise/seam/envelope.py``'s
-        closed field set.
+    async def ingest(self, document: IngestDocument, selector: Selector | None = None) -> IngestJob:
+        """The fourth §18 operation this seam exposes (05-01-PLAN.md; selector parameter added
+        06-10-PLAN.md to close Gap 1(a)) — the first §18 operation that is not a query, and (as of
+        06-10) the first two-arm write. ``selector`` names *which fitted modality's index* the
+        write lands in — the same §18.4 selector ``query``/``compare`` already accept, never a
+        second, write-only selector vocabulary. No selector value can itself express "put this
+        document into the corpus" (there is no candidate wiring to choose *among*, only one fixed
+        operation to perform once the target modality is known) — so this method resolves
+        ``selector`` to a query wiring exactly as ``_execute()`` does, then dispatches that
+        modality's own corpus-side write wiring (:func:`_corpus_wiring`) directly through the real
+        scheduler, rather than through ``_execute()``'s envelope-assembly path. Returns an
+        ``IngestJob`` job handle, never a ``ResponseEnvelope`` — ingest is a distinct operation,
+        not a query, and never touches ``databasise/seam/envelope.py``'s closed field set.
+
+        A caller supplying no selector resolves to the default modality exactly as before this
+        change — the default (no-selector) path is unchanged, including its on-disk store
+        directories: LightRAG's own ``corpus-ingest.json`` declares no ``store_namespaces``, so
+        ``_build_stores`` falls back to the same ``_TEXT_CHUNKS_KIND``/``_GRAPH_KIND`` constants it
+        always has.
 
         Both of ``IngestDocument``'s two input shapes (structured text, raw bytes) take this
         identical path (Task 3) — one operation, two input shapes, never two execution paths. A
@@ -615,26 +654,42 @@ class Databasise:
         generated_on_disk_name(document_id)
         track_id = uuid.uuid4().hex
 
-        resolved = json.loads(_INGEST_WIRING_PATH.read_text(encoding="utf-8"))
-        node_config = dict(resolved["nodes"][_INGEST_NODE_ID].get("config") or {})
+        query_wiring = resolve_selector(selector, registry=self.registry, store_root=self.store_root)
+        resolved = _corpus_wiring(query_wiring, "ingest")
+        target_node_id = resolved["consumes_documents"][0]
+        result_node_id = resolved["provides"][0]
+
+        node_config = dict(resolved["nodes"][target_node_id].get("config") or {})
+        # 06-10-PLAN.md (Rule 3 deviation): stamped under both "id" (lightrag/full-ingest's own
+        # opaque-payload key) and "document_id" (hipporag/chunker-embedder's own key) — the corpus
+        # wiring's own consumes_documents names which node the documents land on, but the per-item
+        # key each node's body reads for its own document id differs, and one caller-supplied
+        # document list must satisfy either reader without a per-family branch here.
         if document.raw is not None:
             inbox_dir = self.store_root / "corpus-inbox"
             inbox_dir.mkdir(parents=True, exist_ok=True)
             on_disk_path = inbox_dir / generated_on_disk_name(document_id)
             on_disk_path.write_bytes(document.raw)
-            node_config["documents"] = [{"id": document_id, "text": ""}]
+            node_config["documents"] = [{"id": document_id, "document_id": document_id, "text": ""}]
             node_config["file_paths"] = [str(on_disk_path)]
             node_config["docs_format"] = _DOCS_FORMAT_PENDING_PARSE
         else:
-            node_config["documents"] = [{"id": document_id, "text": document.text}]
+            node_config["documents"] = [
+                {"id": document_id, "document_id": document_id, "text": document.text}
+            ]
             node_config["docs_format"] = _DOCS_FORMAT_RAW
         node_config["track_id"] = track_id
-        resolved["nodes"][_INGEST_NODE_ID]["config"] = node_config
+        resolved["nodes"][target_node_id]["config"] = node_config
 
         resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
         parsed = parse_wiring(resolved, self.registry)
 
-        stores = _build_stores(self.store_root, self.workspace)
+        # 06-10-PLAN.md: the three-argument form _execute() already uses — LightRAG's own
+        # corpus-ingest.json declares no store_namespaces, so this is a no-op for the default path
+        # (identical _TEXT_CHUNKS_KIND/_GRAPH_KIND fallback); HippoRAG's declares
+        # {"kv": "hipporag-text-chunks", "graph": "hipporag-graph"}, landing an ingest in the same
+        # directories base.json's query side reads.
+        stores = _build_stores(self.store_root, self.workspace, resolved)
         try:
             scheduled = await _scheduler.run_wiring(
                 parsed,
@@ -644,6 +699,18 @@ class Databasise:
                 concurrency_setting=_CONCURRENCY_SETTING,
                 clients=self.clients,
             )
+            # 06-10-PLAN.md (Rule 2 deviation): a real write-path run, for the first time, has a
+            # store-writing node (hipporag/chunker-embedder, hipporag/entity-fact-embedder) hold a
+            # store handle before this method returns. Those bodies only stage writes in each
+            # store's own pending buffer (kv.py/vector.py's own index_done_callback docstrings);
+            # finalize() alone never commits them (stores/base.py's own default no-op). Without
+            # this flush, every HippoRAG chunk/entity/fact vector and KV record ingest() writes
+            # would be silently discarded the instant this method's own stores go out of scope —
+            # LightRAG's own opaque full-ingest never touches ctx.stores at all, so this flush is a
+            # safe no-op for the default (no-selector) path (kv.py/vector.py/graph.py's own
+            # index_done_callback all early-return when nothing is pending).
+            for store in stores.values():
+                await store.index_done_callback()
         finally:
             for store in stores.values():
                 await store.finalize()
@@ -653,11 +720,15 @@ class Databasise:
         # in the run's own node_exceptions/results maps instead, and this module's own shared
         # _node_result_or_refuse re-raises it here as the seam-facing ForeignEngineRefusalError,
         # whatever the underlying failure actually was.
-        result = _node_result_or_refuse(scheduled, _INGEST_NODE_ID, "ingest")
-        return IngestJob(
-            job_id=str(result.get("track_id") or track_id),
-            enqueued=int(result.get("enqueued", 0)),
-        )
+        result = _node_result_or_refuse(scheduled, result_node_id, "ingest")
+        # 06-10-PLAN.md: a terminal node reporting its own "enqueued" count wins (LightRAG's own
+        # full-ingest); otherwise this call submitted exactly one document, so that is what is
+        # reported — never a fabricated literal 0 for a node that simply does not report the field
+        # (HippoRAG's graph-augment-persist), per this codebase's no-fabricated-zero discipline.
+        enqueued = result.get("enqueued")
+        if enqueued is None:
+            enqueued = 1
+        return IngestJob(job_id=str(result.get("track_id") or track_id), enqueued=int(enqueued))
 
     async def delete_document(self, document_id: str) -> DeletionOutcome:
         """The fifth §18 operation this seam exposes (05-03-PLAN.md) — a write, like ``ingest``,
@@ -675,16 +746,24 @@ class Databasise:
         is the load-bearing line documented in this module's own docstring's 05-03 section:
         without it, MACH-11 sees nothing, and the deleting node's own ``mutates_store`` effect
         would never correlate into a ``SeamEvent`` at all.
+
+        06-10-PLAN.md: dispatches through :func:`_corpus_wiring` against the *default* selector's
+        resolved wiring, exactly like ``ingest()`` does for a caller supplying no selector — the
+        selector-parameter surface joins this method in Task 2. LightRAG is the only modality that
+        ships a ``corpus-delete.json`` today, so this call resolves to the identical wiring the
+        former ``_DELETE_WIRING_PATH`` constant named, byte-for-byte.
         """
         try:
             generated_on_disk_name(document_id)
         except ValueError as exc:
             raise UnknownDocumentError(document_id=document_id) from exc
 
-        resolved = json.loads(_DELETE_WIRING_PATH.read_text(encoding="utf-8"))
-        node_config = dict(resolved["nodes"][_DELETE_NODE_ID].get("config") or {})
+        query_wiring = resolve_selector(None, registry=self.registry, store_root=self.store_root)
+        resolved = _corpus_wiring(query_wiring, "delete")
+        delete_node_id = resolved["provides"][0]
+        node_config = dict(resolved["nodes"][delete_node_id].get("config") or {})
         node_config["doc_id"] = document_id
-        resolved["nodes"][_DELETE_NODE_ID]["config"] = node_config
+        resolved["nodes"][delete_node_id]["config"] = node_config
 
         resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
         parsed = parse_wiring(resolved, self.registry)
@@ -716,7 +795,7 @@ class Databasise:
         # cause, rather than degrading to an undifferentiated, causeless DeletionOutcome(fail).
         # Called before the MACH-11 correlation below so a refused run mints no seam events for a
         # node that did not run.
-        result = _node_result_or_refuse(scheduled, _DELETE_NODE_ID, "delete")
+        result = _node_result_or_refuse(scheduled, delete_node_id, "delete")
         node_by_id = {node.node_id: node for node in scheduled["nodes"]}
         seam_events = _mach11_events(parsed, touches, node_by_id)
 

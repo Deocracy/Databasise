@@ -18,5 +18,8 @@
   "harnesses": [],
   "provides": [
     "full-ingest"
+  ],
+  "consumes_documents": [
+    "full-ingest"
   ]
 }

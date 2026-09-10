@@ -26,7 +26,7 @@ from databasise.foreign import (
     run_corpus_op,
 )
 from databasise.parts.admission import MissingWallClockCeilingError
-from databasise.parts.registry import PartRegistry
+from databasise.parts.registry import PartRegistry, default_registry
 from databasise.parts.schema import NodeContext
 from databasise.parts_core.declared_only import LIGHTRAG_FULL_INGEST_PART
 from databasise.runner.trace import TokenAccounting
@@ -92,14 +92,28 @@ def _make_stub_full_ingest_body(
     return _body
 
 
+def _registry_with(part: Any) -> PartRegistry:
+    """A full ``default_registry()`` with ``part``'s own ``name_at_version`` swapped in
+    (06-10-PLAN.md deviation). ``Databasise.ingest()`` now resolves a §18.4 selector before
+    dispatching — for the no-selector default path, ``resolve_selector`` walks every candidate
+    wiring ``databasise.wirings.resolve.all_wirings()`` enumerates and requires each to parse
+    against the registry (``databasise.seam.selectors._is_default_eligible``); a registry holding
+    only the part under test can no longer satisfy that, where the pre-06-10 ``ingest()`` never
+    touched selector resolution at all."""
+    base = default_registry()
+    registry = PartRegistry(seed_tracer_parts=False)
+    for name in base.keys():
+        candidate = base.get(name)
+        registry.register(part if candidate.name_at_version == part.name_at_version else candidate)
+    return registry
+
+
 def _make_engine(store_root, *, body, ceiling: float = 5.0) -> Databasise:
-    """A ``Databasise`` whose registry holds only the test-local ``lightrag/full-ingest@0.1.0``
-    variant — sufficient for ``ingest()``, which never resolves a selector against the full
-    registry (see ``databasise.seam.engine.Databasise.ingest``'s own docstring)."""
+    """A ``Databasise`` whose registry holds the test-local ``lightrag/full-ingest@0.1.0`` variant
+    swapped into a full default registry (see :func:`_registry_with`)."""
     admission = dataclasses.replace(LIGHTRAG_FULL_INGEST_PART.admission, wall_clock_ceiling_seconds=ceiling)
     test_part = dataclasses.replace(LIGHTRAG_FULL_INGEST_PART, body=body, admission=admission)
-    registry = PartRegistry(seed_tracer_parts=False)
-    registry.register(test_part)
+    registry = _registry_with(test_part)
     return Databasise(store_root=store_root, workspace="test-ingest", registry=registry)
 
 

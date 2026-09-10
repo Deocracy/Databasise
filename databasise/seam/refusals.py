@@ -121,6 +121,31 @@ class UnknownDocumentError(SeamRefusalError):
         )
 
 
+class NoWritePathForModalityError(SeamRefusalError):
+    """Raised by ``Databasise.ingest()``/``Databasise.delete_document()`` (06-10-PLAN.md) when the
+    caller's own selector resolves to a fitted modality that ships no
+    ``databasise/wirings/<family>/corpus-<operation>.json`` file for the requested write operation.
+    A write silently landing in a different modality's index than the caller selected is
+    undetectable from the return value — this refusal exists precisely because that failure mode is
+    worse than an explicit "no write path" error: refusing by name lets the caller know immediately,
+    where a silent fallback would only surface later, as data that looks present but was actually
+    routed somewhere the caller never asked for.
+
+    Names only ``operation`` — never the resolved modality, wiring id, arm name, or node id —
+    per this module's own no-enumeration house style (§18.2's closed set applied to this refusal).
+    The literal ``NoWritePathForModalityError`` substring is load-bearing for the same reason
+    ``AmbiguousIngestPayloadError``'s own docstring documents: a caller distinguishing this refusal
+    from another by inspecting a wrapped error's own message needs the refusal's own name to
+    survive in that message text.
+    """
+
+    def __init__(self, *, operation: str) -> None:
+        self.operation = operation
+        super().__init__(
+            f"NoWritePathForModalityError: no write path exists for operation {operation!r}"
+        )
+
+
 class UnknownJobError(SeamRefusalError):
     """Raised by ``Databasise.get_job_status()`` (05-04-PLAN.md Task 1) when the foreign driver
     reports zero documents for the given job id — the raise-not-None behaviour
@@ -263,6 +288,7 @@ __all__ = [
     "AmbiguousIngestPayloadError",
     "OversizedDocumentError",
     "UnknownDocumentError",
+    "NoWritePathForModalityError",
     "UnknownJobError",
     "PageSizeExceededError",
     "MalformedBase64PayloadError",
