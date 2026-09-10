@@ -198,3 +198,16 @@ None - no external service configuration required. `--spend`/`remint.main()` bot
 ---
 *Phase: 06-hipporag-2-side-by-side*
 *Completed: 2026-09-10*
+
+## Self-Check: PASSED
+
+- FOUND: databasise/eval/corpus_ingest.py
+- FOUND: databasise/eval/remint.py
+- FOUND: databasise/tests/eval/test_corpus_ingest.py
+- FOUND: databasise/tests/eval/test_remint.py
+- FOUND: .planning/phases/06-hipporag-2-side-by-side/06-12-SUMMARY.md
+- FOUND commit: ea2f090 (test, Task 1)
+- FOUND commit: 3ae7f94 (feat, Task 1)
+- FOUND commit: def77fd (test, Task 2)
+- FOUND commit: ac30ec2 (feat, Task 2)
+- FOUND commit: e9bcf89 (docs, SUMMARY)
