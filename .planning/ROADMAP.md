@@ -281,7 +281,7 @@ Plans:
 
 **Gap-closure Wave 3** *(blocked on 06-11 and 06-12; not autonomous — two blocking spend checkpoints)*
 
-- [ ] 06-13-PLAN.md — the two real-corpus spend decisions (MODAL-05's cross-modality run; MACH-03's A/A calibration), each asked once with a costed projection and each recorded honestly either way
+- [x] 06-13-PLAN.md — the two real-corpus spend decisions (MODAL-05's cross-modality run; MACH-03's A/A calibration), each asked once with a costed projection and each recorded honestly either way
 
 ### Phase 7: Promotion & Rollback
 
