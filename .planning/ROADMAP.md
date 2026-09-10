@@ -273,7 +273,7 @@ Plans:
 **Gap-closure Wave 1** *(added 2026-09-10; two plans run in parallel — no shared files)*
 
 - [x] 06-10-PLAN.md — Gap 1(a): HippoRAG gets a real ingest path through the §18 seam, delete refuses by name, and COVERAGE.md states the write surface the seam actually has
-- [ ] 06-11-PLAN.md — MACH-10 flips to Complete on the owner's confirmation recorded in 06-UAT.md Test 1
+- [x] 06-11-PLAN.md — MACH-10 flips to Complete on the owner's confirmation recorded in 06-UAT.md Test 1
 
 **Gap-closure Wave 2** *(blocked on 06-10)*
 
