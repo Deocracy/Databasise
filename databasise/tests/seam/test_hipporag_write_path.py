@@ -20,7 +20,7 @@ from databasise.clients.base import ChatResult, EmbeddingResult
 from databasise.runner.trace import TokenAccounting
 from databasise.seam import Databasise, QueryObject
 from databasise.seam.corpus import DeletionOutcome, IngestDocument, IngestJob
-from databasise.seam.refusals import NoWritePathForModalityError
+from databasise.seam.refusals import NoRawUploadPathForModalityError, NoWritePathForModalityError
 from databasise.seam.selectors import Selector
 from databasise.stores.graph import CozoGraphStore
 from databasise.stores.kv import SqliteKVStore
@@ -163,6 +163,34 @@ async def test_no_selector_ingest_still_resolves_to_the_lightrag_corpus_wiring(s
     assert "chunk_entity_relation" in on_disk
     assert "hipporag-text-chunks" not in on_disk
     assert "hipporag-graph" not in on_disk
+
+
+async def test_raw_upload_against_a_hipporag_selector_refuses_by_name_rather_than_losing_content(
+    store_root,
+):
+    """06-REVIEW.md CR-01: before the fix, a raw-bytes ``IngestDocument`` against a
+    HippoRAG-resolving selector always stamped ``text=""`` for the target node
+    (``hipporag/chunker-embedder`` reads only ``document["text"]``, never ``file_paths``), so it
+    silently chunked/embedded/wrote nothing while still reporting a normal-looking
+    ``IngestJob(enqueued=1)``. This test fails without the fix (no exception was raised, and a
+    ``hipporag-graph`` directory was never created either way, making the prior silent-success
+    path indistinguishable from a real ingest without inspecting the returned evidence)."""
+    engine = _make_engine(store_root, workspace="raw-upload-refusal-ws")
+    selector = Selector(capability=_HIPPORAG_CAPABILITY)
+    document = IngestDocument(document_id="hipporag-raw-doc", raw=b"raw pdf bytes")
+
+    with pytest.raises(NoRawUploadPathForModalityError) as exc_info:
+        await engine.ingest(document, selector=selector)
+
+    assert exc_info.value.operation == "ingest"
+    message = str(exc_info.value)
+    assert "hipporag" not in message.lower()
+    assert "lightrag" not in message.lower()
+
+    workspace_dir = store_root / "raw-upload-refusal-ws"
+    on_disk = {p.name for p in workspace_dir.iterdir() if p.is_dir()} if workspace_dir.exists() else set()
+    assert "hipporag-graph" not in on_disk
+    assert not (store_root / "corpus-inbox").exists()
 
 
 async def test_hipporag_ingest_does_not_touch_lightrags_store_directories(store_root):

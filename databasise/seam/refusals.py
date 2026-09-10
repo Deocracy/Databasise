@@ -146,6 +146,33 @@ class NoWritePathForModalityError(SeamRefusalError):
         )
 
 
+class NoRawUploadPathForModalityError(SeamRefusalError):
+    """Raised by ``Databasise.ingest()`` (06-REVIEW.md CR-01) when a raw-bytes
+    ``IngestDocument`` is submitted against a selector whose resolved corpus-ingest wiring's
+    target node is not an ``opaque`` node. ``ingest()`` stamps a raw upload's real bytes only
+    into ``file_paths``/``docs_format`` — a convention only an ``opaque`` node (a v1 subprocess
+    that parses the file itself, e.g. ``lightrag/full-ingest``) knows how to read; a non-opaque
+    target node (e.g. ``hipporag/chunker-embedder``, which reads only ``document["text"]``) always
+    sees an empty string for a raw upload, silently indexing nothing while the operation still
+    reports a normal-looking success. Refusing by name before any node config is stamped is
+    strictly better than that silent data loss.
+
+    Names only ``operation`` — never the resolved modality, wiring id, arm name, or node id —
+    per this module's own no-enumeration house style, mirroring
+    ``NoWritePathForModalityError``. The literal ``NoRawUploadPathForModalityError`` substring is
+    load-bearing for the same reason ``NoWritePathForModalityError``'s own docstring documents: a
+    caller distinguishing this refusal from another by inspecting a wrapped error's own message
+    needs the refusal's own name to survive in that message text.
+    """
+
+    def __init__(self, *, operation: str) -> None:
+        self.operation = operation
+        super().__init__(
+            "NoRawUploadPathForModalityError: no raw-upload path exists for operation "
+            f"{operation!r}"
+        )
+
+
 class UnknownJobError(SeamRefusalError):
     """Raised by ``Databasise.get_job_status()`` (05-04-PLAN.md Task 1) when the foreign driver
     reports zero documents for the given job id — the raise-not-None behaviour
