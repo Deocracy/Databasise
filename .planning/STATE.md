@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 06
 current_phase_name: HippoRAG 2 & Side-by-Side
 status: executing
-stopped_at: Completed 06-04-PLAN.md
-last_updated: "2026-09-09T23:41:41.397Z"
+stopped_at: Completed 06-05-PLAN.md
+last_updated: "2026-09-10T00:13:16.225Z"
 last_activity: 2026-09-09
 last_activity_desc: Phase 06 execution started
-state_head: fe7dc06b4f4e24e1949a179dc7a6d144374b962e
+state_head: 655c544a9ef868781f5bd26776eaa2dfe915b4cb
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 50
-  completed_plans: 45
+  completed_plans: 46
 milestone_name: milestone
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 06 (HippoRAG 2 & Side-by-Side) — EXECUTING
-Plan: 5 of 9
+Plan: 6 of 9
 Status: Ready to execute
 Last activity: 2026-09-09 — Phase 06 execution started
 
@@ -82,6 +82,7 @@ Progress: [██████████] 100%
 | Phase 06 P02 | ~70min | 3 tasks | 9 files |
 | Phase 06 P03 | 75min | 3 tasks | 15 files |
 | Phase 06 P04 | ~65min | 3 tasks | 15 files |
+| Phase 06 P05 | ~80min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -141,6 +142,9 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 06]: 06-03: added DuplicateComparisonKeyError so a selector-key collision refuses by name rather than silently collapsing two arms into one response entry — Required by Task 1's own action text (not covered by any of the seven named behavior tests) - a Rule 2 auto-fix for missing critical functionality, since a silent collapse is the same undistinguishable-partial-mapping failure the plan's unsatisfiable-selector rule already refuses against.
 - [Phase 06]: 06-04: judge_instance recorded as an explicit 'unresolved' sentinel — no live judge call was made in this environment, and this project's own resolved-identity convention forbids substituting a plausible model string
 - [Phase 06]: 06-04: eval-corpus query ids are offset-anchored (q{offset+i+1}) so the 30-question fixture shares no query id with the Phase 3 corpus's own q1/q2
+- [Phase 06]: 06-05: synonymy-edges' num_new_chunks > 0 guard is read as entity-fact-embed's own entity count, not a literal chunk count — this node's sole dep carries no chunk-count field, and entity-fact-embed already short-circuits to zero entities exactly when upstream produced nothing new.
+- [Phase 06]: 06-05: fact-edges/passage-edges declare effects=[] genuinely (not additively like chunk-embed/entity-fact-embed) — both bodies reach no store and no client at all; the graph write happens once, downstream, at graph-augment-persist.
+- [Phase 06]: 06-05: the fact-chunk-association discrepancy between entity-fact-embed (06-02, writes chunk_ids to vector metadata) and reset-vector-join (06-01, reads a KV fact:<id> record no code writes) is explicitly left open — disposition determined (reset-vector-join's KV-read interface is authoritative; entity-fact-embed needs to also write the KV record) but not implemented, since neither file is in 06-05's own <files> scope. 06-07 is named as owner.
 
 ### Pending Todos
 
@@ -169,6 +173,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-09T23:41:41.310Z
-Stopped at: Completed 06-04-PLAN.md
+Last session: 2026-09-10T00:13:09.084Z
+Stopped at: Completed 06-05-PLAN.md
 Resume file: None
