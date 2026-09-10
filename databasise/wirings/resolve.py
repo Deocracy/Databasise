@@ -125,14 +125,23 @@ def declared_node_ids(arm_name: str) -> tuple[str, ...]:
     return tuple(patch_doc["resulting_node_id_set"])
 
 
-def load_wiring(wiring_name: str) -> dict[str, Any]:
-    """The committed base wiring for ``wiring_name`` (06-01-PLAN.md) — e.g. ``load_wiring
-    ("hipporag")`` reads ``databasise/wirings/hipporag/base.json``. Unlike LightRAG, a non-
-    LightRAG modality has no per-arm patch (03-RESEARCH.md §H.5's settled "none (single base
-    wiring)" verdict for HippoRAG) — this returns the base itself, resolved, ready for
+def load_wiring(wiring_name: str, *, variant: str = "base") -> dict[str, Any]:
+    """The committed wiring for ``wiring_name`` (06-01-PLAN.md) — e.g. ``load_wiring("hipporag")``
+    reads ``databasise/wirings/hipporag/base.json``. Unlike LightRAG, a non-LightRAG modality has
+    no per-arm patch (03-RESEARCH.md §H.5's settled "none (single base wiring)" verdict for
+    HippoRAG) — the default ``variant="base"`` returns the base itself, resolved, ready for
     ``parse_wiring``.
+
+    06-14-PLAN.md: ``variant`` is the on-disk file stem under ``databasise/wirings/<wiring_name>/``
+    — the directory layout stays the lookup table, the same principle
+    ``databasise/seam/engine.py``'s own ``_corpus_wiring`` already documents. ``load_wiring
+    ("hipporag", variant="corpus-ingest")`` is the index-side form: HippoRAG's seven index-side
+    positions, with no query-side node reachable from it. The default keeps every existing caller
+    (``all_wirings()`` included) byte-identical in behavior.
     """
-    return json.loads((_WIRINGS_ROOT / wiring_name / "base.json").read_text(encoding="utf-8"))
+    return json.loads(
+        (_WIRINGS_ROOT / wiring_name / f"{variant}.json").read_text(encoding="utf-8")
+    )
 
 
 def all_wirings() -> list[tuple[str, dict[str, Any]]]:

@@ -8,12 +8,17 @@ shape: build, then verify, then report; never report a build that has not been v
 
 This is a one-time build tool checked in beside its own documentation — not a runtime dependency,
 not run by any test (mirrors ``build_corpus_fixture.py``'s own disposition). It loads the committed
-Phase 3 parity corpus snapshot (``databasise/tests/fixtures/corpus/``), resolves HippoRAG 2's base
-wiring, injects the corpus documents onto ``chunk-embed``'s own ``config["documents"]`` and a real
-token allowance onto every node exactly as ``run_arm.py``'s own ``_inject_query``/
-``_inject_token_allowance`` do for query time, builds real clients from ``v1/.env.parity`` through
-``run_arm.py``'s own ``_build_clients``, builds the stores at HippoRAG's own declared
-``store_namespaces``, and runs the wiring through ``runner.scheduler.run_wiring`` directly.
+Phase 3 parity corpus snapshot (``databasise/tests/fixtures/corpus/``), resolves HippoRAG 2's
+``corpus-ingest`` wiring (06-14-PLAN.md — not the base wiring: the base wiring carries six
+query-side positions with no query anywhere at index time, and dispatching them was the concrete
+cause of the 2026-09-10 refusal recorded in ``databasise/evidence/CROSS-MODALITY-EVIDENCE.md`` —
+``fact-score`` declares ``deps: []``, so it dispatched in the first ready batch with an unstamped,
+empty ``config["query"]`` and a provider ``400`` followed), injects the corpus documents onto the
+resolved wiring's own ``consumes_documents[0]`` node and a real token allowance onto every node
+exactly as ``run_arm.py``'s own ``_inject_token_allowance`` does for query time, builds real
+clients from ``v1/.env.parity`` through ``run_arm.py``'s own ``_build_clients``, builds the stores
+at HippoRAG's own declared ``store_namespaces``, and runs the wiring through
+``runner.scheduler.run_wiring`` directly.
 
 Adopts 03-11-PLAN.md's own hard-won guard: refuses a run whose extraction produced nothing. A
 silently-empty OpenIE pass produces an index that looks built and retrieves nothing — the failure
@@ -72,7 +77,10 @@ from databasise.seam.tokens import assemble_token_breakdown
 from databasise.validator.parse import parse_wiring
 from databasise.wirings.resolve import load_wiring
 
-_CHUNK_EMBED_NODE_ID = "chunk-embed"
+# 06-14-PLAN.md: the index-side wiring variant — HippoRAG's seven index-side positions, with no
+# query-side position reachable from it. Named once here and used by build_index's load_wiring
+# call, so the variant name appears in exactly one place.
+_INDEX_WIRING_VARIANT = "corpus-ingest"
 _CHUNKS_NAMESPACE = "hipporag-chunks"
 _ENTITIES_NAMESPACE = "hipporag-entities"
 _FACTS_NAMESPACE = "hipporag-facts"
@@ -136,18 +144,21 @@ class IndexBuildResult:
 
 
 def _inject_documents(resolved: dict[str, Any], documents: list[dict[str, Any]]) -> dict[str, Any]:
-    """Stamp the corpus documents onto ``chunk-embed``'s own ``config["documents"]`` — the single
-    index-side entry point every one of HippoRAG's seven index-side positions is reachable from
-    (``chunk-embed`` has no ``deps``; every other index-side node depends on it transitively).
-    Mirrors ``run_arm.py``'s own ``_inject_query``/``_inject_token_allowance`` no-op convention for
-    a node the resolved wiring does not contain.
+    """Stamp the corpus documents onto the resolved wiring's own ``consumes_documents[0]`` node
+    config — the single index-side entry point every one of HippoRAG's seven index-side positions
+    is reachable from (that node has no ``deps``; every other index-side node depends on it
+    transitively). Mirrors ``databasise.seam.engine.Databasise.ingest()``'s own already-shipped
+    convention (06-10-PLAN.md) of reading the target node id off the resolved wiring's own
+    declaration rather than a module constant, and ``run_arm.py``'s own ``_inject_query``/
+    ``_inject_token_allowance`` no-op convention for a node the resolved wiring does not contain.
     """
     nodes = resolved.get("nodes", {})
-    if _CHUNK_EMBED_NODE_ID not in nodes:
+    target_node_id = (resolved.get("consumes_documents") or [None])[0]
+    if target_node_id is None or target_node_id not in nodes:
         return resolved
-    config = dict(nodes[_CHUNK_EMBED_NODE_ID].get("config") or {})
+    config = dict(nodes[target_node_id].get("config") or {})
     config["documents"] = documents
-    nodes[_CHUNK_EMBED_NODE_ID]["config"] = config
+    nodes[target_node_id]["config"] = config
     return resolved
 
 
@@ -201,7 +212,7 @@ async def build_index(
     snapshot = load_snapshot()
     documents = [{"document_id": doc.id, "text": doc.text} for doc in snapshot.documents]
 
-    resolved = load_wiring("hipporag")
+    resolved = load_wiring("hipporag", variant=_INDEX_WIRING_VARIANT)
     resolved = _inject_documents(resolved, documents)
     resolved = _inject_token_allowance(resolved, token_allowance)
     parsed = parse_wiring(resolved, registry)
