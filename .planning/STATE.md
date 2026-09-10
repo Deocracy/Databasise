@@ -1,19 +1,19 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: 06
 current_phase_name: HippoRAG 2 & Side-by-Side
-status: executing
-stopped_at: Completed 06-08-PLAN.md (MODAL-05 cross-modality run deferred, recorded BLOCKED)
-last_updated: "2026-09-10T02:35:50.580Z"
+status: verifying
+stopped_at: Completed 06-09-PLAN.md (F-07/MACH-10 discharged, comparison-path refusal landed, phase record closed)
+last_updated: "2026-09-10T03:18:16.274Z"
 last_activity: 2026-09-09
 last_activity_desc: Phase 06 execution started
-state_head: b58fdf3ca012bb45452c8b18f156f38d7cbb6d60
+state_head: de28f5e0896c4ba2901b9f3ae20712c35b868416
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 2
   total_plans: 50
-  completed_plans: 49
+  completed_plans: 50
 milestone_name: milestone
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 
 Phase: 06 (HippoRAG 2 & Side-by-Side) — EXECUTING
 Plan: 9 of 9
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-09 — Phase 06 execution started
 
 Progress: [██████████] 100%
@@ -86,6 +86,7 @@ Progress: [██████████] 100%
 | Phase 06-hipporag-2-side-by-side P06 | ~20min (continuation) | 2 tasks | 8 files |
 | Phase 06 P07 | ~90 min | 3 tasks | 15 files |
 | Phase 06-hipporag-2-side-by-side P08 | ~55min | 3 tasks | 5 files |
+| Phase 06-hipporag-2-side-by-side P09 | ~70min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -154,6 +155,7 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 06]: 06-07: fact_filter.py's _GuardAwareResult (a dict subclass overriding __eq__/__ne__) lets a JSON-literal value_when_not_fired sentinel correctly express a per-query, data-dependent condition through evaluate_guards's whole-runtime-output `!=` comparison, without a second guard-evaluation mechanism. — This node's own items/tokens legitimately vary per query in both branches, so ordinary whole-dict equality could never match a static JSON value; dict's own C-level __ne__ slot does not fall back to a subclass __eq__ override, so both had to be defined explicitly.
 - [Phase 06]: 06-07: entity-fact-embed now also writes a fact:<id> -> {chunk_ids} KV record (writes_kv effect added), closing the two-plan-old gap between reset-vector-join's already-committed KV read and entity-fact-embed's vector-metadata-only write. — 06-05-SUMMARY.md's own "Next Phase Readiness" section disposed this gap explicitly to 06-07 as owner, since a real end-to-end run needs the write and neither 06-01 nor 06-05's own <files> scope touched the file that needed it.
 - [Phase 06-hipporag-2-side-by-side]: 06-08: Owner selected defer-and-record-blocked at Task 1's spend checkpoint — no real HippoRAG index build or cross-modality comparison executes; both build_hipporag_index.py and run_cross_modality.py are written as genuine runnable code and committed unexecuted; MODAL-05 recorded as BLOCKED in CROSS-MODALITY-EVIDENCE.md, mirroring FALSIFIER-5-EVIDENCE.md's house format. — One real invocation requires live v1/.env.parity credentials and was not authorized during this plan's execution; MODAL-05 stays Pending in REQUIREMENTS.md.
+- [Phase 06-hipporag-2-side-by-side]: [Phase 06-hipporag-2-side-by-side]: 06-09: F-07/MACH-10 discharged for both real registered mutable-store components (codebase-memory-mcp@0.1.0, lightrag/full-delete@0.1.0 -- a fourth component MODEL-RED-TEAM.md's own roster never named) via permanent-exclusion, enforced as MutableStoreComparisonExcludedError in Databasise.compare(). MACH-10 stays Pending in REQUIREMENTS.md pending the owner's own confirmation of the codebase-memory-mcp disposition (Task 1's human-check) -- no requirements.mark-complete call was made.
 
 ### Pending Todos
 
@@ -182,6 +184,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-10T02:35:35.713Z
-Stopped at: Completed 06-08-PLAN.md (MODAL-05 cross-modality run deferred, recorded BLOCKED)
+Last session: 2026-09-10T03:18:16.160Z
+Stopped at: Completed 06-09-PLAN.md (F-07/MACH-10 discharged, comparison-path refusal landed, phase record closed)
 Resume file: None
