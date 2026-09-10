@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 1
+open_count: 0
 waived_count: 0
-fixed_count: 2
+fixed_count: 3
 total_count: 3
-last_updated: 2026-09-10T17:44:08.972Z
+last_updated: 2026-09-10T23:44:15.130Z
 ---
 
 # Broken Windows Ledger
@@ -17,7 +17,7 @@ last_updated: 2026-09-10T17:44:08.972Z
 |----|-------|------|------|------|-------------|--------|--------|-------------|-------------|
 | 1 | 04 | stub | databasise/seam/envelope.py |  | evidence/token_accounting fields declared empty per declare-upfront checkpoint decision; filled by 04-02 | fixed |  | 2026-09-06T22:23:03.911Z | 2026-09-06T23:20:55.764Z |
 | 2 | 04 | stub | databasise/seam/envelope.py |  | trace_token/seam_events fields declared empty per declare-upfront checkpoint decision; filled by 04-04 | fixed |  | 2026-09-06T22:23:04.063Z | 2026-09-07T00:36:45.160Z |
-| 3 | 06 | deviation | databasise/parts_core/hipporag/fact_score.py |  | fact-score node's provider call raises a 400 (too_small, empty-string input) rather than skipping/guarding empty-string batch items; surfaced by 06-13 Task 1's real HippoRAG index build against the live parity corpus, blocking MODAL-05's real cross-modality run and (per owner's 06-13 Task 2 decline) also blocking authorization of the MACH-03 A/A calibration spend until fixed | open |  | 2026-09-10T17:44:08.972Z |  |
+| 3 | 06 | deviation | databasise/parts_core/hipporag/fact_score.py |  | fact-score node's provider call raises a 400 (too_small, empty-string input) rather than skipping/guarding empty-string batch items; surfaced by 06-13 Task 1's real HippoRAG index build against the live parity corpus, blocking MODAL-05's real cross-modality run and (per owner's 06-13 Task 2 decline) also blocking authorization of the MACH-03 A/A calibration spend until fixed | fixed |  | 2026-09-10T17:44:08.972Z | 2026-09-10T23:44:15.130Z |
 
 ````json
 [
@@ -52,10 +52,10 @@ last_updated: 2026-09-10T17:44:08.972Z
     "file": "databasise/parts_core/hipporag/fact_score.py",
     "line": null,
     "description": "fact-score node's provider call raises a 400 (too_small, empty-string input) rather than skipping/guarding empty-string batch items; surfaced by 06-13 Task 1's real HippoRAG index build against the live parity corpus, blocking MODAL-05's real cross-modality run and (per owner's 06-13 Task 2 decline) also blocking authorization of the MACH-03 A/A calibration spend until fixed",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-09-10T17:44:08.972Z",
-    "resolved_at": null
+    "resolved_at": "2026-09-10T23:44:15.130Z"
   }
 ]
 ````
