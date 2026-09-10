@@ -11,7 +11,10 @@ mapping (five members -> eight). 06-05-PLAN.md Task 1 adds ``hipporag/fact-edge-
 and ``hipporag/passage-edge-builder@0.1.0`` (eight -> ten); Task 2 adds
 ``hipporag/synonymy-edge-builder@0.1.0`` (ten -> eleven); Task 3 adds
 ``hipporag/graph-materializer@0.1.0``, completing HippoRAG's seven-position index side
-(eleven -> twelve).
+(eleven -> twelve). 06-07-PLAN.md Task 1 adds ``hipporag/dpr-fallback@0.1.0``, the thirteenth and
+final position (twelve -> thirteen), and also declares ``writes_kv`` additively on
+``hipporag/entity-fact-embedder@0.1.0`` (06-07's fact-chunk-association KV write, closing the
+06-05-SUMMARY.md-named gap between ``entity_fact_embed.py`` and ``reset_vector_join.py``).
 """
 
 from __future__ import annotations
@@ -61,7 +64,7 @@ _EXPECTED_SHAPE: dict[str, dict[str, object]] = {
     },
     "hipporag/entity-fact-embedder@0.1.0": {
         "kind": "embedder",
-        "effects": ["calls_embedding", "writes_vector"],
+        "effects": ["calls_embedding", "writes_vector", "writes_kv"],
         "structural_depth": "opaque",
     },
     "hipporag/fact-edge-builder@0.1.0": {
@@ -84,12 +87,17 @@ _EXPECTED_SHAPE: dict[str, dict[str, object]] = {
         "effects": ["writes_graph", "writes_artifact"],
         "structural_depth": "opaque",
     },
+    "hipporag/dpr-fallback@0.1.0": {
+        "kind": "retriever",
+        "effects": ["calls_embedding", "reads_vector"],
+        "structural_depth": "opaque",
+    },
 }
 
 
-def test_hipporag_parts_has_exactly_twelve_members_matching_the_pinned_names():
+def test_hipporag_parts_has_exactly_thirteen_members_matching_the_pinned_names():
     assert {part.name_at_version for part in HIPPORAG_PARTS} == set(_EXPECTED_SHAPE)
-    assert len(HIPPORAG_PARTS) == 12
+    assert len(HIPPORAG_PARTS) == 13
 
 
 def test_every_part_matches_its_pinned_kind_effects_and_structural_depth():
@@ -100,13 +108,13 @@ def test_every_part_matches_its_pinned_kind_effects_and_structural_depth():
         assert part.structural_depth == expected["structural_depth"], part.name_at_version
 
 
-def test_none_of_the_twelve_parts_requires_containment_beyond_in_process():
+def test_none_of_the_thirteen_parts_requires_containment_beyond_in_process():
     for part in HIPPORAG_PARTS:
         mode = derive_execution_mode(part.effects, part.kind)
         assert mode == "in-process", (part.name_at_version, mode)
 
 
-def test_default_registry_registers_all_twelve_hipporag_names():
+def test_default_registry_registers_all_thirteen_hipporag_names():
     registry = default_registry()
     for name in _EXPECTED_SHAPE:
         assert name in registry.keys()
