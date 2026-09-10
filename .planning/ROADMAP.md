@@ -240,7 +240,7 @@ Plans:
   5. Mutable-store components either have a defined snapshot/reset protocol or are recorded as permanently excluded from A/B — F-07 discharged rather than left open
   6. Owner mints an eval bundle with dev/holdout/sealed splits carrying questions, gold answers, judge instance, judge prompt hash, corpus snapshot hash, determinism/concurrency setting, and both §EV.2 target families (MACH-02), then runs one A/A calibration and reads a bootstrap-resampled p95 floor keyed to `(bundle@v, tier, metric)` with T1's null width materially narrower than T0's — Falsifier 5, MACH-03, carried forward from Phase 3 per `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`
 
-**Plans**: 12/13 plans executed — 9/9 executed across 6 waves, plus 4 gap-closure plans added 2026-09-10 across 3 further waves (06-VERIFICATION.md found 2 FAILED success criteria and 1 human-verification item)
+**Plans**: 17 plans — 9 executed across 6 waves, plus 4 gap-closure plans (06-10..06-13) across 3 further waves, plus 4 more gap-closure plans (06-14..06-17) added 2026-09-10 across 3 further waves (06-VERIFICATION.md re-verified at 4/6; SC2 and SC6 still FAILED, both converging on one filed defect — WINDOWS.md entry id 3)
 
 Plans:
 **Wave 1** *(tracer — runs alone, before any expansion)*
@@ -282,6 +282,19 @@ Plans:
 **Gap-closure Wave 3** *(blocked on 06-11 and 06-12; not autonomous — two blocking spend checkpoints)*
 
 - [x] 06-13-PLAN.md — the two real-corpus spend decisions (MODAL-05's cross-modality run; MACH-03's A/A calibration), each asked once with a costed projection and each recorded honestly either way
+
+**Gap-closure Wave 4** *(added 2026-09-10, second round; tracer — runs alone, before any expansion)*
+
+- [ ] 06-14-PLAN.md — the fact-score defect fixed at its root: index builds resolve HippoRAG's seven-position corpus-ingest wiring, and an empty or blank embedding batch refuses by name at the one method every caller routes through
+
+**Gap-closure Wave 5** *(blocked on 06-14; two plans run in parallel — no shared files; not autonomous: 06-15 holds a blocking spend checkpoint)*
+
+- [ ] 06-15-PLAN.md — MODAL-05's real cross-modality run, re-attempted once with the previous wasted authorization named honestly
+- [ ] 06-16-PLAN.md — the missing A/A run driver: two per-question scorers and a dry-run-by-default paired-calibration command line, without which MACH-03 was not runnable at any price
+
+**Gap-closure Wave 6** *(blocked on 06-15 and 06-16; not autonomous — one blocking spend checkpoint)*
+
+- [ ] 06-17-PLAN.md — MACH-03's A/A calibration spend, asked with the threshold pre-registered first, plus a dated correction note making 06-VERIFICATION.md honest about what later commits closed
 
 ### Phase 7: Promotion & Rollback
 
