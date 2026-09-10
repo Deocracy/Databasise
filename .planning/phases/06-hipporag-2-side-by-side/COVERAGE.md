@@ -16,12 +16,26 @@ over REST and over MCP. Registering HippoRAG 2 as this milestone's second modali
 |---|---|---|---|
 | compare | in-process, REST (`POST /compare`), MCP (`compare` tool) | 06-03 | API-08's comparison operation: a §18.4 selector picks one arm; `compare` fans out over N of them in one call, returning per-arm results keyed by the caller's own selector values — never an arm id, wiring name, node id or modality name. Inspection-only (no verdict, no aggregate, no winner — RIG.md ## §RUN.4). Landed once the rig had two real arms to fan out over ("rig before comparison surface," ROADMAP.md line 296), discharging the `OPT-OUT` row Phase 5's own table carried for it. |
 
-Every other operation (`query`, `ingest`, `delete`, `status`/`health`/`corpus`/`document counts`,
-`evidence`/`trace` resolution) is unchanged by this phase — see
+Every other operation (`query`, `status`/`health`/`corpus`/`document counts`, `evidence`/`trace`
+resolution) is unchanged by this phase — see
 `.planning/phases/05-opaque-side-admission/COVERAGE.md`'s own §18.5 table for those rows, all of
 which remain reachable identically for both LightRAG and HippoRAG arms with no operation-level
 change (§18.5's own modality-agnosticism holding by construction, not by a second per-modality
 copy of any route or tool).
+
+**Correction (06-REVIEW.md CR-01): `ingest`/`delete` are LightRAG-arm only in this phase.**
+`Databasise.ingest()`/`delete_document()` dispatch the single, hardcoded
+`wirings/lightrag/corpus-ingest.json`/`corpus-delete.json` files — there is no
+`wirings/hipporag/corpus-ingest.json` (or delete) equivalent, and no selector-driven or
+modality-targeted routing for either operation. This phase's earlier claim that `ingest`/`delete`
+"remain reachable identically for both LightRAG and HippoRAG arms" was wrong for these two
+operations; it is corrected here. HippoRAG's index is populated only via the standalone
+`databasise/parity/build_hipporag_index.py` harness, which bypasses `Databasise` and the public
+seam (in-process, REST, MCP) entirely — HippoRAG's write path is research/parity-only in this
+phase, not a public seam operation. A caller that ingests a document through the public seam and
+then queries/compares against HippoRAG gets a normal-looking, empty HippoRAG result (not an
+error) — this is a known, documented gap, not a silent one, and is tracked as follow-up scope for
+whichever future phase gives HippoRAG a public write path.
 
 ### Operations still deliberately absent
 
