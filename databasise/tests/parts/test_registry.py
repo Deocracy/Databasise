@@ -16,7 +16,7 @@ from databasise.parts.registry import (
 from databasise.parts.schema import NodeContext
 
 
-def test_default_registry_holds_exactly_thirty_two_entries():
+def test_default_registry_holds_exactly_thirty_three_entries():
     """D-04's six remaining Phase-1 entries (four executable ``parts_core`` reference parts, two
     declaration-only Falsifier-2 wiring placeholders — 03-08-PLAN.md Task 3 retired the third,
     ``lightrag/query-side`` (version ``0.1.0``), once Phase 3 ported its real eighteen positions)
@@ -32,10 +32,11 @@ def test_default_registry_holds_exactly_thirty_two_entries():
     ``reset-vector-join``, ``ppr``, ``assemble-result``): twenty-seven, the Phase 6 Plan 1 count —
     plus 06-02-PLAN.md's three ported HippoRAG index-side parts (``chunk-embed``, ``openie``,
     ``entity-fact-embed``): thirty, the Phase 6 Plan 2 count — plus 06-05-PLAN.md Task 1's
-    two pure edge-transform parts (``fact-edges``, ``passage-edges``): thirty-two.
+    two pure edge-transform parts (``fact-edges``, ``passage-edges``): thirty-two — plus
+    Task 2's ``hipporag/synonymy-edge-builder@0.1.0``: thirty-three.
     """
     registry = default_registry()
-    assert len(registry.keys()) == 32
+    assert len(registry.keys()) == 33
 
 
 def test_get_on_an_unknown_key_raises_with_the_requested_key_quoted_in_the_message():

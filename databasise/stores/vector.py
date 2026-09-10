@@ -285,7 +285,34 @@ class FaissVectorStore(StorageNameSpace):
         retrieval-shaped methods agree on ordering. An empty store returns an empty mapping,
         following this class's own established empty-state behaviour rather than raising.
         """
-        return {}
+        if self._index is None or self._index.ntotal == 0:
+            return {}
+
+        doc_ids: list[str] = []
+        rows: list[np.ndarray] = []
+        for doc_id, vector in self.iter_vectors():
+            doc_ids.append(doc_id)
+            rows.append(vector)
+        matrix = np.vstack(rows).astype("float32")
+
+        k = min(top_k + 1, self._index.ntotal)
+        scores, int_ids = self._index.search(matrix, k)
+
+        int_to_doc = {v["int_id"]: did for did, v in self._entries.items()}
+        results: dict[str, list[dict[str, Any]]] = {}
+        for row_index, self_doc_id in enumerate(doc_ids):
+            neighbours: list[dict[str, Any]] = []
+            for score, int_id in zip(scores[row_index], int_ids[row_index], strict=True):
+                if int_id == -1:
+                    continue
+                neighbour_id = int_to_doc.get(int(int_id))
+                if neighbour_id is None or neighbour_id == self_doc_id:
+                    continue
+                entry = self._entries[neighbour_id]
+                neighbours.append({"id": neighbour_id, "score": float(score), **entry["metadata"]})
+            neighbours.sort(key=lambda r: (-r["score"], r["id"]))
+            results[self_doc_id] = neighbours[:top_k]
+        return results
 
     def iter_vectors(self) -> Iterator[tuple[str, np.ndarray]]:
         """Yield ``(doc_id, vector)`` for every committed (flushed) entry — WR-02: a public

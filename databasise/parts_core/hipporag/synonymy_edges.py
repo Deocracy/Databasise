@@ -41,7 +41,31 @@ def _canonical_pair(a: str, b: str) -> tuple[str, str]:
 
 
 async def _synonymy_edges_body(ctx: NodeContext) -> dict[str, Any]:
-    return {"edges": []}
+    entity_fact_embed_output = ctx.inputs["entity-fact-embed"]
+    entities = list(entity_fact_embed_output.get("entities", []))
+    if not entities:
+        return {"edges": []}
+
+    config = ctx.config or {}
+    top_k = int(config.get("synonymy_top_k", _DEFAULT_SYNONYMY_TOP_K))
+    threshold = float(config.get("synonymy_threshold", _DEFAULT_SYNONYMY_THRESHOLD))
+
+    entity_store = ctx.stores["vector"].select(_ENTITIES_NAMESPACE)
+    neighbours_by_id = await entity_store.self_knn(top_k=top_k)
+
+    weight_by_pair: dict[tuple[str, str], float] = {}
+    for entity_ref, neighbours in neighbours_by_id.items():
+        for neighbour in neighbours:
+            if neighbour["score"] < threshold:
+                continue
+            pair = _canonical_pair(entity_ref, neighbour["id"])
+            weight_by_pair.setdefault(pair, neighbour["score"])
+
+    edges = [
+        {"src": src, "tgt": tgt, "weight": weight, "edge_type": _EDGE_TYPE}
+        for (src, tgt), weight in sorted(weight_by_pair.items())
+    ]
+    return {"edges": edges}
 
 
 HIPPORAG_SYNONYMY_EDGE_BUILDER_PART = Part(
