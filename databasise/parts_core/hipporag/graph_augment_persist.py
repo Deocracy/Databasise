@@ -53,7 +53,40 @@ def _canonical_pair(a: str, b: str) -> tuple[str, str]:
 
 
 async def _graph_augment_persist_body(ctx: NodeContext) -> dict[str, Any]:
-    return {"artifact": {"node_count": 0, "edge_count": 0}, "artifact_scope": _ARTIFACT_SCOPE}
+    all_edges: list[dict[str, Any]] = []
+    for node_id in _EDGE_STREAM_NODE_IDS:
+        stream = ctx.inputs.get(node_id, {})
+        all_edges.extend(stream.get("edges", []))
+
+    vertex_refs: set[str] = set()
+    weight_by_pair: dict[tuple[str, str], float] = {}
+    types_by_pair: dict[tuple[str, str], list[str]] = {}
+    for edge in all_edges:
+        src, tgt = str(edge["src"]), str(edge["tgt"])
+        vertex_refs.add(src)
+        vertex_refs.add(tgt)
+        pair = _canonical_pair(src, tgt)
+        weight_by_pair[pair] = weight_by_pair.get(pair, 0.0) + float(edge.get("weight", 1.0))
+        edge_type = str(edge.get("edge_type", "unknown"))
+        types = types_by_pair.setdefault(pair, [])
+        if edge_type not in types:
+            types.append(edge_type)
+
+    graph_store = ctx.stores["graph"]
+    for vertex_ref in sorted(vertex_refs):
+        await graph_store.upsert_node(vertex_ref, {})
+    for pair, weight in weight_by_pair.items():
+        src, tgt = pair
+        await graph_store.upsert_edge(
+            src, tgt, {"weight": weight, "edge_types": types_by_pair[pair]}
+        )
+
+    await graph_store.index_done_callback()
+
+    return {
+        "artifact": {"node_count": len(vertex_refs), "edge_count": len(weight_by_pair)},
+        "artifact_scope": _ARTIFACT_SCOPE,
+    }
 
 
 HIPPORAG_GRAPH_MATERIALIZER_PART = Part(
