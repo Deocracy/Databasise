@@ -1,19 +1,19 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: 06
 current_phase_name: HippoRAG 2 & Side-by-Side
 status: executing
-stopped_at: "Completed 06-10-PLAN.md (HippoRAG write path: ingest is two-arm, delete refuses by name, COVERAGE.md corrected)"
-last_updated: "2026-09-10T08:39:25.285Z"
+stopped_at: Completed 06-11-PLAN.md (MACH-10 flipped to Complete in REQUIREMENTS.md, citing owner confirmation)
+last_updated: "2026-09-10T13:06:53.268Z"
 last_activity: 2026-09-10
 last_activity_desc: Phase 06 execution started
-state_head: b93ef3888578e78ac876677a989aa536a1155dc1
+state_head: bb8494b88d35754b3043c7cf2b836a1b22719cd1
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 2
   total_plans: 54
-  completed_plans: 51
+  completed_plans: 52
 milestone_name: milestone
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 06 (HippoRAG 2 & Side-by-Side) — EXECUTING
-Plan: 2 of 13
+Plan: 3 of 13
 Status: Ready to execute
 Last activity: 2026-09-10 — Phase 06 execution started
 
@@ -88,6 +88,7 @@ Progress: [██████████] 100%
 | Phase 06-hipporag-2-side-by-side P08 | ~55min | 3 tasks | 5 files |
 | Phase 06-hipporag-2-side-by-side P09 | ~70min | 3 tasks | 10 files |
 | Phase 06 P10 | 80min | 3 tasks | 15 files |
+| Phase 06-hipporag-2-side-by-side P11 | 8min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -159,6 +160,7 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 06-hipporag-2-side-by-side]: [Phase 06-hipporag-2-side-by-side]: 06-09: F-07/MACH-10 discharged for both real registered mutable-store components (codebase-memory-mcp@0.1.0, lightrag/full-delete@0.1.0 -- a fourth component MODEL-RED-TEAM.md's own roster never named) via permanent-exclusion, enforced as MutableStoreComparisonExcludedError in Databasise.compare(). MACH-10 stays Pending in REQUIREMENTS.md pending the owner's own confirmation of the codebase-memory-mcp disposition (Task 1's human-check) -- no requirements.mark-complete call was made.
 - [Phase 06]: 06-10: ingest becomes a real two-arm wiring (all seven HippoRAG index-side positions already exist), delete becomes a named refusal (no HippoRAG delete node exists anywhere in the repo) — Matches the plan's own objective split: build only what the existing node inventory can honestly support, never a delete wiring needing new node code
 - [Phase 06]: 06-10: MODAL-05 stays Pending in REQUIREMENTS.md — this plan closes the structural write-surface gap (Gap 1(a)) but explicitly does not perform the real cross-modality run (Gap 1(b)), which is 06-13's own blocking checkpoint — The plan's own objective names Gap 1(b) as explicitly out of scope; marking MODAL-05 complete here would overclaim
+- [Phase 06]: 06-11: MACH-10 flipped Pending -> Complete in REQUIREMENTS.md, citing 06-UAT.md Test 1 owner confirmation and F-07-MUTABLE-STORE-DISPOSITION.md — Appended a new dated confirmation annotation rather than rewriting the existing 06-09 measurement annotation, preserving the row's full history; MACH-03 and MODAL-05 left unchanged and Pending.
 
 ### Pending Todos
 
@@ -187,6 +189,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-10T08:38:48.123Z
-Stopped at: Completed 06-10-PLAN.md (HippoRAG write path: ingest is two-arm, delete refuses by name, COVERAGE.md corrected)
+Last session: 2026-09-10T08:43:47.034Z
+Stopped at: Completed 06-11-PLAN.md (MACH-10 flipped to Complete in REQUIREMENTS.md, citing owner confirmation)
 Resume file: None
