@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 06
 current_phase_name: HippoRAG 2 & Side-by-Side
 status: executing
-stopped_at: Completed 06-13-PLAN.md
-last_updated: "2026-09-10T20:46:25.794Z"
+stopped_at: Completed 06-14-PLAN.md
+last_updated: "2026-09-10T23:50:14.201Z"
 last_activity: 2026-09-10
 last_activity_desc: Phase 06 execution started
-state_head: abb6eedea5171217d1653cf37cba2c10176c545f
+state_head: 9c4694cde9f2cdc5097b93fdeafeeabea93eade4
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 4
   total_plans: 58
-  completed_plans: 54
+  completed_plans: 55
 milestone_name: milestone
 ---
 
@@ -28,12 +28,12 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 
 ## Current Position
 
-Phase: 06 (HippoRAG 2 & Side-by-Side) — READY TO EXECUTE
-Plan: 13 of 13 (12 of 13 complete — 06-12 just landed; 06-13 remains. Note: this counter was
+Phase: 06 (HippoRAG 2 & Side-by-Side) — EXECUTING
+Plan: 2 of 17
   drifted before this session — corrected here from find-phase's actual plan/summary counts
   rather than the stale auto-incremented value)
 Status: Ready to execute
-Last activity: 2026-09-10 — 06-12 (Falsifier 5 precondition closure) complete
+Last activity: 2026-09-10 — Phase 06 execution started
 
 Progress: [██████████] 100%
 
@@ -93,6 +93,7 @@ Progress: [██████████] 100%
 | Phase 06-hipporag-2-side-by-side P11 | 8min | 1 tasks | 1 files |
 | Phase 06 P12 | 24min | 2 tasks | 4 files |
 | Phase 06-hipporag-2-side-by-side P13 | 42min | 2 tasks | 4 files |
+| Phase 06-hipporag-2-side-by-side P14 | ~40min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -169,6 +170,8 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 06]: 06-12: corpus_ingest.py's real --spend path uses its own dedicated store root (v1/.eval_corpus_store, workspace eval-corpus-ingest), separate from the Phase 3 parity store and the Phase 6 build-harness store.
 - [Phase 06]: MODAL-05: owner approved the real cross-modality run; build_hipporag_index refused before completion on a fact-score empty-string defect. Real spend incurred, no comparison produced. MODAL-05 stays Pending against the concrete defect. — The plan's own stop-on-refusal rule forbids retrying with a weakened guard; the refusal itself is the honest recorded outcome.
 - [Phase 06]: MACH-03/Falsifier 5: owner declined the A/A calibration spend a second time, reasoning the fact-score failure Task 1 just hit could waste the far larger T0-leg spend if not fixed first. — 06-12 closed both named preconditions; only the spend remains, and the owner is sequencing the defect fix ahead of it.
+- [Phase 06]: 06-14: root cause was the harness calling load_wiring("hipporag") (the 13-node base wiring) for an index build instead of the already-committed 7-node corpus-ingest wiring; fact-score's empty deps let it dispatch query-side with no query ever injected, reaching the provider with an empty string — 06-10 had already built the correct index-side wiring; the harness simply never used it — fixed by generalizing load_wiring with a variant keyword and swapping the harness's own load call, not by patching fact_score.py
+- [Phase 06]: 06-14: added EmptyEmbeddingInputError as one guard at OpenAICompatibleClient.embed, the single method all seven embedding call sites route through, rather than per-call-site guards — three other query-side call sites carry the same unguarded str(config.get("query", "")) pattern for legitimate query-time dispatch; a guard at the shared method turns every one into a diagnosable local refusal instead of a live provider 400
 
 ### Pending Todos
 
@@ -197,6 +200,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-10T17:48:44.655Z
-Stopped at: Completed 06-13-PLAN.md
+Last session: 2026-09-10T23:50:14.078Z
+Stopped at: Completed 06-14-PLAN.md
 Resume file: None
