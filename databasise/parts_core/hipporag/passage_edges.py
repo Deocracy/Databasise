@@ -42,7 +42,27 @@ def _chunk_ref(chunk_id: Any) -> str:
 
 
 async def _passage_edges_body(ctx: NodeContext) -> dict[str, Any]:
-    return {"edges": []}
+    openie_output = ctx.inputs["openie"]
+    findings = list(openie_output.get("findings", []))
+
+    seen: set[tuple[str, str]] = set()
+    edges: list[dict[str, Any]] = []
+    for finding in findings:
+        chunk_id = finding.get("chunk_id")
+        if chunk_id is None:
+            continue
+        chunk_ref = _chunk_ref(chunk_id)
+        for raw_entity in (finding["subject"], finding["object"]):
+            entity_ref = _entity_ref(raw_entity)
+            pair = (chunk_ref, entity_ref)
+            if pair in seen:
+                continue
+            seen.add(pair)
+            edges.append(
+                {"src": chunk_ref, "tgt": entity_ref, "weight": _WEIGHT, "edge_type": _EDGE_TYPE}
+            )
+
+    return {"edges": sorted(edges, key=lambda e: (e["src"], e["tgt"]))}
 
 
 HIPPORAG_PASSAGE_EDGE_BUILDER_PART = Part(
