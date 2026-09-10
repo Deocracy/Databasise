@@ -240,7 +240,7 @@ Plans:
   5. Mutable-store components either have a defined snapshot/reset protocol or are recorded as permanently excluded from A/B — F-07 discharged rather than left open
   6. Owner mints an eval bundle with dev/holdout/sealed splits carrying questions, gold answers, judge instance, judge prompt hash, corpus snapshot hash, determinism/concurrency setting, and both §EV.2 target families (MACH-02), then runs one A/A calibration and reads a bootstrap-resampled p95 floor keyed to `(bundle@v, tier, metric)` with T1's null width materially narrower than T0's — Falsifier 5, MACH-03, carried forward from Phase 3 per `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`
 
-**Plans**: 9/9 plans executed across 6 waves
+**Plans**: 13 plans — 9/9 executed across 6 waves, plus 4 gap-closure plans added 2026-09-10 across 3 further waves (06-VERIFICATION.md found 2 FAILED success criteria and 1 human-verification item)
 
 Plans:
 **Wave 1** *(tracer — runs alone, before any expansion)*
@@ -270,6 +270,19 @@ Plans:
 
 - [x] 06-09-PLAN.md — MACH-10 / F-07 discharged with an enforcing refusal, plus the phase's record and requirement reconciliation
 
+**Gap-closure Wave 1** *(added 2026-09-10; two plans run in parallel — no shared files)*
+
+- [ ] 06-10-PLAN.md — Gap 1(a): HippoRAG gets a real ingest path through the §18 seam, delete refuses by name, and COVERAGE.md states the write surface the seam actually has
+- [ ] 06-11-PLAN.md — MACH-10 flips to Complete on the owner's confirmation recorded in 06-UAT.md Test 1
+
+**Gap-closure Wave 2** *(blocked on 06-10)*
+
+- [ ] 06-12-PLAN.md — Falsifier 5's two named preconditions, closed spend-free: a judge-identity resolver and a cost-bounded, document-count-capped eval-corpus ingest path
+
+**Gap-closure Wave 3** *(blocked on 06-11 and 06-12; not autonomous — two blocking spend checkpoints)*
+
+- [ ] 06-13-PLAN.md — the two real-corpus spend decisions (MODAL-05's cross-modality run; MACH-03's A/A calibration), each asked once with a costed projection and each recorded honestly either way
+
 ### Phase 7: Promotion & Rollback
 
 **Goal**: The owner can promote a wiring and roll it back on recorded evidence, with nothing inferable by absence
@@ -297,7 +310,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. LightRAG Query Side | 13/13 | In Progress|  |
 | 4. The Seam | 5/5 | Complete    | 2026-09-06 |
 | 5. Opaque-Side Admission | 9/9 | Complete    | 2026-09-08 |
-| 6. HippoRAG 2 & Side-by-Side | 7/9 | In Progress|  |
+| 6. HippoRAG 2 & Side-by-Side | 9/13 | In Progress|  |
 | 7. Promotion & Rollback | 0/TBD | Not started | - |
 
 ## Requirement Coverage
