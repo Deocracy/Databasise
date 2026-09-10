@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import numpy as np
+
 from databasise.parts.schema import NodeContext
 from databasise.parts_core.hipporag.entity_fact_embed import (
     CHUNK_VERTEX_PREFIX,
@@ -18,6 +20,8 @@ from databasise.parts_core.hipporag.entity_fact_embed import (
 from databasise.parts_core.hipporag.fact_edges import HIPPORAG_FACT_EDGE_BUILDER_PART
 from databasise.parts_core.hipporag.openie import _fact_id as openie_fact_id
 from databasise.parts_core.hipporag.passage_edges import HIPPORAG_PASSAGE_EDGE_BUILDER_PART
+from databasise.parts_core.hipporag.synonymy_edges import HIPPORAG_SYNONYMY_EDGE_BUILDER_PART
+from databasise.stores.vector import FaissVectorStore, MultiNamespaceVectorStore
 
 
 def _ctx(
@@ -127,3 +131,56 @@ async def test_fact_and_passage_edges_emit_empty_list_given_no_findings():
 
     assert fact_result["edges"] == []
     assert passage_result["edges"] == []
+
+
+# --------------------------------------------------------------------------------------------- #
+# Task 2: synonymy-edges
+# --------------------------------------------------------------------------------------------- #
+
+
+async def test_synonymy_edges_emits_deduped_canonical_edges_above_threshold(store_root):
+    entity_store = FaissVectorStore(
+        namespace="hipporag-entities", workspace="synonymy-ws", store_root=store_root
+    )
+    # cat/kitten are near-identical (cosine ~1.0); rug is unrelated (cosine 0).
+    await entity_store.upsert(
+        ids=[_entity_ref("cat"), _entity_ref("kitten"), _entity_ref("rug")],
+        embeddings=np.array(
+            [[1.0, 0.01, 0.0], [1.0, 0.0, 0.01], [0.0, 1.0, 0.0]], dtype="float32"
+        ),
+        metadatas=[{}, {}, {}],
+    )
+    await entity_store.index_done_callback()
+
+    vector_store = MultiNamespaceVectorStore(workspace="synonymy-ws", store_root=store_root)
+    ctx = _ctx(
+        "synonymy-edges",
+        config={"synonymy_top_k": 2, "synonymy_threshold": 0.9},
+        inputs={
+            "entity-fact-embed": {
+                "entities": [{"ref": _entity_ref("cat"), "surface_form": "cat"}]
+            }
+        },
+        stores={"vector": vector_store},
+    )
+
+    result = await HIPPORAG_SYNONYMY_EDGE_BUILDER_PART.body(ctx)
+
+    pairs = [(e["src"], e["tgt"]) for e in result["edges"]]
+    assert (_entity_ref("cat"), _entity_ref("kitten")) in pairs
+    assert len(pairs) == len(set(pairs))  # deduped
+    assert all(pair[0] < pair[1] for pair in pairs)  # canonically ordered
+    assert not any(_entity_ref("rug") in pair for pair in pairs)
+
+
+async def test_synonymy_edges_zero_upstream_chunk_count_makes_no_store_read():
+    ctx = _ctx(
+        "synonymy-edges",
+        config={"synonymy_top_k": 5, "synonymy_threshold": 0.8},
+        inputs={"entity-fact-embed": {"entities": [], "facts": []}},
+        stores={},
+    )
+
+    result = await HIPPORAG_SYNONYMY_EDGE_BUILDER_PART.body(ctx)
+
+    assert result["edges"] == []

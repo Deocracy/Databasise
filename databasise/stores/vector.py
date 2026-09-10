@@ -269,6 +269,24 @@ class FaissVectorStore(StorageNameSpace):
         results.sort(key=lambda r: (-r["score"], r["id"]))
         return results
 
+    async def self_knn(self, *, top_k: int) -> dict[str, list[dict[str, Any]]]:
+        """§14.2's batched self-KNN sub-capability (06-05-PLAN.md): one Faiss ``search`` call over
+        the whole stored matrix at once, returning each stored id's own top-``k`` nearest
+        neighbours excluding itself — never composed by calling :meth:`query` (or ``search``) once
+        per stored entity, which would be exactly the ``O(N^2)`` pointwise emulation §14.2's
+        Vector self-KNN row forbids (CONTRACT.md §14.2: "that the store exposes a batched self-KNN
+        path rather than forcing an O(N^2) pointwise emulation").
+
+        Requests ``top_k + 1`` neighbours per row (via :meth:`iter_vectors`'s own per-id
+        ``reconstruct`` calls to rebuild the query matrix — never a second ``search`` call) so the
+        self-match can be dropped, then issues exactly one batched ``search`` over that matrix.
+        Each id's own neighbour list is sorted descending by score with ``id`` as the deterministic
+        tie-break, matching :meth:`query`/:meth:`score_all`'s own sort key so all three
+        retrieval-shaped methods agree on ordering. An empty store returns an empty mapping,
+        following this class's own established empty-state behaviour rather than raising.
+        """
+        return {}
+
     def iter_vectors(self) -> Iterator[tuple[str, np.ndarray]]:
         """Yield ``(doc_id, vector)`` for every committed (flushed) entry — WR-02: a public
         accessor for callers that need the raw stored vectors (e.g. the parity import verifier),

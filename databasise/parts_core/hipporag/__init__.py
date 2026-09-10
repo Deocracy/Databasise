@@ -25,6 +25,7 @@ from databasise.parts_core.hipporag.openie import HIPPORAG_OPENIE_EXTRACTOR_PART
 from databasise.parts_core.hipporag.passage_edges import HIPPORAG_PASSAGE_EDGE_BUILDER_PART
 from databasise.parts_core.hipporag.ppr import HIPPORAG_PPR_RETRIEVER_PART
 from databasise.parts_core.hipporag.reset_vector_join import HIPPORAG_RESET_VECTOR_JOIN_PART
+from databasise.parts_core.hipporag.synonymy_edges import HIPPORAG_SYNONYMY_EDGE_BUILDER_PART
 
 HIPPORAG_PARTS: tuple[Part, ...] = (
     HIPPORAG_FACT_SCORER_PART,
@@ -37,6 +38,7 @@ HIPPORAG_PARTS: tuple[Part, ...] = (
     HIPPORAG_ENTITY_FACT_EMBEDDER_PART,
     HIPPORAG_FACT_EDGE_BUILDER_PART,
     HIPPORAG_PASSAGE_EDGE_BUILDER_PART,
+    HIPPORAG_SYNONYMY_EDGE_BUILDER_PART,
 )
 
 __all__ = ["HIPPORAG_PARTS"]

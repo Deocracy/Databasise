@@ -1,6 +1,6 @@
 {
   "wiring_id": "hipporag-base",
-  "title": "HippoRAG 2 base wiring (10 of docs/system-model/wirings/hipporag-base.json's 13 positions: 06-01's 5-node query-side chain, 06-02's first 3 index-side positions, plus 06-05 Task 1's fact-edges/passage-edges)",
+  "title": "HippoRAG 2 base wiring (11 of docs/system-model/wirings/hipporag-base.json's 13 positions: 06-01's 5-node query-side chain, 06-02's first 3 index-side positions, plus 06-05 Task 1's fact-edges/passage-edges and Task 2's synonymy-edges)",
   "wiring_version": "1",
   "nodes": {
     "chunk-embed": {
@@ -33,6 +33,18 @@
       "kind": "extractor",
       "effects": [],
       "deps": ["openie"]
+    },
+    "synonymy-edges": {
+      "component": "hipporag/synonymy-edge-builder@0.1.0",
+      "kind": "extractor",
+      "effects": ["reads_vector"],
+      "config": {
+        "declared_capability": "§14.2 Vector self-KNN [PARTS-02 H1]",
+        "guard": "num_new_chunks > 0",
+        "synonymy_top_k": 5,
+        "synonymy_threshold": 0.8
+      },
+      "deps": ["entity-fact-embed"]
     },
     "fact-score": {
       "component": "hipporag/fact-scorer@0.1.0",
