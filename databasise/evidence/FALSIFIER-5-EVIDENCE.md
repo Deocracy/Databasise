@@ -154,3 +154,54 @@ to record.
 
 ---
 *Recorded: 2026-09-10*
+
+## Pre-registered threshold — 2026-09-11
+
+**Date:** 2026-09-11
+
+Before any floor is computed, this section fixes the numeric value behind MACH-03's own pass
+criterion — "**per-tier null width at T1 materially narrower than T0**" — so neither the owner nor
+this plan can choose it after seeing the two numbers. `06-RESEARCH.md`'s Open Question 1 states
+plainly that no document anywhere quantifies "materially" as a specific ratio or percentage, and
+names its own standing recommended default: adopting that default, rather than deriving a new one,
+is this section's whole content.
+
+**The threshold, adopted verbatim from `06-RESEARCH.md`'s Open Question 1 default:**
+
+> T1's calibrated p95 floor, in the same score units, is at most half of T0's.
+
+Concretely: **MACH-03 / Falsifier 5 is judged to pass if and only if
+`gold_passage`'s (`T1`) calibrated p95 floor <= 0.5 x `answer_level`'s (`T0`) calibrated p95
+floor**, both read from the same real calibration run's `CalibrationResult.floor` values, at the
+same `bundle@v` and the same determinism/concurrency setting (`NullIdentity`'s own key, per
+`calibration.py`).
+
+**Why "same score units" holds by construction, not by assumption.** Both floors are fractions on
+the closed unit interval `[0.0, 1.0]`:
+
+- `gold_passage_recall` (the `T1` metric `databasise/eval/aa_run.py`'s `score_gold_passage` computes)
+  is the fraction of a question's gold document set represented among the envelope's own resolved
+  evidence — a value in `[0.0, 1.0]` by construction, since it is a count of matched gold ids
+  divided by the size of the gold set.
+- `answer_level_correctness` (the `T0` metric `score_answer_level` computes) maps the committed
+  judge prompt's three verdicts (`CORRECT`/`PARTIAL`/`INCORRECT`) onto `1.0`/`0.5`/`0.0` via
+  `aa_run.py`'s own `VERDICT_SCORES` — also a value in `{0.0, 0.5, 1.0}` subset of `[0.0, 1.0]`.
+
+Both metrics land on the same closed unit interval before any comparison is made, so the "same
+score units" condition MACH-03's pass criterion assumes is a property of how each metric is
+defined, not an assumption this section needs to separately justify.
+
+**This threshold is written down before either floor exists.** No real A/A run has executed at the
+time this section is committed — this commit precedes any commit that could carry a `floor` value
+for either target family. It discharges the outstanding item this document's own 2026-09-09 Limits
+section named: "No numeric threshold for 'materially narrower' is pre-registered here ... with no
+floors computed, pre-registering a threshold now would have nothing to be pre-registered against."
+Both preconditions that section described are now closed (06-12), and 06-16 built the driver that
+can actually consume a real run — so the threshold this section fixes now has a real run to be
+pre-registered *against*, for the first time.
+
+This threshold is not adjusted after this point, under any branch of 06-17-PLAN.md's Task 1 —
+approve, decline, or a refusal after approve.
+
+---
+*Recorded: 2026-09-11*
