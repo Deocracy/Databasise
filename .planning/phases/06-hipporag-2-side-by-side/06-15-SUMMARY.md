@@ -118,3 +118,9 @@ None - no external service configuration required.
 ---
 *Phase: 06-hipporag-2-side-by-side*
 *Completed: 2026-09-10*
+
+## Self-Check: PASSED
+
+All key files found on disk (`databasise/evidence/CROSS-MODALITY-EVIDENCE.md`,
+`.planning/phases/06-hipporag-2-side-by-side/06-15-SUMMARY.md`); both commits (`b8eb8f2`,
+`28e4ad1`) found in `git log --oneline --all`.
