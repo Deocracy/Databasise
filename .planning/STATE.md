@@ -1,19 +1,19 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: 06
 current_phase_name: HippoRAG 2 & Side-by-Side
 status: executing
-stopped_at: Completed 06-16-PLAN.md
-last_updated: "2026-09-11T03:42:53.288Z"
+stopped_at: Completed 06-15-PLAN.md
+last_updated: "2026-09-11T07:54:42.945Z"
 last_activity: 2026-09-10
 last_activity_desc: Phase 06 execution started
-state_head: 88afe4c86fe539165e00731f67cb8db6bd786958
+state_head: 28e4ad14229353b2c61ca8d6710086424dd7edb7
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 2
   total_plans: 58
-  completed_plans: 56
+  completed_plans: 57
 milestone_name: milestone
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 06 (HippoRAG 2 & Side-by-Side) — EXECUTING
-Plan: 3 of 17
+Plan: 4 of 17
   drifted before this session — corrected here from find-phase's actual plan/summary counts
   rather than the stale auto-incremented value)
 Status: Ready to execute
@@ -95,6 +95,7 @@ Progress: [██████████] 100%
 | Phase 06-hipporag-2-side-by-side P13 | 42min | 2 tasks | 4 files |
 | Phase 06-hipporag-2-side-by-side P14 | ~40min | 2 tasks | 5 files |
 | Phase 06 P16 | 45min | 2 tasks | 2 files |
+| Phase 06 P15 | ~55min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -174,6 +175,7 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 06]: 06-14: root cause was the harness calling load_wiring("hipporag") (the 13-node base wiring) for an index build instead of the already-committed 7-node corpus-ingest wiring; fact-score's empty deps let it dispatch query-side with no query ever injected, reaching the provider with an empty string — 06-10 had already built the correct index-side wiring; the harness simply never used it — fixed by generalizing load_wiring with a variant keyword and swapping the harness's own load call, not by patching fact_score.py
 - [Phase 06]: 06-14: added EmptyEmbeddingInputError as one guard at OpenAICompatibleClient.embed, the single method all seven embedding call sites route through, rather than per-call-site guards — three other query-side call sites carry the same unguarded str(config.get("query", "")) pattern for legitimate query-time dispatch; a guard at the shared method turns every one into a diagnosable local refusal instead of a live provider 400
 - [Phase 06]: [Phase 06-hipporag-2-side-by-side]: 06-16: Finished an interrupted prior executor's uncommitted-but-complete aa_run.py draft. Fixed the one blocking defect (a del StaleNullError line referencing a name never imported, raising NameError at import time) after confirming calibrate_family never calls floor_for so StaleNullError genuinely cannot fire in this module. All 13 planned tests already present and passing; full suite 960 passed/3 skipped. MACH-03 stays Pending per the plan's own prohibition.
+- [Phase 06]: 06-15: owner re-authorized the real cross-modality run (approve); both build_hipporag_index and run_cross_modality exited 0 against live parity credentials, discharging MODAL-05. — 06-14's corpus-ingest wiring-variant fix and EmptyEmbeddingInputError guard closed the fact-score empty-string defect that killed the 2026-09-10 attempt; both harnesses ran clean this time with no retry needed.
 
 ### Pending Todos
 
@@ -202,6 +204,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-11T03:42:53.163Z
-Stopped at: Completed 06-16-PLAN.md
+Last session: 2026-09-11T07:54:42.851Z
+Stopped at: Completed 06-15-PLAN.md
 Resume file: None
