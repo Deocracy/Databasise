@@ -188,3 +188,11 @@ None - no external service configuration required.
 ---
 *Phase: 06-hipporag-2-side-by-side*
 *Completed: 2026-09-10*
+
+## Self-Check: PASSED
+
+- FOUND: `databasise/eval/aa_run.py`
+- FOUND: `databasise/tests/eval/test_aa_run.py`
+- FOUND: `.planning/phases/06-hipporag-2-side-by-side/06-16-SUMMARY.md`
+- FOUND commit: `0a281fb` (feat — the driver + tests)
+- FOUND commit: `f31805e` (docs — this SUMMARY)
