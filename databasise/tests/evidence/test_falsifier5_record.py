@@ -92,12 +92,16 @@ def test_document_never_reports_a_floor_value():
     assert "No floor value is reported anywhere in this document" in text
     # ...and must not smuggle one in as a bare "p95 = <number>" / "floor: <number>" pattern
     # anywhere in the body (case-insensitive; tolerates markdown emphasis around the label).
-    # A "<=" is excluded from the "=" branch (but not the ":" branch): it is the comparison
-    # operator in a *threshold formula* ("floor <= 0.5 x ... floor", 06-17's pre-registered
-    # threshold), never an assignment of a measured value — the pre-registration states a
-    # relationship between two not-yet-computed floors, not a number read from a run.
+    # A trailing "<=" / "=" / ":" followed by a number is excluded ONLY when the number is itself
+    # part of the two-sided pre-registered *threshold formula* ("floor <= 0.5 x ... p95 floor",
+    # 06-17's pre-registration) — i.e. a second "floor"/"p95" token appears later on the same
+    # line, after an "x"/"*"/"×" multiplier. A bare "floor <= 0.31" with no second floor/p95 term
+    # is NOT a formula — it is a fabricated measurement and must still be caught (CR-01
+    # gap-closure: the prior exclusion covered every "<=", not just the two-sided formula shape).
     floor_value_pattern = re.compile(
-        r"(?:p95|floor)[^a-zA-Z0-9\n]{0,10}(?:(?<!<)=|:)[^a-zA-Z0-9\n]{0,5}\d", re.IGNORECASE
+        r"(?:p95|floor)[^a-zA-Z0-9\n]{0,10}(?:<=|=|:)[^a-zA-Z0-9\n]{0,5}\d+(?:\.\d+)?"
+        r"(?![^\n]{0,80}(?:x|\*|×)[^\n]{0,80}(?:floor|p95))",
+        re.IGNORECASE,
     )
     assert not floor_value_pattern.search(text), (
         "document appears to report a numeric floor/p95 value — Falsifier 5 has not run and no "
