@@ -142,6 +142,26 @@ class SplitNotCalibratableError(ValueError):
         super().__init__(f"SplitNotCalibratableError: split {split_name!r} cannot be A/A calibrated — {reason}")
 
 
+class ConfoundedPassError(RuntimeError):
+    """Raised by :func:`run_one_pass` when a question's envelope reports ``partial`` or
+    ``degraded`` true — a confounded pass cannot calibrate a null (see :func:`run_one_pass`'s own
+    docstring). Named so ``main()``'s ``--spend`` boundary can catch exactly this refusal at the
+    ``except`` tuple without also catching ``databasise.eval.calibration.StaleNullError`` (another
+    ``RuntimeError`` subclass ``calibrate_family`` explicitly does not catch, so it must reach
+    ``main()`` as a loud, unhandled traceback) or an unrelated ``RuntimeError`` raised by a bug
+    deeper in the call chain.
+    """
+
+    def __init__(self, question_id: str, *, partial: bool, degraded: bool) -> None:
+        self.question_id = question_id
+        self.partial = partial
+        self.degraded = degraded
+        super().__init__(
+            f"run_one_pass: question {question_id!r} reported partial={partial!r} "
+            f"degraded={degraded!r} — a confounded pass cannot calibrate a null"
+        )
+
+
 @dataclass(frozen=True)
 class PassResult:
     """One A/A pass over a named split: the question-id-to-score mapping the §AA.1 procedure
@@ -316,8 +336,9 @@ async def run_one_pass(
     """Run ``engine`` once over ``question_ids`` (in sorted order), scoring each returned envelope
     with whichever of the two per-question scorers matches ``family_name``. Refuses (``ValueError``,
     via :func:`_check_family_covers_questions`) before any query runs if a question id is absent
-    from the family's own targets or gold answers. Refuses (``RuntimeError``) by name if any
-    envelope reports ``partial`` or ``degraded`` true — a confounded pass cannot calibrate a null,
+    from the family's own targets or gold answers. Refuses (:class:`ConfoundedPassError`) by name
+    if any envelope reports ``partial`` or ``degraded`` true — a confounded pass cannot calibrate a
+    null,
     the same refusal-at-the-report-layer discipline
     ``databasise.parity.run_cross_modality.DegradedCrossModalityRunError`` already applies. For
     each envelope, resolves its ``trace_token`` through a fresh :class:`TraceStore` opened on
@@ -345,10 +366,7 @@ async def run_one_pass(
         envelope = await engine.query(QueryObject(text=question.text))
 
         if envelope.partial or envelope.degraded:
-            raise RuntimeError(
-                f"run_one_pass: question {question_id!r} reported partial={envelope.partial!r} "
-                f"degraded={envelope.degraded!r} — a confounded pass cannot calibrate a null"
-            )
+            raise ConfoundedPassError(question_id, partial=envelope.partial, degraded=envelope.degraded)
 
         if family_name == GOLD_PASSAGE_FAMILY:
             score = score_gold_passage(
@@ -561,8 +579,8 @@ def main(argv: list[str] | None = None) -> int:
         SplitNotCalibratableError,
         UnparseableJudgeVerdictError,
         UnusableFloorError,
-        RuntimeError,  # WR-02: run_one_pass's own confounded (partial/degraded) pass refusal
-        SeamRefusalError,  # WR-02: any refusal the real engine.query() call itself raises
+        ConfoundedPassError,  # run_one_pass's own confounded (partial/degraded) pass refusal
+        SeamRefusalError,  # any refusal the real engine.query() call itself raises
     ) as exc:
         print(str(exc), file=sys.stderr)
         return 1
