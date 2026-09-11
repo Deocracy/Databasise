@@ -200,7 +200,20 @@ def score_gold_passage(envelope: Any, *, gold_document_ids: Sequence[str], vecto
     propagate — a reference the store lost is a broken run, not a low score. No top-k truncation
     and no score threshold: the arm already decided what it returned, and re-filtering here would
     key the null to a parameter the bundle does not name.
+
+    WR-01 gap closure: an empty ``gold_document_ids`` (a bundle-authoring mistake, not malicious
+    input — ``_check_family_covers_questions`` only checks a question id is present in
+    ``family.targets``, never that its value is non-empty) raises a named ``ValueError`` rather
+    than crashing on a bare ``ZeroDivisionError`` — this module's own "refuse by name, never crash
+    opaquely" house style, applied to the one path that was left unguarded.
     """
+    gold_ids = list(gold_document_ids)
+    if not gold_ids:
+        raise ValueError(
+            "score_gold_passage: gold_document_ids is empty — cannot compute a recall fraction "
+            "with zero gold documents"
+        )
+
     if not envelope.evidence:
         return 0.0
 
@@ -209,7 +222,6 @@ def score_gold_passage(envelope: Any, *, gold_document_ids: Sequence[str], vecto
         record = resolve_evidence_ref(ref, vector_store)
         resolved_document_ids.add(str(record["document_id"]))
 
-    gold_ids = list(gold_document_ids)
     matched = sum(1 for doc_id in gold_ids if str(doc_id) in resolved_document_ids)
     return matched / len(gold_ids)
 
