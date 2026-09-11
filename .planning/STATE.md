@@ -190,6 +190,13 @@ None yet.
 - **Storage decomposition stall (Phase 3)**: research pitfall 1 — 17 node positions can look extracted while every node still reaches v1's singleton `shared_storage.py`. Per-node storage-ownership audit is a Phase 3 success criterion, not an afterthought.
 - **Cozo 0.7.6 is architecture-frozen** with four known correctness bugs and no upstream fixes expected; pin and vendor the wheel (Phase 1).
 - **Open research flags**: HippoRAG 2 porting scope (Phase 6 planning), graph-aware deletion semantics for shared entities (Phase 5 planning), sealed-set sizing/MDE (Phase 2 planning).
+- **Phase 6→7 gate deferral (2026-09-11)**: MACH-03 deferred a fourth time to the first gate-adjudicated promotion (outside this milestone under MACH-09); MODAL-01's two owner items deferred to the parity claim. Phase 7 authorised to start; Phase 6 stays `gaps_found`, Phase 3 stays `human_needed`; milestone cannot close until both discharged. Record: `.planning/phases/06-hipporag-2-side-by-side/06-GATE-AMENDMENT.md`.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | Record Phase 6→7 gate deferral (MACH-03, MODAL-01) | 2026-09-11 | e64c694 | .planning/quick/260911-e7a-record-phase-6-to-7-gate-deferral/ |
 
 ## Deferred Verification
 
