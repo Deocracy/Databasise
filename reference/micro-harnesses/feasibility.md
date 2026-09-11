@@ -1,4 +1,4 @@
-# Feasibility: one small model that embeds for itself, routes to graph / vector / SQL / skills, refines cyclically, and answers from all of it
+# Feasibility (MelodyScribe): one small model that embeds for itself, routes to graph / vector / SQL / skills, refines cyclically, and answers from all of it
 
 Date: 2026-09-11. Companion to `prior-art-survey.md`. Owner analysis unless a source is named.
 
