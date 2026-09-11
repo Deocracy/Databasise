@@ -17,6 +17,7 @@ The working definition above is a draft drawn from the owner's earlier work (see
 | `minicpm5-2b.md` | Notes on the candidate model: identity, benchmarks, training recipe (SFT → RL → OPD), deployment backends, fine-tune recipe, open questions. Every fact tagged with its source. |
 | `prior-art-survey.md` | Answers: can one network be both LLM and embedder (GritLM, LLM2Vec, llama.cpp); which memory harnesses route conversations and documents into graph + vector + SQL (Cognee, MIRIX, Letta, Graphiti, Memori, Hindsight, A-MEM, Mem0, MemOS); which small models are trained to do the routing (Mem-α, Memory-R1, MemoRAG). Verdict: the intersection is unbuilt. |
 | `NAMING.md` | MelodyScribe naming convention: project, method, models (`MelodyScribe-2B-v0.1`), Scriptorium, Folio, Proof, the MelodyScribe skill, seam tool names. |
+| `system-model-fit.md` | MelodyScribe mapped onto CONTRACT / ANATOMY / RIG / SELECTION clause by clause: modality not harness, model as `core` client, opaque entry under §8, stores via §15 (SQL Branch 2, Folios `self_storage`), reviser as `fixpoint`, no `melodyscribe_*` seam tools, F3 pricing, four open questions. |
 | `feasibility.md` | Why the intersection is unbuilt (seven reasons), capability-by-capability feasibility with evidence, the skills store and its injection gate, the two rig experiments that settle the unknowns. |
 | `sources/` | Verbatim snapshots (dated) of the HF model card, the OpenBMB/MiniCPM README, and the TRL fine-tune cookbook. Re-fetch before relying on a number older than a month. |
 
