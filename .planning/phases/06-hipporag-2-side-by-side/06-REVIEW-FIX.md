@@ -1,148 +1,158 @@
 ---
 phase: 06-hipporag-2-side-by-side
-fixed_at: 2026-09-10T19:15:00Z
+fixed_at: 2026-09-11T00:00:00Z
 review_path: .planning/phases/06-hipporag-2-side-by-side/06-REVIEW.md
 iteration: 1
-findings_in_scope: 2
-fixed: 2
+findings_in_scope: 4
+fixed: 4
 skipped: 0
 status: all_fixed
 ---
 
 # Phase 06: Code Review Fix Report
 
-**Fixed at:** 2026-09-10T19:15:00Z
-**Source review:** `.planning/phases/06-hipporag-2-side-by-side/06-REVIEW.md`
+**Fixed at:** 2026-09-11
+**Source review:** `.planning/phases/06-hipporag-2-side-by-side/06-REVIEW.md` (review commit `183139a`, gap-closure round)
 **Iteration:** 1
 
 **Summary:**
-- Findings in scope (Critical + Warning): 2
-- Fixed: 2
+- Findings in scope (critical_warning): 4 (CR-01, CR-02, WR-01, WR-02)
+- Fixed: 4
 - Skipped: 0
+- Out of scope (not attempted, per fix_scope): 2 (IN-01, IN-02)
 
-IN-01, IN-02, IN-03 were out of `fix_scope: critical_warning` and were not touched.
+Each finding was re-verified against the current source before any edit — no line numbers had
+drifted meaningfully from the review, and every defect described was still present exactly as
+reported.
 
 ## Fixed Issues
 
-### CR-01: A raw-bytes document ingested against a HippoRAG-resolving selector silently loses all content — no refusal, no partial flag, a normal-looking success
+### CR-01: `floor_value_pattern`'s `<=`-exclusion lets a fabricated floor value through undetected
 
-**Files modified:** `databasise/seam/engine.py`, `databasise/seam/refusals.py`, `databasise/tests/seam/test_hipporag_write_path.py`, `databasise/tests/seam/test_rest_transport.py`
-**Commits:** `5827165`, `2cb437a`
-**Applied fix:** Took the review's named-refusal option (minimal fix, matching house style) over
-teaching `hipporag/chunker-embedder` to parse arbitrary file formats. Added
-`NoRawUploadPathForModalityError` to `databasise/seam/refusals.py`, mirroring
-`NoWritePathForModalityError`'s exact shape (names only `operation`, never the resolved modality,
-wiring id, arm name, or node id). In `Databasise.ingest()`, added a guard immediately after
-`target_node_id`/`result_node_id` are resolved and before any node config is stamped: if
-`document.raw is not None` and the target node's own `kind` in the resolved corpus wiring is not
-`"opaque"`, raise the new refusal. This check is generic over the wiring's own declared `kind`
-field (`databasise/parts/schema.py`'s `Depth`/`NodeKind` vocabulary — `"opaque"` denotes a v1
-subprocess that parses a file itself), never a hardcoded modality name — a future third modality
-whose corpus-ingest target node is likewise non-opaque is refused by the same check without a new
-branch. `lightrag/full-ingest` (`"kind": "opaque"`) is unaffected; `hipporag/chunker-embedder`
-(`"kind": "embedder"`) now refuses raw uploads instead of silently indexing nothing.
+**File:** `databasise/tests/evidence/test_falsifier5_record.py`
+**Commit:** `e8612d8`
+**Applied fix:** Confirmed the hole live before fixing: the old pattern excluded every `=`
+preceded by `<`, so `floor <= 0.31` and `p95 <= 0.42` matched nothing. Narrowed the exclusion to
+require the excluded number be part of the actual two-sided pre-registered formula shape — a
+second `floor`/`p95` token appearing later on the same line after an `x`/`*`/`×` multiplier — via
+a negative lookahead: `(?![^\n]{0,80}(?:x|\*|×)[^\n]{0,80}(?:floor|p95))`. Verified live with a
+standalone Python check before touching the test suite:
+  - `'floor = 0.31'` → MATCH (caught)
+  - `'floor: 0.31'` → MATCH (caught)
+  - `'floor <= 0.31'` → MATCH (now caught — was the hole)
+  - `'p95 <= 0.42'` → MATCH (now caught — was the hole)
+  - The real two-sided formula line from `FALSIFIER-5-EVIDENCE.md` (`` `gold_passage`'s (`T1`)
+    calibrated p95 floor <= 0.5 x `answer_level`'s (`T0`) calibrated p95\nfloor** ``) → no match
+    (still correctly exempted, formula spans the `x`/second-`floor` shape across the line wrap)
+`databasise/tests/evidence/test_falsifier5_record.py` (11 tests) passes with the narrowed
+pattern.
 
-Added a regression test,
-`test_raw_upload_against_a_hipporag_selector_refuses_by_name_rather_than_losing_content`, to
-`databasise/tests/seam/test_hipporag_write_path.py`: constructs `IngestDocument(raw=...)` against
-the same HippoRAG-resolving selector `test_hipporag_write_path.py`'s other tests already use,
-asserts `NoRawUploadPathForModalityError` is raised with `operation == "ingest"`, that the message
-names neither modality, and that no `hipporag-graph` directory or `corpus-inbox` file was ever
-created. This test fails without the fix (no exception is raised; the pre-fix code path silently
-returns a normal-looking `IngestJob`).
+### CR-02: `POST /documents/upload` returns an unhandled 500, not the documented 422, on a malformed `selector` field
 
-A second, mechanically-required commit (`2cb437a`) registered the new refusal in
-`test_rest_transport.py`'s own exhaustive `SeamRefusalError`-subclass enumeration
-(`_REFUSAL_FACTORIES`/`test_every_refusal_subclass_maps_to_a_non_success_status_carrying_its_named_value`)
-— this test walks `SeamRefusalError.__subclasses__()` recursively and fails closed on any
-refusal type with no registered test factory, so adding `NoRawUploadPathForModalityError` without
-extending this table left the full suite red. This is not a new finding, just CR-01's own fix
-completing the codebase's existing exhaustiveness contract.
+**Files modified:** `databasise/seam/refusals.py`, `databasise/seam/rest.py`, `databasise/tests/seam/test_rest_transport.py`
+**Commit:** `554e071`
+**Applied fix:** Reproduced the 500 live before fixing (`TestClient` post with
+`data={"selector": "{not valid json"}` → 500, `"Internal Server Error"`). Added
+`MalformedSelectorPayloadError(SeamRefusalError)` to `refusals.py`, mirroring
+`MalformedBase64PayloadError`'s documented house pattern for a manually-parsed (non-pydantic-
+validator) field, and added it to `__all__`. Wrapped the manual
+`Selector.model_validate_json(selector)` call in `rest.py`'s upload route in a
+`try/except pydantic.ValidationError` that raises the new refusal. Registered the new class in
+`test_rest_transport.py`'s exhaustive `_REFUSAL_FACTORIES` dict (the parametrized
+`test_every_refusal_subclass_maps_to_a_non_success_status_carrying_its_named_value` test fails
+loudly on a missing factory entry, per its own docstring — this closes that gap for the new
+class). Added a new live-reproduction test,
+`test_upload_with_malformed_selector_field_returns_422_not_a_raw_500`, that posts the same
+malformed selector to `/documents/upload` and asserts `response.status_code == 422` and
+`body["refusal_type"] == "MalformedSelectorPayloadError"`.
+`databasise/tests/seam/test_rest_transport.py` (34 tests, up from the review's baseline) all
+pass.
 
-### WR-01: `DELETE /documents/{document_id}`'s default request body is a mutable module-level singleton, evaluated once at route-registration time
+### WR-01: `score_gold_passage` divides by zero on an empty `gold_document_ids` list
 
-**Files modified:** `databasise/seam/rest.py`, `databasise/tests/seam/test_rest_transport.py`
-**Commit:** `3de871b`
-**Applied fix:** Took the review's second option — `frozen=True` on `_RequestModel`
-(`databasise/seam/rest.py`'s shared base for `QueryRequest`/`CompareRequest`/`TraceRequest`/
-`IngestRequest`/`DeleteRequest`) — mirroring `databasise/mcp/tools.py`'s own `_ToolArgs` base,
-which already sets `frozen=True`. This is the root-cause fix rather than a per-route symptom
-patch: freezing the shared base closes the same mutable-default-argument hazard for every request
-DTO in this module, not just `DeleteRequest`, without touching the route signature or its
-byte-for-byte-unchanged no-body-request behavior. Grepped the whole worktree first — no route or
-test anywhere mutates a `QueryRequest`/`CompareRequest`/`TraceRequest`/`IngestRequest`/
-`DeleteRequest` instance after construction, so this is a behavior-preserving change today; it
-converts a future read-then-write on the shared `DeleteRequest()` default into an immediate
-`pydantic.ValidationError` instead of silent cross-request state corruption.
+**Files modified:** `databasise/eval/aa_run.py`, `databasise/tests/eval/test_aa_run.py`
+**Commit:** `8846730`
+**Applied fix:** Confirmed the crash is reachable exactly as described (empty
+`gold_document_ids`, non-empty evidence → bare `ZeroDivisionError`). Moved the
+`gold_ids = list(gold_document_ids)` conversion to the top of the function and added an early
+`if not gold_ids: raise ValueError(...)` guard, before any evidence resolution or store access —
+tighter than the review's suggested placement (raises before the empty-evidence early return, so
+the function never touches the store on this path either). Added
+`test_score_gold_passage_empty_gold_document_ids_raises_value_error_not_zero_division`, using a
+store stub configured to raise if called, and non-empty evidence, to prove both the named
+refusal and the "no store touch" property.
 
-Added a regression test,
-`test_delete_request_default_body_is_frozen_and_cannot_be_silently_mutated`, to
-`databasise/tests/seam/test_rest_transport.py`: constructs `DeleteRequest()` (the exact shared
-default instance the route uses) and asserts `body.selector = None` raises
-`pydantic.ValidationError`. This test fails without the fix (pydantic v2 permits attribute
-reassignment on a non-frozen `BaseModel`).
+### WR-02: `aa_run.main()`'s `--spend` path does not catch a partial/degraded run or a `SeamRefusalError`
+
+**File:** `databasise/eval/aa_run.py`
+**Commit:** `7540450`
+**Applied fix:** Confirmed the calibration `try/except` block only caught
+`(SplitNotCalibratableError, UnparseableJudgeVerdictError, UnusableFloorError)`. Added
+`from databasise.seam.refusals import SeamRefusalError` and broadened the except tuple to include
+`RuntimeError` (run_one_pass's own confounded partial/degraded-pass refusal) and
+`SeamRefusalError` (the base class for every refusal the real `engine.query()` call could raise).
+Confirmed live, before editing, that `SeamRefusalError` is importable from `aa_run.py` with no
+circular import: `databasise/seam/refusals.py` has zero `databasise.*` imports of its own, and
+`python -c "import databasise.eval.aa_run"` succeeds cleanly both before and after the change.
+No test was added for this except-clause directly (the `--spend` real-run path is deferred and
+unauthorized in this environment per the module's own docstring, and exercising it would require
+building the full live-client/engine harness this module explicitly gates behind a checkpoint);
+the import-safety check and the full `test_aa_run.py` pass (14/14) are the verification available
+without spending a real run.
 
 ## Skipped Issues
 
-None — both in-scope findings were fixed.
+None — all four in-scope findings were fixed.
+
+## Out of Scope
+
+### IN-01: `test_aa_run.py`'s blanket `pytestmark = pytest.mark.asyncio` on sync tests (pre-confirmed)
+
+**File:** `databasise/tests/eval/test_aa_run.py:42`
+Not attempted — `fix_scope` is `critical_warning`, which excludes Info-tier findings. Cosmetic
+only (6-7 `PytestWarning`s, no behavioral effect); still visible in this round's test output.
+
+### IN-02: Redundant exception type in `aa_run.main()`'s first except clause
+
+**File:** `databasise/eval/aa_run.py:506`
+Not attempted — `fix_scope` is `critical_warning`, which excludes Info-tier findings.
+`SplitNotCalibratableError` still subclasses `ValueError`; the redundant tuple member is
+harmless and unchanged.
 
 ## Verification
 
-Ran inside an isolated git worktree (`.claude/worktrees/rf-06-94686-<epoch>/`, on temp branch
-`gsd-reviewfix/06-94686`) for editing and committing. Because the main checkout's `databasise/.venv`
-has `databasise` installed **editable**, pointing its import finder at the main checkout's own
-absolute path (confirmed: `sys.path.insert(0, <worktree>)` did **not** shadow it — the editable
-finder wins regardless of `sys.path` order), test execution could not be trusted from inside the
-worktree. Verification therefore ran as follows:
+All commands run from `databasise/` using the project's own virtualenv (`databasise/.venv`).
 
-1. Applied and committed both fixes (plus the one mechanically-required exhaustiveness-table
-   update) inside the worktree, on `gsd-reviewfix/06-94686`.
-2. Fast-forward merged `gsd-reviewfix/06-94686` into `main` in the **main checkout**
-   (`git merge --ff-only`) — main checkout's working tree was clean before this, so the
-   fast-forward updated its files in place with no conflicts.
-3. Ran the targeted test files against the main checkout's real `.venv`:
+```
+$ .venv/bin/python -m pytest tests/evidence/test_falsifier5_record.py -q
+11 passed in 0.11s
 
-   ```bash
-   cd databasise && .venv/bin/python -m pytest -q \
-     tests/seam/test_hipporag_write_path.py \
-     tests/seam/test_rest_transport.py \
-     tests/seam/test_delete_document.py \
-     tests/seam/test_rest_corpus_endpoints.py
-   ```
+$ .venv/bin/python -m pytest tests/seam/test_rest_transport.py -q
+34 passed in 5.06s
 
-   First run (fixes committed, before the exhaustiveness-table fix): `1 failed, 61 passed, 1
-   skipped` — `NoRawUploadPathForModalityError has no test factory registered in
-   test_rest_transport.py`. Fixed by registering the new refusal in `_REFUSAL_FACTORIES`
-   (commit `2cb437a`), fast-forwarded again, re-ran:
+$ .venv/bin/python -m pytest tests/eval/test_aa_run.py -q
+14 passed, 7 warnings in 1.78s   (warnings are the pre-existing, out-of-scope IN-01)
 
-   ```text
-   62 passed, 1 skipped in 11.07s
-   ```
+$ .venv/bin/python -m pytest tests/seam tests/eval tests/evidence -q
+318 passed, 2 skipped, 7 warnings in 27.11s
+```
 
-4. Ran the full project test suite (the phase's own configured `test_command`) as a final check:
+The 2 skips and 7 warnings are pre-existing and unrelated to this round's fixes (verified by
+running the same suite against the WR-01-only staged state mid-fix, which reproduced the
+identical warning set). No new failures, skips, or warnings were introduced by any of the four
+fixes.
 
-   ```bash
-   cd databasise && .venv/bin/python -m pytest -q
-   ```
-
-   ```text
-   938 passed, 4 skipped in 139.44s (0:02:19)
-   ```
-
-**Verification ran against the main checkout** (`/home/chris/coding/Databasise-2.0-fully-agnostic-system/databasise`), after the fast-forward merge landed all three commits there — reproducible from that tree as-is; the isolated worktree used for editing/committing was removed afterward and no longer exists.
-
-Syntax/structure checks (Tier 1 + Tier 2), applied to every file before each commit:
-
-- `databasise/seam/engine.py`, `databasise/seam/refusals.py`, `databasise/seam/rest.py`,
-  `databasise/tests/seam/test_hipporag_write_path.py`,
-  `databasise/tests/seam/test_rest_transport.py` — `python3 -c "ast.parse(...)"` — all OK.
-
-The worktree's branch (`gsd-reviewfix/06-94686`) was fast-forward-merged into `main`, the worktree
-removed, the temp branch deleted, and the recovery sentinel cleared after all three commits landed.
-`main` now carries all three fix commits (`5827165`, `3de871b`, `2cb437a`).
+Additional live checks performed before committing (not part of the pytest run, per the
+task's own instruction to verify with a small live check):
+- CR-01's regex verified against 4 hand-picked strings plus the actual formula text pulled from
+  `databasise/evidence/FALSIFIER-5-EVIDENCE.md` (see Fixed Issues above for the exact inputs/outputs).
+- CR-02's fix verified against a live `TestClient` posting the exact malformed payload from the
+  review's own reproduction, both before the fix (500) and after (422).
+- WR-02's import safety verified with `python -c "import databasise.eval.aa_run"` (succeeds; no
+  circular import from adding `databasise.seam.refusals.SeamRefusalError`).
 
 ---
 
-_Fixed: 2026-09-10T19:15:00Z_
+_Fixed: 2026-09-11_
 _Fixer: Claude (gsd-code-fixer)_
 _Iteration: 1_
