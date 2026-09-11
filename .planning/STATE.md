@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 06
 current_phase_name: HippoRAG 2 & Side-by-Side
 status: executing
-stopped_at: Completed 06-15-PLAN.md
-last_updated: "2026-09-11T07:54:42.945Z"
+stopped_at: Completed 06-17-PLAN.md
+last_updated: "2026-09-11T08:16:54.598Z"
 last_activity: 2026-09-10
 last_activity_desc: Phase 06 execution started
-state_head: 28e4ad14229353b2c61ca8d6710086424dd7edb7
+state_head: afa55ed1af38aa0f8c977ef085815432c9e348aa
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 58
-  completed_plans: 57
+  completed_plans: 58
 milestone_name: milestone
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 06 (HippoRAG 2 & Side-by-Side) — EXECUTING
-Plan: 4 of 17
+Plan: 5 of 17
   drifted before this session — corrected here from find-phase's actual plan/summary counts
   rather than the stale auto-incremented value)
 Status: Ready to execute
@@ -96,6 +96,7 @@ Progress: [██████████] 100%
 | Phase 06-hipporag-2-side-by-side P14 | ~40min | 2 tasks | 5 files |
 | Phase 06 P16 | 45min | 2 tasks | 2 files |
 | Phase 06 P15 | ~55min | 1 tasks | 2 files |
+| Phase 06 P17 | ~35min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -176,6 +177,8 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 06]: 06-14: added EmptyEmbeddingInputError as one guard at OpenAICompatibleClient.embed, the single method all seven embedding call sites route through, rather than per-call-site guards — three other query-side call sites carry the same unguarded str(config.get("query", "")) pattern for legitimate query-time dispatch; a guard at the shared method turns every one into a diagnosable local refusal instead of a live provider 400
 - [Phase 06]: [Phase 06-hipporag-2-side-by-side]: 06-16: Finished an interrupted prior executor's uncommitted-but-complete aa_run.py draft. Fixed the one blocking defect (a del StaleNullError line referencing a name never imported, raising NameError at import time) after confirming calibrate_family never calls floor_for so StaleNullError genuinely cannot fire in this module. All 13 planned tests already present and passing; full suite 960 passed/3 skipped. MACH-03 stays Pending per the plan's own prohibition.
 - [Phase 06]: 06-15: owner re-authorized the real cross-modality run (approve); both build_hipporag_index and run_cross_modality exited 0 against live parity credentials, discharging MODAL-05. — 06-14's corpus-ingest wiring-variant fix and EmptyEmbeddingInputError guard closed the fact-score empty-string defect that killed the 2026-09-10 attempt; both harnesses ran clean this time with no retry needed.
+- [Phase 06]: [Phase 06-hipporag-2-side-by-side]: 06-17: Owner declined the real A/A calibration spend a third time (06-06, 06-13, 06-17), no free-text reason given beyond the selection. Every precondition and the A/A driver itself are closed; only the spend decision remains, and per the plan's own prohibition it is not to be asked again.
+- [Phase 06]: [Phase 06-hipporag-2-side-by-side]: 06-17: Appended a dated correction note to 06-VERIFICATION.md naming which later commits (5827165, 2cb437a, 3de871b, 06-14) closed five of its findings, without touching its status/score/gap bodies -- a pure append, verified via git diff --numstat (41 insertions, 0 deletions).
 
 ### Pending Todos
 
@@ -204,6 +207,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-11T07:54:42.851Z
-Stopped at: Completed 06-15-PLAN.md
+Last session: 2026-09-11T08:16:34.771Z
+Stopped at: Completed 06-17-PLAN.md
 Resume file: None
