@@ -340,5 +340,46 @@ path that is safe for realistic document uploads, neither of which exists today.
 
 ---
 
+## Correction — findings closed after this report was written (2026-09-11)
+
+This report was written against commit `cc3abf3`. Commits landing after it closed several of the
+findings recorded above as open; this note records which, and is **not** a re-verification —
+`/gsd-verify-work` owns the verdict, and the `status` and `score` above deliberately still read as
+the verifier left them.
+
+| Section | Row | Closed by | What now holds |
+|---------|-----|-----------|-----------------|
+| Required Artifacts | `databasise/seam/engine.py (raw-bytes → HippoRAG safety)`, recorded `✗ MISSING` | `5827165`, `2cb437a` | `Databasise.ingest()` now raises `NoRawUploadPathForModalityError` before any node config is stamped when a raw-bytes document targets a corpus wiring whose consuming node is not `kind: "opaque"`. |
+| Key Links | `Databasise.ingest(document, selector=<HippoRAG>)` (raw-bytes payload), recorded `✗ NOT_WIRED (silent)` | `5827165`, `2cb437a` | The path now refuses by name rather than returning a normal-looking `IngestJob` over zero writes. |
+| Data-Flow | `chunk_embed.py` (`raw=` payload), recorded `✗ HOLLOW_PROP` | `5827165`, `2cb437a` | Closed by unreachability: the refusal fires before `chunk-embed` is ever dispatched with an empty-text document from a raw upload. |
+| Anti-Pattern row 1 | Silent content loss on raw-bytes ingest against a HippoRAG selector, `🛑 Blocker` | `5827165`, `2cb437a` | Closed, with the regression test `06-REVIEW-FIX.md` names: `test_raw_upload_against_a_hipporag_selector_refuses_by_name_rather_than_losing_content`. |
+| Anti-Pattern row 3 | `rest.py:287` mutable-singleton `DeleteRequest` default, `⚠️ Warning` | `3de871b` | Closed: set `frozen=True` on `_RequestModel`, the shared base for every request DTO in `rest.py`. |
+| Gap 1's first `missing` item | The `fact-score` empty-string fix | `06-14` (`7b5a3df`, `9c4694c`) | Closed at the root: `build_hipporag_index` now dispatches the already-committed seven-position `corpus-ingest` wiring instead of the thirteen-position base wiring (the actual cause — `fact-score` was reached with no query ever injected), and `OpenAICompatibleClient.embed` gained `EmptyEmbeddingInputError` as a second, independent guard. `.planning/WINDOWS.md` entry id 3 is `fixed`. |
+
+**What is not closed by the six rows above, stated against each SUMMARY's real recorded branch:**
+gap 1's third `missing` item — owner re-authorization of the real cross-modality run, followed by a
+real `run_cross_modality` invocation producing an actual per-query comparison — **is** closed: 06-15
+records the owner's real answer as `approve`, and both `build_hipporag_index` and
+`run_cross_modality` exited 0 against live `v1/.env.parity` credentials (`graph_node_count=229`,
+`graph_edge_count=460`, both queries `partial=False`/`degraded=False`), discharging MODAL-05 to
+Complete in `.planning/REQUIREMENTS.md`. With the write-path defect (rows 1-4), the `fact-score`
+defect (row 6), and the real run itself (06-15) all closed, gap 1 (SC2) has no outstanding item left
+as of this note. Gap 2 (SC6/MACH-03/Falsifier 5) is **not** closed: this plan's own Task 1 records
+the owner's real answer as `decline` — a third decline, after 06-06 and 06-13 — so MACH-03 stays
+Pending in `.planning/REQUIREMENTS.md` and Falsifier 5 stays open, not failed; no comparison ran.
+
+`06-REVIEW.md`'s IN-01, IN-02 and IN-03 remain open Info-severity items, deliberately untouched by
+this round: none of them is implicated in the `fact-score` blast radius. In particular, IN-02
+concerns `FaissVectorStore.self_knn`'s top-k window (`databasise/stores/vector.py:272-315`) — the
+synonymy-edges path — while the `fact-score` defect ran through `score_all` and the wiring-resolution
+choice in `build_hipporag_index.py` — a different method and a different call site. IN-01
+(`graph_augment_persist.py`'s unsorted iteration) and IN-03 (`engine.py`'s unbounded-index reads) are
+likewise unrelated to either closed defect and remain open exactly as `06-REVIEW.md` recorded them.
+
+---
+*Recorded: 2026-09-11*
+
+---
+
 _Verified: 2026-09-10_
 _Verifier: Claude (gsd-verifier)_
