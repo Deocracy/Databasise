@@ -205,3 +205,41 @@ approve, decline, or a refusal after approve.
 
 ---
 *Recorded: 2026-09-11*
+
+## Deferred a third time — 2026-09-11
+
+**Date:** 2026-09-11
+
+The owner declined the real A/A calibration a third time, at this plan's Task 1
+`gate="blocking-human"` checkpoint (`decline`). They selected the `decline` option; no free-text
+reason was given beyond that selection.
+
+The question presented to the owner, at the moment of the decision, stated two things about its
+own terms — recorded here as the terms the question posed, not as the owner's reasoning: the
+projected cost carried no currency figure, because this project has no measured per-question token
+figure to derive one from; and the authorization asked for was materially larger than the 06-15
+spend the owner had approved earlier the same session — 291 documents versus 20, plus 68 engine
+queries and 34 judge calls.
+
+No corpus is ingested, no judge-identity call is made, no LLM call of any kind occurs, no spend is
+incurred, and no bundle version is minted. Both the T0 and T1 legs stay unrun.
+
+**What changed since 2026-09-10:** 06-14 closed the `fact-score` empty-string defect at its root
+(the harness was dispatching the wrong wiring — `load_wiring` gained a `variant` keyword and
+`build_hipporag_index` was swapped onto the already-committed seven-position `corpus-ingest`
+wiring, plus a new `EmptyEmbeddingInputError` guard at the client boundary). 06-16 built
+`databasise/eval/aa_run.py`, the A/A run driver that did not previously exist —
+`calibrate_aa_floor` now has a real caller, tested (13 passing tests) and capable of driving both
+target families. Both of this document's own preconditions, closed at 06-12, remain closed. The
+only remaining blocker is the spend decision itself, which the owner has now declined three
+times — at 06-06, 06-13, and again here.
+
+MACH-03 stays **Pending** in `.planning/REQUIREMENTS.md`, with a dated annotation naming the spend
+as the single outstanding item — every other precondition is now closed. Falsifier 5 remains
+**open**, not failed: no comparison ran, so there is no adverse verdict to record.
+
+The pre-registered threshold above stands unchanged and un-adjusted under this branch — it is now
+a standing commitment for whichever plan runs the real calibration next.
+
+---
+*Recorded: 2026-09-11*

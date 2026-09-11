@@ -92,8 +92,12 @@ def test_document_never_reports_a_floor_value():
     assert "No floor value is reported anywhere in this document" in text
     # ...and must not smuggle one in as a bare "p95 = <number>" / "floor: <number>" pattern
     # anywhere in the body (case-insensitive; tolerates markdown emphasis around the label).
+    # A "<=" is excluded from the "=" branch (but not the ":" branch): it is the comparison
+    # operator in a *threshold formula* ("floor <= 0.5 x ... floor", 06-17's pre-registered
+    # threshold), never an assignment of a measured value — the pre-registration states a
+    # relationship between two not-yet-computed floors, not a number read from a run.
     floor_value_pattern = re.compile(
-        r"(?:p95|floor)[^a-zA-Z0-9\n]{0,10}[:=][^a-zA-Z0-9\n]{0,5}\d", re.IGNORECASE
+        r"(?:p95|floor)[^a-zA-Z0-9\n]{0,10}(?:(?<!<)=|:)[^a-zA-Z0-9\n]{0,5}\d", re.IGNORECASE
     )
     assert not floor_value_pattern.search(text), (
         "document appears to report a numeric floor/p95 value — Falsifier 5 has not run and no "
