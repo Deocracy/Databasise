@@ -218,6 +218,19 @@ def test_score_gold_passage_propagates_unresolvable_evidence_reference_error():
 
 
 # --------------------------------------------------------------------------------------------- #
+# Test 3b (WR-01 gap closure) — an empty gold_document_ids refuses by name, never a bare
+# ZeroDivisionError, and never touches the store (raised before any evidence resolution).
+# --------------------------------------------------------------------------------------------- #
+
+
+def test_score_gold_passage_empty_gold_document_ids_raises_value_error_not_zero_division():
+    vector_store = _StubVectorStore({}, raise_if_called=True)
+    envelope = _envelope_with_evidence([EvidenceRef(ref="doc-a#0", namespace="chunks", kind="text_chunk")])
+    with pytest.raises(ValueError, match="gold_document_ids is empty"):
+        score_gold_passage(envelope, gold_document_ids=[], vector_store=vector_store)
+
+
+# --------------------------------------------------------------------------------------------- #
 # Test 4 — score_answer_level maps CORRECT/PARTIAL/INCORRECT, whitespace/case-insensitive
 # --------------------------------------------------------------------------------------------- #
 
