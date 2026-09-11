@@ -62,7 +62,7 @@ except ImportError as exc:  # pragma: no cover - exercised only without the `res
         "Install with: pip install 'databasise[rest]' (or `uv sync --extra rest`)."
     ) from exc
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from databasise.parts.registry import PartRegistry
 from databasise.seam.corpus import (
@@ -80,7 +80,11 @@ from databasise.seam.engine import Databasise, stream_envelope_events
 from databasise.seam.envelope import ResponseEnvelope
 from databasise.seam.evidence import EvidenceRef
 from databasise.seam.query import QueryObject
-from databasise.seam.refusals import PageSizeExceededError, SeamRefusalError
+from databasise.seam.refusals import (
+    MalformedSelectorPayloadError,
+    PageSizeExceededError,
+    SeamRefusalError,
+)
 from databasise.seam.selectors import Selector
 
 # Non-success, never a 2xx — the one property T-04-27's mitigation depends on. 422 (Unprocessable
@@ -273,6 +277,12 @@ def create_app(
         data has no native nested-object type, mirroring ``IngestToolArgs``'s own base64-for-bytes
         convention for the identical "no native shape" problem) — parsed via ``Selector``'s own
         ``model_validate_json``, never a hand-rolled parse.
+
+        CR-02 gap closure: this parse happens directly in the route body, never inside a pydantic
+        validator, so a raw ``pydantic.ValidationError`` on malformed input is not itself a
+        ``SeamRefusalError`` the registered handler can map — it must be caught and translated
+        here, mirroring ``MalformedBase64PayloadError``'s own house pattern for exactly this
+        "manually parsed field" situation.
         """
         raw = await file.read()
         document = IngestDocument(
@@ -281,7 +291,10 @@ def create_app(
             file_name=file.filename,
             content_type=file.content_type,
         )
-        parsed_selector = Selector.model_validate_json(selector) if selector else None
+        try:
+            parsed_selector = Selector.model_validate_json(selector) if selector else None
+        except ValidationError as exc:
+            raise MalformedSelectorPayloadError(field="selector") from exc
         return await engine.ingest(document, parsed_selector)
 
     @app.get("/jobs/{job_id}")

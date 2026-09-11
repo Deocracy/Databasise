@@ -48,6 +48,7 @@ from databasise.seam.refusals import (
     ForbiddenSelectorInputError,
     ForeignEngineRefusalError,
     MalformedBase64PayloadError,
+    MalformedSelectorPayloadError,
     MutableStoreComparisonExcludedError,
     NoRawUploadPathForModalityError,
     NoWritePathForModalityError,
@@ -413,6 +414,7 @@ _REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
     UnknownJobError: lambda: UnknownJobError(job_id="no-such-job"),
     PageSizeExceededError: lambda: PageSizeExceededError(requested=101, limit=100),
     MalformedBase64PayloadError: lambda: MalformedBase64PayloadError(field="raw_base64"),
+    MalformedSelectorPayloadError: lambda: MalformedSelectorPayloadError(field="selector"),
 }
 
 
@@ -492,3 +494,22 @@ def test_every_refusal_subclass_maps_to_a_non_success_status_carrying_its_named_
         assert body.get(key) == value, (
             f"{exc_cls.__name__}'s {key!r} attribute missing or mismatched in the response body"
         )
+
+
+def test_upload_with_malformed_selector_field_returns_422_not_a_raw_500(client):
+    """CR-02 gap closure: before the fix, a malformed `selector` form field on
+    `POST /documents/upload` raised a raw `pydantic.ValidationError` that escaped every
+    registered handler, producing an unhandled 500 — a direct violation of this module's own
+    "non-success, never a 2xx" / "422 used uniformly for every refusal kind" design contract.
+    Reproduced against the real app + real `TestClient`, not a mock."""
+    response = client.post(
+        "/documents/upload",
+        files={"file": ("doc.txt", b"hello world", "text/plain")},
+        data={"selector": "{not valid json"},
+    )
+
+    assert response.status_code == 422, (
+        f"expected 422 for a malformed selector field, got {response.status_code}: {response.text}"
+    )
+    body = response.json()
+    assert body["refusal_type"] == "MalformedSelectorPayloadError"

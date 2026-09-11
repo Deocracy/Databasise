@@ -228,6 +228,23 @@ class MalformedBase64PayloadError(SeamRefusalError):
         super().__init__(f"field {field!r} is not decodable in its declared base64 encoding")
 
 
+class MalformedSelectorPayloadError(SeamRefusalError):
+    """Raised by ``databasise.seam.rest``'s ``POST /documents/upload`` route (CR-02 gap closure)
+    when the ``selector`` multipart form field is not valid JSON matching ``Selector``'s own
+    shape. ``selector`` arrives as a JSON-encoded form field parsed manually via
+    ``Selector.model_validate_json`` — never inside a pydantic validator — so, exactly like
+    ``MalformedBase64PayloadError`` above, this refusal must be raised directly rather than let a
+    raw ``pydantic.ValidationError`` escape uncaught (which the registered ``SeamRefusalError``
+    handler cannot map, producing an unhandled 500 instead of the documented 422). ``field`` names
+    only the caller's own input slot, per this module's own house style; it never carries the
+    rejected payload's content.
+    """
+
+    def __init__(self, *, field: str):
+        self.field = field
+        super().__init__(f"field {field!r} is not valid JSON matching the expected selector shape")
+
+
 class EmptyComparisonRequestError(SeamRefusalError):
     """Raised by ``Databasise.compare()`` (06-03-PLAN.md, API-08) when zero selectors are
     supplied — a comparison needs at least one arm to compare (or run, at exactly one; a
@@ -319,6 +336,7 @@ __all__ = [
     "UnknownJobError",
     "PageSizeExceededError",
     "MalformedBase64PayloadError",
+    "MalformedSelectorPayloadError",
     "EmptyComparisonRequestError",
     "DuplicateComparisonKeyError",
     "MutableStoreComparisonExcludedError",
