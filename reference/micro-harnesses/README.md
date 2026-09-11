@@ -13,6 +13,7 @@ The working definition above is a draft drawn from the owner's earlier work (see
 | File | What |
 |---|---|
 | `minicpm5-2b.md` | Notes on the candidate model: identity, benchmarks, training recipe (SFT → RL → OPD), deployment backends, fine-tune recipe, open questions. Every fact tagged with its source. |
+| `prior-art-survey.md` | Answers: can one network be both LLM and embedder (GritLM, LLM2Vec, llama.cpp); which memory harnesses route conversations and documents into graph + vector + SQL (Cognee, MIRIX, Letta, Graphiti, Memori, Hindsight, A-MEM, Mem0, MemOS); which small models are trained to do the routing (Mem-α, Memory-R1, MemoRAG). Verdict: the intersection is unbuilt. |
 | `sources/` | Verbatim snapshots (dated) of the HF model card, the OpenBMB/MiniCPM README, and the TRL fine-tune cookbook. Re-fetch before relying on a number older than a month. |
 
 ## Prior findings (owner's earlier work, outside this repo)
