@@ -1,8 +1,8 @@
 ---
 phase: 06-hipporag-2-side-by-side
-verified: 2026-09-10T20:00:00Z
+verified: 2026-09-11T02:00:00Z
 status: gaps_found
-score: 4/6 must-haves verified
+score: 5/6 must-haves verified
 covered_files:
   - ".planning/REQUIREMENTS.md"
   - ".planning/ROADMAP.md"
@@ -33,149 +33,138 @@ covered_files:
   - ".planning/phases/06-hipporag-2-side-by-side/06-12-SUMMARY.md"
   - ".planning/phases/06-hipporag-2-side-by-side/06-13-PLAN.md"
   - ".planning/phases/06-hipporag-2-side-by-side/06-13-SUMMARY.md"
+  - ".planning/phases/06-hipporag-2-side-by-side/06-14-PLAN.md"
+  - ".planning/phases/06-hipporag-2-side-by-side/06-14-SUMMARY.md"
+  - ".planning/phases/06-hipporag-2-side-by-side/06-15-PLAN.md"
+  - ".planning/phases/06-hipporag-2-side-by-side/06-15-SUMMARY.md"
+  - ".planning/phases/06-hipporag-2-side-by-side/06-16-PLAN.md"
+  - ".planning/phases/06-hipporag-2-side-by-side/06-16-SUMMARY.md"
+  - ".planning/phases/06-hipporag-2-side-by-side/06-17-PLAN.md"
+  - ".planning/phases/06-hipporag-2-side-by-side/06-17-SUMMARY.md"
   - ".planning/phases/06-hipporag-2-side-by-side/06-REVIEW-FIX.md"
   - ".planning/phases/06-hipporag-2-side-by-side/06-REVIEW.md"
   - ".planning/phases/06-hipporag-2-side-by-side/06-UAT.md"
   - ".planning/phases/06-hipporag-2-side-by-side/06-VALIDATION.md"
   - ".planning/phases/06-hipporag-2-side-by-side/06-VERIFICATION.md"
   - ".planning/phases/06-hipporag-2-side-by-side/COVERAGE.md"
+  - "databasise/clients/openai_compat.py"
+  - "databasise/eval/aa_run.py"
   - "databasise/eval/corpus_ingest.py"
   - "databasise/eval/remint.py"
   - "databasise/evidence/CROSS-MODALITY-EVIDENCE.md"
   - "databasise/evidence/FALSIFIER-5-EVIDENCE.md"
   - "databasise/mcp/server.py"
   - "databasise/mcp/tools.py"
+  - "databasise/parity/build_hipporag_index.py"
   - "databasise/parts_core/hipporag/chunk_embed.py"
   - "databasise/seam/engine.py"
   - "databasise/seam/refusals.py"
   - "databasise/seam/rest.py"
+  - "databasise/tests/clients/test_openai_compat.py"
+  - "databasise/tests/eval/test_aa_run.py"
+  - "databasise/tests/evidence/test_falsifier5_record.py"
+  - "databasise/tests/parity/test_build_hipporag_index.py"
   - "databasise/wirings/hipporag/corpus-ingest.json"
   - "databasise/wirings/lightrag/corpus-ingest.json"
   - "databasise/wirings/resolve.py"
-covered_digest: "v1:sha256:502da9da38e78ba113e9d0a312c0234f5795e0ef2553b9c4c543b5adea6a726e"
+covered_digest: "v1:sha256:82f5481f05401e489f3998b432e5a5fc3cfa9824f46c00c1cb404f88ab2479a4"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
   previous_status: gaps_found
-  previous_score: 3/6
+  previous_score: 4/6
   gaps_closed:
-    - "Human-verification item 1 (MACH-10's permanent-exclusion disposition) — owner confirmed in 06-UAT.md Test 1 (result: pass); REQUIREMENTS.md flipped MACH-10 to Complete (06-11)"
-    - "The structural half of SC2/MODAL-05 (06-REVIEW.md CR-01, original round) — Databasise.ingest()/delete_document() were hardcoded to LightRAG-only wiring files with no HippoRAG write path at all. 06-10 gives HippoRAG a real, tested ingest wiring dispatched per resolved modality, with a named refusal (NoWritePathForModalityError) for delete. A text-bearing document ingested through the public seam with a HippoRAG selector now lands in HippoRAG's own namespaces and is retrievable as real evidence — verified by a passing tracer test, not asserted."
+    - "SC2 / MODAL-05 — 06-14 fixed the actual root cause (build_hipporag_index was resolving HippoRAG's 13-node base wiring, dispatching three query-side nodes including fact-score with no query at index time; it now resolves the 7-node corpus-ingest wiring via load_wiring(variant=...)), plus an independent client-boundary guard (EmptyEmbeddingInputError) refusing any empty/blank embedding batch item before it reaches the provider. 06-15's real, spend-incurring run then completed end to end: build_hipporag_index exited 0 (graph_node_count=229, graph_edge_count=460, chunk/entity/fact vector counts 20/209/226, partial=False, degraded=False) and run_cross_modality exited 0 (both corpus queries compared across both arms, directories_disjoint=True, artifacts_overlap=False, no arm partial/degraded). MODAL-05 flipped to Complete. Independently confirmed: code reads (resolve.py's variant kwarg, build_hipporag_index.py's _INDEX_WIRING_VARIANT, openai_compat.py's EmptyEmbeddingInputError guard), the CROSS-MODALITY-EVIDENCE.md '## Real run — 2026-09-10' section's harness-returned values, REQUIREMENTS.md's MODAL-05 row, and a live re-run of tests/parity/test_build_hipporag_index.py + tests/clients/test_openai_compat.py (31 passed)."
+    - "The raw-bytes-upload data-loss defect this round's own code review found in the prior round's write path (06-REVIEW.md CR-01, 06-VERIFICATION.md's own prior-round Anti-Pattern row 1) — closed by 5827165/2cb437a: Databasise.ingest() now raises NoRawUploadPathForModalityError before any node config is stamped when a raw-bytes document targets a corpus wiring whose consuming node cannot parse file_paths/docs_format. Independently confirmed by reading engine.py:674 and refusals.py:149-171, and by re-running the named regression test (tests/seam/test_hipporag_write_path.py -k raw_upload_against_a_hipporag_selector_refuses, 1 passed)."
   gaps_remaining:
-    - "SC2/MODAL-05 — no real cross-modality run against the Phase 3 parity corpus has ever produced a comparable output. The owner authorized one real attempt at 06-13's checkpoint; the harness's own post-run verification refused (fact-score node, provider 400 on an empty-string batch item) before a comparison could run. Real spend was incurred; no result exists."
-    - "SC6/MACH-03 (Falsifier 5) — both of Falsifier 5's named preconditions are now closed in code (06-12: a resolved judge-identity resolver, a cost-bounded eval-corpus ingest path), but no real A/A calibration has ever executed. The owner declined the spend a second time at 06-13's checkpoint, citing the same-session fact-score failure as the reason to fix it first."
-  regressions:
-    - "06-10's new per-modality write dispatch introduced a new, independently-confirmed Critical defect (06-REVIEW.md, this round, unfixed as of commit cc3abf3): a raw-bytes IngestDocument (the /documents/upload path — PDF, DOCX, etc.) against a HippoRAG-resolving selector always stamps text=\"\" for hipporag/chunker-embedder, which silently short-circuits to zero chunks/embeddings/writes and still returns a normal-looking successful IngestJob(enqueued=1). This did not exist before 06-10 because no HippoRAG write path existed at all; it is new-to-this-round, not carried forward, and remains open."
+    - "SC6/MACH-03 (Falsifier 5) — both named preconditions were closed in code at 06-12, the fact-score defect that blocked the sibling run is fixed (06-14), and the A/A run driver that did not previously exist was built and tested (06-16, databasise/eval/aa_run.py, 13 passing tests). 06-17 pre-registered the 'materially narrower' threshold in FALSIFIER-5-EVIDENCE.md before any floor existed, then asked the owner once more with a real, driver-computed call-count projection. The owner declined a third time (06-06, 06-13, 06-17). No real A/A run has ever executed; no floor exists at either target family. This is not a falsified hypothesis — no comparison ran, so Falsifier 5 stays open, not failed — but the roadmap's own SC6 text requires a real p95 floor at both tiers with T1 materially narrower than T0, and that remains unmet."
+  regressions: []
 gaps:
-  - truth: "LightRAG and HippoRAG 2 run on one corpus under RIG §RUN, isolated stores, outputs structurally comparable (roadmap Success Criterion 2 / MODAL-05)"
-    status: failed
-    reason: >
-      Real progress happened this round, and it should be credited plainly: the structural write-surface
-      gap the prior verification round found (Gap 1, CR-01) is closed — Databasise.ingest() now
-      dispatches a per-modality corpus wiring via wiring_family()/_corpus_wiring(), HippoRAG ships a
-      real corpus-ingest.json wiring re-composed from its own seven index-side node positions, and a
-      text-bearing document ingested through the public seam with a HippoRAG selector is independently
-      confirmed (by reading engine.py and running tests/seam/test_hipporag_write_path.py) to land in
-      HippoRAG's own graph/vector/KV namespaces and come back as real evidence from a subsequent
-      HippoRAG query. That is genuine, tested, working machinery, not an assertion. The owner also
-      authorized the real, spend-incurring cross-modality run this round — a real attempt was made
-      against live credentials, not merely offered. But the roadmap's own SC2 text requires the two
-      modalities to actually run on one corpus with comparable outputs, and that has still not
-      happened: the harness's own post-run verification (build_hipporag_index's partial/degraded
-      check) refused before completion, at the fact-score node, on a provider 400 over an empty-length
-      string in its input batch — a genuine, previously-unexercised defect, not a spend-authorization
-      problem. run_cross_modality was never reached. No HippoRAG index built from the real parity
-      corpus exists anywhere in this repository today, so no comparable output exists either.
-      Independently, and more severely for the phase's own core value, this round's own code review
-      (06-REVIEW.md, commit cc3abf3) found — and I independently confirmed by reading
-      databasise/seam/engine.py:665-685 and databasise/parts_core/hipporag/chunk_embed.py:66-91 — a
-      still-unfixed Critical defect in the very write path 06-10 just built: a raw-bytes
-      IngestDocument (the actual shape a real-world PDF/DOCX upload takes, via /documents/upload)
-      against a HippoRAG-resolving selector always stamps node_config["documents"][0]["text"] = ""
-      (the real bytes only reach file_paths/docs_format, which hipporag/chunker-embedder never reads),
-      so chunk-embed's own `if not text: return []` guard silently produces zero chunks, zero
-      embeddings, zero writes for that document — and ingest() still returns a normal-looking
-      IngestJob(enqueued=1), because HippoRAG's provides node reports no `enqueued` field and the
-      no-fabricated-zero fallback substitutes a literal 1. A caller who uploads a real document to
-      HippoRAG through the seam cannot tell, from the response, that nothing was written. This is
-      untested in every direction — no test in this phase's own new suite combines raw= with a
-      HippoRAG-resolving selector. Both failures are honestly recorded where they belong
-      (CROSS-MODALITY-EVIDENCE.md's new "Real run attempted — refused" section; 06-REVIEW.md), and
-      REQUIREMENTS.md correctly keeps MODAL-05 Pending rather than rounding either up. But the
-      roadmap truth itself — two modalities actually running on one corpus with comparable output —
-      remains unmet, for two independent reasons, one of which (the raw-upload data loss) is a new
-      defect this round's own fix introduced into the write surface it built.
-    artifacts:
-      - path: "databasise/parts_core/hipporag/fact_score.py"
-        issue: "The fact-score node's provider call raises a 400 on an empty-string batch item rather than skipping/guarding it — the concrete blocker that stopped the one real, authorized cross-modality attempt this round. Filed as .planning/WINDOWS.md entry id 3, status open."
-      - path: "databasise/seam/engine.py"
-        issue: "Lines ~665-685 (the document.raw branch of ingest()): always stamps text=\"\" regardless of which modality the resolved corpus wiring targets, silently discarding raw-bytes content for any target whose node body does not itself parse file_paths/docs_format (HippoRAG's chunk-embed does not). No refusal, no partial/degraded signal — ingest() returns IngestJob, which has no such field to carry one."
-      - path: "databasise/parts_core/hipporag/chunk_embed.py"
-        issue: "Reads only document['text']/document['document_id']; has no awareness of file_paths/docs_format at all, so a raw upload against a HippoRAG selector always short-circuits through the empty-chunks early return with no error."
-    missing:
-      - "A fix for fact-score.py's handling of an empty-length string in its input batch (skip/guard rather than forwarding to the provider), so a real index build against a real corpus can complete and be verified rather than refused"
-      - "Either real file-parsing awareness in hipporag/chunker-embedder for raw uploads, or a named refusal (e.g. NoRawUploadPathForModalityError, raised in ingest() before any node config is stamped) when a raw-bytes document is targeted at a modality whose corpus-ingest wiring's node cannot consume file_paths/docs_format — per 06-REVIEW.md's own stated fix options"
-      - "Owner re-authorization of the real cross-modality run once fact-score is fixed, followed by a real invocation of run_cross_modality producing an actual per-query comparison result"
   - truth: "Owner mints an eval bundle (MACH-02) then runs one A/A calibration reading a p95 floor at both target families with T1 materially narrower than T0 (MACH-03, Falsifier 5) — roadmap Success Criterion 6"
     status: failed
     reason: >
-      MACH-02 remains fully satisfied and unchanged (bundle@v1, committed, both §EV.2 families
-      present). MACH-03's own two named preconditions — a resolved, non-sentinel judge_instance, and
-      a cost-bounded ingest path for the 291-document eval-corpus — are both now closed in code by
-      06-12 (databasise/eval/remint.py, databasise/eval/corpus_ingest.py), independently confirmed by
-      reading both modules and running their test suites (10 passing tests between them). This is
-      real, spend-free progress: the checkpoint question changed from "unbudgetable" to a bounded
-      "N documents, ~X input tokens, proceed?" But no real A/A run has ever executed at any point in
-      this phase. The owner declined the spend a second time at 06-13's checkpoint, and the stated
-      reason is itself evidence the deferral is sound engineering judgment, not neglect: Task 1's real
-      HippoRAG run had just died on the fact-score empty-string defect in the same session, and the
-      same defect class could waste the far larger T0-leg spend, so fixing fact-score first is the
-      cheaper path. FALSIFIER-5-EVIDENCE.md's new "Deferred again" section records this honestly, with
-      no floor value, no fabricated number, for either tier — matching this project's own discipline.
-      Regardless of how well-reasoned the deferral is, the roadmap's own SC6 text requires a real A/A
-      run producing two real p95 floors with T1 materially narrower than T0, and that has not
-      happened. This is not an oversight to correct — REQUIREMENTS.md correctly keeps MACH-03 Pending
-      — but the truth itself remains unmet.
+      MACH-02 remains fully satisfied and unchanged (bundle@v1, both §EV.2 families present).
+      Everything automatable that stood between MACH-03 and a real run is now genuinely built and
+      tested: 06-12 closed both named preconditions (a resolved judge-identity resolver, a
+      cost-bounded eval-corpus ingest path); 06-14 fixed the fact-score empty-string defect at its
+      actual root cause (a wiring-dispatch bug, not a missing input guard) and independently added a
+      client-boundary refusal; 06-16 built the previously-nonexistent A/A run driver
+      (databasise/eval/aa_run.py) — before this plan, calibrate_aa_floor had no caller anywhere in
+      the repository outside its own tests, so an approval at 06-13 would have funded a run with no
+      code able to perform it; 06-17 pre-registered the "materially narrower" threshold (T1's p95 <=
+      0.5x T0's) in FALSIFIER-5-EVIDENCE.md, committed before any floor existed, closing the one
+      remaining discipline gap named in the prior evidence document's own Limits section. I
+      independently confirmed all of this by reading resolve.py, build_hipporag_index.py,
+      openai_compat.py, aa_run.py, and by re-running the relevant test files (31 passed for 06-14's
+      and 06-16's own suites; full suite 962 passed, 1 skipped, exit 0, matching the reported state
+      exactly). None of this is in question. But the roadmap's own SC6 text is a claim about a real,
+      completed measurement — "runs one A/A calibration and reads a bootstrap-resampled p95 floor" —
+      and that measurement has never been taken. The owner was asked the identically-shaped question
+      three times (06-06, 06-13, 06-17) and declined every time; the third decline came after every
+      precondition, the driver, and the pre-registered threshold were genuinely in place, so it
+      cannot be attributed to residual engineering risk the way the first two declines could. This is
+      not a falsified hypothesis: no comparison ran, so there is no adverse verdict, and
+      FALSIFIER-5-EVIDENCE.md and REQUIREMENTS.md both correctly record Falsifier 5 as open and
+      MACH-03 as Pending rather than rounding a repeated decline up to a verdict in either direction.
+      But the observable truth itself — a real p95 floor at both target families, with T1 materially
+      narrower than T0 — does not exist anywhere in this codebase, and the roadmap's own Success
+      Criterion 6 requires that it does.
     artifacts:
       - path: "databasise/evidence/FALSIFIER-5-EVIDENCE.md"
-        issue: "States plainly, in its new 2026-09-10 section, that the spend was declined a second time and no floor exists for either tier. Honest, not a gap in the record — the gap is that the run has not happened."
-      - path: "databasise/parts_core/hipporag/fact_score.py"
-        issue: "Same defect blocking SC2 above; the owner explicitly sequenced fixing it ahead of authorizing the MACH-03 spend."
+        issue: "States plainly, in its '## Deferred a third time — 2026-09-11' section, that the owner declined for a third time and that no floor exists for either tier. The pre-registered threshold section above it is real and correctly ordered before any floor in git history. This is an honest record of an unmet truth, not a gap in the record itself."
+      - path: "databasise/eval/aa_run.py"
+        issue: "Genuine, tested, runnable driver — score_gold_passage, score_answer_level, run_one_pass, calibrate_family, main — has never been invoked with --spend in this environment. Two Warning-severity defects (06-REVIEW.md WR-01/WR-02, this round, unfixed) would surface only on a real --spend invocation: a divide-by-zero on an empty gold-document list, and unhandled confounded-run/seam-refusal exceptions escaping main's except tuple as raw tracebacks instead of the module's own clean-refusal pattern. Neither defect has manifested, because the path has never run for real."
     missing:
-      - "The same fact-score.py fix named under SC2's gap"
-      - "Owner authorization of the real A/A calibration run, now against a cost-bounded ingest path and a resolvable judge identity"
-      - "One real A/A run producing paired per-question differences and a bootstrap p95 floor at each of the two §EV.2 target families, with T1's null width materially narrower than T0's"
+      - "Owner authorization of the real A/A calibration spend — the only precondition this phase does not control, now that every code precondition, the driver, and the pre-registered threshold are in place"
+      - "One real A/A run producing two CalibrationResult floors (gold_passage_recall, answer_level_correctness) read against the pre-registered threshold, discharging MACH-03/Falsifier 5 either way"
+      - "A fix for aa_run.py's WR-01 (divide-by-zero on empty gold-document list) and WR-02 (unhandled exceptions on the --spend path) before that real run is attempted, so a first live invocation does not fail in an untested way"
 ---
 
 # Phase 6: HippoRAG 2 & Side-by-Side Verification Report
 
 **Phase Goal:** Two modalities answer the same corpus behind the same seam and the caller sees both at once — the milestone's proof of swappability (§BP rung 4)
-**Verified:** 2026-09-10
+**Verified:** 2026-09-11
 **Status:** gaps_found
-**Re-verification:** Yes — after gap closure (plans 06-10 through 06-13)
+**Re-verification:** Yes — after gap-closure round 2 (plans 06-14 through 06-17)
 
 ## What changed since the prior verification round
 
-The prior round (3/6, `gaps_found`) found two FAILED roadmap truths (SC2/MODAL-05, SC6/MACH-03) and
-one human-verification item (SC5/MACH-10). Four gap-closure plans executed:
+The prior round (4/6, `gaps_found`) found two FAILED roadmap truths (SC2/MODAL-05, SC6/MACH-03),
+one still-open Critical defect this round's own code review had found in the prior round's write
+path (raw-bytes uploads silently losing content for HippoRAG), and a concrete named blocker
+(`fact-score`'s empty-string provider 400) stopping both remaining gaps from closing. Four
+gap-closure plans executed:
 
-- **06-10** gave HippoRAG a real, tested write path through the public §18 seam for text-bearing
-  documents, closing the structural half of Gap 1 (06-REVIEW.md's original CR-01).
-- **06-11** flipped MACH-10 to Complete on the owner's recorded confirmation (06-UAT.md Test 1).
-- **06-12** closed both of Falsifier 5's named preconditions spend-free (a judge-identity resolver, a
-  cost-bounded eval-corpus ingest path).
-- **06-13** put both remaining spend decisions to the owner for real: MODAL-05's cross-modality run
-  was **approved** and genuinely attempted against live credentials — and refused by the harness's
-  own post-run verification on a fact-score empty-string defect, before producing a comparison.
-  MACH-03's A/A calibration was **declined** a second time, with the owner's stated reason directly
-  tied to that same-session failure.
+- **06-14** fixed the `fact-score` blocker at its actual root cause — `build_hipporag_index` was
+  resolving HippoRAG's thirteen-position *base* wiring for an index build, dispatching three
+  query-side node positions (including `fact-score`) with no query ever injected. It now resolves
+  the seven-position `corpus-ingest` wiring instead, via a new `variant` keyword on `load_wiring`.
+  Independently, a named client-boundary refusal (`EmptyEmbeddingInputError`) now guards every one
+  of the seven call sites that reach the embedding provider. `.planning/WINDOWS.md` entry id 3
+  closed as `fixed`.
+- **06-15** re-asked the owner the same spend question once, now that the blocker was fixed. The
+  owner approved. Both harnesses ran for real against live `v1/.env.parity` credentials and exited
+  0. MODAL-05 flipped to Complete.
+- **06-16** built `databasise/eval/aa_run.py` — a driver that genuinely did not exist anywhere in
+  the repository before this plan. `calibrate_aa_floor` had no caller outside its own tests, and
+  nothing produced the per-question score mappings it consumes; an approval at 06-13 would have
+  funded a run with no code able to perform it. This plan is spend-free by its own design and
+  performed no run.
+- **06-17** pre-registered the "materially narrower" threshold in `FALSIFIER-5-EVIDENCE.md`,
+  committed before any floor existed, then asked the owner once more for the A/A calibration spend,
+  now with every precondition, the driver, and the threshold genuinely in place. The owner declined
+  a third time. Separately, this plan appended a correction note to the prior round's
+  `06-VERIFICATION.md` naming which later commits closed five of its findings — an append-only note
+  that does not alter that report's own `status`/`score`/gap bodies, both of which I independently
+  confirmed survived byte-for-byte.
 
-Net effect: one truth (SC5/MACH-10) moved from human-verification-needed to VERIFIED. The other two
-FAILED truths (SC2, SC6) are **not** resolved — they remain FAILED, for reasons that changed shape
-(from "unauthorized" to "attempted and refused on a concrete defect" / "preconditions closed, spend
-declined") but did not go away. A new, independently-confirmed Critical defect was also found this
-round in the write path 06-10 built (raw-bytes uploads silently lose content for HippoRAG), which I
-verified is still unfixed as of the latest commit.
+Net effect: one truth (SC2/MODAL-05) moved from FAILED to VERIFIED — a real cross-modality run now
+exists and is independently confirmed, not merely claimed. The other (SC6/MACH-03) remains FAILED,
+for a materially different reason than before: every code precondition is now closed, and the
+remaining gap is a repeated, informed owner decision not to spend, not a defect or missing
+instrument. A code review of this round (`06-REVIEW.md`, commit `183139a`) found 2 Critical + 2
+Warning findings, none fixed (advisory). I independently assessed each below; none of them
+contradicts the roadmap truths this report scores.
 
 ## Goal Achievement
 
@@ -183,203 +172,134 @@ verified is still unfixed as of the latest commit.
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | HippoRAG 2 runs as thirteen fitted node positions, no opaque core left, whole-graph PPR via §14.2 bulk-export into native igraph/prpack, index-side depth stays `opaque` until parity shown | ✓ VERIFIED | Unchanged this round (no files in scope touched `base.json`'s node inventory beyond WR-01's effects correction, already verified). `databasise/wirings/hipporag/base.json` still declares 13 nodes; `ppr.py` still calls `export_to_igraph()` → native `personalized_pagerank(implementation="prpack")`. Regression-checked: full suite includes `test_thirteen_positions.py`/`test_graph_bulk_export.py`, part of the reported 936 passed / 3 skipped. |
-| 2 | LightRAG and HippoRAG 2 run on one corpus, isolated stores, outputs structurally comparable | ✗ FAILED | Structural write path now real and tested (06-10). One real, authorized attempt was made and refused before completion by the harness's own verification (`fact-score` node, provider 400 on empty-string input) — `CROSS-MODALITY-EVIDENCE.md`'s new section. No comparable output exists. Independently, a new unfixed Critical defect (06-REVIEW.md) means raw-byte uploads to HippoRAG silently lose all content. See Gap 1. |
-| 3 | Caller sends one query against two or more modalities, receives per-arm results keyed by caller-supplied selectors, no verdict, single arm degenerates to a run | ✓ VERIFIED | Unchanged this round — `Databasise.compare`, `POST /compare`, MCP `compare` tool untouched by 06-10..06-13's `files_modified`. Regression-checked via full suite (936 passed / 3 skipped includes `test_compare.py`, `test_rest_transport.py`, `test_dual_transport_parity.py`). |
-| 4 | The first genuine seam call records F-14's outcome either way | ✓ VERIFIED | Unchanged this round — `F-14-SEAM-INVARIANCE.md` untouched by any of the four gap-closure plans' `files_modified` lists. |
-| 5 | Mutable-store components have a defined snapshot/reset protocol or are recorded as permanently excluded — F-07 discharged | ✓ VERIFIED | **Moved from human-verification-needed to VERIFIED this round.** 06-11 flipped MACH-10 to Complete in `.planning/REQUIREMENTS.md` citing 06-UAT.md Test 1 (`result: pass`, owner confirmed 2026-09-10) and `F-07-MUTABLE-STORE-DISPOSITION.md`. Independently confirmed: `.planning/REQUIREMENTS.md` line 24 reads `- [x] **MACH-10**` with the `Confirmed 2026-09-10` annotation appended after (not replacing) the original 06-09 annotation; coverage table row reads `| MACH-10 | Phase 6 | Complete |`. Enforcement tests (`test_mutable_store_exclusion.py`, `test_f07_record.py`) re-run clean (16/16 pass). |
-| 6 | Owner mints an eval bundle (MACH-02) then runs one A/A calibration reading a p95 floor at both target families with T1 materially narrower than T0 (MACH-03, Falsifier 5) | ✗ FAILED | MACH-02 unchanged, still satisfied. MACH-03: both named preconditions closed in code by 06-12 (`remint.py`, `corpus_ingest.py`, independently confirmed by reading both modules and running their tests — 10/10 pass). No real A/A run has ever executed; owner declined the spend a second time at 06-13's checkpoint, citing the same-session `fact-score` failure. `FALSIFIER-5-EVIDENCE.md`'s new "Deferred again" section records this honestly, no floor value for either tier. See Gap 2. |
+| 1 | HippoRAG 2 runs as thirteen fitted node positions, no opaque core left, whole-graph PPR via §14.2 bulk-export into native igraph/prpack, index-side depth stays `opaque` until parity shown | ✓ VERIFIED | Unchanged this round — no file in scope touched `base.json`'s node inventory. Independently re-ran `tests/parts_core/hipporag/test_thirteen_positions.py tests/stores/test_graph_bulk_export.py` directly: 12 passed. |
+| 2 | LightRAG and HippoRAG 2 run on one corpus, isolated stores, outputs structurally comparable | ✓ VERIFIED | 06-15's real run completed against live credentials: `IndexBuildResult` returned `graph_node_count=229`, `graph_edge_count=460`, `chunk_vector_count=20`, `entity_vector_count=209`, `fact_vector_count=226`, `partial=False`, `degraded=False`; `CrossModalityRecord` returned `directories_disjoint=True`, `artifacts_overlap=False`, identical envelope field sets on both arms for both corpus queries, no arm `partial`/`degraded`. Independently confirmed against `CROSS-MODALITY-EVIDENCE.md`'s `## Real run — 2026-09-10` section and `.planning/REQUIREMENTS.md`'s MODAL-05 row (`Complete`). The prior round's own new raw-upload data-loss defect (06-REVIEW.md CR-01 that round) is independently confirmed fixed: `databasise/seam/engine.py:674` raises `NoRawUploadPathForModalityError`; `tests/seam/test_hipporag_write_path.py -k raw_upload_against_a_hipporag_selector_refuses` re-run directly, 1 passed. |
+| 3 | Caller sends one query against two or more modalities, receives per-arm results keyed by caller-supplied selectors, no verdict, single arm degenerates to a run | ✓ VERIFIED | Unchanged this round — `Databasise.compare`, `POST /compare`, MCP `compare` tool untouched by 06-14..06-17's `files_modified` lists. Independently re-ran `tests/seam/test_compare.py tests/seam/test_rest_transport.py tests/mcp/test_dual_transport_parity.py tests/seam/test_mutable_store_exclusion.py tests/evidence/test_f07_record.py` directly: 55 passed. |
+| 4 | The first genuine seam call records F-14's outcome either way | ✓ VERIFIED | Unchanged this round — `git log` confirms `databasise/evidence/F-14-SEAM-INVARIANCE.md`'s only commit predates this round entirely (06-03). |
+| 5 | Mutable-store components have a defined snapshot/reset protocol or are recorded as permanently excluded — F-07 discharged | ✓ VERIFIED | Unchanged this round — MACH-10 stayed Complete, `F-07-MUTABLE-STORE-DISPOSITION.md`'s only commit predates this round (06-09). Regression-checked above (`test_mutable_store_exclusion.py`, `test_f07_record.py` both in the 55-passed re-run). |
+| 6 | Owner mints an eval bundle (MACH-02) then runs one A/A calibration reading a p95 floor at both target families with T1 materially narrower than T0 (MACH-03, Falsifier 5) | ✗ FAILED | MACH-02 unchanged, satisfied. Every code precondition for MACH-03 is now closed — 06-12's judge-identity resolver and cost-bounded ingest, 06-14's fact-score root-cause fix, 06-16's previously-nonexistent A/A driver (`databasise/eval/aa_run.py`, 13 tests, independently re-run: 13/13 pass), and 06-17's threshold pre-registered before any floor exists (confirmed in `git log` order: `322d46f` precedes both of 06-17's own later commits, and no commit anywhere carries a floor value). The owner declined the real spend a third time (06-06, 06-13, 06-17). No real A/A run has ever executed; no floor exists at either tier. Falsifier 5 stays open, not failed — this is not a falsified hypothesis. But SC6's own text requires a real measurement, and none exists. See Gap 1. |
 
-**Score:** 4/6 truths verified (0 present-but-behavior-unverified) — up from 3/6 last round.
+**Score:** 5/6 truths verified (0 present-but-behavior-unverified) — up from 4/6 last round.
 
-### CR-01 (this round) Assessment — raw-bytes ingest silently loses content for HippoRAG
+### Anti-Patterns Found (this round's code review, independently assessed)
 
-I independently confirmed 06-REVIEW.md's new Critical finding by reading the cited code directly:
+| File | Line | Pattern | Severity | Impact |
+|------|------|---------|----------|--------|
+| `databasise/tests/evidence/test_falsifier5_record.py` | `floor_value_pattern` | The `<=`-exclusion added to catch the pre-registered threshold text also admits ANY `floor <= <number>` / `p95 <= <number>` phrasing, not just the specific pre-registered formula — a future SUMMARY could phrase a fabricated floor as a bound and this guard would not catch it (06-REVIEW.md CR-01, this round, unfixed) | 🛑 Blocker (latent) | Does **not** affect this round's SC6 verdict — I independently read `FALSIFIER-5-EVIDENCE.md` in full and confirmed no floor value of any kind appears anywhere in it, for either tier, under any of its four dated sections. The risk is forward-looking: this evidence-integrity guard is weaker than intended for whichever future plan actually runs the calibration. Should be tightened before that plan lands, not before this one is scored. |
+| `databasise/seam/rest.py:260-285` | selector parse at line 284 | `POST /documents/upload` returns an unhandled 500, not the documented 422, on a malformed multipart `selector` JSON field — violates the module's own "never a raw 2xx-or-500, 422 uniformly for every refusal" contract (06-REVIEW.md CR-02, this round, unfixed) | ⚠️ Warning | Does not implicate any of the six roadmap truths directly — SC3/API-08's own tested truth is `compare()`'s per-arm keying and no-verdict behavior, not `/documents/upload`'s error-shape contract. It is a real gap in the seam's stated robustness contract and should be fixed as ordinary follow-up work, not a phase-blocking finding. |
+| `databasise/eval/aa_run.py` | `score_gold_passage` | Divides by zero on an empty `gold_document_ids` list (06-REVIEW.md WR-01, this round, unfixed) | ⚠️ Warning | Only reachable on a real `--spend` invocation, which has never occurred — does not affect any truth scored above. Should be fixed before the real A/A run is next attempted (see Gap 1's `missing`). |
+| `databasise/eval/aa_run.py` | `main`'s `--spend` path | Does not catch a partial/degraded run or a `SeamRefusalError`, producing a raw traceback instead of the module's own clean-refusal pattern (06-REVIEW.md WR-02, this round, unfixed) | ⚠️ Warning | Same as above — only reachable on a real `--spend` invocation, never taken. |
+| `databasise/tests/eval/test_aa_run.py` | module-level `pytestmark` | Blanket `pytestmark = pytest.mark.asyncio` applied over sync test functions — 6 `PytestWarning`s on every full-suite run, no behavioral effect | ℹ️ Info | Cosmetic, pre-confirmed by this round's own review and by 06-17-SUMMARY.md's own "Known follow-up" note. Observed directly in this verification's own full-suite run. |
 
-- `databasise/seam/engine.py` lines 665-685 (`document.raw is not None` branch of `ingest()`): for a
-  raw-bytes payload it unconditionally stamps `node_config["documents"] = [{"id": document_id,
-  "document_id": document_id, "text": ""}]`, with the real content only reachable via `file_paths`/
-  `docs_format`. This is correct for LightRAG's opaque `full-ingest` node (a v1 subprocess that
-  parses `pending_parse`-tagged files) and silently wrong for HippoRAG's `chunk-embed`.
-- `databasise/parts_core/hipporag/chunk_embed.py` lines 66-91 (`_chunk_embed_body`): reads only
-  `document["text"]`/`document["document_id"]`; has no knowledge of `file_paths`/`docs_format` at
-  all. For a raw-upload document, `text` is always `""`, `_split_into_chunks("", ...)` returns `[]`
-  by its own explicit guard, and the node returns `{"chunks": []}` — no embedding call, no write.
-- Every downstream HippoRAG node degrades gracefully on an empty list (`openie.py`'s own
-  `if not chunks: return {"findings": []}`), so the entire seven-node chain "succeeds" having
-  written nothing for that document, and `ingest()`'s own no-fabricated-zero fallback (`enqueued =
-  result.get("enqueued"); if enqueued is None: enqueued = 1`) returns a normal `IngestJob(enqueued=1)`
-  — indistinguishable from a real success.
-- `git log --oneline -15` confirms `cc3abf3` (the review itself) is the current HEAD for this scope;
-  there is no subsequent fix commit. `06-REVIEW-FIX.md` on disk is dated `03:48:32Z`, hours before
-  `06-REVIEW.md`'s `18:30:00Z` review that found this defect — it fixes the *prior* round's CR-01/
-  WR-01/WR-02, not this one. **This defect is confirmed still open.**
-
-**Conclusion:** This does not contradict 06-10's own must-have truths, which were tested and
-verified using `text=`-only `IngestDocument`s — those pass genuinely. But it means the write path
-06-10 built is unsafe for the realistic caller shape (a PDF/DOCX upload via `/documents/upload`)
-against a HippoRAG selector, with silent data loss and no error signal anywhere in the response.
-This is scored as part of Gap 1 (SC2) below, since it bears directly on whether "the caller sees
-both at once" can be trusted for real documents, not merely fixture text.
+No `TBD`/`FIXME`/`XXX` markers found in any phase-modified file this round. Debt-marker gate clear.
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `databasise/wirings/hipporag/corpus-ingest.json` | HippoRAG's real write-path wiring | ✓ VERIFIED | Parses as JSON; `nodes` has exactly the 7 expected keys; `provides`/`consumes_documents`/`store_namespaces` match `base.json`'s — confirmed by direct read |
-| `databasise/seam/engine.py` (`_corpus_wiring`) | Per-modality write dispatch, filesystem as lookup table | ✓ VERIFIED | Confirmed by direct read: `_corpus_wiring()` builds `_WIRINGS_ROOT / family / f"corpus-{operation}.json"`, raises `NoWritePathForModalityError` when absent |
-| `databasise/seam/refusals.py` (`NoWritePathForModalityError`) | Named refusal, no modality/wiring/node leak | ✓ VERIFIED | Class present; `test_hipporag_write_path.py`'s Test 4 (message-content assertion) passes |
-| `databasise/eval/corpus_ingest.py` | Dry-run-default, cost-bounded eval-corpus ingest | ✓ VERIFIED | `estimate()`, `ingest_documents()`, `LimitExceedsCorpusError`, `main()` all present; `test_corpus_ingest.py` passes (5/5) |
-| `databasise/eval/remint.py` | Real-response-only judge-identity resolver, next-version mint | ✓ VERIFIED | `resolve_judge_identity()`, `remint()`, `UnresolvedJudgeIdentityError` all present; `test_remint.py` passes (5/5) |
-| `.planning/REQUIREMENTS.md` (MACH-10 row) | Flipped Complete with dated, cited annotation | ✓ VERIFIED | `- [x] **MACH-10**` with `Confirmed 2026-09-10` annotation appended after the original; coverage table row `Complete` |
-| `databasise/evidence/CROSS-MODALITY-EVIDENCE.md` | Append-only; 2026-09-09 content intact, new dated section for the real attempt | ✓ VERIFIED | 2026-09-09 header/content byte-identical to prior round's cited text; new `## Real run attempted — refused — 2026-09-10` section below it, no fabricated counts |
-| `databasise/evidence/FALSIFIER-5-EVIDENCE.md` | Append-only; 2026-09-09 content intact, new dated deferral section | ✓ VERIFIED | 2026-09-09 content intact; new `## Deferred again — 2026-09-10` section, no fabricated floor value |
-| `.planning/WINDOWS.md` | `fact-score` defect filed as discoverable future work | ✓ VERIFIED | Entry id 3, `kind: deviation`, `status: open`, dated 2026-09-10T17:44:08.972Z |
-| `.planning/phases/06-hipporag-2-side-by-side/COVERAGE.md` | Corrected write-surface record | ✓ VERIFIED | Names `hipporag/corpus-ingest.json`, `NoWritePathForModalityError`, LightRAG-only `corpus`/`corpus/counts`/`jobs`; the stale "reachable identically" phrase is gone |
-| `databasise/parts_core/hipporag/fact_score.py` (implied working state) | Handle empty-string batch items without a provider 400 | ✗ NOT FIXED | Confirmed open — this is the concrete blocker for both remaining gaps |
-| `databasise/seam/engine.py` (raw-bytes → HippoRAG safety) | Either real parsing or a named refusal for raw uploads against HippoRAG | ✗ MISSING | Confirmed open — 06-REVIEW.md's new Critical finding, unfixed as of `cc3abf3` |
+| `databasise/wirings/resolve.py` (`load_wiring` variant kwarg) | Index-side/query-side wiring lookup generalized to any `<wiring>/<variant>.json` | ✓ VERIFIED | Confirmed by direct read: `load_wiring(wiring_name, *, variant="base")` reads `_WIRINGS_ROOT / wiring_name / f"{variant}.json"`; default preserves every existing caller |
+| `databasise/parity/build_hipporag_index.py` | Resolves the 7-node `corpus-ingest` wiring, not the 13-node base wiring | ✓ VERIFIED | `_INDEX_WIRING_VARIANT = "corpus-ingest"`; `load_wiring("hipporag", variant=_INDEX_WIRING_VARIANT)`; stamping target read from `resolved["consumes_documents"][0]`, confirmed by direct read |
+| `databasise/clients/openai_compat.py` (`EmptyEmbeddingInputError`) | Named refusal at the one method all embedding call sites route through | ✓ VERIFIED | Class present at line 64; `embed()` guards before `embeddings.create`; `__all__` exports it; `tests/clients/test_openai_compat.py` (15 tests) re-run directly, all pass |
+| `databasise/eval/aa_run.py` | Genuine, runnable A/A calibration driver, dry-run by default | ✓ VERIFIED | `score_gold_passage`, `score_answer_level`, `run_one_pass`, `calibrate_family`, `estimate_calls`, `main` all present (25KB module); `tests/eval/test_aa_run.py` (18 tests incl. Task 1's 7 + Task 2's 6 named in plan, actually 13 total per plan's own enumeration) re-run directly, all pass |
+| `databasise/evidence/CROSS-MODALITY-EVIDENCE.md` | Append-only; two prior sections intact, new dated section carrying real harness-returned values | ✓ VERIFIED | `## Real run — 2026-09-10` section present below both prior sections, carrying only `IndexBuildResult`/`CrossModalityRecord` fields; no fabricated numbers found on direct read |
+| `databasise/evidence/FALSIFIER-5-EVIDENCE.md` | Append-only; three prior sections intact, threshold pre-registered before any floor, new dated deferral section | ✓ VERIFIED | `## Pre-registered threshold — 2026-09-11` and `## Deferred a third time — 2026-09-11` both present below all prior sections; no floor value anywhere in the document, confirmed by direct full read |
+| `.planning/REQUIREMENTS.md` (MODAL-05 row) | Flipped Complete with dated, cited annotation | ✓ VERIFIED | `- [x] **MODAL-05**` with `[Measured 2026-09-10 (06-15-PLAN.md): ...]` annotation appended after both prior annotations, all three intact; coverage table row `Complete` |
+| `.planning/REQUIREMENTS.md` (MACH-03 row) | Stays Pending with a fourth dated annotation | ✓ VERIFIED | `- [ ] **MACH-03**` with `[Deferred 2026-09-11 (06-17-PLAN.md): ...]` annotation appended after all three prior annotations, all intact; coverage table row `Pending` |
+| `.planning/WINDOWS.md` | Entry id 3 closed as fixed | ✓ VERIFIED | `open_count: 0`, entry id 3 `status: fixed`, `resolved_at` stamped, both markdown row and JSON block consistent |
+| `.planning/phases/06-hipporag-2-side-by-side/06-VERIFICATION.md`'s own prior version | Append-only correction note, verdict/score untouched | ✓ VERIFIED (superseded by this report) | The prior report's correction note is preserved in git history; this report is the new authoritative verdict per this task's own instructions, not an amendment to the prior file |
+| `databasise/parts_core/hipporag/fact_score.py` (implied working state) | No longer reachable with an empty query at index time | ✓ VERIFIED | Structurally: `test_build_hipporag_index.py`'s Test 2/3 (disjointness, root-cause pin) re-run directly, pass; `fact-score` is absent from the corpus-ingest wiring's 7 nodes |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|----|----|--------|---------|
-| `Databasise.ingest(document, selector=<HippoRAG>)` (text payload) | HippoRAG's own graph/vector/KV namespaces | `_corpus_wiring` → `hipporag/corpus-ingest.json` → 7 nodes → `_build_stores(..., resolved)` | ✓ WIRED | Confirmed by reading `engine.py` and running `test_hipporag_write_path.py`'s tracer test (passes) |
-| `Databasise.ingest(document, selector=<HippoRAG>)` (raw-bytes payload) | HippoRAG's own graph/vector/KV namespaces | same path, but `text` stamped `""` | ✗ NOT_WIRED (silent) | Confirmed by reading `chunk_embed.py`'s `if not text: return []` guard — no vertex/vector/KV write occurs, no error surfaces; 06-REVIEW.md's new Critical finding |
-| `Databasise.delete_document(id, selector=<HippoRAG>)` | (no HippoRAG delete node exists) | `NoWritePathForModalityError` | ✓ WIRED (refuses by name) | Confirmed by reading `engine.py`/`refusals.py`; `test_hipporag_write_path.py` Test 4 passes |
-| `databasise.parity.build_hipporag_index` (real invocation) | `databasise.parity.run_cross_modality` | index-build success gate | ✗ NOT REACHED | `build_hipporag_index` refused (`fact-score` 400) before certifying; `run_cross_modality` was never invoked, per `CROSS-MODALITY-EVIDENCE.md`'s own record |
-| `databasise/eval/corpus_ingest.py --spend` | `Databasise.ingest()` | per-document seam call, bounded by `--limit` | ✓ WIRED (spend-free path proven; live path never invoked for real) | `ingest_documents()` confirmed to call `engine.ingest(...)` once per document; `test_corpus_ingest.py`'s call-counting tests pass |
-| `databasise/eval/remint.py` | `databasise.eval.bundle.mint_bundle` | `resolve_judge_identity()` → `remint()` | ✓ WIRED (spend-free path proven; live path never invoked for real) | `remint()` confirmed as a thin call-through; `test_remint.py`'s byte-pinning test passes |
+| `build_hipporag_index.build_index` (real invocation) | `databasise.parity.run_cross_modality` (real invocation) | index-build success gate | ✓ WIRED | Both harnesses exited 0 in sequence against live credentials (06-15); confirmed via `CROSS-MODALITY-EVIDENCE.md`'s harness-returned values and `.planning/REQUIREMENTS.md`'s MODAL-05 row |
+| `Databasise.ingest(document, selector=<HippoRAG>)` (raw-bytes payload) | `NoRawUploadPathForModalityError` | `engine.py:674`, before any node config is stamped | ✓ WIRED (refuses by name) | Confirmed by direct read of `engine.py`/`refusals.py`; `tests/seam/test_hipporag_write_path.py -k raw_upload_against_a_hipporag_selector_refuses` re-run directly, 1 passed |
+| every `ctx.clients["embedding"].embed(...)` call site | `OpenAICompatibleClient.embed` | `EmptyEmbeddingInputError` | ✓ WIRED (refuses by name) | Confirmed by direct read; `tests/clients/test_openai_compat.py` tests 11-15 re-run directly, pass |
+| `databasise.eval.aa_run.calibrate_family` | `databasise.eval.calibration.calibrate_aa_floor` | direct call, no second path to a floor | ✓ WIRED (spend-free path proven; live path never invoked) | Confirmed by direct read: `calibrate_family` does not catch `UnusableFloorError`/`StaleNullError`; Test 9 (propagation on `cache_hit`-true) re-run directly, passes |
+| `databasise.eval.aa_run.main --spend` | `databasise.eval.remint` → `databasise.eval.corpus_ingest --spend` → `databasise.eval.aa_run --spend` | 06-17's checkpoint | ✗ NOT REACHED | Owner declined; no command in this chain was ever invoked with a live credential this round |
 
 ### Data-Flow Trace (Level 4)
 
 | Artifact | Data Variable | Source | Produces Real Data | Status |
 |----------|---------------|--------|---------------------|--------|
-| `chunk_embed.py` (`text=`-payload ingest) | `text` | caller-supplied `IngestDocument.text`, stamped verbatim into `node_config["documents"][0]["text"]` | Yes | ✓ FLOWING |
-| `chunk_embed.py` (`raw=`-payload ingest, HippoRAG-resolving selector) | `text` | `engine.py` always stamps `""` for the raw path regardless of target modality | No | ✗ HOLLOW_PROP — caller-supplied bytes never reach the field the node reads; a real, non-empty payload is hardcoded to empty at the seam boundary |
-| `build_hipporag_index.IndexBuildResult` (real corpus) | node/edge/vector counts, token spend | never constructed — harness raised `HippoRAGIndexBuildRefusedError` before assembly | N/A | ✗ DISCONNECTED — no comparable output exists for the real corpus at all |
+| `build_hipporag_index.IndexBuildResult` (real corpus) | node/edge/vector counts, token spend, duration | 06-15's real live invocation, `IndexBuildResult.to_dict()` | Yes | ✓ FLOWING — read directly from `CROSS-MODALITY-EVIDENCE.md`'s `## Real run — 2026-09-10` section |
+| `run_cross_modality.CrossModalityRecord` (real corpus) | per-query, per-arm envelope structure | 06-15's real live invocation | Yes | ✓ FLOWING |
+| `chunk_embed.py` (`raw=`-payload ingest, HippoRAG-resolving selector) | `text` | `engine.py` now refuses before any node config is stamped | N/A | ✓ CLOSED BY REFUSAL — the previously `HOLLOW_PROP` path is unreachable; the guard fires first |
+| `aa_run.CalibrationResult.floor` (both target families) | `floor`, `NullIdentity` fields | never constructed — owner declined the spend that would invoke `calibrate_family` for real | N/A | ✗ DISCONNECTED — no comparable output exists for either target family; this is Gap 1's own subject, not a new finding |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| HippoRAG write-path tracer, no-selector default parity, isolation, delete refusal, write-path invariant, transport parity | `pytest tests/seam/test_hipporag_write_path.py` | 33 passed total across this and the checks below (see combined run) | ✓ PASS |
-| Cost-bounded eval-corpus ingest (tracer, spend-nothing default, bound enforcement, over-large-limit refusal, per-arm labelling) | `pytest tests/eval/test_corpus_ingest.py` | included in combined run | ✓ PASS |
-| Judge-identity resolution and bundle re-mint (present/absent identity, byte-pinning, idempotent re-mint, no-credentials refusal) | `pytest tests/eval/test_remint.py` | included in combined run | ✓ PASS |
-| Mutable-store exclusion and F-07 disposition record (now claimed Complete in REQUIREMENTS.md) | `pytest tests/seam/test_mutable_store_exclusion.py tests/evidence/test_f07_record.py` | included in combined run | ✓ PASS |
-| Combined: `pytest tests/seam/test_hipporag_write_path.py tests/eval/test_corpus_ingest.py tests/eval/test_remint.py tests/seam/test_mutable_store_exclusion.py tests/evidence/test_f07_record.py` | (run directly by this verifier) | 33 passed in 3.76s | ✓ PASS |
-| Full workspace suite (reported by orchestrator, not re-run in full here per the no-redundant-full-run rule) | `uv run --extra rest --extra mcp pytest -q` | 936 passed, 3 skipped (per test_state); regression gate over 87 prior-phase files: 750 passed, 1 skipped, no cross-phase regressions | ✓ PASS (as reported) |
-| HippoRAG wiring JSON structural check | `python -c "json.loads(...)"` over `wirings/hipporag/corpus-ingest.json` | 7 nodes, `provides`/`consumes_documents` correct | ✓ PASS |
+| SC1 regression: thirteen positions, native graph bulk-export | `pytest tests/parts_core/hipporag/test_thirteen_positions.py tests/stores/test_graph_bulk_export.py` | 12 passed | ✓ PASS |
+| SC2 regression: raw-upload-against-HippoRAG refusal | `pytest tests/seam/test_hipporag_write_path.py -k raw_upload_against_a_hipporag_selector_refuses -x` | 1 passed | ✓ PASS |
+| SC2/06-14/06-16 targeted: wiring-swap, empty-embedding guard, A/A driver | `pytest tests/parity/test_build_hipporag_index.py tests/clients/test_openai_compat.py tests/eval/test_aa_run.py -x` | 31 passed (6 cosmetic asyncio-mark warnings, IN-01) | ✓ PASS |
+| SC3/SC5 regression: compare, REST/MCP transport parity, mutable-store exclusion, F-07 record | `pytest tests/seam/test_compare.py tests/seam/test_rest_transport.py tests/mcp/test_dual_transport_parity.py tests/seam/test_mutable_store_exclusion.py tests/evidence/test_f07_record.py -x` | 55 passed | ✓ PASS |
+| Full workspace suite (independently re-run by this verifier in full, once) | `cd databasise && uv run pytest -q` | 962 passed, 1 skipped, exit 0, 165.38s | ✓ PASS — matches the reported suite state exactly |
 
 ### Probe Execution
 
 Not applicable — this phase has no `scripts/*/tests/probe-*.sh` harness; verification relied on the
-project's own pytest suite and direct code reading, per the phase's own conventions.
+project's own pytest suite (independently re-run, not taken from SUMMARY claims) and direct code
+reading.
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
 |-------------|-------------|--------------|--------|----------|
-| MODAL-04 | 06-01, 06-02, 06-05, 06-07 | HippoRAG 2 fully decomposed, 13 positions, no opaque core | ✓ SATISFIED | Complete in REQUIREMENTS.md; unchanged this round, regression-checked |
-| MODAL-05 | 06-01, 06-03, 06-08, 06-10, 06-13 | Both modalities run side-by-side on one corpus, comparable | ✗ BLOCKED | Pending in REQUIREMENTS.md, correctly. Structural write path closed (06-10); one real attempt was authorized and refused (fact-score defect, 06-13); a new unfixed Critical raw-upload defect also found this round |
-| API-08 | 06-03 | One query against 2+ modalities, per-arm keyed results, inspection-only | ✓ SATISFIED | Complete in REQUIREMENTS.md; unchanged this round, regression-checked |
-| MACH-10 | 06-09, 06-11 | F-07 discharged: mutable-store snapshot/reset or permanent exclusion | ✓ SATISFIED | **Newly Complete this round.** Owner confirmation recorded in 06-UAT.md Test 1; REQUIREMENTS.md flipped by 06-11; independently confirmed |
+| MODAL-04 | 06-01, 06-02, 06-05, 06-07 | HippoRAG 2 fully decomposed, 13 positions, no opaque core | ✓ SATISFIED | Complete in REQUIREMENTS.md; unchanged this round, regression-checked (12 passed above) |
+| MODAL-05 | 06-01, 06-03, 06-08, 06-10, 06-13, 06-14, 06-15 | Both modalities run side-by-side on one corpus, comparable | ✓ SATISFIED | **Newly Complete this round.** Real run completed against live credentials (06-15); independently confirmed against harness-returned values, code state, and a live regression re-run |
+| API-08 | 06-03 | One query against 2+ modalities, per-arm keyed results, inspection-only | ✓ SATISFIED | Complete in REQUIREMENTS.md; unchanged this round, regression-checked (55 passed above). Note: `POST /documents/upload`'s 500-vs-422 gap (CR-02) is a real but separate robustness finding against this endpoint's own error-shape contract, not against API-08's tested compare/query truth. |
+| MACH-10 | 06-09, 06-11 | F-07 discharged: mutable-store snapshot/reset or permanent exclusion | ✓ SATISFIED | Complete in REQUIREMENTS.md; unchanged this round, regression-checked |
 | MACH-02 | 06-04 | Eval bundle minted with dev/holdout/sealed, both §EV.2 families | ✓ SATISFIED | Complete in REQUIREMENTS.md; unchanged this round |
-| MACH-03 | 06-06, 06-12, 06-13 | First A/A calibration, p95 floor at both tiers, Falsifier 5 | ✗ BLOCKED | Pending in REQUIREMENTS.md, correctly. Both preconditions closed in code (06-12); spend declined a second time (06-13), citing the fact-score failure |
+| MACH-03 | 06-06, 06-12, 06-16, 06-17 | First A/A calibration, p95 floor at both tiers, Falsifier 5 | ✗ BLOCKED | Pending in REQUIREMENTS.md, correctly. Every code precondition closed; owner declined the spend a third time. Falsifier 5 open, not failed. |
 
-No orphaned requirements: all six IDs declared across Phase 6 plans (`06-01` through `06-13`) match
+No orphaned requirements: all six IDs declared across Phase 6 plans (`06-01` through `06-17`) match
 exactly the six requirement rows REQUIREMENTS.md maps to "Phase 6."
-
-### Anti-Patterns Found
-
-| File | Line | Pattern | Severity | Impact |
-|------|------|---------|----------|--------|
-| `databasise/seam/engine.py` / `databasise/parts_core/hipporag/chunk_embed.py` | engine.py:665-685; chunk_embed.py:66-91 | Raw-bytes `IngestDocument` against a HippoRAG-resolving selector silently loses all content — `text` stamped `""`, no refusal, `IngestJob(enqueued=1)` returned as if successful | 🛑 Blocker | This round's own code review (06-REVIEW.md) Critical finding, independently confirmed here, still unfixed as of `cc3abf3`. Untested in every direction. Directly undermines "the caller sees both at once" for realistic document uploads to HippoRAG. |
-| `databasise/parts_core/hipporag/fact_score.py` | (empty-string batch item) | Provider call raises a 400 on an empty-length string rather than skipping/guarding it | 🛑 Blocker | The concrete blocker that stopped the one real, authorized cross-modality attempt and the reason the owner declined the A/A calibration spend. Filed at `.planning/WINDOWS.md` entry id 3, `status: open` — a real, discoverable ledger entry, not buried in prose. |
-| `databasise/seam/rest.py:287` | `DeleteRequest = DeleteRequest()` | Mutable module-level singleton as a route default (fragile if a future edit mutates it) | ⚠️ Warning | Not observed to cause incorrect behavior today (06-REVIEW.md WR-01, this round) |
-| `databasise/parts_core/hipporag/graph_augment_persist.py` | 78-82 | Iterates `weight_by_pair` unsorted, inconsistent with sibling edge-builders | ℹ️ Info | Carried forward, unchanged (06-REVIEW.md IN-01) |
-| `databasise/stores/vector.py` | 272-315 | `self_knn`'s self-exclusion assumes the self-match is within the `top_k+1` window | ℹ️ Info | Carried forward, unchanged (06-REVIEW.md IN-02) |
-| `databasise/seam/engine.py` | 662-663, 772 | `resolved["consumes_documents"][0]`/`resolved["provides"][0]` indexed with no bounds check | ℹ️ Info | Low priority given today's wirings are all well-formed; would surface as a raw exception rather than a named refusal for a future malformed file (06-REVIEW.md IN-03) |
-
-No `TBD`/`FIXME`/`XXX` markers found in any phase-modified file. Debt-marker gate clear.
 
 ### Human Verification Required
 
-None. The one item outstanding from the prior round (MACH-10's owner confirmation) is now closed and
-independently verified above. No new human-verification items were identified this round — the two
-remaining gaps (SC2, SC6) are both resolved to concrete, code-traceable blockers (`fact-score.py`'s
-empty-string handling; the raw-upload data-loss defect) rather than open policy questions.
+None. All six roadmap Success Criteria resolve to either VERIFIED (independently confirmed against
+code, evidence documents, and a live test re-run) or FAILED (SC6 — an observable truth this
+codebase does not yet contain, for a reason precisely characterized above: a repeated, informed
+owner decision not to spend, not an open policy question or an ambiguous code state). Nothing in
+this round requires a human judgment call this report cannot already make from direct evidence.
 
 ### Gaps Summary
 
-Two of six roadmap Success Criteria remain unmet, and both are honestly recorded as Pending in
-REQUIREMENTS.md and in their own evidence documents — this is not an oversight this round, it is the
-project's own discipline against rounding a partial or refused result up to Complete, working as
-intended. Real progress happened:
+Five of six roadmap Success Criteria are now met, up from four last round. The remaining gap
+(SC6/MACH-03/Falsifier 5) is real, and it is precisely characterized rather than rounded in either
+direction:
 
-1. **SC2 (side-by-side one corpus)** — the structural write-surface gap from the prior round is
-   genuinely closed for text-bearing documents (06-10), and the owner genuinely authorized and
-   attempted the real spend-incurring run (06-13). But the attempt was refused by the harness's own
-   verification on a concrete, previously-unexercised code defect (`fact-score`'s empty-string
-   handling), so no comparable output exists. Separately and more concerning for the phase's own
-   core value, this round's own code review found — and I independently confirmed as still open — a
-   Critical defect where the write path 06-10 just built silently discards all content for a
-   raw-bytes document upload against a HippoRAG selector, with no error signal. Both must be fixed
-   before SC2 can be honestly claimed met.
-2. **SC6 (A/A calibration)** — both of Falsifier 5's named preconditions are closed in code (06-12),
-   real spend-free progress. But no real A/A run has ever executed, and the owner's second decline
-   (06-13) is directly caused by the same `fact-score` defect blocking SC2 — a rational sequencing
-   decision, not neglect.
-
-**The one item that was open for human verification last round (SC5/MACH-10) is now closed and
-verified.** The phase's overall trajectory is genuinely forward: 3/6 → 4/6, one structural gap fully
-closed, both remaining blockers converged onto a single named, filed, fixable code defect
-(`databasise/parts_core/hipporag/fact_score.py`) rather than three separate unresolved items. The
-phase is not yet done — the roadmap's own goal ("the caller sees both at once ... the milestone's
-proof of swappability") still requires a real comparable output that does not exist, and a write
-path that is safe for realistic document uploads, neither of which exists today.
-
----
-
-## Correction — findings closed after this report was written (2026-09-11)
-
-This report was written against commit `cc3abf3`. Commits landing after it closed several of the
-findings recorded above as open; this note records which, and is **not** a re-verification —
-`/gsd-verify-work` owns the verdict, and the `status` and `score` above deliberately still read as
-the verifier left them.
-
-| Section | Row | Closed by | What now holds |
-|---------|-----|-----------|-----------------|
-| Required Artifacts | `databasise/seam/engine.py (raw-bytes → HippoRAG safety)`, recorded `✗ MISSING` | `5827165`, `2cb437a` | `Databasise.ingest()` now raises `NoRawUploadPathForModalityError` before any node config is stamped when a raw-bytes document targets a corpus wiring whose consuming node is not `kind: "opaque"`. |
-| Key Links | `Databasise.ingest(document, selector=<HippoRAG>)` (raw-bytes payload), recorded `✗ NOT_WIRED (silent)` | `5827165`, `2cb437a` | The path now refuses by name rather than returning a normal-looking `IngestJob` over zero writes. |
-| Data-Flow | `chunk_embed.py` (`raw=` payload), recorded `✗ HOLLOW_PROP` | `5827165`, `2cb437a` | Closed by unreachability: the refusal fires before `chunk-embed` is ever dispatched with an empty-text document from a raw upload. |
-| Anti-Pattern row 1 | Silent content loss on raw-bytes ingest against a HippoRAG selector, `🛑 Blocker` | `5827165`, `2cb437a` | Closed, with the regression test `06-REVIEW-FIX.md` names: `test_raw_upload_against_a_hipporag_selector_refuses_by_name_rather_than_losing_content`. |
-| Anti-Pattern row 3 | `rest.py:287` mutable-singleton `DeleteRequest` default, `⚠️ Warning` | `3de871b` | Closed: set `frozen=True` on `_RequestModel`, the shared base for every request DTO in `rest.py`. |
-| Gap 1's first `missing` item | The `fact-score` empty-string fix | `06-14` (`7b5a3df`, `9c4694c`) | Closed at the root: `build_hipporag_index` now dispatches the already-committed seven-position `corpus-ingest` wiring instead of the thirteen-position base wiring (the actual cause — `fact-score` was reached with no query ever injected), and `OpenAICompatibleClient.embed` gained `EmptyEmbeddingInputError` as a second, independent guard. `.planning/WINDOWS.md` entry id 3 is `fixed`. |
-
-**What is not closed by the six rows above, stated against each SUMMARY's real recorded branch:**
-gap 1's third `missing` item — owner re-authorization of the real cross-modality run, followed by a
-real `run_cross_modality` invocation producing an actual per-query comparison — **is** closed: 06-15
-records the owner's real answer as `approve`, and both `build_hipporag_index` and
-`run_cross_modality` exited 0 against live `v1/.env.parity` credentials (`graph_node_count=229`,
-`graph_edge_count=460`, both queries `partial=False`/`degraded=False`), discharging MODAL-05 to
-Complete in `.planning/REQUIREMENTS.md`. With the write-path defect (rows 1-4), the `fact-score`
-defect (row 6), and the real run itself (06-15) all closed, gap 1 (SC2) has no outstanding item left
-as of this note. Gap 2 (SC6/MACH-03/Falsifier 5) is **not** closed: this plan's own Task 1 records
-the owner's real answer as `decline` — a third decline, after 06-06 and 06-13 — so MACH-03 stays
-Pending in `.planning/REQUIREMENTS.md` and Falsifier 5 stays open, not failed; no comparison ran.
-
-`06-REVIEW.md`'s IN-01, IN-02 and IN-03 remain open Info-severity items, deliberately untouched by
-this round: none of them is implicated in the `fact-score` blast radius. In particular, IN-02
-concerns `FaissVectorStore.self_knn`'s top-k window (`databasise/stores/vector.py:272-315`) — the
-synonymy-edges path — while the `fact-score` defect ran through `score_all` and the wiring-resolution
-choice in `build_hipporag_index.py` — a different method and a different call site. IN-01
-(`graph_augment_persist.py`'s unsorted iteration) and IN-03 (`engine.py`'s unbounded-index reads) are
-likewise unrelated to either closed defect and remain open exactly as `06-REVIEW.md` recorded them.
-
----
-*Recorded: 2026-09-11*
+1. **Every code precondition for the A/A calibration is closed.** 06-12's judge-identity resolver
+   and cost-bounded ingest, 06-14's fact-score root-cause fix, 06-16's previously-missing A/A
+   driver, and 06-17's threshold pre-registered before any floor exists — all four are genuine,
+   tested, and independently confirmed here, not merely asserted by their own SUMMARYs.
+2. **No real A/A run has ever executed, and no floor exists at either target family.** The owner
+   has now declined this identically-shaped question three times (06-06, 06-13, 06-17), most
+   recently with every precondition and the driver itself already in place. This is a deliberate,
+   recorded business decision, not a defect — and the project's own evidence documents correctly
+   record Falsifier 5 as open (not failed) and MACH-03 as Pending (not Complete), because no
+   comparison ran and there is no adverse verdict to record. But the roadmap's own SC6 text asserts
+   a real, completed measurement, and that measurement does not exist in this codebase today. The
+   phase goal — "the milestone's proof of swappability" — is achieved for the side-by-side run
+   (SC2) but not for the calibration that would bound how much confidence that comparison deserves
+   (SC6).
+3. **Two Warning-severity defects in `aa_run.py` (06-REVIEW.md WR-01/WR-02) remain unfixed** and
+   would surface only on the first real `--spend` invocation (a divide-by-zero on an empty
+   gold-document list; unhandled exceptions escaping `main`'s refusal-mapping). Neither affects any
+   scored truth today, since the path has never run for real, but a future plan authorizing the
+   spend should fix these first rather than discover them mid-run.
+4. **One latent evidence-integrity risk (06-REVIEW.md CR-01, this round) is worth flagging even
+   though it does not change this round's verdict:** the regex guarding `FALSIFIER-5-EVIDENCE.md`
+   against a smuggled-in floor value was narrowed to admit the pre-registered threshold's own `<=`
+   phrasing, and in doing so became loose enough to admit a genuinely fabricated floor phrased the
+   same way. I independently read the full evidence document and confirmed no floor value exists
+   anywhere in it today — so nothing has been smuggled in — but the guard itself should be
+   tightened before the next plan that could produce a real floor runs against it.
 
 ---
 
-_Verified: 2026-09-10_
+_Verified: 2026-09-11_
 _Verifier: Claude (gsd-verifier)_
