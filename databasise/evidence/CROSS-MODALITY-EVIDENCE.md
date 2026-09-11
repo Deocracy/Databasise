@@ -193,3 +193,88 @@ resolved.
 
 ---
 *Real run attempted, refused before verification — 2026-09-10*
+
+## Real run — 2026-09-10
+
+**Claim.** The owner re-authorized the real cross-modality run at 06-15-PLAN.md's Task 1
+`gate="blocking-human"` checkpoint (`approve`), now that 06-14 closed the `fact-score`
+empty-string defect that killed the attempt recorded in the section immediately above. Both
+harnesses ran to completion this time.
+
+**Method.** Three preconditions were asserted and confirmed before the owner was asked:
+`v1/.env.parity` present and resolving a real `llm`/`embedding` client pair; the Phase 3
+v1-built LightRAG index present at `v1/.parity_v2_store/shared-4fab18fef508b7bc3dda1cc2d8f12e36`;
+`load_wiring("hipporag", variant="corpus-ingest")` resolving to a 7-node wiring (vs. the
+13-node base wiring `load_wiring("hipporag")` still returns) — 06-14's fix. `cd databasise &&
+uv run pytest -q` was also re-run and confirmed green (960 passed, 3 skipped) before proceeding.
+`uv run python -m databasise.parity.build_hipporag_index` was invoked first against live
+`v1/.env.parity` credentials and exited 0. Only then was
+`uv run python -m databasise.parity.run_cross_modality` invoked, which also exited 0. Neither
+harness's own guards were weakened, bypassed, or edited.
+
+**Findings.** Every value below is read directly from the two harnesses' own returned records —
+`IndexBuildResult.to_dict()` and `CrossModalityRecord.to_dict()` — nothing estimated, rounded
+up, or inferred.
+
+`build_hipporag_index` (`IndexBuildResult`):
+
+- `corpus_hash`: `ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd`
+- `workspace`: `shared-4fab18fef508b7bc3dda1cc2d8f12e36`
+- `graph_node_count`: 229, `graph_edge_count`: 460
+- `chunk_vector_count`: 20, `entity_vector_count`: 209, `fact_vector_count`: 226
+- `token_spend`: `Qwen/Qwen3-Embedding-8B` — 5,818 prompt tokens, 0 completion tokens, 3 calls;
+  `qwen/qwen3.7-flash` — 10,013 prompt tokens, 109,341 completion tokens, 40 calls (plus one
+  zero-activity `counted_by: "none"` entry the accounting emits unconditionally)
+- `duration_seconds`: `1218.0277675039833` (~20.3 minutes)
+- `partial`: `False`, `degraded`: `False`
+
+`run_cross_modality` (`CrossModalityRecord`):
+
+- `corpus_hash`: same as above
+- `preflight`: `directories_disjoint=True`;
+  `lightrag_recipe_hash=sha256:334251bbb38683997ad4720cef0be7487534a74add97b15a6c55ed3b63004c4d`;
+  `hipporag_recipe_hash=sha256:77bd66a7d8bdf0ed23476d30a4694f5bfdb8158883acad255cb9b978f59b74a4`;
+  `artifacts_overlap=False` — the RIG.md `## §RUN.2` norm for two unrelated recipes sharing no
+  resolved input
+- **q1** ("Were Scott Derrickson and Ed Wood of the same nationality?"): arm `reads_vector`
+  (LightRAG `naive`) returned 10 items, `partial=False`, `degraded=False`, `stop_reason=None`;
+  arm `reads_graph+reads_kv` (HippoRAG) returned 20 items, `partial=False`, `degraded=False`,
+  `stop_reason=None`
+- **q2** ("What government position was held by the woman who portrayed Corliss Archer in the
+  film Kiss and Tell?"): arm `reads_vector` returned 10 items, `partial=False`, `degraded=False`,
+  `stop_reason=None`; arm `reads_graph+reads_kv` returned 20 items, `partial=False`,
+  `degraded=False`, `stop_reason=None`
+- Both envelopes, on both arms and both queries, carry the identical field set (`answer`,
+  `degradation_reason`, `degraded`, `depth_label`, `evidence`, `partial`, `seam_events`,
+  `stop_reason`, `token_accounting`, `trace_token`) — the structural-comparability check this
+  harness performs, confirmed rather than assumed
+- Full machine-readable record committed at `databasise/parity/.comparison_results/cross_modality.json`
+
+**Verdict.** MODAL-05 is **discharged**. LightRAG and HippoRAG 2 ran side-by-side on the same
+20-document Phase 3 parity corpus, through one `Databasise.compare()` call per query, with
+isolated graph/vector stores (`directories_disjoint=True`, `artifacts_overlap=False`) and
+structurally comparable outputs (identical envelope field sets on both arms; every item
+conforming to the same `§4` item shape) — this milestone's core-value proof point, observed
+rather than asserted. Neither arm reported `partial` or `degraded` on either query. F-14's own
+seam-invariance outcome was already recorded separately
+(`databasise/evidence/F-14-SEAM-INVARIANCE.md`, 06-03-PLAN.md) from an earlier
+synthetic-fixture call; this document is the first real-corpus record and corroborates F-14
+rather than superseding it.
+
+**Limits.**
+
+- The 2026-09-10 refused attempt's own spend is not included in and not recoverable from these
+  figures — that attempt's token accounting was never assembled because the run never completed
+  (see the section immediately above).
+- The two arms' retrieved items differ substantially in identity, count, and ranking (LightRAG's
+  `reads_vector` returns 10 chunk-level hits from its own `chunks` namespace; HippoRAG's
+  `reads_graph+reads_kv` returns 20 differently-scored items from its own `hipporag-chunks`
+  namespace). Per this document's own recorded framework (`## §AA.4`, architecture-comparison
+  mode: two independently-registered wirings sharing no resolved recipe input), this is the
+  expected shape of the result, not a quality finding — this document draws no verdict on which
+  arm's answer is "better."
+- No answer-substance judgment is recorded here — only the structural fact that both arms
+  produced envelope-conformant, non-degraded results for both queries.
+
+---
+*Real cross-modality run against the Phase 3 parity corpus — completed 2026-09-10*
