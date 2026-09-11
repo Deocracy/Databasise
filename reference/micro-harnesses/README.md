@@ -1,6 +1,8 @@
-# Micro-harnesses — research side project
+# Micro-harnesses — research side project (MelodyScribe)
 
 Started 2026-09-11. Owner: Christopher. Status: collecting, not deciding.
+
+Project name: **MelodyScribe** (decided 2026-09-11). Inside Databasise, MelodyScribe is the name of the method: a micro-harness wiring that embeds for itself, routes to graph / vector / SQL / skills, refines cyclically, and serves the frontier model through one human-authored skill. Naming rules in `NAMING.md`.
 
 ## What this folder is
 
@@ -14,6 +16,7 @@ The working definition above is a draft drawn from the owner's earlier work (see
 |---|---|
 | `minicpm5-2b.md` | Notes on the candidate model: identity, benchmarks, training recipe (SFT → RL → OPD), deployment backends, fine-tune recipe, open questions. Every fact tagged with its source. |
 | `prior-art-survey.md` | Answers: can one network be both LLM and embedder (GritLM, LLM2Vec, llama.cpp); which memory harnesses route conversations and documents into graph + vector + SQL (Cognee, MIRIX, Letta, Graphiti, Memori, Hindsight, A-MEM, Mem0, MemOS); which small models are trained to do the routing (Mem-α, Memory-R1, MemoRAG). Verdict: the intersection is unbuilt. |
+| `NAMING.md` | MelodyScribe naming convention: project, method, models (`MelodyScribe-2B-v0.1`), Scriptorium, Folio, Proof, the MelodyScribe skill, seam tool names. |
 | `feasibility.md` | Why the intersection is unbuilt (seven reasons), capability-by-capability feasibility with evidence, the skills store and its injection gate, the two rig experiments that settle the unknowns. |
 | `sources/` | Verbatim snapshots (dated) of the HF model card, the OpenBMB/MiniCPM README, and the TRL fine-tune cookbook. Re-fetch before relying on a number older than a month. |
 
