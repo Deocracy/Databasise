@@ -83,6 +83,7 @@ from databasise.parity.run_arm import (
 from databasise.seam import Databasise
 from databasise.seam.evidence import resolve_evidence_ref
 from databasise.seam.query import QueryObject
+from databasise.seam.refusals import SeamRefusalError
 from databasise.seam.trace_store import TraceStore
 from databasise.stores.vector import MultiNamespaceVectorStore
 
@@ -556,7 +557,13 @@ def main(argv: list[str] | None = None) -> int:
                     seed=args.seed,
                 )
             )
-    except (SplitNotCalibratableError, UnparseableJudgeVerdictError, UnusableFloorError) as exc:
+    except (
+        SplitNotCalibratableError,
+        UnparseableJudgeVerdictError,
+        UnusableFloorError,
+        RuntimeError,  # WR-02: run_one_pass's own confounded (partial/degraded) pass refusal
+        SeamRefusalError,  # WR-02: any refusal the real engine.query() call itself raises
+    ) as exc:
         print(str(exc), file=sys.stderr)
         return 1
 
