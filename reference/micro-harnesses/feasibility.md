@@ -43,6 +43,28 @@ A skill is an instruction the frontier model will follow. If the harness writes 
 - A promote/rollback ledger and validators, which is what cyclical self-refinement needs to be safe.
 - The MiniCPM repo ships Claude Code skills for deploy and fine-tune, so the fine-tune path is scripted.
 
+## Decision 2026-09-11: skill trust boundary
+
+Owner decision: **micro-written skills run sandboxed, for the micro only. The frontier model gets one complementary, human-authored skill that tells it how to talk to the micro.**
+
+```
+ documents ──► micro harness (sandbox) ──► graph / vector / SQL / skills(micro-only)
+                     ▲          │
+   interface skill   │          │ answers = data, fenced
+   (human-authored,  │          ▼
+    frontier reads)  └──── frontier model ──── user
+```
+
+What this closes:
+
+- Micro-written skills never enter the frontier's instruction set. The persistent injection channel named above does not exist.
+- The frontier's only instructions about the micro are in one versioned `SKILL.md` the micro cannot write to. In Databasise terms that skill is the consumer-side guide to the §18 REST/MCP envelope: which tools exist (recall, store, graph search, SQL lookup, list skills), the response shape, and the rule that every returned value is data.
+- Skill sandboxing is a property of the micro's runtime, not of each skill: the micro loads skills only from its own store, and its skill scripts execute with no path to the frontier's context.
+
+What it does not close, stated so it is not forgotten: answers returned to the frontier are still data that can carry instructions, the ordinary RAG injection surface. The seam's fenced envelope is the existing mitigation; nothing new is needed for this design.
+
+Cost: near zero. The MCP surface already exists (Phase 4 and 5), so the interface skill is documentation of tools that are already there, in the same shape the MiniCPM repo uses for its own skills.
+
 ## Ledger
 
 - GritLM's KV reuse crosses an attention-mask boundary (bidirectional embedding pass, causal generation). The README code shows it works; the accuracy cost of the mismatch is in the paper body, not read here. **unverifiable here**
