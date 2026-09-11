@@ -17,6 +17,7 @@ from databasise.eval import aa_run
 from databasise.eval.aa_run import (
     GOLD_PASSAGE_METRIC,
     VERDICT_SCORES,
+    ConfoundedPassError,
     PassResult,
     UnparseableJudgeVerdictError,
     calibrate_family,
@@ -473,3 +474,28 @@ def test_main_refuses_holdout_and_sealed_splits_by_name(capsys):
         assert exit_code != 0
         err = capsys.readouterr().err
         assert split_name in err
+
+
+# --------------------------------------------------------------------------------------------- #
+# Test 14 (WR-01 gap closure) — the --spend path's except tuple actually catches
+# ConfoundedPassError (run_one_pass's own confounded-pass refusal) and exits 1 with the refusal's
+# message on stderr, rather than letting it propagate as an unhandled traceback.
+# --------------------------------------------------------------------------------------------- #
+
+
+def test_main_spend_path_catches_confounded_pass_error_and_exits_1(monkeypatch, capsys):
+    async def _raise_confounded_pass(**kwargs):
+        raise ConfoundedPassError("q1", partial=True, degraded=False)
+
+    monkeypatch.setattr(aa_run, "_load_env_file", lambda path: {})
+    monkeypatch.setattr(aa_run, "_build_clients", lambda env: {"llm": None})
+    monkeypatch.setattr(aa_run, "Databasise", lambda **kwargs: object())
+    monkeypatch.setattr(aa_run, "MultiNamespaceVectorStore", lambda **kwargs: object())
+    monkeypatch.setattr(aa_run, "calibrate_family", _raise_confounded_pass)
+
+    exit_code = aa_run.main(["--split", "dev", "--spend"])
+
+    assert exit_code == 1
+    err = capsys.readouterr().err
+    assert "q1" in err
+    assert "a confounded pass cannot calibrate a null" in err
