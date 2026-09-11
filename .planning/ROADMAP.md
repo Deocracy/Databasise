@@ -240,7 +240,7 @@ Plans:
   5. Mutable-store components either have a defined snapshot/reset protocol or are recorded as permanently excluded from A/B — F-07 discharged rather than left open
   6. Owner mints an eval bundle with dev/holdout/sealed splits carrying questions, gold answers, judge instance, judge prompt hash, corpus snapshot hash, determinism/concurrency setting, and both §EV.2 target families (MACH-02), then runs one A/A calibration and reads a bootstrap-resampled p95 floor keyed to `(bundle@v, tier, metric)` with T1's null width materially narrower than T0's — Falsifier 5, MACH-03, carried forward from Phase 3 per `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`
 
-**Plans**: 17 plans — 9 executed across 6 waves, plus 4 gap-closure plans (06-10..06-13) across 3 further waves, plus 4 more gap-closure plans (06-14..06-17) added 2026-09-10 across 3 further waves (06-VERIFICATION.md re-verified at 4/6; SC2 and SC6 still FAILED, both converging on one filed defect — WINDOWS.md entry id 3)
+**Plans**: 15/17 plans executed — 9 executed across 6 waves, plus 4 gap-closure plans (06-10..06-13) across 3 further waves, plus 4 more gap-closure plans (06-14..06-17) added 2026-09-10 across 3 further waves (06-VERIFICATION.md re-verified at 4/6; SC2 and SC6 still FAILED, both converging on one filed defect — WINDOWS.md entry id 3)
 
 Plans:
 **Wave 1** *(tracer — runs alone, before any expansion)*
@@ -290,7 +290,7 @@ Plans:
 **Gap-closure Wave 5** *(blocked on 06-14; two plans run in parallel — no shared files; not autonomous: 06-15 holds a blocking spend checkpoint)*
 
 - [ ] 06-15-PLAN.md — MODAL-05's real cross-modality run, re-attempted once with the previous wasted authorization named honestly
-- [ ] 06-16-PLAN.md — the missing A/A run driver: two per-question scorers and a dry-run-by-default paired-calibration command line, without which MACH-03 was not runnable at any price
+- [x] 06-16-PLAN.md — the missing A/A run driver: two per-question scorers and a dry-run-by-default paired-calibration command line, without which MACH-03 was not runnable at any price
 
 **Gap-closure Wave 6** *(blocked on 06-15 and 06-16; not autonomous — one blocking spend checkpoint)*
 
@@ -323,7 +323,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. LightRAG Query Side | 13/13 | In Progress|  |
 | 4. The Seam | 5/5 | Complete    | 2026-09-06 |
 | 5. Opaque-Side Admission | 9/9 | Complete    | 2026-09-08 |
-| 6. HippoRAG 2 & Side-by-Side | 12/13 | In Progress|  |
+| 6. HippoRAG 2 & Side-by-Side | 15/17 | In Progress|  |
 | 7. Promotion & Rollback | 0/TBD | Not started | - |
 
 ## Requirement Coverage
