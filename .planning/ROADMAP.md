@@ -299,7 +299,7 @@ Plans:
 ### Phase 7: Promotion & Rollback
 
 **Goal**: The owner can promote a wiring and roll it back on recorded evidence, with nothing inferable by absence
-**Depends on**: Phase 6
+**Depends on**: Phase 6 (code complete; SC6/MACH-03 and Phase 3's MODAL-01 owner items deferred per `.planning/phases/06-hipporag-2-side-by-side/06-GATE-AMENDMENT.md`)
 **Requirements**: MACH-07, API-09, HARD-04, HARD-01, HARD-02
 **Success Criteria** (what must be TRUE):
 
