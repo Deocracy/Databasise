@@ -41,6 +41,8 @@ def _record(**overrides) -> LedgerRecord:
         "parity_records": [],
         "promotion_provenance": "operator_asserted",
         "promotion_trace_ids": [],
+        "change_origin": "human_edit",
+        "record_kind": "promotion",
         "alias": _PROMOTED_ALIAS,
     }
     base.update(overrides)

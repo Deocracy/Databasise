@@ -25,6 +25,8 @@ def _record(**overrides) -> LedgerRecord:
         "parity_records": [],
         "promotion_provenance": "gate_adjudicated",
         "promotion_trace_ids": [],
+        "change_origin": "human_edit",
+        "record_kind": "promotion",
     }
     base.update(overrides)
     return LedgerRecord(**base)
@@ -174,3 +176,74 @@ def test_8_active_pointer_on_unknown_mutation_id_returns_none_and_on_a_single_re
     only = ledger.active_pointer("mut-5")
     assert only is not None
     assert only.verdict == "promote"
+
+
+# --------------------------------------------------------------------------------------------- #
+# 07-01-PLAN.md Task 1: the four additive columns (change_origin, record_kind, minted_version,
+# targets_version) round-trip and do not disturb the append-only triggers.
+# --------------------------------------------------------------------------------------------- #
+
+
+def test_new_columns_round_trip(store_root):
+    ledger = Ledger(store_root)
+    record = _record(
+        mutation_id="mut-6",
+        change_origin="machine_mutation",
+        record_kind="rollback",
+        minted_version="2.0.0",
+        targets_version="1.0.0",
+    )
+
+    ledger.append(record)
+    [stored] = ledger.history("mut-6")
+
+    assert stored.change_origin == "machine_mutation"
+    assert stored.record_kind == "rollback"
+    assert stored.minted_version == "2.0.0"
+    assert stored.targets_version == "1.0.0"
+
+
+def test_ledger_rejects_update_and_delete_after_the_new_columns_land(store_root):
+    ledger = Ledger(store_root)
+    ledger.append(_record(mutation_id="mut-7"))
+
+    with pytest.raises(sqlite3.IntegrityError):
+        ledger._conn.execute(
+            "UPDATE ledger SET change_origin = 'machine_mutation' WHERE mutation_id = 'mut-7'"
+        )
+
+    with pytest.raises(sqlite3.IntegrityError):
+        ledger._conn.execute("DELETE FROM ledger WHERE mutation_id = 'mut-7'")
+
+
+def test_generation_state_reads_minted_or_targeted_version(store_root):
+    ledger = Ledger(store_root)
+    assert ledger.generation_state("gen-alias", "1.0.0") is None
+
+    ledger.append(
+        _record(
+            mutation_id="naive",
+            alias="gen-alias",
+            change_origin="human_edit",
+            record_kind="promotion",
+            minted_version="1.0.0",
+        )
+    )
+    minted = ledger.generation_state("gen-alias", "1.0.0")
+    assert minted is not None
+    assert minted.minted_version == "1.0.0"
+
+    ledger.append(
+        _record(
+            mutation_id="bypass",
+            alias="gen-alias",
+            change_origin="human_edit",
+            record_kind="rollback",
+            minted_version="2.0.0",
+            targets_version="1.0.0",
+        )
+    )
+    latest_for_1_0_0 = ledger.generation_state("gen-alias", "1.0.0")
+    assert latest_for_1_0_0 is not None
+    assert latest_for_1_0_0.record_kind == "rollback"
+    assert latest_for_1_0_0.targets_version == "1.0.0"
