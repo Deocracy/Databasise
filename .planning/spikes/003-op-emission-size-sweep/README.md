@@ -155,6 +155,10 @@ scale-alone: routing accuracy does not rise cleanly with size
 pre-fine-tune.
 
 Primary table (`results.json`, via `run.sh`; identical 1024-token cap):
+Accuracy, token, and count columns are byte-identical between the agent run
+and the owner re-run (2026-09-12, all 126 student decodes identical); the
+s/para column is from the agent run and the owner re-run's `results.json`
+differs by under 5 percent (for example qwen8b 24.59 vs 23.42).
 
 | arm (Q8) | route_exact | subj/val recall | op F1 | parse | Proof-pass | tok/para | s/para |
 |---|---|---|---|---|---|---|---|
