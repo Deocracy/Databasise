@@ -409,6 +409,64 @@ class UncalibratedFloorRefusalError(SeamRefusalError):
         )
 
 
+class UnknownGenerationVersionError(SeamRefusalError):
+    """Raised by ``Databasise.rollback()``/``Databasise.retire()`` (07-02-PLAN.md, D-05/D-07) when
+    ``version`` names no generation ``alias`` has ever minted or acted on
+    (``Ledger.generation_state`` returns ``None``). Covers both "this alias never minted that
+    version" and "that version was minted under a different alias" as the same refusal — from the
+    caller's own vocabulary both are the fact that *this alias has no such generation*; naming the
+    other alias would disclose a generation the caller did not ask about. Names only the caller's
+    own ``alias``/``version``.
+    """
+
+    def __init__(self, *, alias: str, version: str):
+        self.alias = alias
+        self.version = version
+        super().__init__(
+            f"UnknownGenerationVersionError: alias {alias!r} has no generation at version "
+            f"{version!r}"
+        )
+
+
+class TombstonedGenerationError(SeamRefusalError):
+    """Raised by ``Databasise.rollback()``/``Databasise.retire()`` (07-02-PLAN.md, D-05/D-07) when
+    the named generation's latest ledger state (``Ledger.generation_state``) is a tombstone — RIG
+    §PR.2 and CONTRACT §0.4: a retired generation is not reachable again, whether by rolling back
+    to it or by retiring it a second time (a silent second tombstone would be indistinguishable
+    from a real retirement to the caller). Checked by reading the *latest* record for the specific
+    ``(alias, version)`` generation, never by scanning history for a tombstone anywhere — a wiring
+    legitimately retired once and later re-promoted must stay promotable under its new generation.
+    Names only the caller's own ``alias``/``version``.
+    """
+
+    def __init__(self, *, alias: str, version: str):
+        self.alias = alias
+        self.version = version
+        super().__init__(
+            f"TombstonedGenerationError: alias {alias!r} version {version!r} is tombstoned and "
+            "is not reachable again"
+        )
+
+
+class ActiveGenerationRetirementError(SeamRefusalError):
+    """Raised by ``Databasise.retire()`` (07-02-PLAN.md, D-07) when the named generation is
+    ``alias``'s own currently active generation (``Ledger.by_alias(alias).minted_version ==
+    version``). Retiring it would leave the alias resolving to a wiring just declared ineligible,
+    and CONTRACT §16.2 already refuses pins to tombstoned artifacts. The operator rolls back
+    first, then retires — ``by_alias`` walking backward to the most recent non-retired generation
+    would be a second alias-lifecycle mechanism CONTEXT.md states is "not required and not asked
+    for". Names only the caller's own ``alias``/``version``.
+    """
+
+    def __init__(self, *, alias: str, version: str):
+        self.alias = alias
+        self.version = version
+        super().__init__(
+            f"ActiveGenerationRetirementError: alias {alias!r} version {version!r} is the "
+            "currently active generation; roll back first, then retire"
+        )
+
+
 class ForeignEngineRefusalError(SeamRefusalError):
     """The seam-facing wrapper for a foreign-engine subprocess failure
     (``databasise.foreign.CorpusOpSubprocessError``/``CorpusOpTimeoutError``) — so
@@ -448,4 +506,7 @@ __all__ = [
     "GateVerbNotBuiltError",
     "MeasurementPostureRefusalError",
     "UncalibratedFloorRefusalError",
+    "UnknownGenerationVersionError",
+    "TombstonedGenerationError",
+    "ActiveGenerationRetirementError",
 ]
