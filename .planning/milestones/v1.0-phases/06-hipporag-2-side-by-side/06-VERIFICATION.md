@@ -4,6 +4,7 @@ verified: 2026-09-12T18:45:00Z
 status: gaps_found
 score: 5/6 must-haves verified
 covered_files:
+
   - ".planning/REQUIREMENTS.md"
   - ".planning/ROADMAP.md"
   - ".planning/WINDOWS.md"
@@ -53,6 +54,7 @@ covered_files:
   - ".planning/phases/06-hipporag-2-side-by-side/COVERAGE.md"
   - "databasise/clients/openai_compat.py"
   - "databasise/tests/eval/test_aa_run.py"
+
 covered_digest: "v1:sha256:d31a2c70bb12262e630036ba0eff9ba502a64af1aec2a3584f03c1225e11a2ef"
 behavior_unverified: 0
 overrides_applied: 0
@@ -64,6 +66,7 @@ re_verification:
     - "Owner mints an eval bundle (MACH-02) then runs one A/A calibration reading a p95 floor at both target families with T1 materially narrower than T0 (MACH-03, Falsifier 5) — roadmap Success Criterion 6"
   regressions: []
 gaps:
+
   - truth: "Owner mints an eval bundle (MACH-02) then runs one A/A calibration reading a p95 floor at both target families with T1 materially narrower than T0 (MACH-03, Falsifier 5) — roadmap Success Criterion 6"
     status: failed
     reason: >
@@ -90,6 +93,11 @@ gaps:
         issue: "Genuine, tested, runnable A/A calibration driver (13 tests, independently confirmed passing in the full-suite run) that has still never been invoked with --spend in this environment. No floor exists at either tier."
     missing:
       - "One real A/A run producing two CalibrationResult floors (gold_passage_recall, answer_level_correctness), read against the pre-registered threshold in FALSIFIER-5-EVIDENCE.md, discharging MACH-03/Falsifier 5 either way — deferred by 06-GATE-AMENDMENT.md to the first gate-adjudicated promotion, outside this milestone"
+
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-09-12
+  status: gaps_found
 ---
 
 # Phase 6: HippoRAG 2 & Side-by-Side Verification Report

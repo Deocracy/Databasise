@@ -1,41 +1,37 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v1.0
-current_phase: 06
-current_phase_name: HippoRAG 2 & Side-by-Side
-status: executing
+status: Awaiting next milestone
 stopped_at: Completed 06-18-PLAN.md (Phase 6 gap-closure paperwork complete)
-last_updated: "2026-09-12T18:32:01.780Z"
+last_updated: "2026-09-12T20:14:03.956Z"
 last_activity: 2026-09-12
-last_activity_desc: Phase 06 execution started
-state_head: fa2077d614e1e4cad60ad1b667067fe93ac45dc0
+last_activity_desc: Milestone v1.0 completed and archived
+state_head: eed5d1b2e969e04a0e66c2f44969801f8fde85ac
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 7
   total_plans: 64
   completed_plans: 64
 milestone_name: milestone
+current_phase: 06
+current_phase_name: HippoRAG 2 & Side-by-Side
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-12)
+See: .planning/PROJECT.md (updated 2026-09-12 after v1.0 milestone)
 
 **Core value:** Modalities are swappable without consumers noticing — LightRAG and HippoRAG 2 both live behind one unchanging §18 envelope, comparable side-by-side on the rig.
-**Current focus:** Phase 06 — HippoRAG 2 & Side-by-Side
+**Current focus:** v1.0 shipped 2026-09-12. Next: `/gsd-new-milestone`. Owner testing outside any phase per `.planning/TESTING-PLAN.md`.
 
 ## Current Position
 
-Phase: 06 (HippoRAG 2 & Side-by-Side) — EXECUTING
-Plan: 2 of 18
-  corrected here from find-phase's actual plan/summary counts rather than the stale
-  auto-incremented counter, same drift-correction this section already noted before this session)
-Status: Ready to execute
-Last activity: 2026-09-12 — Phase 06 execution started
-
-Progress: [██████████] 100%
+Phase: Milestone v1.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-09-12 — Milestone v1.0 completed and archived
 
 ## Performance Metrics
 
@@ -222,18 +218,27 @@ None yet.
 
 | Phase | State | Resume |
 |-------|-------|--------|
-| 03 | verification_deferred_human | /gsd-verify-work 3 |
+| 03 | verification_deferred_human — carried out of v1.0; owner items in .planning/TESTING-PLAN.md §1 | archived under milestones/v1.0-phases/ |
 
 ## Deferred Items
 
-Items acknowledged and carried forward from previous milestone close:
+Items acknowledged and deferred at milestone close, most recent first:
 
-| Category | Item | Status | Deferred At |
-|----------|------|--------|-------------|
-| *(none)* | | | |
+| Category | Item | Status | Deferred At | Milestone |
+|----------|------|--------|-------------|-----------|
+| verification_gaps | 06/06-VERIFICATION.md — MACH-03 A/A calibration never run (06-GATE-AMENDMENT.md) | gaps_found | 2026-09-12 | v1.0 |
+| verification_gaps | 03/03-VERIFICATION.md — MODAL-01 two owner-only CONTRACT §5 items | human_needed | 2026-09-12 | v1.0 |
+| uat_gaps | 03/03-UAT.md — tests 2 and 3 (answer spot-check, declared-deviation causes) | testing, 2 scenarios open | 2026-09-12 | v1.0 |
+| todos | melodyscribe-interface-skill.md | (presence-only) | 2026-09-12 | v1.0 |
+| todos | melodyscribe-spike-rig-experiments.md | (presence-only) | 2026-09-12 | v1.0 |
+| deferred_items | HARD-01, HARD-02, HARD-04 — deferred out of Phase 7 by 07-GATE-AMENDMENT.md; TESTING-PLAN.md §2, §4 | acknowledged | 2026-09-12 | v1.0 |
 
 ## Session Continuity
 
 Last session: 2026-09-12T18:32:01.640Z
 Stopped at: Completed 06-18-PLAN.md (Phase 6 gap-closure paperwork complete)
 Resume file: None
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

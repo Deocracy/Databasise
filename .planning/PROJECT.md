@@ -27,15 +27,21 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 - ✓ codebase-memory-mcp admitted whole-engine under §17/§8's eleven conditions, run twice (machine chunks / native chunking) — **Falsifier 4** — Validated in Phase 5: Opaque-Side Admission (`databasise/evidence/FALSIFIER-4-EVIDENCE.md`, `databasise/evidence/ADMISSION-CODEBASE-MEMORY-MCP.md`)
 - ✓ REST + MCP surface serving the §18 closed envelope: invariance rule, four selectors, tool-surface-growth rule — REST and envelope in Phase 4: The Seam; MCP capability parity completed and Validated in Phase 5: Opaque-Side Admission
 - ✓ Operator-asserted promotion and rollback on the append-only ledger: `change_origin` and `promotion_provenance` required on every generation record (never defaulted, never inferable by absence), a semver minted at promotion and only at promotion, tombstoned losers never lifted, the active pointer always a derived query — and all three operator verbs atomic under concurrency (MACH-07, API-09) — Validated in Phase 7: Promotion & Rollback (`databasise/evidence/PROMOTION-LEDGER-EVIDENCE.md`)
+- ✓ LightRAG query side re-cut into 17 of 18 §L.1 primitive-part positions, five-arm parity measured on the real corpus (MODAL-01, decomposition and measurement halves) — v1.0, Phase 3; the two CONTRACT §5 owner-only items are in `.planning/TESTING-PLAN.md`
+- ✓ HippoRAG 2 fully decomposed (13 positions, no opaque core, whole-graph PPR via bulk export) and run side-by-side with LightRAG on one corpus, compared in one call with no consumer-visible envelope field changing (MODAL-04, MODAL-05, API-08, MACH-10) — v1.0, Phase 6: the core-value proof point
+- ✓ Eval bundle minted per RIG §EV.1 with dev/holdout/sealed splits and both §EV.2 target families (MACH-02) — v1.0, Phase 6 (`bundle@v1`, 30-question synthetic fixture)
+- ✓ DR-04 decided on `two-covering-rationale` (HARD-03) — v1.0, Phase 5
 
 ### Active
 
-<!-- The four §BP rungs plus the product surface. All hypotheses until shipped. -->
+<!-- Carried out of v1.0. Not a phase: worked from .planning/TESTING-PLAN.md at the owner's pace, or picked up by the next milestone's requirements. -->
 
-- [ ] Eval bundle stood up (dev/holdout/sealed per RIG §EV.1) and first A/A calibration run per tier — **Falsifier 5 gate**, deferred to its point of first need per `.planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md`; no promotion or parity claim is taken before the A/A floor exists
-- [ ] LightRAG query side re-cut into primitive-part nodes (17 of 18 §L.1 positions), parity inside the A/A band (§BP rung 2)
-- [ ] HippoRAG 2 fully decomposed (13 node positions, no opaque core) and run side-by-side against LightRAG on the rig (§BP rung 4)
-- [ ] Model-doc hardening folded in at the phase that first touches it: gate-script vacuous-pass sites, eight ANATOMY §F closure pointers, DR-04 decision
+- [ ] First A/A calibration run and bootstrap p95 floor keyed `(bundle@v, tier, metric)` — **Falsifier 5 / MACH-03**, deferred four times, due at the first gate-adjudicated promotion (`06-GATE-AMENDMENT.md`); driver `databasise/eval/aa_run.py` is built and tested, only real judge spend is missing
+- [ ] MODAL-01 owner items: human-authored causes for the 20 hybrid/local/global excursions and the q1/q2 answer spot-check (CONTRACT §5; `03-UAT.md` tests 2 and 3)
+- [ ] Owner's own corpus layered into the eval bundle before any promotion decision that rides on a measured number (HARD-04)
+- [ ] Doc hardening: gate-script vacuous-pass sites (HARD-01) and ANATOMY §F / PARTS Appendix A reconciliation (HARD-02); landing location for the repairs still undecided (upstream, in-place with recorded divergence, or project-layer copies)
+- [ ] Nyquist validation reconciled for phases 1, 2, 4, 5, 6 (`/gsd-validate-phase N`)
+- [ ] Gate-adjudicated promotion path (measured, with verdict and tier-of-decision) — the next milestone's natural centre, since v1.0 ships only the operator-asserted path
 
 ### Out of Scope
 
@@ -49,7 +55,8 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 
 ## Context
 
-- **Current state:** Phase 1 (Machine Core) complete — 10 plans across 6 waves, 4/4 ROADMAP success criteria verified, 233 tests passing. The machine executes a wiring graph over embedded stores with stable component identity, metering real spend at each node's declared boundary. Next: Phase 2 (Falsifier Gate) — Falsifiers 2 and 5, the rung-1 gate.
+- **Current state:** v1.0 shipped 2026-09-12 — 7 phases, 64 plans, 163 tasks, 569 commits over 15 days. `databasise/` is 48,485 lines of Python with 105 test modules; the full suite is 1068 passed / 1 skipped and needs no external service. Both modalities (LightRAG, HippoRAG 2) run behind the §18 seam in-process, over REST and over MCP; promotion is operator-asserted only. Every promotion in v1.0 is provisional and unmeasured: no A/A floor exists (MACH-03) and the eval bundle holds a synthetic fixture, not the owner's corpus (HARD-04). Milestone audit: `.planning/milestones/v1.0-MILESTONE-AUDIT.md`. Owner testing outside any phase: `.planning/TESTING-PLAN.md`.
+- **Known technical debt (from the v1.0 audit):** ledger-wide write lock contended by read-only alias lookups with no timeout tuning (Phase 7 WR-03); Faiss flush race, dormant until Faiss is wired into a live node (Phase 1 CR-01); unchecked tool-name forwarding in the codebase-memory-mcp part, unreachable until a wiring declares a config block (Phase 5 WR-02); `IngestDocument` validation errors lose their refusal shape on both transports (Phase 5 IN-02); MCP has no streaming analog for REST SSE (documented protocol exception).
 
 - **Governing documents:** `docs/system-model/` — SYSTEM-MODEL.md (entry point; §VD verdict, §BP ladder, §H1 handoff), CONTRACT.md (20 sections), ANATOMY.md (44 entries), PARTS.md (3 worked wirings), CATALOG.md (72-system roster + porting protocol), RIG.md (comparison rig, versioning, §F3 affordability), MODEL-RED-TEAM.md, D-VARIANTS/SELECTION.md (governs on disagreement). Frozen at model v1.0; contract repairs during the build are recorded, not silent.
 - **Verdict status:** §VD conditional go **ratified 2026-08-29**. Conditions: Falsifiers 2 and 5 run and pass at or within Phase 1; the ladder halts if either fires (that is a SELECTION.md-level reversal, not a repairable defect).
@@ -74,13 +81,14 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Ratify §VD conditional go; commit build to D4 One Machine | Model's own falsifier discipline held through five phases; the two remaining decisive tests are cheap and gate Phase 1 | — Pending (proves out when Falsifiers 2/5 run) |
-| v2.0 milestone covers all four §BP rungs | The goal is demonstrated swappability, which only rung 4's side-by-side run proves | — Pending |
-| Standalone product, API only: REST + MCP is Databasise's own voice | Sourcerer is one client; no UI in scope keeps the surface at §18's closed envelope | — Pending |
-| Embeddable in-process engine, no Docker | Cozo-style embedding matches actual use; local NixOS is the runtime; containers add surface without value here | — Pending |
-| Eval corpus: public set bootstraps, own corpus before promotions | A/A calibration needs data on day one; promotion decisions need representative local data | — Pending |
-| Hardening items folded into the build at first-touch | Avoids a stalled doc-only phase; each item has a natural rung (gate scripts → rung 1, DR-04 → rung 3) | — Pending |
-| Defer HARD-01/HARD-02/HARD-04 out of Phase 7 to their point of first need | The operator-asserted path consumes no eval bundle, no floor and no verdict, so none of the three is reached by anything Phase 7 builds (`07-GATE-AMENDMENT.md`) | — Pending (moves to the hardening phase or the first gate-adjudicated promotion) |
+| Ratify §VD conditional go; commit build to D4 One Machine | Model's own falsifier discipline held through five phases; the two remaining decisive tests are cheap and gate Phase 1 | ✓ Good — Falsifier 2 passed (Phase 2); Falsifier 5 never fired because it never ran (MACH-03 deferred), so the go stands on one of two falsifiers |
+| v1.0 milestone covers all four §BP rungs | The goal is demonstrated swappability, which only rung 4's side-by-side run proves | ✓ Good — MODAL-05 discharged by the real LightRAG-vs-HippoRAG side-by-side run (06-15) |
+| Standalone product, API only: REST + MCP is Databasise's own voice | Sourcerer is one client; no UI in scope keeps the surface at §18's closed envelope | ✓ Good — one engine instance under REST and MCP, parity proven per operation |
+| Embeddable in-process engine, no Docker | Cozo-style embedding matches actual use; local NixOS is the runtime; containers add surface without value here | ✓ Good — EMBED-01 discharged by the kernel-interface smoke test; the whole suite runs with no external service |
+| Eval corpus: public set bootstraps, own corpus before promotions | A/A calibration needs data on day one; promotion decisions need representative local data | ⚠️ Revisit — the public fixture was minted (`bundle@v1`) but the A/A run was declined four times and the owner corpus never layered in; the rule now reads "before any promotion that rides on a measured number" |
+| Hardening items folded into the build at first-touch | Avoids a stalled doc-only phase; each item has a natural rung (gate scripts → rung 1, DR-04 → rung 3) | ⚠️ Revisit — only DR-04 (HARD-03) landed at its rung; HARD-01/02 were moved twice and never reached, so first-touch did not hold for doc-only items |
+| Defer HARD-01/HARD-02/HARD-04 out of Phase 7 to their point of first need | The operator-asserted path consumes no eval bundle, no floor and no verdict, so none of the three is reached by anything Phase 7 builds (`07-GATE-AMENDMENT.md`) | — Pending (in `.planning/TESTING-PLAN.md`; due at the hardening pass or the first gate-adjudicated promotion) |
+| Close v1.0 with MACH-03 and MODAL-01 open under the gate amendments rather than insert a closure phase | Both gaps are owner decisions (spend, human judgment), not code; a phase would only re-record the decline. Owner testing tracked outside phases in `TESTING-PLAN.md` | — Pending (resolves when the owner runs the A/A calibration or records the §5 causes) |
 | Close the operator verbs' check-then-act races with one `BEGIN IMMEDIATE` span per verb plus a UNIQUE `(alias, minted_version)` index | A guard read and the append it gates must commit together or the guard goes stale under concurrency; the schema constraint backstops it independently of any Python read path | ✓ Held (G-07-1 closed; 40/40 concurrency runs, full suite green) |
 
 ## Evolution
@@ -101,4 +109,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-12 after Phase 7 completion*
+*Last updated: 2026-09-12 after v1.0 milestone*
