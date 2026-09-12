@@ -26,3 +26,8 @@ graphify-out/
 reference/micro-harnesses/sources/*/code/
 reference/micro-harnesses/sources/sync.log
 reference/micro-harnesses/deep-research/papers/
+
+# MelodyScribe spikes: shared environment and model cache
+.planning/spikes/.venv/
+.planning/spikes/.models/
+.planning/spikes/.logs/
