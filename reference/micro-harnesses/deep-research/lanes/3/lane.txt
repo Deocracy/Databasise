@@ -1,0 +1,2 @@
+Lane 3: Agent memory systems with multiple typed stores.
+Every open-source memory layer and every paper proposing typed memory (episodic, semantic, procedural, structured vault), with attention to: which stores, who decides placement, whether a small model is supported, temporal validity, and SQL or relational stores. Beyond our list: MemoryOS, LangMem, Memobase, SimpleMem, Nemori, Honcho, Supermemory, LightMem, MemInsight, RMM, Generative Agents, Reflexion, MemoryBank, and whatever else exists.

@@ -1,0 +1,2 @@
+Lane 10: Graph, vector, and relational fusion for retrieval.
+Retrieval over a knowledge graph plus vectors plus tables, incremental graph construction from streams, entity and triple extraction with small models, and evaluation methodology for comparing modalities on one corpus.

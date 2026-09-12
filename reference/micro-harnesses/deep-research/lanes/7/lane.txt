@@ -1,0 +1,2 @@
+Lane 7: Small versus frontier on narrow tasks, and how to distil.
+Evidence that 1B to 3B fine-tuned models match larger ones on extraction, classification, routing, or schema emission; the effect of grammar-constrained decoding on small-model accuracy (Outlines, XGrammar, GBNF, SGLang); distillation recipes reachable on one 16 GB GPU (sequence-level distillation, GKD, MiniLLM, DistiLLM, on-policy distillation, distilling step-by-step); LoRA versus full fine-tune at 2B.

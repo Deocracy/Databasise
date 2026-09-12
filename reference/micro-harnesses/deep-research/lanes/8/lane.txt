@@ -1,0 +1,2 @@
+Lane 8: Memory consolidation and refinement loops, and their failure modes.
+Sleep-time and offline consolidation, reflection that produces higher-level "learnings", memory evolution that rewrites older entries, and documented cases of self-refinement degrading a knowledge base. Include forgetting and eviction policies.
