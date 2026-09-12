@@ -1303,7 +1303,11 @@ class Databasise:
         ``effect_size``/``depth_label``/``decomposition_ratio`` are all ``None``.
 
         One ``append()``, offloaded via ``run_in_executor`` exactly as ``promote()`` offloads its
-        own — the atomic repoint is the single ``INSERT``, never a second write.
+        own — the atomic repoint is the single ``INSERT``, never a second write. **07-05-PLAN.md
+        (G-07-1):** the single INSERT is also now enclosed with its own guard read — the tombstone
+        check and the prior-active-generation read the version mint depends on — in one
+        ``BEGIN IMMEDIATE`` span via :meth:`~databasise.ledger.ledger.Ledger.transaction`, which is
+        what makes the *decision* atomic, not only the write.
         """
         _resolved_records, _arm_name, arm_instance_hashes = self._resolve_operator_preconditions(
             alias, trace_ids, change_origin
@@ -1318,56 +1322,58 @@ class Databasise:
             """
             ledger = Ledger(self.store_root)
 
-            target = ledger.generation_state(alias, version)
-            if target is None:
-                raise UnknownGenerationVersionError(alias=alias, version=version)
-            if target.record_kind == RECORD_KIND_TOMBSTONE:
-                raise TombstonedGenerationError(alias=alias, version=version)
-            target_resolved = resolved_wiring_for_arm(target.mutation_id)
+            with ledger.transaction():
+                target = ledger.generation_state(alias, version)
+                if target is None:
+                    raise UnknownGenerationVersionError(alias=alias, version=version)
+                if target.record_kind == RECORD_KIND_TOMBSTONE:
+                    raise TombstonedGenerationError(alias=alias, version=version)
+                target_resolved = resolved_wiring_for_arm(target.mutation_id)
 
-            current_record = ledger.by_alias(alias)
-            current_resolved = (
-                resolved_wiring_for_arm(current_record.mutation_id)
-                if current_record is not None
-                else None
-            )
+                current_record = ledger.by_alias(alias)
+                current_resolved = (
+                    resolved_wiring_for_arm(current_record.mutation_id)
+                    if current_record is not None
+                    else None
+                )
 
-            mutation_class = derive_mutation_class(target_resolved, current_resolved)
+                mutation_class = derive_mutation_class(target_resolved, current_resolved)
 
-            prior_version = (
-                current_record.minted_version if current_record is not None else None
-            )
-            prior_surface = (
-                declared_surface(current_resolved, self.registry)
-                if current_resolved is not None
-                else None
-            )
-            new_surface = declared_surface(target_resolved, self.registry)
-            minted_version = mint_version(prior_version, prior_surface, new_surface)
+                prior_version = (
+                    current_record.minted_version if current_record is not None else None
+                )
+                prior_surface = (
+                    declared_surface(current_resolved, self.registry)
+                    if current_resolved is not None
+                    else None
+                )
+                new_surface = declared_surface(target_resolved, self.registry)
+                minted_version = mint_version(prior_version, prior_surface, new_surface)
 
-            ledger_record = LedgerRecord(
-                mutation_id=target.mutation_id,
-                mutation_class=mutation_class,
-                parent=target.mutation_id,
-                arm_instance_hashes=arm_instance_hashes,
-                effect_size=None,
-                verdict=None,
-                evidence_pointer=None,
-                proposer_id="operator",
-                depth_label=None,
-                tier_of_decision=None,
-                decomposition_ratio=None,
-                opaque_ttl_renewals=[],
-                parity_records=[],
-                promotion_provenance=PROVENANCE_OPERATOR_ASSERTED,
-                promotion_trace_ids=list(trace_ids),
-                change_origin=change_origin,
-                record_kind=RECORD_KIND_ROLLBACK,
-                alias=alias,
-                minted_version=minted_version,
-                targets_version=version,
-            )
-            return minted_version, ledger.append(ledger_record)
+                ledger_record = LedgerRecord(
+                    mutation_id=target.mutation_id,
+                    mutation_class=mutation_class,
+                    parent=target.mutation_id,
+                    arm_instance_hashes=arm_instance_hashes,
+                    effect_size=None,
+                    verdict=None,
+                    evidence_pointer=None,
+                    proposer_id="operator",
+                    depth_label=None,
+                    tier_of_decision=None,
+                    decomposition_ratio=None,
+                    opaque_ttl_renewals=[],
+                    parity_records=[],
+                    promotion_provenance=PROVENANCE_OPERATOR_ASSERTED,
+                    promotion_trace_ids=list(trace_ids),
+                    change_origin=change_origin,
+                    record_kind=RECORD_KIND_ROLLBACK,
+                    alias=alias,
+                    minted_version=minted_version,
+                    targets_version=version,
+                )
+                generation_ordinal = ledger.append(ledger_record)
+            return minted_version, generation_ordinal
 
         minted_version, generation_ordinal = await asyncio.get_running_loop().run_in_executor(
             None, _rollback_sync
@@ -1436,9 +1442,13 @@ class Databasise:
         tombstone through ``generation_state`` forever, while the new generation is a different
         pair. ``promote()`` gains no check refusing an arm whose earlier generation was retired.
 
-        One ``append()``, offloaded via ``run_in_executor``, and no second write. Returns
-        ``PromotionResult`` with ``record_kind`` reporting ``"tombstone"`` and ``version`` reporting
-        the *retired* version — the field's meaning is disambiguated by ``record_kind``.
+        One ``append()``, offloaded via ``run_in_executor``, and no second write. **07-05-PLAN.md
+        (G-07-1):** the single INSERT is also now enclosed with its own guard read — the tombstone
+        check and the active-generation guard — in one ``BEGIN IMMEDIATE`` span via
+        :meth:`~databasise.ledger.ledger.Ledger.transaction`, which is what makes the *decision*
+        atomic, not only the write. Returns ``PromotionResult`` with ``record_kind`` reporting
+        ``"tombstone"`` and ``version`` reporting the *retired* version — the field's meaning is
+        disambiguated by ``record_kind``.
         """
         _resolved_records, _arm_name, arm_instance_hashes = self._resolve_operator_preconditions(
             alias, trace_ids, change_origin
@@ -1452,45 +1462,47 @@ class Databasise:
             """
             ledger = Ledger(self.store_root)
 
-            target = ledger.generation_state(alias, version)
-            if target is None:
-                raise UnknownGenerationVersionError(alias=alias, version=version)
-            if target.record_kind == RECORD_KIND_TOMBSTONE:
-                raise TombstonedGenerationError(alias=alias, version=version)
+            with ledger.transaction():
+                target = ledger.generation_state(alias, version)
+                if target is None:
+                    raise UnknownGenerationVersionError(alias=alias, version=version)
+                if target.record_kind == RECORD_KIND_TOMBSTONE:
+                    raise TombstonedGenerationError(alias=alias, version=version)
 
-            active = ledger.by_alias(alias)
-            if active is not None and active.minted_version == version:
-                raise ActiveGenerationRetirementError(alias=alias, version=version)
+                active = ledger.by_alias(alias)
+                if active is not None and active.minted_version == version:
+                    raise ActiveGenerationRetirementError(alias=alias, version=version)
 
-            target_resolved = resolved_wiring_for_arm(target.mutation_id)
-            active_resolved = (
-                resolved_wiring_for_arm(active.mutation_id) if active is not None else None
-            )
-            mutation_class = derive_mutation_class(target_resolved, active_resolved)
+                target_resolved = resolved_wiring_for_arm(target.mutation_id)
+                active_resolved = (
+                    resolved_wiring_for_arm(active.mutation_id) if active is not None else None
+                )
+                mutation_class = derive_mutation_class(target_resolved, active_resolved)
 
-            ledger_record = LedgerRecord(
-                mutation_id=target.mutation_id,
-                mutation_class=mutation_class,
-                parent=None,
-                arm_instance_hashes=arm_instance_hashes,
-                effect_size=None,
-                verdict=None,
-                evidence_pointer=None,
-                proposer_id="operator",
-                depth_label=None,
-                tier_of_decision=None,
-                decomposition_ratio=None,
-                opaque_ttl_renewals=[],
-                parity_records=[],
-                promotion_provenance=PROVENANCE_OPERATOR_ASSERTED,
-                promotion_trace_ids=list(trace_ids),
-                change_origin=change_origin,
-                record_kind=RECORD_KIND_TOMBSTONE,
-                alias=alias,
-                minted_version=None,
-                targets_version=version,
-            )
-            return ledger.append(ledger_record)
+                ledger_record = LedgerRecord(
+                    mutation_id=target.mutation_id,
+                    mutation_class=mutation_class,
+                    parent=None,
+                    arm_instance_hashes=arm_instance_hashes,
+                    effect_size=None,
+                    verdict=None,
+                    evidence_pointer=None,
+                    proposer_id="operator",
+                    depth_label=None,
+                    tier_of_decision=None,
+                    decomposition_ratio=None,
+                    opaque_ttl_renewals=[],
+                    parity_records=[],
+                    promotion_provenance=PROVENANCE_OPERATOR_ASSERTED,
+                    promotion_trace_ids=list(trace_ids),
+                    change_origin=change_origin,
+                    record_kind=RECORD_KIND_TOMBSTONE,
+                    alias=alias,
+                    minted_version=None,
+                    targets_version=version,
+                )
+                generation_ordinal = ledger.append(ledger_record)
+            return generation_ordinal
 
         generation_ordinal = await asyncio.get_running_loop().run_in_executor(
             None, _retire_sync
