@@ -88,6 +88,7 @@ from __future__ import annotations
 import contextlib
 import json
 import sqlite3
+import time
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -123,6 +124,10 @@ class LedgerRecord:
 
 _JSON_FIELDS = ("arm_instance_hashes", "opaque_ttl_renewals", "parity_records", "promotion_trace_ids")
 
+# Bounded retry for the WAL-pragma first-touch race; see Ledger._set_wal.
+_WAL_ATTEMPTS = 5
+_WAL_RETRY_SECONDS = 0.02
+
 
 class Ledger:
     """SQLite-backed append-only ledger, at its own database file at the store root beside the
@@ -134,8 +139,38 @@ class Ledger:
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(db_path)
         self._conn.row_factory = sqlite3.Row
-        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._set_wal()
         self._create_schema()
+
+    def _set_wal(self) -> None:
+        """Switch the database to WAL, tolerating the first-touch race.
+
+        Flipping journal mode needs a moment with no other connection on the file, and SQLite does
+        NOT run the busy handler for it — so ``PRAGMA journal_mode=WAL`` raises ``SQLITE_BUSY``
+        outright when several connections open a *fresh* ``ledger.db`` at once, rather than waiting
+        the way an ordinary statement would. Measured at 5/360 constructions (1.4%) with six
+        concurrent constructors on a new file, which is what made
+        ``test_six_concurrent_promotes_mint_six_distinct_versions_with_zero_exceptions`` fail ~1 run
+        in 30: a raw ``sqlite3.OperationalError`` escaping :meth:`__init__`, outside any
+        :meth:`transaction` span and so unreachable by G-07-1's fix.
+
+        WAL is a property of the file and persists once set, so whichever racer wins settles it for
+        everyone and the rest observe ``wal`` on a later attempt.
+
+        ponytail: degrades to the default rollback journal instead of raising if every attempt is
+        contended. WAL widens reader/writer concurrency but is not load-bearing for correctness —
+        :meth:`transaction`'s ``BEGIN IMMEDIATE`` serializes writers in either mode. Raising here
+        would trade a 1.4% flake for a rarer one; refusing to start over a performance pragma is
+        the worse failure.
+        """
+        for _ in range(_WAL_ATTEMPTS):
+            try:
+                mode = self._conn.execute("PRAGMA journal_mode=WAL").fetchone()[0]
+            except sqlite3.OperationalError:
+                mode = None
+            if str(mode).lower() == "wal":
+                return
+            time.sleep(_WAL_RETRY_SECONDS)
 
     @contextlib.contextmanager
     def transaction(self) -> Iterator[None]:
