@@ -1,0 +1,2 @@
+Lane 1: Unified embedding and generation in one model.
+Successors and alternatives to GritLM: joint training recipes, decoder-derived embedders (NV-Embed, E5-Mistral, echo embeddings, PromptEOL, Gemini Embedding, EmbeddingGemma), embedding heads over frozen decoders, last-token versus bidirectional pooling results at small scale, any work measuring generation degradation when the same weights embed. Include anything that reuses the embedding pass's KV cache for generation.

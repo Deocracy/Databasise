@@ -1,0 +1,2 @@
+Lane 2: KV-cache reuse beyond the prefix.
+Position-independent and modular caching (Prompt Cache, CacheBlend, EPIC, Block-Attention, KVLink, RAGCache, TurboRAG, ChunkAttention, CacheGen, LMCache), quality measurements when cached chunks are composed out of order, partial-recompute repair, and any serving engine (vLLM, SGLang, llama.cpp, TensorRT-LLM, MLX) exposing these as APIs.

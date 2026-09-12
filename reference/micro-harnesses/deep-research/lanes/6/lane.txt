@@ -1,0 +1,2 @@
+Lane 6: Self-written skills and procedural memory.
+Skill libraries an agent writes and retrieves (Voyager, ExpeL, Dynamic Cheatsheet, ACE, agent-authored SOPs), the Agent Skills specification and MemFS-style file memory, and **the security literature on persistent prompt injection through memory and skills** (memory poisoning, MINJA, AgentPoison, PoisonedRAG, indirect injection surveys). The security half is mandatory.

@@ -1,0 +1,2 @@
+Lane 5: Documents to structured tables and SQL with LLMs.
+Schema induction and LLM-driven ETL (Evaporate, DocETL, LOTUS, Palimpzest, ZenDB, TAG, semantic operators), text-to-SQL memory, and routers that choose between SQL, vector, and graph at query time (HybridRAG, Adaptive-RAG, RouterRetriever, LlamaIndex routers, query routing papers).

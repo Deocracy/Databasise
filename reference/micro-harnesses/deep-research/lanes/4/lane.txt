@@ -1,0 +1,2 @@
+Lane 4: Small models trained to manage memory or decide retrieval.
+RL or SFT recipes where a 1B to 8B model learns store / update / delete / retrieve / search decisions (Mem-α, Memory-R1, MemAgent, Search-R1, ReSearch, R1-Searcher, Self-RAG, RA-DIT, Toolformer, ReST-style self-training), with reported model sizes and whether the trained artefact is released.

@@ -25,3 +25,4 @@ graphify-out/
 # MelodyScribe third-party clones: on disk, pinned in sources/README.md, re-created by sources/sync.sh
 reference/micro-harnesses/sources/*/code/
 reference/micro-harnesses/sources/sync.log
+reference/micro-harnesses/deep-research/papers/

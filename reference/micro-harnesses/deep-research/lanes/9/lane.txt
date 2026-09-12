@@ -1,0 +1,2 @@
+Lane 9: On-device small models and small embedders, 0.3B to 3B.
+Current releases with tool-calling and long-context evaluations (MiniCPM5, Qwen3 small, Gemma small, SmolLM, LFM2, Phi-4-mini, Granite, Nemotron Nano), independent benchmarks of them (not vendor tables), and decoder-based embedders at 0.3B to 0.6B (Qwen3-Embedding-0.6B, MiniCPM-Embedding-Light, EmbeddingGemma, nomic, arctic, jina) with MTEB and long-document results.
