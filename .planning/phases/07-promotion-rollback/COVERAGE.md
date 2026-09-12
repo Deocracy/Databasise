@@ -61,6 +61,24 @@ surfaces under the **identical name** in-process, over REST (422) and over MCP (
 refusal that named a modality, an arm id or a wiring name would breach §18.3 as surely as a
 modality-named tool would.
 
+**07-05-PLAN.md (G-07-1): this gap closure added no refusal.** The ladder above stays exactly ten
+`refusals.py` classes plus `UnknownTraceReferenceError` — eleven total, unchanged. `promote`,
+`rollback` and `retire`'s previously-unserialized guard-read-then-append (07-REVIEW.md WR-01,
+scored `human_needed` in `07-VERIFICATION.md`) is now enclosed, per verb, in one SQLite
+`BEGIN IMMEDIATE` transaction (`Ledger.transaction()`). Under that span the loser of a concurrent
+race does one of two things, neither of which needs a new class: it either serializes and proceeds
+on freshly-committed state (the `promote` case — pure serialization, all six concurrent calls in
+the committed reproduction succeed with six distinct semvers), or it re-reads and refuses through
+the **already-shipped** `TombstonedGenerationError` (a `rollback`/`retire` racing a `retire` that
+tombstoned the same generation first). A second backstop, `UNIQUE(alias, minted_version)`
+(`ux_ledger_generation`), refuses a duplicate published name at the database itself; the
+`sqlite3.IntegrityError` it can raise is **deliberately left unwrapped** — with `transaction()` in
+place this constraint is unreachable through the seam under normal operation, so a raw
+`IntegrityError` reaching a caller would signal a broken machine invariant (e.g. a pre-existing
+database already holding duplicates), not a caller-facing refusal condition. No row is added to
+this file's own §18.5 operations table and no three-transport parity test is owed for a new name,
+because no name was added.
+
 ### Operations still deliberately absent
 
 | operation | decision | reason |
