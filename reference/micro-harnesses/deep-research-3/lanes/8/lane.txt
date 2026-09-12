@@ -1,0 +1,2 @@
+Lane 8: Evaluating fine-tuned extractors and embedders together.
+Held-out design for private corpora, contamination checks, small-sample statistics and effect sizes, LLM-judge reliability, regression gates in training pipelines, reporting standards, and how to measure a generation-retained metric next to a retrieval metric.

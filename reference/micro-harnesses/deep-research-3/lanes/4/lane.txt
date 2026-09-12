@@ -1,0 +1,2 @@
+Lane 4: Distillation and RL recipes on one consumer GPU.
+On-policy distillation, generalised knowledge distillation, MiniLLM, DistiLLM, sequence-level KD, rejection-sampling fine-tuning, RL with verifiable rewards (GRPO family, RLVR) applied to extraction and structured emission, validator-as-reward, reported compute, model sizes, released artefacts.

@@ -1,0 +1,2 @@
+Lane 3: Joint embedding and generation training and interference.
+Multi-task and joint objectives at small scale, multi-task LoRA, adapter composition and routing (LoRAHub, MoLE, MoLoRA, arrow routing), catastrophic forgetting in LLM fine-tuning and its measurement, KL and self-distillation anchors, EWC and replay for LLMs, and every measurement of generation loss when the same weights are trained to embed. Do not re-find GritLM, LLM2Vec, OneGen, Hydra; find what they cite and what cites them on interference.

@@ -1,0 +1,2 @@
+Lane 5: LoRA and PEFT science for forgetting and capacity.
+"LoRA learns less and forgets less", rank and alpha studies, target-module ablations, rsLoRA, LoRA+, DoRA, PiSSA, full fine-tune versus LoRA comparisons, QLoRA at 1B to 3B, learning-rate guidance, and what these say about training a retrieval adapter without breaking generation.

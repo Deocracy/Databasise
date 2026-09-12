@@ -1,0 +1,2 @@
+Lane 9: Output composition for a frontier consumer.
+Query-focused summarisation, context compression (LLMLingua, RECOMP, xRAG, compressed context tokens), payload assembly and ordering, model-written procedural memory and skills, and studies that measure the consumer model's answer quality as a function of the payload a small model built.

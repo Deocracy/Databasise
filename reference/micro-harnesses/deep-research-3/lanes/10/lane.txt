@@ -1,0 +1,2 @@
+Lane 10: Generative retrieval and retrieval-generation co-training.
+DSI, NCI, generative retrieval surveys, RAG end-to-end training (RETRO, Atlas, RA-DIT), Self-RAG reflection tokens, retrieval-aware generation objectives, and evidence about co-training retrieval and generation in one model below 3B.

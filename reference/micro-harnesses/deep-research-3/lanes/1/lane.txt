@@ -1,0 +1,2 @@
+Lane 1: Fine-tuning small models for structured and constrained generation.
+SFT for JSON and schema emission, function and tool calling fine-tunes and their datasets (Gorilla, ToolACE, xLAM, APIGen, Hermes function calling, ToolBench, BFCL), grammar-constrained training and inference interaction, format-following fine-tunes, reported results at 0.5B to 3B, and what "harness-trained" small models exist.

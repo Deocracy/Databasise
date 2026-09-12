@@ -1,0 +1,2 @@
+Lane 6: Extraction fine-tunes and their datasets.
+Models fine-tuned for triple and entity extraction (UniversalNER and GoLLIE successors, Triplex, ReLiK, KnowledgeGraph LLMs, GenIE successors), datasets (REBEL, WebIE, DocRED, Re-DocRED, WikiNRE, SynthIE), evaluation protocols (soft match, Text2KGBench), and reported small-model results.

@@ -1,0 +1,2 @@
+Lane 2: Building fine-tuning datasets from documents.
+Self-Instruct, Evol-Instruct, Magpie, Genie, WRAP, Nemotron synthetic pipelines, Persona Hub, document-grounded instruction generation, quality filtering (LLM judges, consistency, deduplication, decontamination), data mixing ratios, how much data a narrow-task 1B to 3B fine-tune needs, and fine-tuning data scaling laws.

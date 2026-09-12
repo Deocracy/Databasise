@@ -38,3 +38,6 @@ reference/micro-harnesses/deep-research-2/merged/papers/
 .planning/spikes/.venv-vllm/
 .planning/spikes/*/adapters/
 .planning/spikes/*/merged/
+reference/micro-harnesses/deep-research-3/.logs/
+reference/micro-harnesses/deep-research-3/lanes/*/papers/
+reference/micro-harnesses/deep-research-3/merged/papers/

@@ -1,0 +1,2 @@
+Lane 7: Small-model post-training recipes from the labs.
+What MiniCPM, Qwen3 small, SmolLM3, Phi-4-mini, Gemma 3 small, LFM2, and Granite report for SFT, DPO, and RL stages, learning rates, data sizes, and mixing; independent replications; what transfers to a narrow harness task.
