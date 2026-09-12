@@ -1,0 +1,2 @@
+{"ts": "2026-09-12T08:06:37.214120+00:00", "run": "headBeval_lam100", "event": "arm_scored", "arm": "armB+head", "gold_r@1": 0.0, "gold_r@3": 0.0, "gold_r@5": 0.0, "gold_r@10": 0.25, "self_r@1": 0.25, "self_r@3": 0.45, "self_r@5": 0.65, "self_r@10": 0.75, "gold_mrr": 0.0889, "self_mrr": 0.4144}
+{"ts": "2026-09-12T08:06:37.214500+00:00", "run": "headBeval_lam100", "event": "report_saved", "path": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/004-self-embedding-parity/results/headBeval_lam100_report.json"}

@@ -1,0 +1,4 @@
+{"ts": "2026-09-12T08:11:05.905835+00:00", "run": "edge4", "event": "truncation", "model": "B", "ok": true, "tokens": 4201, "n_ctx": 2048, "dim": 2048}
+{"ts": "2026-09-12T08:11:05.939593+00:00", "run": "edge4", "event": "marker_escape", "model": "B", "ok": true, "cos_with_and_without_trailing": 0.4775}
+{"ts": "2026-09-12T08:16:00.148165+00:00", "run": "edge4", "event": "truncation", "model": "B", "ok": true, "tokens": 4201, "n_ctx": 2048, "dim": 2048}
+{"ts": "2026-09-12T08:16:00.181371+00:00", "run": "edge4", "event": "marker_escape", "model": "B", "ok": true, "cos_with_and_without_trailing": 0.4775}

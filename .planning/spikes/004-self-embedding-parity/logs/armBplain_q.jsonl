@@ -1,0 +1,6 @@
+{"ts": "2026-09-12T08:05:41.379319+00:00", "run": "armBplain_q", "event": "model_loaded", "model": "MiniCPM5-2B-Q8_0.gguf", "pooling": "last", "effective_pooling": 3, "n_embd": 2048, "load_s": 0.75}
+{"ts": "2026-09-12T08:05:41.746641+00:00", "run": "armBplain_q", "event": "embedded", "n": 22, "prefix": "", "marker_mode": "none", "embed_s": 0.367, "per_text_ms": 16.69}
+{"ts": "2026-09-12T08:05:41.774942+00:00", "run": "armBplain_q", "event": "saved", "path": ".planning/spikes/004-self-embedding-parity/results/armBplain_q.json"}
+{"ts": "2026-09-12T08:15:29.230044+00:00", "run": "armBplain_q", "event": "model_loaded", "model": "MiniCPM5-2B-Q8_0.gguf", "pooling": "last", "effective_pooling": 3, "n_embd": 2048, "load_s": 0.79}
+{"ts": "2026-09-12T08:15:29.525365+00:00", "run": "armBplain_q", "event": "embedded", "n": 22, "prefix": "", "marker_mode": "none", "embed_s": 0.295, "per_text_ms": 13.42}
+{"ts": "2026-09-12T08:15:29.557008+00:00", "run": "armBplain_q", "event": "saved", "path": "results/armBplain_q.json"}

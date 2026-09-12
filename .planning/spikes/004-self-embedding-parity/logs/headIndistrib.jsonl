@@ -1,0 +1,4 @@
+{"ts": "2026-09-12T08:07:57.139091+00:00", "run": "headIndistrib", "event": "chunk_recall", "arm": "armBplain", "kind": "raw", "r1": 0.32, "r3": 0.4667}
+{"ts": "2026-09-12T08:07:57.584356+00:00", "run": "headIndistrib", "event": "chunk_recall", "arm": "armBplain", "kind": "head", "r1": 0.3733, "r3": 0.52}
+{"ts": "2026-09-12T08:08:14.250500+00:00", "run": "headIndistrib", "event": "chunk_recall", "arm": "armB", "kind": "raw", "r1": 0.3067, "r3": 0.48}
+{"ts": "2026-09-12T08:08:14.682071+00:00", "run": "headIndistrib", "event": "chunk_recall", "arm": "armB", "kind": "head", "r1": 0.2933, "r3": 0.3733}

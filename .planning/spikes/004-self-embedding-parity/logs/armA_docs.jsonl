@@ -1,0 +1,8 @@
+{"ts": "2026-09-12T08:04:40.633261+00:00", "run": "armA_docs", "event": "model_loaded", "model": "Qwen3-Embedding-0.6B-Q8_0.gguf", "pooling": "native", "effective_pooling": 3, "n_embd": 1024, "load_s": 0.78}
+{"ts": "2026-09-12T08:04:41.130667+00:00", "run": "armA_docs", "event": "embedded", "n": 20, "prefix": "", "marker_mode": "none", "embed_s": 0.497, "per_text_ms": 24.86}
+{"ts": "2026-09-12T08:05:01.425804+00:00", "run": "armA_docs", "event": "model_loaded", "model": "Qwen3-Embedding-0.6B-Q8_0.gguf", "pooling": "native", "effective_pooling": 3, "n_embd": 1024, "load_s": 0.51}
+{"ts": "2026-09-12T08:05:01.864118+00:00", "run": "armA_docs", "event": "embedded", "n": 20, "prefix": "", "marker_mode": "none", "embed_s": 0.438, "per_text_ms": 21.91}
+{"ts": "2026-09-12T08:05:01.876574+00:00", "run": "armA_docs", "event": "saved", "path": ".planning/spikes/004-self-embedding-parity/results/armA_docs.json"}
+{"ts": "2026-09-12T08:15:03.173518+00:00", "run": "armA_docs", "event": "model_loaded", "model": "Qwen3-Embedding-0.6B-Q8_0.gguf", "pooling": "native", "effective_pooling": 3, "n_embd": 1024, "load_s": 0.51}
+{"ts": "2026-09-12T08:15:03.602361+00:00", "run": "armA_docs", "event": "embedded", "n": 20, "prefix": "", "marker_mode": "none", "embed_s": 0.429, "per_text_ms": 21.43}
+{"ts": "2026-09-12T08:15:03.617510+00:00", "run": "armA_docs", "event": "saved", "path": "results/armA_docs.json"}

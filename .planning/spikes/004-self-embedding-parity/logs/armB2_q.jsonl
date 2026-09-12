@@ -1,0 +1,6 @@
+{"ts": "2026-09-12T08:05:21.364431+00:00", "run": "armB2_q", "event": "model_loaded", "model": "Qwen3-1.7B-Q8_0.gguf", "pooling": "last", "effective_pooling": 3, "n_embd": 2048, "load_s": 0.65}
+{"ts": "2026-09-12T08:05:21.671384+00:00", "run": "armB2_q", "event": "embedded", "n": 22, "prefix": "", "marker_mode": "emb", "embed_s": 0.307, "per_text_ms": 13.94}
+{"ts": "2026-09-12T08:05:21.700748+00:00", "run": "armB2_q", "event": "saved", "path": ".planning/spikes/004-self-embedding-parity/results/armB2_q.json"}
+{"ts": "2026-09-12T08:15:23.793431+00:00", "run": "armB2_q", "event": "model_loaded", "model": "Qwen3-1.7B-Q8_0.gguf", "pooling": "last", "effective_pooling": 3, "n_embd": 2048, "load_s": 0.65}
+{"ts": "2026-09-12T08:15:24.085255+00:00", "run": "armB2_q", "event": "embedded", "n": 22, "prefix": "", "marker_mode": "emb", "embed_s": 0.292, "per_text_ms": 13.26}
+{"ts": "2026-09-12T08:15:24.116890+00:00", "run": "armB2_q", "event": "saved", "path": "results/armB2_q.json"}

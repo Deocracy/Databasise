@@ -1,0 +1,6 @@
+{"ts": "2026-09-12T08:07:14.051257+00:00", "run": "armA_redo", "event": "model_loaded", "model": "Qwen3-Embedding-0.6B-Q8_0.gguf", "pooling": "native", "effective_pooling": 3, "n_embd": 1024, "load_s": 0.68}
+{"ts": "2026-09-12T08:07:14.531626+00:00", "run": "armA_redo", "event": "embedded", "n": 20, "prefix": "", "marker_mode": "none", "embed_s": 0.48, "per_text_ms": 24.0}
+{"ts": "2026-09-12T08:07:14.544872+00:00", "run": "armA_redo", "event": "saved", "path": ".planning/spikes/004-self-embedding-parity/results/armA_redo_docs.json"}
+{"ts": "2026-09-12T08:15:32.298604+00:00", "run": "armA_redo", "event": "model_loaded", "model": "Qwen3-Embedding-0.6B-Q8_0.gguf", "pooling": "native", "effective_pooling": 3, "n_embd": 1024, "load_s": 0.49}
+{"ts": "2026-09-12T08:15:32.731214+00:00", "run": "armA_redo", "event": "embedded", "n": 20, "prefix": "", "marker_mode": "none", "embed_s": 0.424, "per_text_ms": 21.2}
+{"ts": "2026-09-12T08:15:32.746791+00:00", "run": "armA_redo", "event": "saved", "path": "results/armA_redo_docs.json"}
