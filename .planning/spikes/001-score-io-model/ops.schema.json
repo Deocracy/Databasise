@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "melodyscribe/ops/v0.1",
+  "title": "MelodyScribe op list",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ops"],
+  "properties": {
+    "ops": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object", "additionalProperties": false,
+            "required": ["target", "s", "p", "o", "evidence"],
+            "properties": {
+              "target": {"const": "graph"},
+              "s": {"type": "string", "minLength": 1, "maxLength": 512},
+              "p": {"type": "string", "minLength": 1, "maxLength": 128},
+              "o": {"type": "string", "minLength": 1, "maxLength": 512},
+              "s_type": {"type": "string", "maxLength": 64},
+              "o_type": {"type": "string", "maxLength": 64},
+              "evidence": {"type": "array", "items": {"type": "integer", "minimum": 0}, "minItems": 2, "maxItems": 2}
+            }
+          },
+          {
+            "type": "object", "additionalProperties": false,
+            "required": ["target", "subject", "attribute", "value", "value_type", "evidence"],
+            "properties": {
+              "target": {"const": "sql"},
+              "subject": {"type": "string", "minLength": 1, "maxLength": 512},
+              "attribute": {"type": "string", "minLength": 1, "maxLength": 128},
+              "value": {"type": "string", "minLength": 1, "maxLength": 512},
+              "value_type": {"enum": ["text", "number", "date"]},
+              "unit": {"type": "string", "maxLength": 32},
+              "valid_from": {"type": "string", "maxLength": 32},
+              "valid_to": {"type": "string", "maxLength": 32},
+              "evidence": {"type": "array", "items": {"type": "integer", "minimum": 0}, "minItems": 2, "maxItems": 2}
+            }
+          },
+          {
+            "type": "object", "additionalProperties": false,
+            "required": ["target", "slug", "kind", "title", "markdown"],
+            "properties": {
+              "target": {"const": "folio"},
+              "slug": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 64},
+              "kind": {"enum": ["procedure", "doc"]},
+              "title": {"type": "string", "minLength": 1, "maxLength": 128},
+              "markdown": {"type": "string", "minLength": 1, "maxLength": 4096},
+              "supersedes": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 64}
+            }
+          },
+          {
+            "type": "object", "additionalProperties": false,
+            "required": ["target", "ask", "why"],
+            "properties": {
+              "target": {"const": "agent"},
+              "ask": {"type": "string", "minLength": 1, "maxLength": 512},
+              "why": {"type": "string", "minLength": 1, "maxLength": 256}
+            }
+          }
+        ]
+      }
+    }
+  }
+}
