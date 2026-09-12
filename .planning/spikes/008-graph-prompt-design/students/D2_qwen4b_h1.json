@@ -1,0 +1,77 @@
+{
+ "arm": "D2_qwen4b",
+ "design": "D2",
+ "model_file": "Qwen3-4B-Q8_0.gguf",
+ "corpus_hash": "ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd",
+ "temperature": 0.0,
+ "seed": 1234,
+ "max_tokens": 1024,
+ "chat_template": false,
+ "grammar": "score-io-v0.2-spike003 file=graph,sql",
+ "schema": "ops.v0.2",
+ "load_seconds": 1.19,
+ "example_docs": [
+  "shirley_temple",
+  "adam_collis",
+  "deliver_us_from_evil_2014_film",
+  "scott_derrickson"
+ ],
+ "outputs": {
+  "secretary_of_state_for_constitutional_affairs": {
+   "text": "{\"ops\": [{\"target\": \"sql\", \"subject\": \"Secretary of State for Constitutional Affairs\", \"attribute\": \"created_year\", \"value\": \"2003\", \"value_type\": \"number\", \"quote\": \"created in 2003\"}, {\"target\": \"sql\", \"subject\": \"Secretary of State for Constitutional Affairs\", \"attribute\": \"function\", \"value\": \"Lord Chancellor's Department\", \"value_type\": \"text\", \"quote\": \"Certain functions of the Lord Chancellor which related to the Lord Chancellor's Department were transferred to the Secretary of State\"}, {\"target\": \"sql\", \"subject\": \"Secretary of State for Constitutional Affairs\", \"attribute\": \"function\", \"value\": \"First Secretary of State\", \"value_type\": \"text\", \"quote\": \"further functions were also transferred to the Secretary of State for Constitutional Affairs from the First Secretary of State\"}] }",
+   "prompt_tokens": 2402,
+   "completion_tokens": 187,
+   "seconds": 6.57,
+   "think_tag": false
+  },
+  "lord_high_treasurer": {
+   "text": "{\"ops\": [{\"target\": \"graph\", \"s\": \"Lord High Treasurer\", \"p\": \"description\", \"o\": \"English government position and has been a British government position since the Acts of Union of 1707\", \"quote\": \"The post of Lord High Treasurer or Lord Treasurer was an English government position and has been a British government position since the Acts of Union of 1707.\"}, {\"target\": \"graph\", \"s\": \"Lord High Treasurer\", \"p\": \"rank\", \"o\": \"third-highest-ranked Great Officer of State\", \"quote\": \"A holder of the post would be the third-highest-ranked Great Officer of State, below the Lord High Steward and the Lord High Chancellor.\"}] }",
+   "prompt_tokens": 2380,
+   "completion_tokens": 156,
+   "seconds": 5.87,
+   "think_tag": false
+  },
+  "meet_corliss_archer_tv_series": {
+   "text": "{\"ops\": [{\"target\": \"graph\", \"s\": \"Meet Corliss Archer (TV series)\", \"p\": \"aired_on\", \"o\": \"CBS\", \"quote\": \"aired on CBS (July 13, 1951 - August 10, 1951)\"}, {\"target\": \"graph\", \"s\": \"Meet Corliss Archer (TV series)\", \"p\": \"aired_from\", \"o\": \"1951-07-13\", \"quote\": \"aired on CBS (July 13, 1951 - August 10, 1951)\"}, {\"target\": \"graph\", \"s\": \"Meet Corliss Archer (TV series)\", \"p\": \"aired_to\", \"o\": \"1951-08-10\", \"quote\": \"aired on CBS (July 13, 1951 - August 10, 1951)\"}, {\"target\": \"graph\", \"s\": \"Meet Corliss Archer (TV series)\", \"p\": \"aired_in_syndication\", \"o\": \"Ziv Company\", \"quote\": \"in syndication via the Ziv Company from April to December 1954\"}, {\"target\": \"graph\", \"s\": \"Meet Corliss Archer (TV series)\", \"p\": \"aired_from\", \"o\": \"1954-04\", \"quote\": \"from April to December 1954\"}, {\"target\": \"graph\", \"s\": \"Meet Corliss Archer (TV series)\", \"p\": \"aired_to\", \"o\": \"1954-12\", \"quote\": \"from April to December 1954\"}, {\"target\": \"graph\", \"s\": \"Meet Corliss Archer (TV series)\", \"p\": \"based_on\", \"o\": \"radio series of the same name\", \"quote\": \"an adaptation of the radio series of the same name\"}, {\"target\": \"graph\", \"s\": \"radio series of the same name\", \"p\": \"based_on\", \"o\": \"short stories by F. Hugh Herbert\", \"quote\": \"based on a series of short stories by F. Hugh Herbert\"}] }",
+   "prompt_tokens": 2408,
+   "completion_tokens": 481,
+   "seconds": 15.96,
+   "think_tag": false
+  },
+  "sinister_film": {
+   "text": "{\"ops\": [{\"target\": \"graph\", \"s\": \"Sinister (film)\", \"p\": \"director\", \"o\": \"Scott Derrickson\", \"quote\": \"Sinister is a 2012 supernatural horror film directed by Scott Derrickson\"}, {\"target\": \"graph\", \"s\": \"Sinister (film)\", \"p\": \"writer\", \"o\": \"Scott Derrickson\", \"quote\": \"written by Derrickson and C. Robert Cargill\"}, {\"target\": \"graph\", \"s\": \"Sinister (film)\", \"p\": \"writer\", \"o\": \"C. Robert Cargill\", \"quote\": \"written by Derrickson and C. Robert Cargill\"}, {\"target\": \"graph\", \"s\": \"Sinister (film)\", \"p\": \"starring\", \"o\": \"Ethan Hawke\", \"quote\": \"It stars Ethan Hawke as fictional true-crime writer Ellison Oswalt\"}, {\"target\": \"graph\", \"s\": \"Ethan Hawke\", \"p\": \"role\", \"o\": \"Ellison Oswalt\", \"quote\": \"It stars Ethan Hawke as fictional true-crime writer Ellison Oswalt\"}] }",
+   "prompt_tokens": 2380,
+   "completion_tokens": 249,
+   "seconds": 8.4,
+   "think_tag": false
+  },
+  "meet_corliss_archer": {
+   "text": "{\"ops\": [{\"target\": \"graph\", \"s\": \"Meet Corliss Archer\", \"p\": \"date_of_start\", \"o\": \"1943-01-07\", \"quote\": \"ran from January 7, 1943 to September 30, 1956\"}, {\"target\": \"graph\", \"s\": \"Meet Corliss Archer\", \"p\": \"date_of_end\", \"o\": \"1956-09-30\", \"quote\": \"ran from January 7, 1943 to September 30, 1956\"}, {\"target\": \"graph\", \"s\": \"Meet Corliss Archer\", \"p\": \"network\", \"o\": \"CBS\", \"quote\": \"radio's Golden Age, ran from January 7, 1943 to September 30, 1956\"}, {\"target\": \"graph\", \"s\": \"Meet Corliss Archer\", \"p\": \"network\", \"o\": \"NBC\", \"quote\": \"broadcast by NBC in 1948 as a summer replacement for \\\"The Bob Hope Show\\\"\"}, {\"target\": \"graph\", \"s\": \"Meet Corliss Archer\", \"p\": \"network\", \"o\": \"ABC\", \"quote\": \"aired on ABC, finally returning to CBS\"}, {\"target\": \"graph\", \"s\": \"Meet Corliss Archer\", \"p\": \"number_of_episodes\", \"o\": \"24\", \"quote\": \"fewer than 24 episodes are known to exist\"}] }",
+   "prompt_tokens": 2446,
+   "completion_tokens": 339,
+   "seconds": 11.38,
+   "think_tag": false
+  },
+  "a_kiss_for_corliss": {
+   "text": "{\"ops\": [{\"target\": \"graph\", \"s\": \"A Kiss for Corliss\", \"p\": \"director\", \"o\": \"Richard Wallace\", \"quote\": \"A Kiss for Corliss is a 1949 American comedy film directed by Richard Wallace\"}, {\"target\": \"graph\", \"s\": \"A Kiss for Corliss\", \"p\": \"writer\", \"o\": \"Howard Dimsdale\", \"quote\": \"written by Howard Dimsdale\"}, {\"target\": \"graph\", \"s\": \"A Kiss for Corliss\", \"p\": \"starring\", \"o\": \"Shirley Temple\", \"quote\": \"It stars Shirley Temple in her final starring role as well as her final film appearance\"}, {\"target\": \"graph\", \"s\": \"A Kiss for Corliss\", \"p\": \"predecessor\", \"o\": \"Kiss and Tell\", \"quote\": \"a sequel to the 1945 film \\\"Kiss and Tell\\\"\"}, {\"target\": \"graph\", \"s\": \"A Kiss for Corliss\", \"p\": \"title\", \"o\": \"Almost a Bride\", \"quote\": \"retitled \\\"Almost a Bride\\\" before release and this title appears in the title sequence\"}, {\"target\": \"graph\", \"s\": \"A Kiss for Corliss\", \"p\": \"release_date\", \"o\": \"1949-11-25\", \"quote\": \"released on November 25, 1949\"}, {\"target\": \"graph\", \"s\": \"A Kiss for Corliss\", \"p\": \"distributor\", \"o\": \"United Artists\", \"quote\": \"released on November 25, 1949, by United Artists\"}] }",
+   "prompt_tokens": 2431,
+   "completion_tokens": 374,
+   "seconds": 15.5,
+   "think_tag": false
+  },
+  "kiss_and_tell_1945_film": {
+   "text": "{\"ops\": [{\"target\": \"graph\", \"s\": \"Kiss and Tell (1945 film)\", \"p\": \"starring\", \"o\": \"Shirley Temple\", \"quote\": \"Kiss and Tell is a 1945 American comedy film starring then 17-year-old Shirley Temple as Corliss Archer\"}, {\"target\": \"graph\", \"s\": \"Shirley Temple\", \"p\": \"role\", \"o\": \"Corliss Archer\", \"quote\": \"starring then 17-year-old Shirley Temple as Corliss Archer\"}, {\"target\": \"graph\", \"s\": \"Kiss and Tell (1945 film)\", \"p\": \"genre\", \"o\": \"comedy\", \"quote\": \"a 1945 American comedy film\"}, {\"target\": \"graph\", \"s\": \"Kiss and Tell (1945 film)\", \"p\": \"year\", \"o\": \"1945\", \"quote\": \"Kiss and Tell is a 1945 American comedy film\"}, {\"target\": \"graph\", \"s\": \"Kiss and Tell (1945 film)\", \"p\": \"starring\", \"o\": \"then 17-year-old Shirley Temple\", \"quote\": \"starring then 17-year-old Shirley Temple as Corliss Archer\"}, {\"target\": \"graph\", \"s\": \"Kiss and Tell (1945 film)\", \"p\": \"plot\", \"o\": \"two teenage girls cause their respective parents much concern when they start to become interested in boys\", \"quote\": \"In the film, two teenage girls cause their respective parents much concern when they start to become interested in boys.\"}, {\"target\": \"graph\", \"s\": \"Kiss and Tell (1945 film)\", \"p\": \"plot\", \"o\": \"the parents' bickering about which girl is the worse influence causes more problems than it solves\", \"quote\": \"The parents' bickering about which girl is the worse influence causes more problems than it solves.\"}]}",
+   "prompt_tokens": 2396,
+   "completion_tokens": 440,
+   "seconds": 16.24,
+   "think_tag": false
+  },
+  "janet_waldo": {
+   "text": "{\"ops\": [{\"target\": \"graph\", \"s\": \"Janet Marie Waldo\", \"p\": \"date of birth\", \"o\": \"1920-02-04\", \"quote\": \"Janet Marie Waldo (February 4, 1920\"}, {\"target\": \"graph\", \"s\": \"Janet Marie Waldo\", \"p\": \"date of death\", \"o\": \"2016-06-12\", \"quote\": \"February 4, 1920 \u2013 June 12, 2016\"}] }",
+   "prompt_tokens": 2408,
+   "completion_tokens": 129,
+   "seconds": 5.05,
+   "think_tag": false
+  }
+ }
+}

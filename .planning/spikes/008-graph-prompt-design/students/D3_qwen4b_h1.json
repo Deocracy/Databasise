@@ -1,0 +1,190 @@
+{
+ "arm": "D3_qwen4b",
+ "design": "D3",
+ "model_file": "Qwen3-4B-Q8_0.gguf",
+ "corpus_hash": "ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd",
+ "temperature": 0.0,
+ "seed": 1234,
+ "max_tokens": 1024,
+ "chat_template": false,
+ "grammar": "score-io-v0.2-spike003 file=graph,sql",
+ "schema": "ops.v0.2",
+ "load_seconds": 1.19,
+ "example_docs": [
+  "shirley_temple",
+  "adam_collis",
+  "deliver_us_from_evil_2014_film",
+  "scott_derrickson"
+ ],
+ "outputs": {
+  "secretary_of_state_for_constitutional_affairs": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Secretary of State for Constitutional Affairs\",\"p\":\"created\",\"o\":\"2003\",\"quote\":\"created in 2003.\"}, {\"target\":\"graph\",\"s\":\"Secretary of State for Constitutional Affairs\",\"p\":\"related_to\",\"o\":\"Lord Chancellor's Department\",\"quote\":\"functions of the Lord Chancellor which related to the Lord Chancellor's Department were transferred to the Secretary of State.\"}, {\"target\":\"graph\",\"s\":\"Secretary of State for Constitutional Affairs\",\"p\":\"related_to\",\"o\":\"First Secretary of State\",\"quote\":\"from the First Secretary of State, a position within the government held by the Deputy Prime Minister.\"}, {\"target\":\"sql\",\"subject\":\"Secretary of State for Constitutional Affairs\",\"attribute\":\"position\",\"value\":\"British Government position\",\"value_type\":\"text\",\"quote\":\"was a British Government position\"}] }",
+   "prompt_tokens": 494,
+   "completion_tokens": 214,
+   "seconds": 6.77,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Secretary of State for Constitutional Affairs\", \"British Government\", \"Lord Chancellor\", \"Lord Chancellor's Department\", \"First Secretary of State\", \"Deputy Prime Minister\"]}",
+   "step1_entities": [
+    "Secretary of State for Constitutional Affairs",
+    "British Government",
+    "Lord Chancellor",
+    "Lord Chancellor's Department",
+    "First Secretary of State",
+    "Deputy Prime Minister"
+   ],
+   "step1_prompt_tokens": 142,
+   "step1_completion_tokens": 37
+  },
+  "lord_high_treasurer": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Lord High Treasurer\",\"p\":\"is\",\"o\":\"English government position\",\"quote\":\"The post of Lord High Treasurer or Lord Treasurer was an English government position and has been a British government position since the Acts of Union of 1707.\"},{\"target\":\"graph\",\"s\":\"Lord High Treasurer\",\"p\":\"is\",\"o\":\"British government position\",\"quote\":\"The post of Lord High Treasurer or Lord Treasurer was an English government position and has been a British government position since the Acts of Union of 1707.\"},{\"target\":\"graph\",\"s\":\"Lord High Treasurer\",\"p\":\"is\",\"o\":\"third-highest-ranked Great Officer of State\",\"quote\":\"A holder of the post would be the third-highest-ranked Great Officer of State, below the Lord High Steward and the Lord High Chancellor.\"},{\"target\":\"sql\",\"subject\":\"Acts of Union of 1707\",\"attribute\":\"date\",\"value\":\"Acts of Union of 1707\",\"value_type\":\"text\",\"quote\":\"The post of Lord High Treasurer or Lord Treasurer was an English government position and has been a British government position since the Acts of Union of 1707.\"}]}",
+   "prompt_tokens": 455,
+   "completion_tokens": 288,
+   "seconds": 9.65,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Lord High Treasurer\", \"Lord Treasurer\", \"English government\", \"British government\", \"Acts of Union of 1707\", \"Lord High Steward\", \"Lord High Chancellor\"]}",
+   "step1_entities": [
+    "Lord High Treasurer",
+    "Lord Treasurer",
+    "English government",
+    "British government",
+    "Acts of Union of 1707",
+    "Lord High Steward",
+    "Lord High Chancellor"
+   ],
+   "step1_prompt_tokens": 120,
+   "step1_completion_tokens": 42
+  },
+  "meet_corliss_archer_tv_series": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"aired with\",\"o\":\"CBS\",\"quote\":\"CBS (July 13, 1951 - August 10, 1951)\"}]}",
+   "prompt_tokens": 516,
+   "completion_tokens": 99,
+   "seconds": 3.31,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Corliss Archer\", \"CBS\", \"July 13, 1951\", \"August 10, 1951\", \"Ziv Company\", \"F. Hugh Herbert\"]}",
+   "step1_entities": [
+    "Corliss Archer",
+    "CBS",
+    "July 13, 1951",
+    "August 10, 1951",
+    "Ziv Company",
+    "F. Hugh Herbert"
+   ],
+   "step1_prompt_tokens": 148,
+   "step1_completion_tokens": 47
+  },
+  "sinister_film": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Sinister\",\"p\":\"type\",\"o\":\"film\",\"quote\":\"Sinister (film)\"},{\"target\":\"sql\",\"subject\":\"Sinister\",\"attribute\":\"year\",\"value\":\"2012\",\"value_type\":\"number\",\"quote\":\"Sinister (film)\"}] }",
+   "prompt_tokens": 465,
+   "completion_tokens": 117,
+   "seconds": 3.78,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Sinister\", \"film\", \"2012\", \"Scott Derrickson\", \"C. Robert Cargill\", \"Ethan Hawke\", \"Ellison Oswalt\", \"home movies\", \"attic\", \"family\"]}",
+   "step1_entities": [
+    "Sinister",
+    "film",
+    "2012",
+    "Scott Derrickson",
+    "C. Robert Cargill",
+    "Ethan Hawke",
+    "Ellison Oswalt",
+    "home movies",
+    "attic",
+    "family"
+   ],
+   "step1_prompt_tokens": 120,
+   "step1_completion_tokens": 52
+  },
+  "meet_corliss_archer": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"ran from\",\"o\":\"January 7, 1943\",\"quote\":\"ran from January 7, 1943 to September 30, 1956.\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"broadcast by\",\"o\":\"NBC\",\"quote\":\"broadcast by NBC in 1948 as a summer replacement for \"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"aired with\",\"o\":\"The Bob Hope Show\",\"quote\":\"summer replacement for \"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"aired with\",\"o\":\"A Date with Judy\",\"quote\":\"CBS's answer to NBC's popular \"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"aired with\",\"o\":\"ABC\",\"quote\":\"aired on ABC, finally returning to CBS.\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"aired with\",\"o\":\"CBS\",\"quote\":\"finally returning to CBS.\"},{\"target\":\"sql\",\"subject\":\"Corliss Archer\",\"attribute\":\"end date\",\"value\":\"September 30, 1956\",\"value_type\":\"date\",\"quote\":\"ran from January 7, 1943 to September 30, 1956.\"},{\"target\":\"sql\",\"subject\":\"Corliss Archer\",\"attribute\":\"number of episodes\",\"value\":\"24\",\"value_type\":\"number\",\"quote\":\"fewer than 24 episodes are known to exist.\"}]}",
+   "prompt_tokens": 609,
+   "completion_tokens": 387,
+   "seconds": 13.44,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Corliss Archer\", \"radio's Golden Age\", \"January 7, 1943\", \"September 30, 1956\", \"CBS\", \"NBC\", \"A Date with Judy\", \"The Bob Hope Show\", \"ABC\", \"24 episodes\"]}",
+   "step1_entities": [
+    "Corliss Archer",
+    "radio's Golden Age",
+    "January 7, 1943",
+    "September 30, 1956",
+    "CBS",
+    "NBC",
+    "A Date with Judy",
+    "The Bob Hope Show",
+    "ABC",
+    "24 episodes"
+   ],
+   "step1_prompt_tokens": 186,
+   "step1_completion_tokens": 64
+  },
+  "a_kiss_for_corliss": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"director\",\"o\":\"Richard Wallace\",\"quote\":\"directed by Richard Wallace\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"writer\",\"o\":\"Howard Dimsdale\",\"quote\":\"written by Howard Dimsdale\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"star\",\"o\":\"Shirley Temple\",\"quote\":\"stars Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"title\",\"o\":\"Kiss and Tell\",\"quote\":\"sequel to the 1945 film \\\"Kiss and Tell\\\"\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"title\",\"o\":\"Almost a Bride\",\"quote\":\"retitled \\\"Almost a Bride\\\" before release\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"release date\",\"o\":\"November 25, 1949\",\"quote\":\"released on November 25, 1949\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"distributor\",\"o\":\"United Artists\",\"quote\":\"released by United Artists\"}] }",
+   "prompt_tokens": 569,
+   "completion_tokens": 307,
+   "seconds": 11.72,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"A Kiss for Corliss\", \"Richard Wallace\", \"Howard Dimsdale\", \"Shirley Temple\", \"Kiss and Tell\", \"Almost a Bride\", \"United Artists\", \"November 25, 1949\"]}",
+   "step1_entities": [
+    "A Kiss for Corliss",
+    "Richard Wallace",
+    "Howard Dimsdale",
+    "Shirley Temple",
+    "Kiss and Tell",
+    "Almost a Bride",
+    "United Artists",
+    "November 25, 1949"
+   ],
+   "step1_prompt_tokens": 171,
+   "step1_completion_tokens": 54
+  },
+  "kiss_and_tell_1945_film": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Kiss and Tell\",\"p\":\"type\",\"o\":\"film\",\"quote\":\"Kiss and Tell (1945 film)\"},{\"target\":\"graph\",\"s\":\"Kiss and Tell\",\"p\":\"release_year\",\"o\":\"1945\",\"quote\":\"Kiss and Tell (1945 film)\"},{\"target\":\"graph\",\"s\":\"Kiss and Tell\",\"p\":\"genre\",\"o\":\"comedy\",\"quote\":\"Kiss and Tell (1945 film)\"},{\"target\":\"graph\",\"s\":\"Shirley Temple\",\"p\":\"role\",\"o\":\"Corliss Archer\",\"quote\":\"starring then 17-year-old Shirley Temple as Corliss Archer\"},{\"target\":\"graph\",\"s\":\"Shirley Temple\",\"p\":\"age\",\"o\":\"17\",\"quote\":\"starring then 17-year-old Shirley Temple as Corliss Archer\"},{\"target\":\"graph\",\"s\":\"Shirley Temple\",\"p\":\"type\",\"o\":\"American\",\"quote\":\"1945 American comedy film\"},{\"target\":\"graph\",\"s\":\"Kiss and Tell\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"starring then 17-year-old Shirley Temple as Corliss Archer\"},{\"target\":\"graph\",\"s\":\"Kiss and Tell\",\"p\":\"starring\",\"o\":\"Corliss Archer\",\"quote\":\"starring then 17-year-old Shirley Temple as Corliss Archer\"},{\"target\":\"graph\",\"s\":\"Kiss and Tell\",\"p\":\"subject\",\"o\":\"girls\",\"quote\":\"two teenage girls cause their respective parents much concern when they start to become interested in boys\"},{\"target\":\"graph\",\"s\":\"Kiss and Tell\",\"p\":\"subject\",\"o\":\"boys\",\"quote\":\"two teenage girls cause their respective parents much concern when they start to become interested in boys\"},{\"target\":\"graph\",\"s\":\"Kiss and Tell\",\"p\":\"subject\",\"o\":\"parents\",\"quote\":\"two teenage girls cause their respective parents much concern when they start to become interested in boys\"},{\"target\":\"graph\",\"s\":\"Kiss and Tell\",\"p\":\"subject\",\"o\":\"bickering\",\"quote\":\"The parents' bickering about which girl is the worse influence causes more problems than it solves\"},{\"target\":\"graph\",\"s\":\"Kiss and Tell\",\"p\":\"subject\",\"o\":\"influence\",\"quote\":\"The parents' bickering about which girl is the worse influence causes more problems than it solves\"},{\"target\":\"graph\",\"s\":\"Kiss and Tell\",\"p\":\"subject\",\"o\":\"problems\",\"quote\":\"The parents' bickering about which girl is the worse influence causes more problems than it solves\"}] }",
+   "prompt_tokens": 503,
+   "completion_tokens": 601,
+   "seconds": 21.87,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Kiss and Tell\", \"1945\", \"American\", \"comedy\", \"film\", \"Shirley Temple\", \"Corliss Archer\", \"parents\", \"girls\", \"boys\", \"bickering\", \"influence\", \"problems\"]}",
+   "step1_entities": [
+    "Kiss and Tell",
+    "1945",
+    "American",
+    "comedy",
+    "film",
+    "Shirley Temple",
+    "Corliss Archer",
+    "parents",
+    "girls",
+    "boys",
+    "bickering",
+    "influence",
+    "problems"
+   ],
+   "step1_prompt_tokens": 136,
+   "step1_completion_tokens": 58
+  },
+  "janet_waldo": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Janet Marie Waldo\",\"p\":\"birth date\",\"o\":\"February 4, 1920\",\"quote\":\"February 4, 1920\"},{\"target\":\"graph\",\"s\":\"Janet Marie Waldo\",\"p\":\"death date\",\"o\":\"June 12, 2016\",\"quote\":\"June 12, 2016\"},{\"target\":\"graph\",\"s\":\"Janet Marie Waldo\",\"p\":\"nationality\",\"o\":\"American\",\"quote\":\"American\"},{\"target\":\"graph\",\"s\":\"Janet Marie Waldo\",\"p\":\"occupation\",\"o\":\"radio\",\"quote\":\"radio\"},{\"target\":\"graph\",\"s\":\"Janet Marie Waldo\",\"p\":\"occupation\",\"o\":\"voice actress\",\"quote\":\"voice actress\"},{\"target\":\"graph\",\"s\":\"Janet Marie Waldo\",\"p\":\"known for\",\"o\":\"animation\",\"quote\":\"animation\"},{\"target\":\"graph\",\"s\":\"Janet Marie Waldo\",\"p\":\"known for\",\"o\":\"Judy Jetson\",\"quote\":\"Judy Jetson\"},{\"target\":\"graph\",\"s\":\"Janet Marie Waldo\",\"p\":\"known for\",\"o\":\"Nancy in 'Shazzan'\",\"quote\":\"Nancy in 'Shazzan'\"},{\"target\":\"graph\",\"s\":\"Janet Marie Waldo\",\"p\":\"known for\",\"o\":\"Penelope Pitstop\",\"quote\":\"Penelope Pitstop\"},{\"target\":\"graph\",\"s\":\"Janet Marie Waldo\",\"p\":\"known for\",\"o\":\"Josie in 'Josie and the Pussycats'\",\"quote\":\"Josie in 'Josie and the Pussycats'\"},{\"target\":\"graph\",\"s\":\"Janet Marie Waldo\",\"p\":\"known for\",\"o\":\"Meet Corliss Archer\",\"quote\":\"Meet Corliss Archer\"},{\"target\":\"sql\",\"subject\":\"Janet Marie Waldo\",\"attribute\":\"occupation\",\"value\":\"radio\",\"value_type\":\"text\",\"quote\":\"radio\"},{\"target\":\"sql\",\"subject\":\"Janet Marie Waldo\",\"attribute\":\"occupation\",\"value\":\"voice actress\",\"value_type\":\"text\",\"quote\":\"voice actress\"},{\"target\":\"sql\",\"subject\":\"Janet Marie Waldo\",\"attribute\":\"nationality\",\"value\":\"American\",\"value_type\":\"text\",\"quote\":\"American\"}] }",
+   "prompt_tokens": 559,
+   "completion_tokens": 554,
+   "seconds": 20.59,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Janet Waldo\", \"Janet Marie Waldo\", \"February 4, 1920\", \"June 12, 2016\", \"American\", \"radio\", \"voice actress\", \"animation\", \"Judy Jetson\", \"Shazzan\", \"Penelope Pitstop\", \"Josie in 'Josie and the Pussycats'\", \"Meet Corliss Archer\"]}",
+   "step1_entities": [
+    "Janet Waldo",
+    "Janet Marie Waldo",
+    "February 4, 1920",
+    "June 12, 2016",
+    "American",
+    "radio",
+    "voice actress",
+    "animation",
+    "Judy Jetson",
+    "Shazzan",
+    "Penelope Pitstop",
+    "Josie in 'Josie and the Pussycats'",
+    "Meet Corliss Archer"
+   ],
+   "step1_prompt_tokens": 148,
+   "step1_completion_tokens": 90
+  }
+ }
+}

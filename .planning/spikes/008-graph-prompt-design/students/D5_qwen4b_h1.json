@@ -1,0 +1,77 @@
+{
+ "arm": "D5_qwen4b",
+ "design": "D5",
+ "model_file": "Qwen3-4B-Q8_0.gguf",
+ "corpus_hash": "ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd",
+ "temperature": 0.0,
+ "seed": 1234,
+ "max_tokens": 1024,
+ "chat_template": false,
+ "grammar": "score-io-v0.2-spike003 file=graph,sql",
+ "schema": "ops.v0.2",
+ "load_seconds": 1.19,
+ "example_docs": [
+  "shirley_temple",
+  "adam_collis",
+  "deliver_us_from_evil_2014_film",
+  "scott_derrickson"
+ ],
+ "outputs": {
+  "secretary_of_state_for_constitutional_affairs": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Secretary of State for Constitutional Affairs\",\"p\":\"occupation\",\"o\":\"British Government position\",\"quote\":\"The office of Secretary of State for Constitutional Affairs was a British Government position, created in 2003.\"}, {\"target\":\"sql\",\"subject\":\"Secretary of State for Constitutional Affairs\",\"attribute\":\"date_of_birth\",\"value\":\"2003\",\"value_type\":\"number\",\"quote\":\"The office of Secretary of State for Constitutional Affairs was a British Government position, created in 2003.\"}] }",
+   "prompt_tokens": 413,
+   "completion_tokens": 112,
+   "seconds": 3.87,
+   "think_tag": false
+  },
+  "lord_high_treasurer": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Lord High Treasurer\",\"p\":\"occupation\",\"o\":\"Great Officer of State\",\"quote\":\"The post of Lord High Treasurer or Lord Treasurer was an English government position and has been a British government position since the Acts of Union of 1707.\"}, {\"target\":\"sql\",\"subject\":\"Lord High Treasurer\",\"attribute\":\"date_of_birth\",\"value\":\"1707\",\"value_type\":\"text\",\"quote\":\"The post of Lord High Treasurer or Lord Treasurer was an English government position and has been a British government position since the Acts of Union of 1707.\"}] }",
+   "prompt_tokens": 391,
+   "completion_tokens": 127,
+   "seconds": 4.17,
+   "think_tag": false
+  },
+  "meet_corliss_archer_tv_series": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Meet Corliss Archer\",\"p\":\"work_title\",\"o\":\"TV series\",\"quote\":\"Meet Corliss Archer (TV series)\"}] }",
+   "prompt_tokens": 419,
+   "completion_tokens": 41,
+   "seconds": 1.33,
+   "think_tag": false
+  },
+  "sinister_film": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Sinister\",\"p\":\"work_title\",\"o\":\"2012 supernatural horror film\",\"quote\":\"Sinister is a 2012 supernatural horror film directed by Scott Derrickson and written by Derrickson and C. Robert Cargill.\"}, {\"target\":\"graph\",\"s\":\"Sinister\",\"p\":\"director\",\"o\":\"Scott Derrickson\",\"quote\":\"Sinister is a 2012 supernatural horror film directed by Scott Derrickson and written by Derrickson and C. Robert Cargill.\"}, {\"target\":\"graph\",\"s\":\"Sinister\",\"p\":\"writer\",\"o\":\"Derrickson and C. Robert Cargill\",\"quote\":\"Sinister is a 2012 supernatural horror film directed by Scott Derrickson and written by Derrickson and C. Robert Cargill.\"}, {\"target\":\"graph\",\"s\":\"Ethan Hawke\",\"p\":\"starring\",\"o\":\"Sinister\",\"quote\":\"It stars Ethan Hawke as fictional true-crime writer Ellison Oswalt who discovers a box of home movies in his attic that puts his family in danger.\"}, {\"target\":\"graph\",\"s\":\"Ellison Oswalt\",\"p\":\"role\",\"o\":\"fictional true-crime writer\",\"quote\":\"It stars Ethan Hawke as fictional true-crime writer Ellison Oswalt who discovers a box of home movies in his attic that puts his family in danger.\"}, {\"target\":\"graph\",\"s\":\"Sinister\",\"p\":\"work_title\",\"o\":\"2012 supernatural horror film\",\"quote\":\"Sinister is a 2012 supernatural horror film directed by Scott Derrickson and written by Derrickson and C. Robert Cargill.\"}, {\"target\":\"sql\",\"subject\":\"Sinister\",\"attribute\":\"date_of_birth\",\"value\":\"2012\",\"value_type\":\"number\",\"quote\":\"Sinister is a 2012 supernatural horror film directed by Scott Derrickson and written by Derrickson and C. Robert Cargill.\"}, {\"target\":\"sql\",\"subject\":\"Ellison Oswalt\",\"attribute\":\"role\",\"value\":\"fictional true-crime writer\",\"value_type\":\"text\",\"quote\":\"It stars Ethan Hawke as fictional true-crime writer Ellison Oswalt who discovers a box of home movies in his attic that puts his family in danger.\"}]}",
+   "prompt_tokens": 391,
+   "completion_tokens": 473,
+   "seconds": 16.4,
+   "think_tag": false
+  },
+  "meet_corliss_archer": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"starring\",\"o\":\"Corliss Archer\",\"quote\":\"Meet Corliss Archer, a program from radio's Golden Age, ran from January 7, 1943 to September 30, 1956.\"},{\"target\":\"sql\",\"subject\":\"Corliss Archer\",\"attribute\":\"date_of_birth\",\"value\":\"January 7, 1943\",\"value_type\":\"date\",\"quote\":\"Meet Corliss Archer, a program from radio's Golden Age, ran from January 7, 1943 to September 30, 1956.\"},{\"target\":\"sql\",\"subject\":\"Corliss Archer\",\"attribute\":\"date_of_birth\",\"value\":\"September 30, 1956\",\"value_type\":\"date\",\"quote\":\"Meet Corliss Archer, a program from radio's Golden Age, ran from January 7, 1943 to September 30, 1956.\"},{\"target\":\"sql\",\"subject\":\"Corliss Archer\",\"attribute\":\"date_of_birth\",\"value\":\"January 7, 1943\",\"value_type\":\"date\",\"quote\":\"Meet Corliss Archer, a program from radio's Golden Age, ran from January 7, 1943 to September 30, 1956.\"}] }",
+   "prompt_tokens": 457,
+   "completion_tokens": 291,
+   "seconds": 11.83,
+   "think_tag": false
+  },
+  "a_kiss_for_corliss": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"work_title\",\"o\":\"A Kiss for Corliss\",\"quote\":\"A Kiss for Corliss is a 1949 American comedy film...\"}, {\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"work_title\",\"o\":\"Almost a Bride\",\"quote\":\"...retitled 'Almost a Bride' before release and this title appears in the title sequence.\"}, {\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"date_of_birth\",\"o\":\"1949\",\"quote\":\"A Kiss for Corliss is a 1949 American comedy film...\"}, {\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"director\",\"o\":\"Richard Wallace\",\"quote\":\"A Kiss for Corliss is a 1949 American comedy film directed by Richard Wallace and written by Howard Dimsdale.\"}, {\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"writer\",\"o\":\"Howard Dimsdale\",\"quote\":\"A Kiss for Corliss is a 1949 American comedy film directed by Richard Wallace and written by Howard Dimsdale.\"}, {\"target\":\"graph\",\"s\":\"Shirley Temple\",\"p\":\"starring\",\"o\":\"A Kiss for Corliss\",\"quote\":\"It stars Shirley Temple in her final starring role as well as her final film appearance.\"}, {\"target\":\"graph\",\"s\":\"Shirley Temple\",\"p\":\"role\",\"o\":\"final starring role\",\"quote\":\"It stars Shirley Temple in her final starring role as well as her final film appearance.\"}, {\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"based_on\",\"o\":\"Kiss and Tell\",\"quote\":\"It is a sequel to the 1945 film 'Kiss and Tell'.\"}, {\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"release_date\",\"o\":\"1949-11-25\",\"quote\":\"The film was released on November 25, 1949, by United Artists.\"}, {\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"producer\",\"o\":\"United Artists\",\"quote\":\"The film was released on November 25, 1949, by United Artists.\"}, {\"target\":\"sql\",\"subject\":\"A Kiss for Corliss\",\"attribute\":\"release_date\",\"value\":\"1949-11-25\",\"value_type\":\"date\",\"quote\":\"The film was released on November 25, 1949, by United Artists.\"}]}",
+   "prompt_tokens": 442,
+   "completion_tokens": 553,
+   "seconds": 18.99,
+   "think_tag": false
+  },
+  "kiss_and_tell_1945_film": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Kiss and Tell\",\"p\":\"work_title\",\"o\":\"1945 American comedy film\",\"quote\":\"Kiss and Tell is a 1945 American comedy film starring then 17-year-old Shirley Temple as Corliss Archer.\"}, {\"target\":\"graph\",\"s\":\"Shirley Temple\",\"p\":\"occupation\",\"o\":\"actress\",\"quote\":\"Kiss and Tell is a 1945 American comedy film starring then 17-year-old Shirley Temple as Corliss Archer.\"}, {\"target\":\"graph\",\"s\":\"Shirley Temple\",\"p\":\"role\",\"o\":\"Corliss Archer\",\"quote\":\"Kiss and Tell is a 1945 American comedy film starring then 17-year-old Shirley Temple as Corliss Archer.\"}, {\"target\":\"graph\",\"s\":\"Kiss and Tell\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Kiss and Tell is a 1945 American comedy film starring then 17-year-old Shirley Temple as Corliss Archer.\"}, {\"target\":\"sql\",\"subject\":\"Kiss and Tell\",\"attribute\":\"date_of_birth\",\"value\":\"1945\",\"value_type\":\"text\",\"quote\":\"Kiss and Tell is a 1945 American comedy film starring then 17-year-old Shirley Temple as Corliss Archer.\"}]}",
+   "prompt_tokens": 407,
+   "completion_tokens": 289,
+   "seconds": 10.34,
+   "think_tag": false
+  },
+  "janet_waldo": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"occupation\",\"o\":\"radio and voice actress\",\"quote\":\"Janet Waldo (February 4, 1920 \u2013 June 12, 2016) was an American radio and voice actress.\"}, {\"target\":\"sql\",\"subject\":\"Janet Waldo\",\"attribute\":\"date_of_birth\",\"value\":\"February 4, 1920\",\"value_type\":\"text\",\"quote\":\"Janet Waldo (February 4, 1920 \u2013 June 12, 2016) was an American radio and voice actress.\"}, {\"target\":\"sql\",\"subject\":\"Janet Waldo\",\"attribute\":\"date_of_death\",\"value\":\"June 12, 2016\",\"value_type\":\"text\",\"quote\":\"Janet Waldo (February 4, 1920 \u2013 June 12, 2016) was an American radio and voice actress.\"}, {\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"nationality\",\"o\":\"American\",\"quote\":\"Janet Waldo (February 4, 1920 \u2013 June 12, 2016) was an American radio and voice actress.\"}, {\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"starring\",\"o\":\"Meet Corliss Archer\",\"quote\":\"She is best known in animation for voicing Judy Jetson, Nancy in \" }] }",
+   "prompt_tokens": 419,
+   "completion_tokens": 313,
+   "seconds": 12.41,
+   "think_tag": false
+  }
+ }
+}
