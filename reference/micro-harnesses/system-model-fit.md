@@ -86,6 +86,8 @@ MelodyScribe's first promotion claim is index-side (a new embedder is a new reci
 3. Does a locally served model need a local-compute price class in RIG §CM, or is index-side rung 4 simply the posture? Recommendation: leave §F3 as is; record the question in RIG's open list.
 4. Which `ItemKind` carries a Folio when it is returned as evidence: `text_chunk`, or is a Folio never evidence (only an internal instruction to MelodyScribe)? Recommendation: never evidence, which also keeps model-written text out of the frontier's context by construction.
 
+5. One client call returning both an embedding and a generation has no declared capability flag yet (see `runtime-one-pass.md`). Candidate: a §14 capability-table addition beside `prefix_continuation` and `prompt_cache`. Until then the node declares both `calls_llm` and `calls_embedding`.
+
 ## Not read in this pass
 
 SYSTEM-MODEL §PC (per-modality port cost) and §H1, PARTS.md, CATALOG.md, MODEL-RED-TEAM.md, CONTRACT §6 (promotion and decomposition mechanics), §19 (node granularity), and the SELECTION.md spike-005 amendment text. Port-cost estimation for MelodyScribe waits on §PC.
