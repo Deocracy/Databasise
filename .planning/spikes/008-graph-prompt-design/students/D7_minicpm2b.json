@@ -1,0 +1,133 @@
+{
+ "arm": "D7_minicpm2b",
+ "design": "D7",
+ "model_file": "MiniCPM5-2B-Q8_0.gguf",
+ "corpus_hash": "ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd",
+ "temperature": 0.0,
+ "seed": 1234,
+ "max_tokens": 1024,
+ "chat_template": false,
+ "grammar": "score-io-v0.2-spike003 file=graph,sql",
+ "schema": "ops.v0.2",
+ "load_seconds": 0.77,
+ "example_docs": [
+  "shirley_temple",
+  "adam_collis",
+  "deliver_us_from_evil_2014_film",
+  "scott_derrickson"
+ ],
+ "outputs": {
+  "secretary_of_state_for_constitutional_affairs": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Secretary of State for Constitutional Affairs\",\"p\":\"office\",\"o\":\"British Government position\",\"quote\":\"created in 2003\"},{\"target\":\"graph\",\"s\":\"Secretary of State for Constitutional Affairs\",\"p\":\"functions\",\"o\":\"transferred to the Secretary of State\",\"quote\":\"Certain functions of the Lord Chancellor which related to the Lord Chancellor's Department were transferred to the Secretary of State\"},{\"target\":\"graph\",\"s\":\"First Secretary of State\",\"p\":\"position\",\"o\":\"within the government held by the Deputy Prime Minister\",\"quote\":\"a position within the government held by the Deputy Prime Minister\"}]}",
+   "prompt_tokens": 323,
+   "completion_tokens": 127,
+   "seconds": 3.44,
+   "think_tag": false
+  },
+  "lord_high_treasurer": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Lord High Treasurer\",\"p\":\"government position\",\"o\":\"English government position and has been a British government position since the Acts of Union of 1707\",\"quote\":\"The post of Lord High Treasurer or Lord Treasurer was an English government position and has been a British government position since the Acts of Union of 1707.\"},{\"target\":\"graph\",\"s\":\"Lord High Treasurer\",\"p\":\"rank\",\"o\":\"third-highest-ranked Great Officer of State\",\"quote\":\"A holder of the post would be the third-highest-ranked Great Officer of State, below the Lord High Steward and the Lord High Chancellor.\"}]}",
+   "prompt_tokens": 301,
+   "completion_tokens": 133,
+   "seconds": 4.34,
+   "think_tag": false
+  },
+  "meet_corliss_archer_tv_series": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"aired\",\"o\":\"CBS\",\"quote\":\"aired on CBS\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"aired\",\"o\":\"Ziv Company\",\"quote\":\"in syndication via the Ziv Company\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"aired\",\"o\":\"1951\",\"quote\":\"aired on CBS\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"aired\",\"o\":\"1954\",\"quote\":\"from April to December 1954\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"adapted\",\"o\":\"radio series\",\"quote\":\"adaptation of the radio series\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"based\",\"o\":\"short stories\",\"quote\":\"based on a series of short stories by F. Hugh Herbert\"}]}",
+   "prompt_tokens": 325,
+   "completion_tokens": 181,
+   "seconds": 5.29,
+   "think_tag": false
+  },
+  "sinister_film": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Sinister\",\"p\":\"directed_by\",\"o\":\"Scott Derrickson\",\"quote\":\"directed by Scott Derrickson\"},{\"target\":\"graph\",\"s\":\"Sinister\",\"p\":\"starring\",\"o\":\"Ethan Hawke\",\"quote\":\"Ethan Hawke as fictional true-crime writer Ellison Oswalt\"},{\"target\":\"graph\",\"s\":\"Sinister\",\"p\":\"starring\",\"o\":\"Ellison Oswalt\",\"quote\":\"Ellison Oswalt\"},{\"target\":\"sql\",\"subject\":\"Sinister\",\"attribute\":\"year\",\"value\":\"2012\",\"value_type\":\"number\",\"quote\":\"2012\"},{\"target\":\"sql\",\"subject\":\"Sinister\",\"attribute\":\"directed_by\",\"value\":\"Scott Derrickson\",\"value_type\":\"text\",\"quote\":\"directed by Scott Derrickson\"}]}",
+   "prompt_tokens": 303,
+   "completion_tokens": 159,
+   "seconds": 4.3,
+   "think_tag": false
+  },
+  "meet_corliss_archer": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"program\",\"o\":\"radio\",\"quote\":\"Meet Corliss Archer\"},{\"target\":\"sql\",\"subject\":\"Corliss Archer\",\"attribute\":\"start_date\",\"value\":\"1943-01-07\",\"value_type\":\"date\",\"quote\":\"January 7, 1943\"},{\"target\":\"sql\",\"subject\":\"Corliss Archer\",\"attribute\":\"end_date\",\"value\":\"1956-09-30\",\"value_type\":\"date\",\"quote\":\"September 30, 1956\"}]}",
+   "prompt_tokens": 356,
+   "completion_tokens": 111,
+   "seconds": 3.17,
+   "think_tag": false
+  },
+  "a_kiss_for_corliss": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"directed by\",\"o\":\"Richard Wallace\",\"quote\":\"directed by Richard Wallace\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"written by\",\"o\":\"Howard Dimsdale\",\"quote\":\"written by Howard Dimsdale\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shir",
+   "prompt_tokens": 346,
+   "completion_tokens": 1024,
+   "seconds": 28.89,
+   "think_tag": false
+  },
+  "kiss_and_tell_1945_film": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Kiss and Tell\",\"p\":\"film\",\"o\":\"1945\",\"quote\":\"1945\"},{\"target\":\"sql\",\"subject\":\"Kiss and Tell\",\"attribute\":\"year\",\"value\":\"1945\",\"value_type\":\"number\",\"quote\":\"1945\"}]}",
+   "prompt_tokens": 312,
+   "completion_tokens": 57,
+   "seconds": 1.46,
+   "think_tag": false
+  },
+  "janet_waldo": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"actress\",\"o\":\"Judy Jetson\",\"quote\":\"Judy Jetson\"},{\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"actress\",\"o\":\"Nancy\",\"quote\":\"Nancy\"},{\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"actress\",\"o\":\"Penelope Pitstop\",\"quote\":\"Penelope Pitstop\"},{\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"actress\",\"o\":\"Josie\",\"quote\":\"Josie\"},{\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"actress\",\"o\":\"title character\",\"quote\":\"title character\"},{\"target\":\"sql\",\"subject\":\"Janet Waldo\",\"attribute\":\"birth\",\"value\":\"1920\",\"value_type\":\"number\",\"quote\":\"February 4, 1920\"},{\"target\":\"sql\",\"subject\":\"Janet Waldo\",\"attribute\":\"death\",\"value\":\"2016\",\"value_type\":\"number\",\"quote\":\"June 12, 2016\"}]}",
+   "prompt_tokens": 318,
+   "completion_tokens": 191,
+   "seconds": 5.08,
+   "think_tag": false
+  },
+  "conrad_brooks": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"born\",\"o\":\"January 3, 1931\",\"quote\":\"Conrad Brooks (born Conrad Biedrzycki on January 3, 1931 in Baltimore, Maryland) is an American actor.\"},{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"moved\",\"o\":\"Hollywood, California\",\"quote\":\"He moved to Hollywood, California in 1948 to pursue a career in acting.\"},{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"got\",\"o\":\"start\",\"quote\":\"He got his start in movies appearing in Ed Wood films such as \\\"Plan 9 from Outer Space\\\", \\\"Glen or Glenda\\\", and \\\"Jail Bait.\\\"\"},{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"took\",\"o\":\"break\",\"quote\":\"He took a break from acting during the 1960s and 1970s but due to the ongoing interest in the films of Ed Wood, he reemerged in the 1980s and has become a prolific actor.\"},{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"reemerged\",\"o\":\"1980s\",\"quote\":\"He took a break from acting during the 1960s and 1970s but due to the ongoing interest in the films of Ed Wood, he reemerged in the 1980s and has become a prolific actor.\"},{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"has\",\"o\":\"become\",\"quote\":\"He took a break from acting during the 1960s and 1970s but due to the ongoing interest in the films of Ed Wood, he reemerged in the 1980s and has become a prolific actor.\"},{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"has\",\"o\":\"gone\",\"quote\":\"He also has since gone on to write, produce and direct several films.\"}]}",
+   "prompt_tokens": 383,
+   "completion_tokens": 401,
+   "seconds": 10.85,
+   "think_tag": false
+  },
+  "woodson_arkansas": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Woodson\",\"p\":\"census-designated-place\",\"o\":\"Pulaski County, Arkansas\",\"quote\":\"Woodson is a census-designated place (CDP) in Pulaski County, Arkansas, in the United States.\"},{\"target\":\"graph\",\"s\":\"Woodson\",\"p\":\"population\",\"o\":\"403\",\"quote\":\"Its population was 403 at the 2010 census.\"},{\"target\":\"graph\",\"s\":\"Woodson\",\"p\":\"part-of\",\"o\":\"Little Rock\u2013North Little Rock\u2013Conway Metropolitan Statistical Area\",\"quote\":\"It is part of the Little Rock\u2013North Little Rock\u2013Conway Metropolitan Statistical Area.\"},{\"target\":\"graph\",\"s\":\"Woodson\",\"p\":\"adjacent-to\",\"o\":\"Wood Plantation\",\"quote\":\"Woodson is adjacent to the Wood Plantation, the largest of the plantations own by Ed Wood Sr.\"},{\"target\":\"sql\",\"subject\":\"Woodson\",\"attribute\":\"population\",\"value\":\"403\",\"value_type\":\"number\",\"quote\":\"Its population was 403 at the 2010 census.\"}]}",
+   "prompt_tokens": 355,
+   "completion_tokens": 217,
+   "seconds": 5.68,
+   "think_tag": false
+  },
+  "tyler_bates": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"born\",\"o\":\"June 5, 1965\",\"quote\":\"born June 5, 1965\"},{\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"American\",\"o\":\"true\",\"quote\":\"American musician\"},{\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"lead guitarist\",\"o\":\"Marilyn Manson\",\"quote\":\"lead guitarist of the American rock band Marilyn Manson\"},{\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"produced\",\"o\":\"The Pale Emperor\",\"quote\":\"produced its albums\"},{\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"produced\",\"o\":\"Heaven Upside Down\",\"quote\":\"produced its albums\"}]}",
+   "prompt_tokens": 410,
+   "completion_tokens": 144,
+   "seconds": 3.92,
+   "think_tag": false
+  },
+  "charles_craft": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"film editor\",\"o\":\"English-born American\",\"quote\":\"Born in the county of Hampshire in England on May 9, 1902\"},{\"target\":\"sql\",\"subject\":\"Charles Craft\",\"attribute\":\"birth_year\",\"value\":\">= 1902\",\"value_type\":\"number\",\"quote\":\"Born in the county of Hampshire in England on May 9, 1902\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"film editor\",\"o\":\"English-born American\",\"quote\":\"Born in the county of Hampshire in England on May 9, 1902\"},{\"target\":\"sql\",\"subject\":\"Charles Craft\",\"attribute\":\"death_year\",\"value\":\">= 1968\",\"value_type\":\"number\",\"quote\":\"Born in the county of Hampshire in England on May 9, 1902\"}]}",
+   "prompt_tokens": 549,
+   "completion_tokens": 174,
+   "seconds": 4.43,
+   "think_tag": false
+  },
+  "ed_wood": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Ed Wood\",\"p\":\"film\",\"o\":\"American filmmaker, actor, writer, producer, and director\",\"quote\":\"American filmmaker, actor, writer, producer, and director\"},{\"target\":\"sql\",\"subject\":\"Ed Wood\",\"attribute\":\"birth\",\"value\":\"1924\",\"value_type\":\"number\",\"quote\":\"October 10, 1924\"},{\"target\":\"sql\",\"subject\":\"Ed Wood\",\"attribute\":\"death\",\"value\":\"1978\",\"value_type\":\"number\",\"quote\":\"December 10, 1978\"}]}",
+   "prompt_tokens": 276,
+   "completion_tokens": 111,
+   "seconds": 2.87,
+   "think_tag": false
+  },
+  "doctor_strange_2016_film": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Doctor Strange\",\"p\":\"film\",\"o\":\"2016\",\"quote\":\"2016 American superhero film based on the Marvel Comics character of the same name, produced by Marvel Studios and distributed by Walt Disney Studios Motion Pictures.\"},{\"target\":\"sql\",\"subject\":\"Doctor Strange\",\"attribute\":\"film\",\"value\":\"2016\",\"value_type\":\"text\",\"quote\":\"2016 American superhero film based on the Marvel Comics character of the same name, produced by Marvel Studios and distributed by Walt Disney Studios Motion Pictures.\"}]}",
+   "prompt_tokens": 391,
+   "completion_tokens": 109,
+   "seconds": 3.07,
+   "think_tag": false
+  },
+  "village_accountant": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Village Accountant\",\"p\":\"position\",\"o\":\"administrative government position found in rural parts of the Indian sub-continent\",\"quote\":\"The Village Accountant (variously known as \\\"Patwari\\\", \\\"Talati\\\", \\\"Patel\\\", \\\"Karnam\\\", \\\"Adhikari\\\", \\\"Shanbogaru\\\",\\\"Patnaik\\\" etc.) is an administrative government position found in rural parts of the Indian sub-continent.\"},{\"target\":\"sql\",\"subject\":\"Village Accountant\",\"attribute\":\"position\",\"value\":\"administrative government position found in rural parts of the Indian sub-continent\",\"value_type\":\"text\",\"quote\":\"The Village Accountant (variously known as \\\"Patwari\\\", \\\"Talati\\\", \\\"Patel\\\", \\\"Karnam\\\", \\\"Adhikari\\\", \\\"Shanbogaru\\\",\\\"Patnaik\\\" etc.) is an administrative government position found in rural parts of the Indian sub-continent.\"}]}",
+   "prompt_tokens": 421,
+   "completion_tokens": 195,
+   "seconds": 5.49,
+   "think_tag": false
+  },
+  "ed_wood_film": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Ed Wood\",\"p\":\"film\",\"o\":\"Ed Wood (film)\",\"quote\":\"Ed Wood is a 1994 American biographical period comedy-drama film directed and produced by Tim Burton, and starring Johnny Depp as cult filmmaker Ed Wood.\"},{\"target\":\"sql\",\"subject\":\"Ed Wood\",\"attribute\":\"year\",\"value\":\"1994\",\"value_type\":\"text\",\"quote\":\"Ed Wood is a 1994 American biographical period comedy-drama film directed and produced by Tim Burton, and starring Johnny Depp as cult filmmaker Ed Wood.\"}]}",
+   "prompt_tokens": 331,
+   "completion_tokens": 117,
+   "seconds": 3.15,
+   "think_tag": false
+  }
+ }
+}

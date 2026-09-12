@@ -1,0 +1,133 @@
+{
+ "arm": "D6_minicpm2b",
+ "design": "D6",
+ "model_file": "MiniCPM5-2B-Q8_0.gguf",
+ "corpus_hash": "ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd",
+ "temperature": 0.0,
+ "seed": 1234,
+ "max_tokens": 1024,
+ "chat_template": false,
+ "grammar": "score-io-v0.2-spike003 file=graph,sql",
+ "schema": "ops.v0.2",
+ "load_seconds": 0.77,
+ "example_docs": [
+  "shirley_temple",
+  "adam_collis",
+  "deliver_us_from_evil_2014_film",
+  "scott_derrickson"
+ ],
+ "outputs": {
+  "secretary_of_state_for_constitutional_affairs": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Secretary of State for Constitutional Affairs\",\"p\":\"located_at\",\"o\":\"London\",\"quote\":\"Secretary of State for Constitutional Affairs is located at London.\"},{\"target\":\"graph\",\"s\":\"Secretary of State for Constitutional Affairs\",\"p\":\"created_in\",\"o\":\"2003\",\"quote\":\"Secretary of State for Constitutional Affairs was created in 2003.\"},{\"target\":\"graph\",\"s\":\"Secretary of State for Constitutional Affairs\",\"p\":\"transferred_from\",\"o\":\"First Secretary of State\",\"quote\":\"Secretary of State for Constitutional Affairs transferred functions from the First Secretary of State.\"},{\"target\":\"graph\",\"s\":\"Secretary of State for Constitutional Affairs\",\"p\":\"transferred_to\",\"o\":\"Lord Chancellor's Department\",\"quote\":\"Secretary of State for Constitutional Affairs transferred functions to the Lord Chancellor's Department.\"},{\"target\":\"graph\",\"s\":\"Secretary of State for Constitutional Affairs\",\"p\":\"transferred_to\",\"o\":\"First Secretary of State\",\"quote\":\"Secretary of State for Constitutional Affairs transferred functions to the First Secretary of State.\"},{\"target\":\"graph\",\"s\":\"Secretary of State for Constitutional Affairs\",\"p\":\"transferred_to\",\"o\":\"Lord Chancellor's Department\",\"quote\":\"Secretary of State for Constitutional Affairs transferred functions to the Lord Chancellor's Department.\"}]}",
+   "prompt_tokens": 307,
+   "completion_tokens": 255,
+   "seconds": 6.94,
+   "think_tag": false
+  },
+  "lord_high_treasurer": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Lord High Treasurer\",\"p\":\"located_at\",\"o\":\"London\",\"quote\":\"Lord High Treasurer is located at London.\"},{\"target\":\"graph\",\"s\":\"Lord High Treasurer\",\"p\":\"created_in\",\"o\":\"England\",\"quote\":\"Lord High Treasurer was created in England.\"},{\"target\":\"graph\",\"s\":\"Lord High Treasurer\",\"p\":\"created_in\",\"o\":\"United Kingdom\",\"quote\":\"Lord High Treasurer was created in the United Kingdom.\"},{\"target\":\"graph\",\"s\":\"Lord High Treasurer\",\"p\":\"rank\",\"o\":\"third\",\"quote\":\"Lord High Treasurer is the third-highest-ranked Great Officer of State.\"},{\"target\":\"graph\",\"s\":\"Lord High Treasurer\",\"p\":\"rank\",\"o\":\"below\",\"quote\":\"Lord High Treasurer is below the Lord High Steward and the Lord High Chancellor.\"},{\"target\":\"graph\",\"s\":\"Lord High Treasurer\",\"p\":\"rank\",\"o\":\"below\",\"quote\":\"Lord High Treasurer is below the Lord High Steward and the Lord High Chancellor.\"},{\"target\":\"sql\",\"subject\":\"Lord High Treasurer\",\"attribute\":\"created_in\",\"value\":\"England\",\"value_type\":\"text\",\"quote\":\"Lord High Treasurer was created in England.\"},{\"target\":\"sql\",\"subject\":\"Lord High Treasurer\",\"attribute\":\"created_in\",\"value\":\"United Kingdom\",\"value_type\":\"text\",\"quote\":\"Lord High Treasurer was created in the United Kingdom.\"}]}",
+   "prompt_tokens": 285,
+   "completion_tokens": 278,
+   "seconds": 7.99,
+   "think_tag": false
+  },
+  "meet_corliss_archer_tv_series": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"F. Hugh Herbert\",\"quote\":\"F. Hugh Herbert\"},{\"target\":\"graph\",\"s\":\"",
+   "prompt_tokens": 309,
+   "completion_tokens": 1024,
+   "seconds": 29.55,
+   "think_tag": false
+  },
+  "sinister_film": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Sinister\",\"p\":\"directed_by\",\"o\":\"Scott Derrickson\",\"quote\":\"directed by Scott Derrickson\"},{\"target\":\"sql\",\"subject\":\"Sinister\",\"attribute\":\"director\",\"value\":\"Scott Derrickson\",\"value_type\":\"text\",\"quote\":\"directed by Scott Derrickson\"}]}",
+   "prompt_tokens": 287,
+   "completion_tokens": 64,
+   "seconds": 1.7,
+   "think_tag": false
+  },
+  "meet_corliss_archer": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"creator\",\"o\":\"Corliss Archer\",\"quote\":\"Corliss Archer\"}]}",
+   "prompt_tokens": 340,
+   "completion_tokens": 33,
+   "seconds": 0.88,
+   "think_tag": false
+  },
+  "a_kiss_for_corliss": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"title\",\"o\":\"A Kiss for Corliss\",\"quote\":\"A Kiss for Corliss\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"release_date\",\"o\":\"1949-11-25\",\"quote\":\"1949-11-25\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"director\",\"o\":\"Richard Wallace\",\"quote\":\"Richard Wallace\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"star\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"genre\",\"o\":\"comedy\",\"quote\":\"comedy\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"sequel\",\"o\":\"Kiss and Tell\",\"quote\":\"Kiss and Tell\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"retitled\",\"o\":\"Almost a Bride\",\"quote\":\"Almost a Bride\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"final_role\",\"o\":\"final starring role\",\"quote\":\"final starring role\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"final_appearance\",\"o\":\"final film appearance\",\"quote\":\"final film appearance\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"release_date\",\"o\":\"1949-11-25\",\"quote\":\"1949-11-25\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"director\",\"o\":\"Richard Wallace\",\"quote\":\"Richard Wallace\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"star\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"genre\",\"o\":\"comedy\",\"quote\":\"comedy\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"sequel\",\"o\":\"Kiss and Tell\",\"quote\":\"Kiss and Tell\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"retitled\",\"o\":\"Almost a Bride\",\"quote\":\"Almost a Bride\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"final_role\",\"o\":\"final starring role\",\"quote\":\"final starring role\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"final_appearance\",\"o\":\"final film appearance\",\"quote\":\"final film appearance\"}]}",
+   "prompt_tokens": 330,
+   "completion_tokens": 521,
+   "seconds": 13.05,
+   "think_tag": false
+  },
+  "kiss_and_tell_1945_film": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"film\",\"o\":\"Kiss and Tell\",\"quote\":\"Corliss Archer is a 17-year-old girl who plays Corliss Archer in the film Kiss and Tell.\"},{\"target\":\"sql\",\"subject\":\"Corliss Archer\",\"attribute\":\"film\",\"value\":\"Kiss and Tell\",\"value_type\":\"text\",\"quote\":\"Corliss Archer is a 17-year-old girl who plays Corliss Archer in the film Kiss and Tell.\"}]}",
+   "prompt_tokens": 296,
+   "completion_tokens": 105,
+   "seconds": 3.19,
+   "think_tag": false
+  },
+  "janet_waldo": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"known for\",\"o\":\"Judy Jetson, Nancy in Shazzan, Penelope Pitstop, Josie in Josie and the Pussycats, and on radio as the title character in Meet Corliss Archer\",\"quote\":\"Janet Waldo is best known in animation for voicing Judy Jetson, Nancy in Shazzan, Penelope Pitstop, and Josie in Josie and the Pussycats, and on radio as the title character in Meet Corliss Archer.\"}]}",
+   "prompt_tokens": 302,
+   "completion_tokens": 108,
+   "seconds": 3.41,
+   "think_tag": false
+  },
+  "conrad_brooks": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"born\",\"o\":\"January 3, 1931\",\"quote\":\"Conrad Brooks (born Conrad Biedrzycki on January 3, 1931 in Baltimore, Maryland) is an American actor.\"}]}",
+   "prompt_tokens": 367,
+   "completion_tokens": 60,
+   "seconds": 1.64,
+   "think_tag": false
+  },
+  "woodson_arkansas": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Woodson\",\"p\":\"located\",\"o\":\"Pulaski County\",\"quote\":\"Woodson is a census-designated place (CDP) in Pulaski County, Arkansas.\"},{\"target\":\"graph\",\"s\":\"Woodson\",\"p\":\"part\",\"o\":\"Little Rock\u2013North Little Rock\u2013Conway Metropolitan Statistical Area\",\"quote\":\"Woodson is part of the Little Rock\u2013North Little Rock\u2013Conway Metropolitan Statistical Area.\"},{\"target\":\"graph\",\"s\":\"Woodson\",\"p\":\"adjacent\",\"o\":\"Wood Plantation\",\"quote\":\"Woodson is adjacent to the Wood Plantation, the largest of the plantations own by Ed Wood Sr.\"},{\"target\":\"graph\",\"s\":\"Woodson\",\"p\":\"adjacent\",\"o\":\"Wood Hollow\",\"quote\":\"Woodson is adjacent to Wood Hollow.\"},{\"target\":\"sql\",\"subject\":\"Woodson\",\"attribute\":\"population\",\"value\":\"403\",\"value_type\":\"number\",\"quote\":\"Woodson is a census-designated place (CDP) in Pulaski County, Arkansas.\"}]}",
+   "prompt_tokens": 339,
+   "completion_tokens": 210,
+   "seconds": 5.72,
+   "think_tag": false
+  },
+  "tyler_bates": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"singer\",\"o\":\"Marilyn Manson\",\"quote\":\"Marilyn Manson\"}]}",
+   "prompt_tokens": 394,
+   "completion_tokens": 32,
+   "seconds": 0.91,
+   "think_tag": false
+  },
+  "charles_craft": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"born\",\"o\":\"1902\",\"quote\":\"Charles Craft (May 9, 1902 \u2013 September 19, 1968) was an English-born American film and television editor.\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"90\",\"quote\":\"Over the next 25 years, Craft would edit 90 feature-length films.\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"93\",\"quote\":\"Racket Squad, from 1951\u201353, for which he was the main editor, editing 93 of the 98 episodes.\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"half\",\"quote\":\"editing over half of the episodes.\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"28\",\"quote\":\"editing the first 28 episodes before he retired in 1966.\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"died\",\"o\":\"1968\",\"quote\":\"Charles Craft (May 9, 1902 \u2013 September 19, 1968) was an English-born American film and television editor.\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"born\",\"o\":\"1902\",\"quote\":\"Charles Craft (May 9, 1902 \u2013 September 19, 1968) was an English-born American film and television editor.\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"1964\",\"quote\":\"Flipper's New Adventure\" },{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"1963\",\"quote\":\"Flipper's New Adventure\" },{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"1965\",\"quote\":\"Flipper's New Adventure\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"1966\",\"quote\":\"editing the first 28 episodes before he retired in 1966.\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"1967\",\"quote\":\"Charles Craft (May 9, 1902 \u2013 September 19, 1968) was an English-born American film and television editor.\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"1968\",\"quote\":\"Charles Craft (May 9, 1902 \u2013 September 19, 1968) was an English-born American film and television editor.\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"1969\",\"quote\":\"Charles Craft (May 9, 1902 \u2013 September 19, 1968) was an English-born American film and television editor.\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"1960\",\"quote\":\"Charles Craft (May 9, 1902 \u2013 September 19, 1968) was an English-born American film and television editor.\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"1961\",\"quote\":\"Charles Craft (May 9, 1902 \u2013 September 19, 1968) was an English-born American film and television editor.\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"1962\",\"quote\":\"Charles Craft (May 9, 1902 \u2013 September 19, 1968) was an English-born American film and television editor.\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"1964\",\"quote\":\"Flipper's New Adventure\" },{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"1965\",\"quote\":\"Flipper's New Adventure\" },{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"1966\",\"quote\":\"editing the first 28 episodes before he retired in 1966.\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"1967\",\"quote\":\"Charles Craft (May 9, 1902 \u2013 September 19, 1968) was an English-born American film and television editor.\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"1968\",\"quote\":\"Charles Craft (May 9, 1902 \u2013 September 19, 1968) was an English-born American film and television editor.\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"1969\",\"quote\":\"Charles Craft (May 9, 1902 \u2013 September 19, 1968) was an English-born American film and television editor.\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"edited\",\"o\":\"1960\",\"quote\":\"Charles Craft (May 9, 1902 \u2013 September 19, 1966) was an English-born American film and television editor.\"},{\"target\":\"graph\",\"s\":\"Charles Craft",
+   "prompt_tokens": 533,
+   "completion_tokens": 1024,
+   "seconds": 30.66,
+   "think_tag": false
+  },
+  "ed_wood": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Ed Wood\",\"p\":\"film\",\"o\":\"Ed Wood\",\"quote\":\"Ed Wood\"}]}",
+   "prompt_tokens": 260,
+   "completion_tokens": 27,
+   "seconds": 0.69,
+   "think_tag": false
+  },
+  "doctor_strange_2016_film": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Doctor Strange\",\"p\":\"film\",\"o\":\"2016\",\"quote\":\"2016 film\"},{\"target\":\"sql\",\"subject\":\"Doctor Strange\",\"attribute\":\"film\",\"value\":\"2016\",\"value_type\":\"text\",\"quote\":\"2016 film\"}]}",
+   "prompt_tokens": 375,
+   "completion_tokens": 57,
+   "seconds": 1.39,
+   "think_tag": false
+  },
+  "village_accountant": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Village Accountant\",\"p\":\"is\",\"o\":\"a position in rural India\",\"quote\":\"Village Accountant is an administrative government position found in rural parts of the Indian sub-continent.\"},{\"target\":\"sql\",\"subject\":\"Village Accountant\",\"attribute\":\"is\",\"value\":\"a position in rural India\",\"value_type\":\"text\",\"quote\":\"Village Accountant is an administrative government position found in rural parts of the Indian sub-continent.\"}]}",
+   "prompt_tokens": 405,
+   "completion_tokens": 97,
+   "seconds": 2.58,
+   "think_tag": false
+  },
+  "ed_wood_film": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Ed Wood (film)\",\"p\":\"directed by\",\"o\":\"Tim Burton\",\"quote\":\"directed by Tim Burton\"},{\"target\":\"graph\",\"s\":\"Ed Wood (film)\",\"p\":\"starring\",\"o\":\"Johnny Depp\",\"quote\":\"starring Johnny Depp\"},{\"target\":\"graph\",\"s\":\"Ed Wood (film)\",\"p\":\"starring\",\"o\":\"Martin Landau\",\"quote\":\"starring Martin Landau\"},{\"target\":\"graph\",\"s\":\"Ed Wood (film)\",\"p\":\"starring\",\"o\":\"Sarah Jessica Parker\",\"quote\":\"starring Sarah Jessica Parker\"},{\"target\":\"graph\",\"s\":\"Ed Wood (film)\",\"p\":\"starring\",\"o\":\"Patricia Arquette\",\"quote\":\"starring Patricia Arquette\"},{\"target\":\"graph\",\"s\":\"Ed Wood (film)\",\"p\":\"starring\",\"o\":\"Jeffrey Jones\",\"quote\":\"starring Jeffrey Jones\"},{\"target\":\"graph\",\"s\":\"Ed Wood (film)\",\"p\":\"starring\",\"o\":\"Lisa Marie\",\"quote\":\"starring Lisa Marie\"},{\"target\":\"graph\",\"s\":\"Ed Wood (film)\",\"p\":\"starring\",\"o\":\"Bill Murray\",\"quote\":\"starring Bill Murray\"},{\"target\":\"sql\",\"subject\":\"Ed Wood (film)\",\"attribute\":\"year\",\"value\":\"1994\",\"value_type\":\"number\",\"quote\":\"1994\"}]}",
+   "prompt_tokens": 315,
+   "completion_tokens": 264,
+   "seconds": 6.8,
+   "think_tag": false
+  }
+ }
+}

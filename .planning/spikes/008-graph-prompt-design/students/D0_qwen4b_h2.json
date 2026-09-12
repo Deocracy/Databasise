@@ -1,0 +1,77 @@
+{
+ "arm": "D0_qwen4b",
+ "design": "D0",
+ "model_file": "Qwen3-4B-Q8_0.gguf",
+ "corpus_hash": "ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd",
+ "temperature": 0.0,
+ "seed": 1234,
+ "max_tokens": 1024,
+ "chat_template": false,
+ "grammar": "score-io-v0.2-spike003 file=graph,sql",
+ "schema": "ops.v0.2",
+ "load_seconds": 1.77,
+ "example_docs": [
+  "shirley_temple",
+  "adam_collis",
+  "deliver_us_from_evil_2014_film",
+  "scott_derrickson"
+ ],
+ "outputs": {
+  "conrad_brooks": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"BORN\",\"o\":\"Conrad Biedrzycki\",\"quote\":\"Conrad Brooks (born Conrad Biedrzycki on January 3, 1931 in Baltimore, Maryland) is an American actor.\"},{\"target\":\"sql\",\"subject\":\"Conrad Brooks\",\"attribute\":\"DATE_OF_BIRTH\",\"value\":\"January 3, 1931\",\"value_type\":\"text\",\"quote\":\"Conrad Brooks (born Conrad Biedrzycki on January 3, 1931 in Baltimore, Maryland) is an American actor.\"},{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"MOVED_TO\",\"o\":\"Hollywood, California\",\"quote\":\"He moved to Hollywood, California in 1948 to pursue a career in acting.\"},{\"target\":\"sql\",\"subject\":\"Conrad Brooks\",\"attribute\":\"MOVED_TO\",\"value\":\"Hollywood, California\",\"value_type\":\"text\",\"quote\":\"He moved to Hollywood, California in 1948 to pursue a career in acting.\"},{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"STARTED_CAREER\",\"o\":\"Ed Wood films\",\"quote\":\"He got his start in movies appearing in Ed Wood films such as 'Plan 9 from Outer Space', 'Glen or Glenda', and 'Jail Bait.'\"},{\"target\":\"sql\",\"subject\":\"Conrad Brooks\",\"attribute\":\"STARTED_CAREER_IN\",\"value\":\"Ed Wood films\",\"value_type\":\"text\",\"quote\":\"He got his start in movies appearing in Ed Wood films such as 'Plan 9 from Outer Space', 'Glen or Glenda', and 'Jail Bait.'\"},{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"TOOK_BREAK\",\"o\":\"1960s and 1970s\",\"quote\":\"He took a break from acting during the 1960s and 1970s but due to the ongoing interest in the films of Ed Wood, he reemerged in the 1980s and has become a prolific actor.\"},{\"target\":\"sql\",\"subject\":\"Conrad Brooks\",\"attribute\":\"TOOK_BREAK_DURING\",\"value\":\"1960s and 1970s\",\"value_type\":\"text\",\"quote\":\"He took a break from acting during the 1960s and 1970s but due to the ongoing interest in the films of Ed Wood, he reemerged in the 1980s and has become a prolific actor.\"},{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"REEMERGED\",\"o\":\"1980s\",\"quote\":\"He took a break from acting during the 1960s and 1970s but due to the ongoing interest in the films of Ed Wood, he reemerged in the 1980s and has become a prolific actor.\"},{\"target\":\"sql\",\"subject\":\"Conrad Brooks\",\"attribute\":\"REEMERGED_IN\",\"value\":\"1980s\",\"value_type\":\"text\",\"quote\":\"He took a break from acting during the 1960s and 1970s but due to the ongoing interest in the films of Ed Wood, he reemerged in the 1980s and has become a prolific actor.\"},{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"ACTED_IN\",\"o\":\"Ed Wood films\",\"quote\":\"He got his start in movies appearing in Ed Wood films such as 'Plan 9 from Outer Space', 'Glen or Glenda', and 'Jail Bait.'\"},{\"target\":\"sql\",\"subject\":\"Conrad Brooks\",\"attribute\":\"ACTED_IN\",\"value\":\"Ed Wood films\",\"value_type\":\"text\",\"quote\":\"He got his start in movies appearing in Ed Wood films such as 'Plan 9 from Outer Space', 'Glen or Glenda', and 'Jail Bait.'\"},{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"WRITES\",\"o\":\"films\",\"quote\":\"He also has since gone on to write, produce and direct several films.\"},{\"target\":\"sql\",\"subject\":\"Conrad Brooks\",\"attribute\":\"WRITES\",\"value\":\"films\",\"value_type\":\"text\",\"quote\":\"He also has since gone on to write, produce and direct several films.\"},{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"PRODUCES\",\"o\":\"films\",\"quote\":\"He also has since gone on to write, produce and direct several films.\"},{\"target\":\"sql\",\"subject\":\" Conrad Brooks\",\"attribute\":\"PRODUCES\",\"value\":\"films\",\"value_type\":\"text\",\"quote\":\"He also has since gone on to write, produce and direct several films.\"},{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"DIRECTS\",\"o\":\"films\",\"quote\":\"He also has since gone on to write, produce and direct several films.\"},{\"target",
+   "prompt_tokens": 381,
+   "completion_tokens": 1024,
+   "seconds": 32.84,
+   "think_tag": false
+  },
+  "woodson_arkansas": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Woodson, Arkansas\",\"p\":\"is a\",\"o\":\"census-designated place (CDP) in Pulaski County, Arkansas, in the United States.\",\"quote\":\"Woodson is a census-designated place (CDP) in Pulaski County, Arkansas, in the United States.\"}, {\"target\":\"sql\",\"subject\":\"Woodson, Arkansas\",\"attribute\":\"population\",\"value\":\"403\",\"value_type\":\"number\",\"quote\":\"Its population was 403 at the 2010 census.\"}]}",
+   "prompt_tokens": 351,
+   "completion_tokens": 120,
+   "seconds": 3.89,
+   "think_tag": false
+  },
+  "tyler_bates": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"born\",\"o\":\"June 5, 1965\",\"quote\":\"Tyler Bates (born June 5, 1965) is an American musician...\"}, {\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"occupation\",\"o\":\"musician, music producer, composer\",\"quote\":\"Tyler Bates (born June 5, 1965) is an American musician, music producer, and composer...\"}, {\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"genre\",\"o\":\"action and horror film\",\"quote\":\"Much of his work is in the action and horror film genres, with films like \"}, {\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"film\",\"o\":\"Dawn of the Dead\",\"quote\":\"with films like \"}, {\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"film\",\"o\":\"300\",\"quote\":\"with films like \"}, {\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"film\",\"o\":\"Sucker Punch\",\"quote\":\"with films like \"}, {\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"film\",\"o\":\"John Wick\",\"quote\":\"with films like \"}, {\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"collaborated with\",\"o\":\"Zack Snyder\",\"quote\":\"He has collaborated with directors like Zack Snyder...\"}, {\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"collaborated with\",\"o\":\"Rob Zombie\",\"quote\":\"He has collaborated with directors like Zack Snyder, Rob Zombie...\"}, {\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"collaborated with\",\"o\":\"Neil Marshall\",\"quote\":\"He has collaborated with directors like Zack Snyder, Rob Zombie, Neil Marshall...\"}, {\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"collaborated with\",\"o\":\"William Friedkin\",\"quote\":\"He has collaborated with directors like Zack Snyder, Rob Zombie, Neil Marshall, William Friedkin...\"}, {\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"collaborated with\",\"o\":\"Scott Derrickson\",\"quote\":\"He has collaborated with directors like Zack Snyder, Rob Zombie, Neil Marshall, William Friedkin, Scott Derrickson...\"}, {\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"collaborated with\",\"o\":\"James Gunn\",\"quote\":\"He has collaborated with directors like Zack Snyder, Rob Zombie, Neil Marshall, William Friedkin, Scott Derrickson, and James Gunn.\"}, {\"target\":\"graph\",\"s\":\"James Gunn\",\"p\":\"scored\",\"o\":\"Guardians of the Galaxy\",\"quote\":\"With Gunn, he has scored every one of the director's films; including \"}, {\"target\":\"graph\",\"s\":\"James Gunn\",\"p\":\"scored\",\"o\":\"Guardians of the Galaxy 2017 sequel\",\"quote\":\"With Gunn, he has scored every one of the director's films; including \"}, {\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"lead guitarist\",\"o\":\"Marilyn Manson\",\"quote\":\"In addition, he is also the lead guitarist of the American rock band Marilyn Manson...\"}, {\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"produced\",\"o\":\"The Pale Emperor\",\"quote\":\"and produced its albums \"}, {\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"produced\",\"o\":\"Heaven Upside Down\",\"quote\":\"and produced its albums \"}, {\"target\":\"sql\",\"subject\":\"Tyler Bates\",\"attribute\":\"date of birth\",\"value\":\"June 5, 1965\",\"value_type\":\"text\",\"quote\":\"Tyler Bates (born June 5, 1965) is an American musician...\"}, {\"target\":\"sql\",\"subject\":\"Tyler Bates\",\"attribute\":\"occupation\",\"value\":\"musician, music producer, composer\",\"value_type\":\"text\",\"quote\":\"Tyler Bates (born June 5, 1965) is an American musician, music producer, and composer...\"}] }",
+   "prompt_tokens": 407,
+   "completion_tokens": 818,
+   "seconds": 30.42,
+   "think_tag": false
+  },
+  "charles_craft": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"born\",\"o\":\"May 9, 1902\",\"quote\":\"Charles Craft (May 9, 1902 \u2013 September 19, 1968) was an English-born American film and television editor.\"}, {\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"died\",\"o\":\"September 19, 1968\",\"quote\":\"Charles Craft (May 9, 1902 \u2013 September 19, 1968) was an English-born American film and television editor.\"}, {\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"birth place\",\"o\":\"Hampshire, England\",\"quote\":\"Born in the county of Hampshire in England on May 9, 1902, Craft would enter the film industry in Hollywood in 1927.\"}, {\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"entered film industry\",\"o\":\"Hollywood in 1927\",\"quote\":\"Born in the county of Hampshire in England on May 9, 1902, Craft would enter the film industry in Hollywood in 1927.\"}, {\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"first film edited\",\"o\":\"Painting the Town\",\"quote\":\"The first film he edited was the Universal Pictures silent film, \" }] }",
+   "prompt_tokens": 577,
+   "completion_tokens": 297,
+   "seconds": 10.07,
+   "think_tag": false
+  },
+  "ed_wood": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Edward Davis Wood Jr.\",\"p\":\"born\",\"o\":\"October 10, 1924\",\"quote\":\"Edward Davis Wood Jr. (October 10, 1924 \u2013 December 10, 1978) was an American filmmaker, actor, writer, producer, and director.\"},{\"target\":\"graph\",\"s\":\"Edward Davis Wood Jr.\",\"p\":\"died\",\"o\":\"December 10, 1978\",\"quote\":\"Edward Davis Wood Jr. (October 10, 1924 \u2013 December 10, 1978) was an American filmmaker, actor, writer, producer, and director.\"},{\"target\":\"sql\",\"subject\":\"Edward Davis Wood Jr.\",\"attribute\":\"date_of_birth\",\"value\":\"October 10, 1924\",\"value_type\":\"date\",\"quote\":\"Edward Davis Wood Jr. (October 10, 1924 \u2013 December 10, 1978) was an American filmmaker, actor, writer, producer, and director.\"},{\"target\":\"sql\",\"subject\":\"Edward Davis Wood Jr.\",\"attribute\":\"date_of_death\",\"value\":\"December 10, 1978\",\"value_type\":\"date\",\"quote\":\"Edward Davis Wood Jr. (October 10, 1924 \u2013 December 10, 1978) was an American filmmaker, actor, writer, producer, and director.\"}] }",
+   "prompt_tokens": 270,
+   "completion_tokens": 312,
+   "seconds": 11.17,
+   "think_tag": false
+  },
+  "doctor_strange_2016_film": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Doctor Strange (2016 film)\",\"p\":\"type\",\"o\":\"2016 American superhero film\",\"quote\":\"Doctor Strange is a 2016 American superhero film based on the Marvel Comics character of the same name...\"}, {\"target\":\"sql\",\"subject\":\"Doctor Strange (2016 film)\",\"attribute\":\"year\",\"value\":\"2016\",\"value_type\":\"number\",\"quote\":\"Doctor Strange is a 2016 American superhero film based on the Marvel Comics character of the same name...\"}] }",
+   "prompt_tokens": 385,
+   "completion_tokens": 120,
+   "seconds": 4.56,
+   "think_tag": false
+  },
+  "village_accountant": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Village Accountant\",\"p\":\"is\",\"o\":\"administrative government position\",\"quote\":\"The Village Accountant (variously known as ... in the Indian sub-continent.\"}, {\"target\":\"sql\",\"subject\":\"Village Accountant\",\"attribute\":\"location\",\"value\":\"rural parts of the Indian sub-continent\",\"value_type\":\"text\",\"quote\":\"The Village Accountant (variously known as ... in the Indian sub-continent.\"}]}",
+   "prompt_tokens": 416,
+   "completion_tokens": 100,
+   "seconds": 3.29,
+   "think_tag": false
+  },
+  "ed_wood_film": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Ed Wood\",\"p\":\"film\",\"o\":\"Ed Wood (film)\",\"quote\":\"Ed Wood is a 1994 American biographical period comedy-drama film...\"}, {\"target\":\"sql\",\"subject\":\"Ed Wood\",\"attribute\":\"year\",\"value\":\"1994\",\"value_type\":\"number\",\"quote\":\"Ed Wood is a 1994 American biographical period comedy-drama film...\"}] }",
+   "prompt_tokens": 322,
+   "completion_tokens": 95,
+   "seconds": 2.98,
+   "think_tag": false
+  }
+ }
+}

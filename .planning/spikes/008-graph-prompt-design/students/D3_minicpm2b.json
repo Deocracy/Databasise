@@ -1,0 +1,335 @@
+{
+ "arm": "D3_minicpm2b",
+ "design": "D3",
+ "model_file": "MiniCPM5-2B-Q8_0.gguf",
+ "corpus_hash": "ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd",
+ "temperature": 0.0,
+ "seed": 1234,
+ "max_tokens": 1024,
+ "chat_template": false,
+ "grammar": "score-io-v0.2-spike003 file=graph,sql",
+ "schema": "ops.v0.2",
+ "load_seconds": 0.77,
+ "example_docs": [
+  "shirley_temple",
+  "adam_collis",
+  "deliver_us_from_evil_2014_film",
+  "scott_derrickson"
+ ],
+ "outputs": {
+  "secretary_of_state_for_constitutional_affairs": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Secretary of State for Constitutional Affairs\",\"p\":\"office\",\"o\":\"British Government position\",\"quote\":\"created in 2003\"},{\"target\":\"graph\",\"s\":\"Secretary of State for Constitutional Affairs\",\"p\":\"functions\",\"o\":\"transferred to the Secretary of State\",\"quote\":\"Certain functions of the Lord Chancellor which related to the Lord Chancellor's Department were transferred to the Secretary of State\"},{\"target\":\"graph\",\"s\":\"Secretary of State for Constitutional Affairs\",\"p\":\"functions\",\"o\":\"transferred from the First Secretary of State\",\"quote\":\"further functions were also transferred to the Secretary of State for Constitutional Affairs from the First Secretary of State, a position within the government held by the Deputy Prime Minister\"}]}",
+   "prompt_tokens": 480,
+   "completion_tokens": 176,
+   "seconds": 4.84,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Secretary of State for Constitutional Affairs\", \"Lord Chancellor\", \"First Secretary of State\", \"Deputy Prime Minister\"]}",
+   "step1_entities": [
+    "Secretary of State for Constitutional Affairs",
+    "Lord Chancellor",
+    "First Secretary of State",
+    "Deputy Prime Minister"
+   ],
+   "step1_prompt_tokens": 143,
+   "step1_completion_tokens": 28
+  },
+  "lord_high_treasurer": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Lord High Treasurer\",\"p\":\"government_position\",\"o\":\"English government position and has been a British government position since the Acts of Union of 1707\",\"quote\":\"The post of Lord High Treasurer or Lord Treasurer was an English government position and has been a British government position since the Acts of Union of 1707.\"},{\"target\":\"graph\",\"s\":\"Lord High Treasurer\",\"p\":\"rank\",\"o\":\"third-highest-ranked Great Officer of State\",\"quote\":\"A holder of the post would be the third-highest-ranked Great Officer of State, below the Lord High Steward and the Lord High Chancellor.\"}]}",
+   "prompt_tokens": 440,
+   "completion_tokens": 165,
+   "seconds": 4.94,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Lord High Treasurer\", \"Lord Treasurer\", \"Acts of Union of 1707\", \"Lord High Steward\", \"Lord High Chancellor\"]}",
+   "step1_entities": [
+    "Lord High Treasurer",
+    "Lord Treasurer",
+    "Acts of Union of 1707",
+    "Lord High Steward",
+    "Lord High Chancellor"
+   ],
+   "step1_prompt_tokens": 121,
+   "step1_completion_tokens": 32
+  },
+  "meet_corliss_archer_tv_series": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 480,
+   "completion_tokens": 29,
+   "seconds": 0.79,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Corliss Archer\", \"CBS\", \"Ziv Company\", \"F. Hugh Herbert\"]}",
+   "step1_entities": [
+    "Corliss Archer",
+    "CBS",
+    "Ziv Company",
+    "F. Hugh Herbert"
+   ],
+   "step1_prompt_tokens": 145,
+   "step1_completion_tokens": 24
+  },
+  "sinister_film": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Sinister\",\"p\":\"film\",\"o\":\"2012 supernatural horror film directed by Scott Derrickson and written by Derrickson and C. Robert Cargill\",\"quote\":\"Sinister is a 2012 supernatural horror film directed by Scott Derrickson and written by Derrickson and C. Robert Cargill\"},{\"target\":\"sql\",\"subject\":\"Sinister\",\"attribute\":\"year\",\"value\":\"2012\",\"value_type\":\"number\",\"quote\":\"Sinister is a 2012 supernatural horror film directed by Scott Derrickson and written by Derrickson and C. Robert Cargill\"},{\"target\":\"graph\",\"s\":\"Sinister\",\"p\":\"film\",\"o\":\"starring Ethan Hawke as fictional true-crime writer Ellison Oswalt\",\"quote\":\"It stars Ethan Hawke as fictional true-crime writer Ellison Oswalt who discovers a box of home movies in his attic that puts his family in danger\"},{\"target\":\"sql\",\"subject\":\"Sinister\",\"attribute\":\"star\",\"value\":\"Ethan Hawke\",\"value_type\":\"text\",\"quote\":\"It stars Ethan Hawke as fictional true-crime writer Ellison Oswalt who discovers a box of home movies in his attic that puts his family in danger\"}]}",
+   "prompt_tokens": 445,
+   "completion_tokens": 281,
+   "seconds": 8.37,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Sinister\", \"Scott Derrickson\", \"C. Robert Cargill\", \"Ethan Hawke\", \"Ellison Oswalt\"]}",
+   "step1_entities": [
+    "Sinister",
+    "Scott Derrickson",
+    "C. Robert Cargill",
+    "Ethan Hawke",
+    "Ellison Oswalt"
+   ],
+   "step1_prompt_tokens": 123,
+   "step1_completion_tokens": 33
+  },
+  "meet_corliss_archer": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"program\",\"o\":\"radio's Golden Age\",\"quote\":\"Meet Corliss Archer\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"program\",\"o\":\"CBS's answer to NBC's popular \\\"A Date with Judy\\\"\",\"quote\":\"Although it was CBS's answer to NBC's popular \\\"A Date with Judy\\\"\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"program\",\"o\":\"broadcast by NBC in 1948 as a summer replacement for \\\"The Bob Hope Show\\\"\",\"quote\":\"it was also broadcast by NBC in 1948 as a summer replacement for \\\"The Bob Hope Show\\\"\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"program\",\"o\":\"aired on ABC from October 3, 1952 to June 26, 1953\",\"quote\":\"From October 3, 1952 to June 26, 1953, it aired on ABC, finally returning to CBS.\"},{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"program\",\"o\":\"fewer than 24 episodes are known to exist\",\"quote\":\"Despite the program's long run, fewer than 24 episodes are known to exist.\"}]}",
+   "prompt_tokens": 585,
+   "completion_tokens": 327,
+   "seconds": 10.17,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Corliss Archer\", \"January 7, 1943\", \"September 30, 1956\", \"CBS\", \"NBC\", \"A Date with Judy\", \"The Bob Hope Show\", \"October 3, 1952\", \"June 26, 1953\", \"ABC\"]}",
+   "step1_entities": [
+    "Corliss Archer",
+    "January 7, 1943",
+    "September 30, 1956",
+    "CBS",
+    "NBC",
+    "A Date with Judy",
+    "The Bob Hope Show",
+    "October 3, 1952",
+    "June 26, 1953",
+    "ABC"
+   ],
+   "step1_prompt_tokens": 176,
+   "step1_completion_tokens": 67
+  },
+  "a_kiss_for_corliss": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"directed by\",\"o\":\"Richard Wallace\",\"quote\":\"directed by Richard Wallace\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"written by\",\"o\":\"Howard Dimsdale\",\"quote\":\"written by Howard Dimsdale\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"starring\",\"o\":\"Shirley Temple\",\"quote\":\"Shirley Temple in her final starring role as well as her final film appearance\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"sequel to\",\"o\":\"Kiss and Tell\",\"quote\":\"It is a sequel to the 1945 film \\\"Kiss and Tell\\\"\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"retitled\",\"o\":\"Almost a Bride\",\"quote\":\"was retitled \\\"Almost a Bride\\\" before release and this title appears in the title sequence\"},{\"target\":\"graph\",\"s\":\"A Kiss for Corliss\",\"p\":\"released on\",\"o\":\"November 25, 1949\",\"quote\":\"released on November 25, 1949, by United Artists\"}]}",
+   "prompt_tokens": 539,
+   "completion_tokens": 285,
+   "seconds": 7.25,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"A Kiss for Corliss\", \"Shirley Temple\", \"Richard Wallace\", \"Howard Dimsdale\", \"Kiss and Tell\", \"Almost a Bride\", \"United Artists\"]}",
+   "step1_entities": [
+    "A Kiss for Corliss",
+    "Shirley Temple",
+    "Richard Wallace",
+    "Howard Dimsdale",
+    "Kiss and Tell",
+    "Almost a Bride",
+    "United Artists"
+   ],
+   "step1_prompt_tokens": 166,
+   "step1_completion_tokens": 41
+  },
+  "kiss_and_tell_1945_film": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Kiss and Tell\",\"p\":\"film\",\"o\":\"1945\",\"quote\":\"1945 American comedy film starring then 17-year-old Shirley Temple as Corliss Archer\"},{\"target\":\"sql\",\"subject\":\"Kiss and Tell\",\"attribute\":\"year\",\"value\":\"1945\",\"value_type\":\"text\",\"quote\":\"1945 American comedy film starring then 17-year-old Shirley Temple as Corliss Archer\"},{\"target\":\"graph\",\"s\":\"Shirley Temple\",\"p\":\"actress\",\"o\":\"17-year-old\",\"quote\":\"17-year-old Shirley Temple\"},{\"target\":\"sql\",\"subject\":\"Shirley Temple\",\"attribute\":\"age\",\"value\":\"17\",\"value_type\":\"number\",\"quote\":\"17-year-old Shirley Temple\"}]}",
+   "prompt_tokens": 450,
+   "completion_tokens": 168,
+   "seconds": 4.69,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Kiss and Tell\", \"Shirley Temple\", \"Corliss Archer\"]}",
+   "step1_entities": [
+    "Kiss and Tell",
+    "Shirley Temple",
+    "Corliss Archer"
+   ],
+   "step1_prompt_tokens": 132,
+   "step1_completion_tokens": 20
+  },
+  "janet_waldo": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"actress\",\"o\":\"American\",\"quote\":\"American radio and voice actress\"},{\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"actress\",\"o\":\"voice actress\",\"quote\":\"voice actress\"},{\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"actress\",\"o\":\"American radio and voice actress\",\"quote\":\"American radio and voice actress\"},{\"target\":\"sql\",\"subject\":\"Janet Waldo\",\"attribute\":\"birth_year\",\"value\":\"1920\",\"value_type\":\"number\",\"quote\":\"February 4, 1920\"},{\"target\":\"sql\",\"subject\":\"Janet Waldo\",\"attribute\":\"death_year\",\"value\":\"2016\",\"value_type\":\"number\",\"quote\":\"June 12, 2016\"}]}",
+   "prompt_tokens": 490,
+   "completion_tokens": 197,
+   "seconds": 5.48,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Janet Waldo\", \"Judy Jetson\", \"Nancy\", \"Shazzan\", \"Penelope Pitstop\", \"Josie\", \"Josie and the Pussycats\", \"Meet Corliss Archer\"]}",
+   "step1_entities": [
+    "Janet Waldo",
+    "Judy Jetson",
+    "Nancy",
+    "Shazzan",
+    "Penelope Pitstop",
+    "Josie",
+    "Josie and the Pussycats",
+    "Meet Corliss Archer"
+   ],
+   "step1_prompt_tokens": 138,
+   "step1_completion_tokens": 48
+  },
+  "conrad_brooks": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"actor\",\"o\":\"Ed Wood films\",\"quote\":\"He got his start in movies appearing in Ed Wood films such as \\\"Plan 9 from Outer Space\\\", \\\"Glen or Glenda\\\", and \\\"Jail Bait.\\\"\"},{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"actor\",\"o\":\"Plan 9 from Outer Space\",\"quote\":\"He got his start in movies appearing in Ed Wood films such as \\\"Plan 9 from Outer Space\\\", \\\"Glen or Glenda\\\", and \\\"Jail Bait.\\\"\"},{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"actor\",\"o\":\"Glen or Glenda\",\"quote\":\"He got his start in movies appearing in Ed Wood films such as \\\"Plan 9 from Outer Space\\\", \\\"Glen or Glenda\\\", and \\\"Jail Bait.\\\"\"},{\"target\":\"graph\",\"s\":\"Conrad Brooks\",\"p\":\"actor\",\"o\":\"Jail Bait\",\"quote\":\"He got his start in movies appearing in Ed Wood films such as \\\"Plan 9 from Outer Space\\\", \\\"Glen or Glenda\\\", and \\\"Jail Bait.\\\"},{\" }] }",
+   "prompt_tokens": 615,
+   "completion_tokens": 287,
+   "seconds": 7.82,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Conrad Brooks\", \"Ed Wood\", \"Plan 9 from Outer Space\", \"Glen or Glenda\", \"Jail Bait\", \"Baltimore, Maryland\", \"Hollywood, California\"]}",
+   "step1_entities": [
+    "Conrad Brooks",
+    "Ed Wood",
+    "Plan 9 from Outer Space",
+    "Glen or Glenda",
+    "Jail Bait",
+    "Baltimore, Maryland",
+    "Hollywood, California"
+   ],
+   "step1_prompt_tokens": 203,
+   "step1_completion_tokens": 43
+  },
+  "woodson_arkansas": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Woodson\",\"p\":\"CDP\",\"o\":\"Pulaski County, Arkansas, in the United States\",\"quote\":\"Woodson is a census-designated place (CDP) in Pulaski County, Arkansas, in the United States.\"},{\"target\":\"graph\",\"s\":\"Woodson\",\"p\":\"part of\",\"o\":\"Little Rock\u2013North Little Rock\u2013Conway Metropolitan Statistical Area\",\"quote\":\"It is part of the Little Rock\u2013North Little Rock\u2013Conway Metropolitan Statistical Area.\"},{\"target\":\"graph\",\"s\":\"Woodson\",\"p\":\"namesake for\",\"o\":\"Ed Wood Sr.\",\"quote\":\"Woodson and its accompanying Woodson Lake and Wood Hollow are the namesake for Ed Wood Sr., a prominent plantation owner, trader, and businessman at the turn of the 20th century.\"},{\"target\":\"graph\",\"s\":\"Woodson\",\"p\":\"adjacent to\",\"o\":\"Wood Plantation\",\"quote\":\"Woodson is adjacent to the Wood Plantation, the largest of the plantations own by Ed Wood Sr.\"}]}",
+   "prompt_tokens": 570,
+   "completion_tokens": 264,
+   "seconds": 7.28,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Woodson\", \"Pulaski County\", \"United States\", \"Little Rock\u2013North Little Rock\u2013Conway Metropolitan Statistical Area\", \"Woodson Lake\", \"Wood Hollow\", \"Ed Wood Sr.\", \"Wood Plantation\"]}",
+   "step1_entities": [
+    "Woodson",
+    "Pulaski County",
+    "United States",
+    "Little Rock\u2013North Little Rock\u2013Conway Metropolitan Statistical Area",
+    "Woodson Lake",
+    "Wood Hollow",
+    "Ed Wood Sr.",
+    "Wood Plantation"
+   ],
+   "step1_prompt_tokens": 175,
+   "step1_completion_tokens": 50
+  },
+  "tyler_bates": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"composer\",\"o\":\"films, television, and video games\",\"quote\":\"Much of his work is in the action and horror film genres, with films like \\\"Dawn of the Dead, 300, Sucker Punch,\\\" and \\\"John Wick.\\\"\"},{\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"collaborated_with\",\"o\":\"directors\",\"quote\":\"He has collaborated with directors like Zack Snyder, Rob Zombie, Neil Marshall, William Friedkin, Scott Derrickson, and James Gunn.\"},{\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"scored\",\"o\":\"films\",\"quote\":\"With Gunn, he has scored every one of the director's films; including \\\"Guardians of the Galaxy\\\", which became one of the highest grossing domestic movies of 2014, and its 2017 sequel.\"},{\"target\":\"graph\",\"s\":\"Tyler Bates\",\"p\":\"lead_guitarist\",\"o\":\"Marilyn Manson\",\"quote\":\"In addition, he is also the lead guitarist of the American rock band Marilyn Manson, and produced its albums \\\"The Pale Emperor\\\" and \\\"Heaven Upside Down\\\".\"}]}",
+   "prompt_tokens": 704,
+   "completion_tokens": 322,
+   "seconds": 9.5,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Tyler Bates\", \"Dawn of the Dead\", \"300\", \"Sucker Punch\", \"John Wick\", \"Zack Snyder\", \"Rob Zombie\", \"Neil Marshall\", \"William Friedkin\", \"Scott Derrickson\", \"James Gunn\", \"Guardians of the Galaxy\", \"Marilyn Manson\", \"The Pale Emperor\", \"Heaven Upside Down\"]}",
+   "step1_entities": [
+    "Tyler Bates",
+    "Dawn of the Dead",
+    "300",
+    "Sucker Punch",
+    "John Wick",
+    "Zack Snyder",
+    "Rob Zombie",
+    "Neil Marshall",
+    "William Friedkin",
+    "Scott Derrickson",
+    "James Gunn",
+    "Guardians of the Galaxy",
+    "Marilyn Manson",
+    "The Pale Emperor",
+    "Heaven Upside Down"
+   ],
+   "step1_prompt_tokens": 230,
+   "step1_completion_tokens": 78
+  },
+  "charles_craft": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"film editor\",\"o\":\"English-born American\",\"quote\":\"Born in the county of Hampshire in England on May 9, 1902\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"first film edited\",\"o\":\"Painting the Town\",\"quote\":\"The first film he edited was the Universal Pictures silent film, \\\"Painting the Town\\\"\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"number of feature-length films edited\",\"o\":\"90\",\"quote\":\"Over the next 25 years, Craft would edit 90 feature-length films\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"first TV show edited\",\"o\":\"Racket Squad\",\"quote\":\"his first show being \\\"Racket Squad\\\", from 1951\u201353\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"number of episodes edited for Racket Squad\",\"o\":\"93\",\"quote\":\"editing 93 of the 98 episodes\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"first TV series edited\",\"o\":\"Meet Corliss Archer\",\"quote\":\"including \\\"Meet Corliss Archer\\\" (1954)\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"first TV series edited\",\"o\":\"Science Fiction Theatre\",\"quote\":\"including \\\"Science Fiction Theatre\\\" (1955\u201356)\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"first TV series edited\",\"o\":\"Highway Patrol\",\"quote\":\"including \\\"Highway Patrol\\\" (1955\u201357)\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"first TV series edited\",\"o\":\"Sea Hunt\",\"quote\":\"In the late 1950s and early 1960s he was one of the main editors on \\\"Sea Hunt\\\"\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"number of episodes edited for Sea Hunt\",\"o\":\"over half\",\"quote\":\"editing over half of the episodes\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"final film edited\",\"o\":\"Flipper's New Adventure\",\"quote\":\"His final film work would be editing \\\"Flipper's New Adventure\\\" (1964, the sequel to 1963's \\\"Flipper\\\"\"},{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"first TV episodes edited for Flipper's New Adventure\",\"o\":\"first 28\",\"quote\":\"editing the first 28 episodes before he retired in 1966\"}]}",
+   "prompt_tokens": 952,
+   "completion_tokens": 550,
+   "seconds": 15.43,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Charles Craft\", \"Painting the Town\", \"Racket Squad\", \"Meet Corliss Archer\", \"Science Fiction Theatre\", \"Highway Patrol\", \"Sea Hunt\", \"Flipper's New Adventure\"]}",
+   "step1_entities": [
+    "Charles Craft",
+    "Painting the Town",
+    "Racket Squad",
+    "Meet Corliss Archer",
+    "Science Fiction Theatre",
+    "Highway Patrol",
+    "Sea Hunt",
+    "Flipper's New Adventure"
+   ],
+   "step1_prompt_tokens": 369,
+   "step1_completion_tokens": 48
+  },
+  "ed_wood": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Ed Wood\",\"p\":\"film\",\"o\":\"filmmaker\",\"quote\":\"Edward Davis Wood Jr.\"},{\"target\":\"graph\",\"s\":\"Ed Wood\",\"p\":\"film\",\"o\":\"actor\",\"quote\":\"Edward Davis Wood Jr.\"},{\"target\":\"graph\",\"s\":\"Ed Wood\",\"p\":\"film\",\"o\":\"writer\",\"quote\":\"Edward Davis Wood Jr.\"},{\"target\":\"graph\",\"s\":\"Ed Wood\",\"p\":\"film\",\"o\":\"producer\",\"quote\":\"Edward Davis Wood Jr.\"},{\"target\":\"graph\",\"s\":\"Ed Wood\",\"p\":\"film\",\"o\":\"director\",\"quote\":\"Edward Davis Wood Jr.\"},{\"target\":\"sql\",\"subject\":\"Ed Wood\",\"attribute\":\"film\",\"value\":\"filmmaker\",\"value_type\":\"text\",\"quote\":\"Edward Davis Wood Jr.\"},{\"target\":\"sql\",\"subject\":\"Ed Wood\",\"attribute\":\"film\",\"value\":\"actor\",\"value_type\":\"text\",\"quote\":\"Edward Davis Wood Jr.\"},{\"target\":\"sql\",\"subject\":\"Ed Wood\",\"attribute\":\"film\",\"value\":\"writer\",\"value_type\":\"text\",\"quote\":\"Edward Davis Wood Jr.\"},{\"target\":\"sql\",\"subject\":\"Ed Wood\",\"attribute\":\"film\",\"value\":\"producer\",\"value_type\":\"text\",\"quote\":\"Edward Davis Wood Jr.\"},{\"target\":\"sql\",\"subject\":\"Ed Wood\",\"attribute\":\"film\",\"value\":\"director\",\"value_type\":\"text\",\"quote\":\"Edward Davis Wood Jr.\"}]}",
+   "prompt_tokens": 373,
+   "completion_tokens": 299,
+   "seconds": 6.98,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Ed Wood\", \"Edward Davis Wood Jr.\"]}",
+   "step1_entities": [
+    "Ed Wood",
+    "Edward Davis Wood Jr."
+   ],
+   "step1_prompt_tokens": 96,
+   "step1_completion_tokens": 14
+  },
+  "doctor_strange_2016_film": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 699,
+   "completion_tokens": 116,
+   "seconds": 3.49,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Doctor Strange\", \"2016\", \"Marvel Studios\", \"Walt Disney Studios Motion Pictures\", \"Marvel Cinematic Universe\", \"Scott Derrickson\", \"Jon Spaihts\", \"C. Robert Cargill\", \"Benedict Cumberbatch\", \"Stephen Strange\", \"Chiwetel Ejiofor\", \"Rachel McAdams\", \"Benedict Wong\", \"Michael Stuhlbarg\", \"Benjamin Bratt\", \"Scott Adkins\", \"Mads Mikkelsen\", \"Tilda Swinton\"]}",
+   "step1_entities": [
+    "Doctor Strange",
+    "2016",
+    "Marvel Studios",
+    "Walt Disney Studios Motion Pictures",
+    "Marvel Cinematic Universe",
+    "Scott Derrickson",
+    "Jon Spaihts",
+    "C. Robert Cargill",
+    "Benedict Cumberbatch",
+    "Stephen Strange",
+    "Chiwetel Ejiofor",
+    "Rachel McAdams",
+    "Benedict Wong",
+    "Michael Stuhlbarg",
+    "Benjamin Bratt",
+    "Scott Adkins",
+    "Mads Mikkelsen",
+    "Tilda Swinton"
+   ],
+   "step1_prompt_tokens": 211,
+   "step1_completion_tokens": 111
+  },
+  "village_accountant": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Village Accountant\",\"p\":\"is an administrative government position found in rural parts of the Indian sub-continent\",\"o\":\"Village Accountant\",\"quote\":\"The Village Accountant (variously known as \\\"Patwari\\\", \\\"Talati\\\", \\\"Patel\\\", \\\"Karnam\\\", \\\"Adhikari\\\", \\\"Shanbogaru\\\",\\\"Patnaik\\\" etc.) is an administrative government position found in rural parts of the Indian sub-continent.\"},{\"target\":\"graph\",\"s\":\"Village Accountant\",\"p\":\"is an administrative government position found in rural parts of the Indian sub-continent\",\"o\":\"Village Accountant\",\"quote\":\"The Village Accountant (variously known as \\\"Patwari\\\", \\\"Talati\\\", \\\"Patel\\\", \\\"Karnam\\\", \\\"Adhikari\\\", \\\"Shanbogaru\\\",\\\"Patnaik\\\" etc.) is an administrative government position found in rural parts of the Indian sub-continent.\"},{\"target\":\"sql\",\"subject\":\"Village Accountant\",\"attribute\":\"is an administrative government position found in rural parts of the Indian sub-continent\",\"value\":\"Village Accountant\",\"value_type\":\"text\",\"quote\":\"The Village Accountant (variously known as \\\"Patwari\\\", \\\"Talati\\\", \\\"Patel\\\", \\\"Karnam\\\", \\\"Adhikari\\\", \\\"Shanbogaru\\\",\\\"Patnaik\\\" etc.) is an administrative government position found in rural parts of the Indian sub-continent.\"}]}",
+   "prompt_tokens": 690,
+   "completion_tokens": 339,
+   "seconds": 9.99,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Village Accountant\", \"Patwari\", \"Talati\", \"Patel\", \"Karnam\", \"Adhikari\", \"Shanbogaru\", \"Patnaik\"]}",
+   "step1_entities": [
+    "Village Accountant",
+    "Patwari",
+    "Talati",
+    "Patel",
+    "Karnam",
+    "Adhikari",
+    "Shanbogaru",
+    "Patnaik"
+   ],
+   "step1_prompt_tokens": 241,
+   "step1_completion_tokens": 42
+  },
+  "ed_wood_film": {
+   "text": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Ed Wood\",\"p\":\"film\",\"o\":\"1994\",\"quote\":\"Ed Wood is a 1994 American biographical period comedy-drama film directed and produced by Tim Burton, and starring Johnny Depp as cult filmmaker Ed Wood.\"},{\"target\":\"graph\",\"s\":\"Ed Wood\",\"p\":\"film\",\"o\":\"directed by Tim Burton\",\"quote\":\"Ed Wood is a 1994 American biographical period comedy-drama film directed and produced by Tim Burton, and starring Johnny Depp as cult filmmaker Ed Wood.\"},{\"target\":\"graph\",\"s\":\"Ed Wood\",\"p\":\"film\",\"o\":\"starring Johnny Depp\",\"quote\":\"Ed Wood is a 1994 American biographical period comedy-drama film directed and produced by Tim Burton, and starring Johnny Depp as cult filmmaker Ed Wood.\"},{\"target\":\"graph\",\"s\":\"Ed Wood\",\"p\":\"film\",\"o\":\"relationship with Bela Lugosi\",\"quote\":\"The film concerns the period in Wood's life when he made his best-known films as well as his relationship with actor Bela Lugosi, played by Martin Landau.\"},{\"target\":\"graph\",\"s\":\"Ed Wood\",\"p\":\"film\",\"o\":\"played by Martin Landau\",\"quote\":\"The film concerns the period in Wood's life when he made his best-known films as well as his relationship with actor Bela Lugosi, played by Martin Landau.\"},{\"target\":\"graph\",\"s\":\"Ed Wood\",\"p\":\"film\",\"o\":\"supporting cast\",\"quote\":\"Sarah Jessica Parker, Patricia Arquette, Jeffrey Jones, Lisa Marie, and Bill Murray are among the supporting cast.\"}]}",
+   "prompt_tokens": 517,
+   "completion_tokens": 376,
+   "seconds": 10.5,
+   "think_tag": false,
+   "step1_text": "{\"entities\": [\"Ed Wood\", \"Tim Burton\", \"Johnny Depp\", \"Bela Lugosi\", \"Martin Landau\", \"Sarah Jessica Parker\", \"Patricia Arquette\", \"Jeffrey Jones\", \"Lisa Marie\", \"Bill Murray\"]}",
+   "step1_entities": [
+    "Ed Wood",
+    "Tim Burton",
+    "Johnny Depp",
+    "Bela Lugosi",
+    "Martin Landau",
+    "Sarah Jessica Parker",
+    "Patricia Arquette",
+    "Jeffrey Jones",
+    "Lisa Marie",
+    "Bill Murray"
+   ],
+   "step1_prompt_tokens": 151,
+   "step1_completion_tokens": 49
+  }
+ }
+}
