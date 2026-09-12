@@ -1,8 +1,8 @@
 ---
 phase: 07-promotion-rollback
-verified: 2026-09-11T00:00:00Z
-status: gaps_found
-score: 3/3 roadmap success criteria present-and-wired; 1 blocker anti-pattern found in the same subsystem as criterion 3
+verified: 2026-09-12T00:00:00Z
+status: human_needed
+score: 3/3 roadmap success criteria verified; 1 open human-verification item (pre-existing, out of 07-04's scope)
 covered_files:
   - ".planning/REQUIREMENTS.md"
   - ".planning/phases/07-promotion-rollback/07-01-PLAN.md"
@@ -11,8 +11,11 @@ covered_files:
   - ".planning/phases/07-promotion-rollback/07-02-SUMMARY.md"
   - ".planning/phases/07-promotion-rollback/07-03-PLAN.md"
   - ".planning/phases/07-promotion-rollback/07-03-SUMMARY.md"
+  - ".planning/phases/07-promotion-rollback/07-04-PLAN.md"
+  - ".planning/phases/07-promotion-rollback/07-04-SUMMARY.md"
   - ".planning/phases/07-promotion-rollback/07-GATE-AMENDMENT.md"
   - ".planning/phases/07-promotion-rollback/07-REVIEW.md"
+  - ".planning/phases/07-promotion-rollback/07-VALIDATION.md"
   - "databasise/evidence/PROMOTION-LEDGER-EVIDENCE.md"
   - "databasise/ledger/ledger.py"
   - "databasise/mcp/server.py"
@@ -21,42 +24,21 @@ covered_files:
   - "databasise/seam/promotion.py"
   - "databasise/seam/refusals.py"
   - "databasise/seam/rest.py"
-covered_digest: "v1:sha256:5dc890986147e02ce01171cd7278c1496e137d32457568ad080fbc3a4afbaa07"
-gaps:
-  - truth: "promote-next and promote-now stay unavailable for answer-level/index-side classes, and the refusal names the posture rather than failing silently (SC3) — evaluated against the full verb-refusal subsystem SC3 lives in, not only the two named verb strings"
-    status: partial
-    reason: >
-      The six-member verb enum (`operator-asserted`, `check`, `preview`, `run`, `promote-next`,
-      `promote-now`) each refuse correctly and by name — verified live and by test. But
-      `Databasise.promote()`'s `verb` parameter is typed `str` (not the `PromotionVerb` `Literal`
-      07-01-PLAN.md's own Task 3 action text explicitly requires), and neither
-      `databasise/seam/rest.py`'s `PromoteRequest.verb` nor `databasise/mcp/tools.py`'s
-      `PromoteToolArgs.verb` constrain it either. Any string outside the six-member enum (a typo,
-      e.g. `"promote_next"` or `"Promote-Next"`) falls through to `_promote_sync`'s final branch,
-      which raises a bare `ValueError` — not a `SeamRefusalError` subclass. Reproduced live in this
-      session against HEAD (953b203..2bb2b78, no fix commit exists after them): calling
-      `engine.promote(alias, [valid_trace_id], "human_edit", verb="promote_next_typo")` raises
-      `ValueError("unknown promotion verb 'promote_next_typo'")`, uncaught by
-      `rest.py`'s single `add_exception_handler(SeamRefusalError, ...)` (would 500, not 422) and by
-      `mcp/server.py`'s `_refusal_mapped` wrapper (would crash the tool call, not raise a
-      `ToolError`) — confirmed by reading both call sites; no test in
-      `databasise/tests/seam/test_promotion_posture.py`, `test_rest_transport.py`'s
-      `_REFUSAL_FACTORIES`, or MCP's refusal-parity tests exercises an out-of-enum verb string, so
-      the crash path is untested and unguarded on both public transports. Nothing is written to the
-      ledger on this path (confirmed live: 0 rows after the crash), so the ledger's own append-only
-      discipline (criterion 1) is not implicated. This is 07-REVIEW.md's CR-01, filed the same day
-      as this verification and still unresolved at HEAD.
-    artifacts:
-      - path: "databasise/seam/engine.py"
-        issue: "promote()'s verb: str = \"operator-asserted\" parameter is untyped against PromotionVerb; the terminal branch (~line 1201) raises bare ValueError instead of a SeamRefusalError subclass for any value outside the six-member enum"
-      - path: "databasise/seam/rest.py"
-        issue: "PromoteRequest.verb: str carries no validator constraining it to the six-member enum, so a malformed value reaches the engine and 500s instead of 422ing"
-      - path: "databasise/mcp/tools.py"
-        issue: "PromoteToolArgs.verb: str carries no validator either, so the same malformed value crashes the MCP tool call instead of surfacing as a ToolError"
-    missing:
-      - "A named SeamRefusalError subclass (e.g. UnrecognisedPromotionVerbError) raised for any verb value outside the six known literals, checked before trace-id resolution runs (mirroring InvalidChangeOriginError's own placement and style)"
-      - "A _REFUSAL_FACTORIES entry (REST) and an equivalent MCP refusal-parity case covering the new subclass, so the existing generic-handler tests actually exercise this path"
-      - "A test asserting that an out-of-enum verb string refuses by name rather than crashing, on all three transports"
+  - "databasise/tests/seam/test_dual_transport.py"
+  - "databasise/tests/seam/test_promotion_posture.py"
+  - "databasise/tests/seam/test_rest_transport.py"
+covered_digest: "v1:sha256:47f934a4472f59a73ac09c29d853125d1917c43ec546926a6c01f5e63e9786b3"
+re_verification:
+  previous_status: gaps_found
+  previous_score: "2/3 live criteria fully verified; 1/3 (criterion 3) partial"
+  gaps_closed:
+    - "promote()'s verb was an unconstrained str and an out-of-enum value raised a bare ValueError from a foreign family instead of a named SeamRefusalError — closed by 07-04's UnrecognisedPromotionVerbError guard, checked first in promote()'s body"
+  gaps_remaining: []
+  regressions: []
+human_verification:
+  - test: "Fire two concurrent promote()/rollback()/retire() calls (or a promote() racing a retire()) against the same alias, e.g. via asyncio.gather() against two REST/MCP requests hitting the same alias at once."
+    expected: "Either true serialization (one call fully completes before the other starts reading prior state) or a clean refusal for the loser — never two rows minting the same semver, and never retire()'s ActiveGenerationRetirementError guard passing on a generation that becomes active only after the guard's own read."
+    why_human: "Genuine concurrency race requiring real parallel dispatch to trigger non-deterministically; grep/read confirms no asyncio.Lock/threading.Lock exists anywhere in engine.py (re-confirmed this run, unchanged since the previous verification and untouched by 07-04's scope), but only a live concurrent run demonstrates the actual outcome. Carried forward from the previous verification (WR-01/07-REVIEW.md) rather than re-litigated, since 07-04 did not touch _promote_sync/_rollback_sync/_retire_sync's dispatch shape."
 ---
 
 # Phase 7: Promotion & Rollback Verification Report
@@ -65,9 +47,43 @@ gaps:
 inferable by absence.
 **Scope (per `07-GATE-AMENDMENT.md`):** ROADMAP success criteria 1, 2, 3 only. Criteria 4 and 5 are
 struck; HARD-01/HARD-02/HARD-04 are deferred and are correctly **not** scored as gaps here.
-**Verified:** 2026-09-11
-**Status:** gaps_found
-**Re-verification:** No — initial verification.
+**Verified:** 2026-09-12
+**Status:** human_needed
+**Re-verification:** Yes — after 07-04's gap closure of the previous run's sole gap (CR-01).
+
+## Gap Closure Verdict (07-04 / CR-01)
+
+**CLOSED.** Checked directly against the running code, not against SUMMARY.md's claim:
+
+| Contract item (from the previous `gaps:` block) | Verified against code |
+|---|---|
+| `UnrecognisedPromotionVerbError` exists in `databasise/seam/refusals.py` as a `SeamRefusalError` subclass, exported | ✓ Confirmed: `class UnrecognisedPromotionVerbError(SeamRefusalError)` at line 360, between `InvalidChangeOriginError` and `GateVerbNotBuiltError`; present in `__all__` |
+| The guard is the FIRST statement in `Databasise.promote()`, before trace-id resolution and any ledger read/write | ✓ Confirmed by reading `engine.py:1176-1178`: `if verb not in PROMOTION_VERBS: raise UnrecognisedPromotionVerbError(verb=verb)` is the literal first statement in the method body, preceding the `_NOT_BUILT_VERBS` check (line 1180) and `_resolve_operator_preconditions` (line 1183) |
+| Accepted set comes from `typing.get_args(PromotionVerb)` via `PROMOTION_VERBS` in `promotion.py` — no second hand-maintained list | ✓ Confirmed: `promotion.py:62` — `PROMOTION_VERBS: frozenset[str] = frozenset(get_args(PromotionVerb))`; single occurrence of the derivation pattern, no parallel literal list found |
+| `promote()`'s `verb` parameter annotated `PromotionVerb` | ✓ Confirmed: `engine.py:1152` — `verb: PromotionVerb = "operator-asserted"` |
+| All three transports surface the identical `refusal_type` | ✓ Confirmed by reading `rest.py`'s single `add_exception_handler(SeamRefusalError, ...)` (unchanged, generic), `mcp/server.py`'s `_refusal_mapped` (unchanged, generic, `detail["refusal_type"] = type(exc).__name__`), and both `PromoteRequest`/`PromoteToolArgs` docstrings recording the deliberate `verb: str` (deserialization-only) decision. Live test run: `test_an_out_of_enum_verb_refuses_identically_across_three_transports` — 1 passed, asserting all three `refusal_type` values equal `"UnrecognisedPromotionVerbError"` in one body |
+| A refusal leaves ZERO rows in the ledger | ✓ Confirmed: same test asserts `Ledger(store_root)._conn.execute("SELECT COUNT(*) FROM ledger").fetchone()[0] == 0` after all three transport calls; also independently asserted in `test_an_unrecognised_verb_refuses_by_name_before_any_trace_resolution`'s six parametrized cases |
+
+Live re-run of the specific closure tests (not trusted from SUMMARY.md — executed this session):
+
+```
+uv run --extra rest --extra mcp pytest -q tests/seam/test_promotion_posture.py tests/seam/test_dual_transport.py -k "verb or Unrecognised"
+→ 10 passed, 14 deselected
+
+uv run --extra rest pytest -q tests/seam/test_rest_transport.py::test_every_refusal_subclass_maps_to_a_non_success_status_carrying_its_named_value
+→ 30 passed
+```
+
+`git log --oneline -- databasise/seam/engine.py` confirms `214faff` ("feat(07-04): refuse an
+out-of-enum promotion verb by name before trace-id resolution") is the top commit touching that
+file, directly above `07-01`'s original `953b203`/`07-02`'s `94e36b5` — no undocumented later edit.
+
+The bare-`ValueError` terminal branch inside `_promote_sync` (line ~1209-1216) now raises
+`UnrecognisedPromotionVerbError(verb=verb)` instead of a foreign exception; the branch is kept as a
+backstop (unreachable by construction post-guard) with a comment explaining why, per the plan's own
+explicit instruction not to delete it.
+
+**Verdict: 07-04 closes CR-01 exactly as specified. No new gap introduced by its changes.**
 
 ## Goal Achievement
 
@@ -75,117 +91,114 @@ struck; HARD-01/HARD-02/HARD-04 are deferred and are correctly **not** scored as
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | Every generation record carries `change_origin` and `promotion_provenance`, never defaulted; a semver is minted at promotion and only at promotion; tombstoned losers are never lifted; the active pointer is a derived query | ✓ VERIFIED | `databasise/ledger/ledger.py:134-138` (`change_origin TEXT NOT NULL`, `record_kind TEXT NOT NULL`, no `ALTER TABLE`); `by_alias` (line 231) and `generation_state` (line 253) both `ORDER BY id DESC LIMIT 1` with no written "current" column; `by_alias`'s WHERE clause excludes `record_kind != 'tombstone'`; `test_retire.py::test_never_lifted_repromotion_is_a_new_generation` and the full suite (1054 passed / 1 skipped) pass at HEAD |
-| 2 | Owner promotes by explicit call with `operator_asserted` provenance and non-empty `promotion_trace_ids`, no verdict/tier-of-decision; ledger append is the decision, alias repoint is atomic; rollback follows the same path | ✓ VERIFIED | `Databasise.promote`/`rollback`/`retire` each contain exactly one `ledger.append(` call inside one `run_in_executor` dispatch (read `databasise/seam/engine.py:1143-1478`); `test_promote.py`, `test_rollback.py`, `test_retire.py` all pass; three-transport parity confirmed live (`uv run --extra rest --extra mcp pytest tests/seam/test_dual_transport.py -k promot` → 1 passed) |
-| 3 | `promote-next`/`promote-now` stay unavailable for answer-level/index-side classes under the default posture, and the refusal names the posture rather than failing silently | ⚠️ PARTIAL — holds for the six declared verb values, fails for any other string | `test_promotion_posture.py` (all cases) pass for the six-member enum; `_MEASUREMENT_POSTURE` is a module-scope literal dict, read at one site, unreachable from env/config/constructor (`test_posture_is_not_flippable_at_runtime` passes). **But** an out-of-enum `verb` string bypasses the named-refusal architecture entirely — reproduced live this session, see Gaps below (CR-01) |
-| 4 (deferred) | Owner's corpus in eval bundle before promotion | — struck | Per `07-GATE-AMENDMENT.md`; correctly not built, correctly not scored |
-| 5 (deferred) | Gate scripts fail on missing extraction; ANATOMY §F reconciled | — struck | Per `07-GATE-AMENDMENT.md`; correctly not built, correctly not scored |
+| 1 | Every generation record carries `change_origin` and `promotion_provenance`, never defaulted; a semver is minted at promotion and only at promotion; tombstoned losers are never lifted; the active pointer is a derived query | ✓ VERIFIED | `databasise/ledger/ledger.py:134-135` (`change_origin TEXT NOT NULL`, `record_kind TEXT NOT NULL`, no `ALTER TABLE` present in the file); `by_alias` (line 231) and `generation_state` (line 253) both use `ORDER BY id DESC LIMIT 1`, no written "current" column. Untouched by 07-04 (not in its `files_modified`); re-confirmed by direct read this session |
+| 2 | Owner promotes by explicit call with `operator_asserted` provenance and non-empty `promotion_trace_ids`, no verdict/tier-of-decision; ledger append is the decision, alias repoint is atomic; rollback follows the same path | ✓ VERIFIED | `promote()`'s docstring (`engine.py:1172`) and body confirm one `Ledger.append()` call inside one `run_in_executor` dispatch, unchanged by 07-04 except for the guard ordering documented above and the terminal-branch exception-family fix. `test_promote.py`/`test_rollback.py`/`test_retire.py` all pass per verified full-suite run (1063 passed, 1 skipped) |
+| 3 | `promote-next`/`promote-now` stay unavailable for answer-level/index-side classes under the default posture, and the refusal names the posture rather than failing silently — now including every out-of-enum verb string, not only the six declared literals | ✓ VERIFIED | Six declared verbs behave exactly as before (`test_no_gate_verb_appends_a_row`, `test_operator_asserted_verb_still_appends` pass unchanged); the previously-uncovered seventh case (any out-of-enum string) now refuses by name via `UnrecognisedPromotionVerbError`, checked first, before the not-built check, before trace-id resolution, before any ledger touch — closing the sole gap the previous verification scored against this criterion |
 
-**Score:** 2/3 live criteria fully verified; 1/3 (criterion 3) verified for its literal enumerated
-scope but co-located with a confirmed, reproducible, untested crash defect in the same
-verb-dispatch subsystem (see Gaps).
+**Score:** 3/3 truths verified against the current codebase (not against SUMMARY.md's claim).
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `databasise/seam/promotion.py` | pure computation module: posture, semver, class derivation | ✓ VERIFIED | No `sqlite3` import, no `databasise.seam.engine` import; `_MEASUREMENT_POSTURE`, `mint_version`, `derive_mutation_class`, `resolve_single_arm` all present and match plan spec |
-| `databasise/ledger/ledger.py` | 4 additive columns, `generation_state`, amended `by_alias` | ✓ VERIFIED | Confirmed via grep and read: `change_origin`, `record_kind`, `minted_version`, `targets_version` columns; no `ALTER TABLE`; both projections use `ORDER BY id DESC LIMIT 1` |
-| `databasise/seam/engine.py` — `promote`/`rollback`/`retire` | three operator verbs, refuse-before-write | ✓ VERIFIED (with the CR-01 defect noted above) | All three methods present with the documented signatures; one `append()` each |
-| `databasise/seam/rest.py` — 3 routes | thin adapters, no route-local logic | ✓ VERIFIED | `POST /promote`/`/rollback`/`/retire` are single `return await engine....(...)` bodies; single `add_exception_handler` registration |
-| `databasise/mcp/tools.py`/`server.py` — 3 tools | `TOOL_NAMES` grows 6→9, `@_refusal_mapped` reused | ✓ VERIFIED | `TOOL_NAMES` = 9 entries ending `promote, rollback, retire`; 9 `@server.tool` registrations counted live |
-| `databasise/evidence/PROMOTION-LEDGER-EVIDENCE.md` | evidence doc naming tests per criterion | ✓ VERIFIED | Criteria table cites collectible node ids; `tests/evidence/test_promotion_ledger_record.py` (7 tests) passes live and asserts the document's own claims against pytest collection |
-| `.planning/phases/05-opaque-side-admission/COVERAGE.md` | 3 new §18.5 operation rows | ✓ VERIFIED | `promote`/`rollback`/`retire` rows present, each naming in-process/REST/MCP and `07-03` |
+| `databasise/seam/refusals.py` | `UnrecognisedPromotionVerbError(SeamRefusalError)`, keyword-only, `Any`-typed, in `__all__` | ✓ VERIFIED | Confirmed by direct read: matches `InvalidChangeOriginError`'s shape exactly, no menu/default implied in the message |
+| `databasise/seam/promotion.py` | `PROMOTION_VERBS` derived via `get_args`, exported | ✓ VERIFIED | `frozenset[str] = frozenset(get_args(PromotionVerb))`, single occurrence, `"PROMOTION_VERBS"` in `__all__` |
+| `databasise/seam/engine.py` — `promote()` | `PromotionVerb`-annotated, verb guard first-statement | ✓ VERIFIED | Confirmed line-by-line; guard precedes `_NOT_BUILT_VERBS` check and precondition resolution |
+| `databasise/seam/rest.py`/`mcp/tools.py` | `verb: str` stays deserialization-only, no `Literal`/validator | ✓ VERIFIED | Both docstrings record the deliberate rejected-alternative rationale; no `field_validator` or `Literal` found on either `verb` field |
+| `databasise/tests/seam/test_promotion_posture.py` | two new tests: refusal ordering + drift guard | ✓ VERIFIED | Both present, both pass live |
+| `databasise/tests/seam/test_dual_transport.py` | one three-transport parity test | ✓ VERIFIED | Present, passes live, asserts all three `refusal_type` values in one body (not three separate tests) |
+| `databasise/tests/seam/test_rest_transport.py` | `_REFUSAL_FACTORIES` entry for the new class | ✓ VERIFIED | Entry present; exhaustiveness test (30 cases) passes, meaning no `SeamRefusalError` subclass lacks a factory |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|----|----|--------|---------|
-| `Databasise.promote` | `selectors._resolve_alias` | `Ledger.append` → `Ledger.by_alias` | ✓ WIRED | `test_promote_appends_one_row_the_alias_selector_resolves` passes; confirmed live |
-| `Databasise.rollback`/`retire` | `Ledger.generation_state` | tombstone/unknown-version refusals | ✓ WIRED | `UnknownGenerationVersionError`/`TombstonedGenerationError`/`ActiveGenerationRetirementError` all present and raised at the documented call sites |
-| `POST /promote`,`/rollback`,`/retire` | `Databasise.promote`/`rollback`/`retire` | thin route bodies | ✓ WIRED | Single-statement route bodies confirmed by reading `rest.py` |
-| MCP `promote`/`rollback`/`retire` tools | same engine methods | `@_refusal_mapped` | ✓ WIRED | Confirmed by reading `mcp/server.py`; decorator stacking matches `delete_tool`'s shape |
-| `promote()`'s `verb` param | a named refusal for out-of-enum values | — | ✗ NOT_WIRED | No such link exists; falls through to a bare `ValueError` (see Gaps) |
+| `Databasise.promote`'s `verb` param | `UnrecognisedPromotionVerbError` | `PROMOTION_VERBS` membership check, first statement | ✓ WIRED | Confirmed by reading `engine.py:1177-1178` |
+| `UnrecognisedPromotionVerbError` | REST 422 + `refusal_type` | `rest.py`'s single generic `add_exception_handler(SeamRefusalError, ...)` | ✓ WIRED | No transport-specific code added; live test confirms `status_code == 422`, `refusal_type == "UnrecognisedPromotionVerbError"` |
+| `UnrecognisedPromotionVerbError` | MCP `ToolError` + `refusal_type` | `mcp/server.py`'s generic `_refusal_mapped` | ✓ WIRED | No transport-specific code added; live test confirms `ToolError` raised, JSON detail carries the name |
+| `UnrecognisedPromotionVerbError` | REST exhaustiveness test | `test_rest_transport.py`'s `_REFUSAL_FACTORIES` | ✓ WIRED | Confirmed by reading the dict entry and the passing 30-case parametrized run |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| Full test suite at HEAD | `cd databasise && uv run pytest -q` | `1054 passed, 1 skipped in 172.91s` | ✓ PASS (matches known_state exactly) |
-| REST/MCP/in-process promote parity | `uv run --extra rest --extra mcp pytest tests/seam/test_dual_transport.py -k promot -x` | `1 passed, 5 deselected` | ✓ PASS |
-| Evidence-document self-check | `uv run pytest tests/evidence/test_promotion_ledger_record.py -x` | `7 passed` | ✓ PASS |
-| `promote()` with an unrecognised `verb` string | live Python repro (see gap detail) against a fresh temp store, seeded with a real resolvable trace id | `ValueError("unknown promotion verb 'promote_next_typo'")`, 0 ledger rows written | ✗ FAIL — confirms CR-01; nothing else in this defect corrupts state |
-| MCP tool roster count | `TOOL_NAMES` read directly from `databasise/mcp/tools.py` | 9 entries, ends `promote, rollback, retire` | ✓ PASS |
-| `@server.tool` registration count | `grep -c '@server.tool' databasise/mcp/server.py` | `9` | ✓ PASS |
+| Out-of-enum verb refusal (in-process/REST/MCP + drift guard) | `uv run --extra rest --extra mcp pytest -q tests/seam/test_promotion_posture.py tests/seam/test_dual_transport.py -k "verb or Unrecognised"` | `10 passed, 14 deselected` | ✓ PASS |
+| Refusal-exhaustiveness gate (every `SeamRefusalError` subclass has a factory) | `uv run --extra rest pytest -q tests/seam/test_rest_transport.py::test_every_refusal_subclass_maps_to_a_non_success_status_carrying_its_named_value` | `30 passed` | ✓ PASS |
+| No stray `ValueError` on the promote path | `grep -v '^\s*#' seam/engine.py \| grep -c 'ValueError'` | `1` (the sole pre-existing unrelated `except ValueError` guard) | ✓ PASS |
+| Full suite (from orchestrator's `verified_context`, no code changed since) | `uv run --extra rest --extra mcp pytest -q` | `1063 passed, 1 skipped` | ✓ PASS |
+| Lock/serialization scan for WR-01 | `grep -n "asyncio.Lock\|threading.Lock\|Lock(" seam/engine.py` | no matches | confirms WR-01 unresolved, unchanged |
+| Debt-marker scan on all 07-04-touched files | `grep -n "TBD\|FIXME\|XXX\|TODO\|HACK\|PLACEHOLDER"` across refusals.py, promotion.py, engine.py, rest.py, tools.py | no matches | ✓ PASS — no blocker |
+
+### Probe Execution
+
+No `scripts/*/tests/probe-*.sh` files exist in this project and no phase document references a probe script. **SKIPPED (no runnable probes declared or found).**
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
 |-------------|------------|-------------|--------|----------|
-| MACH-07 | 07-01, 07-02 | Append-only promote/rollback ledger, §7 field discipline | ✓ SATISFIED | Ledger columns, projections, tombstone-never-lifted test all verified; the CR-01 defect writes nothing to the ledger, so this requirement's own text is not implicated |
-| API-09 | 07-01, 07-03 | Operator can promote/rollback via RIG §PR.3's path, reachable identically over REST/MCP | ✓ SATISFIED (as literally worded) | The three verbs work identically on all three transports for valid input; the enumerated promote-next/promote-now refusal behavior this requirement names works correctly. The unvalidated `verb` field is a robustness gap in the same code path, not a failure of the requirement's own stated text — flagged as a phase-scope gap regardless (see Gaps) |
-| HARD-01 | — (deferred) | Gate-script vacuous-pass repair | Pending, correctly deferred | `07-GATE-AMENDMENT.md`; REQUIREMENTS.md carries the dated deferral note, checkbox unchecked |
+| MACH-07 | 07-01, 07-02 | Append-only promote/rollback ledger, §7 field discipline | ✓ SATISFIED | Unchanged by 07-04; ledger schema/projections re-confirmed this session; `.planning/REQUIREMENTS.md` line 21 checked `[x]`, traceability table line 91 reads "Phase 7 / Complete" |
+| API-09 | 07-01, 07-03, 07-04 | Operator can promote/rollback via RIG §PR.3's path, reachable identically over REST/MCP, including a named refusal for any invalid verb | ✓ SATISFIED (now fully, unqualified) | The verb-refusal gap that previously left this "satisfied as literally worded" with a flagged robustness gap is closed; `.planning/REQUIREMENTS.md` line 45 checked `[x]`, traceability table line 109 reads "Phase 7 / Complete" |
+| HARD-01 | — (deferred) | Gate-script vacuous-pass repair | Pending, correctly deferred | `07-GATE-AMENDMENT.md`; unaffected by this run |
 | HARD-02 | — (deferred) | ANATOMY §F / PARTS Appendix A reconciliation | Pending, correctly deferred | Same |
 | HARD-04 | — (deferred) | Owner's corpus in eval bundle | Pending, correctly deferred | Same |
 
 No orphaned requirements: MACH-07 and API-09 are the only two IDs mapped to Phase 7 in
-`REQUIREMENTS.md`'s traceability table, and both appear in at least one plan's `requirements:`
-frontmatter (07-01: both; 07-02: MACH-07; 07-03: API-09).
+`REQUIREMENTS.md`'s traceability table; 07-04's own frontmatter declares `requirements: [API-09]`,
+consistent with it being a targeted gap-closure plan against the same requirement 07-01/07-03 already
+claimed.
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| `databasise/seam/engine.py` | ~1201 | Bare `raise ValueError(...)` on a public-input-reachable path, instead of the codebase's own `SeamRefusalError` convention | 🛑 Blocker | Uncaught by both transport-level generic refusal handlers; a REST caller gets a 500, an MCP caller gets an unwrapped crash, for what should be a clean, named 422/`ToolError` refusal. Reproduced live this session (see Gaps) |
-| `databasise/seam/promotion.py` | 111-124 (`_arm_name_for_node_ids`) | First-match-wins arm resolution with no uniqueness guard | ⚠️ Warning | Not exploitable against the currently registered arm set (confirmed no two arms share a node-id set today), but a future arm patch changing only `component` identity could silently promote the wrong wiring with no error. From 07-REVIEW.md's WR-02, unresolved at HEAD |
-| `databasise/seam/engine.py` | `_promote_sync`/`_rollback_sync`/`_retire_sync` | No serialization (lock) across concurrent calls to the same alias | ⚠️ Warning | Confirmed live: no `asyncio.Lock`/`threading` reference anywhere in `engine.py`. Two racing calls on the same alias could mint a duplicate semver, misattribute `parent`, or let `retire()`'s active-generation guard pass on a generation that becomes active only after the guard's own read. From 07-REVIEW.md's WR-01, unresolved at HEAD. Routed to human verification below rather than scored as a gap, because it requires genuine concurrent access to trigger and does not falsify either criterion's literal single-call wording |
-| `databasise/seam/engine.py` (`rollback` docstring) | 1248-1296 | `rollback()`'s docstring does not state (as `retire()`'s does) that the resolved arm need not match the rollback target | ℹ️ Info | Untested behavior either way; a future reader could "fix" it into an unwanted match check. From 07-REVIEW.md's IN-01 |
+| `databasise/seam/promotion.py` | 111-124 (`_arm_name_for_node_ids`) | First-match-wins arm resolution with no uniqueness guard | ⚠️ Warning | Carried forward from 07-REVIEW.md's WR-02; not touched by 07-04; not exploitable against the currently registered arm set; unchanged |
+| `databasise/seam/engine.py` | `_promote_sync`/`_rollback_sync`/`_retire_sync` | No serialization (lock) across concurrent calls to the same alias | ⚠️ Warning | Carried forward from 07-REVIEW.md's WR-01; not touched by 07-04 (confirmed: no `asyncio.Lock`/`threading.Lock` reference anywhere in `engine.py`, re-checked this session); routed to Human Verification below rather than scored as a gap, because it requires genuine concurrent access to trigger and does not falsify either criterion's literal single-call wording |
+| `databasise/seam/engine.py` (`rollback` docstring) | ~1248-1296 | `rollback()`'s docstring does not state (as `retire()`'s does) that the resolved arm need not match the rollback target | ℹ️ Info | Carried forward from 07-REVIEW.md's IN-01; untested behavior either way; unchanged |
+
+No new anti-patterns introduced by 07-04's changes: all five files it modified were scanned directly
+for debt markers (`TBD`/`FIXME`/`XXX`/`TODO`/`HACK`/`PLACEHOLDER`) — zero matches.
 
 ## Human Verification Required
 
-### 1. Concurrent promote/rollback/retire on the same alias (WR-01)
+### 1. Concurrent promote/rollback/retire on the same alias (WR-01 — carried forward, not a new finding)
 
 **Test:** Fire two concurrent `promote()` calls (or a `promote()` racing a `retire()`) against the
-same alias, e.g. via `asyncio.gather()` against two REST/MCP requests hitting the same alias at
-once.
-**Expected:** Either true serialization (one call fully completes before the other starts reading
-the prior state) or a clean refusal for the loser — never two rows minting the same semver, and
-never `retire()`'s `ActiveGenerationRetirementError` guard passing on a generation that becomes
-active only after the guard's own read.
-**Why human:** This is a genuine concurrency race that requires real parallel dispatch to trigger
-non-deterministically; grep/read confirms no lock exists, but only a live concurrent run
-demonstrates the actual outcome (duplicate version vs. SQLite-level contention error vs. silent
-corruption). The reviewer's severity rating (Warning, not Critical) and the fact that this
-milestone's stated scope is a single-process embedded engine both argue for a human decision on
-whether this needs closing now or can ship with the risk accepted and tracked.
+same alias, e.g. via `asyncio.gather()` against two REST/MCP requests hitting the same alias at once.
+**Expected:** Either true serialization (one call fully completes before the other starts reading the
+prior state) or a clean refusal for the loser — never two rows minting the same semver, and never
+`retire()`'s `ActiveGenerationRetirementError` guard passing on a generation that becomes active only
+after the guard's own read.
+**Why human:** Genuine concurrency race requiring real parallel dispatch to trigger
+non-deterministically; grep/read re-confirms no lock exists (unchanged since the previous
+verification), but only a live concurrent run demonstrates the actual outcome. 07-04 did not touch
+`_promote_sync`/`_rollback_sync`/`_retire_sync`'s dispatch shape, so this item is carried forward
+unresolved rather than re-litigated. The reviewer's severity rating (Warning, not Critical) and this
+milestone's stated scope (single-process embedded engine) both argue for an owner decision on whether
+this needs closing now or can ship with the risk accepted and tracked.
 
 ## Gaps Summary
 
-Phase 7's core ledger/promotion architecture is sound and matches its own plans in detail: the four
-additive ledger columns, the `generation_state`/`by_alias` projections, the three operator verbs,
-the posture refusal for the six declared verb values, and three-transport parity are all verified
-directly against the running code and a live test suite (1054 passed / 1 skipped, matching
-`known_state` exactly).
+**No gaps.** The previous verification's sole scored gap — `promote()`'s `verb` parameter accepting
+any `str` and crashing with a bare `ValueError` (a 500 over REST, an unwrapped crash over MCP) on any
+out-of-enum value — is closed. Checked directly against the running code and a live, targeted test
+run (not trusted from SUMMARY.md's claim): `UnrecognisedPromotionVerbError` exists as a proper
+`SeamRefusalError` subclass, is the first statement checked in `promote()`'s body (before the
+not-built check, before trace-id resolution, before any ledger touch), derives its accepted set from
+`typing.get_args(PromotionVerb)` with no parallel hand-maintained list, and surfaces the identical
+`refusal_type` on all three transports with zero ledger rows written on the refusal path. All three
+plans from the original phase (07-01/07-02/07-03) continue to hold after 07-04's edits to the shared
+files they touch — re-confirmed directly, not merely assumed unchanged.
 
-One confirmed, reproducible defect survives in the same subsystem success criterion 3 lives in:
-`promote()`'s `verb` parameter is unconstrained `str` at the engine, REST, and MCP layers, and any
-value outside the six declared literals (a typo, not a genuine gate-verb attempt) crashes with a
-bare `ValueError` rather than refusing by name — reproduced live this session against a real
-resolvable trace id, with zero ledger corruption but a genuine 500/crash on both public transports.
-This is 07-REVIEW.md's CR-01, filed the same day as this verification, and no fix commit exists
-after 07-03's landing commits (`cc5c468`, `2bb2b78`). It also directly contradicts 07-01-PLAN.md's
-own Task 3 action text ("declare `PromotionVerb = Literal[...]`... A value outside the enum is
-refused by the type/validation layer before any resolution runs" — the code declares `verb: str`
-and the check happens deep inside `_promote_sync`, not at the type/validation layer, and raises the
-wrong exception family). This is scored as a blocker gap rather than an advisory note because it is
-confirmed, reachable from both public transports this phase itself builds, untested, and a direct
-deviation from the plan's own explicit instruction — not a hypothetical or deferred concern.
-
-A second, lower-severity concurrency gap (WR-01) is routed to human verification rather than scored
-as a blocking gap, because it requires genuine concurrent dispatch to demonstrate and does not
-contradict either criterion's literal single-call wording.
+One pre-existing, out-of-scope concern (WR-01, the concurrent-access race) remains open from the
+previous verification and is carried forward as a human-verification item rather than a gap, per the
+same reasoning the previous verification applied: it does not falsify either success criterion's
+literal single-call wording, and demonstrating it requires genuine concurrent dispatch that only a
+human-directed test run can produce. Because it remains an open item in the Human Verification
+Required section, the overall status is `human_needed` rather than `passed` — Phase 7's three ROADMAP
+success criteria (1–3) are otherwise fully and unqualifiedly verified.
 
 ---
 
-_Verified: 2026-09-11_
+_Verified: 2026-09-12_
 _Verifier: Claude (gsd-verifier)_
