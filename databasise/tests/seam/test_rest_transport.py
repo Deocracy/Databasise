@@ -67,6 +67,7 @@ from databasise.seam.refusals import (
     UnknownDocumentError,
     UnknownGenerationVersionError,
     UnknownJobError,
+    UnrecognisedPromotionVerbError,
     UnsatisfiableSelectorError,
 )
 from databasise.ledger.ledger import Ledger, LedgerRecord
@@ -432,6 +433,9 @@ _REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
         trace_ids=["trace-1", "trace-2"]
     ),
     InvalidChangeOriginError: lambda: InvalidChangeOriginError(change_origin="guessed"),
+    UnrecognisedPromotionVerbError: lambda: UnrecognisedPromotionVerbError(
+        verb="promote_next_typo"
+    ),
     GateVerbNotBuiltError: lambda: GateVerbNotBuiltError(verb="check"),
     MeasurementPostureRefusalError: lambda: MeasurementPostureRefusalError(
         verb="promote-next", mutation_class="answer-level"

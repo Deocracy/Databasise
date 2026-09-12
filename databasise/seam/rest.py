@@ -149,7 +149,12 @@ class PromoteRequest(_RequestModel):
     in-process call sees the identical vocabulary. ``change_origin`` defaults to ``None`` rather
     than being a required JSON key — an absent value still reaches ``Databasise.promote()``, which
     raises the named ``InvalidChangeOriginError`` refusal itself (D-08); this model adds no
-    validation of its own beyond deserialization."""
+    validation of its own beyond deserialization. ``verb`` stays a plain ``str`` here by the
+    identical rule stated above for ``change_origin`` (07-04-PLAN.md): an out-of-enum value is
+    allowed to reach ``Databasise.promote()``, which raises the named
+    ``UnrecognisedPromotionVerbError`` refusal itself (D-09) — so this endpoint's out-of-enum
+    response is the same 422 carrying the same ``refusal_type`` as every other seam refusal,
+    rather than a request-validation body that carries no refusal name."""
 
     alias: str
     trace_ids: list[str]
