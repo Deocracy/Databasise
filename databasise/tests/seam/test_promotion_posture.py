@@ -10,11 +10,12 @@ import pytest
 
 from databasise.ledger.ledger import Ledger
 from databasise.seam.engine import Databasise
-from databasise.seam.promotion import _MEASUREMENT_POSTURE, MutationClass
+from databasise.seam.promotion import _MEASUREMENT_POSTURE, PROMOTION_VERBS, MutationClass, PromotionVerb
 from databasise.seam.refusals import (
     GateVerbNotBuiltError,
     MeasurementPostureRefusalError,
     UncalibratedFloorRefusalError,
+    UnrecognisedPromotionVerbError,
 )
 from databasise.seam.trace_store import TraceStore
 from databasise.wirings.resolve import all_wirings
@@ -164,3 +165,51 @@ async def test_operator_asserted_verb_still_appends(store_root):
 
     assert result.record_kind == "promotion"
     assert Ledger(store_root).by_alias("operator-alias") is not None
+
+
+@pytest.mark.parametrize(
+    "verb",
+    [
+        "promote_next_typo",
+        "Promote-Next",
+        "promote_next",
+        "",
+        None,
+        "operator asserted",
+    ],
+)
+async def test_an_unrecognised_verb_refuses_by_name_before_any_trace_resolution(store_root, verb):
+    """07-04-PLAN.md, closing 07-VERIFICATION.md's three `missing:` items and 07-REVIEW.md CR-01:
+    any string outside PROMOTION_VERBS's six declared literals refuses by name, never crashes with
+    a bare ValueError, and never normalises a near-miss into the literal it resembles."""
+    engine = _engine(store_root)
+    trace_id = _seed_trace(store_root, "naive")
+
+    with pytest.raises(UnrecognisedPromotionVerbError) as exc_info:
+        await engine.promote("any-alias", [trace_id], "human_edit", verb=verb)
+
+    assert exc_info.value.verb == verb
+    assert _row_count(store_root) == 0
+
+    if verb == "promote_next_typo":
+        # No menu: the message names only the caller's own out-of-enum value, never any of the
+        # six declared literals it might otherwise be pattern-matched against.
+        message = str(exc_info.value)
+        for declared_verb in PROMOTION_VERBS:
+            assert declared_verb not in message
+
+        # Ordering proof (single case, per 07-04-PLAN.md's own instruction): the same out-of-enum
+        # verb still refuses by name even when trace_ids carries an unresolvable token, proving the
+        # verb guard runs before trace-id resolution (07-VERIFICATION.md's missing item 1) rather
+        # than merely happening to run first because a valid trace was supplied.
+        with pytest.raises(UnrecognisedPromotionVerbError) as exc_info_unresolvable:
+            await engine.promote("any-alias", ["no-such-trace-token"], "human_edit", verb=verb)
+        assert exc_info_unresolvable.value.verb == verb
+        assert _row_count(store_root) == 0
+
+
+def test_the_verb_guard_reads_the_enum_rather_than_a_second_list():
+    """The drift guard (07-04-PLAN.md): fails the moment a seventh literal is added to
+    PromotionVerb without PROMOTION_VERBS being derived from it automatically."""
+    assert PROMOTION_VERBS == frozenset(typing.get_args(PromotionVerb))
+    assert len(PROMOTION_VERBS) == 6
