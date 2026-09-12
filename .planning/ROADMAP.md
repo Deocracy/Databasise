@@ -296,6 +296,10 @@ Plans:
 
 - [x] 06-17-PLAN.md — MACH-03's A/A calibration spend, asked with the threshold pre-registered first, plus a dated correction note making 06-VERIFICATION.md honest about what later commits closed
 
+**Gap-closure Wave 7** *(added 2026-09-12; runs alone, depends on nothing — a three-item paperwork closeout, autonomous with no checkpoint)*
+
+- [ ] 06-18-PLAN.md — the deferral annotation Phase 6's own success criterion 6 never received, the stale status line above it, and the blanket asyncio mark warning on every suite run
+
 ### Phase 7: Promotion & Rollback
 
 **Goal**: The owner can promote a wiring and roll it back on recorded evidence, with nothing inferable by absence
