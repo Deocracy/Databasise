@@ -1,19 +1,19 @@
 ---
-gsd_state_version: "1.0"
+gsd_state_version: 1.0
 milestone: v1.0
-current_phase: 7
-current_phase_name: promotion-rollback
+current_phase: 07
+current_phase_name: Promotion & Rollback
 status: executing
-stopped_at: Phase 7 context gathered
-last_updated: "2026-09-12T01:27:51.866Z"
-last_activity: 2026-09-10
-last_activity_desc: Phase 06 execution started
-state_head: 25b14863f1429235fd894c61d6e965f052a60aca
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-09-12T04:20:33.856Z"
+last_activity: 2026-09-11
+last_activity_desc: Phase 07 execution started
+state_head: 8c38fd4f54417e9fc3bbcbfd1b615dde71114a65
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 61
-  completed_plans: 58
+  completed_plans: 59
 milestone_name: milestone
 ---
 
@@ -24,16 +24,16 @@ milestone_name: milestone
 See: .planning/PROJECT.md (updated 2026-08-29)
 
 **Core value:** Modalities are swappable without consumers noticing — LightRAG and HippoRAG 2 both live behind one unchanging §18 envelope, comparable side-by-side on the rig.
-**Current focus:** Phase 06 — HippoRAG 2 & Side-by-Side
+**Current focus:** Phase 07 — Promotion & Rollback
 
 ## Current Position
 
-Phase: 7 (promotion-rollback) — READY TO EXECUTE
-Plan: 5 of 17
+Phase: 07 (Promotion & Rollback) — EXECUTING
+Plan: 2 of 3
   drifted before this session — corrected here from find-phase's actual plan/summary counts
   rather than the stale auto-incremented value)
 Status: Ready to execute
-Last activity: 2026-09-10 — Phase 06 execution started
+Last activity: 2026-09-11 — Phase 07 execution started
 
 Progress: [██████████] 100%
 
@@ -97,6 +97,7 @@ Progress: [██████████] 100%
 | Phase 06 P16 | 45min | 2 tasks | 2 files |
 | Phase 06 P15 | ~55min | 1 tasks | 2 files |
 | Phase 06 P17 | ~35min | 2 tasks | 4 files |
+| Phase 07 P01 | ~55min | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -179,6 +180,8 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 06]: 06-15: owner re-authorized the real cross-modality run (approve); both build_hipporag_index and run_cross_modality exited 0 against live parity credentials, discharging MODAL-05. — 06-14's corpus-ingest wiring-variant fix and EmptyEmbeddingInputError guard closed the fact-score empty-string defect that killed the 2026-09-10 attempt; both harnesses ran clean this time with no retry needed.
 - [Phase 06]: [Phase 06-hipporag-2-side-by-side]: 06-17: Owner declined the real A/A calibration spend a third time (06-06, 06-13, 06-17), no free-text reason given beyond the selection. Every precondition and the A/A driver itself are closed; only the spend decision remains, and per the plan's own prohibition it is not to be asked again.
 - [Phase 06]: [Phase 06-hipporag-2-side-by-side]: 06-17: Appended a dated correction note to 06-VERIFICATION.md naming which later commits (5827165, 2cb437a, 3de871b, 06-14) closed five of its findings, without touching its status/score/gap bodies -- a pure append, verified via git diff --numstat (41 insertions, 0 deletions).
+- [Phase 07]: 07-01: trace-id -> arm-name resolution matches on the dispatched node id set, not wiring_id/arm_id (both constant literals across every LightRAG arm) — the plan's literal field description does not survive contact with the real RunRecord shape. — wiring_id is the shared 'lightrag-base' string and arm_id is always the literal 'seam' for every LightRAG arm; only the persisted node id set (RunRecord.nodes[*].node_id) is both query-invariant and unique per arm.
+- [Phase 07]: 07-01: the whole ledger read-modify-append sequence inside promote() runs in one run_in_executor call, never split across the calling thread and the executor thread. — sqlite3 forbids cross-thread use of a connection opened on a different thread; opening Ledger() on the event loop thread and calling append() from run_in_executor raised sqlite3.ProgrammingError.
 
 ### Pending Todos
 
@@ -214,6 +217,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-12T00:45:51.403Z
-Stopped at: Phase 7 context gathered
-Resume file: .planning/phases/07-promotion-rollback/07-CONTEXT.md
+Last session: 2026-09-12T04:20:18.990Z
+Stopped at: Completed 07-01-PLAN.md
+Resume file: None
