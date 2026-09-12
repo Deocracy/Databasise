@@ -309,7 +309,7 @@ Plans:
   4. ~~The owner's own document corpus is layered into the eval bundle before any promotion decision is taken on it~~ — **STRUCK 2026-09-11** *(deferred per `.planning/phases/07-promotion-rollback/07-GATE-AMENDMENT.md`: HARD-04 moves to the owner's in-depth testing / hardening phase, or the first gate-adjudicated promotion, whichever comes first — an operator-asserted promotion reads no eval bundle, so nothing in this phase consumes the owner-corpus layer. HARD-04 stays Pending.)*
   5. ~~The gate scripts fail on missing extraction instead of passing vacuously, and every ANATOMY §F row points at its landed repair with stale cross-document rows reconciled~~ — **STRUCK 2026-09-11** *(deferred per `.planning/phases/07-promotion-rollback/07-GATE-AMENDMENT.md`: HARD-01 and HARD-02 move to the same phase, same point of first need — neither is consumed by the promote path, and where the repairs land relative to the never-edited `docs/system-model/` mirror travels with the deferral, unresolved. Both stay Pending.)*
 
-**Plans**: 4/4 plans executed across 4 sequential waves (each plan modifies files the previous one created, so no two run in parallel)
+**Plans**: 5 plans across 5 sequential waves (each plan modifies files the previous one created, so no two run in parallel)
 
 Plans:
 **Wave 1** *(tracer — runs alone, before any expansion)*
@@ -327,6 +327,10 @@ Plans:
 **Wave 4** *(gap closure — blocked on 07-03; closes `07-VERIFICATION.md`'s one scored gap / `07-REVIEW.md` CR-01)*
 
 - [x] 07-04-PLAN.md — An out-of-enum promotion `verb` refuses by a named `SeamRefusalError` subclass checked before trace-id resolution, and surfaces under that same name on all three transports (422 over REST, `ToolError` over MCP) instead of crashing
+
+**Wave 5** *(gap closure — blocked on 07-04; closes `07-UAT.md`'s sole gap G-07-1 / `07-REVIEW.md` WR-01, carried unaddressed through two review rounds)*
+
+- [ ] 07-05-PLAN.md — A `BEGIN IMMEDIATE` transaction spans each operator verb's guard read and its append, and `(alias, minted_version)` becomes UNIQUE, so concurrent promote/rollback/retire on one alias either serialize or refuse the loser by an already-shipped name — with a committed concurrency regression test for both reproduced races and no change to the §18 envelope
 
 ## Progress
 
