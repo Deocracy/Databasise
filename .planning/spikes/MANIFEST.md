@@ -18,7 +18,7 @@ MelodyScribe: a micro-harness where one small local model (1B to 10B to start, D
 
 | # | Idea | Name | Type | Validates | Verdict | Tags |
 |---|------|------|------|-----------|---------|------|
-| 001 | melodyscribe | score-io-model | standard | Given a Score with directives, when compiled, then every section maps to a deterministic token plan and every model output to a typed op with no ambiguous case | PENDING | score, compiler, schema, grammar |
+| 001 | melodyscribe | score-io-model | standard | Given a Score with directives, when compiled, then every section maps to a deterministic token plan and every model output to a typed op with no ambiguous case | VALIDATED (toy tokenizer; real ids re-checked in 002) | score, compiler, schema, grammar |
 | 002 | melodyscribe | one-pass-runtime | standard | Given llama-cpp-python with CUDA on legion and MiniCPM5-2B, when one decode runs over prefix+section+[EMB], then embeddings and logits come from the same call, ops decode under grammar, isolated sequences are neighbour-independent, and throughput is recorded | PENDING | llama.cpp, cuda, kv, embeddings |
 | 003 | melodyscribe | op-emission-size-sweep | comparison | Given frontier-labelled ops for the corpus, when each model size emits ops under grammar with thinking off, then routing accuracy and tokens per paragraph per size | PENDING | size-sweep, accuracy, teacher |
 | 004 | melodyscribe | self-embedding-parity | comparison | Given the corpus and its queries, when embedded by a dedicated 0.6B embedder, by untrained last-token states, and by a trained head over frozen states, then recall@k per method | PENDING | embeddings, recall, head |

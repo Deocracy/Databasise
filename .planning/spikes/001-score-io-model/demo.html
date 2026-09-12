@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spike 001 demo: Score -&gt; token plan -&gt; Proof</title>
+<style>
+body { font-family: monospace; max-width: 1100px; margin: 2em auto; color: #222; }
+textarea { width: 100%; font-family: monospace; }
+.row { display: flex; gap: 1em; } .row > div { flex: 1; }
+.tok-s0 { background: #dceaff; } .tok-e { background: #d9f2d9; }
+.tok-instr { background: #ffe6b3; } .tok-emb { background: #f3b3ff; font-weight: bold; }
+.tok-gen { background: #eee; border-bottom: 2px dotted #888; }
+.pass { color: #0a0; } .fail { color: #a00; }
+table { border-collapse: collapse; width: 100%; }
+td, th { border: 1px solid #bbb; padding: 2px 6px; text-align: left; font-size: 12px; }
+.note { background: #f6f6f6; padding: 0.5em; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>Spike 001 demo: Score &rarr; token plan &rarr; Proof</h1>
+<p class="note">Display mirror of <code>score.py</code> / <code>ops_validate.py</code>
+in this folder. The Python suite (<code>run.sh</code>) is normative; this page
+re-implements the same rules in plain JS for inspection. Open from disk, no server.</p>
+
+<h2>1. Paste a Score</h2>
+<textarea id="score" rows="10">&lt;score v="1" corpus="parity20" doc="ed_wood"&gt;
+  &lt;section id="s1" embed="isolated"&gt;Ed Wood was born on 1924-10-10 in Poughkeepsie.&lt;/section&gt;
+  &lt;section id="s2" embed="isolated" respond="ops" file="graph,sql"&gt;Tim Burton directed the film Ed Wood in 1994.&lt;/section&gt;
+  &lt;section id="s3" embed="off" respond="text"&gt;Name the director.&lt;/section&gt;
+&lt;/score&gt;</textarea>
+<br><button id="compile">Compile to token plan</button>
+<div id="errors"></div>
+
+<h2>2. Token plan</h2>
+<table id="steps"><tr><th>#</th><th>kind</th><th>seq</th><th>detail</th><th>cap/grammar</th></tr></table>
+<h3>S0 stream</h3>
+<div id="s0"></div>
+<h3>Isolated embedding sequences</h3>
+<div id="eis"></div>
+
+<h2>3. Model output &rarr; Proof</h2>
+<div class="row"><div>
+<label>Section the ops belong to: <select id="sec"></select></label>
+<textarea id="ops" rows="12">{"ops": [
+  {"target": "graph", "s": "Ed Wood", "p": "born_on", "o": "1924-10-10", "evidence": [0, 44]},
+  {"target": "sql", "subject": "Ed Wood", "attribute": "birthday", "value": "1924-10-10", "value_type": "date", "evidence": [0, 44]},
+  {"target": "agent", "ask": "Check the year.", "why": "Two sources disagree."}
+]}</textarea>
+<br><button id="prove">Run Proof</button>
+</div></div>
+<div id="verdicts"></div>
+
+<script>
+"use strict";
+const TOK = s => s.match(/\S+|\s+/g) || [];
+const DOC_PREFIX = "<|system|>You file Score sections into typed ops. Emit only what the section directives request.</|system|>";
+const EMB = "[EMB]";
+const FILE_TARGETS = ["graph", "sql", "folio", "agent"];
+const REWRITE = { propositions: "Rewrite the section above as one atomic proposition per line. Add no facts.",
+  canonical: "Rewrite the section above in canonical entity-attribute-value sentences. Add no facts.",
+  summary: "Summarise the section above in at most three sentences. Add no facts." };
+const ANSWER_INSTR = "Follow the command in the section above. Answer in plain text.";
+const opsInstr = fs => `Emit one JSON object {"ops":[...]} with at most 32 ops, targets restricted to [${fs}]. Graph and sql ops need a [start,end] evidence span into the section. Empty list {"ops":[]} means nothing to file.`;
+let SPEC = null, PLAN = null;
+
+function err(msg) { document.getElementById("errors").innerHTML = `<p class="fail">${msg}</p>`; }
+function okClear() { document.getElementById("errors").innerHTML = ""; }
+
+function parseScore(xml) {
+  const doc = new DOMParser().parseFromString(xml, "text/xml");
+  if (doc.querySelector("parsererror")) throw new Error("not well-formed XML");
+  const root = doc.documentElement;
+  if (root.tagName !== "score") throw new Error("root must be <score>");
+  for (const a of root.attributes)
+    if (!["v", "corpus", "doc", "provenance"].includes(a.name)) throw new Error("unknown <score> attribute " + a.name);
+  if ((root.getAttribute("v") || "1") !== "1") throw new Error("unsupported version");
+  const prov = root.getAttribute("provenance") || "chunker";
+  if (!["chunker", "frontier"].includes(prov)) throw new Error("refused provenance " + prov);
+  const secs = [], seen = new Set();
+  for (const el of root.children) {
+    if (el.tagName !== "section") throw new Error("unexpected <" + el.tagName + ">");
+    for (const a of el.attributes)
+      if (!["id", "embed", "respond", "file", "link"].includes(a.name)) throw new Error("unknown <section> attribute " + a.name);
+    const id = el.getAttribute("id");
+    if (!id || !/^[a-z0-9_-]+$/.test(id)) throw new Error("bad section id " + id);
+    if (seen.has(id)) throw new Error("duplicate section id " + id);
+    seen.add(id);
+    const embed = el.getAttribute("embed") || "isolated";
+    if (embed.startsWith("rewrite:")) {
+      if (!(embed.slice(8) in REWRITE)) throw new Error("unregistered rewrite style " + embed);
+    } else if (!["isolated", "context", "off"].includes(embed)) throw new Error("unknown embed " + embed);
+    const respond = el.getAttribute("respond") || "none";
+    if (!["none", "ops", "text"].includes(respond)) throw new Error("unknown respond " + respond);
+    let file = [];
+    if (el.hasAttribute("file")) {
+      file = el.getAttribute("file").split(",").map(s => s.trim());
+      if (file.includes("any")) file = file.length === 1 ? [...FILE_TARGETS] : (() => { throw new Error("'any' must stand alone"); })();
+      for (const t of file) if (!FILE_TARGETS.includes(t)) throw new Error("unknown file target " + t);
+      if (respond !== "ops") throw new Error(`section ${id}: file= without respond=ops`);
+    } else if (respond === "ops") file = [...FILE_TARGETS];
+    const link = (el.getAttribute("link") || "raw").split(",").map(s => s.trim());
+    for (const t of link) if (!["raw", "graph", "sql", "folio"].includes(t)) throw new Error("unknown link " + t);
+    if (el.children.length) throw new Error(`section ${id}: nested markup refused`);
+    secs.push({ id, embed, respond, file, link, content: el.textContent });
+  }
+  if (!secs.length) throw new Error("Score with zero sections");
+  return secs;
+}
+
+function compilePlan(secs) {
+  const P = TOK(DOC_PREFIX), steps = [];
+  let s0 = 0, exact = true;
+  const app = (seq, toks, cls) => { steps.push({ kind: "append", seq, toks, cls }); if (seq === "S0") s0 += toks.length; };
+  secs.forEach((sec, i) => {
+    const ct = TOK(sec.content);
+    app("S0", ct, "tok-s0");
+    const E = "E_" + i;
+    if (sec.embed === "isolated") {
+      steps.push({ kind: "copy_prefix", seq: E, toks: P, cls: "tok-e" });
+      steps.push({ kind: "append", seq: E, toks: ct.concat([EMB]), cls: "tok-e" });
+      steps.push({ kind: "read_vector", seq: E, at: P.length + ct.length, cls: "tok-emb", note: EMB + " form=isolated" });
+      steps.push({ kind: "free", seq: E, toks: [], cls: "" });
+    } else if (sec.embed === "context") {
+      const at = s0; app("S0", [EMB], "tok-emb");
+      steps.push({ kind: "read_vector", seq: "S0", at, cls: "tok-emb", note: EMB + " form=context" });
+    } else if (sec.embed.startsWith("rewrite:")) {
+      app("S0", TOK(REWRITE[sec.embed.slice(8)]), "tok-instr");
+      steps.push({ kind: "decode", seq: "S0", toks: [], cls: "tok-gen", note: `rewrite cap=256 stop` }); s0 += 256; exact = false;
+      const at = s0; app("S0", [EMB], "tok-emb");
+      steps.push({ kind: "read_vector", seq: "S0", at, cls: "tok-emb", note: EMB + " form=" + sec.embed });
+    }
+    if (sec.respond === "ops") {
+      app("S0", TOK(opsInstr(sec.file.join(","))), "tok-instr");
+      steps.push({ kind: "decode", seq: "S0", toks: [], cls: "tok-gen", note: `ops grammar=G(${sec.file.join(",")}) cap=256` }); s0 += 256; exact = false;
+    } else if (sec.respond === "text") {
+      app("S0", TOK(ANSWER_INSTR), "tok-instr");
+      steps.push({ kind: "decode", seq: "S0", toks: [], cls: "tok-gen", note: "text cap=512 stop" }); s0 += 512; exact = false;
+    }
+  });
+  return { P, steps };
+}
+
+const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+function render() {
+  const t = document.getElementById("steps");
+  t.innerHTML = "<tr><th>#</th><th>kind</th><th>seq</th><th>detail</th><th>cap/grammar</th></tr>";
+  PLAN.steps.forEach((st, i) => {
+    const det = st.kind === "append" || st.kind === "copy_prefix"
+      ? esc(st.toks.join("")).slice(0, 120) : esc(st.note || "");
+    const cg = st.kind === "decode" ? esc(st.note) : (st.kind === "read_vector" ? `read @${st.at}` : "");
+    t.innerHTML += `<tr><td>${i}</td><td>${st.kind}</td><td>${st.seq}</td><td>${det}</td><td>${cg}</td></tr>`;
+  });
+  document.getElementById("s0").innerHTML = PLAN.steps.filter(s => s.seq === "S0")
+    .map(s => `<span class="${s.cls}">${esc((s.toks.length ? s.toks : ["&lt;gen&gt;"]).join(""))}</span>`).join("");
+  document.getElementById("eis").innerHTML = SPEC.filter(s => s.embed === "isolated")
+    .map(s => `<p><b>${s.id}</b>: <span class="tok-e">${esc(DOC_PREFIX + s.content)}</span><span class="tok-emb">${EMB}</span></p>`).join("");
+  document.getElementById("sec").innerHTML = SPEC.map(s => `<option>${s.id}</option>`).join("");
+}
+
+document.getElementById("compile").onclick = () => {
+  try { SPEC = parseScore(document.getElementById("score").value); PLAN = compilePlan(SPEC); okClear(); render(); }
+  catch (e) { err("Compile error: " + esc(e.message)); }
+};
+
+const norm = s => s.toLowerCase().split(/\s+/).join(" ").trim();
+function proveOp(op, file, content, slugs) {
+  const keys = { graph: ["target", "s", "p", "o", "evidence"], sql: ["target", "subject", "attribute", "value", "value_type", "evidence"],
+    folio: ["target", "slug", "kind", "title", "markdown"], agent: ["target", "ask", "why"] }[op.target];
+  if (!keys) return [`schema: unknown target ${op.target}`];
+  const R = [];
+  if (!file.includes(op.target)) return [`permission: target ${op.target} not in file set`];
+  if (op.target === "graph" || op.target === "sql") {
+    const sub = op.target === "graph" ? op.s : op.subject, val = op.target === "graph" ? op.o : op.value;
+    if (!sub || !sub.trim() || !val || !val.trim()) R.push("non-empty: blank field");
+    const [a, b] = op.evidence || [];
+    if (!(Number.isInteger(a) && Number.isInteger(b) && 0 <= a && a <= b && b <= content.length))
+      R.push(`evidence: span [${a},${b}] outside content len ${content.length}`);
+    else {
+      const span = norm(content.slice(a, b));
+      if (!(span.includes(norm(sub)) || span.includes(norm(val)))) R.push("evidence: span contains neither subject nor value");
+    }
+    if (op.target === "sql") {
+      if (op.value_type === "date" && !/^\d{4}$/.test(op.value.trim()) && isNaN(Date.parse(op.value))) R.push("value-type: bad date");
+      if (op.value_type === "number" && (op.value.trim() === "" || isNaN(Number(op.value)))) R.push("value-type: bad number");
+    }
+  } else if (op.target === "folio") {
+    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(op.slug || "")) R.push("schema: bad slug");
+    if (slugs.has(op.slug) && !op.supersedes) R.push("slug: duplicate without supersedes");
+  }
+  return R;
+}
+
+document.getElementById("prove").onclick = () => {
+  const box = document.getElementById("verdicts");
+  if (!SPEC) { box.innerHTML = '<p class="fail">Compile a Score first.</p>'; return; }
+  let obj;
+  try { obj = JSON.parse(document.getElementById("ops").value); }
+  catch (e) { box.innerHTML = `<p class="fail">Not JSON: ${esc(e.message)}</p>`; return; }
+  const sec = SPEC.find(s => s.id === document.getElementById("sec").value);
+  if (!obj || !Array.isArray(obj.ops)) { box.innerHTML = '<p class="fail">Top level must be exactly {"ops": [...]}</p>'; return; }
+  const slugs = new Set();
+  box.innerHTML = obj.ops.map((op, i) => {
+    const rs = proveOp(op, sec.file, sec.content, slugs);
+    if (op.target === "folio" && !rs.length) slugs.add(op.slug);
+    return `<p class="${rs.length ? "fail" : "pass"}">op ${i} (${esc(op.target || "?")}): ${rs.length ? "REJECT — " + esc(rs.join("; ")) : "ACCEPT"}</p>`;
+  }).join("") || '<p class="pass">{"ops": []} — nothing to file, accepted.</p>';
+};
+</script>
+</body>
+</html>
