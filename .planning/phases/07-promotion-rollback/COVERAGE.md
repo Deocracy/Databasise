@@ -35,16 +35,26 @@ serve every fitted modality, and no modality-named tool was added.
 Every other operation (`query`, `compare`, `ingest`, `delete`, `status`, `resolve`) is unchanged by
 this phase. No route body carries logic: the three REST routes
 (`databasise/seam/rest.py`) and the three MCP tools are thin passes over the identical
-`Databasise.promote()` / `.rollback()` / `.retire()` methods, and 07-03 proves field-for-field
-parity across all three transports on success **and** on refusal.
+`Databasise.promote()` / `.rollback()` / `.retire()` methods. 07-03 proves **field-for-field**
+parity across all three transports on success (`test_dual_transport.py` compares every field of the
+returned body); on **refusal** it proves that all three transports name the *identical refusal
+class* — and that REST answers 422 and no ledger row is written — not that the refusal detail
+payload matches field-for-field. That narrower refusal guarantee is what the phase promised
+(07-03-PLAN.md) and what is committed; stating it as full field-for-field parity would overclaim.
 
 ### The refusal ladder is part of the surface
 
-Ten named `SeamRefusalError` subclasses cover the operator path (`databasise/seam/refusals.py`):
+Ten named `SeamRefusalError` subclasses live in `databasise/seam/refusals.py`:
 `EmptyPromotionTraceIdsError`, `DisagreeingPromotionTraceIdsError`, `InvalidChangeOriginError`,
 `UnrecognisedPromotionVerbError`, `GateVerbNotBuiltError`, `MeasurementPostureRefusalError`,
 `UncalibratedFloorRefusalError`, `UnknownGenerationVersionError`, `TombstonedGenerationError`,
 `ActiveGenerationRetirementError`.
+
+An **eleventh** refusal is reachable on the same operator path and is easy to miss because it lives
+elsewhere: `UnknownTraceReferenceError` (`databasise/seam/trace_store.py`), raised from the shared
+`_resolve_operator_preconditions` when a caller supplies a `trace_id` that was never minted. It is
+equally consumer-observable on all three verbs, so a consumer reading this record to learn what a
+`promote` call can return must count it.
 
 These are surface, not implementation detail: a refusal is what a caller observes, so each one
 surfaces under the **identical name** in-process, over REST (422) and over MCP (`ToolError`). A
