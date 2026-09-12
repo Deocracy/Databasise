@@ -3,10 +3,11 @@ phase: "7"
 slug: "promotion-rollback"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
 # audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
-status: draft
+status: validated
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: "2026-09-11"
+validated: "2026-09-12"
 ---
 
 # Phase 7 — Validation Strategy
@@ -49,15 +50,16 @@ created: "2026-09-11"
 
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |--------|----------|-----------|-------------------|-------------|
-| MACH-07 (SC1) | Every generation record carries `change_origin` and `promotion_provenance`, never defaulted | unit | `cd databasise && uv run pytest -q tests/ledger/test_ledger.py -k change_origin -x` | ❌ Wave 0 — extend `test_ledger.py` |
-| MACH-07 (SC1) | Semver minted only at promotion, MAJOR/MINOR rule correct | unit | `cd databasise && uv run pytest -q tests/seam/test_promote.py -k semver -x` | ❌ Wave 0 |
-| MACH-07 (SC1) | Tombstoned losers never lifted (re-promotion is a new generation, not a resurrection) | unit | `cd databasise && uv run pytest -q tests/seam/test_retire.py -k never_lifted -x` | ❌ Wave 0 |
-| MACH-07 (SC1) | Active pointer is a derived query, not a written field | unit (regression) | `cd databasise && uv run pytest -q tests/ledger/test_ledger.py -k active_pointer -x` | ✅ existing — extend for new columns |
-| API-09 / MACH-07 (SC2) | promote()/rollback() with `operator_asserted` provenance and non-empty `promotion_trace_ids`, no verdict/tier-of-decision; ledger append is atomic | unit + integration | `cd databasise && uv run pytest -q tests/seam/test_promote.py tests/seam/test_rollback.py -x` | ❌ Wave 0 |
-| API-09 (SC2) | Disagreeing/unresolvable/empty trace ids refuse by name | unit | `cd databasise && uv run pytest -q tests/seam/test_promote.py -k trace_ids -x` | ❌ Wave 0 |
-| MACH-09 / API-09 (SC3) | promote-next/promote-now refuse for answer-level/index-side under default posture, naming the posture | unit | `cd databasise && uv run pytest -q tests/seam/test_promotion_posture.py -x` | ❌ Wave 0 |
-| API-09 (SC2/3) | Three-transport parity (in-process/REST/MCP) for promote/rollback/retire | integration | `cd databasise && uv run --extra rest pytest -q tests/seam/test_dual_transport.py -k promot -x` and `cd databasise && uv run --extra mcp pytest -q tests/mcp/test_tool_growth_invariant.py -x` | ✅ existing — extend |
-| API-09 | Refusal vocabulary maps to 422 (REST) / ToolError (MCP) automatically | regression | `cd databasise && uv run --extra rest pytest -q tests/seam/test_rest_transport.py -k refusal -x` | ✅ existing — extend `_REFUSAL_FACTORIES` |
+| MACH-07 (SC1) | Every generation record carries `change_origin` and `promotion_provenance`, never defaulted | unit | `cd databasise && uv run pytest -q tests/seam/test_promote.py -k "change_origin or provenance" -x` | ✅ green (4 tests; storage round-trip also in `test_ledger.py::test_2…`/`test_new_columns_round_trip`) |
+| MACH-07 (SC1) | Semver minted only at promotion, MAJOR/MINOR rule correct | unit | `cd databasise && uv run pytest -q tests/seam/test_promote.py -k semver -x` | ✅ green |
+| MACH-07 (SC1) | Tombstoned losers never lifted (re-promotion is a new generation, not a resurrection) | unit | `cd databasise && uv run pytest -q tests/seam/test_retire.py -k never_lifted -x` | ✅ green |
+| MACH-07 (SC1) | Active pointer is a derived query, not a written field | unit (regression) | `cd databasise && uv run pytest -q tests/ledger/test_ledger.py -k active_pointer -x` | ✅ green (3 tests) |
+| API-09 / MACH-07 (SC2) | promote()/rollback() with `operator_asserted` provenance and non-empty `promotion_trace_ids`, no verdict/tier-of-decision; ledger append is atomic | unit + integration | `cd databasise && uv run pytest -q tests/seam/test_promote.py tests/seam/test_rollback.py -x` | ✅ green (29 tests) |
+| API-09 (SC2) | Disagreeing/unresolvable/empty trace ids refuse by name | unit | `cd databasise && uv run pytest -q tests/seam/test_promote.py -k trace_ids -x` | ✅ green |
+| MACH-09 / API-09 (SC3) | promote-next/promote-now refuse for answer-level/index-side under default posture, naming the posture | unit | `cd databasise && uv run pytest -q tests/seam/test_promotion_posture.py -x` | ✅ green (10 tests) |
+| API-09 (SC2/3) | Three-transport parity (in-process/REST/MCP) for promote/rollback/retire | integration | `cd databasise && uv run --extra rest pytest -q tests/seam/test_dual_transport.py -k promot -x` and `cd databasise && uv run --extra mcp pytest -q tests/mcp/test_tool_growth_invariant.py -x` | ✅ green |
+| API-09 | Refusal vocabulary maps to 422 (REST) / ToolError (MCP) automatically | regression | `cd databasise && uv run --extra rest pytest -q tests/seam/test_rest_transport.py -k refusal -x` | ✅ green (4 tests; `_REFUSAL_FACTORIES` exhaustiveness enforced) |
+| API-09 (SC3, gap closure) | Any verb outside the six `PromotionVerb` literals refuses by name (`UnrecognisedPromotionVerbError`) before trace-id resolution, identically on all three transports | unit + integration | `cd databasise && uv run pytest -q tests/seam/test_promotion_posture.py -k verb -x` and `cd databasise && uv run --extra rest --extra mcp pytest -q tests/seam/test_dual_transport.py -x` | ✅ green (9 + 7 tests) |
 
 ---
 
@@ -65,14 +67,16 @@ created: "2026-09-11"
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| T1 (tracer) — end-to-end promote → ledger → alias read | 07-01 | 1 | MACH-07, API-09 | — | N/A (`workflow.security_enforcement: false`) | integration (end-to-end, one path) | `cd databasise && uv run pytest -q tests/seam/test_promote.py -x` | created by this task | ⬜ pending |
-| T2 — trace/change_origin refusals, semver rule, class derivation | 07-01 | 1 | MACH-07, API-09 | — | N/A | unit | `cd databasise && uv run pytest -q tests/seam/test_promote.py -x` | created by T1 | ⬜ pending |
-| T3 — verb ladder and posture refusal (SC3) | 07-01 | 1 | MACH-07, API-09 | — | N/A | unit | `cd databasise && uv run pytest -q tests/seam/test_promotion_posture.py -x` | created by this task | ⬜ pending |
-| T1 — rollback to an explicit semver | 07-02 | 2 | MACH-07 | — | N/A | unit + integration | `cd databasise && uv run pytest -q tests/seam/test_rollback.py -x` | created by this task | ⬜ pending |
-| T2 — retire, tombstone, never-lifted | 07-02 | 2 | MACH-07 | — | N/A | unit + integration | `cd databasise && uv run pytest -q tests/seam/test_retire.py -x` | created by this task | ⬜ pending |
-| T1 — three REST routes, refusal mapping | 07-03 | 3 | API-09 | — | N/A | integration | `cd databasise && uv run --extra rest pytest -q tests/seam/test_rest_transport.py -x` | ✅ existing, extended | ⬜ pending |
-| T2 — three MCP tools, roster growth, §18.5 coverage record | 07-03 | 3 | API-09 | — | N/A | integration | `cd databasise && uv run --extra mcp pytest -q tests/mcp/ -x -rs` | ✅ existing, extended | ⬜ pending |
-| T3 — three-transport conformance + evidence record | 07-03 | 3 | API-09 | — | N/A | integration | `cd databasise && uv run --extra rest pytest -q tests/seam/test_dual_transport.py -x` | ✅ existing, extended | ⬜ pending |
+| T1 (tracer) — end-to-end promote → ledger → alias read | 07-01 | 1 | MACH-07, API-09 | — | N/A (`workflow.security_enforcement: false`) | integration (end-to-end, one path) | `cd databasise && uv run pytest -q tests/seam/test_promote.py -x` | created by this task | ✅ green |
+| T2 — trace/change_origin refusals, semver rule, class derivation | 07-01 | 1 | MACH-07, API-09 | — | N/A | unit | `cd databasise && uv run pytest -q tests/seam/test_promote.py -x` | created by T1 | ✅ green |
+| T3 — verb ladder and posture refusal (SC3) | 07-01 | 1 | MACH-07, API-09 | — | N/A | unit | `cd databasise && uv run pytest -q tests/seam/test_promotion_posture.py -x` | created by this task | ✅ green |
+| T1 — rollback to an explicit semver | 07-02 | 2 | MACH-07 | — | N/A | unit + integration | `cd databasise && uv run pytest -q tests/seam/test_rollback.py -x` | created by this task | ✅ green |
+| T2 — retire, tombstone, never-lifted | 07-02 | 2 | MACH-07 | — | N/A | unit + integration | `cd databasise && uv run pytest -q tests/seam/test_retire.py -x` | created by this task | ✅ green |
+| T1 — three REST routes, refusal mapping | 07-03 | 3 | API-09 | — | N/A | integration | `cd databasise && uv run --extra rest pytest -q tests/seam/test_rest_transport.py -x` | ✅ existing, extended | ✅ green |
+| T2 — three MCP tools, roster growth, §18.5 coverage record | 07-03 | 3 | API-09 | — | N/A | integration | `cd databasise && uv run --extra mcp pytest -q tests/mcp/ -x -rs` | ✅ existing, extended | ✅ green |
+| T3 — three-transport conformance + evidence record | 07-03 | 3 | API-09 | — | N/A | integration | `cd databasise && uv run --extra rest pytest -q tests/seam/test_dual_transport.py -x` | ✅ existing, extended | ✅ green |
+| T1 (tracer, tdd) — out-of-enum verb refuses by name before trace resolution; ledger stays empty | 07-04 | 1 | API-09 | — | N/A | unit | `cd databasise && uv run pytest -q tests/seam/test_promotion_posture.py -x` | ✅ existing, extended | ✅ green |
+| T2 — same refusal name on REST (422 + `refusal_type`) and MCP (`ToolError` + `refusal_type`) | 07-04 | 1 | API-09 | — | N/A | integration | `cd databasise && uv run --extra rest --extra mcp pytest -q tests/seam/test_dual_transport.py tests/seam/test_rest_transport.py -x` | ✅ existing, extended | ✅ green |
 
 **Wave 0 note.** Every `<automated>` command above is runnable at the end of the task that names it,
 because each task creates or extends its own test file inside its own `<files>` set. No task carries
@@ -85,14 +89,14 @@ three consecutive tasks lack an automated verify, since every task has one.
 
 ## Wave 0 Requirements
 
-- [ ] `databasise/tests/seam/test_promote.py` — stubs for MACH-07 SC1/SC2, API-09
-- [ ] `databasise/tests/seam/test_rollback.py` — stubs for MACH-07 SC1/SC2, API-09
-- [ ] `databasise/tests/seam/test_retire.py` — stubs for MACH-07 SC1 (never-lifted)
-- [ ] `databasise/tests/seam/test_promotion_posture.py` — stubs for MACH-07/API-09 SC3
-- [ ] Extend `databasise/tests/ledger/test_ledger.py` — new columns round-trip
-- [ ] Extend `databasise/tests/seam/test_dual_transport.py` — REST parity for the three new verbs
-- [ ] Extend `databasise/tests/mcp/test_tool_growth_invariant.py` — MCP roster grows by exactly the new tool names (§18.5 per-operation growth rule)
-- [ ] Extend `databasise/tests/seam/test_rest_transport.py` `_REFUSAL_FACTORIES` — one entry per new `SeamRefusalError` subclass
+- [x] `databasise/tests/seam/test_promote.py` — stubs for MACH-07 SC1/SC2, API-09
+- [x] `databasise/tests/seam/test_rollback.py` — stubs for MACH-07 SC1/SC2, API-09
+- [x] `databasise/tests/seam/test_retire.py` — stubs for MACH-07 SC1 (never-lifted)
+- [x] `databasise/tests/seam/test_promotion_posture.py` — stubs for MACH-07/API-09 SC3
+- [x] Extend `databasise/tests/ledger/test_ledger.py` — new columns round-trip
+- [x] Extend `databasise/tests/seam/test_dual_transport.py` — REST parity for the three new verbs
+- [x] Extend `databasise/tests/mcp/test_tool_growth_invariant.py` — MCP roster grows by exactly the new tool names (§18.5 per-operation growth rule)
+- [x] Extend `databasise/tests/seam/test_rest_transport.py` `_REFUSAL_FACTORIES` — one entry per new `SeamRefusalError` subclass
 - Framework install: none — pytest/pytest-asyncio already installed via the `dev` dependency group
 
 ---
@@ -114,4 +118,36 @@ three consecutive tasks lack an automated verify, since every task has one.
 - [x] Feedback latency < 120s (quick run `cd databasise && uv run pytest -q tests/ledger tests/seam -x`)
 - [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** plans 07-01..07-03 mapped 2026-09-11
+**Approval:** plans 07-01..07-03 mapped 2026-09-11; plan 07-04 (gap closure) mapped and validated 2026-09-12
+
+---
+
+## Validation Audit 2026-09-12
+
+Run by `/gsd-execute-phase 7 --gaps-only` via the `verify:post` nyquist hook, after 07-04 closed
+`07-VERIFICATION.md`'s single gap.
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+**Map defects corrected (not coverage gaps):**
+
+1. The MACH-07 SC1 `change_origin` row named a command that selects nothing —
+   `tests/ledger/test_ledger.py -k change_origin` matches 0 tests. The behaviour was covered all
+   along, in `tests/seam/test_promote.py` (`test_absent_change_origin_refuses_by_name`,
+   `test_unrecognised_change_origin_refuses_by_name`,
+   `test_machine_mutation_change_origin_is_accepted`) and
+   `tests/runner/test_measurement_posture.py::test_promotion_provenance_has_no_default`, with the
+   storage round-trip in `test_ledger.py`. Command repointed. A selector that silently matches
+   nothing reads green forever — this was the one real finding of the audit.
+2. Every Per-Task Map row still read `pending` from planning time; all are now green.
+3. Plan 07-04 post-dated the map and had no rows; both its tasks are now mapped.
+
+**Evidence:** full suite `cd databasise && uv run --extra rest --extra mcp pytest -q` →
+**1063 passed, 1 skipped** (2026-09-12), against a Phase 6 close baseline of 960+/3.
+
+No auditor was spawned: with zero MISSING and zero PARTIAL requirements there were no tests to
+generate (workflow step 3, "No gaps → skip to Step 6").
