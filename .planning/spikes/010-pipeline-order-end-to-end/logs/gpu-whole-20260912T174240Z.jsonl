@@ -1,0 +1,42 @@
+{"ts": "2026-09-12T17:42:40.885544+00:00", "event": "load", "mode": "onepass", "variant": "whole", "model": "MiniCPM5-2B-Q8_0.gguf", "n_embd": 2048, "pooling": 3, "seconds": 0.73}
+{"ts": "2026-09-12T17:42:40.999288+00:00", "event": "embed", "sec": "a_kiss_for_corliss#s1", "seconds": 0.114, "dim": 2048}
+{"ts": "2026-09-12T17:42:41.027886+00:00", "event": "embed", "sec": "adam_collis#s1", "seconds": 0.029, "dim": 2048}
+{"ts": "2026-09-12T17:42:41.138762+00:00", "event": "embed", "sec": "charles_craft#s1", "seconds": 0.111, "dim": 2048}
+{"ts": "2026-09-12T17:42:41.174263+00:00", "event": "embed", "sec": "conrad_brooks#s1", "seconds": 0.035, "dim": 2048}
+{"ts": "2026-09-12T17:42:41.207102+00:00", "event": "embed", "sec": "deliver_us_from_evil_2014_film#s1", "seconds": 0.033, "dim": 2048}
+{"ts": "2026-09-12T17:42:41.242795+00:00", "event": "embed", "sec": "doctor_strange_2016_film#s1", "seconds": 0.036, "dim": 2048}
+{"ts": "2026-09-12T17:42:41.261889+00:00", "event": "embed", "sec": "ed_wood#s1", "seconds": 0.019, "dim": 2048}
+{"ts": "2026-09-12T17:42:41.288064+00:00", "event": "embed", "sec": "ed_wood_film#s1", "seconds": 0.026, "dim": 2048}
+{"ts": "2026-09-12T17:42:41.311844+00:00", "event": "embed", "sec": "janet_waldo#s1", "seconds": 0.024, "dim": 2048}
+{"ts": "2026-09-12T17:42:41.334427+00:00", "event": "embed", "sec": "kiss_and_tell_1945_film#s1", "seconds": 0.023, "dim": 2048}
+{"ts": "2026-09-12T17:42:41.356391+00:00", "event": "embed", "sec": "lord_high_treasurer#s1", "seconds": 0.022, "dim": 2048}
+{"ts": "2026-09-12T17:42:41.384703+00:00", "event": "embed", "sec": "meet_corliss_archer#s1", "seconds": 0.028, "dim": 2048}
+{"ts": "2026-09-12T17:42:41.409060+00:00", "event": "embed", "sec": "meet_corliss_archer_tv_series#s1", "seconds": 0.024, "dim": 2048}
+{"ts": "2026-09-12T17:42:41.432884+00:00", "event": "embed", "sec": "scott_derrickson#s1", "seconds": 0.024, "dim": 2048}
+{"ts": "2026-09-12T17:42:41.456555+00:00", "event": "embed", "sec": "secretary_of_state_for_constitutional_affairs#s1", "seconds": 0.024, "dim": 2048}
+{"ts": "2026-09-12T17:42:41.480488+00:00", "event": "embed", "sec": "shirley_temple#s1", "seconds": 0.024, "dim": 2048}
+{"ts": "2026-09-12T17:42:41.502759+00:00", "event": "embed", "sec": "sinister_film#s1", "seconds": 0.022, "dim": 2048}
+{"ts": "2026-09-12T17:42:41.539582+00:00", "event": "embed", "sec": "tyler_bates#s1", "seconds": 0.037, "dim": 2048}
+{"ts": "2026-09-12T17:42:41.579310+00:00", "event": "embed", "sec": "village_accountant#s1", "seconds": 0.04, "dim": 2048}
+{"ts": "2026-09-12T17:42:41.609521+00:00", "event": "embed", "sec": "woodson_arkansas#s1", "seconds": 0.03, "dim": 2048}
+{"ts": "2026-09-12T17:43:08.306351+00:00", "event": "decode", "sec": "a_kiss_for_corliss#s1", "seconds": 26.7, "prompt_tokens": 330, "completion_tokens": 1024, "chars": 3597}
+{"ts": "2026-09-12T17:43:14.366210+00:00", "event": "decode", "sec": "adam_collis#s1", "seconds": 6.06, "prompt_tokens": 334, "completion_tokens": 227, "chars": 775}
+{"ts": "2026-09-12T17:43:19.151697+00:00", "event": "decode", "sec": "charles_craft#s1", "seconds": 4.79, "prompt_tokens": 533, "completion_tokens": 174, "chars": 667}
+{"ts": "2026-09-12T17:43:32.391017+00:00", "event": "decode", "sec": "conrad_brooks#s1", "seconds": 13.24, "prompt_tokens": 367, "completion_tokens": 454, "chars": 1534}
+{"ts": "2026-09-12T17:43:39.910143+00:00", "event": "decode", "sec": "deliver_us_from_evil_2014_film#s1", "seconds": 7.52, "prompt_tokens": 345, "completion_tokens": 262, "chars": 948}
+{"ts": "2026-09-12T17:43:44.309829+00:00", "event": "decode", "sec": "doctor_strange_2016_film#s1", "seconds": 4.4, "prompt_tokens": 375, "completion_tokens": 158, "chars": 701}
+{"ts": "2026-09-12T17:43:45.674108+00:00", "event": "decode", "sec": "ed_wood#s1", "seconds": 1.36, "prompt_tokens": 260, "completion_tokens": 56, "chars": 196}
+{"ts": "2026-09-12T17:43:49.078763+00:00", "event": "decode", "sec": "ed_wood_film#s1", "seconds": 3.4, "prompt_tokens": 315, "completion_tokens": 119, "chars": 503}
+{"ts": "2026-09-12T17:43:53.675259+00:00", "event": "decode", "sec": "janet_waldo#s1", "seconds": 4.6, "prompt_tokens": 302, "completion_tokens": 181, "chars": 684}
+{"ts": "2026-09-12T17:43:59.343428+00:00", "event": "decode", "sec": "kiss_and_tell_1945_film#s1", "seconds": 5.67, "prompt_tokens": 296, "completion_tokens": 190, "chars": 763}
+{"ts": "2026-09-12T17:44:03.582163+00:00", "event": "decode", "sec": "lord_high_treasurer#s1", "seconds": 4.24, "prompt_tokens": 285, "completion_tokens": 133, "chars": 613}
+{"ts": "2026-09-12T17:44:05.764678+00:00", "event": "decode", "sec": "meet_corliss_archer#s1", "seconds": 2.18, "prompt_tokens": 340, "completion_tokens": 76, "chars": 285}
+{"ts": "2026-09-12T17:44:07.408877+00:00", "event": "decode", "sec": "meet_corliss_archer_tv_series#s1", "seconds": 1.64, "prompt_tokens": 309, "completion_tokens": 61, "chars": 218}
+{"ts": "2026-09-12T17:44:13.726283+00:00", "event": "decode", "sec": "scott_derrickson#s1", "seconds": 6.32, "prompt_tokens": 304, "completion_tokens": 197, "chars": 762}
+{"ts": "2026-09-12T17:44:17.881199+00:00", "event": "decode", "sec": "secretary_of_state_for_constitutional_affairs#s1", "seconds": 4.15, "prompt_tokens": 307, "completion_tokens": 127, "chars": 632}
+{"ts": "2026-09-12T17:44:24.532226+00:00", "event": "decode", "sec": "shirley_temple#s1", "seconds": 6.65, "prompt_tokens": 309, "completion_tokens": 224, "chars": 882}
+{"ts": "2026-09-12T17:44:34.273235+00:00", "event": "decode", "sec": "sinister_film#s1", "seconds": 9.74, "prompt_tokens": 287, "completion_tokens": 283, "chars": 1210}
+{"ts": "2026-09-12T17:44:49.934403+00:00", "event": "decode", "sec": "tyler_bates#s1", "seconds": 15.66, "prompt_tokens": 394, "completion_tokens": 502, "chars": 1917}
+{"ts": "2026-09-12T17:45:15.700144+00:00", "event": "decode", "sec": "village_accountant#s1", "seconds": 25.77, "prompt_tokens": 405, "completion_tokens": 709, "chars": 2815}
+{"ts": "2026-09-12T17:45:24.080980+00:00", "event": "decode", "sec": "woodson_arkansas#s1", "seconds": 8.38, "prompt_tokens": 339, "completion_tokens": 242, "chars": 968}
+{"ts": "2026-09-12T17:45:25.829814+00:00", "event": "queries_embedded", "n": 118, "seconds": 1.75}

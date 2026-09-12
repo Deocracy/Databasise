@@ -1,0 +1,202 @@
+{
+ "n_sections": 20,
+ "emb_cos_min": 0.9999999999999999,
+ "emb_cos_mean": 1.0,
+ "ops_identical": 20,
+ "one_wall_s": 163.9,
+ "two_wall_s": 165.9,
+ "one_docs_min": 7.32,
+ "two_docs_min": 7.23,
+ "one_proof": {
+  "passed": 70,
+  "failed": 28
+ },
+ "two_proof": {
+  "passed": 70,
+  "failed": 28
+ },
+ "one_load_s": 0.73,
+ "two_load_s": 1.54,
+ "rows": [
+  {
+   "sec": "a_kiss_for_corliss#s1",
+   "emb_cos_1v2": 0.9999999999999999,
+   "ops_identical": true,
+   "one_emb_s": 0.114,
+   "one_ops_s": 26.7,
+   "two_emb_s": 0.116,
+   "two_ops_s": 27.99
+  },
+  {
+   "sec": "adam_collis#s1",
+   "emb_cos_1v2": 1.0,
+   "ops_identical": true,
+   "one_emb_s": 0.029,
+   "one_ops_s": 6.06,
+   "two_emb_s": 0.029,
+   "two_ops_s": 6.84
+  },
+  {
+   "sec": "charles_craft#s1",
+   "emb_cos_1v2": 1.0,
+   "ops_identical": true,
+   "one_emb_s": 0.111,
+   "one_ops_s": 4.79,
+   "two_emb_s": 0.103,
+   "two_ops_s": 4.95
+  },
+  {
+   "sec": "conrad_brooks#s1",
+   "emb_cos_1v2": 0.9999999999999999,
+   "ops_identical": true,
+   "one_emb_s": 0.035,
+   "one_ops_s": 13.24,
+   "two_emb_s": 0.035,
+   "two_ops_s": 13.06
+  },
+  {
+   "sec": "deliver_us_from_evil_2014_film#s1",
+   "emb_cos_1v2": 1.0,
+   "ops_identical": true,
+   "one_emb_s": 0.033,
+   "one_ops_s": 7.52,
+   "two_emb_s": 0.034,
+   "two_ops_s": 7.78
+  },
+  {
+   "sec": "doctor_strange_2016_film#s1",
+   "emb_cos_1v2": 1.0,
+   "ops_identical": true,
+   "one_emb_s": 0.036,
+   "one_ops_s": 4.4,
+   "two_emb_s": 0.036,
+   "two_ops_s": 4.62
+  },
+  {
+   "sec": "ed_wood#s1",
+   "emb_cos_1v2": 0.9999999999999999,
+   "ops_identical": true,
+   "one_emb_s": 0.019,
+   "one_ops_s": 1.36,
+   "two_emb_s": 0.019,
+   "two_ops_s": 1.47
+  },
+  {
+   "sec": "ed_wood_film#s1",
+   "emb_cos_1v2": 0.9999999999999999,
+   "ops_identical": true,
+   "one_emb_s": 0.026,
+   "one_ops_s": 3.4,
+   "two_emb_s": 0.026,
+   "two_ops_s": 3.68
+  },
+  {
+   "sec": "janet_waldo#s1",
+   "emb_cos_1v2": 1.0,
+   "ops_identical": true,
+   "one_emb_s": 0.024,
+   "one_ops_s": 4.6,
+   "two_emb_s": 0.024,
+   "two_ops_s": 4.92
+  },
+  {
+   "sec": "kiss_and_tell_1945_film#s1",
+   "emb_cos_1v2": 0.9999999999999999,
+   "ops_identical": true,
+   "one_emb_s": 0.023,
+   "one_ops_s": 5.67,
+   "two_emb_s": 0.023,
+   "two_ops_s": 5.66
+  },
+  {
+   "sec": "lord_high_treasurer#s1",
+   "emb_cos_1v2": 1.0,
+   "ops_identical": true,
+   "one_emb_s": 0.022,
+   "one_ops_s": 4.24,
+   "two_emb_s": 0.022,
+   "two_ops_s": 4.47
+  },
+  {
+   "sec": "meet_corliss_archer#s1",
+   "emb_cos_1v2": 1.0,
+   "ops_identical": true,
+   "one_emb_s": 0.028,
+   "one_ops_s": 2.18,
+   "two_emb_s": 0.028,
+   "two_ops_s": 2.32
+  },
+  {
+   "sec": "meet_corliss_archer_tv_series#s1",
+   "emb_cos_1v2": 0.9999999999999999,
+   "ops_identical": true,
+   "one_emb_s": 0.024,
+   "one_ops_s": 1.64,
+   "two_emb_s": 0.025,
+   "two_ops_s": 1.69
+  },
+  {
+   "sec": "scott_derrickson#s1",
+   "emb_cos_1v2": 0.9999999999999999,
+   "ops_identical": true,
+   "one_emb_s": 0.024,
+   "one_ops_s": 6.32,
+   "two_emb_s": 0.024,
+   "two_ops_s": 6.89
+  },
+  {
+   "sec": "secretary_of_state_for_constitutional_affairs#s1",
+   "emb_cos_1v2": 1.0000000000000002,
+   "ops_identical": true,
+   "one_emb_s": 0.024,
+   "one_ops_s": 4.15,
+   "two_emb_s": 0.024,
+   "two_ops_s": 4.58
+  },
+  {
+   "sec": "shirley_temple#s1",
+   "emb_cos_1v2": 1.0,
+   "ops_identical": true,
+   "one_emb_s": 0.024,
+   "one_ops_s": 6.65,
+   "two_emb_s": 0.024,
+   "two_ops_s": 7.12
+  },
+  {
+   "sec": "sinister_film#s1",
+   "emb_cos_1v2": 1.0,
+   "ops_identical": true,
+   "one_emb_s": 0.022,
+   "one_ops_s": 9.74,
+   "two_emb_s": 0.022,
+   "two_ops_s": 9.95
+  },
+  {
+   "sec": "tyler_bates#s1",
+   "emb_cos_1v2": 1.0,
+   "ops_identical": true,
+   "one_emb_s": 0.037,
+   "one_ops_s": 15.66,
+   "two_emb_s": 0.037,
+   "two_ops_s": 14.68
+  },
+  {
+   "sec": "village_accountant#s1",
+   "emb_cos_1v2": 1.0000000000000002,
+   "ops_identical": true,
+   "one_emb_s": 0.04,
+   "one_ops_s": 25.77,
+   "two_emb_s": 0.038,
+   "two_ops_s": 23.02
+  },
+  {
+   "sec": "woodson_arkansas#s1",
+   "emb_cos_1v2": 0.9999999999999999,
+   "ops_identical": true,
+   "one_emb_s": 0.03,
+   "one_ops_s": 8.38,
+   "two_emb_s": 0.03,
+   "two_ops_s": 8.0
+  }
+ ]
+}

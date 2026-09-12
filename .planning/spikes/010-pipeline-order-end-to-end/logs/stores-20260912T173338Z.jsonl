@@ -1,0 +1,17 @@
+{"ts": "2026-09-12T17:33:39.063261+00:00", "event": "proof_summary", "passed": {"STU": 70, "SPL": 110, "TEA": 204}, "failed": {"STU": 28, "SPL": 29, "TEA": 0}}
+{"ts": "2026-09-12T17:33:39.063472+00:00", "event": "stores_built", "label": "STU-streamed-write", "write_mode": "streamed", "merge": "write", "wall_s": 0.0001, "nodes": 17, "edges": 50, "sql_rows": 20, "merged_aliases": 0}
+{"ts": "2026-09-12T17:33:39.063756+00:00", "event": "stores_built", "label": "STU-streamed-revise", "write_mode": "streamed", "merge": "revise", "wall_s": 0.0001, "nodes": 17, "edges": 50, "sql_rows": 20, "merged_aliases": 0}
+{"ts": "2026-09-12T17:33:39.064013+00:00", "event": "stores_built", "label": "STU-batched-write", "write_mode": "batched", "merge": "write", "wall_s": 0.0001, "nodes": 17, "edges": 50, "sql_rows": 20, "merged_aliases": 0}
+{"ts": "2026-09-12T17:33:39.159113+00:00", "event": "stores_built", "label": "STU-batched-revise", "write_mode": "batched", "merge": "revise", "wall_s": 0.0001, "nodes": 17, "edges": 50, "sql_rows": 20, "merged_aliases": 0}
+{"ts": "2026-09-12T17:33:39.247919+00:00", "event": "stores_built", "label": "SPL-streamed-write", "write_mode": "streamed", "merge": "write", "wall_s": 0.0002, "nodes": 22, "edges": 81, "sql_rows": 29, "merged_aliases": 0}
+{"ts": "2026-09-12T17:33:39.248329+00:00", "event": "stores_built", "label": "SPL-streamed-revise", "write_mode": "streamed", "merge": "revise", "wall_s": 0.0001, "nodes": 22, "edges": 81, "sql_rows": 29, "merged_aliases": 1}
+{"ts": "2026-09-12T17:33:39.248696+00:00", "event": "stores_built", "label": "SPL-batched-write", "write_mode": "batched", "merge": "write", "wall_s": 0.0001, "nodes": 22, "edges": 81, "sql_rows": 29, "merged_aliases": 0}
+{"ts": "2026-09-12T17:33:39.336475+00:00", "event": "stores_built", "label": "SPL-batched-revise", "write_mode": "batched", "merge": "revise", "wall_s": 0.0001, "nodes": 22, "edges": 81, "sql_rows": 29, "merged_aliases": 1}
+{"ts": "2026-09-12T17:33:39.419212+00:00", "event": "stores_built", "label": "TEA-streamed-write", "write_mode": "streamed", "merge": "write", "wall_s": 0.0003, "nodes": 34, "edges": 121, "sql_rows": 83, "merged_aliases": 0}
+{"ts": "2026-09-12T17:33:39.419868+00:00", "event": "stores_built", "label": "TEA-streamed-revise", "write_mode": "streamed", "merge": "revise", "wall_s": 0.0002, "nodes": 34, "edges": 121, "sql_rows": 83, "merged_aliases": 0}
+{"ts": "2026-09-12T17:33:39.420480+00:00", "event": "stores_built", "label": "TEA-batched-write", "write_mode": "batched", "merge": "write", "wall_s": 0.0002, "nodes": 34, "edges": 121, "sql_rows": 83, "merged_aliases": 0}
+{"ts": "2026-09-12T17:33:39.514236+00:00", "event": "stores_built", "label": "TEA-batched-revise", "write_mode": "batched", "merge": "revise", "wall_s": 0.0002, "nodes": 34, "edges": 121, "sql_rows": 83, "merged_aliases": 0}
+{"ts": "2026-09-12T17:33:39.826679+00:00", "event": "faiss", "index": "2b_whole", "n": 20, "dim": 2048}
+{"ts": "2026-09-12T17:33:39.827424+00:00", "event": "faiss", "index": "06_whole", "n": 20, "dim": 1024}
+{"ts": "2026-09-12T17:33:39.897455+00:00", "event": "faiss", "index": "2b_split", "n": 40, "dim": 2048}
+{"ts": "2026-09-12T17:33:39.898789+00:00", "event": "faiss", "index": "06_split", "n": 40, "dim": 1024}
