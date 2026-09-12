@@ -69,10 +69,13 @@ from databasise.seam.refusals import (
     UnknownJobError,
     UnsatisfiableSelectorError,
 )
+from databasise.ledger.ledger import Ledger, LedgerRecord
+from databasise.parts.registry import default_registry
 from databasise.seam.rest import create_app
 from databasise.seam.tokens import UnbudgetableParticipantError
-from databasise.seam.trace_store import UnknownTraceReferenceError
+from databasise.seam.trace_store import TraceStore, UnknownTraceReferenceError
 from databasise.tests._ast_helpers import called_names
+from databasise.wirings.resolve import all_wirings, resolve_arm
 from fastapi.testclient import TestClient
 
 _STUB_COMPLETION = "This is a stub completion for the REST transport's tracer test."
@@ -543,3 +546,259 @@ def test_upload_with_malformed_selector_field_returns_422_not_a_raw_500(client):
     )
     body = response.json()
     assert body["refusal_type"] == "MalformedSelectorPayloadError"
+
+
+# --------------------------------------------------------------------------------------------- #
+# 07-03-PLAN.md Task 1: POST /promote, /rollback, /retire — thin adapters over the identical
+# Databasise methods 07-01/07-02 landed, proven in exact parity with the in-process call.
+# --------------------------------------------------------------------------------------------- #
+
+
+def _seed_trace(store_root, arm_name: str) -> str:
+    """Persist a minimal trace record naming exactly ``arm_name``'s own resolved node id set,
+    through the same ``TraceStore.persist()`` path the engine uses — mirrors
+    ``tests/seam/test_promote.py``'s own helper of the identical name and shape."""
+    resolved = next(resolved for name, resolved in all_wirings() if name == arm_name)
+    node_ids = sorted(resolved.get("nodes", {}).keys())
+    fake_record = {
+        "run_id": f"fake-run-{arm_name}",
+        "wiring_id": resolved.get("wiring_id"),
+        "wiring_instance_hash": f"sha256:{'0' * 63}{len(node_ids) % 10}",
+        "arm_id": "seam",
+        "nodes": [{"node_id": node_id} for node_id in node_ids],
+    }
+    return TraceStore(store_root).persist(fake_record)
+
+
+# The exclusion below is unavoidable, not a weakening of the plan's own "identical ledger records"
+# instruction: TraceStore.persist() mints a fresh secrets.token_urlsafe() reference per call (D-06,
+# databasise/seam/trace_store.py's own module docstring) — two independent stores can never
+# literally share a trace token value, exactly why test_dual_transport.py already excludes the
+# structurally identical `trace_token` field from its own envelope comparison.
+_LEDGER_RECORD_EXCLUDED_FIELDS = frozenset({"promotion_trace_ids"})
+
+
+async def test_post_promote_returns_the_same_result_as_the_in_process_call(tmp_path):
+    rest_root = tmp_path / "rest-store"
+    ip_root = tmp_path / "ip-store"
+    rest_root.mkdir()
+    ip_root.mkdir()
+    alias = "promote-rest-parity-alias"
+
+    rest_app = create_app(store_root=rest_root, workspace="promote-rest-parity")
+    rest_trace = _seed_trace(rest_root, "naive")
+    rest_response = TestClient(rest_app).post(
+        "/promote",
+        json={"alias": alias, "trace_ids": [rest_trace], "change_origin": "human_edit"},
+    )
+    assert rest_response.status_code == 200
+    rest_body = rest_response.json()
+
+    ip_engine = Databasise(store_root=ip_root, workspace="promote-ip-parity")
+    ip_trace = _seed_trace(ip_root, "naive")
+    ip_result = await ip_engine.promote(alias, [ip_trace], "human_edit")
+    ip_body = ip_result.model_dump()
+
+    compared_response_fields = [field for field in ip_body if field != "generation_ordinal"]
+    assert compared_response_fields
+    for field in compared_response_fields:
+        assert rest_body[field] == ip_body[field], f"response field {field!r} diverged"
+
+    rest_record = Ledger(rest_root).by_alias(alias)
+    ip_record = Ledger(ip_root).by_alias(alias)
+    compared_record_fields = [
+        field
+        for field in LedgerRecord.__dataclass_fields__
+        if field not in _LEDGER_RECORD_EXCLUDED_FIELDS
+    ]
+    assert compared_record_fields
+    for field in compared_record_fields:
+        assert getattr(rest_record, field) == getattr(ip_record, field), (
+            f"ledger record field {field!r} diverged"
+        )
+
+
+async def test_post_rollback_and_post_retire_round_trip(tmp_path):
+    rest_root = tmp_path / "rollback-retire-rest-store"
+    ip_root = tmp_path / "rollback-retire-ip-store"
+    rest_root.mkdir()
+    ip_root.mkdir()
+    rollback_alias = "rollback-rest-parity-alias"
+    retire_alias = "retire-rest-parity-alias"
+
+    rest_app = create_app(store_root=rest_root, workspace="rollback-retire-rest-parity")
+    rest_client = TestClient(rest_app)
+    ip_engine = Databasise(store_root=ip_root, workspace="rollback-retire-ip-parity")
+
+    # Rollback: two promotions (1.0.0, then 1.1.0 — same arm, MINOR bump), then roll back to
+    # 1.0.0. Identically seeded in both stores.
+    for root, engine_or_client, is_rest in ((rest_root, rest_client, True), (ip_root, ip_engine, False)):
+        trace_1 = _seed_trace(root, "naive")
+        trace_2 = _seed_trace(root, "naive")
+        if is_rest:
+            engine_or_client.post(
+                "/promote",
+                json={"alias": rollback_alias, "trace_ids": [trace_1], "change_origin": "human_edit"},
+            )
+            engine_or_client.post(
+                "/promote",
+                json={"alias": rollback_alias, "trace_ids": [trace_2], "change_origin": "human_edit"},
+            )
+        else:
+            await engine_or_client.promote(rollback_alias, [trace_1], "human_edit")
+            await engine_or_client.promote(rollback_alias, [trace_2], "human_edit")
+
+    rest_rollback_trace = _seed_trace(rest_root, "naive")
+    rest_rollback_response = rest_client.post(
+        "/rollback",
+        json={
+            "alias": rollback_alias,
+            "version": "1.0.0",
+            "trace_ids": [rest_rollback_trace],
+            "change_origin": "human_edit",
+        },
+    )
+    assert rest_rollback_response.status_code == 200
+    rest_rollback_body = rest_rollback_response.json()
+
+    ip_rollback_trace = _seed_trace(ip_root, "naive")
+    ip_rollback_result = await ip_engine.rollback(
+        rollback_alias, "1.0.0", [ip_rollback_trace], "human_edit"
+    )
+    ip_rollback_body = ip_rollback_result.model_dump()
+
+    for field in [f for f in ip_rollback_body if f != "generation_ordinal"]:
+        assert rest_rollback_body[field] == ip_rollback_body[field], (
+            f"rollback response field {field!r} diverged"
+        )
+
+    # Retire: promote "naive" (1.0.0) then "bypass" (2.0.0, MAJOR — a differing declared
+    # surface), so the active generation is not the one being retired; retire targets 1.0.0.
+    for root, engine_or_client, is_rest in ((rest_root, rest_client, True), (ip_root, ip_engine, False)):
+        trace_naive = _seed_trace(root, "naive")
+        trace_bypass = _seed_trace(root, "bypass")
+        if is_rest:
+            engine_or_client.post(
+                "/promote",
+                json={"alias": retire_alias, "trace_ids": [trace_naive], "change_origin": "human_edit"},
+            )
+            engine_or_client.post(
+                "/promote",
+                json={"alias": retire_alias, "trace_ids": [trace_bypass], "change_origin": "human_edit"},
+            )
+        else:
+            await engine_or_client.promote(retire_alias, [trace_naive], "human_edit")
+            await engine_or_client.promote(retire_alias, [trace_bypass], "human_edit")
+
+    rest_retire_trace = _seed_trace(rest_root, "naive")
+    rest_retire_response = rest_client.post(
+        "/retire",
+        json={
+            "alias": retire_alias,
+            "version": "1.0.0",
+            "trace_ids": [rest_retire_trace],
+            "change_origin": "human_edit",
+        },
+    )
+    assert rest_retire_response.status_code == 200
+    rest_retire_body = rest_retire_response.json()
+
+    ip_retire_trace = _seed_trace(ip_root, "naive")
+    ip_retire_result = await ip_engine.retire(retire_alias, "1.0.0", [ip_retire_trace], "human_edit")
+    ip_retire_body = ip_retire_result.model_dump()
+
+    for field in [f for f in ip_retire_body if f != "generation_ordinal"]:
+        assert rest_retire_body[field] == ip_retire_body[field], (
+            f"retire response field {field!r} diverged"
+        )
+
+
+_PHASE_7_REFUSAL_CLASSES = (
+    EmptyPromotionTraceIdsError,
+    DisagreeingPromotionTraceIdsError,
+    InvalidChangeOriginError,
+    MeasurementPostureRefusalError,
+    UncalibratedFloorRefusalError,
+    GateVerbNotBuiltError,
+    UnknownGenerationVersionError,
+    TombstonedGenerationError,
+    ActiveGenerationRetirementError,
+)
+
+
+@pytest.mark.parametrize("exc_cls", _PHASE_7_REFUSAL_CLASSES)
+def test_every_new_refusal_maps_to_non_2xx(probe_app, exc_cls):
+    """07-03-PLAN.md Task 1's own named test: every one of Phase 7's nine refusal subclasses maps
+    to a non-2xx REST response through the single pre-existing handler — narrower and
+    explicitly-Phase-7-scoped than the exhaustive parametrized walk above, which already covers
+    this set (and every other registered subclass) via `_REFUSAL_FACTORIES`."""
+    response = TestClient(probe_app).post(f"/_test/raise/{exc_cls.__name__}")
+    assert not (200 <= response.status_code < 300), (
+        f"{exc_cls.__name__} mapped to a success status {response.status_code}"
+    )
+    assert response.json()["refusal_type"] == exc_cls.__name__
+
+
+def test_promote_route_body_carries_no_logic(client):
+    """The refusal response for a refusing /promote call is produced by the one registered
+    `_refusal_response` handler, not a route-local except block — asserted by reconstructing the
+    handler's own generic `vars(exc)` dump exactly and comparing it byte-for-byte against the real
+    response body."""
+    response = client.post(
+        "/promote",
+        json={"alias": "some-alias", "trace_ids": [], "change_origin": "human_edit"},
+    )
+    assert response.status_code == 422
+    exc = EmptyPromotionTraceIdsError(alias="some-alias")
+    expected = {"refusal_type": type(exc).__name__, "message": str(exc), "alias": exc.alias}
+    assert response.json() == expected
+
+
+async def test_rest_response_carries_no_internal_identity(tmp_path):
+    """The forbidden-token set is derived live from the registry and the resolved "naive" wiring
+    at test time — never a literal list — mirroring
+    `tests/seam/test_promote.py::test_promotion_result_carries_no_internal_identity`'s own
+    convention. Covers promote, rollback and retire together, one shared store."""
+    store_root = tmp_path / "identity-store"
+    store_root.mkdir()
+    resolved_naive = resolve_arm("naive")
+    forbidden = set(default_registry().keys()) | set(resolved_naive.get("nodes", {}).keys())
+
+    app = create_app(store_root=store_root, workspace="promote-identity")
+    client_ = TestClient(app)
+    alias = "identity-alias"
+
+    trace_1 = _seed_trace(store_root, "naive")
+    promote_1 = client_.post(
+        "/promote", json={"alias": alias, "trace_ids": [trace_1], "change_origin": "human_edit"}
+    )
+    trace_2 = _seed_trace(store_root, "naive")
+    promote_2 = client_.post(
+        "/promote", json={"alias": alias, "trace_ids": [trace_2], "change_origin": "human_edit"}
+    )
+    trace_3 = _seed_trace(store_root, "naive")
+    rollback_response = client_.post(
+        "/rollback",
+        json={
+            "alias": alias,
+            "version": "1.0.0",
+            "trace_ids": [trace_3],
+            "change_origin": "human_edit",
+        },
+    )
+    trace_4 = _seed_trace(store_root, "naive")
+    retire_response = client_.post(
+        "/retire",
+        json={
+            "alias": alias,
+            "version": "1.1.0",
+            "trace_ids": [trace_4],
+            "change_origin": "human_edit",
+        },
+    )
+
+    for response in (promote_1, promote_2, rollback_response, retire_response):
+        assert response.status_code == 200
+        serialized = response.text
+        for token in forbidden:
+            assert token not in serialized, f"{token!r} leaked into the REST promotion response"
