@@ -182,6 +182,8 @@ from databasise.seam.promotion import (
     CHANGE_ORIGINS,
     PROVENANCE_OPERATOR_ASSERTED,
     RECORD_KIND_PROMOTION,
+    RECORD_KIND_ROLLBACK,
+    RECORD_KIND_TOMBSTONE,
     _GATE_VERBS,
     _NOT_BUILT_VERBS,
     declared_surface,
@@ -193,6 +195,7 @@ from databasise.seam.promotion import (
 )
 from databasise.seam.query import QueryObject, check_consumable
 from databasise.seam.refusals import (
+    ActiveGenerationRetirementError,
     EmptyComparisonRequestError,
     ForeignEngineRefusalError,
     GateVerbNotBuiltError,
@@ -200,7 +203,9 @@ from databasise.seam.refusals import (
     MutableStoreComparisonExcludedError,
     NoRawUploadPathForModalityError,
     NoWritePathForModalityError,
+    TombstonedGenerationError,
     UnknownDocumentError,
+    UnknownGenerationVersionError,
     UnknownJobError,
 )
 from databasise.seam.selectors import Selector, _wiring_effects, resolve_selector
@@ -1100,6 +1105,41 @@ class Databasise:
             return record
         return {key: value for key, value in record.items() if key in _NON_DEBUG_TRACE_FIELDS}
 
+    def _resolve_operator_preconditions(
+        self, alias: str, trace_ids: list[str], change_origin: str | None
+    ) -> tuple[list[dict[str, Any]], str, list[str]]:
+        """07-02-PLAN.md Task 1: the one shared place the operator-path preconditions live —
+        extracted verbatim from ``promote()``'s own former prologue so ``rollback()``/``retire()``
+        share it rather than each carrying their own copy (three copies is where one of them
+        quietly stops being checked). Refuses an invalid ``change_origin``; resolves every trace id
+        through ``self._trace_store`` (raising :class:`~databasise.seam.trace_store.
+        UnknownTraceReferenceError` per unresolvable id); refuses an empty or disagreeing
+        ``trace_ids`` via :func:`~databasise.seam.promotion.resolve_single_arm`.
+
+        Returns ``(resolved_records, arm_name, arm_instance_hashes)``. ``promote()`` uses
+        ``arm_name`` directly as its promotion target; ``rollback()``/``retire()`` derive their own
+        target from the ledger instead (D-05/D-07) and use only ``resolved_records`` (for
+        ``arm_instance_hashes``) and the refusal vocabulary this method already enforces —
+        ``retire()``'s own docstring states explicitly that its resolved arm is recorded, never
+        matched against the retirement target.
+        """
+        if change_origin not in CHANGE_ORIGINS:
+            raise InvalidChangeOriginError(change_origin=change_origin)
+
+        resolved_records = [self._trace_store.resolve(trace_id) for trace_id in trace_ids]
+        arm_name = resolve_single_arm(resolved_records, alias=alias, trace_ids=list(trace_ids))
+
+        # Real data from the runs the operator read — never fabricated, never returned to the
+        # caller (§18.2's closed set forbids an instance hash crossing the seam either way).
+        arm_instance_hashes = sorted(
+            {
+                str(trace_record["wiring_instance_hash"])
+                for trace_record in resolved_records
+                if trace_record.get("wiring_instance_hash")
+            }
+        )
+        return resolved_records, arm_name, arm_instance_hashes
+
     async def promote(
         self,
         alias: str,
@@ -1131,22 +1171,10 @@ class Databasise:
         if verb in _NOT_BUILT_VERBS:
             raise GateVerbNotBuiltError(verb=verb)
 
-        if change_origin not in CHANGE_ORIGINS:
-            raise InvalidChangeOriginError(change_origin=change_origin)
-
-        resolved_records = [self._trace_store.resolve(trace_id) for trace_id in trace_ids]
-        arm_name = resolve_single_arm(resolved_records, alias=alias, trace_ids=list(trace_ids))
-        new_resolved = resolved_wiring_for_arm(arm_name)
-
-        # Real data from the runs the operator read — never fabricated, never returned to the
-        # caller (§18.2's closed set forbids an instance hash crossing the seam either way).
-        arm_instance_hashes = sorted(
-            {
-                str(trace_record["wiring_instance_hash"])
-                for trace_record in resolved_records
-                if trace_record.get("wiring_instance_hash")
-            }
+        _resolved_records, arm_name, arm_instance_hashes = self._resolve_operator_preconditions(
+            alias, trace_ids, change_origin
         )
+        new_resolved = resolved_wiring_for_arm(arm_name)
 
         def _promote_sync() -> tuple[str, int]:
             """Runs entirely on the executor thread: opening ``Ledger`` here (rather than on the
@@ -1213,6 +1241,250 @@ class Databasise:
             alias=alias,
             version=minted_version,
             record_kind=RECORD_KIND_PROMOTION,
+            provenance=PROVENANCE_OPERATOR_ASSERTED,
+            generation_ordinal=generation_ordinal,
+        )
+
+    async def rollback(
+        self,
+        alias: str,
+        version: str,
+        trace_ids: list[str],
+        change_origin: str | None,
+    ) -> PromotionResult:
+        """The eleventh §18 operation this seam exposes (07-02-PLAN.md, MACH-07/API-09, D-05) —
+        RIG §PR.2's rollback path. ``version`` is a required positional parameter with no default:
+        D-05 settles that rollback names an explicit semver target, and there is no "previous" a
+        caller can silently ask for — a default would let an operator repoint an alias to a
+        generation they never named, which is a promotion decision made by the machine on their
+        behalf.
+
+        Shares ``promote()``'s validation prologue via
+        :meth:`_resolve_operator_preconditions` — an invalid ``change_origin`` and an
+        empty/unknown/disagreeing ``trace_ids`` refuse identically to ``promote()``. The target
+        generation is then resolved through ``Ledger.generation_state(alias, version)`` — never a
+        caller-supplied wiring name: ``None`` refuses as
+        :class:`~databasise.seam.refusals.UnknownGenerationVersionError` (covering both "this
+        alias never minted that version" and "that version belongs to a different alias" as one
+        fact — this alias has no such generation); a tombstoned target refuses as
+        :class:`~databasise.seam.refusals.TombstonedGenerationError` (RIG §PR.2, CONTRACT §0.4 — a
+        retired generation is not reachable again). ``generation_state`` reads the *latest* record
+        for the specific ``(alias, version)`` generation, never a scan for whether a tombstone
+        exists anywhere in that mutation's history — a wiring retired once and later legitimately
+        re-promoted must stay reachable under its own new generation.
+
+        The appended record's ``mutation_id``/``parent`` both name the target generation's own
+        ``mutation_id`` — the wiring being returned to, read from the ledger, never named by the
+        caller (RIG §PR.2's own instruction that the record name what it returns to).
+        ``targets_version`` is the caller's ``version``; ``minted_version`` is a **newly minted**
+        semver, never the target's own — CONTRACT §0.4 says a published name is never reused, and
+        re-publishing the target's version for a second, later generation would break the
+        ``(alias, version)`` keying ``generation_state`` depends on. The mint uses the same
+        :func:`~databasise.seam.promotion.mint_version` rule ``promote()`` uses: prior version is
+        the alias's current active generation's own ``minted_version``, and the surface comparison
+        is between the rolled-back-to wiring and that current active generation's wiring; the
+        mutation class is derived from the same two wirings. The record carries no new arm run and
+        no verdict (RIG §PR.3) — ``verdict``/``tier_of_decision``/``evidence_pointer``/
+        ``effect_size``/``depth_label``/``decomposition_ratio`` are all ``None``.
+
+        One ``append()``, offloaded via ``run_in_executor`` exactly as ``promote()`` offloads its
+        own — the atomic repoint is the single ``INSERT``, never a second write.
+        """
+        _resolved_records, _arm_name, arm_instance_hashes = self._resolve_operator_preconditions(
+            alias, trace_ids, change_origin
+        )
+
+        def _rollback_sync() -> tuple[str, int]:
+            """Runs entirely on the executor thread — mirrors ``promote()``'s own
+            ``_promote_sync``: every ledger touch this rollback needs (reading the target
+            generation, reading the alias's current active generation, minting the version, and
+            appending) happens in this one offloaded call, never split across the calling
+            event-loop thread and the executor thread.
+            """
+            ledger = Ledger(self.store_root)
+
+            target = ledger.generation_state(alias, version)
+            if target is None:
+                raise UnknownGenerationVersionError(alias=alias, version=version)
+            if target.record_kind == RECORD_KIND_TOMBSTONE:
+                raise TombstonedGenerationError(alias=alias, version=version)
+            target_resolved = resolved_wiring_for_arm(target.mutation_id)
+
+            current_record = ledger.by_alias(alias)
+            current_resolved = (
+                resolved_wiring_for_arm(current_record.mutation_id)
+                if current_record is not None
+                else None
+            )
+
+            mutation_class = derive_mutation_class(target_resolved, current_resolved)
+
+            prior_version = (
+                current_record.minted_version if current_record is not None else None
+            )
+            prior_surface = (
+                declared_surface(current_resolved, self.registry)
+                if current_resolved is not None
+                else None
+            )
+            new_surface = declared_surface(target_resolved, self.registry)
+            minted_version = mint_version(prior_version, prior_surface, new_surface)
+
+            ledger_record = LedgerRecord(
+                mutation_id=target.mutation_id,
+                mutation_class=mutation_class,
+                parent=target.mutation_id,
+                arm_instance_hashes=arm_instance_hashes,
+                effect_size=None,
+                verdict=None,
+                evidence_pointer=None,
+                proposer_id="operator",
+                depth_label=None,
+                tier_of_decision=None,
+                decomposition_ratio=None,
+                opaque_ttl_renewals=[],
+                parity_records=[],
+                promotion_provenance=PROVENANCE_OPERATOR_ASSERTED,
+                promotion_trace_ids=list(trace_ids),
+                change_origin=change_origin,
+                record_kind=RECORD_KIND_ROLLBACK,
+                alias=alias,
+                minted_version=minted_version,
+                targets_version=version,
+            )
+            return minted_version, ledger.append(ledger_record)
+
+        minted_version, generation_ordinal = await asyncio.get_running_loop().run_in_executor(
+            None, _rollback_sync
+        )
+
+        return PromotionResult(
+            alias=alias,
+            version=minted_version,
+            record_kind=RECORD_KIND_ROLLBACK,
+            provenance=PROVENANCE_OPERATOR_ASSERTED,
+            generation_ordinal=generation_ordinal,
+        )
+
+    async def retire(
+        self,
+        alias: str,
+        version: str,
+        trace_ids: list[str],
+        change_origin: str | None,
+    ) -> PromotionResult:
+        """The twelfth §18 operation this seam exposes (07-02-PLAN.md, MACH-07/API-09, D-07) — a
+        tombstone on the same append-only path ``promote()``/``rollback()`` write to. Shares the
+        same parameter shape as ``rollback()`` so the three verbs read as one family across all
+        three transports, and reuses :meth:`_resolve_operator_preconditions` for the identical
+        ``change_origin``/trace-id checks.
+
+        **A deliberate, stated non-requirement (RESEARCH.md Open Question 2): the resolved arm
+        does not have to match the generation being retired.** CONTEXT.md D-07 does not decide
+        this; the reading this method adopts is that an operator's judgment that a generation
+        should stop being eligible may legitimately be formed by reading traces of a different run
+        that demonstrated the problem. The trace ids are still required and must still resolve and
+        agree on one arm — so the refusal vocabulary stays uniform across ``promote``/``rollback``/
+        ``retire`` — but the resolved arm is recorded (via ``arm_instance_hashes``), never matched
+        against the retirement target. Do not "fix" this into a match check.
+
+        The target generation is resolved through ``Ledger.generation_state(alias, version)``,
+        exactly as ``rollback()`` does: ``None`` refuses as
+        :class:`~databasise.seam.refusals.UnknownGenerationVersionError`; an already-tombstoned
+        target refuses as :class:`~databasise.seam.refusals.TombstonedGenerationError` rather than
+        silently appending a second tombstone — a no-op success is indistinguishable from a real
+        retirement to the caller.
+
+        Then the active-generation guard: if the alias's own active generation
+        (``Ledger.by_alias(alias)``) is the target being retired, this refuses as
+        :class:`~databasise.seam.refusals.ActiveGenerationRetirementError` — retiring the
+        generation an alias currently derives from would leave the alias resolving to a wiring
+        just declared ineligible (CONTRACT §16.2 already refuses pins to tombstoned artifacts).
+        The alternative — ``by_alias`` walking backward to the most recent non-retired generation —
+        would be a second alias-lifecycle mechanism CONTEXT.md states plainly is "not required and
+        not asked for"; refusing is the smaller surface, and composes: roll back, then retire.
+
+        The tombstone record's ``mutation_id``/``mutation_class`` name the target generation being
+        retired (classed against the alias's own still-active generation, the same two-wiring-diff
+        pattern ``rollback()`` uses); ``targets_version`` is the caller's ``version``;
+        ``minted_version`` is ``None`` — a retirement mints nothing, which is exactly why 07-01
+        gave the minted and targeted versions separate ledger columns instead of overloading one.
+        ``parent`` is ``None`` — a tombstone does not return to anything. The record carries no
+        verdict, exactly as ``promote()``/``rollback()``'s own records do not.
+
+        **Nothing lifts a tombstone, and that is structural, not defensive, here.** There is no
+        un-retire verb, no flag on ``promote()`` that revives a generation, and no code path that
+        updates or deletes a tombstone row (the database's own ``BEFORE UPDATE``/``BEFORE DELETE``
+        triggers refuse both regardless). Re-promoting the same wiring later is simply a new
+        generation with a new minted version (D-07) — the ledger expresses this naturally because
+        versions are never reused: the retired ``(alias, version)`` pair keeps reporting a
+        tombstone through ``generation_state`` forever, while the new generation is a different
+        pair. ``promote()`` gains no check refusing an arm whose earlier generation was retired.
+
+        One ``append()``, offloaded via ``run_in_executor``, and no second write. Returns
+        ``PromotionResult`` with ``record_kind`` reporting ``"tombstone"`` and ``version`` reporting
+        the *retired* version — the field's meaning is disambiguated by ``record_kind``.
+        """
+        _resolved_records, _arm_name, arm_instance_hashes = self._resolve_operator_preconditions(
+            alias, trace_ids, change_origin
+        )
+
+        def _retire_sync() -> int:
+            """Runs entirely on the executor thread, mirroring ``_promote_sync``/
+            ``_rollback_sync``: reading the target generation, reading the alias's active
+            generation for the guard and the class derivation, and appending, all in one offloaded
+            call.
+            """
+            ledger = Ledger(self.store_root)
+
+            target = ledger.generation_state(alias, version)
+            if target is None:
+                raise UnknownGenerationVersionError(alias=alias, version=version)
+            if target.record_kind == RECORD_KIND_TOMBSTONE:
+                raise TombstonedGenerationError(alias=alias, version=version)
+
+            active = ledger.by_alias(alias)
+            if active is not None and active.minted_version == version:
+                raise ActiveGenerationRetirementError(alias=alias, version=version)
+
+            target_resolved = resolved_wiring_for_arm(target.mutation_id)
+            active_resolved = (
+                resolved_wiring_for_arm(active.mutation_id) if active is not None else None
+            )
+            mutation_class = derive_mutation_class(target_resolved, active_resolved)
+
+            ledger_record = LedgerRecord(
+                mutation_id=target.mutation_id,
+                mutation_class=mutation_class,
+                parent=None,
+                arm_instance_hashes=arm_instance_hashes,
+                effect_size=None,
+                verdict=None,
+                evidence_pointer=None,
+                proposer_id="operator",
+                depth_label=None,
+                tier_of_decision=None,
+                decomposition_ratio=None,
+                opaque_ttl_renewals=[],
+                parity_records=[],
+                promotion_provenance=PROVENANCE_OPERATOR_ASSERTED,
+                promotion_trace_ids=list(trace_ids),
+                change_origin=change_origin,
+                record_kind=RECORD_KIND_TOMBSTONE,
+                alias=alias,
+                minted_version=None,
+                targets_version=version,
+            )
+            return ledger.append(ledger_record)
+
+        generation_ordinal = await asyncio.get_running_loop().run_in_executor(
+            None, _retire_sync
+        )
+
+        return PromotionResult(
+            alias=alias,
+            version=version,
+            record_kind=RECORD_KIND_TOMBSTONE,
             provenance=PROVENANCE_OPERATOR_ASSERTED,
             generation_ordinal=generation_ordinal,
         )
