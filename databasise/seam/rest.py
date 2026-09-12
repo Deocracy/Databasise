@@ -77,7 +77,7 @@ from databasise.seam.corpus import (
     Page,
 )
 from databasise.seam.engine import Databasise, stream_envelope_events
-from databasise.seam.envelope import ResponseEnvelope
+from databasise.seam.envelope import PromotionResult, ResponseEnvelope
 from databasise.seam.evidence import EvidenceRef
 from databasise.seam.query import QueryObject
 from databasise.seam.refusals import (
@@ -141,6 +141,40 @@ class DeleteRequest(_RequestModel):
     ``QueryRequest``/``IngestRequest`` already carry."""
 
     selector: Selector | None = None
+
+
+class PromoteRequest(_RequestModel):
+    """07-03-PLAN.md Task 1: the operator-asserted promotion request body. Field names match
+    ``Databasise.promote()``'s own parameter names exactly, so a reader comparing this body to the
+    in-process call sees the identical vocabulary. ``change_origin`` defaults to ``None`` rather
+    than being a required JSON key — an absent value still reaches ``Databasise.promote()``, which
+    raises the named ``InvalidChangeOriginError`` refusal itself (D-08); this model adds no
+    validation of its own beyond deserialization."""
+
+    alias: str
+    trace_ids: list[str]
+    change_origin: str | None = None
+    verb: str = "operator-asserted"
+
+
+class RollbackRequest(_RequestModel):
+    """07-03-PLAN.md Task 1: ``Databasise.rollback()``'s request body — ``version`` is required
+    with no default, mirroring D-05's own rule that rollback names an explicit semver target."""
+
+    alias: str
+    version: str
+    trace_ids: list[str]
+    change_origin: str | None = None
+
+
+class RetireRequest(_RequestModel):
+    """07-03-PLAN.md Task 1: ``Databasise.retire()``'s request body — the identical shape as
+    ``RollbackRequest`` (D-07: retire shares rollback's parameter family)."""
+
+    alias: str
+    version: str
+    trace_ids: list[str]
+    change_origin: str | None = None
 
 
 def _checked_page(limit: int, offset: int) -> Page:
@@ -328,6 +362,18 @@ def create_app(
     async def get_corpus_counts() -> DocumentCounts:
         return await engine.document_counts()
 
+    @app.post("/promote")
+    async def post_promote(body: PromoteRequest) -> PromotionResult:
+        return await engine.promote(body.alias, body.trace_ids, body.change_origin, verb=body.verb)
+
+    @app.post("/rollback")
+    async def post_rollback(body: RollbackRequest) -> PromotionResult:
+        return await engine.rollback(body.alias, body.version, body.trace_ids, body.change_origin)
+
+    @app.post("/retire")
+    async def post_retire(body: RetireRequest) -> PromotionResult:
+        return await engine.retire(body.alias, body.version, body.trace_ids, body.change_origin)
+
     return app
 
 
@@ -337,5 +383,8 @@ __all__ = [
     "TraceRequest",
     "IngestRequest",
     "DeleteRequest",
+    "PromoteRequest",
+    "RollbackRequest",
+    "RetireRequest",
     "create_app",
 ]
