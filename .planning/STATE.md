@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 07
 current_phase_name: Promotion & Rollback
 status: executing
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-09-12T04:20:33.856Z"
+stopped_at: Completed 07-02-PLAN.md
+last_updated: "2026-09-12T04:51:01.438Z"
 last_activity: 2026-09-11
 last_activity_desc: Phase 07 execution started
-state_head: 8c38fd4f54417e9fc3bbcbfd1b615dde71114a65
+state_head: 917cd8f804bdb0544eda2d8b6de3195e9c25247e
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 61
-  completed_plans: 59
+  completed_plans: 60
 milestone_name: milestone
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 07 (Promotion & Rollback) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
   drifted before this session — corrected here from find-phase's actual plan/summary counts
   rather than the stale auto-incremented value)
 Status: Ready to execute
@@ -98,6 +98,7 @@ Progress: [██████████] 100%
 | Phase 06 P15 | ~55min | 1 tasks | 2 files |
 | Phase 06 P17 | ~35min | 2 tasks | 4 files |
 | Phase 07 P01 | ~55min | 3 tasks | 14 files |
+| Phase 07-promotion-rollback P02 | ~50min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -182,6 +183,7 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 06]: [Phase 06-hipporag-2-side-by-side]: 06-17: Appended a dated correction note to 06-VERIFICATION.md naming which later commits (5827165, 2cb437a, 3de871b, 06-14) closed five of its findings, without touching its status/score/gap bodies -- a pure append, verified via git diff --numstat (41 insertions, 0 deletions).
 - [Phase 07]: 07-01: trace-id -> arm-name resolution matches on the dispatched node id set, not wiring_id/arm_id (both constant literals across every LightRAG arm) — the plan's literal field description does not survive contact with the real RunRecord shape. — wiring_id is the shared 'lightrag-base' string and arm_id is always the literal 'seam' for every LightRAG arm; only the persisted node id set (RunRecord.nodes[*].node_id) is both query-invariant and unique per arm.
 - [Phase 07]: 07-01: the whole ledger read-modify-append sequence inside promote() runs in one run_in_executor call, never split across the calling thread and the executor thread. — sqlite3 forbids cross-thread use of a connection opened on a different thread; opening Ledger() on the event loop thread and calling append() from run_in_executor raised sqlite3.ProgrammingError.
+- [Phase 07]: 07-02: MACH-09 posture guard's rollback exemption widened to seam/engine.py's def rollback(...) (mirroring promote's own exemption) since this codebase's real rollback() is RIG PR.2's operator-asserted path, never a CONTRACT SS5 gate-adjudicated ladder member. — The guard's _PROMOTION_VERB_NAMES already listed rollback from Phase 2's own drafting guess; landing the real verb tripped it exactly as its docstring anticipated, per 07-01's identical precedent for promote.
 
 ### Pending Todos
 
@@ -217,6 +219,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-12T04:20:18.990Z
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-09-12T04:51:01.280Z
+Stopped at: Completed 07-02-PLAN.md
 Resume file: None
