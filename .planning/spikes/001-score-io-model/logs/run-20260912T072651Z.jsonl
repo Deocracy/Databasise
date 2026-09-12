@@ -1,0 +1,91 @@
+{"ts": "2026-09-12T07:26:51.844968+00:00", "check": "corpus.loads", "pass": true, "detail": "20 docs hash-verified"}
+{"ts": "2026-09-12T07:26:51.845047+00:00", "check": "rej.duplicate-ids", "pass": true, "detail": "duplicate section id 's1'"}
+{"ts": "2026-09-12T07:26:51.845069+00:00", "check": "rej.unknown-section-attr", "pass": true, "detail": "unknown <section> attribute 'foo'"}
+{"ts": "2026-09-12T07:26:51.845084+00:00", "check": "rej.unknown-score-attr", "pass": true, "detail": "unknown <score> attribute 'quux'"}
+{"ts": "2026-09-12T07:26:51.845097+00:00", "check": "rej.unknown-embed", "pass": true, "detail": "unknown embed value 'telepathic'"}
+{"ts": "2026-09-12T07:26:51.845109+00:00", "check": "rej.unknown-respond", "pass": true, "detail": "unknown respond value 'dance'"}
+{"ts": "2026-09-12T07:26:51.845131+00:00", "check": "rej.unknown-file", "pass": true, "detail": "unknown file value 'ledger' (allowed: ('graph', 'sql', 'folio', 'agent', 'any'))"}
+{"ts": "2026-09-12T07:26:51.845146+00:00", "check": "rej.unknown-link", "pass": true, "detail": "unknown link value 'akashic' (allowed: ('raw', 'graph', 'sql', 'folio'))"}
+{"ts": "2026-09-12T07:26:51.845158+00:00", "check": "rej.file-without-ops", "pass": true, "detail": "section 's1': file= without respond=ops"}
+{"ts": "2026-09-12T07:26:51.845171+00:00", "check": "rej.file-text-without-ops", "pass": true, "detail": "section 's1': file= without respond=ops"}
+{"ts": "2026-09-12T07:26:51.845181+00:00", "check": "rej.rewrite-unregistered", "pass": true, "detail": "unregistered rewrite style 'haiku'"}
+{"ts": "2026-09-12T07:26:51.845188+00:00", "check": "rej.zero-sections", "pass": true, "detail": "Score with zero sections"}
+{"ts": "2026-09-12T07:26:51.845199+00:00", "check": "rej.bad-id-upper", "pass": true, "detail": "bad section id 'S1'"}
+{"ts": "2026-09-12T07:26:51.845212+00:00", "check": "rej.bad-id-space", "pass": true, "detail": "bad section id 's 1'"}
+{"ts": "2026-09-12T07:26:51.845227+00:00", "check": "rej.model-provenance", "pass": true, "detail": "refused provenance 'model'"}
+{"ts": "2026-09-12T07:26:51.845241+00:00", "check": "rej.provenance-unknown", "pass": true, "detail": "refused provenance 'oracle'"}
+{"ts": "2026-09-12T07:26:51.845262+00:00", "check": "rej.nested-markup", "pass": true, "detail": "section 's1': nested markup refused, plain text only"}
+{"ts": "2026-09-12T07:26:51.845281+00:00", "check": "rej.dup-file-entry", "pass": true, "detail": "duplicate entry in file='graph,graph'"}
+{"ts": "2026-09-12T07:26:51.845299+00:00", "check": "rej.any-not-alone", "pass": true, "detail": "'any' must stand alone in file='any,graph'"}
+{"ts": "2026-09-12T07:26:51.845309+00:00", "check": "rej.bad-version", "pass": true, "detail": "unsupported score v='2'"}
+{"ts": "2026-09-12T07:26:51.845341+00:00", "check": "rej.malformed", "pass": true, "detail": "not well-formed XML: no element found: line 1, column 28"}
+{"ts": "2026-09-12T07:26:51.845354+00:00", "check": "rej.non-score-root", "pass": true, "detail": "root must be <score>, got <doc>"}
+{"ts": "2026-09-12T07:26:51.845375+00:00", "check": "ok.frontier-provenance", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.845395+00:00", "check": "ok.defaults", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.845712+00:00", "check": "I1.position-independent", "pass": true, "detail": "227 tokens byte-identical at pos 1 vs pos 4"}
+{"ts": "2026-09-12T07:26:51.846962+00:00", "check": "deterministic.compile-twice", "pass": true, "detail": "identical plan JSON across two compiles"}
+{"ts": "2026-09-12T07:26:51.847185+00:00", "check": "I2.in-order", "pass": true, "detail": "S0 len 94, expected len 94"}
+{"ts": "2026-09-12T07:26:51.847274+00:00", "check": "I2.pure-append-exact", "pass": true, "detail": "22 tokens"}
+{"ts": "2026-09-12T07:26:51.847351+00:00", "check": "I3.ei-exact-shape", "pass": true, "detail": "E_i is prefix+content+[EMB] and nothing else"}
+{"ts": "2026-09-12T07:26:51.847362+00:00", "check": "I3.no-directive-text", "pass": true, "detail": "instruction vocabulary absent, content vocabulary present verbatim"}
+{"ts": "2026-09-12T07:26:51.847375+00:00", "check": "I3.no-instruction-in-ei", "pass": true, "detail": "8 E-steps carry no instruction text"}
+{"ts": "2026-09-12T07:26:51.847935+00:00", "check": "grammar.graph", "pass": true, "detail": "1 allowed pass, 3 disallowed refused"}
+{"ts": "2026-09-12T07:26:51.848117+00:00", "check": "grammar.sql", "pass": true, "detail": "1 allowed pass, 3 disallowed refused"}
+{"ts": "2026-09-12T07:26:51.848261+00:00", "check": "grammar.graph,sql", "pass": true, "detail": "2 allowed pass, 2 disallowed refused"}
+{"ts": "2026-09-12T07:26:51.848356+00:00", "check": "grammar.folio", "pass": true, "detail": "1 allowed pass, 3 disallowed refused"}
+{"ts": "2026-09-12T07:26:51.848476+00:00", "check": "grammar.graph,folio", "pass": true, "detail": "2 allowed pass, 2 disallowed refused"}
+{"ts": "2026-09-12T07:26:51.848614+00:00", "check": "grammar.sql,folio", "pass": true, "detail": "2 allowed pass, 2 disallowed refused"}
+{"ts": "2026-09-12T07:26:51.848761+00:00", "check": "grammar.graph,sql,folio", "pass": true, "detail": "3 allowed pass, 1 disallowed refused"}
+{"ts": "2026-09-12T07:26:51.848841+00:00", "check": "grammar.agent", "pass": true, "detail": "1 allowed pass, 3 disallowed refused"}
+{"ts": "2026-09-12T07:26:51.848932+00:00", "check": "grammar.graph,agent", "pass": true, "detail": "2 allowed pass, 2 disallowed refused"}
+{"ts": "2026-09-12T07:26:51.849040+00:00", "check": "grammar.sql,agent", "pass": true, "detail": "2 allowed pass, 2 disallowed refused"}
+{"ts": "2026-09-12T07:26:51.849163+00:00", "check": "grammar.graph,sql,agent", "pass": true, "detail": "3 allowed pass, 1 disallowed refused"}
+{"ts": "2026-09-12T07:26:51.849258+00:00", "check": "grammar.folio,agent", "pass": true, "detail": "2 allowed pass, 2 disallowed refused"}
+{"ts": "2026-09-12T07:26:51.849397+00:00", "check": "grammar.graph,folio,agent", "pass": true, "detail": "3 allowed pass, 1 disallowed refused"}
+{"ts": "2026-09-12T07:26:51.849563+00:00", "check": "grammar.sql,folio,agent", "pass": true, "detail": "3 allowed pass, 1 disallowed refused"}
+{"ts": "2026-09-12T07:26:51.849723+00:00", "check": "grammar.graph,sql,folio,agent", "pass": true, "detail": "4 allowed pass, 0 disallowed refused"}
+{"ts": "2026-09-12T07:26:51.849728+00:00", "check": "grammar.subset-count", "pass": true, "detail": "15 non-empty subsets of 2^4 minus empty; 'any' is an alias for the full set, expanded by the compiler before grammar selection"}
+{"ts": "2026-09-12T07:26:51.850032+00:00", "check": "fuzz.all-rejected", "pass": true, "detail": "9/9 mutations refused"}
+{"ts": "2026-09-12T07:26:51.850042+00:00", "check": "split.grammar-format-proof-accuracy", "pass": true, "detail": "over-long string refused by Proof (length), not by shape"}
+{"ts": "2026-09-12T07:26:51.850069+00:00", "check": "proof.correct-pass", "pass": true, "detail": "[{\"index\": 0, \"target\": \"graph\", \"pass\": true, \"reasons\": []}, {\"index\": 1, \"target\": \"sql\", \"pass\": true, \"reasons\": []}]"}
+{"ts": "2026-09-12T07:26:51.850072+00:00", "check": "proof.empty-pass", "pass": true, "detail": "cheapest legal output"}
+{"ts": "2026-09-12T07:26:51.850088+00:00", "check": "proof.fabricated-span-caught", "pass": true, "detail": "[{\"index\": 0, \"target\": \"graph\", \"pass\": false, \"reasons\": [\"evidence: evidence span contains neither subject nor value\"]}]"}
+{"ts": "2026-09-12T07:26:51.850103+00:00", "check": "proof.mistyped-date-caught", "pass": true, "detail": "[{\"index\": 0, \"target\": \"sql\", \"pass\": false, \"reasons\": [\"value-type: date does not parse as ISO 8601: '12/10/1815'\"]}]"}
+{"ts": "2026-09-12T07:26:51.850116+00:00", "check": "valuetype.date.1815", "pass": true, "detail": "want=True got=True"}
+{"ts": "2026-09-12T07:26:51.850124+00:00", "check": "valuetype.date.1815-12-10", "pass": true, "detail": "want=True got=True"}
+{"ts": "2026-09-12T07:26:51.850131+00:00", "check": "valuetype.date.1815-12-10T09:00:00", "pass": true, "detail": "want=True got=True"}
+{"ts": "2026-09-12T07:26:51.850139+00:00", "check": "valuetype.date.12/10/1815", "pass": true, "detail": "want=False got=False"}
+{"ts": "2026-09-12T07:26:51.850146+00:00", "check": "valuetype.date.not-a-date", "pass": true, "detail": "want=False got=False"}
+{"ts": "2026-09-12T07:26:51.850159+00:00", "check": "valuetype.number.3.14", "pass": true, "detail": "want=True got=True"}
+{"ts": "2026-09-12T07:26:51.850167+00:00", "check": "valuetype.number.-17", "pass": true, "detail": "want=True got=True"}
+{"ts": "2026-09-12T07:26:51.850176+00:00", "check": "valuetype.number.abc", "pass": true, "detail": "want=False got=False"}
+{"ts": "2026-09-12T07:26:51.850183+00:00", "check": "valuetype.number.NaN", "pass": true, "detail": "want=False got=False"}
+{"ts": "2026-09-12T07:26:51.850189+00:00", "check": "valuetype.number.Infinity", "pass": true, "detail": "want=False got=False"}
+{"ts": "2026-09-12T07:26:51.850194+00:00", "check": "valuetype.text.anything", "pass": true, "detail": "want=True got=True"}
+{"ts": "2026-09-12T07:26:51.850202+00:00", "check": "evidence.end-eq-len-pass", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.850210+00:00", "check": "evidence.end-gt-len-fail", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.850222+00:00", "check": "evidence.norm-case-space", "pass": true, "detail": "whitespace/case normalisation"}
+{"ts": "2026-09-12T07:26:51.850233+00:00", "check": "evidence.whitespace-subject-fail", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.850240+00:00", "check": "folio.first-pass", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.850246+00:00", "check": "folio.dup-without-supersedes-fail", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.850254+00:00", "check": "folio.dup-with-supersedes-pass", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.850259+00:00", "check": "permission.agent-refused", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.850263+00:00", "check": "permission.agent-allowed", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.850323+00:00", "check": "file.default-any", "pass": true, "detail": "respond=ops defaults file to any->all four"}
+{"ts": "2026-09-12T07:26:51.850366+00:00", "check": "shape.empty-content-compiles", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.850421+00:00", "check": "shape.unicode", "pass": true, "detail": "unicode round-trips through parse/compile"}
+{"ts": "2026-09-12T07:26:51.850570+00:00", "check": "shape.ops-32-pass", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.850578+00:00", "check": "shape.ops-33-fail", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.850582+00:00", "check": "shape.top-extra-key-fail", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.850586+00:00", "check": "shape.non-object-op-fail", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.850676+00:00", "check": "worked-example.step-kinds", "pass": true, "detail": "append,copy_prefix,append,read_vector,free,append,copy_prefix,append,read_vector,free,append,decode,append,append,decode"}
+{"ts": "2026-09-12T07:26:51.850681+00:00", "check": "worked-example.decode-bounds", "pass": true, "detail": "ops decode under G(graph,sql) cap 256; text decode stopped cap 512"}
+{"ts": "2026-09-12T07:26:51.850684+00:00", "check": "worked-example.caps", "pass": true, "detail": "[256, 512]"}
+{"ts": "2026-09-12T07:26:51.850794+00:00", "check": "mirror.schema-loads", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.850797+00:00", "check": "mirror.max-ops", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.850805+00:00", "check": "mirror.four-targets", "pass": true, "detail": "agent,folio,graph,sql"}
+{"ts": "2026-09-12T07:26:51.850808+00:00", "check": "mirror.graph-required", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.850810+00:00", "check": "mirror.sql-required", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.850812+00:00", "check": "mirror.folio-required", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.850896+00:00", "check": "mirror.folio-slug-pattern", "pass": true, "detail": ""}
+{"ts": "2026-09-12T07:26:51.850899+00:00", "check": "mirror.no-unknown-shape", "pass": true, "detail": ""}
