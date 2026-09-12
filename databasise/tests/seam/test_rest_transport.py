@@ -60,9 +60,12 @@ from databasise.seam.refusals import (
     OversizedDocumentError,
     PageSizeExceededError,
     SeamRefusalError,
+    ActiveGenerationRetirementError,
+    TombstonedGenerationError,
     UncalibratedFloorRefusalError,
     UnconsumableQueryMemberError,
     UnknownDocumentError,
+    UnknownGenerationVersionError,
     UnknownJobError,
     UnsatisfiableSelectorError,
 )
@@ -432,6 +435,15 @@ _REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
     ),
     UncalibratedFloorRefusalError: lambda: UncalibratedFloorRefusalError(
         verb="promote-next", mutation_class="retrieval-side"
+    ),
+    UnknownGenerationVersionError: lambda: UnknownGenerationVersionError(
+        alias="some-alias", version="9.9.9"
+    ),
+    TombstonedGenerationError: lambda: TombstonedGenerationError(
+        alias="some-alias", version="1.0.0"
+    ),
+    ActiveGenerationRetirementError: lambda: ActiveGenerationRetirementError(
+        alias="some-alias", version="1.0.0"
     ),
 }
 
