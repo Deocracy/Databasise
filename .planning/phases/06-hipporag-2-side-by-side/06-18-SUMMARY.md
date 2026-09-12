@@ -36,7 +36,11 @@ key-decisions:
 
 patterns-established: []
 
-requirements-completed: [MACH-03]
+requirements-completed: []
+# MACH-03 is deliberately NOT discharged by this plan. The plan's `requirements: [MACH-03]`
+# frontmatter links it to paperwork ABOUT the requirement (the SC6 deferral annotation), not to
+# its discharge, and the plan's own prohibitions forbid flipping the checkbox. MACH-03 remains
+# Pending in .planning/REQUIREMENTS.md. See this SUMMARY's Deviations section.
 
 coverage:
   - id: D1
