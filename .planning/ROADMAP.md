@@ -330,7 +330,7 @@ Plans:
 
 **Wave 5** *(gap closure — blocked on 07-04; closes `07-UAT.md`'s sole gap G-07-1 / `07-REVIEW.md` WR-01, carried unaddressed through two review rounds)*
 
-- [ ] 07-05-PLAN.md — A `BEGIN IMMEDIATE` transaction spans each operator verb's guard read and its append, and `(alias, minted_version)` becomes UNIQUE, so concurrent promote/rollback/retire on one alias either serialize or refuse the loser by an already-shipped name — with a committed concurrency regression test for both reproduced races and no change to the §18 envelope
+- [x] 07-05-PLAN.md — A `BEGIN IMMEDIATE` transaction spans each operator verb's guard read and its append, and `(alias, minted_version)` becomes UNIQUE, so concurrent promote/rollback/retire on one alias either serialize or refuse the loser by an already-shipped name — with a committed concurrency regression test for both reproduced races and no change to the §18 envelope
 
 ## Progress
 

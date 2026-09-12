@@ -1,19 +1,19 @@
 ---
-gsd_state_version: "1.0"
+gsd_state_version: 1.0
 milestone: v1.0
 current_phase: 07
 current_phase_name: Promotion & Rollback
 status: executing
-stopped_at: Completed 07-04-PLAN.md
-last_updated: "2026-09-12T06:38:31.110Z"
-last_activity: 2026-09-11
+stopped_at: Completed 07-05-PLAN.md (gap closure G-07-1)
+last_updated: "2026-09-12T15:17:52.040Z"
+last_activity: 2026-09-12
 last_activity_desc: Phase 07 execution started
-state_head: 844ccf5af2e7a8b526f813be51034ee8cd4df065
+state_head: 9775a62378aaf827f6f1ceb38dcfeb473a60c753
 progress:
   total_phases: 7
-  completed_phases: 2
-  total_plans: 62
-  completed_plans: 62
+  completed_phases: 4
+  total_plans: 63
+  completed_plans: 63
 milestone_name: milestone
 ---
 
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 07 (Promotion & Rollback) — EXECUTING
-Plan: 2 of 4
-  drifted before this session — corrected here from find-phase's actual plan/summary counts
-  rather than the stale auto-incremented value)
-Status: Ready to execute
-Last activity: 2026-09-11 — Phase 07 execution started
+Plan: 5 of 5 (all plans have summaries — 07-05, gap closure for G-07-1, completed this session;
+  corrected here from find-phase's actual plan/summary counts rather than the stale
+  auto-incremented counter, same drift-correction this section already noted before this session)
+Status: All plans complete — ready for /gsd-verify-work 7
+Last activity: 2026-09-12 — 07-05 (gap closure G-07-1) completed
 
 Progress: [██████████] 100%
 
@@ -101,6 +101,7 @@ Progress: [██████████] 100%
 | Phase 07-promotion-rollback P02 | ~50min | 2 tasks | 7 files |
 | Phase 07 P03 | ~75min | 3 tasks | 10 files |
 | Phase 07 P04 | ~21 min | 2 tasks | 9 files |
+| Phase 07 P05 | 35min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -188,6 +189,8 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 07]: 07-02: MACH-09 posture guard's rollback exemption widened to seam/engine.py's def rollback(...) (mirroring promote's own exemption) since this codebase's real rollback() is RIG PR.2's operator-asserted path, never a CONTRACT SS5 gate-adjudicated ladder member. — The guard's _PROMOTION_VERB_NAMES already listed rollback from Phase 2's own drafting guess; landing the real verb tripped it exactly as its docstring anticipated, per 07-01's identical precedent for promote.
 - [Phase 07]: 07-03: three-transport parity tests use per-transport isolated store roots with a directly-inserted fixed trace token (bypassing TraceStore's random minting) so full LedgerRecord field equality is provable across in-process/REST/MCP — TraceStore.persist() mints a fresh secrets.token_urlsafe() reference every call (D-06); no two independent stores can literally share a promotion_trace_ids value unless the token is inserted directly
 - [Phase 07]: 07-04: Kept PromoteRequest.verb/PromoteToolArgs.verb as plain str with no Literal/field_validator; a named UnrecognisedPromotionVerbError raised inside Databasise.promote() (checked before trace-id resolution) is the sole refusal mechanism, so REST/MCP/in-process all surface the identical refusal_type. Closes 07-VERIFICATION.md's sole gap and 07-REVIEW.md's CR-01.
+- [Phase 07]: 07-05: SQLite BEGIN IMMEDIATE transaction (Ledger.transaction()) over the WR-01-proposed asyncio.Lock — serializes at the file, covering multi-process/multi-instance access, not only one event loop. — An asyncio.Lock only serializes callers sharing one Databasise instance on one event loop; it does nothing for a second process or REST worker sharing the same store_root/ledger.db.
+- [Phase 07]: 07-05: DROP INDEX + CREATE UNIQUE INDEX under a new name (ux_ledger_generation), not CREATE UNIQUE INDEX IF NOT EXISTS reusing ix_ledger_generation. — Verified directly against SQLite 3.53.1 that reusing the old index name is a silent no-op over an existing plain index — the uniqueness constraint would never take effect on a database that already ran the old schema.
 
 ### Pending Todos
 
@@ -223,6 +226,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-12T06:38:31.015Z
-Stopped at: Completed 07-04-PLAN.md
+Last session: 2026-09-12T15:17:51.907Z
+Stopped at: Completed 07-05-PLAN.md (gap closure G-07-1)
 Resume file: None
