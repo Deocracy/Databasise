@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.0
 current_phase: 07
 current_phase_name: Promotion & Rollback
-status: executing
-stopped_at: Completed 07-02-PLAN.md
-last_updated: "2026-09-12T04:51:01.438Z"
+status: verifying
+stopped_at: Completed 07-03-PLAN.md
+last_updated: "2026-09-12T05:27:34.850Z"
 last_activity: 2026-09-11
 last_activity_desc: Phase 07 execution started
-state_head: 917cd8f804bdb0544eda2d8b6de3195e9c25247e
+state_head: 03ea6b2184646dcbcee113802d505fbe7dbf46a2
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 61
-  completed_plans: 60
+  completed_plans: 61
 milestone_name: milestone
 ---
 
@@ -32,7 +32,7 @@ Phase: 07 (Promotion & Rollback) — EXECUTING
 Plan: 3 of 3
   drifted before this session — corrected here from find-phase's actual plan/summary counts
   rather than the stale auto-incremented value)
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-11 — Phase 07 execution started
 
 Progress: [██████████] 100%
@@ -99,6 +99,7 @@ Progress: [██████████] 100%
 | Phase 06 P17 | ~35min | 2 tasks | 4 files |
 | Phase 07 P01 | ~55min | 3 tasks | 14 files |
 | Phase 07-promotion-rollback P02 | ~50min | 2 tasks | 7 files |
+| Phase 07 P03 | ~75min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -184,6 +185,7 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 07]: 07-01: trace-id -> arm-name resolution matches on the dispatched node id set, not wiring_id/arm_id (both constant literals across every LightRAG arm) — the plan's literal field description does not survive contact with the real RunRecord shape. — wiring_id is the shared 'lightrag-base' string and arm_id is always the literal 'seam' for every LightRAG arm; only the persisted node id set (RunRecord.nodes[*].node_id) is both query-invariant and unique per arm.
 - [Phase 07]: 07-01: the whole ledger read-modify-append sequence inside promote() runs in one run_in_executor call, never split across the calling thread and the executor thread. — sqlite3 forbids cross-thread use of a connection opened on a different thread; opening Ledger() on the event loop thread and calling append() from run_in_executor raised sqlite3.ProgrammingError.
 - [Phase 07]: 07-02: MACH-09 posture guard's rollback exemption widened to seam/engine.py's def rollback(...) (mirroring promote's own exemption) since this codebase's real rollback() is RIG PR.2's operator-asserted path, never a CONTRACT SS5 gate-adjudicated ladder member. — The guard's _PROMOTION_VERB_NAMES already listed rollback from Phase 2's own drafting guess; landing the real verb tripped it exactly as its docstring anticipated, per 07-01's identical precedent for promote.
+- [Phase 07]: 07-03: three-transport parity tests use per-transport isolated store roots with a directly-inserted fixed trace token (bypassing TraceStore's random minting) so full LedgerRecord field equality is provable across in-process/REST/MCP — TraceStore.persist() mints a fresh secrets.token_urlsafe() reference every call (D-06); no two independent stores can literally share a promotion_trace_ids value unless the token is inserted directly
 
 ### Pending Todos
 
@@ -219,6 +221,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-12T04:51:01.280Z
-Stopped at: Completed 07-02-PLAN.md
+Last session: 2026-09-12T05:27:34.725Z
+Stopped at: Completed 07-03-PLAN.md
 Resume file: None
