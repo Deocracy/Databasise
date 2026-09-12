@@ -37,12 +37,19 @@ import pytest
 # installed — see tests/seam/test_rest_transport.py's identical guard for why.
 pytest.importorskip("fastapi")
 
+import json
+from datetime import UTC, datetime
+
 from databasise.clients.base import ChatResult, EmbeddingResult
+from databasise.ledger.ledger import Ledger, LedgerRecord
 from databasise.runner.trace import TokenAccounting
 from databasise.seam.engine import Databasise
 from databasise.seam.envelope import ResponseEnvelope
 from databasise.seam.query import QueryObject
+from databasise.seam.refusals import DisagreeingPromotionTraceIdsError
 from databasise.seam.rest import create_app
+from databasise.seam.trace_store import TraceStore
+from databasise.wirings.resolve import all_wirings
 from fastapi.testclient import TestClient
 
 _QUERY_TEXT = "Which films did Ed Wood direct?"
@@ -163,3 +170,282 @@ async def test_both_transports_produce_the_same_envelope_for_the_same_query(synt
         assert node_fields
         for key in node_fields:
             assert in_process_node[key] == rest_node[key], f"trace node field {key!r} diverged"
+
+
+# --------------------------------------------------------------------------------------------- #
+# 07-03-PLAN.md Task 3: promote/rollback/retire in-process/REST/MCP parity, and refusal parity.
+#
+# A trace token is inserted directly rather than through `TraceStore.persist()` (which mints a
+# fresh `secrets.token_urlsafe()` reference every call, D-06) — a fixed, caller-chosen token lets
+# three independent, isolated store roots each resolve the identical `promotion_trace_ids` value,
+# which is what makes "ledger records equal on every column except `id` and `created_at`" true
+# literally, including `promotion_trace_ids` and `alias` themselves, rather than only up to the
+# unavoidable per-store randomness `TraceStore.persist()` would otherwise introduce.
+# --------------------------------------------------------------------------------------------- #
+
+
+def _seed_fixed_trace(store_root, arm_name: str, *, token: str) -> str:
+    resolved = next(resolved for name, resolved in all_wirings() if name == arm_name)
+    node_ids = sorted(resolved.get("nodes", {}).keys())
+    fake_record = {
+        "run_id": f"fake-run-{arm_name}",
+        "wiring_id": resolved.get("wiring_id"),
+        "wiring_instance_hash": f"sha256:{'0' * 63}{len(node_ids) % 10}",
+        "arm_id": "seam",
+        "nodes": [{"node_id": node_id} for node_id in node_ids],
+    }
+    trace_store = TraceStore(store_root)
+    trace_store._conn.execute(
+        "INSERT INTO traces (token, run_record, created_at) VALUES (?, ?, ?)",
+        (token, json.dumps(fake_record), datetime.now(UTC).isoformat()),
+    )
+    trace_store._conn.commit()
+    return token
+
+
+def _mcp_available() -> bool:
+    try:
+        import databasise.mcp  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+async def _mcp_server(**kwargs):
+    from databasise.mcp import create_server
+
+    return create_server(**kwargs)
+
+
+def _mcp_tool_json(result) -> dict:
+    text = "".join(getattr(item, "text", "") or "" for item in result.content)
+    return json.loads(text)
+
+
+_PROMOTION_RESPONSE_EXCLUDED_FIELDS = frozenset({"generation_ordinal"})
+
+
+def _assert_ledger_records_equal_across_transports(records: dict[str, LedgerRecord]) -> None:
+    """Every `LedgerRecord` field (never `id`/`created_at` — neither is a dataclass field at all)
+    must be identical across every named transport's own store."""
+    compared_fields = list(LedgerRecord.__dataclass_fields__)
+    assert compared_fields
+    for field in compared_fields:
+        values = {name: getattr(record, field) for name, record in records.items()}
+        assert len(set(map(str, values.values()))) == 1, f"ledger field {field!r} diverged: {values}"
+
+
+async def test_promote_parity_across_three_transports(tmp_path):
+    if not _mcp_available():
+        pytest.skip("the `mcp` extra is not installed")
+
+    alias = "three-transport-promote-alias"
+    roots = {name: tmp_path / f"promote-{name}" for name in ("in_process", "rest", "mcp")}
+    for root in roots.values():
+        root.mkdir()
+
+    trace_ip = _seed_fixed_trace(roots["in_process"], "naive", token="fixed-promote-trace")
+    in_process_engine = Databasise(store_root=roots["in_process"], workspace="promote-3t-ip")
+    in_process_result = await in_process_engine.promote(alias, [trace_ip], "human_edit")
+
+    trace_rest = _seed_fixed_trace(roots["rest"], "naive", token="fixed-promote-trace")
+    rest_app = create_app(store_root=roots["rest"], workspace="promote-3t-rest")
+    rest_response = TestClient(rest_app).post(
+        "/promote", json={"alias": alias, "trace_ids": [trace_rest], "change_origin": "human_edit"}
+    )
+    assert rest_response.status_code == 200
+    rest_body = rest_response.json()
+
+    trace_mcp = _seed_fixed_trace(roots["mcp"], "naive", token="fixed-promote-trace")
+    mcp_server = await _mcp_server(store_root=roots["mcp"], workspace="promote-3t-mcp")
+    mcp_body = _mcp_tool_json(
+        await mcp_server.call_tool(
+            "promote",
+            {"args": {"alias": alias, "trace_ids": [trace_mcp], "change_origin": "human_edit"}},
+        )
+    )
+
+    in_process_body = in_process_result.model_dump()
+    compared_fields = [f for f in in_process_body if f not in _PROMOTION_RESPONSE_EXCLUDED_FIELDS]
+    assert compared_fields
+    for field in compared_fields:
+        assert in_process_body[field] == rest_body[field] == mcp_body[field], (
+            f"promote response field {field!r} diverged across transports"
+        )
+
+    _assert_ledger_records_equal_across_transports(
+        {name: Ledger(root).by_alias(alias) for name, root in roots.items()}
+    )
+
+
+async def test_rollback_parity_across_three_transports(tmp_path):
+    if not _mcp_available():
+        pytest.skip("the `mcp` extra is not installed")
+
+    alias = "three-transport-rollback-alias"
+    roots = {name: tmp_path / f"rollback-{name}" for name in ("in_process", "rest", "mcp")}
+    for root in roots.values():
+        root.mkdir()
+
+    # Two identically-seeded promotions per store (1.0.0, then 1.1.0 — same arm, MINOR bump),
+    # then roll back to 1.0.0.
+    for name, root in roots.items():
+        trace_1 = _seed_fixed_trace(root, "naive", token=f"fixed-rollback-seed-1-{name}")
+        trace_2 = _seed_fixed_trace(root, "naive", token=f"fixed-rollback-seed-2-{name}")
+        seed_engine = Databasise(store_root=root, workspace=f"rollback-3t-seed-{name}")
+        await seed_engine.promote(alias, [trace_1], "human_edit")
+        await seed_engine.promote(alias, [trace_2], "human_edit")
+
+    trace_ip = _seed_fixed_trace(roots["in_process"], "naive", token="fixed-rollback-trace")
+    in_process_engine = Databasise(store_root=roots["in_process"], workspace="rollback-3t-ip")
+    in_process_result = await in_process_engine.rollback(alias, "1.0.0", [trace_ip], "human_edit")
+
+    trace_rest = _seed_fixed_trace(roots["rest"], "naive", token="fixed-rollback-trace")
+    rest_app = create_app(store_root=roots["rest"], workspace="rollback-3t-rest")
+    rest_response = TestClient(rest_app).post(
+        "/rollback",
+        json={
+            "alias": alias,
+            "version": "1.0.0",
+            "trace_ids": [trace_rest],
+            "change_origin": "human_edit",
+        },
+    )
+    assert rest_response.status_code == 200
+    rest_body = rest_response.json()
+
+    trace_mcp = _seed_fixed_trace(roots["mcp"], "naive", token="fixed-rollback-trace")
+    mcp_server = await _mcp_server(store_root=roots["mcp"], workspace="rollback-3t-mcp")
+    mcp_body = _mcp_tool_json(
+        await mcp_server.call_tool(
+            "rollback",
+            {
+                "args": {
+                    "alias": alias,
+                    "version": "1.0.0",
+                    "trace_ids": [trace_mcp],
+                    "change_origin": "human_edit",
+                }
+            },
+        )
+    )
+
+    in_process_body = in_process_result.model_dump()
+    compared_fields = [f for f in in_process_body if f not in _PROMOTION_RESPONSE_EXCLUDED_FIELDS]
+    assert compared_fields
+    for field in compared_fields:
+        assert in_process_body[field] == rest_body[field] == mcp_body[field], (
+            f"rollback response field {field!r} diverged across transports"
+        )
+
+    _assert_ledger_records_equal_across_transports(
+        {name: Ledger(root).by_alias(alias) for name, root in roots.items()}
+    )
+
+
+async def test_retire_parity_across_three_transports(tmp_path):
+    if not _mcp_available():
+        pytest.skip("the `mcp` extra is not installed")
+
+    alias = "three-transport-retire-alias"
+    roots = {name: tmp_path / f"retire-{name}" for name in ("in_process", "rest", "mcp")}
+    for root in roots.values():
+        root.mkdir()
+
+    # naive (1.0.0) then bypass (2.0.0, MAJOR — differing declared surface), so the active
+    # generation is not the one being retired (1.0.0).
+    for name, root in roots.items():
+        trace_naive = _seed_fixed_trace(root, "naive", token=f"fixed-retire-seed-naive-{name}")
+        trace_bypass = _seed_fixed_trace(root, "bypass", token=f"fixed-retire-seed-bypass-{name}")
+        seed_engine = Databasise(store_root=root, workspace=f"retire-3t-seed-{name}")
+        await seed_engine.promote(alias, [trace_naive], "human_edit")
+        await seed_engine.promote(alias, [trace_bypass], "human_edit")
+
+    trace_ip = _seed_fixed_trace(roots["in_process"], "naive", token="fixed-retire-trace")
+    in_process_engine = Databasise(store_root=roots["in_process"], workspace="retire-3t-ip")
+    in_process_result = await in_process_engine.retire(alias, "1.0.0", [trace_ip], "human_edit")
+
+    trace_rest = _seed_fixed_trace(roots["rest"], "naive", token="fixed-retire-trace")
+    rest_app = create_app(store_root=roots["rest"], workspace="retire-3t-rest")
+    rest_response = TestClient(rest_app).post(
+        "/retire",
+        json={
+            "alias": alias,
+            "version": "1.0.0",
+            "trace_ids": [trace_rest],
+            "change_origin": "human_edit",
+        },
+    )
+    assert rest_response.status_code == 200
+    rest_body = rest_response.json()
+
+    trace_mcp = _seed_fixed_trace(roots["mcp"], "naive", token="fixed-retire-trace")
+    mcp_server = await _mcp_server(store_root=roots["mcp"], workspace="retire-3t-mcp")
+    mcp_body = _mcp_tool_json(
+        await mcp_server.call_tool(
+            "retire",
+            {
+                "args": {
+                    "alias": alias,
+                    "version": "1.0.0",
+                    "trace_ids": [trace_mcp],
+                    "change_origin": "human_edit",
+                }
+            },
+        )
+    )
+
+    in_process_body = in_process_result.model_dump()
+    compared_fields = [f for f in in_process_body if f not in _PROMOTION_RESPONSE_EXCLUDED_FIELDS]
+    assert compared_fields
+    for field in compared_fields:
+        assert in_process_body[field] == rest_body[field] == mcp_body[field], (
+            f"retire response field {field!r} diverged across transports"
+        )
+
+    # by_alias() deliberately excludes tombstoned rows (07-01-SUMMARY.md) — it would return the
+    # still-active `bypass`/2.0.0 seed generation, not the tombstone this test wrote. The tombstone
+    # is the latest record naming the (alias, "1.0.0") generation specifically.
+    _assert_ledger_records_equal_across_transports(
+        {name: Ledger(root).generation_state(alias, "1.0.0") for name, root in roots.items()}
+    )
+
+
+async def test_refusal_parity_across_three_transports(tmp_path):
+    """One refusing input — a disagreeing trace-id pair — refuses on all three transports, all
+    three naming the identical refusal class, with nothing written to the ledger. A single shared
+    store is safe here: a refusal fires before any write (test_promote.py's own
+    `test_disagreeing_trace_ids_refuse_rather_than_pick_one` proves the identical property
+    in-process), so driving all three transports against it accumulates no state."""
+    if not _mcp_available():
+        pytest.skip("the `mcp` extra is not installed")
+
+    store_root = tmp_path / "refusal-3t-store"
+    store_root.mkdir()
+    trace_naive = _seed_fixed_trace(store_root, "naive", token="fixed-refusal-naive")
+    trace_bypass = _seed_fixed_trace(store_root, "bypass", token="fixed-refusal-bypass")
+    alias = "three-transport-refusal-alias"
+    body = {"alias": alias, "trace_ids": [trace_naive, trace_bypass], "change_origin": "human_edit"}
+
+    in_process_engine = Databasise(store_root=store_root, workspace="refusal-3t-ip")
+    with pytest.raises(DisagreeingPromotionTraceIdsError) as in_process_exc_info:
+        await in_process_engine.promote(alias, [trace_naive, trace_bypass], "human_edit")
+    assert type(in_process_exc_info.value).__name__ == "DisagreeingPromotionTraceIdsError"
+
+    rest_app = create_app(store_root=store_root, workspace="refusal-3t-rest")
+    rest_response = TestClient(rest_app).post("/promote", json=body)
+    assert rest_response.status_code == 422
+    assert rest_response.json()["refusal_type"] == "DisagreeingPromotionTraceIdsError"
+
+    from databasise.mcp import create_server
+    from databasise.mcp._sdk import import_sdk
+
+    ToolError = import_sdk("mcp.server.mcpserver.exceptions").ToolError
+    mcp_server = create_server(store_root=store_root, workspace="refusal-3t-mcp")
+    with pytest.raises(ToolError) as mcp_exc_info:
+        await mcp_server.call_tool("promote", {"args": body})
+    mcp_detail_text = str(mcp_exc_info.value)
+    mcp_detail = json.loads(mcp_detail_text[mcp_detail_text.index("{") :])
+    assert mcp_detail["refusal_type"] == "DisagreeingPromotionTraceIdsError"
+
+    assert Ledger(store_root)._conn.execute("SELECT COUNT(*) FROM ledger").fetchone()[0] == 0
