@@ -180,7 +180,9 @@ from databasise.seam.evidence import (
 from databasise.seam.compare import compare_arms
 from databasise.seam.promotion import (
     CHANGE_ORIGINS,
+    PROMOTION_VERBS,
     PROVENANCE_OPERATOR_ASSERTED,
+    PromotionVerb,
     RECORD_KIND_PROMOTION,
     RECORD_KIND_ROLLBACK,
     RECORD_KIND_TOMBSTONE,
@@ -207,6 +209,7 @@ from databasise.seam.refusals import (
     UnknownDocumentError,
     UnknownGenerationVersionError,
     UnknownJobError,
+    UnrecognisedPromotionVerbError,
 )
 from databasise.seam.selectors import Selector, _wiring_effects, resolve_selector
 from databasise.seam.tokens import TokenBreakdownEntry, assemble_token_breakdown
@@ -1146,7 +1149,7 @@ class Databasise:
         trace_ids: list[str],
         change_origin: str | None,
         *,
-        verb: str = "operator-asserted",
+        verb: PromotionVerb = "operator-asserted",
     ) -> PromotionResult:
         """The tenth §18 operation this seam exposes (07-01-PLAN.md, MACH-07/API-09) — RIG §PR.3's
         operator-asserted promotion path. The caller states an alias, the trace ids they read to
@@ -1154,9 +1157,12 @@ class Databasise:
         (``mutation_id``), the mutation class, and the minted semver are all derived, never
         accepted as caller input (D-04/D-10/D-11).
 
-        Refusal order (D-09): a gate-ladder verb not built in this milestone (``check``,
-        ``preview``, ``run``) refuses immediately, before anything else runs — there is nothing to
-        resolve. Otherwise: an invalid ``change_origin`` refuses; an empty, unknown, or disagreeing
+        Refusal order (D-09, amended 07-04-PLAN.md closing 07-REVIEW.md CR-01): a ``verb`` outside
+        :data:`~databasise.seam.promotion.PROMOTION_VERBS`'s six declared literals refuses first,
+        by name, before anything else runs — before the not-built check and before any trace-id
+        resolution. Then a gate-ladder verb not built in this milestone (``check``, ``preview``,
+        ``run``) refuses immediately, before anything else runs — there is nothing to resolve.
+        Otherwise: an invalid ``change_origin`` refuses; an empty, unknown, or disagreeing
         ``trace_ids`` refuses (via :func:`~databasise.seam.promotion.resolve_single_arm`); the
         mutation class is derived against the alias's prior active generation (if any); a
         gate-adjudicated verb (``promote-next``, ``promote-now``) then refuses by posture — it
@@ -1168,6 +1174,9 @@ class Databasise:
         its own deliberate exception; the append is offloaded at this async call site via
         ``run_in_executor``.
         """
+        if verb not in PROMOTION_VERBS:
+            raise UnrecognisedPromotionVerbError(verb=verb)
+
         if verb in _NOT_BUILT_VERBS:
             raise GateVerbNotBuiltError(verb=verb)
 
@@ -1198,7 +1207,13 @@ class Databasise:
                 enforce_gate_verb_posture(verb, mutation_class)  # always raises
 
             if verb != "operator-asserted":
-                raise ValueError(f"unknown promotion verb {verb!r}")
+                # Unreachable by construction: promote()'s own top-of-body guard already raises
+                # UnrecognisedPromotionVerbError for anything outside PROMOTION_VERBS, and every
+                # member of that set is handled above (_NOT_BUILT_VERBS, _GATE_VERBS) or is this
+                # branch's own "operator-asserted". Kept as a backstop so a seventh PromotionVerb
+                # literal added without a matching branch here refuses by name instead of falling
+                # through into a ledger append (07-04-PLAN.md, closing 07-REVIEW.md CR-01).
+                raise UnrecognisedPromotionVerbError(verb=verb)
 
             prior_version = prior_record.minted_version if prior_record is not None else None
             prior_surface = (

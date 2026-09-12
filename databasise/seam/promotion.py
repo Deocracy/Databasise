@@ -27,7 +27,7 @@ bare id sets, so it can compare each shared node id's own ``component`` string.
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, Literal, get_args
 
 from databasise.parts.registry import PartRegistry
 from databasise.seam.refusals import (
@@ -56,6 +56,10 @@ RECORD_KIND_TOMBSTONE = "tombstone"
 PromotionVerb = Literal[
     "operator-asserted", "check", "preview", "run", "promote-next", "promote-now"
 ]
+# 07-04-PLAN.md (D-09, closing 07-REVIEW.md CR-01): the runtime guard's accepted set, derived from
+# PromotionVerb via typing.get_args rather than hand-restated — a seventh literal added above is
+# then automatically covered here, never a second hand-maintained list that can drift out of sync.
+PROMOTION_VERBS: frozenset[str] = frozenset(get_args(PromotionVerb))
 _NOT_BUILT_VERBS: tuple[str, ...] = ("check", "preview", "run")
 _GATE_VERBS: tuple[str, ...] = ("promote-next", "promote-now")
 
@@ -240,6 +244,7 @@ def enforce_gate_verb_posture(verb: str, mutation_class: MutationClass) -> None:
 
 __all__ = [
     "PromotionVerb",
+    "PROMOTION_VERBS",
     "MutationClass",
     "PROVENANCE_OPERATOR_ASSERTED",
     "CHANGE_ORIGINS",
