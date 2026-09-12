@@ -317,6 +317,8 @@ def _falsifier_ledger_record(*, mutation_id: str, alias: str) -> LedgerRecord:
         parity_records=[],
         promotion_provenance="operator_asserted",
         promotion_trace_ids=[],
+        change_origin="human_edit",
+        record_kind="promotion",
         alias=alias,
     )
 
