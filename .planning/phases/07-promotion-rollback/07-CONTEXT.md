@@ -75,8 +75,7 @@ this phase consumes any of the three.
   mutation id being returned to (RIG §PR.2), carrying no new arm run and no verdict, and the alias
   repoints to that generation. An unknown semver, a semver minted under a different alias, or a
   tombstoned target refuses by name.
-- **D-06: The semver is minted by the machine at promotion; the operator states nothing about
-  versions.** First promotion of an alias mints `1.0.0`. Thereafter, per CONTRACT §0's fixed
+- **D-06: The semver is minted by the machine at promotion; the operator states nothing about versions.** First promotion of an alias mints `1.0.0`. Thereafter, per CONTRACT §0's fixed
   rule: **MAJOR** when the promoted wiring's declared socket / capability / effects surface differs
   from the prior active generation's; otherwise **MINOR**. **PATCH is never minted on the operator
   path** — no measured "bug fix" distinction exists without a gate. Running an arm never mints
@@ -90,8 +89,7 @@ this phase consumes any of the three.
   promoting the same wiring again later is a new generation with a new semver, never a
   resurrection (RIG §PR.2, §0.4). This makes SC1's "tombstoned losers are never lifted" real in
   production, not only against a test-seeded row.
-- **D-08: `change_origin` is required input on promote, rollback and retire, both values
-  accepted.** Absent → refuse by name. `machine_mutation` is accepted as a value even though no
+- **D-08: `change_origin` is required input on promote, rollback and retire, both values accepted.** Absent → refuse by name. `machine_mutation` is accepted as a value even though no
   proposer exists in this milestone, because CONTRACT §7 makes the field orthogonal to
   `promotion_provenance` and the contract is frozen input the seam does not re-litigate. Never
   defaulted, never inferred.
