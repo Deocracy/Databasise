@@ -1,0 +1,491 @@
+{
+ "n_docs": 20,
+ "n_queries": 116,
+ "n_keyword": 20,
+ "n_emb_texts": 532,
+ "n_gen_texts": 238,
+ "gold2": [
+  {
+   "id": "q1",
+   "gold": [
+    "scott_derrickson",
+    "ed_wood"
+   ]
+  },
+  {
+   "id": "q2",
+   "gold": [
+    "kiss_and_tell_1945_film",
+    "shirley_temple"
+   ]
+  }
+ ],
+ "queries": [
+  {
+   "id": "a_kiss_for_corliss#1",
+   "doc": "a_kiss_for_corliss"
+  },
+  {
+   "id": "a_kiss_for_corliss#2",
+   "doc": "a_kiss_for_corliss"
+  },
+  {
+   "id": "a_kiss_for_corliss#3",
+   "doc": "a_kiss_for_corliss"
+  },
+  {
+   "id": "a_kiss_for_corliss#4",
+   "doc": "a_kiss_for_corliss"
+  },
+  {
+   "id": "a_kiss_for_corliss#5",
+   "doc": "a_kiss_for_corliss"
+  },
+  {
+   "id": "a_kiss_for_corliss#6",
+   "doc": "a_kiss_for_corliss"
+  },
+  {
+   "id": "adam_collis#1",
+   "doc": "adam_collis"
+  },
+  {
+   "id": "adam_collis#2",
+   "doc": "adam_collis"
+  },
+  {
+   "id": "adam_collis#3",
+   "doc": "adam_collis"
+  },
+  {
+   "id": "adam_collis#4",
+   "doc": "adam_collis"
+  },
+  {
+   "id": "adam_collis#5",
+   "doc": "adam_collis"
+  },
+  {
+   "id": "adam_collis#6",
+   "doc": "adam_collis"
+  },
+  {
+   "id": "charles_craft#1",
+   "doc": "charles_craft"
+  },
+  {
+   "id": "charles_craft#2",
+   "doc": "charles_craft"
+  },
+  {
+   "id": "charles_craft#3",
+   "doc": "charles_craft"
+  },
+  {
+   "id": "charles_craft#4",
+   "doc": "charles_craft"
+  },
+  {
+   "id": "charles_craft#5",
+   "doc": "charles_craft"
+  },
+  {
+   "id": "charles_craft#6",
+   "doc": "charles_craft"
+  },
+  {
+   "id": "conrad_brooks#1",
+   "doc": "conrad_brooks"
+  },
+  {
+   "id": "conrad_brooks#2",
+   "doc": "conrad_brooks"
+  },
+  {
+   "id": "conrad_brooks#3",
+   "doc": "conrad_brooks"
+  },
+  {
+   "id": "conrad_brooks#4",
+   "doc": "conrad_brooks"
+  },
+  {
+   "id": "conrad_brooks#5",
+   "doc": "conrad_brooks"
+  },
+  {
+   "id": "conrad_brooks#6",
+   "doc": "conrad_brooks"
+  },
+  {
+   "id": "deliver_us_from_evil_2014_film#1",
+   "doc": "deliver_us_from_evil_2014_film"
+  },
+  {
+   "id": "deliver_us_from_evil_2014_film#2",
+   "doc": "deliver_us_from_evil_2014_film"
+  },
+  {
+   "id": "deliver_us_from_evil_2014_film#3",
+   "doc": "deliver_us_from_evil_2014_film"
+  },
+  {
+   "id": "deliver_us_from_evil_2014_film#5",
+   "doc": "deliver_us_from_evil_2014_film"
+  },
+  {
+   "id": "deliver_us_from_evil_2014_film#6",
+   "doc": "deliver_us_from_evil_2014_film"
+  },
+  {
+   "id": "doctor_strange_2016_film#1",
+   "doc": "doctor_strange_2016_film"
+  },
+  {
+   "id": "doctor_strange_2016_film#2",
+   "doc": "doctor_strange_2016_film"
+  },
+  {
+   "id": "doctor_strange_2016_film#3",
+   "doc": "doctor_strange_2016_film"
+  },
+  {
+   "id": "doctor_strange_2016_film#4",
+   "doc": "doctor_strange_2016_film"
+  },
+  {
+   "id": "doctor_strange_2016_film#5",
+   "doc": "doctor_strange_2016_film"
+  },
+  {
+   "id": "doctor_strange_2016_film#6",
+   "doc": "doctor_strange_2016_film"
+  },
+  {
+   "id": "ed_wood#1",
+   "doc": "ed_wood"
+  },
+  {
+   "id": "ed_wood#2",
+   "doc": "ed_wood"
+  },
+  {
+   "id": "ed_wood#3",
+   "doc": "ed_wood"
+  },
+  {
+   "id": "ed_wood#4",
+   "doc": "ed_wood"
+  },
+  {
+   "id": "ed_wood#5",
+   "doc": "ed_wood"
+  },
+  {
+   "id": "ed_wood#6",
+   "doc": "ed_wood"
+  },
+  {
+   "id": "ed_wood_film#1",
+   "doc": "ed_wood_film"
+  },
+  {
+   "id": "ed_wood_film#2",
+   "doc": "ed_wood_film"
+  },
+  {
+   "id": "ed_wood_film#3",
+   "doc": "ed_wood_film"
+  },
+  {
+   "id": "ed_wood_film#4",
+   "doc": "ed_wood_film"
+  },
+  {
+   "id": "ed_wood_film#5",
+   "doc": "ed_wood_film"
+  },
+  {
+   "id": "ed_wood_film#6",
+   "doc": "ed_wood_film"
+  },
+  {
+   "id": "janet_waldo#1",
+   "doc": "janet_waldo"
+  },
+  {
+   "id": "janet_waldo#2",
+   "doc": "janet_waldo"
+  },
+  {
+   "id": "janet_waldo#3",
+   "doc": "janet_waldo"
+  },
+  {
+   "id": "janet_waldo#5",
+   "doc": "janet_waldo"
+  },
+  {
+   "id": "janet_waldo#6",
+   "doc": "janet_waldo"
+  },
+  {
+   "id": "kiss_and_tell_1945_film#1",
+   "doc": "kiss_and_tell_1945_film"
+  },
+  {
+   "id": "kiss_and_tell_1945_film#2",
+   "doc": "kiss_and_tell_1945_film"
+  },
+  {
+   "id": "kiss_and_tell_1945_film#3",
+   "doc": "kiss_and_tell_1945_film"
+  },
+  {
+   "id": "kiss_and_tell_1945_film#5",
+   "doc": "kiss_and_tell_1945_film"
+  },
+  {
+   "id": "kiss_and_tell_1945_film#6",
+   "doc": "kiss_and_tell_1945_film"
+  },
+  {
+   "id": "lord_high_treasurer#1",
+   "doc": "lord_high_treasurer"
+  },
+  {
+   "id": "lord_high_treasurer#2",
+   "doc": "lord_high_treasurer"
+  },
+  {
+   "id": "lord_high_treasurer#3",
+   "doc": "lord_high_treasurer"
+  },
+  {
+   "id": "lord_high_treasurer#4",
+   "doc": "lord_high_treasurer"
+  },
+  {
+   "id": "lord_high_treasurer#5",
+   "doc": "lord_high_treasurer"
+  },
+  {
+   "id": "lord_high_treasurer#6",
+   "doc": "lord_high_treasurer"
+  },
+  {
+   "id": "meet_corliss_archer#1",
+   "doc": "meet_corliss_archer"
+  },
+  {
+   "id": "meet_corliss_archer#2",
+   "doc": "meet_corliss_archer"
+  },
+  {
+   "id": "meet_corliss_archer#3",
+   "doc": "meet_corliss_archer"
+  },
+  {
+   "id": "meet_corliss_archer#4",
+   "doc": "meet_corliss_archer"
+  },
+  {
+   "id": "meet_corliss_archer#5",
+   "doc": "meet_corliss_archer"
+  },
+  {
+   "id": "meet_corliss_archer#6",
+   "doc": "meet_corliss_archer"
+  },
+  {
+   "id": "meet_corliss_archer_tv_series#1",
+   "doc": "meet_corliss_archer_tv_series"
+  },
+  {
+   "id": "meet_corliss_archer_tv_series#2",
+   "doc": "meet_corliss_archer_tv_series"
+  },
+  {
+   "id": "meet_corliss_archer_tv_series#3",
+   "doc": "meet_corliss_archer_tv_series"
+  },
+  {
+   "id": "meet_corliss_archer_tv_series#4",
+   "doc": "meet_corliss_archer_tv_series"
+  },
+  {
+   "id": "meet_corliss_archer_tv_series#5",
+   "doc": "meet_corliss_archer_tv_series"
+  },
+  {
+   "id": "meet_corliss_archer_tv_series#6",
+   "doc": "meet_corliss_archer_tv_series"
+  },
+  {
+   "id": "scott_derrickson#1",
+   "doc": "scott_derrickson"
+  },
+  {
+   "id": "scott_derrickson#2",
+   "doc": "scott_derrickson"
+  },
+  {
+   "id": "scott_derrickson#3",
+   "doc": "scott_derrickson"
+  },
+  {
+   "id": "scott_derrickson#4",
+   "doc": "scott_derrickson"
+  },
+  {
+   "id": "scott_derrickson#5",
+   "doc": "scott_derrickson"
+  },
+  {
+   "id": "scott_derrickson#6",
+   "doc": "scott_derrickson"
+  },
+  {
+   "id": "secretary_of_state_for_constitutional_affairs#1",
+   "doc": "secretary_of_state_for_constitutional_affairs"
+  },
+  {
+   "id": "secretary_of_state_for_constitutional_affairs#2",
+   "doc": "secretary_of_state_for_constitutional_affairs"
+  },
+  {
+   "id": "secretary_of_state_for_constitutional_affairs#3",
+   "doc": "secretary_of_state_for_constitutional_affairs"
+  },
+  {
+   "id": "secretary_of_state_for_constitutional_affairs#5",
+   "doc": "secretary_of_state_for_constitutional_affairs"
+  },
+  {
+   "id": "secretary_of_state_for_constitutional_affairs#6",
+   "doc": "secretary_of_state_for_constitutional_affairs"
+  },
+  {
+   "id": "shirley_temple#1",
+   "doc": "shirley_temple"
+  },
+  {
+   "id": "shirley_temple#2",
+   "doc": "shirley_temple"
+  },
+  {
+   "id": "shirley_temple#3",
+   "doc": "shirley_temple"
+  },
+  {
+   "id": "shirley_temple#4",
+   "doc": "shirley_temple"
+  },
+  {
+   "id": "shirley_temple#5",
+   "doc": "shirley_temple"
+  },
+  {
+   "id": "shirley_temple#6",
+   "doc": "shirley_temple"
+  },
+  {
+   "id": "sinister_film#1",
+   "doc": "sinister_film"
+  },
+  {
+   "id": "sinister_film#2",
+   "doc": "sinister_film"
+  },
+  {
+   "id": "sinister_film#3",
+   "doc": "sinister_film"
+  },
+  {
+   "id": "sinister_film#4",
+   "doc": "sinister_film"
+  },
+  {
+   "id": "sinister_film#5",
+   "doc": "sinister_film"
+  },
+  {
+   "id": "sinister_film#6",
+   "doc": "sinister_film"
+  },
+  {
+   "id": "tyler_bates#1",
+   "doc": "tyler_bates"
+  },
+  {
+   "id": "tyler_bates#2",
+   "doc": "tyler_bates"
+  },
+  {
+   "id": "tyler_bates#3",
+   "doc": "tyler_bates"
+  },
+  {
+   "id": "tyler_bates#4",
+   "doc": "tyler_bates"
+  },
+  {
+   "id": "tyler_bates#5",
+   "doc": "tyler_bates"
+  },
+  {
+   "id": "tyler_bates#6",
+   "doc": "tyler_bates"
+  },
+  {
+   "id": "village_accountant#1",
+   "doc": "village_accountant"
+  },
+  {
+   "id": "village_accountant#2",
+   "doc": "village_accountant"
+  },
+  {
+   "id": "village_accountant#3",
+   "doc": "village_accountant"
+  },
+  {
+   "id": "village_accountant#4",
+   "doc": "village_accountant"
+  },
+  {
+   "id": "village_accountant#5",
+   "doc": "village_accountant"
+  },
+  {
+   "id": "village_accountant#6",
+   "doc": "village_accountant"
+  },
+  {
+   "id": "woodson_arkansas#1",
+   "doc": "woodson_arkansas"
+  },
+  {
+   "id": "woodson_arkansas#2",
+   "doc": "woodson_arkansas"
+  },
+  {
+   "id": "woodson_arkansas#3",
+   "doc": "woodson_arkansas"
+  },
+  {
+   "id": "woodson_arkansas#4",
+   "doc": "woodson_arkansas"
+  },
+  {
+   "id": "woodson_arkansas#5",
+   "doc": "woodson_arkansas"
+  },
+  {
+   "id": "woodson_arkansas#6",
+   "doc": "woodson_arkansas"
+  }
+ ],
+ "min_query_chars": 16,
+ "max_doc_chars": 1195
+}

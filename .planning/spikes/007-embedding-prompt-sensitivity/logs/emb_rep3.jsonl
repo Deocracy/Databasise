@@ -1,0 +1,6 @@
+{"ts": "2026-09-12T16:09:34.595768+00:00", "run": "emb_rep3", "event": "model_loaded", "model": "Qwen3-Embedding-0.6B-Q8_0.gguf", "pooling": "native", "effective_pooling": 3, "n_embd": 1024, "load_s": 2.02}
+{"ts": "2026-09-12T16:09:38.874217+00:00", "run": "emb_rep3", "event": "embedded", "n": 532, "embed_s": 4.278, "per_text_ms": 8.04}
+{"ts": "2026-09-12T16:09:40.632721+00:00", "run": "emb_rep3", "event": "saved", "path": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/007-embedding-prompt-sensitivity/results/vecs_emb_rep3.json"}
+{"ts": "2026-09-12T18:49:24.776664+00:00", "run": "emb_rep3", "event": "model_loaded", "model": "Qwen3-Embedding-0.6B-Q8_0.gguf", "pooling": "native", "effective_pooling": 3, "n_embd": 1024, "load_s": 0.55}
+{"ts": "2026-09-12T18:49:27.364988+00:00", "run": "emb_rep3", "event": "embedded", "n": 532, "embed_s": 2.588, "per_text_ms": 4.86}
+{"ts": "2026-09-12T18:49:27.733132+00:00", "run": "emb_rep3", "event": "saved", "path": "results/vecs_emb_rep3.json"}
