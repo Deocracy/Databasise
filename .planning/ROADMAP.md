@@ -309,12 +309,12 @@ Plans:
   4. ~~The owner's own document corpus is layered into the eval bundle before any promotion decision is taken on it~~ — **STRUCK 2026-09-11** *(deferred per `.planning/phases/07-promotion-rollback/07-GATE-AMENDMENT.md`: HARD-04 moves to the owner's in-depth testing / hardening phase, or the first gate-adjudicated promotion, whichever comes first — an operator-asserted promotion reads no eval bundle, so nothing in this phase consumes the owner-corpus layer. HARD-04 stays Pending.)*
   5. ~~The gate scripts fail on missing extraction instead of passing vacuously, and every ANATOMY §F row points at its landed repair with stale cross-document rows reconciled~~ — **STRUCK 2026-09-11** *(deferred per `.planning/phases/07-promotion-rollback/07-GATE-AMENDMENT.md`: HARD-01 and HARD-02 move to the same phase, same point of first need — neither is consumed by the promote path, and where the repairs land relative to the never-edited `docs/system-model/` mirror travels with the deferral, unresolved. Both stay Pending.)*
 
-**Plans**: 3 plans across 3 sequential waves (each plan modifies files the previous one created, so no two run in parallel)
+**Plans**: 1/3 plans executed across 3 sequential waves (each plan modifies files the previous one created, so no two run in parallel)
 
 Plans:
 **Wave 1** *(tracer — runs alone, before any expansion)*
 
-- [ ] 07-01-PLAN.md — Tracer: an operator promotes a wiring in-process, one row lands in the append-only ledger, and the alias selector resolves to it through the unchanged Phase 4 read path — plus the four additive columns, the derived semver and mutation class, and SC3's posture refusal
+- [x] 07-01-PLAN.md — Tracer: an operator promotes a wiring in-process, one row lands in the append-only ledger, and the alias selector resolves to it through the unchanged Phase 4 read path — plus the four additive columns, the derived semver and mutation class, and SC3's posture refusal
 
 **Wave 2** *(blocked on 07-01 — shares `engine.py`, `promotion.py`, `refusals.py`)*
 
@@ -337,7 +337,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. The Seam | 5/5 | Complete    | 2026-09-06 |
 | 5. Opaque-Side Admission | 9/9 | Complete    | 2026-09-08 |
 | 6. HippoRAG 2 & Side-by-Side | 17/17 | In Progress|  |
-| 7. Promotion & Rollback | 0/TBD | Not started | - |
+| 7. Promotion & Rollback | 1/3 | In Progress|  |
 
 ## Requirement Coverage
 
