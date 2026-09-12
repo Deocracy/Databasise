@@ -307,3 +307,11 @@ None - no external service configuration required.
 
 *Phase: 07-promotion-rollback*
 *Completed: 2026-09-12*
+
+## Self-Check: PASSED
+
+All key files confirmed present on disk (`databasise/seam/promotion.py`,
+`databasise/tests/seam/test_promote.py`, `databasise/tests/seam/test_promotion_posture.py`, this
+SUMMARY). All four commit hashes (`953b203`, `a1b9d40`, `37ac327`, `465025d`) confirmed present in
+`git log`. Re-ran the plan's own three `<verify>` blocks and the plan-level `<verification>` block
+(full `uv run pytest -q`: 1006 passed, 1 skipped; `check_import_boundary`: exit 0) — all pass.
