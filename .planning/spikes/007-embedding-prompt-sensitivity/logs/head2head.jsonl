@@ -1,0 +1,2 @@
+{"ts": "2026-09-12T16:27:58.050924+00:00", "run": "head2head", "event": "evaluated", "designs": 12, "determinism_max_abs_diff_emb": 0.0, "determinism_max_abs_diff_gen": 0.0}
+{"ts": "2026-09-12T18:56:55.122664+00:00", "run": "head2head", "event": "evaluated", "designs": 12, "determinism_max_abs_diff_emb": 0.0, "determinism_max_abs_diff_gen": 0.0}
