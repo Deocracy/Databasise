@@ -144,4 +144,5 @@ Token plan: `P` prefilled once. Step 1: `S0 += s1`; `E_1 = copy(P) + s1 + [EMB]`
 2. One generic `facts` table versus a typed catalog. v0.1 is generic.
 3. Whether `folio` ops are allowed during bulk ingest or only from `respond=ops` sections the frontier authored. v0.1 allows both; the sandbox rule (D-MS-01) holds either way.
 4. Whether `doc_prefix` includes the chat-template system turn. v0.1 says yes, because the ops instruction must be in the template and the prefix must be everything before the section.
-5. `[EMB]` token choice per model, recorded when spike 002 inspects each tokenizer.
+5. `[EMB]` token choice per model, recorded when spike 002 inspects each tokenizer. Resolved by 002: `emb=reserved:130080;rq=reserved:130081` for MiniCPM5-2B.
+6. **Evidence as a quoted substring (v0.2 candidate, raised by spike 003).** Character-offset spans are not producible by the frontier teacher (8/8 and 10/10 ops rejected per round). v0.2 should carry `quote` (verbatim substring) and let the harness resolve offsets, keeping Proof's containment check on the resolved span.
