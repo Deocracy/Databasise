@@ -16,7 +16,7 @@
     {
       "number": "3",
       "name": "LightRAG Query Side",
-      "status": "in_progress"
+      "status": "pending"
     },
     {
       "number": "4",
@@ -31,7 +31,7 @@
     {
       "number": "6",
       "name": "HippoRAG 2 & Side-by-Side",
-      "status": "in_progress"
+      "status": "pending"
     },
     {
       "number": "7",
@@ -40,9 +40,9 @@
     }
   ],
   "next": {
-    "command": "/gsd:progress --next",
-    "label": "Advance to the next step",
-    "reason": "Phase 6 of 7 · executing"
+    "command": "/gsd:progress",
+    "label": "Show progress",
+    "reason": "Unsure of state — showing progress"
   },
-  "updated_at": "2026-09-12T18:31:16.371Z"
+  "updated_at": "2026-09-12T20:14:03.974Z"
 }
