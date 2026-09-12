@@ -1,0 +1,7 @@
+loaded
+prompt_len 138
+flipped
+create_completion-after-flip OK len=4
+single-seq raw prefill OK
+sample-last 1387
+done

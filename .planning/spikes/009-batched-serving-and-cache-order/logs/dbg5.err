@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/009-batched-serving-and-cache-order/dbg5.py", line 23, in <module>
+    crumb("loaded")
+  File "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/009-batched-serving-and-cache-order/dbg5.py", line 17, in crumb
+    print(s, flush=True)
+BrokenPipeError: [Errno 32] Broken pipe
+Exception ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>
+BrokenPipeError: [Errno 32] Broken pipe

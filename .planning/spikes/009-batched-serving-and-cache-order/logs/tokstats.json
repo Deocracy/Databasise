@@ -1,0 +1,30 @@
+{
+ "ts": "2026-09-12T21:40:24.550615+00:00",
+ "corpus_hash": "ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd",
+ "docs": 20,
+ "sections": 19,
+ "prompt_toks": {
+  "min": 281,
+  "p50": 323,
+  "max": 384,
+  "mean": 324.3
+ },
+ "shared_prefix_toks": 105,
+ "tail_toks": {
+  "min": 280,
+  "p50": 322,
+  "max": 383
+ },
+ "shared_frac_after": 0.2451,
+ "instr_before_tail_p50": 321,
+ "note": "instr-before puts the shared instruction first: shared run is INSTRUCTION+prefix; measured exactly in cacheorder.py",
+ "shard_prefix_toks": [
+  111,
+  111,
+  111,
+  111
+ ],
+ "boundary_merge_delta": [
+  1
+ ]
+}

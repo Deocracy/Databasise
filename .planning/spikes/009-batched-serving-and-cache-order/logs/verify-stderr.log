@@ -1,0 +1,17 @@
+init: embeddings required but some input tokens were not marked as outputs -> overriding
+init: embeddings required but some input tokens were not marked as outputs -> overriding
+init: embeddings required but some input tokens were not marked as outputs -> overriding
+init: embeddings required but some input tokens were not marked as outputs -> overriding
+init: embeddings required but some input tokens were not marked as outputs -> overriding
+Traceback (most recent call last):
+  File "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/009-batched-serving-and-cache-order/verify.py", line 58, in <module>
+    text, ids, ttft, dec = slot_decode_grammar(llm, j + 1, t, GRAMMAR, CAP)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/009-batched-serving-and-cache-order/batchserve.py", line 113, in slot_decode_grammar
+    raw_decode_rows(llm, [(0, L - 1, prompt_toks[-1], True)])
+  File "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/009-batched-serving-and-cache-order/batchserve.py", line 63, in raw_decode_rows
+    llm._ctx.decode(llm._batch)  # raises on nonzero return
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/.venv/lib/python3.12/site-packages/llama_cpp/_internals.py", line 334, in decode
+    raise RuntimeError(f"llama_decode returned {return_code}")
+RuntimeError: llama_decode returned -1

@@ -1,0 +1,5 @@
+refs [416, 416]
+prefill 2-seq OK (2 outputs)
+sampler idx sample [844, 416] match refs: [False, True]
+logits_ith argmax [5, 33] match refs: [False, False]
+same-pos re-decode FAIL (as suspected) RuntimeError('llama_decode returned -1')

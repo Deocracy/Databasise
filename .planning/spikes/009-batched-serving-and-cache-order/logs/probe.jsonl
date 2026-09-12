@@ -1,0 +1,14 @@
+{"ts": "2026-09-12T21:40:25.392008+00:00", "event": "corpus", "docs": 20, "corpus_hash": "ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd", "lens": [["ed_wood", 135], ["sinister_film", 285], ["janet_waldo", 302]]}
+{"ts": "2026-09-12T21:40:25.392042+00:00", "event": "prompt_chars", "n": 1348}
+{"ts": "2026-09-12T21:40:26.133841+00:00", "event": "load_2b", "seconds": 0.742}
+{"ts": "2026-09-12T21:40:26.134529+00:00", "event": "prompt_tokens", "n": 330}
+{"ts": "2026-09-12T21:40:27.531970+00:00", "event": "grammar_decode", "rep": 0, "seconds": 1.397, "prompt_tokens": 330, "completion_tokens": 48, "text_len": 178}
+{"ts": "2026-09-12T21:40:28.652452+00:00", "event": "grammar_decode", "rep": 1, "seconds": 1.12, "prompt_tokens": 330, "completion_tokens": 48, "text_len": 178}
+{"ts": "2026-09-12T21:40:29.820021+00:00", "event": "grammar_decode", "rep": 2, "seconds": 1.167, "prompt_tokens": 330, "completion_tokens": 48, "text_len": 178}
+{"ts": "2026-09-12T21:40:30.217160+00:00", "event": "greedy_decode", "rep": 0, "seconds": 0.397, "out_tokens": 48}
+{"ts": "2026-09-12T21:40:30.611866+00:00", "event": "greedy_decode", "rep": 1, "seconds": 0.395, "out_tokens": 48}
+{"ts": "2026-09-12T21:40:31.011437+00:00", "event": "greedy_decode", "rep": 2, "seconds": 0.4, "out_tokens": 48}
+{"ts": "2026-09-12T21:40:31.347663+00:00", "event": "load_06b", "seconds": 0.336}
+{"ts": "2026-09-12T21:40:31.355314+00:00", "event": "embed_q", "rep": 0, "seconds": 0.0076, "dim": 1024}
+{"ts": "2026-09-12T21:40:31.363239+00:00", "event": "embed_q", "rep": 1, "seconds": 0.0079, "dim": 1024}
+{"ts": "2026-09-12T21:40:31.369418+00:00", "event": "embed_q", "rep": 2, "seconds": 0.0062, "dim": 1024}

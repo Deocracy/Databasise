@@ -1,0 +1,5 @@
+lens 18
+prefill seq0 all-out OK
+cp(0->1) OK
+cont seq1 OK
+sample OK 416

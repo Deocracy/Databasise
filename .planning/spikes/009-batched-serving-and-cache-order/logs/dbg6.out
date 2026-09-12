@@ -1,0 +1,5 @@
+refs [416, 416]
+2-seq prefill OK
+get_logits null=False
+full-buffer argmax [416, 416] match=[True, True]
+done

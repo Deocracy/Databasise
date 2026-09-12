@@ -1,0 +1,3 @@
+K=1 prompt2 equal=False got_len=223 ref_len=153
+greedy firsts [4945, 4945, 4945, 4945] vs generate [8869, 8869, 8869, 8869]
+done

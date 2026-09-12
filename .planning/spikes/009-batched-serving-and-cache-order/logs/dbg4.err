@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/009-batched-serving-and-cache-order/dbg4.py", line 39, in <module>
+    l0 = np.ctypeslib.as_array(llm._ctx.get_logits_ith(0),
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/.venv/lib/python3.12/site-packages/numpy/ctypeslib/_ctypeslib.py", line 557, in as_array
+    obj = ctypes.cast(obj, p_arr_type).contents
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: NULL pointer access

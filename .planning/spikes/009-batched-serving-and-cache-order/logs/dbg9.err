@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/009-batched-serving-and-cache-order/dbg9.py", line 59, in <module>
+    raw_decode_rows(llm, [(s_, p, t, False) for (s_, p, t, _) in rows[:h]])
+  File "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/009-batched-serving-and-cache-order/batchserve.py", line 93, in raw_decode_rows
+    llm._ctx.decode(llm._batch)  # raises on nonzero return
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/.venv/lib/python3.12/site-packages/llama_cpp/_internals.py", line 334, in decode
+    raise RuntimeError(f"llama_decode returned {return_code}")
+RuntimeError: llama_decode returned -1

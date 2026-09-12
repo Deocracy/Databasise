@@ -1,0 +1,7 @@
+{
+ "event": "vllm_path",
+ "ok": false,
+ "installed": "imports",
+ "engine": "FAILED: see logs/vllm-run.err (this rig: triton needs /sbin/ldconfig, absent on NixOS)",
+ "llama_server": "no binary on PATH; skipped with reason"
+}

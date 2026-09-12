@@ -1,0 +1,6 @@
+{"ts": "2026-09-12T21:40:31.764566+00:00", "event": "pool", "ok": true, "docs": 20, "sections": 19, "corpus_hash": "ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd"}
+{"ts": "2026-09-12T21:40:32.500297+00:00", "event": "load", "ok": true, "seconds": 0.719, "vram_mb": 3683.0, "n_seq_note": "embedding=True for n_seq_max>1"}
+{"ts": "2026-09-12T21:40:32.503236+00:00", "event": "prompt_tokens", "ok": true, "lens": [323, 330, 373, 363]}
+{"ts": "2026-09-12T21:40:43.336971+00:00", "event": "verify_serial_grammar", "ok": true, "full_equal": [true, true, false, true], "first_equal": [true, true, true, true], "ref_lens": [178, 184, 153, 147], "got_lens": [178, 184, 223, 147]}
+{"ts": "2026-09-12T21:40:44.069078+00:00", "event": "verify_parallel_greedy", "ok": true, "full_equal": [true, false, false, true], "first_equal": [true, true, true, true], "dec_s": 0.019}
+{"ts": "2026-09-12T21:40:44.069130+00:00", "event": "verdict", "ok": true, "note": "tie flips allowed in b-full"}
