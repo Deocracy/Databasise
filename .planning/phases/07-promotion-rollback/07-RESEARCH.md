@@ -637,7 +637,7 @@ codebase's minimal two-branch minting rule.
 shown in `## Sources` below. All codebase claims are `[VERIFIED: <path>:<lines>]` — every file
 this document cites was opened with `Read` this session, not grepped.
 
-## Open Questions
+## Open Questions (RESOLVED — see 07-01/07-02/07-03 PLAN.md)
 
 1. **Does `promote()`'s single `verb` enum parameter (D-09) return a normal value or raise for the
    four gate-ladder verbs it refuses (`check`/`preview`/`run`/`promote-next`/`promote-now`)?**
