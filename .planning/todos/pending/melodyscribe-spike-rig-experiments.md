@@ -2,6 +2,9 @@
 title: MelodyScribe spike — the two rig experiments that settle feasibility
 date: 2026-09-11
 priority: medium
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-09-12
 ---
 
 Run as `/gsd-spike melodyscribe` when there is GPU time. Per D-MS-05 the model size is a variable: run experiment 2 (and where cheap, experiment 1) across a size sweep, 1B to 8B dense locally plus one mixture of experts with expert offload, and report the size-versus-accuracy curve before any size is chosen. The 2B references below are the current candidate, not a constraint. Two experiments, each with a pass condition stated before the run.
