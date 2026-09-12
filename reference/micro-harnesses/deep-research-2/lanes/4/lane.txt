@@ -1,0 +1,2 @@
+Lane 4: Hybrid models: one small model that embeds and generates.
+Unified training (GritLM, OneGen, generative representational instruction tuning successors), adapters that switch between embedding and generation modes, weight merging of an embedding-tuned model with its generative base (task arithmetic, TIES, DARE, model soups, mergekit reports) and what merging preserves, mixture-of-experts variants, and every measurement of generation degradation when the same weights embed. Also work that reuses one forward pass for both.

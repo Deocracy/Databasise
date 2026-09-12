@@ -31,3 +31,10 @@ reference/micro-harnesses/deep-research/papers/
 .planning/spikes/.venv/
 .planning/spikes/.models/
 .planning/spikes/.logs/
+reference/micro-harnesses/deep-research-2/.logs/
+reference/micro-harnesses/deep-research-2/lanes/*/papers/
+reference/micro-harnesses/deep-research-2/merged/papers/
+.planning/spikes/.venv-train/
+.planning/spikes/.venv-vllm/
+.planning/spikes/*/adapters/
+.planning/spikes/*/merged/

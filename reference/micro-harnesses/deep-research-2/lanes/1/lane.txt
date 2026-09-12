@@ -1,0 +1,2 @@
+Lane 1: Embedding model architectures.
+Bi-encoders from encoders and from decoders, pooling (mean, last token, latent attention, weighted), bidirectional conversion of causal models, Matryoshka representation learning, multi-vector late interaction (ColBERT family), learned sparse (SPLADE family), and what each choice costs at inference. Which architectures top MTEB, MMTEB, and BEIR now, with the fetched numbers.
