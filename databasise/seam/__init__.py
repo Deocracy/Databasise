@@ -14,8 +14,15 @@ from __future__ import annotations
 
 from databasise.seam.compare import compare_arms
 from databasise.seam.engine import Databasise
-from databasise.seam.envelope import ResponseEnvelope
+from databasise.seam.envelope import PromotionResult, ResponseEnvelope
 from databasise.seam.query import QueryObject
 from databasise.seam.selectors import Selector
 
-__all__ = ["Databasise", "QueryObject", "ResponseEnvelope", "Selector", "compare_arms"]
+__all__ = [
+    "Databasise",
+    "PromotionResult",
+    "QueryObject",
+    "ResponseEnvelope",
+    "Selector",
+    "compare_arms",
+]

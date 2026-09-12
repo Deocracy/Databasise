@@ -154,6 +154,7 @@ from databasise.foreign.v1_corpus_adapter import (
     STATUS_WALL_CLOCK_CEILING_SECONDS,
 )
 from databasise.identity.canon import canonicalise
+from databasise.ledger.ledger import Ledger, LedgerRecord
 from databasise.parts.registry import PartRegistry, default_registry
 from databasise.runner import scheduler as _scheduler
 from databasise.runner.trace import NodeTrace, RunRecord
@@ -169,7 +170,7 @@ from databasise.seam.corpus import (
     Page,
     generated_on_disk_name,
 )
-from databasise.seam.envelope import ResponseEnvelope, SeamEvent
+from databasise.seam.envelope import PromotionResult, ResponseEnvelope, SeamEvent
 from databasise.seam.evidence import (
     CHUNKS_NAMESPACE,
     EvidenceRef,
@@ -177,10 +178,25 @@ from databasise.seam.evidence import (
     resolve_evidence_ref,
 )
 from databasise.seam.compare import compare_arms
+from databasise.seam.promotion import (
+    CHANGE_ORIGINS,
+    PROVENANCE_OPERATOR_ASSERTED,
+    RECORD_KIND_PROMOTION,
+    _GATE_VERBS,
+    _NOT_BUILT_VERBS,
+    declared_surface,
+    derive_mutation_class,
+    enforce_gate_verb_posture,
+    mint_version,
+    resolve_single_arm,
+    resolved_wiring_for_arm,
+)
 from databasise.seam.query import QueryObject, check_consumable
 from databasise.seam.refusals import (
     EmptyComparisonRequestError,
     ForeignEngineRefusalError,
+    GateVerbNotBuiltError,
+    InvalidChangeOriginError,
     MutableStoreComparisonExcludedError,
     NoRawUploadPathForModalityError,
     NoWritePathForModalityError,
@@ -1083,6 +1099,123 @@ class Databasise:
         if debug:
             return record
         return {key: value for key, value in record.items() if key in _NON_DEBUG_TRACE_FIELDS}
+
+    async def promote(
+        self,
+        alias: str,
+        trace_ids: list[str],
+        change_origin: str | None,
+        *,
+        verb: str = "operator-asserted",
+    ) -> PromotionResult:
+        """The tenth §18 operation this seam exposes (07-01-PLAN.md, MACH-07/API-09) — RIG §PR.3's
+        operator-asserted promotion path. The caller states an alias, the trace ids they read to
+        form the judgment, and a ``change_origin`` — nothing else: the promotion target
+        (``mutation_id``), the mutation class, and the minted semver are all derived, never
+        accepted as caller input (D-04/D-10/D-11).
+
+        Refusal order (D-09): a gate-ladder verb not built in this milestone (``check``,
+        ``preview``, ``run``) refuses immediately, before anything else runs — there is nothing to
+        resolve. Otherwise: an invalid ``change_origin`` refuses; an empty, unknown, or disagreeing
+        ``trace_ids`` refuses (via :func:`~databasise.seam.promotion.resolve_single_arm`); the
+        mutation class is derived against the alias's prior active generation (if any); a
+        gate-adjudicated verb (``promote-next``, ``promote-now``) then refuses by posture — it
+        never appends a row in this milestone. Only the default ``"operator-asserted"`` verb
+        reaches ``Ledger.append()``.
+
+        One ``INSERT`` in one transaction **is** the atomic alias repoint (CONTRACT §6) — no
+        second write, no transaction wrapper around two statements. ``Ledger`` stays synchronous by
+        its own deliberate exception; the append is offloaded at this async call site via
+        ``run_in_executor``.
+        """
+        if verb in _NOT_BUILT_VERBS:
+            raise GateVerbNotBuiltError(verb=verb)
+
+        if change_origin not in CHANGE_ORIGINS:
+            raise InvalidChangeOriginError(change_origin=change_origin)
+
+        resolved_records = [self._trace_store.resolve(trace_id) for trace_id in trace_ids]
+        arm_name = resolve_single_arm(resolved_records, alias=alias, trace_ids=list(trace_ids))
+        new_resolved = resolved_wiring_for_arm(arm_name)
+
+        # Real data from the runs the operator read — never fabricated, never returned to the
+        # caller (§18.2's closed set forbids an instance hash crossing the seam either way).
+        arm_instance_hashes = sorted(
+            {
+                str(trace_record["wiring_instance_hash"])
+                for trace_record in resolved_records
+                if trace_record.get("wiring_instance_hash")
+            }
+        )
+
+        def _promote_sync() -> tuple[str, int]:
+            """Runs entirely on the executor thread: opening ``Ledger`` here (rather than on the
+            calling event-loop thread) and never handing its connection across threads avoids
+            sqlite3's own cross-thread-use refusal, since ``Ledger`` itself stays synchronous by
+            deliberate exception. Every ledger touch this promotion needs — reading the prior
+            active generation, minting the version off it, and appending — happens in this one
+            offloaded call, so the read and the write are never split across two threads.
+            """
+            ledger = Ledger(self.store_root)
+            prior_record = ledger.by_alias(alias)
+            prior_resolved = (
+                resolved_wiring_for_arm(prior_record.mutation_id)
+                if prior_record is not None
+                else None
+            )
+
+            mutation_class = derive_mutation_class(new_resolved, prior_resolved)
+
+            if verb in _GATE_VERBS:
+                enforce_gate_verb_posture(verb, mutation_class)  # always raises
+
+            if verb != "operator-asserted":
+                raise ValueError(f"unknown promotion verb {verb!r}")
+
+            prior_version = prior_record.minted_version if prior_record is not None else None
+            prior_surface = (
+                declared_surface(prior_resolved, self.registry)
+                if prior_resolved is not None
+                else None
+            )
+            new_surface = declared_surface(new_resolved, self.registry)
+            minted_version = mint_version(prior_version, prior_surface, new_surface)
+
+            ledger_record = LedgerRecord(
+                mutation_id=arm_name,
+                mutation_class=mutation_class,
+                parent=prior_record.mutation_id if prior_record is not None else None,
+                arm_instance_hashes=arm_instance_hashes,
+                effect_size=None,
+                verdict=None,
+                evidence_pointer=None,
+                proposer_id="operator",
+                depth_label=None,
+                tier_of_decision=None,
+                decomposition_ratio=None,
+                opaque_ttl_renewals=[],
+                parity_records=[],
+                promotion_provenance=PROVENANCE_OPERATOR_ASSERTED,
+                promotion_trace_ids=list(trace_ids),
+                change_origin=change_origin,
+                record_kind=RECORD_KIND_PROMOTION,
+                alias=alias,
+                minted_version=minted_version,
+                targets_version=None,
+            )
+            return minted_version, ledger.append(ledger_record)
+
+        minted_version, generation_ordinal = await asyncio.get_running_loop().run_in_executor(
+            None, _promote_sync
+        )
+
+        return PromotionResult(
+            alias=alias,
+            version=minted_version,
+            record_kind=RECORD_KIND_PROMOTION,
+            provenance=PROVENANCE_OPERATOR_ASSERTED,
+            generation_ordinal=generation_ordinal,
+        )
 
 
 __all__ = ["Databasise", "stream_envelope_events"]

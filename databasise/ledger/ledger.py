@@ -32,6 +32,21 @@ path appends the first row naming both ``alias`` (the promoted alias string) and
 (the identifier of the promoted wiring/arm) on the same record; every alias lookup against an
 empty or non-matching registry refuses, cleanly and identically, per D-12/FA-06.
 
+**07-01-PLAN.md: four additive columns, each with exactly one meaning.** ``change_origin`` (NOT
+NULL — ``"human_edit"`` or ``"machine_mutation"``, CONTRACT §7) and ``record_kind`` (NOT NULL —
+``"promotion"``, ``"rollback"`` or ``"tombstone"``) are the promote path's own write-side
+requirements; ``minted_version`` (nullable) and ``targets_version`` (nullable) are four, not
+CONTRACT §7's/RESEARCH.md's suggested three, because this module's own ``alias``-column precedent
+above states the reason directly: a field carrying two meanings can never be disentangled once
+real rows exist. ``minted_version`` means "the semver **this record mints**" and is ``NULL``
+exactly when ``record_kind == "tombstone"``. ``targets_version`` means "the semver **this record
+acts on**" and is non-``NULL`` exactly for ``record_kind`` in ``("rollback", "tombstone")``.
+Collapsing them into one column would make a tombstone's own version indistinguishable from a
+version it minted. No SQL default on either NOT NULL column — an absent value fails at the
+database, never falls back to a plausible string. All four columns land in the single ``CREATE
+TABLE IF NOT EXISTS`` column list, following the identical no-migration precedent the ``alias``
+column set: the table holds zero rows in every environment this milestone runs in.
+
 **WR-03, deliberate exception:** every method on ``Ledger`` is plain synchronous ``def`` — this
 module has no ``async def`` surface to dispatch off the event loop in the first place, unlike
 ``stores/kv.py``/``stores/lexical.py`` (own deliberate-exception notes) or ``stores/graph.py``
@@ -73,7 +88,11 @@ class LedgerRecord:
     parity_records: list[dict[str, Any]]
     promotion_provenance: str
     promotion_trace_ids: list[str]
+    change_origin: str
+    record_kind: str
     alias: str | None = None
+    minted_version: str | None = None
+    targets_version: str | None = None
 
 
 _JSON_FIELDS = ("arm_instance_hashes", "opaque_ttl_renewals", "parity_records", "promotion_trace_ids")
@@ -112,7 +131,11 @@ class Ledger:
                 parity_records TEXT NOT NULL,
                 promotion_provenance TEXT NOT NULL,
                 promotion_trace_ids TEXT NOT NULL,
+                change_origin TEXT NOT NULL,
+                record_kind TEXT NOT NULL,
                 alias TEXT,
+                minted_version TEXT,
+                targets_version TEXT,
                 created_at TEXT NOT NULL
             )
             """
@@ -122,6 +145,9 @@ class Ledger:
         )
         self._conn.execute(
             "CREATE INDEX IF NOT EXISTS ix_ledger_alias ON ledger(alias)"
+        )
+        self._conn.execute(
+            "CREATE INDEX IF NOT EXISTS ix_ledger_generation ON ledger(alias, minted_version)"
         )
         self._conn.execute(
             """
@@ -161,8 +187,9 @@ class Ledger:
             "INSERT INTO ledger (mutation_id, mutation_class, parent, arm_instance_hashes, "
             "effect_size, verdict, evidence_pointer, proposer_id, depth_label, "
             "tier_of_decision, decomposition_ratio, opaque_ttl_renewals, parity_records, "
-            "promotion_provenance, promotion_trace_ids, alias, created_at) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "promotion_provenance, promotion_trace_ids, change_origin, record_kind, alias, "
+            "minted_version, targets_version, created_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 record.mutation_id,
                 record.mutation_class,
@@ -179,7 +206,11 @@ class Ledger:
                 json.dumps(record.parity_records),
                 record.promotion_provenance,
                 json.dumps(record.promotion_trace_ids),
+                record.change_origin,
+                record.record_kind,
                 record.alias,
+                record.minted_version,
+                record.targets_version,
                 created_at,
             ),
         )
@@ -205,10 +236,32 @@ class Ledger:
         _resolve_alias``) is this method's only caller, and refuses identically whether the
         registry holds no rows at all or holds rows naming a different alias (D-12/FA-06's
         empty-registry-refuses-cleanly requirement).
+
+        07-01-PLAN.md: excludes ``record_kind = 'tombstone'`` rows — the active pointer derives
+        from promotion and rollback generations only. A retirement record names a generation that
+        has stopped being eligible; deriving the alias from it would resolve the alias to the very
+        wiring that was just retired.
         """
         cur = self._conn.execute(
-            "SELECT * FROM ledger WHERE alias = ? ORDER BY id DESC LIMIT 1",
+            "SELECT * FROM ledger WHERE alias = ? AND record_kind != 'tombstone' "
+            "ORDER BY id DESC LIMIT 1",
             (alias,),
+        )
+        row = cur.fetchone()
+        return self._row_to_record(row) if row is not None else None
+
+    def generation_state(self, alias: str, version: str) -> LedgerRecord | None:
+        """07-01-PLAN.md: the latest record naming the ``(alias, version)`` generation, whether it
+        is the record that minted that version (``minted_version == version``) or a later record
+        acting on it (``targets_version == version``) — a rollback or a tombstone. Returns
+        ``None`` when this alias has no such generation. 07-02's tombstone and
+        unknown-version refusals are this method's only callers; it lands here, beside
+        :meth:`by_alias`/:meth:`active_pointer`, so the projection set stays in one module.
+        """
+        cur = self._conn.execute(
+            "SELECT * FROM ledger WHERE alias = ? AND (minted_version = ? OR targets_version = ?) "
+            "ORDER BY id DESC LIMIT 1",
+            (alias, version, version),
         )
         row = cur.fetchone()
         return self._row_to_record(row) if row is not None else None

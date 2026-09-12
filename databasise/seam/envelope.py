@@ -35,6 +35,11 @@ structural half.
 **`resolved_model_identity` is excluded (FA-02, resolved by the checkpoint answer).** No
 requirement in this phase asks for it, and including it would make "which model answered" visible
 to a consumer without that having been decided under §18.3's invariance rule.
+
+**07-01-PLAN.md: `PromotionResult`, §18.2's closed set for `Databasise.promote()`.** Exactly
+`alias`, `version`, `record_kind`, `provenance`, `generation_ordinal` — never a wiring name, arm
+name, node id, or instance hash. Placed beside `ResponseEnvelope`/`SeamEvent` because it is the
+same closed-response-model discipline over `_StrictModel`, not because a promotion is a query.
 """
 
 from __future__ import annotations
@@ -88,8 +93,22 @@ class ResponseEnvelope(_StrictModel):
     seam_events: list[SeamEvent] = []
 
 
+class PromotionResult(_StrictModel):
+    """07-01-PLAN.md's §18.2 closed set for ``Databasise.promote()``: exactly ``alias``,
+    ``version``, ``record_kind``, ``provenance``, ``generation_ordinal`` — never a wiring name, arm
+    name, node id, or instance hash.
+    """
+
+    alias: str
+    version: str
+    record_kind: str
+    provenance: str
+    generation_ordinal: int
+
+
 __all__ = [
     "EvidenceRef",
+    "PromotionResult",
     "ResponseEnvelope",
     "SeamEvent",
     "SeamEventOutcome",

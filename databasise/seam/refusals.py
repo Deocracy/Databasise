@@ -308,6 +308,107 @@ class MutableStoreComparisonExcludedError(SeamRefusalError):
         )
 
 
+class EmptyPromotionTraceIdsError(SeamRefusalError):
+    """Raised by ``databasise.seam.promotion.resolve_single_arm`` (07-01-PLAN.md, D-04) when a
+    ``promote()`` call supplies an empty ``promotion_trace_ids`` list. CONTRACT §6's cross-field
+    rule (``promotion_trace_ids`` non-empty iff ``promotion_provenance == "operator_asserted"``)
+    has no SQL-level CHECK constraint to enforce it — this refusal is what makes the rule real,
+    firing before any ledger read or write. Names only the caller's own ``alias`` — never a
+    candidate mutation id or wiring name.
+    """
+
+    def __init__(self, *, alias: str):
+        self.alias = alias
+        super().__init__(
+            f"EmptyPromotionTraceIdsError: promotion for alias {alias!r} was given no trace ids "
+            "to derive the target wiring from"
+        )
+
+
+class DisagreeingPromotionTraceIdsError(SeamRefusalError):
+    """Raised by ``databasise.seam.promotion.resolve_single_arm`` (07-01-PLAN.md, D-04) when the
+    supplied trace ids resolve to more than one distinct wiring — refused rather than silently
+    promoting whichever record happened to be read first or last, since that would promote a
+    wiring the caller never actually named. Names only the caller's own ``trace_ids`` — never the
+    resolved arm names, per this module's own no-enumeration house style.
+    """
+
+    def __init__(self, *, trace_ids: list[str]):
+        self.trace_ids = list(trace_ids)
+        super().__init__(
+            "DisagreeingPromotionTraceIdsError: trace ids "
+            f"{self.trace_ids!r} resolve to more than one distinct wiring; a promotion target "
+            "must be named by trace ids that all agree on exactly one"
+        )
+
+
+class InvalidChangeOriginError(SeamRefusalError):
+    """Raised by ``Databasise.promote()`` (07-01-PLAN.md, D-08) when ``change_origin`` is absent
+    (``None``) or is not one of CONTRACT §7's two enumerated values (``human_edit``,
+    ``machine_mutation``) — never defaulted, never inferred from absence. Names only the caller's
+    own supplied value; the message does not enumerate the accepted set as a menu the caller could
+    pattern-match against, and does not imply a default exists.
+    """
+
+    def __init__(self, *, change_origin: Any):
+        self.change_origin = change_origin
+        super().__init__(
+            f"InvalidChangeOriginError: change_origin {change_origin!r} is not a recognised value"
+        )
+
+
+class GateVerbNotBuiltError(SeamRefusalError):
+    """Raised by ``Databasise.promote()`` (07-01-PLAN.md, D-09) when ``verb`` is ``check``,
+    ``preview``, or ``run`` — no gate implementation exists in this milestone, and Phase 7 does
+    not build one. Refused immediately, before any trace resolution or class derivation runs,
+    since there is nothing yet to resolve. One shared refusal type parameterized by ``verb``,
+    mirroring ``UnsatisfiableSelectorError``'s own ``selector_kind`` parameterization, rather than
+    three near-identical exception classes for the same "not built" fact. Names only the caller's
+    own ``verb``.
+    """
+
+    def __init__(self, *, verb: str):
+        self.verb = verb
+        super().__init__(f"GateVerbNotBuiltError: verb {verb!r} is not built in this milestone")
+
+
+class MeasurementPostureRefusalError(SeamRefusalError):
+    """Raised by ``Databasise.promote()`` (07-01-PLAN.md, D-09/D-11) when ``promote-next`` or
+    ``promote-now`` is called against a mutation classed ``answer-level`` or ``index-side`` —
+    measurement-gated promotion is off by default for both classes (RIG.md §F3.2), and this
+    refusal is what keeps that default posture true at the runtime gate rather than merely
+    documented. Names only the caller's own ``verb`` and the machine-derived ``mutation_class`` —
+    never a wiring name, arm name, or node id.
+    """
+
+    def __init__(self, *, verb: str, mutation_class: str):
+        self.verb = verb
+        self.mutation_class = mutation_class
+        super().__init__(
+            f"MeasurementPostureRefusalError: verb {verb!r} refuses for mutation class "
+            f"{mutation_class!r}: measurement-gated promotion is off by default for this class "
+            "per RIG.md §F3.2"
+        )
+
+
+class UncalibratedFloorRefusalError(SeamRefusalError):
+    """Raised by ``Databasise.promote()`` (07-01-PLAN.md, D-09/D-11) when ``promote-next`` or
+    ``promote-now`` is called against a mutation classed ``retrieval-side`` — this class is
+    measurement-gated ON by default (RIG.md §F3.2), but no calibrated A/A floor exists yet
+    (MACH-03 Pending): a null whose cache-bypass status is unknown is not usable as a floor
+    (RIG.md §AA.2). Names only the caller's own ``verb`` and the machine-derived
+    ``mutation_class``.
+    """
+
+    def __init__(self, *, verb: str, mutation_class: str):
+        self.verb = verb
+        self.mutation_class = mutation_class
+        super().__init__(
+            f"UncalibratedFloorRefusalError: verb {verb!r} refuses for mutation class "
+            f"{mutation_class!r}: no calibrated A/A floor exists yet per RIG.md §AA.2"
+        )
+
+
 class ForeignEngineRefusalError(SeamRefusalError):
     """The seam-facing wrapper for a foreign-engine subprocess failure
     (``databasise.foreign.CorpusOpSubprocessError``/``CorpusOpTimeoutError``) — so
@@ -341,4 +442,10 @@ __all__ = [
     "DuplicateComparisonKeyError",
     "MutableStoreComparisonExcludedError",
     "ForeignEngineRefusalError",
+    "EmptyPromotionTraceIdsError",
+    "DisagreeingPromotionTraceIdsError",
+    "InvalidChangeOriginError",
+    "GateVerbNotBuiltError",
+    "MeasurementPostureRefusalError",
+    "UncalibratedFloorRefusalError",
 ]
