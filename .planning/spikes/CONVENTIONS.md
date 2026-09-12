@@ -25,9 +25,17 @@ Patterns and stack choices established across spike sessions. New spikes follow 
 - Size comparisons decode by raw completion with identical prompt bytes across arms (no per-model chat template), which also disables Qwen3 thinking by construction; every output is scanned for think tags and the count is reported.
 - The grammar guarantees shape, only the token cap guarantees termination (a 2B arm looped one op about 66 times until the cap): every decode step carries an I4 cap and truncation is reported as its own Proof category.
 - Head-to-head accuracy across sizes uses `routing_exact` (the set of target stores per section) as the alias-free comparator; string-match recall and F1 against teacher ops are strict lower bounds until a normaliser exists.
+- Pre-register the materiality bar and the pass condition in the README before any run (spike 007: 0.05 MRR; spike 008: 0.10 routing or Proof-pass); a design that moves a metric under the bar is reported as not material, never as a small win.
+- Few-shot examples come only from held-out documents chosen by a fixed rule (spike 008: the four median-op-count documents), and every design, including the zero-shot baseline, is scored on the same held-out-free set.
+- Measure the run-to-run noise floor with a repeat probe on the divergent documents before reading design deltas; two runs of a spike's `run.sh` reproduce each other byte-identically on this rig, but an in-process re-decode of the same prompt can differ on long inputs (spike 008).
+- Prompt placement and prefix-sharing cost are measured per model, never assumed: instruction after the section helped the 4B and hurt the 2B (spike 008).
+- Pipelines run one loaded model per process with workers as asyncio tasks over one model lock; one write lock per store and idempotent op keys (normalised subject, predicate, value) make streamed and batched writes hash equal and W 1 to 8 conflict-free (spike 010).
+- Retrieval fusion rules need rank-gated or calibrated scores; a flat bonus for graph or SQL hits lowers vector-only recall (spike 010). Chunk whole documents on this corpus; title/body splits cost recall@3 0.22.
+- Shared labelled data lives in `.planning/spikes/shared/` with provenance, counts, a hash, and a fixed train/test split by document; spikes read it and never regenerate it.
 
 ## Tools & Libraries
 - `llama-cpp-python` 0.3.35 (CUDA wheel index cu125), `nvidia-cuda-runtime-cu12` 12.5.82, `nvidia-cublas-cu12` 12.5.3.2: worked on legion (RTX 3080 Laptop, driver 595).
 - `faiss-cpu` for recall evaluation; `jsonschema` for op validation; GBNF grammars generated from the JSON schema for constrained decoding.
 - Avoid: `--embeddings` mode on llama-server for a generative model (it is embedding-only); `arxiv.org/search` HTML pages for agents (rate limits and 400s; use the export API or abs pages).
 - Teacher labelling goes through the OpenAI-compatible endpoint configured in `v1/.env.parity`, sourced at runtime (`set -a; source v1/.env.parity; set +a`); credentials are never printed, logged, or written.
+- Round 2 adds `.planning/spikes/.venv-train` (`setup-train-env.sh`: torch CUDA wheels, transformers, peft, accelerate, sentence-transformers, safetensors, datasets, mergekit) and safetensors weights under `.models/hf/` (`fetch-hf-weights.py`); GGUF stays inference-only. A machine reboot kills detached runs; `resume-spike.sh` and the lane runner resume agents on their captured session ids.
