@@ -14,6 +14,7 @@ Decided 2026-09-11 by the owner. Applies to every artifact, model, store, skill,
 | A store or table built specifically for MelodyScribe | MelodyScribe {store} | prefix `melodyscribe_` on tables, namespaces, and collections |
 | The deterministic validator a write must pass | MelodyScribe Proof | `melodyscribe_proof` |
 | The one human-authored skill the frontier model reads | **MelodyScribe skill** | `.claude/skills/melodyscribe/SKILL.md`; the model cannot write to this path |
+| The sectioned input format (embed / respond / file / link directives) — proposed | MelodyScribe Score | see `score-format-and-cache.md` |
 | Internal wiring verbs | transcribe, file, recall, revise | Node names `melodyscribe/transcriber`, `/filer`, `/recaller`, `/reviser`. **Not seam tools**: CONTRACT §18.5 refuses per-modality tools for existing operations. The frontier selects MelodyScribe through the stable alias `melodyscribe` on the existing seam tools |
 | Served model as machine clients | — | `core/llm-minicpm5-2b@…`, `core/embedder-melodyscribe-2b@…` (CONTRACT §8 cond. 3 makes the model a machine-injected client, not part of the node) |
 | The frontier model used for distillation | teacher | plain word, no prefix |
