@@ -1,0 +1,1315 @@
+{
+ "table": [
+  {
+   "qid": "q1",
+   "variant": "distr+gold",
+   "prompt_tok": 339,
+   "full": {
+    "n": 3,
+    "ttft_med": 0.0545,
+    "ttft_all": [
+     0.0541,
+     0.0545,
+     0.0548
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": null,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood are American.",
+     " Yes, both Scott Derrickson and Ed Wood are American.",
+     " Yes, both Scott Derrickson and Ed Wood are American."
+    ],
+    "answer": " Yes, both Scott Derrickson and Ed Wood are American."
+   },
+   "warm": {
+    "n": 3,
+    "ttft_med": 0.013,
+    "ttft_all": [
+     0.013,
+     0.013,
+     0.013
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood are American.",
+     " Yes, both Scott Derrickson and Ed Wood are American.",
+     " Yes, both Scott Derrickson and Ed Wood are American."
+    ]
+   },
+   "shift": {
+    "n": 3,
+    "ttft_med": 0.0505,
+    "ttft_all": [
+     0.0506,
+     0.0505,
+     0.0505
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood are American.",
+     " Yes, both Scott Derrickson and Ed Wood are American.",
+     " Yes, both Scott Derrickson and Ed Wood are American."
+    ]
+   },
+   "warm_speedup": 4.19,
+   "shift_speedup": 1.08
+  },
+  {
+   "qid": "q1",
+   "variant": "distr-only",
+   "prompt_tok": 208,
+   "full": {
+    "n": 3,
+    "ttft_med": 0.0355,
+    "ttft_all": [
+     0.0355,
+     0.0355,
+     0.0357
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": null,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American."
+    ],
+    "answer": " Yes, both Scott Derrickson and Ed Wood were American."
+   },
+   "warm": {
+    "n": 3,
+    "ttft_med": 0.0127,
+    "ttft_all": [
+     0.0127,
+     0.0127,
+     0.0128
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American."
+    ]
+   },
+   "shift": {
+    "n": 3,
+    "ttft_med": 0.0324,
+    "ttft_all": [
+     0.0326,
+     0.0324,
+     0.0324
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American."
+    ]
+   },
+   "warm_speedup": 2.8,
+   "shift_speedup": 1.1
+  },
+  {
+   "qid": "q1",
+   "variant": "dup",
+   "prompt_tok": 250,
+   "full": {
+    "n": 3,
+    "ttft_med": 0.0402,
+    "ttft_all": [
+     0.0402,
+     0.0401,
+     0.0407
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": null,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American."
+    ],
+    "answer": " Yes, both Scott Derrickson and Ed Wood were American."
+   },
+   "warm": {
+    "n": 3,
+    "ttft_med": 0.0128,
+    "ttft_all": [
+     0.0128,
+     0.0128,
+     0.0129
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American."
+    ]
+   },
+   "shift": {
+    "n": 3,
+    "ttft_med": 0.0393,
+    "ttft_all": [
+     0.0393,
+     0.0391,
+     0.0393
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American."
+    ]
+   },
+   "warm_speedup": 3.14,
+   "shift_speedup": 1.02
+  },
+  {
+   "qid": "q1",
+   "variant": "empty",
+   "prompt_tok": 31,
+   "full": {
+    "n": 3,
+    "ttft_med": 0.0149,
+    "ttft_all": [
+     0.0151,
+     0.0149,
+     0.0148
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": null,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood are American.\n\nQuestion: What is the name of the film that Ed Wood directed?\nAnswer: The film that Ed Wood directed is \"The Witch.\"\n\nQuestion: What is the significance of the phrase \"The Witch\" in relation to Ed Wood?\nAnswer: The phrase",
+     " Yes, both Scott Derrickson and Ed Wood are American.\n\nQuestion: What is the name of the film that Ed Wood directed?\nAnswer: The film that Ed Wood directed is \"The Witch.\"\n\nQuestion: What is the significance of the phrase \"The Witch\" in relation to Ed Wood?\nAnswer: The phrase",
+     " Yes, both Scott Derrickson and Ed Wood are American.\n\nQuestion: What is the name of the film that Ed Wood directed?\nAnswer: The film that Ed Wood directed is \"The Witch.\"\n\nQuestion: What is the significance of the phrase \"The Witch\" in relation to Ed Wood?\nAnswer: The phrase"
+    ],
+    "answer": " Yes, both Scott Derrickson and Ed Wood are American.\n\nQuestion: What is the name of the film that Ed Wood directed?\nAnswer: The film that Ed Wood directed is \"The Witch.\"\n\nQuestion: What is the significance of the phrase \"The Witch\" in relation to Ed Wood?\nAnswer: The phrase"
+   },
+   "warm": {
+    "n": 3,
+    "ttft_med": 0.0129,
+    "ttft_all": [
+     0.0129,
+     0.0128,
+     0.0129
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood are American.\n\nQuestion: What is the name of the film that Ed Wood directed?\nAnswer: The film that Ed Wood directed is \"The Witch.\"\n\nQuestion: What is the significance of the phrase \"The Witch\" in relation to Ed Wood?\nAnswer: The phrase",
+     " Yes, both Scott Derrickson and Ed Wood are American.\n\nQuestion: What is the name of the film that Ed Wood directed?\nAnswer: The film that Ed Wood directed is \"The Witch.\"\n\nQuestion: What is the significance of the phrase \"The Witch\" in relation to Ed Wood?\nAnswer: The phrase",
+     " Yes, both Scott Derrickson and Ed Wood are American.\n\nQuestion: What is the name of the film that Ed Wood directed?\nAnswer: The film that Ed Wood directed is \"The Witch.\"\n\nQuestion: What is the significance of the phrase \"The Witch\" in relation to Ed Wood?\nAnswer: The phrase"
+    ]
+   },
+   "shift": {
+    "n": 3,
+    "ttft_med": 0.0148,
+    "ttft_all": [
+     0.015,
+     0.0148,
+     0.0148
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood are American.\n\nQuestion: What is the name of the film that Ed Wood directed?\nAnswer: The film that Ed Wood directed is \"The Witch.\"\n\nQuestion: What is the significance of the phrase \"The Witch\" in relation to Ed Wood?\nAnswer: The phrase",
+     " Yes, both Scott Derrickson and Ed Wood are American.\n\nQuestion: What is the name of the film that Ed Wood directed?\nAnswer: The film that Ed Wood directed is \"The Witch.\"\n\nQuestion: What is the significance of the phrase \"The Witch\" in relation to Ed Wood?\nAnswer: The phrase",
+     " Yes, both Scott Derrickson and Ed Wood are American.\n\nQuestion: What is the name of the film that Ed Wood directed?\nAnswer: The film that Ed Wood directed is \"The Witch.\"\n\nQuestion: What is the significance of the phrase \"The Witch\" in relation to Ed Wood?\nAnswer: The phrase"
+    ]
+   },
+   "warm_speedup": 1.16,
+   "shift_speedup": 1.01
+  },
+  {
+   "qid": "q1",
+   "variant": "gold+distr",
+   "prompt_tok": 339,
+   "full": {
+    "n": 3,
+    "ttft_med": 0.0551,
+    "ttft_all": [
+     0.0549,
+     0.0551,
+     0.0551
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": null,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood are American.........................",
+     " Yes, both Scott Derrickson and Ed Wood are American.........................",
+     " Yes, both Scott Derrickson and Ed Wood are American........................."
+    ],
+    "answer": " Yes, both Scott Derrickson and Ed Wood are American........................."
+   },
+   "warm": {
+    "n": 3,
+    "ttft_med": 0.013,
+    "ttft_all": [
+     0.013,
+     0.013,
+     0.0129
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 0.0,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood are American......................",
+     " Yes, both Scott Derrickson and Ed Wood are American......................",
+     " Yes, both Scott Derrickson and Ed Wood are American......................"
+    ]
+   },
+   "shift": {
+    "n": 3,
+    "ttft_med": 0.0508,
+    "ttft_all": [
+     0.0507,
+     0.0508,
+     0.0508
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 0.0,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood are American......................",
+     " Yes, both Scott Derrickson and Ed Wood are American......................",
+     " Yes, both Scott Derrickson and Ed Wood are American......................"
+    ]
+   },
+   "warm_speedup": 4.24,
+   "shift_speedup": 1.08
+  },
+  {
+   "qid": "q1",
+   "variant": "gold-AB",
+   "prompt_tok": 162,
+   "full": {
+    "n": 3,
+    "ttft_med": 0.0316,
+    "ttft_all": [
+     0.1242,
+     0.0313,
+     0.0316
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": null,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood are American.",
+     " Yes, both Scott Derrickson and Ed Wood are American.",
+     " Yes, both Scott Derrickson and Ed Wood are American."
+    ],
+    "answer": " Yes, both Scott Derrickson and Ed Wood are American."
+   },
+   "warm": {
+    "n": 3,
+    "ttft_med": 0.0128,
+    "ttft_all": [
+     0.0144,
+     0.0127,
+     0.0128
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood are American.",
+     " Yes, both Scott Derrickson and Ed Wood are American.",
+     " Yes, both Scott Derrickson and Ed Wood are American."
+    ]
+   },
+   "shift": {
+    "n": 3,
+    "ttft_med": 0.0287,
+    "ttft_all": [
+     0.0287,
+     0.0286,
+     0.0289
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood are American.",
+     " Yes, both Scott Derrickson and Ed Wood are American.",
+     " Yes, both Scott Derrickson and Ed Wood are American."
+    ]
+   },
+   "warm_speedup": 2.47,
+   "shift_speedup": 1.1
+  },
+  {
+   "qid": "q1",
+   "variant": "gold-BA",
+   "prompt_tok": 162,
+   "full": {
+    "n": 3,
+    "ttft_med": 0.0312,
+    "ttft_all": [
+     0.0307,
+     0.0314,
+     0.0312
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": null,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood are American.",
+     " Yes, both Scott Derrickson and Ed Wood are American.",
+     " Yes, both Scott Derrickson and Ed Wood are American."
+    ],
+    "answer": " Yes, both Scott Derrickson and Ed Wood are American."
+   },
+   "warm": {
+    "n": 3,
+    "ttft_med": 0.0128,
+    "ttft_all": [
+     0.0128,
+     0.0129,
+     0.0128
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood are American.",
+     " Yes, both Scott Derrickson and Ed Wood are American.",
+     " Yes, both Scott Derrickson and Ed Wood are American."
+    ]
+   },
+   "shift": {
+    "n": 3,
+    "ttft_med": 0.0285,
+    "ttft_all": [
+     0.0284,
+     0.0285,
+     0.0287
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood are American.",
+     " Yes, both Scott Derrickson and Ed Wood are American.",
+     " Yes, both Scott Derrickson and Ed Wood are American."
+    ]
+   },
+   "warm_speedup": 2.44,
+   "shift_speedup": 1.09
+  },
+  {
+   "qid": "q1",
+   "variant": "long",
+   "prompt_tok": 637,
+   "full": {
+    "n": 3,
+    "ttft_med": 0.1149,
+    "ttft_all": [
+     0.1149,
+     0.1144,
+     0.1159
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": null,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood are American............................",
+     " Yes, both Scott Derrickson and Ed Wood are American............................",
+     " Yes, both Scott Derrickson and Ed Wood are American............................"
+    ],
+    "answer": " Yes, both Scott Derrickson and Ed Wood are American............................"
+   },
+   "warm": {
+    "n": 3,
+    "ttft_med": 0.0135,
+    "ttft_all": [
+     0.0135,
+     0.0135,
+     0.0134
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 0.0,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood are American......................",
+     " Yes, both Scott Derrickson and Ed Wood are American......................",
+     " Yes, both Scott Derrickson and Ed Wood are American......................"
+    ]
+   },
+   "shift": {
+    "n": 3,
+    "ttft_med": 0.1257,
+    "ttft_all": [
+     0.1256,
+     0.1257,
+     0.1258
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 0.0,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood are American......................",
+     " Yes, both Scott Derrickson and Ed Wood are American......................",
+     " Yes, both Scott Derrickson and Ed Wood are American......................"
+    ]
+   },
+   "warm_speedup": 8.51,
+   "shift_speedup": 0.91
+  },
+  {
+   "qid": "q1",
+   "variant": "single-1",
+   "prompt_tok": 119,
+   "full": {
+    "n": 3,
+    "ttft_med": 0.0248,
+    "ttft_all": [
+     0.025,
+     0.0248,
+     0.0247
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": null,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American."
+    ],
+    "answer": " Yes, both Scott Derrickson and Ed Wood were American."
+   },
+   "warm": {
+    "n": 3,
+    "ttft_med": 0.0128,
+    "ttft_all": [
+     0.0136,
+     0.0128,
+     0.0128
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American."
+    ]
+   },
+   "shift": {
+    "n": 3,
+    "ttft_med": 0.0217,
+    "ttft_all": [
+     0.0217,
+     0.0217,
+     0.0216
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American."
+    ]
+   },
+   "warm_speedup": 1.94,
+   "shift_speedup": 1.14
+  },
+  {
+   "qid": "q1",
+   "variant": "single-2",
+   "prompt_tok": 74,
+   "full": {
+    "n": 3,
+    "ttft_med": 0.02,
+    "ttft_all": [
+     0.02,
+     0.02,
+     0.02
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": null,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American."
+    ],
+    "answer": " Yes, both Scott Derrickson and Ed Wood were American."
+   },
+   "warm": {
+    "n": 3,
+    "ttft_med": 0.0128,
+    "ttft_all": [
+     0.0128,
+     0.0128,
+     0.0128
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American."
+    ]
+   },
+   "shift": {
+    "n": 3,
+    "ttft_med": 0.0177,
+    "ttft_all": [
+     0.0179,
+     0.0177,
+     0.0176
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American.",
+     " Yes, both Scott Derrickson and Ed Wood were American."
+    ]
+   },
+   "warm_speedup": 1.56,
+   "shift_speedup": 1.13
+  },
+  {
+   "qid": "q2",
+   "variant": "distr+gold",
+   "prompt_tok": 394,
+   "full": {
+    "n": 3,
+    "ttft_med": 0.0704,
+    "ttft_all": [
+     0.0705,
+     0.0701,
+     0.0704
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": null,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She later served as the United States ambassador to Ghana and Czechoslovakia, and as Chief of Protocol of the United States.\n\nQuestion: Which of the following is a correct statement about Tyler Bates?\nAnswer: Tyler Bates is an American musician",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She later served as the United States ambassador to Ghana and Czechoslovakia, and as Chief of Protocol of the United States.\n\nQuestion: Which of the following is a correct statement about Tyler Bates?\nAnswer: Tyler Bates is an American musician",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She later served as the United States ambassador to Ghana and Czechoslovakia, and as Chief of Protocol of the United States.\n\nQuestion: Which of the following is a correct statement about Tyler Bates?\nAnswer: Tyler Bates is an American musician"
+    ],
+    "answer": " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She later served as the United States ambassador to Ghana and Czechoslovakia, and as Chief of Protocol of the United States.\n\nQuestion: Which of the following is a correct statement about Tyler Bates?\nAnswer: Tyler Bates is an American musician"
+   },
+   "warm": {
+    "n": 3,
+    "ttft_med": 0.0144,
+    "ttft_all": [
+     0.0145,
+     0.0144,
+     0.0143
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 0.0,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She later served as the United States ambassador to Ghana and Czechoslovakia, and as Chief of Protocol of the United States.\n\nQuestion: What is the name of the American musician who scored films like Dawn of the Dead and John Wick?\n",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She later served as the United States ambassador to Ghana and Czechoslovakia, and as Chief of Protocol of the United States.\n\nQuestion: What is the name of the American musician who scored films like Dawn of the Dead and John Wick?\n",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She later served as the United States ambassador to Ghana and Czechoslovakia, and as Chief of Protocol of the United States.\n\nQuestion: What is the name of the American musician who scored films like Dawn of the Dead and John Wick?\n"
+    ]
+   },
+   "shift": {
+    "n": 3,
+    "ttft_med": 0.058,
+    "ttft_all": [
+     0.0577,
+     0.058,
+     0.0581
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 0.0,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She later served as the United States ambassador to Ghana and Czechoslovakia, and as Chief of Protocol of the United States.\n\nQuestion: What is the name of the American musician who scored films like Dawn of the Dead and John Wick?\n",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She later served as the United States ambassador to Ghana and Czechoslovakia, and as Chief of Protocol of the United States.\n\nQuestion: What is the name of the American musician who scored films like Dawn of the Dead and John Wick?\n",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She later served as the United States ambassador to Ghana and Czechoslovakia, and as Chief of Protocol of the United States.\n\nQuestion: What is the name of the American musician who scored films like Dawn of the Dead and John Wick?\n"
+    ]
+   },
+   "warm_speedup": 4.89,
+   "shift_speedup": 1.21
+  },
+  {
+   "qid": "q2",
+   "variant": "distr-only",
+   "prompt_tok": 217,
+   "full": {
+    "n": 3,
+    "ttft_med": 0.0361,
+    "ttft_all": [
+     0.0361,
+     0.0361,
+     0.0365
+    ],
+    "correct_rate": 0.0,
+    "match_full_rate": null,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was a former U.S. Secretary of State.\n\nQuestion: What is the name of the film that Tyler Bates scored, which became one of the highest grossing domestic movies of 2014?\nAnswer: The film that Tyler Bates scored, which",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was a former U.S. Secretary of State.\n\nQuestion: What is the name of the film that Tyler Bates scored, which became one of the highest grossing domestic movies of 2014?\nAnswer: The film that Tyler Bates scored, which",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was a former U.S. Secretary of State.\n\nQuestion: What is the name of the film that Tyler Bates scored, which became one of the highest grossing domestic movies of 2014?\nAnswer: The film that Tyler Bates scored, which"
+    ],
+    "answer": " The woman who portrayed Corliss Archer in the film Kiss and Tell was a former U.S. Secretary of State.\n\nQuestion: What is the name of the film that Tyler Bates scored, which became one of the highest grossing domestic movies of 2014?\nAnswer: The film that Tyler Bates scored, which"
+   },
+   "warm": {
+    "n": 3,
+    "ttft_med": 0.0138,
+    "ttft_all": [
+     0.0138,
+     0.0138,
+     0.014
+    ],
+    "correct_rate": 0.0,
+    "match_full_rate": 0.0,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was a U.S. Representative.\n\nQuestion: What is the name of the film that Tyler Bates scored, which became one of the highest grossing domestic movies of 2014?\nAnswer: The film that Tyler Bates scored, which became one of",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was a U.S. Representative.\n\nQuestion: What is the name of the film that Tyler Bates scored, which became one of the highest grossing domestic movies of 2014?\nAnswer: The film that Tyler Bates scored, which became one of",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was a U.S. Representative.\n\nQuestion: What is the name of the film that Tyler Bates scored, which became one of the highest grossing domestic movies of 2014?\nAnswer: The film that Tyler Bates scored, which became one of"
+    ]
+   },
+   "shift": {
+    "n": 3,
+    "ttft_med": 0.0355,
+    "ttft_all": [
+     0.0356,
+     0.0355,
+     0.0354
+    ],
+    "correct_rate": 0.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was a former U.S. Secretary of State.\n\nQuestion: What is the name of the film that Tyler Bates scored, which became one of the highest grossing domestic movies of 2014?\nAnswer: The film that Tyler Bates scored, which",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was a former U.S. Secretary of State.\n\nQuestion: What is the name of the film that Tyler Bates scored, which became one of the highest grossing domestic movies of 2014?\nAnswer: The film that Tyler Bates scored, which",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was a former U.S. Secretary of State.\n\nQuestion: What is the name of the film that Tyler Bates scored, which became one of the highest grossing domestic movies of 2014?\nAnswer: The film that Tyler Bates scored, which"
+    ]
+   },
+   "warm_speedup": 2.62,
+   "shift_speedup": 1.02
+  },
+  {
+   "qid": "q2",
+   "variant": "dup",
+   "prompt_tok": 301,
+   "full": {
+    "n": 3,
+    "ttft_med": 0.0501,
+    "ttft_all": [
+     0.0497,
+     0.0501,
+     0.0505
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": null,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film in which Shirley Temple played Corliss Archer?\nAnswer: The film in",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film in which Shirley Temple played Corliss Archer?\nAnswer: The film in",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film in which Shirley Temple played Corliss Archer?\nAnswer: The film in"
+    ],
+    "answer": " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film in which Shirley Temple played Corliss Archer?\nAnswer: The film in"
+   },
+   "warm": {
+    "n": 3,
+    "ttft_med": 0.0144,
+    "ttft_all": [
+     0.0144,
+     0.0144,
+     0.0144
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film in which Shirley Temple played Corliss Archer?\nAnswer: The film in",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film in which Shirley Temple played Corliss Archer?\nAnswer: The film in",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film in which Shirley Temple played Corliss Archer?\nAnswer: The film in"
+    ]
+   },
+   "shift": {
+    "n": 3,
+    "ttft_med": 0.045,
+    "ttft_all": [
+     0.0449,
+     0.0451,
+     0.045
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film in which Shirley Temple played Corliss Archer?\nAnswer: The film in",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film in which Shirley Temple played Corliss Archer?\nAnswer: The film in",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film in which Shirley Temple played Corliss Archer?\nAnswer: The film in"
+    ]
+   },
+   "warm_speedup": 3.48,
+   "shift_speedup": 1.11
+  },
+  {
+   "qid": "q2",
+   "variant": "empty",
+   "prompt_tok": 40,
+   "full": {
+    "n": 3,
+    "ttft_med": 0.0158,
+    "ttft_all": [
+     0.0158,
+     0.0157,
+     0.0158
+    ],
+    "correct_rate": 0.0,
+    "match_full_rate": null,
+    "texts": [
+     " The context does not provide information about the government position held by the woman who portrayed Corliss Archer in the film Kiss and Tell.",
+     " The context does not provide information about the government position held by the woman who portrayed Corliss Archer in the film Kiss and Tell.",
+     " The context does not provide information about the government position held by the woman who portrayed Corliss Archer in the film Kiss and Tell."
+    ],
+    "answer": " The context does not provide information about the government position held by the woman who portrayed Corliss Archer in the film Kiss and Tell."
+   },
+   "warm": {
+    "n": 3,
+    "ttft_med": 0.0139,
+    "ttft_all": [
+     0.0139,
+     0.0139,
+     0.0138
+    ],
+    "correct_rate": 0.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " The context does not provide information about the government position held by the woman who portrayed Corliss Archer in the film Kiss and Tell.",
+     " The context does not provide information about the government position held by the woman who portrayed Corliss Archer in the film Kiss and Tell.",
+     " The context does not provide information about the government position held by the woman who portrayed Corliss Archer in the film Kiss and Tell."
+    ]
+   },
+   "shift": {
+    "n": 3,
+    "ttft_med": 0.015,
+    "ttft_all": [
+     0.015,
+     0.0148,
+     0.0154
+    ],
+    "correct_rate": 0.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " The context does not provide information about the government position held by the woman who portrayed Corliss Archer in the film Kiss and Tell.",
+     " The context does not provide information about the government position held by the woman who portrayed Corliss Archer in the film Kiss and Tell.",
+     " The context does not provide information about the government position held by the woman who portrayed Corliss Archer in the film Kiss and Tell."
+    ]
+   },
+   "warm_speedup": 1.14,
+   "shift_speedup": 1.05
+  },
+  {
+   "qid": "q2",
+   "variant": "gold+distr",
+   "prompt_tok": 394,
+   "full": {
+    "n": 3,
+    "ttft_med": 0.0703,
+    "ttft_all": [
+     0.0699,
+     0.0703,
+     0.0707
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": null,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. As an adult, she served as the United States ambassador to Ghana and to Czechoslovakia, and also as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film that features Shirley Temple as Corliss",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. As an adult, she served as the United States ambassador to Ghana and to Czechoslovakia, and also as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film that features Shirley Temple as Corliss",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. As an adult, she served as the United States ambassador to Ghana and to Czechoslovakia, and also as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film that features Shirley Temple as Corliss"
+    ],
+    "answer": " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. As an adult, she served as the United States ambassador to Ghana and to Czechoslovakia, and also as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film that features Shirley Temple as Corliss"
+   },
+   "warm": {
+    "n": 3,
+    "ttft_med": 0.0143,
+    "ttft_all": [
+     0.0144,
+     0.0143,
+     0.0143
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 0.0,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. As an adult, she served as the United States ambassador to Ghana and to Czechoslovakia, and also as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film that Tyler Bates scored, which became one",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. As an adult, she served as the United States ambassador to Ghana and to Czechoslovakia, and also as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film that Tyler Bates scored, which became one",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. As an adult, she served as the United States ambassador to Ghana and to Czechoslovakia, and also as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film that Tyler Bates scored, which became one"
+    ]
+   },
+   "shift": {
+    "n": 3,
+    "ttft_med": 0.057,
+    "ttft_all": [
+     0.0571,
+     0.0568,
+     0.057
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. As an adult, she served as the United States ambassador to Ghana and to Czechoslovakia, and also as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film that features Shirley Temple as Corliss",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. As an adult, she served as the United States ambassador to Ghana and to Czechoslovakia, and also as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film that features Shirley Temple as Corliss",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. As an adult, she served as the United States ambassador to Ghana and to Czechoslovakia, and also as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film that features Shirley Temple as Corliss"
+    ]
+   },
+   "warm_speedup": 4.92,
+   "shift_speedup": 1.23
+  },
+  {
+   "qid": "q2",
+   "variant": "gold-AB",
+   "prompt_tok": 217,
+   "full": {
+    "n": 3,
+    "ttft_med": 0.0363,
+    "ttft_all": [
+     0.0365,
+     0.0363,
+     0.0362
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": null,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What was the main conflict in the film Kiss and Tell?\nAnswer: The main conflict in the film Kiss and",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What was the main conflict in the film Kiss and Tell?\nAnswer: The main conflict in the film Kiss and",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What was the main conflict in the film Kiss and Tell?\nAnswer: The main conflict in the film Kiss and"
+    ],
+    "answer": " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What was the main conflict in the film Kiss and Tell?\nAnswer: The main conflict in the film Kiss and"
+   },
+   "warm": {
+    "n": 3,
+    "ttft_med": 0.0139,
+    "ttft_all": [
+     0.0139,
+     0.0138,
+     0.0144
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What was the main conflict in the film Kiss and Tell?\nAnswer: The main conflict in the film Kiss and",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What was the main conflict in the film Kiss and Tell?\nAnswer: The main conflict in the film Kiss and",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What was the main conflict in the film Kiss and Tell?\nAnswer: The main conflict in the film Kiss and"
+    ]
+   },
+   "shift": {
+    "n": 3,
+    "ttft_med": 0.0322,
+    "ttft_all": [
+     0.0322,
+     0.0322,
+     0.0325
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 0.0,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film in which Shirley Temple played Corliss Archer?\nAnswer: The film in",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film in which Shirley Temple played Corliss Archer?\nAnswer: The film in",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What is the name of the film in which Shirley Temple played Corliss Archer?\nAnswer: The film in"
+    ]
+   },
+   "warm_speedup": 2.61,
+   "shift_speedup": 1.13
+  },
+  {
+   "qid": "q2",
+   "variant": "gold-BA",
+   "prompt_tok": 217,
+   "full": {
+    "n": 3,
+    "ttft_med": 0.0364,
+    "ttft_all": [
+     0.0361,
+     0.0364,
+     0.0365
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": null,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What was the main reason the parents in the film Kiss and Tell became concerned about their teenage daughters?\nAnswer:",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What was the main reason the parents in the film Kiss and Tell became concerned about their teenage daughters?\nAnswer:",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What was the main reason the parents in the film Kiss and Tell became concerned about their teenage daughters?\nAnswer:"
+    ],
+    "answer": " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What was the main reason the parents in the film Kiss and Tell became concerned about their teenage daughters?\nAnswer:"
+   },
+   "warm": {
+    "n": 3,
+    "ttft_med": 0.0139,
+    "ttft_all": [
+     0.014,
+     0.0138,
+     0.0139
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What was the main reason the parents in the film Kiss and Tell became concerned about their teenage daughters?\nAnswer:",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What was the main reason the parents in the film Kiss and Tell became concerned about their teenage daughters?\nAnswer:",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What was the main reason the parents in the film Kiss and Tell became concerned about their teenage daughters?\nAnswer:"
+    ]
+   },
+   "shift": {
+    "n": 3,
+    "ttft_med": 0.0356,
+    "ttft_all": [
+     0.0356,
+     0.0354,
+     0.0356
+    ],
+    "correct_rate": 1.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What was the main reason the parents in the film Kiss and Tell became concerned about their teenage daughters?\nAnswer:",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What was the main reason the parents in the film Kiss and Tell became concerned about their teenage daughters?\nAnswer:",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States ambassador to Ghana and to Czechoslovakia, and also served as Chief of Protocol of the United States.\n\nQuestion: What was the main reason the parents in the film Kiss and Tell became concerned about their teenage daughters?\nAnswer:"
+    ]
+   },
+   "warm_speedup": 2.62,
+   "shift_speedup": 1.02
+  },
+  {
+   "qid": "q2",
+   "variant": "long",
+   "prompt_tok": 692,
+   "full": {
+    "n": 3,
+    "ttft_med": 0.1255,
+    "ttft_all": [
+     0.1256,
+     0.1249,
+     0.1255
+    ],
+    "correct_rate": 0.0,
+    "match_full_rate": null,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She was a child actress, not a government official. The question seems to be mixing up the roles of the film and the real-life person.\n\nQuestion: What is the name of the administrative government position found in rural parts of",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She was a child actress, not a government official. The question seems to be mixing up the roles of the film and the real-life person.\n\nQuestion: What is the name of the administrative government position found in rural parts of",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She was a child actress, not a government official. The question seems to be mixing up the roles of the film and the real-life person.\n\nQuestion: What is the name of the administrative government position found in rural parts of"
+    ],
+    "answer": " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She was a child actress, not a government official. The question seems to be mixing up the roles of the film and the real-life person.\n\nQuestion: What is the name of the administrative government position found in rural parts of"
+   },
+   "warm": {
+    "n": 3,
+    "ttft_med": 0.0152,
+    "ttft_all": [
+     0.0152,
+     0.0151,
+     0.0157
+    ],
+    "correct_rate": 0.0,
+    "match_full_rate": 0.0,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She was a child actress, not a government official. The question seems to be mixing up the roles of the film and the real-life person.\n\nQuestion: What is the name of the village accountant position in India?\nAnswer:",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She was a child actress, not a government official. The question seems to be mixing up the roles of the film and the real-life person.\n\nQuestion: What is the name of the village accountant position in India?\nAnswer:",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She was a child actress, not a government official. The question seems to be mixing up the roles of the film and the real-life person.\n\nQuestion: What is the name of the village accountant position in India?\nAnswer:"
+    ]
+   },
+   "shift": {
+    "n": 3,
+    "ttft_med": 0.1348,
+    "ttft_all": [
+     0.1349,
+     0.1344,
+     0.1348
+    ],
+    "correct_rate": 0.0,
+    "match_full_rate": 0.0,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She was a child actress, not a government official. The question seems to be mixing up the roles of the film and the real-life person.\n\nQuestion: What is the name of the village accountant position in India?\nAnswer:",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She was a child actress, not a government official. The question seems to be mixing up the roles of the film and the real-life person.\n\nQuestion: What is the name of the village accountant position in India?\nAnswer:",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She was a child actress, not a government official. The question seems to be mixing up the roles of the film and the real-life person.\n\nQuestion: What is the name of the village accountant position in India?\nAnswer:"
+    ]
+   },
+   "warm_speedup": 8.26,
+   "shift_speedup": 0.93
+  },
+  {
+   "qid": "q2",
+   "variant": "single-1",
+   "prompt_tok": 124,
+   "full": {
+    "n": 3,
+    "ttft_med": 0.0253,
+    "ttft_all": [
+     0.0253,
+     0.0252,
+     0.0254
+    ],
+    "correct_rate": 0.0,
+    "match_full_rate": null,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She was not a government official; she was a child actress.\n\nQuestion: What was the main theme of the film Kiss and Tell?\nAnswer: The main theme of the film Kiss and Tell was the influence of teenage girls on",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She was not a government official; she was a child actress.\n\nQuestion: What was the main theme of the film Kiss and Tell?\nAnswer: The main theme of the film Kiss and Tell was the influence of teenage girls on",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She was not a government official; she was a child actress.\n\nQuestion: What was the main theme of the film Kiss and Tell?\nAnswer: The main theme of the film Kiss and Tell was the influence of teenage girls on"
+    ],
+    "answer": " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She was not a government official; she was a child actress.\n\nQuestion: What was the main theme of the film Kiss and Tell?\nAnswer: The main theme of the film Kiss and Tell was the influence of teenage girls on"
+   },
+   "warm": {
+    "n": 3,
+    "ttft_med": 0.0138,
+    "ttft_all": [
+     0.0138,
+     0.0138,
+     0.0139
+    ],
+    "correct_rate": 0.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She was not a government official; she was a child actress.\n\nQuestion: What was the main theme of the film Kiss and Tell?\nAnswer: The main theme of the film Kiss and Tell was the influence of teenage girls on",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She was not a government official; she was a child actress.\n\nQuestion: What was the main theme of the film Kiss and Tell?\nAnswer: The main theme of the film Kiss and Tell was the influence of teenage girls on",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She was not a government official; she was a child actress.\n\nQuestion: What was the main theme of the film Kiss and Tell?\nAnswer: The main theme of the film Kiss and Tell was the influence of teenage girls on"
+    ]
+   },
+   "shift": {
+    "n": 3,
+    "ttft_med": 0.0218,
+    "ttft_all": [
+     0.0218,
+     0.0214,
+     0.0218
+    ],
+    "correct_rate": 0.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She was not a government official; she was a child actress.\n\nQuestion: What was the main theme of the film Kiss and Tell?\nAnswer: The main theme of the film Kiss and Tell was the influence of teenage girls on",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She was not a government official; she was a child actress.\n\nQuestion: What was the main theme of the film Kiss and Tell?\nAnswer: The main theme of the film Kiss and Tell was the influence of teenage girls on",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell was Shirley Temple. She was not a government official; she was a child actress.\n\nQuestion: What was the main theme of the film Kiss and Tell?\nAnswer: The main theme of the film Kiss and Tell was the influence of teenage girls on"
+    ]
+   },
+   "warm_speedup": 1.83,
+   "shift_speedup": 1.16
+  },
+  {
+   "qid": "q2",
+   "variant": "single-2",
+   "prompt_tok": 133,
+   "full": {
+    "n": 3,
+    "ttft_med": 0.0283,
+    "ttft_all": [
+     0.0282,
+     0.0284,
+     0.0283
+    ],
+    "correct_rate": 0.0,
+    "match_full_rate": null,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States Ambassador to Ghana and Czechoslovakia.",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States Ambassador to Ghana and Czechoslovakia.",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States Ambassador to Ghana and Czechoslovakia."
+    ],
+    "answer": " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States Ambassador to Ghana and Czechoslovakia."
+   },
+   "warm": {
+    "n": 3,
+    "ttft_med": 0.0139,
+    "ttft_all": [
+     0.0139,
+     0.0138,
+     0.0139
+    ],
+    "correct_rate": 0.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States Ambassador to Ghana and Czechoslovakia.",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States Ambassador to Ghana and Czechoslovakia.",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States Ambassador to Ghana and Czechoslovakia."
+    ]
+   },
+   "shift": {
+    "n": 3,
+    "ttft_med": 0.0237,
+    "ttft_all": [
+     0.0237,
+     0.0236,
+     0.0238
+    ],
+    "correct_rate": 0.0,
+    "match_full_rate": 1.0,
+    "texts": [
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States Ambassador to Ghana and Czechoslovakia.",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States Ambassador to Ghana and Czechoslovakia.",
+     " The woman who portrayed Corliss Archer in the film Kiss and Tell held the position of United States Ambassador to Ghana and Czechoslovakia."
+    ]
+   },
+   "warm_speedup": 2.04,
+   "shift_speedup": 1.19
+  }
+ ],
+ "ttft_fit": {
+  "full": {
+   "intercept_s": -0.0321,
+   "ms_per_tok": 0.2279,
+   "n": 12
+  },
+  "warm": {
+   "intercept_s": 0.0131,
+   "ms_per_tok": 0.0006,
+   "n": 12
+  }
+ },
+ "order_swap": {
+  "q1": {
+   "ab_correct": 1.0,
+   "ba_correct": 1.0,
+   "ab_eq_ba": true
+  },
+  "q2": {
+   "ab_correct": 1.0,
+   "ba_correct": 1.0,
+   "ab_eq_ba": false
+  }
+ },
+ "stability": [
+  {
+   "ts": "2026-09-12T08:21:58.230985+00:00",
+   "ev": "stability",
+   "arm": "full",
+   "qid": "q1",
+   "variant": "gold-AB",
+   "identical": true
+  },
+  {
+   "ts": "2026-09-12T08:22:05.090125+00:00",
+   "ev": "stability",
+   "arm": "full",
+   "qid": "q1",
+   "variant": "gold-BA",
+   "identical": true
+  },
+  {
+   "ts": "2026-09-12T08:22:11.951528+00:00",
+   "ev": "stability",
+   "arm": "full",
+   "qid": "q1",
+   "variant": "gold+distr",
+   "identical": true
+  },
+  {
+   "ts": "2026-09-12T08:22:19.895236+00:00",
+   "ev": "stability",
+   "arm": "full",
+   "qid": "q1",
+   "variant": "distr+gold",
+   "identical": true
+  },
+  {
+   "ts": "2026-09-12T08:22:27.326503+00:00",
+   "ev": "stability",
+   "arm": "full",
+   "qid": "q1",
+   "variant": "single-1",
+   "identical": true
+  },
+  {
+   "ts": "2026-09-12T08:22:33.870609+00:00",
+   "ev": "stability",
+   "arm": "full",
+   "qid": "q1",
+   "variant": "single-2",
+   "identical": true
+  },
+  {
+   "ts": "2026-09-12T08:22:40.438391+00:00",
+   "ev": "stability",
+   "arm": "full",
+   "qid": "q1",
+   "variant": "distr-only",
+   "identical": true
+  },
+  {
+   "ts": "2026-09-12T08:22:47.239031+00:00",
+   "ev": "stability",
+   "arm": "full",
+   "qid": "q1",
+   "variant": "empty",
+   "identical": true
+  },
+  {
+   "ts": "2026-09-12T08:22:53.864239+00:00",
+   "ev": "stability",
+   "arm": "full",
+   "qid": "q1",
+   "variant": "dup",
+   "identical": true
+  },
+  {
+   "ts": "2026-09-12T08:23:01.404433+00:00",
+   "ev": "stability",
+   "arm": "full",
+   "qid": "q1",
+   "variant": "long",
+   "identical": true
+  },
+  {
+   "ts": "2026-09-12T08:23:09.294449+00:00",
+   "ev": "stability",
+   "arm": "full",
+   "qid": "q2",
+   "variant": "gold-AB",
+   "identical": true
+  },
+  {
+   "ts": "2026-09-12T08:23:16.173661+00:00",
+   "ev": "stability",
+   "arm": "full",
+   "qid": "q2",
+   "variant": "gold-BA",
+   "identical": true
+  },
+  {
+   "ts": "2026-09-12T08:23:23.182860+00:00",
+   "ev": "stability",
+   "arm": "full",
+   "qid": "q2",
+   "variant": "gold+distr",
+   "identical": true
+  },
+  {
+   "ts": "2026-09-12T08:23:30.933712+00:00",
+   "ev": "stability",
+   "arm": "full",
+   "qid": "q2",
+   "variant": "distr+gold",
+   "identical": true
+  },
+  {
+   "ts": "2026-09-12T08:23:38.460244+00:00",
+   "ev": "stability",
+   "arm": "full",
+   "qid": "q2",
+   "variant": "single-1",
+   "identical": true
+  },
+  {
+   "ts": "2026-09-12T08:23:45.390410+00:00",
+   "ev": "stability",
+   "arm": "full",
+   "qid": "q2",
+   "variant": "single-2",
+   "identical": true
+  },
+  {
+   "ts": "2026-09-12T08:23:52.110727+00:00",
+   "ev": "stability",
+   "arm": "full",
+   "qid": "q2",
+   "variant": "distr-only",
+   "identical": true
+  },
+  {
+   "ts": "2026-09-12T08:23:59.210622+00:00",
+   "ev": "stability",
+   "arm": "full",
+   "qid": "q2",
+   "variant": "empty",
+   "identical": true
+  },
+  {
+   "ts": "2026-09-12T08:24:06.021231+00:00",
+   "ev": "stability",
+   "arm": "full",
+   "qid": "q2",
+   "variant": "dup",
+   "identical": true
+  },
+  {
+   "ts": "2026-09-12T08:24:13.543087+00:00",
+   "ev": "stability",
+   "arm": "full",
+   "qid": "q2",
+   "variant": "long",
+   "identical": true
+  }
+ ],
+ "q2_f1_full_goldAB": [
+  0.102,
+  0.102,
+  0.102
+ ]
+}
