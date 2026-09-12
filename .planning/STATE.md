@@ -1,19 +1,19 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: 07
 current_phase_name: Promotion & Rollback
 status: executing
-stopped_at: Completed 07-03-PLAN.md
-last_updated: "2026-09-12T06:07:26.141Z"
+stopped_at: Completed 07-04-PLAN.md
+last_updated: "2026-09-12T06:38:31.110Z"
 last_activity: 2026-09-11
 last_activity_desc: Phase 07 execution started
-state_head: c0e56b8d4852466a57e1f859349484af1da81427
+state_head: 844ccf5af2e7a8b526f813be51034ee8cd4df065
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 2
   total_plans: 62
-  completed_plans: 61
+  completed_plans: 62
 milestone_name: milestone
 ---
 
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 
 ## Current Position
 
-Phase: 07 (Promotion & Rollback) — READY TO EXECUTE
-Plan: 3 of 3
+Phase: 07 (Promotion & Rollback) — EXECUTING
+Plan: 2 of 4
   drifted before this session — corrected here from find-phase's actual plan/summary counts
   rather than the stale auto-incremented value)
 Status: Ready to execute
@@ -100,6 +100,7 @@ Progress: [██████████] 100%
 | Phase 07 P01 | ~55min | 3 tasks | 14 files |
 | Phase 07-promotion-rollback P02 | ~50min | 2 tasks | 7 files |
 | Phase 07 P03 | ~75min | 3 tasks | 10 files |
+| Phase 07 P04 | ~21 min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -186,6 +187,7 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 07]: 07-01: the whole ledger read-modify-append sequence inside promote() runs in one run_in_executor call, never split across the calling thread and the executor thread. — sqlite3 forbids cross-thread use of a connection opened on a different thread; opening Ledger() on the event loop thread and calling append() from run_in_executor raised sqlite3.ProgrammingError.
 - [Phase 07]: 07-02: MACH-09 posture guard's rollback exemption widened to seam/engine.py's def rollback(...) (mirroring promote's own exemption) since this codebase's real rollback() is RIG PR.2's operator-asserted path, never a CONTRACT SS5 gate-adjudicated ladder member. — The guard's _PROMOTION_VERB_NAMES already listed rollback from Phase 2's own drafting guess; landing the real verb tripped it exactly as its docstring anticipated, per 07-01's identical precedent for promote.
 - [Phase 07]: 07-03: three-transport parity tests use per-transport isolated store roots with a directly-inserted fixed trace token (bypassing TraceStore's random minting) so full LedgerRecord field equality is provable across in-process/REST/MCP — TraceStore.persist() mints a fresh secrets.token_urlsafe() reference every call (D-06); no two independent stores can literally share a promotion_trace_ids value unless the token is inserted directly
+- [Phase 07]: 07-04: Kept PromoteRequest.verb/PromoteToolArgs.verb as plain str with no Literal/field_validator; a named UnrecognisedPromotionVerbError raised inside Databasise.promote() (checked before trace-id resolution) is the sole refusal mechanism, so REST/MCP/in-process all surface the identical refusal_type. Closes 07-VERIFICATION.md's sole gap and 07-REVIEW.md's CR-01.
 
 ### Pending Todos
 
@@ -221,6 +223,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-12T05:27:34.725Z
-Stopped at: Completed 07-03-PLAN.md
+Last session: 2026-09-12T06:38:31.015Z
+Stopped at: Completed 07-04-PLAN.md
 Resume file: None
