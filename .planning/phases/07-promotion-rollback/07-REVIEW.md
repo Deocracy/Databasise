@@ -1,6 +1,6 @@
 ---
 phase: 07-promotion-rollback
-reviewed: 2026-09-11T00:00:00Z
+reviewed: 2026-09-12T00:00:00Z
 depth: standard
 files_reviewed: 9
 files_reviewed_list:
@@ -199,6 +199,6 @@ from databasise.seam.refusals import (
 
 ---
 
-_Reviewed: 2026-09-11_
+_Reviewed: 2026-09-12_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
