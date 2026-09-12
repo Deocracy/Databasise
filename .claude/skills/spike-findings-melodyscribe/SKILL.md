@@ -1,6 +1,6 @@
 ---
 name: spike-findings-melodyscribe
-description: Implementation blueprint from the MelodyScribe spikes. Requirements, proven patterns, measured numbers, and dead ends for building the MelodyScribe micro-harness (one small local model, sectioned Score input, one-pass embedding plus grammar-constrained ops, Proof validator, KV reuse). Auto-loaded during MelodyScribe implementation work.
+description: Implementation blueprint from the MelodyScribe spikes. Requirements, proven patterns, measured numbers, and dead ends for building the MelodyScribe micro-harness (one small local model, sectioned Score input, one-pass embedding plus grammar-constrained ops, Proof validator, KV reuse, embedding training, extraction prompts, batched serving, pipeline order). Auto-loaded during MelodyScribe implementation work.
 ---
 
 <context>
@@ -10,7 +10,7 @@ MelodyScribe: a micro-harness where one small local model (1B to 10B to start, D
 
 Five spikes settled the input/output contract and the three unknowns the rig had to measure. Every verdict entered the manifest only after an owner-side re-run of the spike's `run.sh` reproduced it.
 
-Spike sessions wrapped: 2026-09-12 (spikes 001, 002, 004, 005, then 003)
+Spike sessions wrapped: 2026-09-12 round 1 (spikes 001, 002, 004, 005, then 003) and round 2 (spikes 006 to 010, after deep research 2 on embedding models, prompts, serving, and pipeline order: `reference/micro-harnesses/deep-research-2/REPORT.md`)
 </context>
 
 <requirements>
@@ -32,6 +32,11 @@ Added by the spikes (owner review pending where marked):
 - Every decode step carries a token cap: the grammar guarantees shape, only the cap guarantees termination (spike 003)
 - The dedicated 0.6B embedder is the durable-index baseline until a trained adapter beats it on the rig; untrained last-token states are not embeddings (spike 004)
 - Runtime prefix reuse stays; no persisted per-chunk KV module store for the corpus at 2B scale (spike 005)
+- Labelled data is teacher-generated with provenance and a fixed train/test split by document (`.planning/spikes/shared/queries-v1.json`); nothing is hand-labelled and no spike trains on test documents (round 2)
+- Any adapter or merge reports generation retained: op emission Proof-pass rate and routing with the change on versus off (round 2; spike 006 found a retrieval LoRA at rank 16 kills op emission)
+- Training and merging run in `.planning/spikes/.venv-train` on safetensors under `.models/hf/`; GGUF stays inference-only (round 2)
+- Pre-register the materiality bar and pass condition before a run; few-shot examples come only from held-out documents; prompt placement cost is measured per model (spike 008)
+- One loaded model process serves embedding and ops; workers are asyncio tasks over one model lock, one write lock per store, idempotent op keys; ship vector-first ranking with graph and SQL as backoff, never flat fusion bonuses (spike 010)
 - Never prepend BOS for MiniCPM5; tokenise prefix and section as one string; `llama_get_embeddings_ith` indexes the i-th output, not the position; reject empty sections; enforce context limits chunker-side; one model per process; every load under `flock /tmp/melodyscribe-gpu.lock` (spike 002)
 </requirements>
 
@@ -42,6 +47,9 @@ Added by the spikes (owner review pending where marked):
 |------|-----------|-------------|
 | Score I/O contract | references/score-io-contract.md | Score XML, compilation to token plans, per-file-set grammar, and Proof pass 95/95 acceptance checks (001); evidence must be a quoted substring resolved harness-side, not model-emitted offsets (003, v0.2) |
 | One-pass runtime | references/one-pass-runtime.md | One `llama_decode` yields the 2048-dim embedding and the logits; sequence copy is bit-exact; prefill about 3.7k tokens/s on MiniCPM5-2B Q8 (002). Prebuilt KV modules cut TTFT 2.4x to 8.5x relative but only 20 to 110 ms absolute at 2B; saved state is not bit-exact (005) |
+| Embedding training and hybrids | references/embedding-training-and-hybrids.md | Contrastive LoRA on the 2B closes most of the untrained gap in 147 s of GPU (test MRR 0.316 to 0.748 versus the 0.6B embedder at 0.801) but misses parity by 0.05 and destroys op emission; distillation to the embedder is worse; a linear weight merge of Qwen3-Embedding-0.6B into Qwen3-0.6B reaches 0.82 of the embedder (006). No instruction, prefix, or marker design is material on either model; documents stay bare (007) |
+| Graph prompt design | references/graph-prompt-design.md | One-shot with a held-out teacher example clears the 0.10 bar on the 4B and keeps one pass; two-step entities-then-relations scores higher at a second decode; LightRAG-style wording collapses; instruction placement cost is model-dependent; gains come from verbatim quoting (008) |
+| Serving and pipeline order | references/serving-and-pipeline.md | On one 16 GB card 16 slots saturate greedy decode at about 2470 tokens/s and 16 to 64 embed slots reach about 800 queries/s; grammar filtering costs 9x on the CPU side; instruction-first ordering doubles the shared prefix; "1000 agents" is a queue over K slots (009). One pass equals two, streamed equals batched writes, one worker per model process, whole-document chunks, vector-first ranking (010) |
 | Model size and training | references/model-size-and-training.md | 1B emits no ops under greedy grammar decoding; routing accuracy is flat 0.30 to 0.45 from 2B to 8B pre-fine-tune while cost grows about a hundredfold (003). A dedicated 0.6B embedder beats untrained 2B states (gold MRR 1.00 vs 0.31) because the states are anisotropic; a ridge head does not fix it (004) |
 
 ## Source Files
@@ -57,6 +65,11 @@ Original spike source files (READMEs, scripts, schemas, the spec, the demo) are 
 - 003-op-emission-size-sweep (VALIDATED)
 - 004-self-embedding-parity (PARTIAL: contrastive adapter untested)
 - 005-kv-composition-quality (PARTIAL: absolute savings second-order at 2B)
+- 006-hybrid-embedder (PARTIAL: contrastive LoRA near parity, generation not retained; distillation and mergekit TIES invalidated)
+- 007-embedding-prompt-sensitivity (VALIDATED)
+- 008-graph-prompt-design (VALIDATED)
+- 009-batched-serving-and-cache-order (VALIDATED)
+- 010-pipeline-order-end-to-end (PARTIAL: flat-bonus fusion fails its pass condition)
 
-Next project step: owner review of SCORE-IO-SPEC §10 open decisions and the v0.2 quote-evidence change, then the training spike (fine-tune on `teacher.json` labels, contrastive adapter with query-passage pairs) before any size is chosen. The digest is `reference/micro-harnesses/spike-results.md`.
+Next project step: owner review of SCORE-IO-SPEC §10 open decisions and the v0.2 quote-evidence change, then the training spike that reconciles embedding and generation in one adapter (generation-preserving recipe: lower rank, KL anchor or joint LM loss, whitening controls first) and fine-tunes op emission on the teacher labels with the one-shot prompt, before any size is chosen. The digest is `reference/micro-harnesses/spike-results.md`.
 </metadata>

@@ -1,0 +1,3 @@
+# vector dumps stay on disk; run.sh regenerates them (arm C reads teacher_A_train.json)
+results/vecs_*.json
+results/teacher_A_train.json

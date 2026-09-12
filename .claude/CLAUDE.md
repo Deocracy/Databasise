@@ -419,7 +419,7 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 | Skill | Description | Path |
 |-------|-------------|------|
 | spike-findings-rag-graph-vector-raw | Implementation blueprint from spike experiments. Requirements, proven patterns, and verified knowledge for the RAG modality-swap system model (Databasise/Sourcerer). Auto-loaded during implementation work. | `.claude/skills/spike-findings-rag-graph-vector-raw/SKILL.md` |
-| spike-findings-melodyscribe | Implementation blueprint from the MelodyScribe spikes: Score I/O contract, one-pass runtime, model size and training. Auto-loaded during MelodyScribe implementation work. | `.claude/skills/spike-findings-melodyscribe/SKILL.md` |
+| spike-findings-melodyscribe | Implementation blueprint from the MelodyScribe spikes: Score I/O contract, one-pass runtime, model size and training, embedding training and hybrids, graph prompt design, serving and pipeline order. Auto-loaded during MelodyScribe implementation work. | `.claude/skills/spike-findings-melodyscribe/SKILL.md` |
 
 - **Spike findings for MelodyScribe** (contract, runtime patterns, size curve, constraints, gotchas) → `Skill("spike-findings-melodyscribe")`
 <!-- GSD:skills-end -->
