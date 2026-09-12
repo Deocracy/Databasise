@@ -105,6 +105,42 @@ ledger caller, an `append()` call reachable from a gate-adjudicated verb, or a r
 parameter) appearing anywhere outside the test suite still fails this test and still means this
 document needs another update.
 
+## 07-02-PLAN.md: rollback/retire — the same operator-asserted exception, extended (MACH-07)
+
+`Databasise.rollback()` and `Databasise.retire()` are two more non-test callers of
+`Ledger.append()` in `databasise/seam/engine.py` — the same file the 07-01 section above already
+names, not a new caller site. Both are RIG §PR.2's own named operations, distinct from CONTRACT
+§5's five-verb ladder (`check`/`preview`/`run`/`promote-next`/`promote-now`) that this document's
+posture actually gates: `rollback()` repoints an alias to an explicitly named prior generation,
+and `retire()` tombstones a generation. Neither carries a `verb` parameter, neither reaches any
+gate-adjudicated branch, and neither is reachable from `promote-next`/`promote-now` — they are
+their own §18 operations (Phase 4 D-03: one entry per operation), sharing `promote()`'s
+operator-asserted precondition checks (`Databasise._resolve_operator_preconditions`) but never its
+posture-refusal branch. This document's posture claim is unaffected: both new verbs are already
+named in this document's own "What survives" section above (`Rollback`), and `retire()` is the
+same class of manual, unmeasured, `promotion_provenance = "operator_asserted"` act rollback and
+promote already are.
+
+The guard test's own vocabulary needed one addition, not a relaxation: `_PROMOTION_VERB_NAMES`
+(`databasise/tests/runner/test_measurement_posture.py`) already listed `"rollback"` as a name to
+scan for — inherited from Phase 2, when it was written as a guess at what the CONTRACT §5
+gate-adjudicated ladder's own rollback mechanism might be named, before Phase 7 settled that this
+codebase's real `rollback()` is instead RIG §PR.2's operator-asserted path, never a member of that
+ladder. `_PROMOTION_VERB_EXEMPT_FILES`'s matching detail set was widened from `{"def
+promote(...)"}` to `{"def promote(...)", "def rollback(...)"}` for the one already-named exempt
+file, `seam/engine.py` — the same file, the same reasoning, extended to name the second real
+operator-asserted verb this phase landed. `retire` needed no exemption at all: it was never in
+`_PROMOTION_VERB_NAMES`'s vocabulary, since nothing in Phase 2's own drafting mistook it for a
+member of the gate-adjudicated ladder in the first place.
+
+No branch of `rollback()`/`retire()` accepts a `verb` argument or reads
+`databasise.seam.promotion._MEASUREMENT_POSTURE` at all — proven at runtime by
+`databasise/tests/seam/test_rollback.py` and `databasise/tests/seam/test_retire.py`, which drive
+real promote/rollback/retire sequences against the real ledger, not a hand-seeded row. A third verb
+appearing under `seam/engine.py` with a `record_kind` outside the three declared constants
+(`promotion`/`rollback`/`tombstone`), or a real `promote_next`/`promote_now` implementation
+anywhere, still fails the guard test and still means this document needs another update.
+
 ## Read-only exception (04-03-PLAN.md, D-12/FA-06)
 
 `databasise/seam/selectors.py`'s alias branch is the first non-test, non-`ledger/` module to

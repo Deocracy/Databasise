@@ -27,19 +27,24 @@ that one appearing anywhere outside tests still forces this record open:
    the operator-asserted write exception" sections for why these two callers do not mean the
    *gate-adjudicated* promotion path has started to exist.
 2. **No promotion-gate implementation is defined outside tests.** No module under the same scan
-   defines a function or method named ``promote_next``, ``promote_now``, or ``rollback`` — the
+   defines a function or method named ``promote_next`` or ``promote_now`` — CONTRACT §5's
    gate-adjudicated verbs, which this milestone never implements (they only refuse). ``promote``
-   itself is exempted for exactly one file, ``databasise/seam/engine.py`` (07-01-PLAN.md): it is
-   the operator-asserted entry point every verb (including the gate-adjudicated ones) passes
-   through on its way to refusing.
+   and ``rollback`` are exempted for exactly one file, ``databasise/seam/engine.py``
+   (07-01-PLAN.md, 07-02-PLAN.md): both are real operator-asserted entry points (RIG §PR.1/§PR.2),
+   never members of §5's ladder — ``promote`` is the entry point every verb (including the
+   gate-adjudicated ones) passes through on its way to refusing; ``rollback`` is its own §18
+   operation, appending through the identical operator-asserted-only path. ``retire`` needs no
+   exemption at all: it was never in this set's named vocabulary, since it was never mistaken for
+   a member of §5's ladder in the first place.
 3. **``LedgerRecord.promotion_provenance`` can never be defaulted.** No default, no
    ``default_factory`` — an append can never omit its provenance nor acquire one by absence
    (02-CONTEXT.md D-04).
 
-**This test was expected to, and did, fail when Phase 7 built MACH-07's promote path** — the
-posture decision was forced into the open exactly as this docstring anticipated, and
-``.planning/phases/02-falsifier-gate/02-MACH-09-POSTURE.md`` was updated in the same change,
-recording the new narrow exceptions above rather than silently relaxing this test.
+**This test was expected to, and did, fail when Phase 7 built MACH-07's promote path, and again
+when 07-02-PLAN.md built rollback** — the posture decision was forced into the open exactly as
+this docstring anticipated both times, and
+``.planning/phases/02-falsifier-gate/02-MACH-09-POSTURE.md`` was updated in the same change each
+time, recording the new narrow exceptions above rather than silently relaxing this test.
 """
 
 from __future__ import annotations
@@ -66,18 +71,25 @@ _EXEMPT_FILES = (
     "seam/selectors.py",
     # 07-01-PLAN.md (MACH-07): Databasise.promote() calls Ledger.append() for the
     # operator-asserted verb only — every gate-adjudicated verb refuses (via
-    # databasise.seam.promotion.enforce_gate_verb_posture) before that line is ever reached. See
+    # databasise.seam.promotion.enforce_gate_verb_posture) before that line is ever reached.
+    # 07-02-PLAN.md: Databasise.rollback()/retire() append through the identical
+    # operator-asserted-only path (RIG §PR.2) — neither is a member of CONTRACT §5's
+    # check/preview/run/promote-next/promote-now ladder this guard's own item 2 fences. See
     # _PROMOTION_VERB_EXEMPT_FILES below for the matching promotion-verb-definition exemption.
     "seam/engine.py",
 )
 
-# A narrower, promotion-verb-specific exemption: this file defines `promote` (the
-# operator-asserted entry point every verb passes through), but no gate-adjudicated verb
-# (`promote_next`/`promote_now`/`rollback`) is defined anywhere in it — those names are only ever
-# string values of the `verb` parameter, checked and refused, never function definitions.
+# A narrower, promotion-verb-specific exemption: this file defines `promote` and `rollback` (both
+# real operator-asserted entry points, RIG §PR.1/§PR.2), but no gate-adjudicated verb
+# (`promote_next`/`promote_now`) is defined anywhere in it — those names are only ever string
+# values of the `verb` parameter, checked and refused, never function definitions.
+# `retire` is deliberately absent from `_PROMOTION_VERB_NAMES` below: it was never part of
+# CONTRACT §5's gate-adjudicated ladder this set fences (that ladder is
+# check/preview/run/promote-next/promote-now), so defining it needs no exemption at all.
 _PROMOTION_VERB_EXEMPT_FILES = ("seam/engine.py",)
 
 _PROMOTION_VERB_NAMES = frozenset({"promote", "promote_next", "promote_now", "rollback"})
+_PROMOTION_VERB_EXEMPT_DETAILS = frozenset({"def promote(...)", "def rollback(...)"})
 
 
 @dataclass(frozen=True)
@@ -181,16 +193,19 @@ def test_no_promotion_verb_is_defined_outside_tests():
     for path in _scanned_files():
         relative = path.relative_to(root).as_posix()
         for finding in _promotion_verb_findings(path):
-            # Only `promote` on the one named exempt file is the operator-asserted entry point
-            # (07-01-PLAN.md); a gate-adjudicated verb name (promote_next/promote_now/rollback),
-            # or `promote` defined anywhere else, still fails this test.
-            if relative in _PROMOTION_VERB_EXEMPT_FILES and finding.detail == "def promote(...)":
+            # `promote`/`rollback` on the one named exempt file are both real operator-asserted
+            # entry points (07-01-PLAN.md/07-02-PLAN.md); a gate-adjudicated verb name
+            # (promote_next/promote_now), or either defined anywhere else, still fails this test.
+            if (
+                relative in _PROMOTION_VERB_EXEMPT_FILES
+                and finding.detail in _PROMOTION_VERB_EXEMPT_DETAILS
+            ):
                 continue
             all_findings.append(finding)
 
     assert all_findings == [], (
-        "a gate-adjudicated promotion verb (promote_next/promote_now/rollback), or `promote` "
-        "outside its one named exemption, is defined outside the test suite — this means the "
+        "a gate-adjudicated promotion verb (promote_next/promote_now), or `promote`/`rollback` "
+        "outside their one named exemption, is defined outside the test suite — this means the "
         "gate-adjudicated promotion path has started to exist. Update "
         ".planning/phases/02-falsifier-gate/02-MACH-09-POSTURE.md in the same change rather than "
         f"relaxing this test: {all_findings}"
