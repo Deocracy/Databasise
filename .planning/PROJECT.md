@@ -26,6 +26,7 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 - ✓ LightRAG ingest core (~1,786 lines) admitted as opaque node under `quarantined` scope, with an enforced inside-vs-across-boundary change rule and DR-04 decided (§BP rung 3) — Validated in Phase 5: Opaque-Side Admission (`databasise/evidence/DR-04-DECISION.md`)
 - ✓ codebase-memory-mcp admitted whole-engine under §17/§8's eleven conditions, run twice (machine chunks / native chunking) — **Falsifier 4** — Validated in Phase 5: Opaque-Side Admission (`databasise/evidence/FALSIFIER-4-EVIDENCE.md`, `databasise/evidence/ADMISSION-CODEBASE-MEMORY-MCP.md`)
 - ✓ REST + MCP surface serving the §18 closed envelope: invariance rule, four selectors, tool-surface-growth rule — REST and envelope in Phase 4: The Seam; MCP capability parity completed and Validated in Phase 5: Opaque-Side Admission
+- ✓ Operator-asserted promotion and rollback on the append-only ledger: `change_origin` and `promotion_provenance` required on every generation record (never defaulted, never inferable by absence), a semver minted at promotion and only at promotion, tombstoned losers never lifted, the active pointer always a derived query — and all three operator verbs atomic under concurrency (MACH-07, API-09) — Validated in Phase 7: Promotion & Rollback (`databasise/evidence/PROMOTION-LEDGER-EVIDENCE.md`)
 
 ### Active
 
@@ -79,6 +80,8 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 | Embeddable in-process engine, no Docker | Cozo-style embedding matches actual use; local NixOS is the runtime; containers add surface without value here | — Pending |
 | Eval corpus: public set bootstraps, own corpus before promotions | A/A calibration needs data on day one; promotion decisions need representative local data | — Pending |
 | Hardening items folded into the build at first-touch | Avoids a stalled doc-only phase; each item has a natural rung (gate scripts → rung 1, DR-04 → rung 3) | — Pending |
+| Defer HARD-01/HARD-02/HARD-04 out of Phase 7 to their point of first need | The operator-asserted path consumes no eval bundle, no floor and no verdict, so none of the three is reached by anything Phase 7 builds (`07-GATE-AMENDMENT.md`) | — Pending (moves to the hardening phase or the first gate-adjudicated promotion) |
+| Close the operator verbs' check-then-act races with one `BEGIN IMMEDIATE` span per verb plus a UNIQUE `(alias, minted_version)` index | A guard read and the append it gates must commit together or the guard goes stale under concurrency; the schema constraint backstops it independently of any Python read path | ✓ Held (G-07-1 closed; 40/40 concurrency runs, full suite green) |
 
 ## Evolution
 
@@ -98,4 +101,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-08 after Phase 5 completion*
+*Last updated: 2026-09-12 after Phase 7 completion*
