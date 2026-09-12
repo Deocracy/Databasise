@@ -42,19 +42,25 @@ from databasise.seam.redact import (
 )
 from databasise.seam.refusals import (
     AmbiguousIngestPayloadError,
+    DisagreeingPromotionTraceIdsError,
     DuplicateComparisonKeyError,
     EmptyComparisonRequestError,
+    EmptyPromotionTraceIdsError,
     EmptyQueryObjectError,
     ForbiddenSelectorInputError,
     ForeignEngineRefusalError,
+    GateVerbNotBuiltError,
+    InvalidChangeOriginError,
     MalformedBase64PayloadError,
     MalformedSelectorPayloadError,
+    MeasurementPostureRefusalError,
     MutableStoreComparisonExcludedError,
     NoRawUploadPathForModalityError,
     NoWritePathForModalityError,
     OversizedDocumentError,
     PageSizeExceededError,
     SeamRefusalError,
+    UncalibratedFloorRefusalError,
     UnconsumableQueryMemberError,
     UnknownDocumentError,
     UnknownJobError,
@@ -415,6 +421,18 @@ _REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
     PageSizeExceededError: lambda: PageSizeExceededError(requested=101, limit=100),
     MalformedBase64PayloadError: lambda: MalformedBase64PayloadError(field="raw_base64"),
     MalformedSelectorPayloadError: lambda: MalformedSelectorPayloadError(field="selector"),
+    EmptyPromotionTraceIdsError: lambda: EmptyPromotionTraceIdsError(alias="some-alias"),
+    DisagreeingPromotionTraceIdsError: lambda: DisagreeingPromotionTraceIdsError(
+        trace_ids=["trace-1", "trace-2"]
+    ),
+    InvalidChangeOriginError: lambda: InvalidChangeOriginError(change_origin="guessed"),
+    GateVerbNotBuiltError: lambda: GateVerbNotBuiltError(verb="check"),
+    MeasurementPostureRefusalError: lambda: MeasurementPostureRefusalError(
+        verb="promote-next", mutation_class="answer-level"
+    ),
+    UncalibratedFloorRefusalError: lambda: UncalibratedFloorRefusalError(
+        verb="promote-next", mutation_class="retrieval-side"
+    ),
 }
 
 
