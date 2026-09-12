@@ -1,0 +1,2497 @@
+{
+ "corpus_hash": "ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd",
+ "file_set": [
+  "graph",
+  "sql"
+ ],
+ "schema": "ops.v0.2",
+ "labels": {
+  "a_kiss_for_corliss": {
+   "ops": [
+    {
+     "target": "graph",
+     "s": "A Kiss for Corliss",
+     "p": "director",
+     "o": "Richard Wallace",
+     "quote": "A Kiss for Corliss is a 1949 American comedy film directed by Richard Wallace"
+    },
+    {
+     "target": "graph",
+     "s": "A Kiss for Corliss",
+     "p": "writer",
+     "o": "Howard Dimsdale",
+     "quote": "directed by Richard Wallace and written by Howard Dimsdale"
+    },
+    {
+     "target": "graph",
+     "s": "A Kiss for Corliss",
+     "p": "starring",
+     "o": "Shirley Temple",
+     "quote": "It stars Shirley Temple in her final starring role"
+    },
+    {
+     "target": "graph",
+     "s": "A Kiss for Corliss",
+     "p": "sequel to",
+     "o": "Kiss and Tell",
+     "quote": "It is a sequel to the 1945 film \"Kiss and Tell\""
+    },
+    {
+     "target": "graph",
+     "s": "A Kiss for Corliss",
+     "p": "alternative title",
+     "o": "Almost a Bride",
+     "quote": "\"A Kiss for Corliss\" was retitled \"Almost a Bride\" before release"
+    },
+    {
+     "target": "sql",
+     "subject": "A Kiss for Corliss",
+     "attribute": "distributor",
+     "value": "United Artists",
+     "value_type": "text",
+     "quote": "released on November 25, 1949, by United Artists"
+    }
+   ],
+   "spans": [
+    [
+     20,
+     97
+    ],
+    [
+     70,
+     128
+    ],
+    [
+     130,
+     180
+    ],
+    [
+     219,
+     266
+    ],
+    [
+     268,
+     333
+    ],
+    [
+     393,
+     441
+    ]
+   ],
+   "_rounds": 3,
+   "_dropped": 1
+  },
+  "adam_collis": {
+   "ops": [
+    {
+     "target": "graph",
+     "s": "Adam Collis",
+     "p": "occupation",
+     "o": "filmmaker",
+     "quote": "Adam Collis is an American filmmaker and actor."
+    },
+    {
+     "target": "graph",
+     "s": "Adam Collis",
+     "p": "occupation",
+     "o": "actor",
+     "quote": "Adam Collis is an American filmmaker and actor."
+    },
+    {
+     "target": "sql",
+     "subject": "Adam Collis",
+     "attribute": "attended_institution",
+     "value": "Duke University",
+     "value_type": "text",
+     "quote": "He attended the Duke University from 1986 to 1990"
+    },
+    {
+     "target": "sql",
+     "subject": "Adam Collis",
+     "attribute": "attended_institution",
+     "value": "University of California, Los Angeles",
+     "value_type": "text",
+     "quote": "and the University of California, Los Angeles from 2007 to 2010"
+    },
+    {
+     "target": "sql",
+     "subject": "Adam Collis",
+     "attribute": "attended_institution",
+     "value": "University of Southern California",
+     "value_type": "text",
+     "quote": "studied cinema at the University of Southern California from 1991 to 1997"
+    },
+    {
+     "target": "sql",
+     "subject": "Adam Collis",
+     "attribute": "field_of_study",
+     "value": "cinema",
+     "value_type": "text",
+     "quote": "studied cinema at the University of Southern California from 1991 to 1997"
+    },
+    {
+     "target": "graph",
+     "s": "Adam Collis",
+     "p": "role",
+     "o": "assistant director",
+     "quote": "Collis first work was the assistant director for the Scott Derrickson's short \"Love in the Ruins\" (1995)"
+    },
+    {
+     "target": "graph",
+     "s": "Adam Collis",
+     "p": "work_title",
+     "o": "Love in the Ruins",
+     "quote": "Collis first work was the assistant director for the Scott Derrickson's short \"Love in the Ruins\" (1995)"
+    },
+    {
+     "target": "graph",
+     "s": "Adam Collis",
+     "p": "role",
+     "o": "Crankshaft",
+     "quote": "In 1998, he played \"Crankshaft\" in Eric Koyanagi's \"Hundred Percent\""
+    },
+    {
+     "target": "graph",
+     "s": "Adam Collis",
+     "p": "work_title",
+     "o": "Hundred Percent",
+     "quote": "In 1998, he played \"Crankshaft\" in Eric Koyanagi's \"Hundred Percent\""
+    }
+   ],
+   "spans": [
+    [
+     13,
+     60
+    ],
+    [
+     13,
+     60
+    ],
+    [
+     61,
+     110
+    ],
+    [
+     111,
+     174
+    ],
+    [
+     184,
+     257
+    ],
+    [
+     184,
+     257
+    ],
+    [
+     259,
+     363
+    ],
+    [
+     259,
+     363
+    ],
+    [
+     365,
+     433
+    ],
+    [
+     365,
+     433
+    ]
+   ],
+   "_rounds": 3,
+   "_dropped": 8
+  },
+  "charles_craft": {
+   "ops": [
+    {
+     "target": "graph",
+     "s": "Charles Craft",
+     "p": "date of birth",
+     "o": "May 9, 1902",
+     "quote": "Charles Craft (May 9, 1902 \u2013 September 19, 1968)"
+    },
+    {
+     "target": "graph",
+     "s": "Charles Craft",
+     "p": "date of death",
+     "o": "September 19, 1968",
+     "quote": "Charles Craft (May 9, 1902 \u2013 September 19, 1968)"
+    },
+    {
+     "target": "sql",
+     "subject": "Charles Craft",
+     "attribute": "birth place",
+     "value": "Hampshire",
+     "value_type": "text",
+     "quote": "Born in the county of Hampshire in England"
+    },
+    {
+     "target": "sql",
+     "subject": "Charles Craft",
+     "attribute": "entry into film industry",
+     "value": "1927",
+     "value_type": "number",
+     "quote": "Craft would enter the film industry in Hollywood in 1927."
+    },
+    {
+     "target": "sql",
+     "subject": "Charles Craft",
+     "attribute": "first film edited",
+     "value": "Painting the Town",
+     "value_type": "text",
+     "quote": "The first film he edited was the Universal Pictures silent film, \"Painting the Town\"."
+    },
+    {
+     "target": "sql",
+     "subject": "Charles Craft",
+     "attribute": "films edited count",
+     "value": "90",
+     "value_type": "number",
+     "quote": "Craft would edit 90 feature-length films."
+    },
+    {
+     "target": "sql",
+     "subject": "Charles Craft",
+     "attribute": "first TV show",
+     "value": "Racket Squad",
+     "value_type": "text",
+     "quote": "his first show being \"Racket Squad\""
+    },
+    {
+     "target": "sql",
+     "subject": "Charles Craft",
+     "attribute": "episodes edited Racket Squad",
+     "value": "93",
+     "value_type": "number",
+     "quote": "editing 93 of the 98 episodes."
+    },
+    {
+     "target": "sql",
+     "subject": "Meet Corliss Archer",
+     "attribute": "year",
+     "value": "1954",
+     "value_type": "number",
+     "quote": "\"Meet Corliss Archer\" (1954)"
+    },
+    {
+     "target": "sql",
+     "subject": "Science Fiction Theatre",
+     "attribute": "years",
+     "value": "1955-56",
+     "value_type": "text",
+     "quote": "\"Science Fiction Theatre\" (1955\u201356)"
+    },
+    {
+     "target": "sql",
+     "subject": "Highway Patrol",
+     "attribute": "years",
+     "value": "1955-57",
+     "value_type": "text",
+     "quote": "\"Highway Patrol\" (1955\u201357)"
+    },
+    {
+     "target": "sql",
+     "subject": "Charles Craft",
+     "attribute": "TV series Sea Hunt role",
+     "value": "main editor",
+     "value_type": "text",
+     "quote": "he was one of the main editors on \"Sea Hunt\""
+    },
+    {
+     "target": "sql",
+     "subject": "Charles Craft",
+     "attribute": "final film work",
+     "value": "Flipper's New Adventure",
+     "value_type": "text",
+     "quote": "His final film work would be editing \"Flipper's New Adventure\""
+    },
+    {
+     "target": "sql",
+     "subject": "Charles Craft",
+     "attribute": "TV series Flipper episodes edited",
+     "value": "28",
+     "value_type": "number",
+     "quote": "editing the first 28 episodes"
+    },
+    {
+     "target": "sql",
+     "subject": "Charles Craft",
+     "attribute": "retirement year",
+     "value": "1966",
+     "value_type": "number",
+     "quote": "before he retired in 1966."
+    },
+    {
+     "target": "sql",
+     "subject": "Charles Craft",
+     "attribute": "death place",
+     "value": "Los Angeles, California",
+     "value_type": "text",
+     "quote": "Craft died on September 19, 1968 in Los Angeles, California."
+    }
+   ],
+   "spans": [
+    [
+     15,
+     63
+    ],
+    [
+     15,
+     63
+    ],
+    [
+     121,
+     163
+    ],
+    [
+     180,
+     237
+    ],
+    [
+     238,
+     323
+    ],
+    [
+     348,
+     389
+    ],
+    [
+     456,
+     491
+    ],
+    [
+     541,
+     571
+    ],
+    [
+     638,
+     666
+    ],
+    [
+     668,
+     703
+    ],
+    [
+     709,
+     735
+    ],
+    [
+     771,
+     815
+    ],
+    [
+     876,
+     938
+    ],
+    [
+     1078,
+     1107
+    ],
+    [
+     1108,
+     1134
+    ],
+    [
+     1135,
+     1195
+    ]
+   ],
+   "_rounds": 3,
+   "_dropped": 1
+  },
+  "conrad_brooks": {
+   "ops": [
+    {
+     "target": "graph",
+     "s": "Conrad Brooks",
+     "p": "birth name",
+     "o": "Conrad Biedrzycki",
+     "quote": "Conrad Brooks (born Conrad Biedrzycki"
+    },
+    {
+     "target": "graph",
+     "s": "Conrad Brooks",
+     "p": "date of birth",
+     "o": "1931-01-03",
+     "quote": "Conrad Brooks (born Conrad Biedrzycki on January 3, 1931"
+    },
+    {
+     "target": "graph",
+     "s": "Conrad Brooks",
+     "p": "place of birth",
+     "o": "Baltimore, Maryland",
+     "quote": "January 3, 1931 in Baltimore, Maryland)"
+    },
+    {
+     "target": "graph",
+     "s": "Conrad Brooks",
+     "p": "nationality",
+     "o": "American",
+     "quote": "is an American actor."
+    },
+    {
+     "target": "graph",
+     "s": "Conrad Brooks",
+     "p": "occupation",
+     "o": "actor",
+     "quote": "is an American actor."
+    },
+    {
+     "target": "graph",
+     "s": "Conrad Brooks",
+     "p": "moved to",
+     "o": "Hollywood, California",
+     "quote": "He moved to Hollywood, California in 1948"
+    },
+    {
+     "target": "graph",
+     "s": "Conrad Brooks",
+     "p": "year moved to Hollywood",
+     "o": "1948",
+     "quote": "He moved to Hollywood, California in 1948"
+    },
+    {
+     "target": "graph",
+     "s": "Conrad Brooks",
+     "p": "appeared in film",
+     "o": "Plan 9 from Outer Space",
+     "quote": "\"Plan 9 from Outer Space\""
+    },
+    {
+     "target": "graph",
+     "s": "Conrad Brooks",
+     "p": "appeared in film",
+     "o": "Glen or Glenda",
+     "quote": "\"Glen or Glenda\""
+    },
+    {
+     "target": "graph",
+     "s": "Conrad Brooks",
+     "p": "appeared in film",
+     "o": "Jail Bait",
+     "quote": "\"Jail Bait.\""
+    },
+    {
+     "target": "graph",
+     "s": "Conrad Brooks",
+     "p": "collaborator",
+     "o": "Ed Wood",
+     "quote": "appearing in Ed Wood films"
+    }
+   ],
+   "spans": [
+    [
+     15,
+     52
+    ],
+    [
+     15,
+     71
+    ],
+    [
+     56,
+     95
+    ],
+    [
+     96,
+     117
+    ],
+    [
+     96,
+     117
+    ],
+    [
+     118,
+     159
+    ],
+    [
+     118,
+     159
+    ],
+    [
+     252,
+     277
+    ],
+    [
+     279,
+     295
+    ],
+    [
+     301,
+     313
+    ],
+    [
+     217,
+     243
+    ]
+   ],
+   "_rounds": 3,
+   "_dropped": 3
+  },
+  "deliver_us_from_evil_2014_film": {
+   "ops": [
+    {
+     "target": "graph",
+     "s": "Deliver Us from Evil (2014 film)",
+     "p": "director",
+     "o": "Scott Derrickson",
+     "quote": "Deliver Us from Evil is a 2014 American supernatural horror film directed by Scott Derrickson"
+    },
+    {
+     "target": "graph",
+     "s": "Deliver Us from Evil (2014 film)",
+     "p": "producer",
+     "o": "Jerry Bruckheimer",
+     "quote": "directed by Scott Derrickson and produced by Jerry Bruckheimer"
+    },
+    {
+     "target": "graph",
+     "s": "Deliver Us from Evil (2014 film)",
+     "p": "based on",
+     "o": "Beware the Night",
+     "quote": "officially based on a 2001 non-fiction book entitled \"Beware the Night\""
+    },
+    {
+     "target": "graph",
+     "s": "Beware the Night",
+     "p": "author",
+     "o": "Ralph Sarchie",
+     "quote": "entitled \"Beware the Night\" by Ralph Sarchie"
+    },
+    {
+     "target": "graph",
+     "s": "Beware the Night",
+     "p": "author",
+     "o": "Lisa Collier Cool",
+     "quote": "by Ralph Sarchie and Lisa Collier Cool"
+    },
+    {
+     "target": "graph",
+     "s": "Deliver Us from Evil (2014 film)",
+     "p": "starring",
+     "o": "Eric Bana",
+     "quote": "The film stars Eric Bana, \u00c9dgar Ram\u00edrez, Sean Harris, Olivia Munn, and Joel McHale"
+    },
+    {
+     "target": "graph",
+     "s": "Deliver Us from Evil (2014 film)",
+     "p": "starring",
+     "o": "\u00c9dgar Ram\u00edrez",
+     "quote": "The film stars Eric Bana, \u00c9dgar Ram\u00edrez, Sean Harris, Olivia Munn, and Joel McHale"
+    },
+    {
+     "target": "graph",
+     "s": "Deliver Us from Evil (2014 film)",
+     "p": "starring",
+     "o": "Sean Harris",
+     "quote": "The film stars Eric Bana, \u00c9dgar Ram\u00edrez, Sean Harris, Olivia Munn, and Joel McHale"
+    },
+    {
+     "target": "graph",
+     "s": "Deliver Us from Evil (2014 film)",
+     "p": "starring",
+     "o": "Olivia Munn",
+     "quote": "The film stars Eric Bana, \u00c9dgar Ram\u00edrez, Sean Harris, Olivia Munn, and Joel McHale"
+    },
+    {
+     "target": "graph",
+     "s": "Deliver Us from Evil (2014 film)",
+     "p": "starring",
+     "o": "Joel McHale",
+     "quote": "The film stars Eric Bana, \u00c9dgar Ram\u00edrez, Sean Harris, Olivia Munn, and Joel McHale"
+    }
+   ],
+   "spans": [
+    [
+     34,
+     127
+    ],
+    [
+     99,
+     161
+    ],
+    [
+     175,
+     246
+    ],
+    [
+     219,
+     263
+    ],
+    [
+     247,
+     285
+    ],
+    [
+     369,
+     451
+    ],
+    [
+     369,
+     451
+    ],
+    [
+     369,
+     451
+    ],
+    [
+     369,
+     451
+    ],
+    [
+     369,
+     451
+    ]
+   ],
+   "_rounds": 3,
+   "_dropped": 1
+  },
+  "doctor_strange_2016_film": {
+   "ops": [
+    {
+     "target": "graph",
+     "s": "Doctor Strange (2016 film)",
+     "p": "instance of",
+     "o": "American superhero film",
+     "quote": "Doctor Strange is a 2016 American superhero film"
+    },
+    {
+     "target": "graph",
+     "s": "Doctor Strange (2016 film)",
+     "p": "based on character",
+     "o": "Marvel Comics character",
+     "quote": "based on the Marvel Comics character of the same name"
+    },
+    {
+     "target": "graph",
+     "s": "Doctor Strange (2016 film)",
+     "p": "producer",
+     "o": "Marvel Studios",
+     "quote": "produced by Marvel Studios"
+    },
+    {
+     "target": "graph",
+     "s": "Doctor Strange (2016 film)",
+     "p": "distributor",
+     "o": "Walt Disney Studios Motion Pictures",
+     "quote": "distributed by Walt Disney Studios Motion Pictures"
+    },
+    {
+     "target": "graph",
+     "s": "Doctor Strange (2016 film)",
+     "p": "part of series",
+     "o": "Marvel Cinematic Universe",
+     "quote": "fourteenth film of the Marvel Cinematic Universe"
+    },
+    {
+     "target": "sql",
+     "subject": "Doctor Strange (2016 film)",
+     "attribute": "release_year",
+     "value": "2016",
+     "value_type": "text",
+     "quote": "Doctor Strange (2016 film)"
+    },
+    {
+     "target": "sql",
+     "subject": "Doctor Strange (2016 film)",
+     "attribute": "director",
+     "value": "Scott Derrickson",
+     "value_type": "text",
+     "quote": "directed by Scott Derrickson"
+    },
+    {
+     "target": "sql",
+     "subject": "Doctor Strange (2016 film)",
+     "attribute": "writer",
+     "value": "Jon Spaihts",
+     "value_type": "text",
+     "quote": "who wrote it with Jon Spaihts"
+    },
+    {
+     "target": "sql",
+     "subject": "Doctor Strange (2016 film)",
+     "attribute": "writer",
+     "value": "C. Robert Cargill",
+     "value_type": "text",
+     "quote": "with Jon Spaihts and C. Robert Cargill"
+    },
+    {
+     "target": "sql",
+     "subject": "Doctor Strange (2016 film)",
+     "attribute": "starring",
+     "value": "Benedict Cumberbatch",
+     "value_type": "text",
+     "quote": "stars Benedict Cumberbatch as Stephen Strange"
+    },
+    {
+     "target": "sql",
+     "subject": "Doctor Strange (2016 film)",
+     "attribute": "starring",
+     "value": "Chiwetel Ejiofor",
+     "value_type": "text",
+     "quote": "along with Chiwetel Ejiofor"
+    },
+    {
+     "target": "sql",
+     "subject": "Doctor Strange (2016 film)",
+     "attribute": "starring",
+     "value": "Rachel McAdams",
+     "value_type": "text",
+     "quote": "Rachel McAdams"
+    },
+    {
+     "target": "sql",
+     "subject": "Doctor Strange (2016 film)",
+     "attribute": "starring",
+     "value": "Benedict Wong",
+     "value_type": "text",
+     "quote": "Benedict Wong"
+    },
+    {
+     "target": "sql",
+     "subject": "Doctor Strange (2016 film)",
+     "attribute": "starring",
+     "value": "Michael Stuhlbarg",
+     "value_type": "text",
+     "quote": "Michael Stuhlbarg"
+    },
+    {
+     "target": "sql",
+     "subject": "Doctor Strange (2016 film)",
+     "attribute": "starring",
+     "value": "Benjamin Bratt",
+     "value_type": "text",
+     "quote": "Benjamin Bratt"
+    },
+    {
+     "target": "sql",
+     "subject": "Doctor Strange (2016 film)",
+     "attribute": "starring",
+     "value": "Scott Adkins",
+     "value_type": "text",
+     "quote": "Scott Adkins"
+    },
+    {
+     "target": "sql",
+     "subject": "Doctor Strange (2016 film)",
+     "attribute": "starring",
+     "value": "Mads Mikkelsen",
+     "value_type": "text",
+     "quote": "Mads Mikkelsen"
+    },
+    {
+     "target": "sql",
+     "subject": "Doctor Strange (2016 film)",
+     "attribute": "starring",
+     "value": "Tilda Swinton",
+     "value_type": "text",
+     "quote": "Tilda Swinton"
+    }
+   ],
+   "spans": [
+    [
+     28,
+     76
+    ],
+    [
+     77,
+     130
+    ],
+    [
+     132,
+     158
+    ],
+    [
+     163,
+     213
+    ],
+    [
+     225,
+     273
+    ],
+    [
+     0,
+     26
+    ],
+    [
+     294,
+     322
+    ],
+    [
+     324,
+     353
+    ],
+    [
+     337,
+     375
+    ],
+    [
+     381,
+     426
+    ],
+    [
+     428,
+     455
+    ],
+    [
+     457,
+     471
+    ],
+    [
+     473,
+     486
+    ],
+    [
+     488,
+     505
+    ],
+    [
+     507,
+     521
+    ],
+    [
+     523,
+     535
+    ],
+    [
+     537,
+     551
+    ],
+    [
+     557,
+     570
+    ]
+   ],
+   "_rounds": 3,
+   "_dropped": 0
+  },
+  "ed_wood": {
+   "ops": [
+    {
+     "target": "graph",
+     "s": "Edward Davis Wood Jr.",
+     "p": "date of birth",
+     "o": "1924-10-10",
+     "quote": "Edward Davis Wood Jr. (October 10, 1924"
+    },
+    {
+     "target": "sql",
+     "subject": "Edward Davis Wood Jr.",
+     "attribute": "date_of_birth",
+     "value": "1924-10-10",
+     "value_type": "date",
+     "quote": "Edward Davis Wood Jr. (October 10, 1924"
+    },
+    {
+     "target": "graph",
+     "s": "Edward Davis Wood Jr.",
+     "p": "date of death",
+     "o": "1978-12-10",
+     "quote": "Edward Davis Wood Jr. (October 10, 1924 \u2013 December 10, 1978)"
+    },
+    {
+     "target": "sql",
+     "subject": "Edward Davis Wood Jr.",
+     "attribute": "date_of_death",
+     "value": "1978-12-10",
+     "value_type": "date",
+     "quote": "Edward Davis Wood Jr. (October 10, 1924 \u2013 December 10, 1978)"
+    },
+    {
+     "target": "graph",
+     "s": "Edward Davis Wood Jr.",
+     "p": "nationality",
+     "o": "American",
+     "quote": "was an American filmmaker"
+    },
+    {
+     "target": "sql",
+     "subject": "Edward Davis Wood Jr.",
+     "attribute": "nationality",
+     "value": "American",
+     "value_type": "text",
+     "quote": "was an American filmmaker"
+    },
+    {
+     "target": "graph",
+     "s": "Edward Davis Wood Jr.",
+     "p": "occupation",
+     "o": "filmmaker",
+     "quote": "was an American filmmaker, actor, writer, producer, and director."
+    },
+    {
+     "target": "sql",
+     "subject": "Edward Davis Wood Jr.",
+     "attribute": "occupation",
+     "value": "filmmaker",
+     "value_type": "text",
+     "quote": "was an American filmmaker, actor, writer, producer, and director."
+    },
+    {
+     "target": "graph",
+     "s": "Edward Davis Wood Jr.",
+     "p": "occupation",
+     "o": "actor",
+     "quote": "was an American filmmaker, actor, writer, producer, and director."
+    },
+    {
+     "target": "sql",
+     "subject": "Edward Davis Wood Jr.",
+     "attribute": "occupation",
+     "value": "actor",
+     "value_type": "text",
+     "quote": "was an American filmmaker, actor, writer, producer, and director."
+    },
+    {
+     "target": "graph",
+     "s": "Edward Davis Wood Jr.",
+     "p": "occupation",
+     "o": "writer",
+     "quote": "was an American filmmaker, actor, writer, producer, and director."
+    },
+    {
+     "target": "sql",
+     "subject": "Edward Davis Wood Jr.",
+     "attribute": "occupation",
+     "value": "writer",
+     "value_type": "text",
+     "quote": "was an American filmmaker, actor, writer, producer, and director."
+    },
+    {
+     "target": "graph",
+     "s": "Edward Davis Wood Jr.",
+     "p": "occupation",
+     "o": "producer",
+     "quote": "was an American filmmaker, actor, writer, producer, and director."
+    },
+    {
+     "target": "sql",
+     "subject": "Edward Davis Wood Jr.",
+     "attribute": "occupation",
+     "value": "producer",
+     "value_type": "text",
+     "quote": "was an American filmmaker, actor, writer, producer, and director."
+    },
+    {
+     "target": "graph",
+     "s": "Edward Davis Wood Jr.",
+     "p": "occupation",
+     "o": "director",
+     "quote": "was an American filmmaker, actor, writer, producer, and director."
+    },
+    {
+     "target": "sql",
+     "subject": "Edward Davis Wood Jr.",
+     "attribute": "occupation",
+     "value": "director",
+     "value_type": "text",
+     "quote": "was an American filmmaker, actor, writer, producer, and director."
+    }
+   ],
+   "spans": [
+    [
+     9,
+     48
+    ],
+    [
+     9,
+     48
+    ],
+    [
+     9,
+     69
+    ],
+    [
+     9,
+     69
+    ],
+    [
+     70,
+     95
+    ],
+    [
+     70,
+     95
+    ],
+    [
+     70,
+     135
+    ],
+    [
+     70,
+     135
+    ],
+    [
+     70,
+     135
+    ],
+    [
+     70,
+     135
+    ],
+    [
+     70,
+     135
+    ],
+    [
+     70,
+     135
+    ],
+    [
+     70,
+     135
+    ],
+    [
+     70,
+     135
+    ],
+    [
+     70,
+     135
+    ],
+    [
+     70,
+     135
+    ]
+   ],
+   "_rounds": 2,
+   "_dropped": 0
+  },
+  "ed_wood_film": {
+   "ops": [
+    {
+     "target": "graph",
+     "s": "Ed Wood (film)",
+     "p": "publication year",
+     "o": "1994",
+     "quote": "Ed Wood is a 1994 American biographical period comedy-drama film"
+    },
+    {
+     "target": "sql",
+     "subject": "Ed Wood (film)",
+     "attribute": "publication_year",
+     "value": "1994",
+     "value_type": "number",
+     "quote": "Ed Wood is a 1994 American biographical period comedy-drama film"
+    },
+    {
+     "target": "graph",
+     "s": "Ed Wood (film)",
+     "p": "director",
+     "o": "Tim Burton",
+     "quote": "directed and produced by Tim Burton"
+    },
+    {
+     "target": "sql",
+     "subject": "Ed Wood (film)",
+     "attribute": "director",
+     "value": "Tim Burton",
+     "value_type": "text",
+     "quote": "directed and produced by Tim Burton"
+    },
+    {
+     "target": "graph",
+     "s": "Ed Wood (film)",
+     "p": "producer",
+     "o": "Tim Burton",
+     "quote": "directed and produced by Tim Burton"
+    },
+    {
+     "target": "sql",
+     "subject": "Ed Wood (film)",
+     "attribute": "producer",
+     "value": "Tim Burton",
+     "value_type": "text",
+     "quote": "directed and produced by Tim Burton"
+    },
+    {
+     "target": "graph",
+     "s": "Ed Wood (film)",
+     "p": "starring",
+     "o": "Johnny Depp",
+     "quote": "starring Johnny Depp as cult filmmaker Ed Wood"
+    },
+    {
+     "target": "sql",
+     "subject": "Ed Wood (film)",
+     "attribute": "starring",
+     "value": "Johnny Depp",
+     "value_type": "text",
+     "quote": "starring Johnny Depp as cult filmmaker Ed Wood"
+    },
+    {
+     "target": "graph",
+     "s": "Ed Wood (film)",
+     "p": "character portrayal",
+     "o": "cult filmmaker Ed Wood",
+     "quote": "starring Johnny Depp as cult filmmaker Ed Wood"
+    },
+    {
+     "target": "sql",
+     "subject": "Ed Wood (film)",
+     "attribute": "character_portrayal",
+     "value": "cult filmmaker Ed Wood",
+     "value_type": "text",
+     "quote": "starring Johnny Depp as cult filmmaker Ed Wood"
+    },
+    {
+     "target": "graph",
+     "s": "Bela Lugosi",
+     "p": "portrayed by",
+     "o": "Martin Landau",
+     "quote": "actor Bela Lugosi, played by Martin Landau"
+    },
+    {
+     "target": "sql",
+     "subject": "Bela Lugosi",
+     "attribute": "portrayed_by",
+     "value": "Martin Landau",
+     "value_type": "text",
+     "quote": "actor Bela Lugosi, played by Martin Landau"
+    },
+    {
+     "target": "graph",
+     "s": "Sarah Jessica Parker",
+     "p": "role in",
+     "o": "Ed Wood (film)",
+     "quote": "Sarah Jessica Parker, Patricia Arquette, Jeffrey Jones, Lisa Marie, and Bill Murray are among the supporting cast."
+    },
+    {
+     "target": "sql",
+     "subject": "Sarah Jessica Parker",
+     "attribute": "role_in",
+     "value": "Ed Wood (film)",
+     "value_type": "text",
+     "quote": "Sarah Jessica Parker, Patricia Arquette, Jeffrey Jones, Lisa Marie, and Bill Murray are among the supporting cast."
+    },
+    {
+     "target": "graph",
+     "s": "Patricia Arquette",
+     "p": "role in",
+     "o": "Ed Wood (film)",
+     "quote": "Sarah Jessica Parker, Patricia Arquette, Jeffrey Jones, Lisa Marie, and Bill Murray are among the supporting cast."
+    },
+    {
+     "target": "sql",
+     "subject": "Patricia Arquette",
+     "attribute": "role_in",
+     "value": "Ed Wood (film)",
+     "value_type": "text",
+     "quote": "Sarah Jessica Parker, Patricia Arquette, Jeffrey Jones, Lisa Marie, and Bill Murray are among the supporting cast."
+    },
+    {
+     "target": "graph",
+     "s": "Jeffrey Jones",
+     "p": "role in",
+     "o": "Ed Wood (film)",
+     "quote": "Sarah Jessica Parker, Patricia Arquette, Jeffrey Jones, Lisa Marie, and Bill Murray are among the supporting cast."
+    },
+    {
+     "target": "sql",
+     "subject": "Jeffrey Jones",
+     "attribute": "role_in",
+     "value": "Ed Wood (film)",
+     "value_type": "text",
+     "quote": "Sarah Jessica Parker, Patricia Arquette, Jeffrey Jones, Lisa Marie, and Bill Murray are among the supporting cast."
+    },
+    {
+     "target": "graph",
+     "s": "Lisa Marie",
+     "p": "role in",
+     "o": "Ed Wood (film)",
+     "quote": "Sarah Jessica Parker, Patricia Arquette, Jeffrey Jones, Lisa Marie, and Bill Murray are among the supporting cast."
+    },
+    {
+     "target": "sql",
+     "subject": "Lisa Marie",
+     "attribute": "role_in",
+     "value": "Ed Wood (film)",
+     "value_type": "text",
+     "quote": "Sarah Jessica Parker, Patricia Arquette, Jeffrey Jones, Lisa Marie, and Bill Murray are among the supporting cast."
+    },
+    {
+     "target": "graph",
+     "s": "Bill Murray",
+     "p": "role in",
+     "o": "Ed Wood (film)",
+     "quote": "Sarah Jessica Parker, Patricia Arquette, Jeffrey Jones, Lisa Marie, and Bill Murray are among the supporting cast."
+    },
+    {
+     "target": "sql",
+     "subject": "Bill Murray",
+     "attribute": "role_in",
+     "value": "Ed Wood (film)",
+     "value_type": "text",
+     "quote": "Sarah Jessica Parker, Patricia Arquette, Jeffrey Jones, Lisa Marie, and Bill Murray are among the supporting cast."
+    }
+   ],
+   "spans": [
+    [
+     16,
+     80
+    ],
+    [
+     16,
+     80
+    ],
+    [
+     81,
+     116
+    ],
+    [
+     81,
+     116
+    ],
+    [
+     81,
+     116
+    ],
+    [
+     81,
+     116
+    ],
+    [
+     122,
+     168
+    ],
+    [
+     122,
+     168
+    ],
+    [
+     122,
+     168
+    ],
+    [
+     122,
+     168
+    ],
+    [
+     281,
+     323
+    ],
+    [
+     281,
+     323
+    ],
+    [
+     325,
+     439
+    ],
+    [
+     325,
+     439
+    ],
+    [
+     325,
+     439
+    ],
+    [
+     325,
+     439
+    ],
+    [
+     325,
+     439
+    ],
+    [
+     325,
+     439
+    ],
+    [
+     325,
+     439
+    ],
+    [
+     325,
+     439
+    ],
+    [
+     325,
+     439
+    ],
+    [
+     325,
+     439
+    ]
+   ],
+   "_rounds": 1,
+   "_dropped": 0
+  },
+  "janet_waldo": {
+   "ops": [
+    {
+     "target": "graph",
+     "s": "Janet Marie Waldo",
+     "p": "date of birth",
+     "o": "1920-02-04",
+     "quote": "Janet Marie Waldo (February 4, 1920"
+    },
+    {
+     "target": "sql",
+     "subject": "Janet Marie Waldo",
+     "attribute": "date_of_birth",
+     "value": "1920-02-04",
+     "value_type": "date",
+     "quote": "Janet Marie Waldo (February 4, 1920"
+    },
+    {
+     "target": "graph",
+     "s": "Janet Marie Waldo",
+     "p": "date of death",
+     "o": "2016-06-12",
+     "quote": "Janet Marie Waldo (February 4, 1920 \u2013 June 12, 2016)"
+    },
+    {
+     "target": "sql",
+     "subject": "Janet Marie Waldo",
+     "attribute": "date_of_death",
+     "value": "2016-06-12",
+     "value_type": "date",
+     "quote": "Janet Marie Waldo (February 4, 1920 \u2013 June 12, 2016)"
+    },
+    {
+     "target": "graph",
+     "s": "Janet Waldo",
+     "p": "nationality",
+     "o": "American",
+     "quote": "was an American radio and voice actress."
+    },
+    {
+     "target": "sql",
+     "subject": "Janet Waldo",
+     "attribute": "nationality",
+     "value": "American",
+     "value_type": "text",
+     "quote": "was an American radio and voice actress."
+    },
+    {
+     "target": "graph",
+     "s": "Janet Waldo",
+     "p": "occupation",
+     "o": "radio and voice actress",
+     "quote": "was an American radio and voice actress."
+    },
+    {
+     "target": "sql",
+     "subject": "Janet Waldo",
+     "attribute": "occupation",
+     "value": "radio and voice actress",
+     "value_type": "text",
+     "quote": "was an American radio and voice actress."
+    }
+   ],
+   "spans": [
+    [
+     13,
+     48
+    ],
+    [
+     13,
+     48
+    ],
+    [
+     13,
+     65
+    ],
+    [
+     13,
+     65
+    ],
+    [
+     66,
+     106
+    ],
+    [
+     66,
+     106
+    ],
+    [
+     66,
+     106
+    ],
+    [
+     66,
+     106
+    ]
+   ],
+   "_rounds": 3,
+   "_dropped": 0
+  },
+  "kiss_and_tell_1945_film": {
+   "ops": [
+    {
+     "target": "graph",
+     "s": "Kiss and Tell",
+     "p": "instance of",
+     "o": "film",
+     "quote": "Kiss and Tell is a 1945 American comedy film"
+    },
+    {
+     "target": "sql",
+     "subject": "Kiss and Tell",
+     "attribute": "release_year",
+     "value": "1945",
+     "value_type": "number",
+     "quote": "Kiss and Tell (1945 film)"
+    },
+    {
+     "target": "sql",
+     "subject": "Kiss and Tell",
+     "attribute": "country_of_origin",
+     "value": "American",
+     "value_type": "text",
+     "quote": "Kiss and Tell is a 1945 American comedy film"
+    },
+    {
+     "target": "sql",
+     "subject": "Kiss and Tell",
+     "attribute": "genre",
+     "value": "comedy",
+     "value_type": "text",
+     "quote": "Kiss and Tell is a 1945 American comedy film"
+    },
+    {
+     "target": "graph",
+     "s": "Shirley Temple",
+     "p": "actor in",
+     "o": "Kiss and Tell",
+     "quote": "starring then 17-year-old Shirley Temple as Corliss Archer"
+    },
+    {
+     "target": "sql",
+     "subject": "Shirley Temple",
+     "attribute": "age_at_release",
+     "value": "17",
+     "value_type": "number",
+     "quote": "starring then 17-year-old Shirley Temple"
+    },
+    {
+     "target": "graph",
+     "s": "Shirley Temple",
+     "p": "character played",
+     "o": "Corliss Archer",
+     "quote": "Shirley Temple as Corliss Archer"
+    }
+   ],
+   "spans": [
+    [
+     27,
+     71
+    ],
+    [
+     0,
+     25
+    ],
+    [
+     27,
+     71
+    ],
+    [
+     27,
+     71
+    ],
+    [
+     72,
+     130
+    ],
+    [
+     72,
+     112
+    ],
+    [
+     98,
+     130
+    ]
+   ],
+   "_rounds": 1,
+   "_dropped": 0
+  },
+  "lord_high_treasurer": {
+   "ops": [
+    {
+     "target": "graph",
+     "s": "Lord High Treasurer",
+     "p": "is a",
+     "o": "English government position",
+     "quote": "The post of Lord High Treasurer or Lord Treasurer was an English government position"
+    },
+    {
+     "target": "graph",
+     "s": "Lord High Treasurer",
+     "p": "is a",
+     "o": "British government position",
+     "quote": "has been a British government position since the Acts of Union of 1707"
+    },
+    {
+     "target": "sql",
+     "subject": "Lord High Treasurer",
+     "attribute": "rank",
+     "value": "third-highest-ranked",
+     "value_type": "text",
+     "quote": "A holder of the post would be the third-highest-ranked Great Officer of State"
+    }
+   ],
+   "spans": [
+    [
+     21,
+     105
+    ],
+    [
+     110,
+     180
+    ],
+    [
+     182,
+     259
+    ]
+   ],
+   "_rounds": 1,
+   "_dropped": 0
+  },
+  "meet_corliss_archer": {
+   "ops": [
+    {
+     "target": "graph",
+     "s": "Corliss Archer",
+     "p": "network",
+     "o": "CBS",
+     "quote": "it was CBS's answer to NBC's popular \"A Date with Judy\""
+    },
+    {
+     "target": "sql",
+     "subject": "Corliss Archer",
+     "attribute": "start_date",
+     "value": "1943-01-07",
+     "value_type": "date",
+     "quote": "Meet Corliss Archer, a program from radio's Golden Age, ran from January 7, 1943"
+    },
+    {
+     "target": "graph",
+     "s": "Corliss Archer",
+     "p": "network",
+     "o": "NBC",
+     "quote": "it was also broadcast by NBC in 1948 as a summer replacement for \"The Bob Hope Show\""
+    },
+    {
+     "target": "graph",
+     "s": "Corliss Archer",
+     "p": "network",
+     "o": "ABC",
+     "quote": "From October 3, 1952 to June 26, 1953, it aired on ABC, finally returning to CBS."
+    },
+    {
+     "target": "sql",
+     "subject": "Corliss Archer",
+     "attribute": "known_episodes_count",
+     "value": "24",
+     "value_type": "number",
+     "quote": "Despite the program's long run, fewer than 24 episodes are known to exist."
+    }
+   ],
+   "spans": [
+    [
+     134,
+     189
+    ],
+    [
+     21,
+     101
+    ],
+    [
+     191,
+     275
+    ],
+    [
+     277,
+     358
+    ],
+    [
+     359,
+     433
+    ]
+   ],
+   "_rounds": 3,
+   "_dropped": 1
+  },
+  "meet_corliss_archer_tv_series": {
+   "ops": [
+    {
+     "target": "graph",
+     "s": "Meet Corliss Archer (TV series)",
+     "p": "network",
+     "o": "CBS",
+     "quote": "aired on CBS"
+    },
+    {
+     "target": "graph",
+     "s": "Meet Corliss Archer (TV series)",
+     "p": "based_on",
+     "o": "radio series of the same name",
+     "quote": "adaptation of the radio series of the same name"
+    },
+    {
+     "target": "graph",
+     "s": "radio series of the same name",
+     "p": "author",
+     "o": "F. Hugh Herbert",
+     "quote": "based on a series of short stories by F. Hugh Herbert"
+    }
+   ],
+   "spans": [
+    [
+     91,
+     103
+    ],
+    [
+     225,
+     272
+    ],
+    [
+     284,
+     337
+    ]
+   ],
+   "_rounds": 3,
+   "_dropped": 2
+  },
+  "scott_derrickson": {
+   "ops": [
+    {
+     "target": "graph",
+     "s": "Scott Derrickson",
+     "p": "date of birth",
+     "o": "1966-07-16",
+     "quote": "Scott Derrickson (born July 16, 1966)"
+    },
+    {
+     "target": "sql",
+     "subject": "Scott Derrickson",
+     "attribute": "date_of_birth",
+     "value": "1966-07-16",
+     "value_type": "date",
+     "quote": "Scott Derrickson (born July 16, 1966)"
+    },
+    {
+     "target": "graph",
+     "s": "Scott Derrickson",
+     "p": "occupation",
+     "o": "director",
+     "quote": "Scott Derrickson (born July 16, 1966) is an American director"
+    },
+    {
+     "target": "sql",
+     "subject": "Scott Derrickson",
+     "attribute": "occupation",
+     "value": "director",
+     "value_type": "text",
+     "quote": "Scott Derrickson (born July 16, 1966) is an American director"
+    },
+    {
+     "target": "graph",
+     "s": "Scott Derrickson",
+     "p": "occupation",
+     "o": "screenwriter",
+     "quote": "Scott Derrickson (born July 16, 1966) is an American director, screenwriter and producer."
+    },
+    {
+     "target": "sql",
+     "subject": "Scott Derrickson",
+     "attribute": "occupation",
+     "value": "screenwriter",
+     "value_type": "text",
+     "quote": "Scott Derrickson (born July 16, 1966) is an American director, screenwriter and producer."
+    },
+    {
+     "target": "graph",
+     "s": "Scott Derrickson",
+     "p": "occupation",
+     "o": "producer",
+     "quote": "Scott Derrickson (born July 16, 1966) is an American director, screenwriter and producer."
+    },
+    {
+     "target": "sql",
+     "subject": "Scott Derrickson",
+     "attribute": "occupation",
+     "value": "producer",
+     "value_type": "text",
+     "quote": "Scott Derrickson (born July 16, 1966) is an American director, screenwriter and producer."
+    },
+    {
+     "target": "graph",
+     "s": "Scott Derrickson",
+     "p": "residence",
+     "o": "Los Angeles, California",
+     "quote": "He lives in Los Angeles, California."
+    },
+    {
+     "target": "sql",
+     "subject": "Scott Derrickson",
+     "attribute": "residence",
+     "value": "Los Angeles, California",
+     "value_type": "text",
+     "quote": "He lives in Los Angeles, California."
+    }
+   ],
+   "spans": [
+    [
+     18,
+     55
+    ],
+    [
+     18,
+     55
+    ],
+    [
+     18,
+     79
+    ],
+    [
+     18,
+     79
+    ],
+    [
+     18,
+     107
+    ],
+    [
+     18,
+     107
+    ],
+    [
+     18,
+     107
+    ],
+    [
+     18,
+     107
+    ],
+    [
+     108,
+     144
+    ],
+    [
+     108,
+     144
+    ]
+   ],
+   "_rounds": 2,
+   "_dropped": 0
+  },
+  "secretary_of_state_for_constitutional_affairs": {
+   "ops": [
+    {
+     "target": "graph",
+     "s": "Secretary of State for Constitutional Affairs",
+     "p": "created in",
+     "o": "2003",
+     "quote": "The office of Secretary of State for Constitutional Affairs was a British Government position, created in 2003."
+    },
+    {
+     "target": "sql",
+     "subject": "Secretary of State for Constitutional Affairs",
+     "attribute": "creation_year",
+     "value": "2003",
+     "value_type": "text",
+     "quote": "The office of Secretary of State for Constitutional Affairs was a British Government position, created in 2003."
+    }
+   ],
+   "spans": [
+    [
+     47,
+     158
+    ],
+    [
+     47,
+     158
+    ]
+   ],
+   "_rounds": 2,
+   "_dropped": 0
+  },
+  "shirley_temple": {
+   "ops": [
+    {
+     "target": "graph",
+     "s": "Shirley Temple Black",
+     "p": "date of birth",
+     "o": "1928-04-23",
+     "quote": "Shirley Temple Black (April 23, 1928"
+    },
+    {
+     "target": "sql",
+     "subject": "Shirley Temple Black",
+     "attribute": "nationality",
+     "value": "American",
+     "value_type": "text",
+     "quote": "was an American actress"
+    },
+    {
+     "target": "sql",
+     "subject": "Shirley Temple Black",
+     "attribute": "occupation",
+     "value": "actress",
+     "value_type": "text",
+     "quote": "American actress, singer, dancer"
+    },
+    {
+     "target": "sql",
+     "subject": "Shirley Temple Black",
+     "attribute": "occupation",
+     "value": "singer",
+     "value_type": "text",
+     "quote": "American actress, singer, dancer"
+    },
+    {
+     "target": "sql",
+     "subject": "Shirley Temple Black",
+     "attribute": "occupation",
+     "value": "dancer",
+     "value_type": "text",
+     "quote": "American actress, singer, dancer"
+    },
+    {
+     "target": "sql",
+     "subject": "Shirley Temple Black",
+     "attribute": "occupation",
+     "value": "businesswoman",
+     "value_type": "text",
+     "quote": "singer, dancer, businesswoman, and diplomat"
+    },
+    {
+     "target": "sql",
+     "subject": "Shirley Temple Black",
+     "attribute": "occupation",
+     "value": "diplomat",
+     "value_type": "text",
+     "quote": "businesswoman, and diplomat who was"
+    },
+    {
+     "target": "sql",
+     "subject": "Shirley Temple Black",
+     "attribute": "role",
+     "value": "United States ambassador to Ghana",
+     "value_type": "text",
+     "quote": "named United States ambassador to Ghana"
+    },
+    {
+     "target": "sql",
+     "subject": "Shirley Temple Black",
+     "attribute": "role",
+     "value": "Chief of Protocol of the United States",
+     "value_type": "text",
+     "quote": "served as Chief of Protocol of the United States"
+    }
+   ],
+   "spans": [
+    [
+     16,
+     52
+    ],
+    [
+     74,
+     97
+    ],
+    [
+     81,
+     113
+    ],
+    [
+     81,
+     113
+    ],
+    [
+     81,
+     113
+    ],
+    [
+     99,
+     142
+    ],
+    [
+     115,
+     150
+    ],
+    [
+     249,
+     288
+    ],
+    [
+     320,
+     368
+    ]
+   ],
+   "_rounds": 3,
+   "_dropped": 2
+  },
+  "sinister_film": {
+   "ops": [
+    {
+     "target": "graph",
+     "s": "Sinister (film)",
+     "p": "director",
+     "o": "Scott Derrickson",
+     "quote": "Sinister is a 2012 supernatural horror film directed by Scott Derrickson"
+    },
+    {
+     "target": "graph",
+     "s": "Sinister (film)",
+     "p": "writer",
+     "o": "Derrickson and C. Robert Cargill",
+     "quote": "directed by Scott Derrickson and written by Derrickson and C. Robert Cargill"
+    },
+    {
+     "target": "sql",
+     "subject": "Sinister (film)",
+     "attribute": "release_year",
+     "value": "2012",
+     "value_type": "number",
+     "quote": "Sinister is a 2012 supernatural horror film"
+    },
+    {
+     "target": "sql",
+     "subject": "Sinister (film)",
+     "attribute": "genre",
+     "value": "supernatural horror",
+     "value_type": "text",
+     "quote": "Sinister is a 2012 supernatural horror film"
+    }
+   ],
+   "spans": [
+    [
+     17,
+     89
+    ],
+    [
+     61,
+     137
+    ],
+    [
+     17,
+     60
+    ],
+    [
+     17,
+     60
+    ]
+   ],
+   "_rounds": 1,
+   "_dropped": 0
+  },
+  "tyler_bates": {
+   "ops": [
+    {
+     "target": "graph",
+     "s": "Tyler Bates",
+     "p": "date of birth",
+     "o": "1965-06-05",
+     "quote": "Tyler Bates (born June 5, 1965)"
+    },
+    {
+     "target": "sql",
+     "subject": "Tyler Bates",
+     "attribute": "nationality",
+     "value": "American",
+     "value_type": "text",
+     "quote": "is an American musician"
+    },
+    {
+     "target": "sql",
+     "subject": "Tyler Bates",
+     "attribute": "occupation",
+     "value": "musician",
+     "value_type": "text",
+     "quote": "is an American musician, music producer, and composer"
+    },
+    {
+     "target": "sql",
+     "subject": "Tyler Bates",
+     "attribute": "occupation",
+     "value": "music producer",
+     "value_type": "text",
+     "quote": "is an American musician, music producer, and composer"
+    },
+    {
+     "target": "sql",
+     "subject": "Tyler Bates",
+     "attribute": "occupation",
+     "value": "composer",
+     "value_type": "text",
+     "quote": "is an American musician, music producer, and composer for films, television, and video games."
+    },
+    {
+     "target": "graph",
+     "s": "Tyler Bates",
+     "p": "collaborated with",
+     "o": "Zack Snyder",
+     "quote": "He has collaborated with directors like Zack Snyder, Rob Zombie, Neil Marshall, William Friedkin, Scott Derrickson, and James Gunn."
+    },
+    {
+     "target": "graph",
+     "s": "Tyler Bates",
+     "p": "collaborated with",
+     "o": "Rob Zombie",
+     "quote": "He has collaborated with directors like Zack Snyder, Rob Zombie, Neil Marshall, William Friedkin, Scott Derrickson, and James Gunn."
+    },
+    {
+     "target": "graph",
+     "s": "Tyler Bates",
+     "p": "collaborated with",
+     "o": "Neil Marshall",
+     "quote": "He has collaborated with directors like Zack Snyder, Rob Zombie, Neil Marshall, William Friedkin, Scott Derrickson, and James Gunn."
+    },
+    {
+     "target": "graph",
+     "s": "Tyler Bates",
+     "p": "collaborated with",
+     "o": "William Friedkin",
+     "quote": "He has collaborated with directors like Zack Snyder, Rob Zombie, Neil Marshall, William Friedkin, Scott Derrickson, and James Gunn."
+    },
+    {
+     "target": "graph",
+     "s": "Tyler Bates",
+     "p": "collaborated with",
+     "o": "Scott Derrickson",
+     "quote": "He has collaborated with directors like Zack Snyder, Rob Zombie, Neil Marshall, William Friedkin, Scott Derrickson, and James Gunn."
+    },
+    {
+     "target": "graph",
+     "s": "Tyler Bates",
+     "p": "collaborated with",
+     "o": "James Gunn",
+     "quote": "He has collaborated with directors like Zack Snyder, Rob Zombie, Neil Marshall, William Friedkin, Scott Derrickson, and James Gunn."
+    },
+    {
+     "target": "graph",
+     "s": "Tyler Bates",
+     "p": "scored film",
+     "o": "Guardians of the Galaxy",
+     "quote": "With Gunn, he has scored every one of the director's films; including \"Guardians of the Galaxy\""
+    },
+    {
+     "target": "graph",
+     "s": "Tyler Bates",
+     "p": "member of band",
+     "o": "Marilyn Manson",
+     "quote": "he is also the lead guitarist of the American rock band Marilyn Manson"
+    },
+    {
+     "target": "graph",
+     "s": "Tyler Bates",
+     "p": "produced album",
+     "o": "The Pale Emperor",
+     "quote": "and produced its albums \"The Pale Emperor\" and \"Heaven Upside Down\"."
+    },
+    {
+     "target": "graph",
+     "s": "Tyler Bates",
+     "p": "produced album",
+     "o": "Heaven Upside Down",
+     "quote": "and produced its albums \"The Pale Emperor\" and \"Heaven Upside Down\"."
+    }
+   ],
+   "spans": [
+    [
+     13,
+     44
+    ],
+    [
+     45,
+     68
+    ],
+    [
+     45,
+     98
+    ],
+    [
+     45,
+     98
+    ],
+    [
+     45,
+     138
+    ],
+    [
+     269,
+     400
+    ],
+    [
+     269,
+     400
+    ],
+    [
+     269,
+     400
+    ],
+    [
+     269,
+     400
+    ],
+    [
+     269,
+     400
+    ],
+    [
+     269,
+     400
+    ],
+    [
+     401,
+     496
+    ],
+    [
+     598,
+     668
+    ],
+    [
+     670,
+     738
+    ],
+    [
+     670,
+     738
+    ]
+   ],
+   "_rounds": 2,
+   "_dropped": 0
+  },
+  "village_accountant": {
+   "ops": [
+    {
+     "target": "graph",
+     "s": "Village Accountant",
+     "p": "also known as",
+     "o": "Patwari",
+     "quote": "The Village Accountant (variously known as \"Patwari\""
+    },
+    {
+     "target": "graph",
+     "s": "Village Accountant",
+     "p": "also known as",
+     "o": "Talati",
+     "quote": "\"Patwari\", \"Talati\""
+    },
+    {
+     "target": "graph",
+     "s": "Village Accountant",
+     "p": "also known as",
+     "o": "Patel",
+     "quote": "\"Talati\", \"Patel\""
+    },
+    {
+     "target": "graph",
+     "s": "Village Accountant",
+     "p": "also known as",
+     "o": "Karnam",
+     "quote": "\"Patel\", \"Karnam\""
+    },
+    {
+     "target": "graph",
+     "s": "Village Accountant",
+     "p": "also known as",
+     "o": "Adhikari",
+     "quote": "\"Karnam\", \"Adhikari\""
+    },
+    {
+     "target": "graph",
+     "s": "Village Accountant",
+     "p": "also known as",
+     "o": "Shanbogaru",
+     "quote": "\"Adhikari\", \"Shanbogaru\""
+    },
+    {
+     "target": "graph",
+     "s": "Village Accountant",
+     "p": "also known as",
+     "o": "Patnaik",
+     "quote": "\"Shanbogaru\",\"Patnaik\""
+    },
+    {
+     "target": "graph",
+     "s": "Village Accountant",
+     "p": "is a",
+     "o": "administrative government position",
+     "quote": "is an administrative government position"
+    },
+    {
+     "target": "graph",
+     "s": "Village Accountant",
+     "p": "found in",
+     "o": "rural parts of the Indian sub-continent",
+     "quote": "found in rural parts of the Indian sub-continent"
+    },
+    {
+     "target": "graph",
+     "s": "Village Accountant",
+     "p": "called in Telangana",
+     "o": "patwari",
+     "quote": "called the \"patwari\" in Telangana"
+    },
+    {
+     "target": "graph",
+     "s": "Village Accountant",
+     "p": "called in Sindh",
+     "o": "tapedar",
+     "quote": "in Sindh it is called \"tapedar\""
+    },
+    {
+     "target": "graph",
+     "s": "Village Accountant",
+     "p": "known as in Andhra Pradesh",
+     "o": "karnam",
+     "quote": "known as the \"karnam\" in Andhra Pradesh"
+    },
+    {
+     "target": "graph",
+     "s": "Village Accountant",
+     "p": "known as in Orissa",
+     "o": "patnaik",
+     "quote": "\"patnaik\" in Orissa"
+    },
+    {
+     "target": "graph",
+     "s": "Village Accountant",
+     "p": "known as in Tamil Nadu",
+     "o": "adhikari",
+     "quote": "\"adhikari\" in Tamil Nadu"
+    },
+    {
+     "target": "graph",
+     "s": "Village Accountant",
+     "p": "known as in Karnataka",
+     "o": "talati",
+     "quote": "known as the \"talati\" in Karnataka"
+    },
+    {
+     "target": "graph",
+     "s": "Village Accountant",
+     "p": "known as in Gujarat",
+     "o": "talati",
+     "quote": "\"talati\" in Karnataka, Gujarat"
+    },
+    {
+     "target": "graph",
+     "s": "Village Accountant",
+     "p": "known as in Northern Karnataka",
+     "o": "kulkarni",
+     "quote": "known as the \"kulkarni\" in Northern Karnataka"
+    },
+    {
+     "target": "graph",
+     "s": "Village Accountant",
+     "p": "known as in South Karnataka",
+     "o": "shanbogaru",
+     "quote": "known as the \"shanbogaru\" in South Karnataka"
+    }
+   ],
+   "spans": [
+    [
+     20,
+     72
+    ],
+    [
+     63,
+     82
+    ],
+    [
+     74,
+     91
+    ],
+    [
+     84,
+     101
+    ],
+    [
+     93,
+     113
+    ],
+    [
+     103,
+     127
+    ],
+    [
+     115,
+     137
+    ],
+    [
+     144,
+     184
+    ],
+    [
+     185,
+     233
+    ],
+    [
+     271,
+     304
+    ],
+    [
+     348,
+     379
+    ],
+    [
+     397,
+     436
+    ],
+    [
+     438,
+     457
+    ],
+    [
+     461,
+     485
+    ],
+    [
+     508,
+     542
+    ],
+    [
+     521,
+     551
+    ],
+    [
+     586,
+     631
+    ],
+    [
+     666,
+     710
+    ]
+   ],
+   "_rounds": 2,
+   "_dropped": 5
+  },
+  "woodson_arkansas": {
+   "ops": [
+    {
+     "target": "graph",
+     "s": "Woodson",
+     "p": "located in",
+     "o": "Pulaski County",
+     "quote": "Woodson is a census-designated place (CDP) in Pulaski County, Arkansas"
+    },
+    {
+     "target": "graph",
+     "s": "Woodson",
+     "p": "located in",
+     "o": "Arkansas",
+     "quote": "Woodson is a census-designated place (CDP) in Pulaski County, Arkansas"
+    },
+    {
+     "target": "graph",
+     "s": "Woodson",
+     "p": "located in",
+     "o": "United States",
+     "quote": "in Pulaski County, Arkansas, in the United States"
+    },
+    {
+     "target": "sql",
+     "subject": "Woodson",
+     "attribute": "census_year",
+     "value": "2010",
+     "value_type": "text",
+     "quote": "Its population was 403 at the 2010 census"
+    },
+    {
+     "target": "graph",
+     "s": "Woodson",
+     "p": "part of",
+     "o": "Little Rock\u2013North Little Rock\u2013Conway Metropolitan Statistical Area",
+     "quote": "It is part of the Little Rock\u2013North Little Rock\u2013Conway Metropolitan Statistical Area"
+    },
+    {
+     "target": "graph",
+     "s": "Ed Wood Sr.",
+     "p": "occupation",
+     "o": "plantation owner",
+     "quote": "Ed Wood Sr., a prominent plantation owner, trader, and businessman"
+    },
+    {
+     "target": "graph",
+     "s": "Ed Wood Sr.",
+     "p": "occupation",
+     "o": "trader",
+     "quote": "Ed Wood Sr., a prominent plantation owner, trader, and businessman"
+    },
+    {
+     "target": "graph",
+     "s": "Ed Wood Sr.",
+     "p": "occupation",
+     "o": "businessman",
+     "quote": "Ed Wood Sr., a prominent plantation owner, trader, and businessman"
+    },
+    {
+     "target": "graph",
+     "s": "Woodson Lake",
+     "p": "namesake for",
+     "o": "Ed Wood Sr.",
+     "quote": "Woodson Lake and Wood Hollow are the namesake for Ed Wood Sr."
+    },
+    {
+     "target": "graph",
+     "s": "Wood Hollow",
+     "p": "namesake for",
+     "o": "Ed Wood Sr.",
+     "quote": "Woodson Lake and Wood Hollow are the namesake for Ed Wood Sr."
+    },
+    {
+     "target": "graph",
+     "s": "Wood Plantation",
+     "p": "owner",
+     "o": "Ed Wood Sr.",
+     "quote": "the largest of the plantations own by Ed Wood Sr."
+    }
+   ],
+   "spans": [
+    [
+     19,
+     89
+    ],
+    [
+     19,
+     89
+    ],
+    [
+     62,
+     111
+    ],
+    [
+     113,
+     154
+    ],
+    [
+     156,
+     240
+    ],
+    [
+     321,
+     387
+    ],
+    [
+     321,
+     387
+    ],
+    [
+     321,
+     387
+    ],
+    [
+     271,
+     332
+    ],
+    [
+     271,
+     332
+    ],
+    [
+     465,
+     514
+    ]
+   ],
+   "_rounds": 3,
+   "_dropped": 1
+  }
+ }
+}

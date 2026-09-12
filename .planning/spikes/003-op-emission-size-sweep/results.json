@@ -1,0 +1,926 @@
+{
+ "ts": "2026-09-12T09:24:18.822525+00:00",
+ "corpus_hash": "ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd",
+ "arms": [
+  {
+   "arm": "minicpm1b",
+   "model_file": "MiniCPM5-1B-Q8_0.gguf",
+   "n_docs": 20,
+   "merged_docs": [],
+   "routing_exact": 0.0,
+   "subjval_recall": 0.0,
+   "op_p": 0.0,
+   "op_r": 0.0,
+   "op_f1": 0.0,
+   "parse_rate": 1.0,
+   "proof_pass_rate": 1.0,
+   "n_emitted": 0,
+   "n_passed": 0,
+   "fail_reasons": {},
+   "tokens_per_para": 4.0,
+   "secs_per_para": 0.1,
+   "total_completion_tokens": 80,
+   "per_doc": [
+    {
+     "doc": "a_kiss_for_corliss",
+     "t_ops": 6,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "adam_collis",
+     "t_ops": 10,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "charles_craft",
+     "t_ops": 16,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "conrad_brooks",
+     "t_ops": 11,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "deliver_us_from_evil_2014_film",
+     "t_ops": 10,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "doctor_strange_2016_film",
+     "t_ops": 18,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "ed_wood",
+     "t_ops": 16,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "ed_wood_film",
+     "t_ops": 22,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "janet_waldo",
+     "t_ops": 8,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "kiss_and_tell_1945_film",
+     "t_ops": 7,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "lord_high_treasurer",
+     "t_ops": 3,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "meet_corliss_archer",
+     "t_ops": 5,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "meet_corliss_archer_tv_series",
+     "t_ops": 3,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "scott_derrickson",
+     "t_ops": 10,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "secretary_of_state_for_constitutional_affairs",
+     "t_ops": 2,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "shirley_temple",
+     "t_ops": 9,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "sinister_film",
+     "t_ops": 4,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "tyler_bates",
+     "t_ops": 15,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "village_accountant",
+     "t_ops": 18,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "woodson_arkansas",
+     "t_ops": 11,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    }
+   ]
+  },
+  {
+   "arm": "minicpm2b",
+   "model_file": "MiniCPM5-2B-Q8_0.gguf",
+   "n_docs": 20,
+   "merged_docs": [],
+   "routing_exact": 0.45,
+   "subjval_recall": 0.024,
+   "op_p": 0.0,
+   "op_r": 0.0,
+   "op_f1": 0.0,
+   "parse_rate": 0.95,
+   "proof_pass_rate": 0.714,
+   "n_emitted": 98,
+   "n_passed": 70,
+   "fail_reasons": {
+    "unparseable-output": 1,
+    "evidence": 28
+   },
+   "tokens_per_para": 269.9,
+   "secs_per_para": 7.93,
+   "total_completion_tokens": 5399,
+   "per_doc": [
+    {
+     "doc": "a_kiss_for_corliss",
+     "t_ops": 6,
+     "s_emitted": null,
+     "s_passed": 0,
+     "parsed": false,
+     "route_hit": false
+    },
+    {
+     "doc": "adam_collis",
+     "t_ops": 10,
+     "s_emitted": 6,
+     "s_passed": 6,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "charles_craft",
+     "t_ops": 16,
+     "s_emitted": 4,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "conrad_brooks",
+     "t_ops": 11,
+     "s_emitted": 7,
+     "s_passed": 7,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "deliver_us_from_evil_2014_film",
+     "t_ops": 10,
+     "s_emitted": 6,
+     "s_passed": 6,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "doctor_strange_2016_film",
+     "t_ops": 18,
+     "s_emitted": 4,
+     "s_passed": 4,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "ed_wood",
+     "t_ops": 16,
+     "s_emitted": 2,
+     "s_passed": 2,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "ed_wood_film",
+     "t_ops": 22,
+     "s_emitted": 2,
+     "s_passed": 2,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "janet_waldo",
+     "t_ops": 8,
+     "s_emitted": 7,
+     "s_passed": 7,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "kiss_and_tell_1945_film",
+     "t_ops": 7,
+     "s_emitted": 4,
+     "s_passed": 4,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "lord_high_treasurer",
+     "t_ops": 3,
+     "s_emitted": 2,
+     "s_passed": 2,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "meet_corliss_archer",
+     "t_ops": 5,
+     "s_emitted": 2,
+     "s_passed": 1,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "meet_corliss_archer_tv_series",
+     "t_ops": 3,
+     "s_emitted": 2,
+     "s_passed": 2,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "scott_derrickson",
+     "t_ops": 10,
+     "s_emitted": 4,
+     "s_passed": 2,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "secretary_of_state_for_constitutional_affairs",
+     "t_ops": 2,
+     "s_emitted": 3,
+     "s_passed": 2,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "shirley_temple",
+     "t_ops": 9,
+     "s_emitted": 6,
+     "s_passed": 6,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "sinister_film",
+     "t_ops": 4,
+     "s_emitted": 4,
+     "s_passed": 4,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "tyler_bates",
+     "t_ops": 15,
+     "s_emitted": 20,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "village_accountant",
+     "t_ops": 18,
+     "s_emitted": 8,
+     "s_passed": 8,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "woodson_arkansas",
+     "t_ops": 11,
+     "s_emitted": 5,
+     "s_passed": 5,
+     "parsed": true,
+     "route_hit": false
+    }
+   ]
+  },
+  {
+   "arm": "qwen1p7b",
+   "model_file": "Qwen3-1.7B-Q8_0.gguf",
+   "n_docs": 20,
+   "merged_docs": [],
+   "routing_exact": 0.3,
+   "subjval_recall": 0.034,
+   "op_p": 0.133,
+   "op_r": 0.01,
+   "op_f1": 0.018,
+   "parse_rate": 1.0,
+   "proof_pass_rate": 0.6,
+   "n_emitted": 25,
+   "n_passed": 15,
+   "fail_reasons": {
+    "schema": 1,
+    "value-type": 1,
+    "evidence": 8
+   },
+   "tokens_per_para": 79.0,
+   "secs_per_para": 2.09,
+   "total_completion_tokens": 1581,
+   "per_doc": [
+    {
+     "doc": "a_kiss_for_corliss",
+     "t_ops": 6,
+     "s_emitted": 1,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "adam_collis",
+     "t_ops": 10,
+     "s_emitted": 2,
+     "s_passed": 2,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "charles_craft",
+     "t_ops": 16,
+     "s_emitted": 2,
+     "s_passed": 1,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "conrad_brooks",
+     "t_ops": 11,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "deliver_us_from_evil_2014_film",
+     "t_ops": 10,
+     "s_emitted": 2,
+     "s_passed": 2,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "doctor_strange_2016_film",
+     "t_ops": 18,
+     "s_emitted": 2,
+     "s_passed": 2,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "ed_wood",
+     "t_ops": 16,
+     "s_emitted": 2,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "ed_wood_film",
+     "t_ops": 22,
+     "s_emitted": 2,
+     "s_passed": 2,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "janet_waldo",
+     "t_ops": 8,
+     "s_emitted": 1,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "kiss_and_tell_1945_film",
+     "t_ops": 7,
+     "s_emitted": 2,
+     "s_passed": 2,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "lord_high_treasurer",
+     "t_ops": 3,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "meet_corliss_archer",
+     "t_ops": 5,
+     "s_emitted": 2,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "meet_corliss_archer_tv_series",
+     "t_ops": 3,
+     "s_emitted": 1,
+     "s_passed": 1,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "scott_derrickson",
+     "t_ops": 10,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "secretary_of_state_for_constitutional_affairs",
+     "t_ops": 2,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "shirley_temple",
+     "t_ops": 9,
+     "s_emitted": 2,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "sinister_film",
+     "t_ops": 4,
+     "s_emitted": 2,
+     "s_passed": 2,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "tyler_bates",
+     "t_ops": 15,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "village_accountant",
+     "t_ops": 18,
+     "s_emitted": 0,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "woodson_arkansas",
+     "t_ops": 11,
+     "s_emitted": 2,
+     "s_passed": 1,
+     "parsed": true,
+     "route_hit": false
+    }
+   ]
+  },
+  {
+   "arm": "qwen4b",
+   "model_file": "Qwen3-4B-Q8_0.gguf",
+   "n_docs": 20,
+   "merged_docs": [],
+   "routing_exact": 0.35,
+   "subjval_recall": 0.126,
+   "op_p": 0.055,
+   "op_r": 0.015,
+   "op_f1": 0.023,
+   "parse_rate": 1.0,
+   "proof_pass_rate": 0.5,
+   "n_emitted": 110,
+   "n_passed": 55,
+   "fail_reasons": {
+    "evidence": 51,
+    "value-type": 4
+   },
+   "tokens_per_para": 313.6,
+   "secs_per_para": 10.52,
+   "total_completion_tokens": 6273,
+   "per_doc": [
+    {
+     "doc": "a_kiss_for_corliss",
+     "t_ops": 6,
+     "s_emitted": 6,
+     "s_passed": 4,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "adam_collis",
+     "t_ops": 10,
+     "s_emitted": 11,
+     "s_passed": 10,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "charles_craft",
+     "t_ops": 16,
+     "s_emitted": 5,
+     "s_passed": 3,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "conrad_brooks",
+     "t_ops": 11,
+     "s_emitted": 2,
+     "s_passed": 2,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "deliver_us_from_evil_2014_film",
+     "t_ops": 10,
+     "s_emitted": 15,
+     "s_passed": 11,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "doctor_strange_2016_film",
+     "t_ops": 18,
+     "s_emitted": 2,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "ed_wood",
+     "t_ops": 16,
+     "s_emitted": 4,
+     "s_passed": 2,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "ed_wood_film",
+     "t_ops": 22,
+     "s_emitted": 2,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "janet_waldo",
+     "t_ops": 8,
+     "s_emitted": 5,
+     "s_passed": 5,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "kiss_and_tell_1945_film",
+     "t_ops": 7,
+     "s_emitted": 10,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "lord_high_treasurer",
+     "t_ops": 3,
+     "s_emitted": 4,
+     "s_passed": 4,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "meet_corliss_archer",
+     "t_ops": 5,
+     "s_emitted": 6,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "meet_corliss_archer_tv_series",
+     "t_ops": 3,
+     "s_emitted": 2,
+     "s_passed": 2,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "scott_derrickson",
+     "t_ops": 10,
+     "s_emitted": 6,
+     "s_passed": 5,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "secretary_of_state_for_constitutional_affairs",
+     "t_ops": 2,
+     "s_emitted": 2,
+     "s_passed": 2,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "shirley_temple",
+     "t_ops": 9,
+     "s_emitted": 11,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "sinister_film",
+     "t_ops": 4,
+     "s_emitted": 4,
+     "s_passed": 3,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "tyler_bates",
+     "t_ops": 15,
+     "s_emitted": 9,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "village_accountant",
+     "t_ops": 18,
+     "s_emitted": 2,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "woodson_arkansas",
+     "t_ops": 11,
+     "s_emitted": 2,
+     "s_passed": 2,
+     "parsed": true,
+     "route_hit": true
+    }
+   ]
+  },
+  {
+   "arm": "qwen8b",
+   "model_file": "Qwen3-8B-Q8_0.gguf",
+   "n_docs": 20,
+   "merged_docs": [],
+   "routing_exact": 0.45,
+   "subjval_recall": 0.18,
+   "op_p": 0.084,
+   "op_r": 0.044,
+   "op_f1": 0.058,
+   "parse_rate": 0.75,
+   "proof_pass_rate": 0.836,
+   "n_emitted": 128,
+   "n_passed": 107,
+   "fail_reasons": {
+    "evidence": 15,
+    "unparseable-output": 5,
+    "value-type": 6
+   },
+   "tokens_per_para": 556.3,
+   "secs_per_para": 23.42,
+   "total_completion_tokens": 11126,
+   "per_doc": [
+    {
+     "doc": "a_kiss_for_corliss",
+     "t_ops": 6,
+     "s_emitted": 10,
+     "s_passed": 8,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "adam_collis",
+     "t_ops": 10,
+     "s_emitted": 6,
+     "s_passed": 6,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "charles_craft",
+     "t_ops": 16,
+     "s_emitted": 14,
+     "s_passed": 13,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "conrad_brooks",
+     "t_ops": 11,
+     "s_emitted": null,
+     "s_passed": 0,
+     "parsed": false,
+     "route_hit": false
+    },
+    {
+     "doc": "deliver_us_from_evil_2014_film",
+     "t_ops": 10,
+     "s_emitted": 14,
+     "s_passed": 12,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "doctor_strange_2016_film",
+     "t_ops": 18,
+     "s_emitted": null,
+     "s_passed": 0,
+     "parsed": false,
+     "route_hit": false
+    },
+    {
+     "doc": "ed_wood",
+     "t_ops": 16,
+     "s_emitted": 4,
+     "s_passed": 2,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "ed_wood_film",
+     "t_ops": 22,
+     "s_emitted": 16,
+     "s_passed": 10,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "janet_waldo",
+     "t_ops": 8,
+     "s_emitted": null,
+     "s_passed": 0,
+     "parsed": false,
+     "route_hit": false
+    },
+    {
+     "doc": "kiss_and_tell_1945_film",
+     "t_ops": 7,
+     "s_emitted": 10,
+     "s_passed": 10,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "lord_high_treasurer",
+     "t_ops": 3,
+     "s_emitted": 10,
+     "s_passed": 10,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "meet_corliss_archer",
+     "t_ops": 5,
+     "s_emitted": 10,
+     "s_passed": 6,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "meet_corliss_archer_tv_series",
+     "t_ops": 3,
+     "s_emitted": null,
+     "s_passed": 0,
+     "parsed": false,
+     "route_hit": false
+    },
+    {
+     "doc": "scott_derrickson",
+     "t_ops": 10,
+     "s_emitted": 4,
+     "s_passed": 3,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "secretary_of_state_for_constitutional_affairs",
+     "t_ops": 2,
+     "s_emitted": 4,
+     "s_passed": 4,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "shirley_temple",
+     "t_ops": 9,
+     "s_emitted": 2,
+     "s_passed": 0,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "sinister_film",
+     "t_ops": 4,
+     "s_emitted": 14,
+     "s_passed": 14,
+     "parsed": true,
+     "route_hit": true
+    },
+    {
+     "doc": "tyler_bates",
+     "t_ops": 15,
+     "s_emitted": 2,
+     "s_passed": 1,
+     "parsed": true,
+     "route_hit": false
+    },
+    {
+     "doc": "village_accountant",
+     "t_ops": 18,
+     "s_emitted": null,
+     "s_passed": 0,
+     "parsed": false,
+     "route_hit": false
+    },
+    {
+     "doc": "woodson_arkansas",
+     "t_ops": 11,
+     "s_emitted": 8,
+     "s_passed": 8,
+     "parsed": true,
+     "route_hit": true
+    }
+   ]
+  }
+ ],
+ "merges": {}
+}

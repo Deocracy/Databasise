@@ -1,0 +1,154 @@
+{
+ "arm": "qwen1p7b",
+ "model_file": "Qwen3-1.7B-Q8_0.gguf",
+ "corpus_hash": "ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd",
+ "temperature": 0.0,
+ "seed": 1234,
+ "max_tokens": 1024,
+ "chat_template": false,
+ "grammar": "score-io-v0.2-spike003 file=graph,sql",
+ "schema": "ops.v0.2",
+ "load_seconds": 1.34,
+ "outputs": {
+  "a_kiss_for_corliss": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Shirley Temple\",\"p\":\"starred_in\",\"o\":\"A Kiss for Corliss\",\"quote\":\"A Kiss for Corliss is a 1949 American comedy film directed by Richard Wallace and written by Howard Dimsdale. It stars Shirley Temple in her final starring role as well as her final film appearance. It is a sequel to the 1945 film \\\"Kiss and Tell\\\". \\\"A Kiss for Corliss\\\" was retitled \\\"Almost a Bride\\\" before release and this title appears in the title sequence. The film was released on November 25, 1949, by United Artists.\"}] }",
+   "prompt_tokens": 342,
+   "completion_tokens": 146,
+   "seconds": 4.11,
+   "think_tag": false
+  },
+  "adam_collis": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Adam Collis\",\"p\":\"attended\",\"o\":\"Duke University\",\"quote\":\"He attended the Duke University from 1986 to 1990 and the University of California, Los Angeles from 2007 to 2010.\"}, {\"target\":\"sql\",\"subject\":\"Adam Collis\",\"attribute\":\"education\",\"value\":\"Duke University\",\"value_type\":\"text\",\"quote\":\"He attended the Duke University from 1986 to 1990 and the University of California, Los Angeles from 2007 to 2010.\"}]}",
+   "prompt_tokens": 354,
+   "completion_tokens": 133,
+   "seconds": 3.37,
+   "think_tag": false
+  },
+  "charles_craft": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Charles Craft\",\"p\":\"was born in\",\"o\":\"Hampshire in England\",\"quote\":\"Born in the county of Hampshire in England on May 9, 1902\"}, {\"target\":\"sql\",\"subject\":\"Charles Craft\",\"attribute\":\"birth_date\",\"value\":\"May 9, 1902\",\"value_type\":\"date\",\"quote\":\"Born in the county of Hampshire in England on May 9, 1902\"}] }",
+   "prompt_tokens": 577,
+   "completion_tokens": 104,
+   "seconds": 2.55,
+   "think_tag": false
+  },
+  "conrad_brooks": {
+   "text": "{\"ops\":[] }",
+   "prompt_tokens": 381,
+   "completion_tokens": 6,
+   "seconds": 0.14,
+   "think_tag": false
+  },
+  "deliver_us_from_evil_2014_film": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Deliver Us from Evil\",\"p\":\"director\",\"o\":\"Scott Derrickson\",\"quote\":\"Deliver Us from Evil is a 2014 American supernatural horror film directed by Scott Derrickson and produced by Jerry Bruckheimer.\"},{\"target\":\"sql\",\"subject\":\"Deliver Us from Evil\",\"attribute\":\"year\",\"value\":\"2014\",\"value_type\":\"number\",\"quote\":\"Deliver Us from Evil is a 2014 American supernatural horror film directed by Scott Derrickson and produced by Jerry Bruckheimer.\"}]}",
+   "prompt_tokens": 358,
+   "completion_tokens": 119,
+   "seconds": 3.0,
+   "think_tag": false
+  },
+  "doctor_strange_2016_film": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Doctor Strange (2016 film)\",\"p\":\"based_on\",\"o\":\"Marvel Comics character of the same name\",\"quote\":\"Doctor Strange is a 2016 American superhero film based on the Marvel Comics character of the same name, produced by Marvel Studios and distributed by Walt Disney Studios Motion Pictures.\"},{\"target\":\"sql\",\"subject\":\"Doctor Strange (2016 film)\",\"attribute\":\"year\",\"value\":\"2016\",\"value_type\":\"number\",\"quote\":\"Doctor Strange is a 2016 American superhero film based on the Marvel Comics character of the same name, produced by Marvel Studios and distributed by Walt Disney Studios Motion Pictures.\"}]}",
+   "prompt_tokens": 385,
+   "completion_tokens": 144,
+   "seconds": 3.71,
+   "think_tag": false
+  },
+  "ed_wood": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Ed Wood\",\"p\":\"birthDate\",\"o\": \"1924-10-10\",\"quote\":\"October 10, 1924\"},{\"target\":\"sql\",\"subject\":\"Ed Wood\",\"attribute\":\"birthDate\",\"value\":\"1924-10-10\",\"value_type\":\"date\",\"quote\":\"October 10, 1924\"}] }",
+   "prompt_tokens": 270,
+   "completion_tokens": 93,
+   "seconds": 2.27,
+   "think_tag": false
+  },
+  "ed_wood_film": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Ed Wood (film)\",\"p\":\"director\",\"o\":\"Tim Burton\",\"quote\":\"Ed Wood is a 1994 American biographical period comedy-drama film directed and produced by Tim Burton, and starring Johnny Depp as cult filmmaker Ed Wood.\"}, {\"target\":\"sql\",\"subject\":\"Ed Wood (film)\",\"attribute\":\"year\",\"value\":\"1994\",\"value_type\":\"number\",\"quote\":\"Ed Wood is a 1994 American biographical period comedy-drama film directed and produced by Tim Burton, and starring Johnny Depp as cult filmmaker Ed Wood.\"}]}",
+   "prompt_tokens": 322,
+   "completion_tokens": 129,
+   "seconds": 3.31,
+   "think_tag": false
+  },
+  "janet_waldo": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"birthDate\",\"o\": \"1920-02-04\",\"quote\":\"Janet Marie Waldo (February 4, 1920 \u2013 June 12, 2016)\"}]}",
+   "prompt_tokens": 319,
+   "completion_tokens": 65,
+   "seconds": 1.71,
+   "think_tag": false
+  },
+  "kiss_and_tell_1945_film": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Kiss and Tell\",\"p\":\"genre\",\"o\":\"comedy\",\"quote\":\"Kiss and Tell is a 1945 American comedy film\"},{\"target\":\"sql\",\"subject\":\"Kiss and Tell\",\"attribute\":\"year\",\"value\":\"1945\",\"value_type\":\"number\",\"quote\":\"Kiss and Tell is a 1945 American comedy film\"}] }",
+   "prompt_tokens": 307,
+   "completion_tokens": 88,
+   "seconds": 2.18,
+   "think_tag": false
+  },
+  "lord_high_treasurer": {
+   "text": "{\"ops\":[] }",
+   "prompt_tokens": 291,
+   "completion_tokens": 6,
+   "seconds": 0.14,
+   "think_tag": false
+  },
+  "meet_corliss_archer": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Corliss Archer\",\"p\":\"created\",\"o\":\"1943-01-07\",\"quote\":\"January 7, 1943\"},{\"target\":\"sql\",\"subject\":\"Corliss Archer\",\"attribute\":\"created\",\"value\":\"1943-01-07\",\"value_type\":\"date\",\"quote\":\"January 7, 1943\"}] }",
+   "prompt_tokens": 357,
+   "completion_tokens": 92,
+   "seconds": 2.26,
+   "think_tag": false
+  },
+  "meet_corliss_archer_tv_series": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Corliss Archer (TV series)\",\"p\":\"dbo:isPartOf\",\"o\":\"CBS\",\"quote\":\"Meet Corliss Archer is an American television sitcom that aired on CBS (July 13, 1951 - August 10, 1951) and in syndication via the Ziv Company from April to December 1954.\"}] }",
+   "prompt_tokens": 319,
+   "completion_tokens": 91,
+   "seconds": 2.59,
+   "think_tag": false
+  },
+  "scott_derrickson": {
+   "text": "{\"ops\":[] }",
+   "prompt_tokens": 313,
+   "completion_tokens": 6,
+   "seconds": 0.13,
+   "think_tag": false
+  },
+  "secretary_of_state_for_constitutional_affairs": {
+   "text": "{\"ops\":[] }",
+   "prompt_tokens": 313,
+   "completion_tokens": 6,
+   "seconds": 0.13,
+   "think_tag": false
+  },
+  "shirley_temple": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Shirley Temple Black\",\"p\":\"birthDate\",\"o\":\"April 23, 1928\",\"quote\":\"Shirley Temple Black was born on April 23, 1928.\"},{\"target\":\"sql\",\"subject\":\"Shirley Temple Black\",\"attribute\":\"birthDate\",\"value\":\"1928-04-23\",\"value_type\":\"date\",\"quote\":\"Shirley Temple Black was born on April 23, 1928.\"}]}",
+   "prompt_tokens": 328,
+   "completion_tokens": 116,
+   "seconds": 3.34,
+   "think_tag": false
+  },
+  "sinister_film": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Sinister (film)\",\"p\":\"director\",\"o\":\"Scott Derrickson\",\"quote\":\"Sinister is a 2012 supernatural horror film directed by Scott Derrickson and written by Derrickson and C. Robert Cargill.\"}, {\"target\":\"sql\",\"subject\":\"Sinister (film)\",\"attribute\":\"director\",\"value\":\"Scott Derrickson\",\"value_type\":\"text\",\"quote\":\"Sinister is a 2012 supernatural horror film directed by Scott Derrickson and written by Derrickson and C. Robert Cargill.\"}]}",
+   "prompt_tokens": 291,
+   "completion_tokens": 119,
+   "seconds": 3.47,
+   "think_tag": false
+  },
+  "tyler_bates": {
+   "text": "{\"ops\":[] }",
+   "prompt_tokens": 407,
+   "completion_tokens": 6,
+   "seconds": 0.14,
+   "think_tag": false
+  },
+  "village_accountant": {
+   "text": "{\"ops\":[] }",
+   "prompt_tokens": 416,
+   "completion_tokens": 6,
+   "seconds": 0.14,
+   "think_tag": false
+  },
+  "woodson_arkansas": {
+   "text": "{\"ops\": [{\"target\":\"graph\",\"s\":\"Woodson, Arkansas\",\"p\":\"located_in\",\"o\":\"Pulaski County, Arkansas\",\"quote\":\"Woodson is a census-designated place (CDP) in Pulaski County, Arkansas, in the United States.\"},{\"target\":\"sql\",\"subject\":\"Woodson, Arkansas\",\"attribute\":\"population\",\"value\":\"403\",\"value_type\":\"number\",\"quote\":\"Woodson's population was 403 at the 2010 census.\"}]}",
+   "prompt_tokens": 351,
+   "completion_tokens": 106,
+   "seconds": 3.11,
+   "think_tag": false
+  }
+ }
+}
