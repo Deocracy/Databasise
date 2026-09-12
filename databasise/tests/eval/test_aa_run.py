@@ -40,8 +40,6 @@ from databasise.seam.evidence import EvidenceRef, UnresolvableEvidenceReferenceE
 from databasise.seam.query import QueryObject
 from databasise.seam.trace_store import TraceStore
 
-pytestmark = pytest.mark.asyncio
-
 
 # --------------------------------------------------------------------------------------------- #
 # Shared stubs
