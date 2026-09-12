@@ -1,0 +1,10 @@
+/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/002-one-pass-runtime/tok_probe.py:74: SyntaxWarning: invalid escape sequence '\u'
+  if t in (b"", b"\ufffd", b"<unk>", b"\xef\xbf\xbd"):
+llama_context: n_ctx_seq (512) > n_ctx_train (0) -- possible training context overflow
+init: embeddings required but some input tokens were not marked as outputs -> overriding
+init: embeddings required but some input tokens were not marked as outputs -> overriding
+init: embeddings required but some input tokens were not marked as outputs -> overriding
+init: embeddings required but some input tokens were not marked as outputs -> overriding
+init: embeddings required but some input tokens were not marked as outputs -> overriding
+init: embeddings required but some input tokens were not marked as outputs -> overriding
+init: embeddings required but some input tokens were not marked as outputs -> overriding
