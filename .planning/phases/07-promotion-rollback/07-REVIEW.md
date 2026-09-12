@@ -2,131 +2,91 @@
 phase: 07-promotion-rollback
 reviewed: 2026-09-12T00:00:00Z
 depth: standard
-files_reviewed: 9
+files_reviewed: 5
 files_reviewed_list:
-  - databasise/evidence/PROMOTION-LEDGER-EVIDENCE.md
-  - databasise/mcp/tools.py
+  - databasise/ledger/ledger.py
   - databasise/seam/engine.py
-  - databasise/seam/promotion.py
-  - databasise/seam/refusals.py
-  - databasise/seam/rest.py
-  - databasise/tests/seam/test_dual_transport.py
-  - databasise/tests/seam/test_promotion_posture.py
-  - databasise/tests/seam/test_rest_transport.py
+  - databasise/tests/ledger/test_ledger_generation_uniqueness.py
+  - databasise/tests/seam/test_operator_verb_concurrency.py
+  - databasise/evidence/PROMOTION-LEDGER-EVIDENCE.md
 findings:
   critical: 0
-  warning: 2
-  info: 2
-  total: 4
+  warning: 3
+  info: 3
+  total: 6
 status: issues_found
 ---
 
-# Phase 7: Promotion & Rollback — Code Review Report (Incremental: 07-04)
+# Phase 7: Promotion & Rollback — Code Review Report (Incremental: 07-05, G-07-1)
 
-**Reviewed:** 2026-09-11
+**Reviewed:** 2026-09-12
 **Depth:** standard
-**Files Reviewed:** 9
+**Files Reviewed:** 5
 **Status:** issues_found
 
 ## Summary
 
-This is an incremental review of 07-04 only (commits `86ca4b3`, `214faff`, `844ccf5`, `d9a6378`),
-whose sole purpose was to close the previous review's CR-01: `promote()`'s `verb` argument crashed
-with a bare `ValueError` instead of refusing by name for an out-of-enum value.
+This is an incremental review of 07-05 (G-07-1), whose sole purpose was to close the previous
+review's **WR-01** — the check-then-act race across separate autocommit statements in
+`promote()`/`rollback()`/`retire()`. The fix is `Ledger.transaction()`, a `BEGIN IMMEDIATE`
+context manager now enclosing each verb's guard read through its own `append()`, plus a
+`UNIQUE(alias, minted_version)` index (`ux_ledger_generation`) as a database-level backstop.
 
-**CR-01 is genuinely closed.** Verified directly against the diff and the current source:
+**WR-01 is genuinely closed** — see "Resolved This Cycle" below. Verified directly (not merely
+read) by: tracing every exit path of `transaction()`, confirming no caller performs two appends
+inside one `transaction()` span, confirming `transaction()` does not nest anywhere in the current
+call graph, and directly executing the SQLite DDL sequence in `_create_schema()` against a
+duplicate-seeded database to observe its real failure/self-healing behavior (Python's `sqlite3`
+module autocommits DDL statements individually — confirmed empirically, not assumed).
 
-- `Databasise.promote()` now checks `if verb not in PROMOTION_VERBS: raise
-  UnrecognisedPromotionVerbError(verb=verb)` as the literal first statement of the function body —
-  before `_resolve_operator_preconditions` (trace-id resolution), before `_NOT_BUILT_VERBS`/
-  `_GATE_VERBS` handling, and before any `Ledger` object is constructed or touched
-  (`databasise/seam/engine.py:1179-1181`).
-- `PROMOTION_VERBS` is derived via `frozenset(typing.get_args(PromotionVerb))`
-  (`databasise/seam/promotion.py:62`) — there is no second hand-maintained verb list anywhere to
-  drift out of sync; `test_the_verb_guard_reads_the_enum_rather_than_a_second_list` pins this.
-- `UnrecognisedPromotionVerbError` (`databasise/seam/refusals.py:360-377`) matches the shape of its
-  siblings exactly: keyword-only `__init__(self, *, verb: Any)`, attribute stored as `self.verb`,
-  class name embedded as a message prefix, and `Any`-typed (not `str`) so a JSON body delivering
-  `None`, a number, or an object is still named in the refusal rather than crashing pydantic
-  coercion first — the parametrized test in `test_promotion_posture.py` exercises exactly this with
-  `verb=None` and `verb=""`.
-- The old terminal `raise ValueError(...)` branch inside `_promote_sync` now raises the same named
-  `UnrecognisedPromotionVerbError` instead, and remains reachable only by construction (a future
-  seventh `PromotionVerb` literal added without a matching branch) — it is not reachable today,
-  since the top-of-body guard already rejects everything outside the six declared literals.
-- Both transport DTOs (`PromoteRequest.verb` in `rest.py:158`, `PromoteToolArgs.verb` in
-  `tools.py:184`) deliberately stay unconstrained `str`, each carrying an explicit docstring
-  explaining why (mirroring `change_origin`'s existing rule): constraining to `Literal` would let
-  FastAPI's/pydantic's own validation-error path answer with no `refusal_type`, which is exactly
-  the three-transport divergence this design avoids. The new
-  `test_an_out_of_enum_verb_refuses_identically_across_three_transports` in
-  `test_dual_transport.py` proves the identical `refusal_type` lands on all three transports
-  (in-process, REST 422, MCP `ToolError`) for the same out-of-enum value, and that the ledger row
-  count stays 0 on all three paths.
-- None of the plan-declared prohibitions are violated: no coercion/case-folding/normalisation of
-  the verb, no ledger write on any refusal path (guard runs before `Ledger` is even constructed),
-  the message names only the caller's own value (no menu of the six accepted verbs, no implied
-  default — pinned by `test_an_unrecognised_verb_refuses_by_name_before_any_trace_resolution`'s own
-  "no menu" assertion), and the refusal's only public attribute (`verb`) carries the caller's own
-  input, never a wiring/arm/node/instance identity.
-- `test_rest_transport.py`'s `_REFUSAL_FACTORIES`/`_all_seam_refusal_subclasses` exhaustiveness
-  test is a genuine hard failure, not a silent skip: it is a `pytest.mark.parametrize` over every
-  live `SeamRefusalError` subclass (found via recursive `__subclasses__()` walk, not a
-  hand-maintained list), and the body's first line is `assert exc_cls in _REFUSAL_FACTORIES` with
-  an explicit failure message — a subclass added without a factory fails this test, it does not
-  skip. `UnrecognisedPromotionVerbError` has a factory registered.
+Closing WR-01 introduces its own new concurrency-adjacent gaps, detailed below: every `Ledger()`
+construction (including the **read-only** alias lookup `selectors.py` performs on every ordinary
+`query()`/`compare()` call) now contends for the same single write lock a `promote`/`rollback`/
+`retire` transaction holds, with no `busy_timeout` tuning and no wrapping of a lock-timeout
+`sqlite3.OperationalError` into a `SeamRefusalError`; and one of the two new regression tests has a
+materially lower single-run detection probability than its sibling despite both being described as
+proving the fix. WR-02 and IN-01 from the prior review remain open and unaddressed by 07-05 (carried
+forward verbatim below, per this review's own append-only discipline for cross-cycle findings).
 
-No new defects were introduced by 07-04's own diff. Two findings from the prior 07-REVIEW.md that
-07-04 did not touch remain open below, carried forward rather than dropped, plus one small
-Info-level cleanliness issue in the two test files 07-04 edited.
+## Resolved This Cycle
+
+### WR-01 (prior review) — RESOLVED by 07-05
+
+**Was:** No serialization across concurrent `promote()`/`rollback()`/`retire()` calls on the same
+alias — each `_*_sync` body read the alias's current state and appended on two separate autocommit
+statements, so a concurrent writer could commit between the read and the append.
+
+**Fix:** `databasise/ledger/ledger.py:140-167` (`Ledger.transaction()`) plus
+`databasise/ledger/ledger.py:213-216` (`ux_ledger_generation` unique index, database-level backstop).
+Applied at all three call sites: `databasise/seam/engine.py:1203` (`_promote_sync`), `:1336`
+(`_rollback_sync`), `:1476` (`_retire_sync`) — the guard read (tombstone check / active-generation
+check / prior-version read) and the `append()` that depends on it now share one `BEGIN IMMEDIATE`
+span.
+
+**Verified genuinely fixed, not merely re-labeled:**
+- Traced every exit path of `transaction()`: normal completion commits (`else` branch); any
+  exception (including a refusal raised by a gate-verb posture check or the unreachable-by-
+  construction backstop) rolls back and re-raises via `except BaseException`. No path leaves a
+  write transaction open.
+- Confirmed by direct execution (not assumption) that a `commit()` called after `append()`'s own
+  internal `commit()` already closed the span is a safe no-op in `sqlite3` — the "one append per
+  transaction" ceiling the docstring documents does not leave a dangling transaction, because
+  `append()` is the literal last statement inside all three `with ledger.transaction():` blocks
+  (no code runs after it, so the ceiling is never actually exercised by a live call path).
+- Confirmed no caller does two appends inside one `transaction()` span (grep + read of all three
+  `_*_sync` bodies).
+- Confirmed `transaction()` does not nest anywhere in the current call graph: no function called
+  from inside a `with ledger.transaction():` block (`by_alias`, `generation_state`,
+  `derive_mutation_class`, `mint_version`, `declared_surface`, `resolved_wiring_for_arm`,
+  `enforce_gate_verb_posture`) constructs a second `Ledger` or calls `.transaction()` itself.
+- `test_operator_verb_concurrency.py`'s two new tests reproduce both races the prior review's
+  reproduction measured (retire/rollback outrunning a tombstone; six concurrent promotes minting a
+  duplicate semver) and pass against the fixed code. See WR-04 below for a reliability caveat on one
+  of the two.
 
 ## Warnings
 
-### WR-01 (carried forward, unaddressed by 07-04): No serialization across concurrent `promote()`/`rollback()`/`retire()` calls on the same alias
-
-**File:** `databasise/seam/engine.py:1179-1234` (`_promote_sync`), `1297-1355` (`_rollback_sync`),
-`1432-1478` (`_retire_sync`)
-**Issue:** Each sync body opens its own fresh `Ledger(self.store_root)` inside its own
-`run_in_executor` call, reads the alias's current state, derives a mutation class and a minted
-version from that read, then appends. Nothing prevents two separate `run_in_executor` calls (two
-concurrent `promote()` calls, or a `promote()` racing a `retire()`, on the same alias) from both
-reading the same prior state before either appends — the default `ThreadPoolExecutor` has more
-than one worker. This is unchanged by 07-04; 07-04's diff touches none of the three `_*_sync`
-bodies' locking behavior.
-
-Concretely reachable outcomes (unchanged from the prior review): two concurrent `promote(alias,
-...)` calls can both mint the same version number and both append, violating the ledger's own
-"a published name is never reused" rule; `retire()`'s `ActiveGenerationRetirementError` guard can
-pass on a generation that becomes active only after the guard's own read, via a race with a
-concurrent `promote()`/`rollback()`.
-
-No test in the suite exercises concurrent calls to `promote`/`rollback`/`retire` (grep for
-`asyncio.gather`/`Lock`/`threading` across `test_promote.py`, `test_rollback.py`, `test_retire.py`,
-`test_ledger.py` returns nothing).
-
-**Fix:** Serialize per-alias, e.g. an `asyncio.Lock` keyed by alias held around the whole
-async-method body (acquired before dispatching to the executor, released after it returns),
-mirroring this codebase's existing keyed-lock pattern (`get_storage_keyed_lock`):
-
-```python
-self._promotion_locks: dict[str, asyncio.Lock] = {}
-
-def _lock_for_alias(self, alias: str) -> asyncio.Lock:
-    return self._promotion_locks.setdefault(alias, asyncio.Lock())
-
-async def promote(self, alias, trace_ids, change_origin, *, verb="operator-asserted"):
-    ...
-    async with self._lock_for_alias(alias):
-        minted_version, generation_ordinal = await asyncio.get_running_loop().run_in_executor(
-            None, _promote_sync
-        )
-```
-(Apply identically around `rollback()`/`retire()`'s own executor calls.) A single-process
-`asyncio.Lock` does not protect two separate OS processes sharing one `store_root`; a cross-process
-guard (SQLite `BEGIN IMMEDIATE` around the read+append) would be needed if multiple processes are
-expected to share one ledger file.
-
-### WR-02 (carried forward, unaddressed by 07-04): `resolve_single_arm`'s promotion-target derivation has no uniqueness guard against two arms sharing a node-id set
+### WR-02 (carried forward, unaddressed by 07-05): `resolve_single_arm`'s promotion-target derivation has no uniqueness guard against two arms sharing a node-id set
 
 **File:** `databasise/seam/promotion.py:115-128` (`_arm_name_for_node_ids`)
 **Issue:** `_arm_name_for_node_ids` returns the **first** candidate from `all_wirings()` whose
@@ -143,7 +103,7 @@ scenario `derive_mutation_class`'s own docstring calls out as needing separate h
 could end up with identical node-id sets. `resolve_single_arm` is the sole signal
 `promote()`/`rollback()`/`retire()` use to determine which wiring becomes the alias's next
 generation; a silent match to the wrong arm here would promote a different wiring than the operator
-actually reviewed, with no error raised anywhere. Unchanged by 07-04.
+actually reviewed, with no error raised anywhere. Unchanged by 07-05.
 
 **Fix:** Collect all matches instead of returning on the first, and raise when more than one
 candidate's node-id set matches:
@@ -157,9 +117,69 @@ if not matches:
 return matches[0]
 ```
 
+### WR-03 (new): Every `Ledger()` construction — including the read-only lookup ordinary queries make — contends for the same write lock `transaction()` holds, with no timeout tuning and no refusal wrapping
+
+**File:** `databasise/ledger/ledger.py:132-244` (`__init__`/`_create_schema`), `140-167`
+(`transaction`); `databasise/seam/selectors.py:265` (read-only `Ledger(store_root).by_alias`, called
+from every `query()`/`compare()` that resolves an alias-based selector)
+**Issue:** `Ledger.__init__` unconditionally runs `_create_schema()` — `CREATE TABLE IF NOT EXISTS`,
+two `CREATE INDEX IF NOT EXISTS`, `DROP INDEX IF EXISTS`, `CREATE UNIQUE INDEX IF NOT EXISTS`, two
+trigger creations — on **every** construction, including a purely read-only caller. Verified by
+direct execution that `sqlite3` autocommits each DDL statement individually rather than batching them
+under one transaction, but each still needs SQLite's write lock to run at all. `ledger.py`'s own
+module docstring already states this plainly: "an unreleased write transaction would stall the next
+`Ledger()` construction for the full busy timeout, because `__init__` always runs `_create_schema`
+... even for a read-only caller."
+
+Because `sqlite3.connect(db_path)` (`ledger.py:135`) sets no `timeout=` argument, the busy timeout is
+the library default of 5.0 seconds. During the window a `promote()`/`rollback()`/`retire()` call
+holds its `BEGIN IMMEDIATE` transaction (guard reads through `append()`), **any other `Ledger()`
+construction anywhere in the process — including `selectors.py:265`'s read-only alias lookup that
+every ordinary `query()`/`compare()` call performs when resolving a selector — blocks waiting for
+that same lock**, and raises a bare `sqlite3.OperationalError: database is locked` if the wait
+exceeds 5 seconds. That exception is not caught anywhere on this path and is not a
+`SeamRefusalError`: it would surface as a raw, unhandled low-level exception out of an ordinary read
+query, in direct tension with this codebase's own stated house style (explicit named refusals, never
+a raw exception crossing the seam) — a query should not be able to crash because an unrelated
+operator promotion happened to be mid-flight. The same risk applies symmetrically to
+`test_six_concurrent_promotes_mint_six_distinct_versions_with_zero_exceptions`'s own "zero exceptions
+of any kind" assertion: on a loaded CI runner, six concurrently-serialized short transactions could
+in principle exceed 5 seconds cumulatively for reasons unrelated to a real bug, making that assertion
+theoretically flaky in the other direction too.
+
+**Fix:** Set an explicit, larger `timeout=` on `sqlite3.connect()` (e.g. 30s) so realistic operator
+contention serializes rather than crashes, and wrap a lock-timeout `sqlite3.OperationalError` raised
+from `transaction()`/`Ledger.__init__` into a named `SeamRefusalError` subclass (or retry once with
+backoff) so it never reaches a caller as a raw low-level exception:
+
+```python
+self._conn = sqlite3.connect(db_path, timeout=30.0)
+```
+
+### WR-04 (new): The six-concurrent-promotes regression test has a materially lower single-run detection probability than its sibling, despite both being presented as proving the fix
+
+**File:** `databasise/tests/seam/test_operator_verb_concurrency.py:37-39` (`_SIX_WAY_PROMOTE_TRIALS`
+comment), `121-148` (`test_six_concurrent_promotes_mint_six_distinct_versions_with_zero_exceptions`)
+**Issue:** The retire/rollback race test's own comment explicitly claims 20 trials at the measured
+~68% per-trial pre-fix detection rate "makes a regression essentially certain to be caught"
+(`1 - 0.32^20 ≈ 1`). The six-way-promote test carries no equivalent claim — it states the measured
+rate (~10% per trial, re-measured as 6/60 at plan-authoring time) and the trial count/cost, but never
+asserts confidence. The actual math: `1 - 0.9^20 ≈ 0.88` — roughly a **1-in-8 chance that a single CI
+run of this test would silently pass even if the `transaction()` fix were fully reverted**, for a
+correctness class (duplicate minted semver — a published name reused, violating D-06/CONTRACT §0.4)
+that this same evidence document (`PROMOTION-LEDGER-EVIDENCE.md`) cites as proof criterion 2 holds.
+A regression test with a ~12% false-negative rate on a single run is a materially weaker guard than
+its sibling test, but nothing in the test file or the evidence document flags this asymmetry — a
+reader could reasonably assume both tests offer comparable confidence.
+
+**Fix:** Either raise the trial count for this test specifically (e.g. ~45 trials brings single-run
+detection to >99%: `1 - 0.9^45 ≈ 0.99`), or state the actual detection probability in the comment so
+a future reader (or CI flake investigation) understands this test's guarantee is weaker than its
+sibling's, rather than assuming parity.
+
 ## Info
 
-### IN-01 (carried forward, unaddressed by 07-04): `rollback()`'s docstring does not state whether the resolved arm must match the rollback target (unlike `retire()`, which states this explicitly)
+### IN-01 (carried forward, unaddressed by 07-05): `rollback()`'s docstring does not state whether the resolved arm must match the rollback target (unlike `retire()`, which states this explicitly)
 
 **File:** `databasise/seam/engine.py:1248-1296`
 **Issue:** `retire()`'s docstring explicitly documents that "the resolved arm does not have to
@@ -167,35 +187,53 @@ match the generation being retired" as a deliberate, cited design decision. `rol
 identical shape — the resolved arm from `_resolve_operator_preconditions` is used only for
 `arm_instance_hashes`, never checked against `target.mutation_id` — but `rollback()`'s own
 docstring never states this is deliberate, so a future reader may treat it as an oversight and "fix"
-it into a match check. Unchanged by 07-04.
+it into a match check. Unchanged by 07-05.
 **Fix:** Add the same one-paragraph disclosure `retire()` carries, or add a test exercising a
 rollback whose trace ids resolve to an arm different from the rollback target, to make the intended
 behavior explicit and pinned.
 
-### IN-02: 07-04's two edited test files fail `ruff check`'s import-sort rule (I001)
+### IN-02 (new): The pre-existing-duplicate-rows index-upgrade failure path is undocumented by any test, though its actual behavior was verified manually during this review
 
-**File:** `databasise/tests/seam/test_dual_transport.py:49`, `databasise/tests/seam/test_promotion_posture.py:13`
-**Issue:** 07-04 added `UnrecognisedPromotionVerbError` to existing single-line multi-name imports
-rather than wrapping them, pushing both lines past ruff's wrap threshold and leaving the import
-block flagged as unformatted by `ruff check`:
+**File:** `databasise/ledger/ledger.py:204-225` (`_create_schema`'s `DROP INDEX`/`CREATE UNIQUE
+INDEX` sequence and its accompanying comment)
+**Issue:** The comment at `ledger.py:222-225` states plainly that a pre-existing database already
+holding duplicate `(alias, minted_version)` rows will fail `CREATE UNIQUE INDEX` at open time and
+that "no repair machinery is added for it here" — a deliberate design choice, not a defect. This
+review verified by direct execution (not assumption) that the actual failure sequence is: `DROP
+INDEX IF EXISTS ix_ledger_generation` commits immediately (SQLite DDL autocommits per-statement
+under the `sqlite3` module's legacy transaction handling — confirmed empirically), then `CREATE
+UNIQUE INDEX` raises `sqlite3.IntegrityError`, uncaught, out of `Ledger.__init__` — every subsequent
+`Ledger()` construction against that file keeps failing identically until the duplicate rows are
+manually removed, at which point the migration self-heals (`DROP INDEX IF EXISTS` becomes a no-op,
+`CREATE UNIQUE INDEX` then succeeds). This is a genuinely reachable, if rare, production scenario
+(any store whose `ledger.db` predates 07-01/07-05's schema and happens to carry a legacy duplicate),
+and the on-open crash takes down every ledger read (`active_pointer`, `by_alias`, `history`) as well
+as every write, with no test in the suite pinning this exact behavior — only the "old plain index,
+no duplicates" upgrade path is tested
+(`test_reopening_a_database_carrying_the_old_plain_index_enforces_uniqueness`).
+**Fix:** Add a test seeding an actual duplicate `(alias, minted_version)` pair under the old schema
+before opening a real `Ledger`, asserting the specific `sqlite3.IntegrityError` and that a second
+open (after manually deduplicating) succeeds — turning the comment's claim into a pinned fact rather
+than an assertion trusted on the strength of a code comment alone.
 
-```python
-from databasise.seam.refusals import DisagreeingPromotionTraceIdsError, UnrecognisedPromotionVerbError
-```
-```python
-from databasise.seam.promotion import _MEASUREMENT_POSTURE, PROMOTION_VERBS, MutationClass, PromotionVerb
-```
-Confirmed by running `ruff check` directly against both files (two `I001` findings, both isolated
-to lines 07-04 touched — every other `I001`/lint hit in this file set is pre-existing and outside
-07-04's diff hunks, so not reported here). Cosmetic only; does not affect test collection or
-runtime behavior (suite is green per the orchestrator's pre-review run).
-**Fix:** `ruff check --fix` on both files, or wrap the import list manually:
-```python
-from databasise.seam.refusals import (
-    DisagreeingPromotionTraceIdsError,
-    UnrecognisedPromotionVerbError,
-)
-```
+### IN-03 (new): Gate-verb refusal paths acquire the sole ledger write lock even though they are guaranteed to never write
+
+**File:** `databasise/seam/engine.py:1213-1214` (`_promote_sync`, inside `with
+ledger.transaction():`)
+**Issue:** `promote-next`/`promote-now` calls always refuse via `enforce_gate_verb_posture` under
+the current milestone's posture (`PROMOTION-LEDGER-EVIDENCE.md` criterion 3, `test_no_gate_verb_
+appends_a_row`) — no code path lets them reach `append()`. Yet the check runs *inside* `with
+ledger.transaction():`, after `prior_record = ledger.by_alias(alias)` has already opened the
+`BEGIN IMMEDIATE` span, so every gate-verb call still takes the same single write lock a real
+`promote`/`rollback`/`retire` needs, for zero write benefit. Under concurrent load this adds
+avoidable contention on the lock discussed in WR-03, though it is not itself an incorrect-behavior
+defect (out of this review's performance scope; noted here only because it interacts with WR-03's
+lock-contention concern).
+**Fix:** Move the `verb in _GATE_VERBS` / `enforce_gate_verb_posture` check before `with
+ledger.transaction():` opens — it only needs `mutation_class`, which is derived from `new_resolved`
+and `prior_resolved`; `prior_resolved` can be read via a lightweight, lock-free `by_alias` call
+issued outside the transaction (a plain autocommit `SELECT`, not a write), since a gate-verb call
+never appends and so never needs the atomicity guarantee `transaction()` provides.
 
 ---
 
