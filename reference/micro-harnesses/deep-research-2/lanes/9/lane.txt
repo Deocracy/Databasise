@@ -1,0 +1,2 @@
+Lane 9: Pipeline orchestration for extraction at scale.
+How GraphRAG, LightRAG, HippoRAG, nano-graphrag, Cognee, and Graphiti parallelise ingestion; entity resolution and deduplication across workers; idempotent and batched store writes; stage ordering (embed before or after extraction); incremental and streaming indexing; reported documents-per-hour figures and their hardware.

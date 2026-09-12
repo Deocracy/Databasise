@@ -1,0 +1,2 @@
+Lane 7: Prompting small models for knowledge-graph extraction.
+The extraction prompts and pipelines of GraphRAG, LightRAG, HippoRAG, KGGen, EDC, iText2KG, Triplex, SciPhi, OpenIE-with-LLMs, and schema-guided extraction with small models; few-shot versus schema-only; two-step (entities then relations) versus one-step; constrained and grammar decoding for extraction; error analyses (hallucinated relations, evidence failures, date normalisation); prompt placement effects.

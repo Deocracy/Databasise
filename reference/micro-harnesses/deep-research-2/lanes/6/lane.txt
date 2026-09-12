@@ -1,0 +1,2 @@
+Lane 6: Evaluating "best" and fixing anisotropy.
+MTEB, MMTEB, BEIR, and domain-specific evaluation; building an evaluation set for a private corpus with synthetic queries; anisotropy and isotropy fixes (whitening, centering, post-processing) and when they help; what a fair head-to-head between a trained embedder and a decoder state looks like; metric pitfalls with small query sets.

@@ -1,0 +1,2 @@
+Lane 2: Training recipes for embedders.
+Contrastive objectives (InfoNCE and variants), in-batch and mined hard negatives, false-negative handling, temperature, curriculum, two-stage weakly supervised pretraining then supervised fine-tuning, synthetic query generation (E5-Mistral, Gecko, Promptagator, InPars, Doc2Query), instruction tuning, and the reported compute per stage. Which recipes fit one 16 GB GPU: LoRA embedders, LLM2Vec, the Qwen3-Embedding and Arctic-Embed and BGE-M3 reports, sentence-transformers training.

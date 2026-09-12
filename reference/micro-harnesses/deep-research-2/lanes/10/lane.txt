@@ -1,0 +1,2 @@
+Lane 10: High-speed retrieval and vector storage.
+Index choices (HNSW, IVF, PQ, GPU Faiss, DiskANN), quantised and binary embeddings, Matryoshka truncation at query time, hybrid sparse plus dense, small rerankers (0.3B to 1B) and their latency, graph-plus-vector fusion at query time, and the reported QPS and recall trade-offs.

@@ -1,0 +1,2 @@
+Lane 5: Prompts and instructions for embeddings.
+Instruction-following embedders (INSTRUCTOR, E5-instruct, Qwen3-Embedding instructions, NV-Embed instructions), prompt-based embeddings from decoders (PromptEOL, PromptBERT, echo embeddings, "summarise in one word" prompts), sensitivity studies of instruction wording, query-side versus document-side prefixes, chat-template effects, and marker-token approaches. Anything measuring how much MRR moves with the instruction.

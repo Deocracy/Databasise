@@ -1,0 +1,989 @@
+{
+ "version": "queries-v1",
+ "created": "2026-09-12T15:26:13.469036+00:00",
+ "corpus_hash": "ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd",
+ "teacher": "v1/.env.parity LLM_MODEL (id not recorded), temperature 0, reasoning disabled",
+ "split_rule": "documents sorted by id; every fourth starting at index 3 is test",
+ "test_document_ids": [
+  "conrad_brooks",
+  "ed_wood_film",
+  "meet_corliss_archer",
+  "shirley_temple",
+  "woodson_arkansas"
+ ],
+ "queries": [
+  {
+   "id": "a_kiss_for_corliss#1",
+   "doc": "a_kiss_for_corliss",
+   "split": "train",
+   "q": "Who directed the movie?",
+   "answer": "Richard Wallace",
+   "quote": "A Kiss for Corliss is a 1949 American comedy film directed by Richard Wallace and written by Howard Dimsdale."
+  },
+  {
+   "id": "a_kiss_for_corliss#2",
+   "doc": "a_kiss_for_corliss",
+   "split": "train",
+   "q": "When was it released?",
+   "answer": "November 25, 1949",
+   "quote": "The film was released on November 25, 1949, by United Artists."
+  },
+  {
+   "id": "a_kiss_for_corliss#3",
+   "doc": "a_kiss_for_corliss",
+   "split": "train",
+   "q": "What is the connection between this film and 'Kiss and Tell'?",
+   "answer": "It is a sequel to the 1945 film \"Kiss and Tell\".",
+   "quote": "It is a sequel to the 1945 film \"Kiss and Tell\"."
+  },
+  {
+   "id": "a_kiss_for_corliss#4",
+   "doc": "a_kiss_for_corliss",
+   "split": "train",
+   "q": "Identify the actress in her last leading part",
+   "answer": "Shirley Temple",
+   "quote": "It stars Shirley Temple in her final starring role as well as her final film appearance."
+  },
+  {
+   "id": "a_kiss_for_corliss#5",
+   "doc": "a_kiss_for_corliss",
+   "split": "train",
+   "q": "United Artists distributor release date",
+   "answer": "November 25, 1949",
+   "quote": "The film was released on November 25, 1949, by United Artists."
+  },
+  {
+   "id": "a_kiss_for_corliss#6",
+   "doc": "a_kiss_for_corliss",
+   "split": "train",
+   "q": "What alternative title appears in the opening sequence?",
+   "answer": "Almost a Bride",
+   "quote": "\"A Kiss for Corliss\" was retitled \"Almost a Bride\" before release and this title appears in the title sequence."
+  },
+  {
+   "id": "adam_collis#1",
+   "doc": "adam_collis",
+   "split": "train",
+   "q": "Who is Adam Collis?",
+   "answer": "An American filmmaker and actor.",
+   "quote": "Adam Collis is an American filmmaker and actor."
+  },
+  {
+   "id": "adam_collis#2",
+   "doc": "adam_collis",
+   "split": "train",
+   "q": "When did he attend Duke University?",
+   "answer": "From 1986 to 1990.",
+   "quote": "He attended the Duke University from 1986 to 1990"
+  },
+  {
+   "id": "adam_collis#3",
+   "doc": "adam_collis",
+   "split": "train",
+   "q": "Relation between Collis and Derrickson?",
+   "answer": "Collis was assistant director for Derrickson's short.",
+   "quote": "assistant director for the Scott Derrickson's short \"Love in the Ruins\""
+  },
+  {
+   "id": "adam_collis#4",
+   "doc": "adam_collis",
+   "split": "train",
+   "q": "What profession does this man hold?",
+   "answer": "Filmmaker and actor.",
+   "quote": "Adam Collis is an American filmmaker and actor."
+  },
+  {
+   "id": "adam_collis#5",
+   "doc": "adam_collis",
+   "split": "train",
+   "q": "Eric Koyanagi Hundred Percent role",
+   "answer": "Crankshaft.",
+   "quote": "In 1998, he played \"Crankshaft\" in Eric Koyanagi's \"Hundred Percent\"."
+  },
+  {
+   "id": "adam_collis#6",
+   "doc": "adam_collis",
+   "split": "train",
+   "q": "USC study period details?",
+   "answer": "From 1991 to 1997.",
+   "quote": "studied cinema at the University of Southern California from 1991 to 1997."
+  },
+  {
+   "id": "charles_craft#1",
+   "doc": "charles_craft",
+   "split": "train",
+   "q": "Who was Charles Craft?",
+   "answer": "An English-born American film and television editor.",
+   "quote": "Charles Craft (May 9, 1902 – September 19, 1968) was an English-born American film and television editor."
+  },
+  {
+   "id": "charles_craft#2",
+   "doc": "charles_craft",
+   "split": "train",
+   "q": "In what year did Craft enter the film industry?",
+   "answer": "1927",
+   "quote": "Born in the county of Hampshire in England on May 9, 1902, Craft would enter the film industry in Hollywood in 1927."
+  },
+  {
+   "id": "charles_craft#3",
+   "doc": "charles_craft",
+   "split": "train",
+   "q": "What was the relationship between Craft and Racket Squad?",
+   "answer": "He was the main editor for the show.",
+   "quote": "his first show being \"Racket Squad\", from 1951–53, for which he was the main editor, editing 93 of the 98 episodes."
+  },
+  {
+   "id": "charles_craft#4",
+   "doc": "charles_craft",
+   "split": "train",
+   "q": "Which cinematic professional worked on Flipper's New Adventure?",
+   "answer": "Charles Craft edited the film.",
+   "quote": "His final film work would be editing \"Flipper's New Adventure\" (1964, the sequel to 1963's \"Flipper\"."
+  },
+  {
+   "id": "charles_craft#5",
+   "doc": "charles_craft",
+   "split": "train",
+   "q": "Craft died location city state",
+   "answer": "Los Angeles, California",
+   "quote": "Craft died on September 19, 1968 in Los Angeles, California."
+  },
+  {
+   "id": "charles_craft#6",
+   "doc": "charles_craft",
+   "split": "train",
+   "q": "When did Craft retire from editing duties?",
+   "answer": "He retired in 1966.",
+   "quote": "editing the first 28 episodes before he retired in 1966. Craft died on September 19, 1968 in Los Angeles, California."
+  },
+  {
+   "id": "conrad_brooks#1",
+   "doc": "conrad_brooks",
+   "split": "test",
+   "q": "Who is the subject of this biography?",
+   "answer": "Conrad Brooks, an American actor.",
+   "quote": "Conrad Brooks (born Conrad Biedrzycki on January 3, 1931 in Baltimore, Maryland) is an American actor."
+  },
+  {
+   "id": "conrad_brooks#2",
+   "doc": "conrad_brooks",
+   "split": "test",
+   "q": "In what year did he relocate to Hollywood?",
+   "answer": "1948",
+   "quote": "He moved to Hollywood, California in 1948 to pursue a career in acting."
+  },
+  {
+   "id": "conrad_brooks#3",
+   "doc": "conrad_brooks",
+   "split": "test",
+   "q": "What is the connection between Brooks and Ed Wood?",
+   "answer": "Brooks appeared in films directed by Ed Wood.",
+   "quote": "He got his start in movies appearing in Ed Wood films such as \"Plan 9 from Outer Space\""
+  },
+  {
+   "id": "conrad_brooks#4",
+   "doc": "conrad_brooks",
+   "split": "test",
+   "q": "Identify the performer who transitioned into filmmaking roles later",
+   "answer": "Conrad Brooks",
+   "quote": "He also has since gone on to write, produce and direct several films."
+  },
+  {
+   "id": "conrad_brooks#5",
+   "doc": "conrad_brooks",
+   "split": "test",
+   "q": "actor prolific reemerged interest",
+   "answer": "he reemerged in the 1980s",
+   "quote": "due to the ongoing interest in the films of Ed Wood, he reemerged in the 1980s and has become a prolific actor."
+  },
+  {
+   "id": "conrad_brooks#6",
+   "doc": "conrad_brooks",
+   "split": "test",
+   "q": "What creative activities does he engage in now?",
+   "answer": "Write, produce, and direct films.",
+   "quote": "He also has since gone on to write, produce and direct several films."
+  },
+  {
+   "id": "deliver_us_from_evil_2014_film#1",
+   "doc": "deliver_us_from_evil_2014_film",
+   "split": "train",
+   "q": "Who directed the movie?",
+   "answer": "Scott Derrickson",
+   "quote": "Deliver Us from Evil is a 2014 American supernatural horror film directed by Scott Derrickson and produced by Jerry Bruckheimer."
+  },
+  {
+   "id": "deliver_us_from_evil_2014_film#2",
+   "doc": "deliver_us_from_evil_2014_film",
+   "split": "train",
+   "q": "When was the book published?",
+   "answer": "2001",
+   "quote": "The film is officially based on a 2001 non-fiction book entitled \"Beware the Night\" by Ralph Sarchie and Lisa Collier Cool, and its marketing campaign highlighted that it was \"inspired by actual accounts\"."
+  },
+  {
+   "id": "deliver_us_from_evil_2014_film#3",
+   "doc": "deliver_us_from_evil_2014_film",
+   "split": "train",
+   "q": "What is the connection between the film and the book?",
+   "answer": "The film is based on the book",
+   "quote": "The film is officially based on a 2001 non-fiction book entitled \"Beware the Night\" by Ralph Sarchie and Lisa Collier Cool, and its marketing campaign highlighted that it was \"inspired by actual accounts\"."
+  },
+  {
+   "id": "deliver_us_from_evil_2014_film#5",
+   "doc": "deliver_us_from_evil_2014_film",
+   "split": "train",
+   "q": "Eric Bana main role",
+   "answer": "main roles",
+   "quote": "The film stars Eric Bana, Édgar Ramírez, Sean Harris, Olivia Munn, and Joel McHale in the main roles and was released on July 2, 2014."
+  },
+  {
+   "id": "deliver_us_from_evil_2014_film#6",
+   "doc": "deliver_us_from_evil_2014_film",
+   "split": "train",
+   "q": "Release date of the film",
+   "answer": "July 2, 2014",
+   "quote": "The film stars Eric Bana, Édgar Ramírez, Sean Harris, Olivia Munn, and Joel McHale in the main roles and was released on July 2, 2014."
+  },
+  {
+   "id": "doctor_strange_2016_film#1",
+   "doc": "doctor_strange_2016_film",
+   "split": "train",
+   "q": "Who is the director of this movie?",
+   "answer": "Scott Derrickson",
+   "quote": "The film was directed by Scott Derrickson, who wrote it with Jon Spaihts and C. Robert Cargill,"
+  },
+  {
+   "id": "doctor_strange_2016_film#2",
+   "doc": "doctor_strange_2016_film",
+   "split": "train",
+   "q": "What year was the film released?",
+   "answer": "2016",
+   "quote": "Doctor Strange is a 2016 American superhero film based on the Marvel Comics character of the same name,"
+  },
+  {
+   "id": "doctor_strange_2016_film#3",
+   "doc": "doctor_strange_2016_film",
+   "split": "train",
+   "q": "How does Doctor Strange relate to MCU films?",
+   "answer": "It is the fourteenth film in the MCU",
+   "quote": "It is the fourteenth film of the Marvel Cinematic Universe (MCU)."
+  },
+  {
+   "id": "doctor_strange_2016_film#4",
+   "doc": "doctor_strange_2016_film",
+   "split": "train",
+   "q": "Identify the protagonist's profession before his accident",
+   "answer": "Surgeon",
+   "quote": "In \"Doctor Strange\", surgeon Strange learns the mystic arts after a career-ending car accident."
+  },
+  {
+   "id": "doctor_strange_2016_film#5",
+   "doc": "doctor_strange_2016_film",
+   "split": "train",
+   "q": "Marvel Studios producer Disney distributor",
+   "answer": "Produced by Marvel Studios and distributed by Walt Disney Studios Motion Pictures",
+   "quote": "produced by Marvel Studios and distributed by Walt Disney Studios Motion Pictures."
+  },
+  {
+   "id": "doctor_strange_2016_film#6",
+   "doc": "doctor_strange_2016_film",
+   "split": "train",
+   "q": "What causes Stephen Strange to learn mystic arts?",
+   "answer": "A career-ending car accident",
+   "quote": "In \"Doctor Strange\", surgeon Strange learns the mystic arts after a career-ending car accident."
+  },
+  {
+   "id": "ed_wood#1",
+   "doc": "ed_wood",
+   "split": "train",
+   "q": "Who was Edward Davis Wood Jr.?",
+   "answer": "An American filmmaker, actor, writer, producer, and director.",
+   "quote": "Edward Davis Wood Jr. (October 10, 1924 – December 10, 1978) was an American filmmaker, actor, writer, producer, and director."
+  },
+  {
+   "id": "ed_wood#2",
+   "doc": "ed_wood",
+   "split": "train",
+   "q": "When did he die?",
+   "answer": "December 10, 1978",
+   "quote": "Edward Davis Wood Jr. (October 10, 1924 – December 10, 1978) was an American filmmaker, actor, writer, producer, and director."
+  },
+  {
+   "id": "ed_wood#3",
+   "doc": "ed_wood",
+   "split": "train",
+   "q": "What is the connection between Ed Wood and filmmaking?",
+   "answer": "He was a filmmaker.",
+   "quote": "Edward Davis Wood Jr. (October 10, 1924 – December 10, 1978) was an American filmmaker, actor, writer, producer, and director."
+  },
+  {
+   "id": "ed_wood#4",
+   "doc": "ed_wood",
+   "split": "train",
+   "q": "Identify the cinematic artist described here.",
+   "answer": "Edward Davis Wood Jr.",
+   "quote": "Edward Davis Wood Jr. (October 10, 1924 – December 10, 1978) was an American filmmaker, actor, writer, producer, and director."
+  },
+  {
+   "id": "ed_wood#5",
+   "doc": "ed_wood",
+   "split": "train",
+   "q": "American filmmaker actor writer",
+   "answer": "Edward Davis Wood Jr.",
+   "quote": "Edward Davis Wood Jr. (October 10, 1924 – December 10, 1978) was an American filmmaker, actor, writer, producer, and director."
+  },
+  {
+   "id": "ed_wood#6",
+   "doc": "ed_wood",
+   "split": "train",
+   "q": "What roles did he hold besides directing?",
+   "answer": "Actor, writer, and producer.",
+   "quote": "Edward Davis Wood Jr. (October 10, 1924 – December 10, 1978) was an American filmmaker, actor, writer, producer, and director."
+  },
+  {
+   "id": "ed_wood_film#1",
+   "doc": "ed_wood_film",
+   "split": "test",
+   "q": "Who is the director of Ed Wood?",
+   "answer": "Tim Burton",
+   "quote": "Ed Wood is a 1994 American biographical period comedy-drama film directed and produced by Tim Burton, and starring Johnny Depp as cult filmmaker Ed Wood."
+  },
+  {
+   "id": "ed_wood_film#2",
+   "doc": "ed_wood_film",
+   "split": "test",
+   "q": "What year was the film released?",
+   "answer": "1994",
+   "quote": "Ed Wood is a 1994 American biographical period comedy-drama film directed and produced by Tim Burton, and starring Johnny Depp as cult filmmaker Ed Wood."
+  },
+  {
+   "id": "ed_wood_film#3",
+   "doc": "ed_wood_film",
+   "split": "test",
+   "q": "How does Martin Landau relate to Bela Lugosi?",
+   "answer": "Martin Landau played Bela Lugosi",
+   "quote": "The film concerns the period in Wood's life when he made his best-known films as well as his relationship with actor Bela Lugosi, played by Martin Landau."
+  },
+  {
+   "id": "ed_wood_film#4",
+   "doc": "ed_wood_film",
+   "split": "test",
+   "q": "Identify the cinematic work helmed by Burton",
+   "answer": "Ed Wood",
+   "quote": "Ed Wood is a 1994 American biographical period comedy-drama film directed and produced by Tim Burton, and starring Johnny Depp as cult filmmaker Ed Wood."
+  },
+  {
+   "id": "ed_wood_film#5",
+   "doc": "ed_wood_film",
+   "split": "test",
+   "q": "Johnny Depp role name",
+   "answer": "cult filmmaker Ed Wood",
+   "quote": "Ed Wood is a 1994 American biographical period comedy-drama film directed and produced by Tim Burton, and starring Johnny Depp as cult filmmaker Ed Wood."
+  },
+  {
+   "id": "ed_wood_film#6",
+   "doc": "ed_wood_film",
+   "split": "test",
+   "q": "Name a supporting cast member mentioned later",
+   "answer": "Sarah Jessica Parker",
+   "quote": "Sarah Jessica Parker, Patricia Arquette, Jeffrey Jones, Lisa Marie, and Bill Murray are among the supporting cast."
+  },
+  {
+   "id": "janet_waldo#1",
+   "doc": "janet_waldo",
+   "split": "train",
+   "q": "Who was the voice actress for Judy Jetson?",
+   "answer": "Janet Marie Waldo",
+   "quote": "Janet Marie Waldo (February 4, 1920 – June 12, 2016) was an American radio and voice actress. She is best known in animation for voicing Judy Jetson,"
+  },
+  {
+   "id": "janet_waldo#2",
+   "doc": "janet_waldo",
+   "split": "train",
+   "q": "When did Janet Waldo die?",
+   "answer": "June 12, 2016",
+   "quote": "Janet Marie Waldo (February 4, 1920 – June 12, 2016) was an American radio and voice actress."
+  },
+  {
+   "id": "janet_waldo#3",
+   "doc": "janet_waldo",
+   "split": "train",
+   "q": "What character did she voice in Josie and the Pussycats?",
+   "answer": "Josie",
+   "quote": "She is best known in animation for voicing Judy Jetson, Nancy in \"Shazzan\", Penelope Pitstop, and Josie in \"Josie and the Pussycats\", and on radio as the title character in \"Meet Corliss Archer\"."
+  },
+  {
+   "id": "janet_waldo#5",
+   "doc": "janet_waldo",
+   "split": "train",
+   "q": "radio title character meet corliss",
+   "answer": "Janet Waldo",
+   "quote": "and Josie in \"Josie and the Pussycats\", and on radio as the title character in \"Meet Corliss Archer\"."
+  },
+  {
+   "id": "janet_waldo#6",
+   "doc": "janet_waldo",
+   "split": "train",
+   "q": "Which role is mentioned in the latter part of the text?",
+   "answer": "title character in Meet Corliss Archer",
+   "quote": "Pitstop, and Josie in \"Josie and the Pussycats\", and on radio as the title character in \"Meet Corliss Archer\"."
+  },
+  {
+   "id": "kiss_and_tell_1945_film#1",
+   "doc": "kiss_and_tell_1945_film",
+   "split": "train",
+   "q": "Who is the lead actress?",
+   "answer": "Shirley Temple",
+   "quote": "Kiss and Tell is a 1945 American comedy film starring then 17-year-old Shirley Temple as Corliss Archer."
+  },
+  {
+   "id": "kiss_and_tell_1945_film#2",
+   "doc": "kiss_and_tell_1945_film",
+   "split": "train",
+   "q": "What year was this movie released?",
+   "answer": "1945",
+   "quote": "Kiss and Tell (1945 film) Kiss and Tell is a 1945 American comedy film starring then 17-year-old Shirley Temple as Corliss Archer."
+  },
+  {
+   "id": "kiss_and_tell_1945_film#3",
+   "doc": "kiss_and_tell_1945_film",
+   "split": "train",
+   "q": "How do the parents interact regarding the girls?",
+   "answer": "They bicker about which girl is the worse influence",
+   "quote": "The parents' bickering about which girl is the worse influence causes more problems than it solves."
+  },
+  {
+   "id": "kiss_and_tell_1945_film#5",
+   "doc": "kiss_and_tell_1945_film",
+   "split": "train",
+   "q": "teenage girls parental concern boys",
+   "answer": "two teenage girls cause their respective parents much concern when they start to become interested in boys",
+   "quote": "In the film, two teenage girls cause their respective parents much concern when they start to become interested in boys."
+  },
+  {
+   "id": "kiss_and_tell_1945_film#6",
+   "doc": "kiss_and_tell_1945_film",
+   "split": "train",
+   "q": "What problem arises from the parents' behavior?",
+   "answer": "It causes more problems than it solves",
+   "quote": "The parents' bickering about which girl is the worse influence causes more problems than it solves."
+  },
+  {
+   "id": "lord_high_treasurer#1",
+   "doc": "lord_high_treasurer",
+   "split": "train",
+   "q": "What is the Lord High Treasurer?",
+   "answer": "An English and later British government position.",
+   "quote": "The post of Lord High Treasurer or Lord Treasurer was an English government position and has been a British government position since the Acts of Union of 1707."
+  },
+  {
+   "id": "lord_high_treasurer#2",
+   "doc": "lord_high_treasurer",
+   "split": "train",
+   "q": "When did it become a British position?",
+   "answer": "Since the Acts of Union of 1707.",
+   "quote": "The post of Lord High Treasurer or Lord Treasurer was an English government position and has been a British government position since the Acts of Union of 1707."
+  },
+  {
+   "id": "lord_high_treasurer#3",
+   "doc": "lord_high_treasurer",
+   "split": "train",
+   "q": "Who ranks above the Lord High Treasurer?",
+   "answer": "The Lord High Steward and the Lord High Chancellor.",
+   "quote": "A holder of the post would be the third-highest-ranked Great Officer of State, below the Lord High Steward and the Lord High Chancellor."
+  },
+  {
+   "id": "lord_high_treasurer#4",
+   "doc": "lord_high_treasurer",
+   "split": "train",
+   "q": "Identify the official holding this specific office",
+   "answer": "A holder of the post.",
+   "quote": "A holder of the post would be the third-highest-ranked Great Officer of State, below the Lord High Steward and the Lord High Chancellor."
+  },
+  {
+   "id": "lord_high_treasurer#5",
+   "doc": "lord_high_treasurer",
+   "split": "train",
+   "q": "British government position title",
+   "answer": "Lord High Treasurer or Lord Treasurer.",
+   "quote": "The post of Lord High Treasurer or Lord Treasurer was an English government position and has been a British government position since the Acts of Union of 1707."
+  },
+  {
+   "id": "lord_high_treasurer#6",
+   "doc": "lord_high_treasurer",
+   "split": "train",
+   "q": "Ranking detail from second half",
+   "answer": "Third-highest-ranked Great Officer of State.",
+   "quote": "A holder of the post would be the third-highest-ranked Great Officer of State, below the Lord High Steward and the Lord High Chancellor."
+  },
+  {
+   "id": "meet_corliss_archer#1",
+   "doc": "meet_corliss_archer",
+   "split": "test",
+   "q": "What is the title of the radio show described?",
+   "answer": "Corliss Archer",
+   "quote": "Meet Corliss Archer, a program from radio's Golden Age, ran from January 7, 1943 to September 30, 1956."
+  },
+  {
+   "id": "meet_corliss_archer#2",
+   "doc": "meet_corliss_archer",
+   "split": "test",
+   "q": "On what date did the series conclude its run?",
+   "answer": "September 30, 1956",
+   "quote": "Meet Corliss Archer, a program from radio's Golden Age, ran from January 7, 1943 to September 30, 1956."
+  },
+  {
+   "id": "meet_corliss_archer#3",
+   "doc": "meet_corliss_archer",
+   "split": "test",
+   "q": "Which network aired the show as a replacement for Bob Hope?",
+   "answer": "NBC",
+   "quote": "Although it was CBS's answer to NBC's popular \"A Date with Judy\", it was also broadcast by NBC in 1948"
+  },
+  {
+   "id": "meet_corliss_archer#4",
+   "doc": "meet_corliss_archer",
+   "split": "test",
+   "q": "How many surviving recordings are there?",
+   "answer": "Fewer than 24",
+   "quote": "Despite the program's long run, fewer than 24 episodes are known to exist."
+  },
+  {
+   "id": "meet_corliss_archer#5",
+   "doc": "meet_corliss_archer",
+   "split": "test",
+   "q": "Golden Age radio program title",
+   "answer": "Corliss Archer",
+   "quote": "Meet Corliss Archer, a program from radio's Golden Age, ran from January 7, 1943 to September 30, 1956."
+  },
+  {
+   "id": "meet_corliss_archer#6",
+   "doc": "meet_corliss_archer",
+   "split": "test",
+   "q": "When did ABC air the show?",
+   "answer": "October 3, 1952 to June 26, 1953",
+   "quote": "From October 3, 1952 to June 26, 1953, it aired on ABC, finally returning to CBS."
+  },
+  {
+   "id": "meet_corliss_archer_tv_series#1",
+   "doc": "meet_corliss_archer_tv_series",
+   "split": "train",
+   "q": "What is the title of the sitcom featuring Corliss Archer?",
+   "answer": "Meet Corliss Archer",
+   "quote": "Meet Corliss Archer is an American television sitcom that aired on CBS"
+  },
+  {
+   "id": "meet_corliss_archer_tv_series#2",
+   "doc": "meet_corliss_archer_tv_series",
+   "split": "train",
+   "q": "On what date did the series premiere on CBS?",
+   "answer": "July 13, 1951",
+   "quote": "(TV series) Meet Corliss Archer is an American television sitcom that aired on CBS (July 13, 1951 - August 10, 1951)"
+  },
+  {
+   "id": "meet_corliss_archer_tv_series#3",
+   "doc": "meet_corliss_archer_tv_series",
+   "split": "train",
+   "q": "How does the Ziv Company relate to the show's distribution?",
+   "answer": "It distributed the show in syndication",
+   "quote": "and in syndication via the Ziv Company from April to December 1954."
+  },
+  {
+   "id": "meet_corliss_archer_tv_series#4",
+   "doc": "meet_corliss_archer_tv_series",
+   "split": "train",
+   "q": "Source material for the adaptation was written by whom?",
+   "answer": "F. Hugh Herbert",
+   "quote": "The program was an adaptation of the radio series of the same name, which was based on a series of short stories by F. Hugh Herbert."
+  },
+  {
+   "id": "meet_corliss_archer_tv_series#5",
+   "doc": "meet_corliss_archer_tv_series",
+   "split": "train",
+   "q": "television sitcom american broadcast network cbs",
+   "answer": "CBS",
+   "quote": "Meet Corliss Archer is an American television sitcom that aired on CBS (July 13, 1951 - August 10, 1951)"
+  },
+  {
+   "id": "meet_corliss_archer_tv_series#6",
+   "doc": "meet_corliss_archer_tv_series",
+   "split": "train",
+   "q": "When did syndication run through December?",
+   "answer": "1954",
+   "quote": "and in syndication via the Ziv Company from April to December 1954."
+  },
+  {
+   "id": "scott_derrickson#1",
+   "doc": "scott_derrickson",
+   "split": "train",
+   "q": "Who is Scott Derrickson?",
+   "answer": "American director, screenwriter and producer.",
+   "quote": "Scott Derrickson (born July 16, 1966) is an American director, screenwriter and producer."
+  },
+  {
+   "id": "scott_derrickson#2",
+   "doc": "scott_derrickson",
+   "split": "train",
+   "q": "When was he born?",
+   "answer": "July 16, 1966",
+   "quote": "Scott Derrickson (born July 16, 1966) is an American director, screenwriter and producer."
+  },
+  {
+   "id": "scott_derrickson#3",
+   "doc": "scott_derrickson",
+   "split": "train",
+   "q": "What genre of films is he best known for directing?",
+   "answer": "Horror films.",
+   "quote": "He is best known for directing horror films such as \"Sinister\", \"The Exorcism of Emily Rose\", and \"Deliver Us From Evil\""
+  },
+  {
+   "id": "scott_derrickson#4",
+   "doc": "scott_derrickson",
+   "split": "train",
+   "q": "Where does the filmmaker reside?",
+   "answer": "Los Angeles, California.",
+   "quote": "He lives in Los Angeles, California. He is best known for directing horror films such as \"Sinister\""
+  },
+  {
+   "id": "scott_derrickson#5",
+   "doc": "scott_derrickson",
+   "split": "train",
+   "q": "Doctor Strange MCU year",
+   "answer": "2016",
+   "quote": "as well as the 2016 Marvel Cinematic Universe installment, \"Doctor Strange.\""
+  },
+  {
+   "id": "scott_derrickson#6",
+   "doc": "scott_derrickson",
+   "split": "train",
+   "q": "Name a horror film directed by him.",
+   "answer": "Sinister.",
+   "quote": "He is best known for directing horror films such as \"Sinister\", \"The Exorcism of Emily Rose\", and \"Deliver Us From Evil\""
+  },
+  {
+   "id": "secretary_of_state_for_constitutional_affairs#1",
+   "doc": "secretary_of_state_for_constitutional_affairs",
+   "split": "train",
+   "q": "What is the Secretary of State for Constitutional Affairs?",
+   "answer": "A British Government position created in 2003.",
+   "quote": "The office of Secretary of State for Constitutional Affairs was a British Government position, created in 2003."
+  },
+  {
+   "id": "secretary_of_state_for_constitutional_affairs#2",
+   "doc": "secretary_of_state_for_constitutional_affairs",
+   "split": "train",
+   "q": "In which year was this office established?",
+   "answer": "2003",
+   "quote": "The office of Secretary of State for Constitutional Affairs was a British Government position, created in 2003."
+  },
+  {
+   "id": "secretary_of_state_for_constitutional_affairs#3",
+   "doc": "secretary_of_state_for_constitutional_affairs",
+   "split": "train",
+   "q": "Who held the position of Deputy Prime Minister?",
+   "answer": "The First Secretary of State.",
+   "quote": "At a later date further functions were also transferred to the Secretary of State for Constitutional Affairs from the First Secretary of State, a position within the government held by the Deputy Prime Minister."
+  },
+  {
+   "id": "secretary_of_state_for_constitutional_affairs#5",
+   "doc": "secretary_of_state_for_constitutional_affairs",
+   "split": "train",
+   "q": "functions transferred from Lord Chancellor",
+   "answer": "Certain functions of the Lord Chancellor which related to the Lord Chancellor's Department were transferred to the Secretary of State.",
+   "quote": "Certain functions of the Lord Chancellor which related to the Lord Chancellor's Department were transferred to the Secretary of State."
+  },
+  {
+   "id": "secretary_of_state_for_constitutional_affairs#6",
+   "doc": "secretary_of_state_for_constitutional_affairs",
+   "split": "train",
+   "q": "Which official's duties moved to the new secretary?",
+   "answer": "The First Secretary of State.",
+   "quote": "At a later date further functions were also transferred to the Secretary of State for Constitutional Affairs from the First Secretary of State, a position within the government held by the Deputy Prime Minister."
+  },
+  {
+   "id": "shirley_temple#1",
+   "doc": "shirley_temple",
+   "split": "test",
+   "q": "Who was the prominent child star of Hollywood?",
+   "answer": "Shirley Temple Black",
+   "quote": "Shirley Temple Black (April 23, 1928 – February 10, 2014) was an American actress, singer, dancer, businesswoman, and diplomat"
+  },
+  {
+   "id": "shirley_temple#2",
+   "doc": "shirley_temple",
+   "split": "test",
+   "q": "When did she die?",
+   "answer": "February 10, 2014",
+   "quote": "Shirley Temple Black (April 23, 1928 – February 10, 2014) was an American actress, singer, dancer, businesswoman, and diplomat"
+  },
+  {
+   "id": "shirley_temple#3",
+   "doc": "shirley_temple",
+   "split": "test",
+   "q": "What role did she hold in Ghana?",
+   "answer": "United States ambassador",
+   "quote": "As an adult, she was named United States ambassador to Ghana and to Czechoslovakia and also served as Chief of Protocol of the United States."
+  },
+  {
+   "id": "shirley_temple#4",
+   "doc": "shirley_temple",
+   "split": "test",
+   "q": "Identify the top earner during her youth career",
+   "answer": "Hollywood's number one box-office draw",
+   "quote": "Shirley Temple Black (April 23, 1928 – February 10, 2014) was an American actress, singer, dancer, businesswoman, and diplomat who was Hollywood's number one box-office draw as a child actress from 1935 to 1938."
+  },
+  {
+   "id": "shirley_temple#5",
+   "doc": "shirley_temple",
+   "split": "test",
+   "q": "diplomat chief protocol usa",
+   "answer": "Chief of Protocol of the United States",
+   "quote": "As an adult, she was named United States ambassador to Ghana and to Czechoslovakia and also served as Chief of Protocol of the United States."
+  },
+  {
+   "id": "shirley_temple#6",
+   "doc": "shirley_temple",
+   "split": "test",
+   "q": "What position did she serve in later life?",
+   "answer": "Chief of Protocol of the United States",
+   "quote": "As an adult, she was named United States ambassador to Ghana and to Czechoslovakia and also served as Chief of Protocol of the United States."
+  },
+  {
+   "id": "sinister_film#1",
+   "doc": "sinister_film",
+   "split": "train",
+   "q": "Who directed the movie Sinister?",
+   "answer": "Scott Derrickson",
+   "quote": "Sinister is a 2012 supernatural horror film directed by Scott Derrickson and written by Derrickson and C. Robert Cargill."
+  },
+  {
+   "id": "sinister_film#2",
+   "doc": "sinister_film",
+   "split": "train",
+   "q": "What year was this film released?",
+   "answer": "2012",
+   "quote": "Sinister is a 2012 supernatural horror film directed by Scott Derrickson and written by Derrickson and C. Robert Cargill."
+  },
+  {
+   "id": "sinister_film#3",
+   "doc": "sinister_film",
+   "split": "train",
+   "q": "How does Ellison Oswalt relate to the home movies?",
+   "answer": "He discovers them in his attic",
+   "quote": "It stars Ethan Hawke as fictional true-crime writer Ellison Oswalt who discovers a box of home movies in his attic that puts his family in danger."
+  },
+  {
+   "id": "sinister_film#4",
+   "doc": "sinister_film",
+   "split": "train",
+   "q": "Identify the genre of the cinematic work described",
+   "answer": "supernatural horror",
+   "quote": "Sinister is a 2012 supernatural horror film directed by Scott Derrickson and written by Derrickson and C. Robert Cargill."
+  },
+  {
+   "id": "sinister_film#5",
+   "doc": "sinister_film",
+   "split": "train",
+   "q": "Ethan Hawke role name",
+   "answer": "Ellison Oswalt",
+   "quote": "It stars Ethan Hawke as fictional true-crime writer Ellison Oswalt who discovers a box of home movies in his attic that puts his family in danger."
+  },
+  {
+   "id": "sinister_film#6",
+   "doc": "sinister_film",
+   "split": "train",
+   "q": "What danger arises from the attic discovery?",
+   "answer": "His family is put in danger",
+   "quote": "It stars Ethan Hawke as fictional true-crime writer Ellison Oswalt who discovers a box of home movies in his attic that puts his family in danger."
+  },
+  {
+   "id": "tyler_bates#1",
+   "doc": "tyler_bates",
+   "split": "train",
+   "q": "Who is Tyler Bates?",
+   "answer": "American musician, music producer, and composer for films, television, and video games.",
+   "quote": "Tyler Bates (born June 5, 1965) is an American musician, music producer, and composer for films, television, and video games."
+  },
+  {
+   "id": "tyler_bates#2",
+   "doc": "tyler_bates",
+   "split": "train",
+   "q": "When was he born?",
+   "answer": "June 5, 1965",
+   "quote": "Tyler Bates (born June 5, 1965) is an American musician, music producer, and composer for films, television, and video games."
+  },
+  {
+   "id": "tyler_bates#3",
+   "doc": "tyler_bates",
+   "split": "train",
+   "q": "What is the connection between Tyler Bates and James Gunn?",
+   "answer": "Bates has scored every one of Gunn's films.",
+   "quote": "With Gunn, he has scored every one of the director's films; including \"Guardians of the Galaxy\", which became one of the highest grossing domestic movies of 2014, and its 2017 sequel."
+  },
+  {
+   "id": "tyler_bates#4",
+   "doc": "tyler_bates",
+   "split": "train",
+   "q": "Identify the rock group where he serves as lead guitarist",
+   "answer": "Marilyn Manson",
+   "quote": "In addition, he is also the lead guitarist of the American rock band Marilyn Manson, and produced its albums \"The Pale Emperor\" and \"Heaven Upside Down\"."
+  },
+  {
+   "id": "tyler_bates#5",
+   "doc": "tyler_bates",
+   "split": "train",
+   "q": "highest grossing movie year",
+   "answer": "2014",
+   "quote": "With Gunn, he has scored every one of the director's films; including \"Guardians of the Galaxy\", which became one of the highest grossing domestic movies of 2014, and its 2017 sequel."
+  },
+  {
+   "id": "tyler_bates#6",
+   "doc": "tyler_bates",
+   "split": "train",
+   "q": "Which album did he produce after The Pale Emperor?",
+   "answer": "Heaven Upside Down",
+   "quote": "In addition, he is also the lead guitarist of the American rock band Marilyn Manson, and produced its albums \"The Pale Emperor\" and \"Heaven Upside Down\"."
+  },
+  {
+   "id": "village_accountant#1",
+   "doc": "village_accountant",
+   "split": "train",
+   "q": "What is the primary role of a Patwari?",
+   "answer": "An administrative government position in rural parts of the Indian sub-continent.",
+   "quote": "The Village Accountant (variously known as \"Patwari\", \"Talati\", \"Patel\", \"Karnam\", \"Adhikari\", \"Shanbogaru\",\"Patnaik\" etc.) is an administrative government position found in rural parts of the Indian sub-continent."
+  },
+  {
+   "id": "village_accountant#2",
+   "doc": "village_accountant",
+   "split": "train",
+   "q": "How many alternative names are listed for the Village Accountant?",
+   "answer": "Seven alternative names are listed: Patwari, Talati, Patel, Karnam, Adhikari, Shanbogaru, Patnaik.",
+   "quote": "The Village Accountant (variously known as \"Patwari\", \"Talati\", \"Patel\", \"Karnam\", \"Adhikari\", \"Shanbogaru\",\"Patnaik\" etc.) is an administrative government position found in rural parts of the Indian sub-continent."
+  },
+  {
+   "id": "village_accountant#3",
+   "doc": "village_accountant",
+   "split": "train",
+   "q": "Which term is used for this officeholder in Sindh?",
+   "answer": "In Sindh, the officeholder is called \"tapedar\".",
+   "quote": "The office and the officeholder are called the \"patwari\" in Telangana, Bengal, North India and in Pakistan while in Sindh it is called \"tapedar\"."
+  },
+  {
+   "id": "village_accountant#4",
+   "doc": "village_accountant",
+   "split": "train",
+   "q": "Where is the kulkarni title applied?",
+   "answer": "It was known as the \"kulkarni\" in Northern Karnataka and Maharashtra.",
+   "quote": "The position was known as the \"kulkarni\" in Northern Karnataka and Maharashtra."
+  },
+  {
+   "id": "village_accountant#5",
+   "doc": "village_accountant",
+   "split": "train",
+   "q": "Village accountant regional titles",
+   "answer": "Patwari, Talati, Patel, Karnam, Adhikari, Shanbogaru, Patnaik.",
+   "quote": "The Village Accountant (variously known as \"Patwari\", \"Talati\", \"Patel\", \"Karnam\", \"Adhikari\", \"Shanbogaru\",\"Patnaik\" etc.) is an administrative government position found in rural parts of the Indian sub-continent."
+  },
+  {
+   "id": "village_accountant#6",
+   "doc": "village_accountant",
+   "split": "train",
+   "q": "What is the name in South Karnataka?",
+   "answer": "The position was known as the \"shanbogaru\" in South Karnataka.",
+   "quote": "The position was known as the \"shanbogaru\" in South Karnataka."
+  },
+  {
+   "id": "woodson_arkansas#1",
+   "doc": "woodson_arkansas",
+   "split": "test",
+   "q": "What is Woodson?",
+   "answer": "A census-designated place in Pulaski County, Arkansas.",
+   "quote": "Woodson is a census-designated place (CDP) in Pulaski County, Arkansas, in the United States."
+  },
+  {
+   "id": "woodson_arkansas#2",
+   "doc": "woodson_arkansas",
+   "split": "test",
+   "q": "What was the population count in 2010?",
+   "answer": "403",
+   "quote": "Its population was 403 at the 2010 census."
+  },
+  {
+   "id": "woodson_arkansas#3",
+   "doc": "woodson_arkansas",
+   "split": "test",
+   "q": "How does Ed Wood Sr. relate to the name?",
+   "answer": "The place is named after him.",
+   "quote": "Woodson and its accompanying Woodson Lake and Wood Hollow are the namesake for Ed Wood Sr."
+  },
+  {
+   "id": "woodson_arkansas#4",
+   "doc": "woodson_arkansas",
+   "split": "test",
+   "q": "Identify the prominent trader from the turn of the century",
+   "answer": "Ed Wood Sr.",
+   "quote": "namesake for Ed Wood Sr., a prominent plantation owner, trader, and businessman at the turn of the 20th century."
+  },
+  {
+   "id": "woodson_arkansas#5",
+   "doc": "woodson_arkansas",
+   "split": "test",
+   "q": "largest plantation owned by Ed Wood Sr",
+   "answer": "Wood Plantation",
+   "quote": "Woodson is adjacent to the Wood Plantation, the largest of the plantations own by Ed Wood Sr."
+  },
+  {
+   "id": "woodson_arkansas#6",
+   "doc": "woodson_arkansas",
+   "split": "test",
+   "q": "Which metropolitan area includes this location?",
+   "answer": "Little Rock–North Little Rock–Conway Metropolitan Statistical Area.",
+   "quote": "It is part of the Little Rock–North Little Rock–Conway Metropolitan Statistical Area."
+  }
+ ],
+ "dropped": [
+  {
+   "id": "deliver_us_from_evil_2014_film#4",
+   "doc": "deliver_us_from_evil_2014_film",
+   "split": "train",
+   "q": "Identify the cinematic work described as supernatural horror",
+   "answer": "Deliver Us from Evil",
+   "quote": "Deliver Us from Evil is a 2014 American supernatural horror film directed by Scott Derrickson and produced by Jerry Bruckheimer. The film is officially based on a 2001 non-fiction book entitled \"Beware the Night\" by Ralph Sarchie and Lisa Collier Cool, and its marketing campaign highlighted that it was \"inspired by actual accounts\".",
+   "reason": "quote not a substring or malformed"
+  },
+  {
+   "id": "janet_waldo#4",
+   "doc": "janet_waldo",
+   "split": "train",
+   "q": "Identify the performer linked to the animated series featuring a feline band.",
+   "answer": "Janet Marie Waldo",
+   "quote": "Janet Marie Waldo (February 4, 1920 – June 12, 2016) was an American radio and voice actress. She is best known in animation for voicing Judy Jetson, Nancy in \"Shazzan\", Penelope Pitstop, and Josie in \"Josie and the Pussycats\"",
+   "reason": "quote not a substring or malformed"
+  },
+  {
+   "id": "kiss_and_tell_1945_film#4",
+   "doc": "kiss_and_tell_1945_film",
+   "split": "train",
+   "q": "Identify the protagonist played by the young star",
+   "answer": "Corliss Archer",
+   "quote": "Kiss and Tell is a 1945 American comedy film starring then 17-year-old Shirley Temple as Corliss Archer. In the film, two teenage girls cause their respective parents much concern when they start to become interested in boys.",
+   "reason": "quote not a substring or malformed"
+  },
+  {
+   "id": "secretary_of_state_for_constitutional_affairs#4",
+   "doc": "secretary_of_state_for_constitutional_affairs",
+   "split": "train",
+   "q": "Identify the governmental role established during the early twenty-first century",
+   "answer": "Secretary of State for Constitutional Affairs",
+   "quote": "The office of Secretary of State for Constitutional Affairs was a British Government position, created in 2003. Certain functions of the Lord Chancellor which related to the Lord Chancellor's Department were transferred to the Secretary of State.",
+   "reason": "quote not a substring or malformed"
+  }
+ ],
+ "counts": {
+  "queries": 116,
+  "train": 86,
+  "test": 30,
+  "dropped": 4
+ },
+ "queries_hash": "ddfb9401a7498894bb60cddc2a98ad46930311438b9055129e42d4c2ba73e548"
+}

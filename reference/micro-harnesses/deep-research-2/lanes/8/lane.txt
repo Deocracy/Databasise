@@ -1,0 +1,2 @@
+Lane 8: Batched serving and KV sharing on one GPU.
+Continuous batching, prefix caching (vLLM automatic prefix caching, SGLang RadixAttention, llama.cpp slots and cache reuse, TensorRT-LLM), prompt ordering to maximise shared prefixes, output ordering, speculative decoding for small models, throughput and VRAM scaling with concurrency on consumer GPUs (fetched numbers only), and multi-agent serving patterns where thousands of requests share a prefix.

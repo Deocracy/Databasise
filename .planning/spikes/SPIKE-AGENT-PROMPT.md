@@ -14,4 +14,6 @@ Method, mandatory:
 
 When finished, reply with one line: SPIKE DONE <number> verdict=<VALIDATED|INVALIDATED|PARTIAL>.
 
+Round 2 additions: what earlier spikes settled is in `.claude/skills/spike-findings-melodyscribe/` (read `SKILL.md` and the reference your README names before building; do not re-measure settled results). A second venv `.planning/spikes/.venv-train/bin/python` has PyTorch with CUDA, transformers, peft, accelerate, sentence-transformers, safetensors, datasets, and mergekit if `.planning/spikes/.logs/setup-train.out` says so; safetensors weights are under `.planning/spikes/.models/hf/<org>__<name>/`. Teacher-generated queries with a fixed train/test split are in `.planning/spikes/shared/queries-v1.json`; never train on `test` documents. The v0.2 quote-evidence schema and grammar live in `.planning/spikes/003-op-emission-size-sweep/` (`ops.v0.2.schema.json`, `v02_grammar.py`, `resolve.py`); import them read-only.
+
 YOUR SPIKE:

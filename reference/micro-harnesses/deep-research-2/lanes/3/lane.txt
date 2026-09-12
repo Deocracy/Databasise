@@ -1,0 +1,2 @@
+Lane 3: Small embedders and distillation into them.
+The best 0.1B to 0.6B embedders with independent results, what made them good, distillation of large embedders into small ones (embedding distillation, relational KD, model2vec static distillation), and long-document behaviour. Include MiniCPM-Embedding, Qwen3-Embedding-0.6B, arctic-embed-s, bge-small, nomic-embed, jina-embeddings-v3, EmbeddingGemma, granite-embedding, and whatever else exists with numbers.
