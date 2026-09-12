@@ -4,30 +4,42 @@
 files with findings reported by file and line, not a bare boolean.
 
 The posture record states that measurement-gated promotion is off by default for the
-answer-level and index-side classes (RIG §F3.2), and that this holds today — without any
-``measurement_posture`` configuration switch — because no measurement-gated promotion path
-exists anywhere in ``databasise/``. This module is what keeps that claim true going forward:
+answer-level and index-side classes (RIG §F3.2). Before 07-01-PLAN.md this held because no
+measurement-gated promotion path existed anywhere in ``databasise/`` at all; as of 07-01-PLAN.md
+(MACH-07), the operator-asserted path is real, and the posture instead holds because the two
+off-by-default classes' gate-adjudicated verbs (``promote-next``, ``promote-now``) refuse by name
+before ever reaching ``Ledger.append()`` — proven at runtime by
+``databasise/tests/seam/test_promotion_posture.py``, not merely by this module's own absence
+check. This module still pins what a real promotion-gate *implementation* would look like, so
+that one appearing anywhere outside tests still forces this record open:
 
-1. **No non-test module imports the ledger, except one deliberately reviewed, read-only
-   caller.** ``databasise/ledger/ledger.py`` defines the append-only ledger; nothing outside
-   ``databasise/tests/`` and ``databasise/ledger/`` itself may import it, with exactly one named
-   exception: ``databasise/seam/selectors.py`` (04-03-PLAN.md, D-12/FA-06), whose alias branch
-   calls ``Ledger.by_alias`` — a read-only projection — to resolve which wiring an alias names.
-   It never calls ``Ledger.append()``. ``databasise/ledger/`` is exempt for the same reason
+1. **No non-test module imports the ledger, except two deliberately reviewed, named
+   exceptions.** ``databasise/ledger/ledger.py`` defines the append-only ledger; nothing outside
+   ``databasise/tests/`` and ``databasise/ledger/`` itself may import it, with exactly two named
+   exceptions: ``databasise/seam/selectors.py`` (04-03-PLAN.md, D-12/FA-06), whose alias branch
+   calls ``Ledger.by_alias`` — a read-only projection — and never ``Ledger.append()``; and
+   ``databasise/seam/engine.py`` (07-01-PLAN.md, MACH-07), whose ``Databasise.promote()`` calls
+   ``Ledger.append()`` for the ``operator-asserted`` verb only — every gate-adjudicated verb
+   refuses before that line is ever reached (``databasise.seam.promotion.
+   enforce_gate_verb_posture``). ``databasise/ledger/`` is exempt for the same reason
    ``databasise/validator/parse.py`` is exempt in the trusted-source pin: it is the definition
-   site, not a caller. See ``02-MACH-09-POSTURE.md``'s "Read-only exception" section for why this
-   one caller does not mean the promotion path has started to exist.
-2. **No promotion verb is defined outside tests.** No module under the same scan defines a
-   function or method named ``promote``, ``promote_next``, ``promote_now``, or ``rollback``.
+   site, not a caller. See ``02-MACH-09-POSTURE.md``'s "Read-only exception" and "07-01-PLAN.md:
+   the operator-asserted write exception" sections for why these two callers do not mean the
+   *gate-adjudicated* promotion path has started to exist.
+2. **No promotion-gate implementation is defined outside tests.** No module under the same scan
+   defines a function or method named ``promote_next``, ``promote_now``, or ``rollback`` — the
+   gate-adjudicated verbs, which this milestone never implements (they only refuse). ``promote``
+   itself is exempted for exactly one file, ``databasise/seam/engine.py`` (07-01-PLAN.md): it is
+   the operator-asserted entry point every verb (including the gate-adjudicated ones) passes
+   through on its way to refusing.
 3. **``LedgerRecord.promotion_provenance`` can never be defaulted.** No default, no
    ``default_factory`` — an append can never omit its provenance nor acquire one by absence
    (02-CONTEXT.md D-04).
 
-**This test is expected to fail when Phase 7 builds MACH-07's promote/rollback path.** That
-failure is the posture decision being forced into the open: a new ledger caller or a new
-promotion verb means the promotion path has started to exist, and
-``.planning/phases/02-falsifier-gate/02-MACH-09-POSTURE.md`` must be updated in the same
-change rather than this test relaxed without updating the record it pins.
+**This test was expected to, and did, fail when Phase 7 built MACH-07's promote path** — the
+posture decision was forced into the open exactly as this docstring anticipated, and
+``.planning/phases/02-falsifier-gate/02-MACH-09-POSTURE.md`` was updated in the same change,
+recording the new narrow exceptions above rather than silently relaxing this test.
 """
 
 from __future__ import annotations
@@ -45,16 +57,25 @@ _EXEMPT_DIRS = (
     "ledger",  # the ledger's own definition site, not a caller
 )
 
-# Per-file exemptions — a single, deliberately reviewed, read-only non-test caller, never a
+# Per-file exemptions — a single, deliberately reviewed, named caller per entry, never a
 # directory-wide carve-out. Extend only alongside a 02-MACH-09-POSTURE.md update naming exactly
-# what changed and why it is not the promotion path.
+# what changed and why it is not the gate-adjudicated promotion path.
 _EXEMPT_FILES = (
     # 04-03-PLAN.md (D-12/FA-06): the seam's alias selector reads Ledger.by_alias — a read-only
-    # projection, never Ledger.append() — to resolve which wiring an alias names. No promotion
-    # verb is defined here (test_no_promotion_verb_is_defined_outside_tests still scans this
-    # file), so this exemption narrows only the import-site check, not the promotion-verb one.
+    # projection, never Ledger.append() — to resolve which wiring an alias names.
     "seam/selectors.py",
+    # 07-01-PLAN.md (MACH-07): Databasise.promote() calls Ledger.append() for the
+    # operator-asserted verb only — every gate-adjudicated verb refuses (via
+    # databasise.seam.promotion.enforce_gate_verb_posture) before that line is ever reached. See
+    # _PROMOTION_VERB_EXEMPT_FILES below for the matching promotion-verb-definition exemption.
+    "seam/engine.py",
 )
+
+# A narrower, promotion-verb-specific exemption: this file defines `promote` (the
+# operator-asserted entry point every verb passes through), but no gate-adjudicated verb
+# (`promote_next`/`promote_now`/`rollback`) is defined anywhere in it — those names are only ever
+# string values of the `verb` parameter, checked and refused, never function definitions.
+_PROMOTION_VERB_EXEMPT_FILES = ("seam/engine.py",)
 
 _PROMOTION_VERB_NAMES = frozenset({"promote", "promote_next", "promote_now", "rollback"})
 
@@ -155,15 +176,24 @@ def test_no_non_test_module_imports_the_ledger():
 
 
 def test_no_promotion_verb_is_defined_outside_tests():
+    root = _package_root()
     all_findings: list[_Finding] = []
     for path in _scanned_files():
-        all_findings.extend(_promotion_verb_findings(path))
+        relative = path.relative_to(root).as_posix()
+        for finding in _promotion_verb_findings(path):
+            # Only `promote` on the one named exempt file is the operator-asserted entry point
+            # (07-01-PLAN.md); a gate-adjudicated verb name (promote_next/promote_now/rollback),
+            # or `promote` defined anywhere else, still fails this test.
+            if relative in _PROMOTION_VERB_EXEMPT_FILES and finding.detail == "def promote(...)":
+                continue
+            all_findings.append(finding)
 
     assert all_findings == [], (
-        "a promotion verb (promote/promote_next/promote_now/rollback) is defined outside the "
-        "test suite — this means the measurement-gated promotion path has started to exist. "
-        "Update .planning/phases/02-falsifier-gate/02-MACH-09-POSTURE.md in the same change "
-        f"rather than relaxing this test: {all_findings}"
+        "a gate-adjudicated promotion verb (promote_next/promote_now/rollback), or `promote` "
+        "outside its one named exemption, is defined outside the test suite — this means the "
+        "gate-adjudicated promotion path has started to exist. Update "
+        ".planning/phases/02-falsifier-gate/02-MACH-09-POSTURE.md in the same change rather than "
+        f"relaxing this test: {all_findings}"
     )
 
 

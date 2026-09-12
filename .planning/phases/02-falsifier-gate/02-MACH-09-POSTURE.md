@@ -63,6 +63,48 @@ pins, structurally, that no non-test module imports the ledger and that no modul
 `promote`/`promote_next`/`promote_now`/`rollback` verb, so a later change that starts building
 the promotion path fails this test rather than silently invalidating this record.
 
+## 07-01-PLAN.md: the operator-asserted write exception (MACH-07)
+
+`databasise/seam/engine.py`'s `Databasise.promote()` is the second non-test, non-`ledger/` module
+to import `databasise.ledger.ledger`, and the first to call `Ledger.append()` outside the test
+suite. This is MACH-07's own deliverable, landed exactly where 02-CONTEXT.md's D-04 and this
+document's own "What survives" section already named it: "Manual promotion via RIG §PR's
+provenance mechanism (the `operator-asserted` path)." The posture this document records does not
+change — it is made real for the one path RIG §F3.2 already lists as surviving unconditionally.
+
+**Why this does not mean the gate-adjudicated path has started to exist.** `promote()` takes a
+`verb` parameter covering CONTRACT §5's five-verb ladder plus the operator-asserted path
+(`databasise.seam.promotion.PromotionVerb`). Only `verb="operator-asserted"` (the default) ever
+reaches `Ledger.append()`. Every other verb refuses before that line:
+
+- `check`, `preview`, `run` raise `GateVerbNotBuiltError` immediately — no gate implementation
+  exists in this milestone, and none is built here.
+- `promote-next`, `promote-now` run the same trace-resolution and class-derivation steps the
+  operator path does (so the refusal can name the class), then branch on the identical posture
+  this document records — `databasise.seam.promotion._MEASUREMENT_POSTURE`, a module constant
+  reading `{"retrieval-side": True, "answer-level": False, "index-side": False}`, exactly RIG
+  §F3.2. `answer-level`/`index-side` (off by default) raise `MeasurementPostureRefusalError`,
+  quoting RIG §F3.2 by name. `retrieval-side` (on by default) raises
+  `UncalibratedFloorRefusalError`, since no calibrated A/A floor exists yet (MACH-03 Pending) —
+  RIG §AA.2's own rule that a null with unknown bypass status is unusable as a floor.
+
+No branch of `promote()` for any verb other than `operator-asserted` appends a row in this
+milestone — proven at runtime, not merely by this document's prose, by
+`databasise/tests/seam/test_promotion_posture.py::test_no_gate_verb_appends_a_row` and its sibling
+tests for each refusal. The posture constant itself is read at exactly one call site inside
+`databasise/seam/promotion.py` and is never reached through an environment variable, a config
+file, or a `Databasise` constructor argument (D-11) —
+`test_posture_is_not_flippable_at_runtime` pins this by setting a spread of plausible flag names
+and asserting the refusal is unchanged.
+
+The guard test's two exemption lists (`_EXEMPT_FILES` for the ledger-import check,
+`_PROMOTION_VERB_EXEMPT_FILES` for the promotion-verb-definition check) both name exactly
+`seam/engine.py`, with the reason recorded in the test's own module docstring. A third non-test
+ledger caller, an `append()` call reachable from a gate-adjudicated verb, or a real
+`promote_next`/`promote_now`/`rollback` *implementation* (not merely the string value of a `verb`
+parameter) appearing anywhere outside the test suite still fails this test and still means this
+document needs another update.
+
 ## Read-only exception (04-03-PLAN.md, D-12/FA-06)
 
 `databasise/seam/selectors.py`'s alias branch is the first non-test, non-`ledger/` module to
