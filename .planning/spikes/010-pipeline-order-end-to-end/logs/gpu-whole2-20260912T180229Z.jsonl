@@ -1,0 +1,21 @@
+{"ts": "2026-09-12T18:02:30.178192+00:00", "event": "load", "mode": "embed2b", "variant": "whole", "model": "MiniCPM5-2B-Q8_0.gguf", "n_embd": 2048, "pooling": 3, "seconds": 0.73}
+{"ts": "2026-09-12T18:02:30.294525+00:00", "event": "embed", "sec": "a_kiss_for_corliss#s1", "seconds": 0.116, "dim": 2048}
+{"ts": "2026-09-12T18:02:30.323779+00:00", "event": "embed", "sec": "adam_collis#s1", "seconds": 0.029, "dim": 2048}
+{"ts": "2026-09-12T18:02:30.427349+00:00", "event": "embed", "sec": "charles_craft#s1", "seconds": 0.103, "dim": 2048}
+{"ts": "2026-09-12T18:02:30.462712+00:00", "event": "embed", "sec": "conrad_brooks#s1", "seconds": 0.035, "dim": 2048}
+{"ts": "2026-09-12T18:02:30.496426+00:00", "event": "embed", "sec": "deliver_us_from_evil_2014_film#s1", "seconds": 0.034, "dim": 2048}
+{"ts": "2026-09-12T18:02:30.532333+00:00", "event": "embed", "sec": "doctor_strange_2016_film#s1", "seconds": 0.036, "dim": 2048}
+{"ts": "2026-09-12T18:02:30.551168+00:00", "event": "embed", "sec": "ed_wood#s1", "seconds": 0.019, "dim": 2048}
+{"ts": "2026-09-12T18:02:30.577642+00:00", "event": "embed", "sec": "ed_wood_film#s1", "seconds": 0.026, "dim": 2048}
+{"ts": "2026-09-12T18:02:30.601754+00:00", "event": "embed", "sec": "janet_waldo#s1", "seconds": 0.024, "dim": 2048}
+{"ts": "2026-09-12T18:02:30.624635+00:00", "event": "embed", "sec": "kiss_and_tell_1945_film#s1", "seconds": 0.023, "dim": 2048}
+{"ts": "2026-09-12T18:02:30.646450+00:00", "event": "embed", "sec": "lord_high_treasurer#s1", "seconds": 0.022, "dim": 2048}
+{"ts": "2026-09-12T18:02:30.674622+00:00", "event": "embed", "sec": "meet_corliss_archer#s1", "seconds": 0.028, "dim": 2048}
+{"ts": "2026-09-12T18:02:30.699221+00:00", "event": "embed", "sec": "meet_corliss_archer_tv_series#s1", "seconds": 0.025, "dim": 2048}
+{"ts": "2026-09-12T18:02:30.723180+00:00", "event": "embed", "sec": "scott_derrickson#s1", "seconds": 0.024, "dim": 2048}
+{"ts": "2026-09-12T18:02:30.747592+00:00", "event": "embed", "sec": "secretary_of_state_for_constitutional_affairs#s1", "seconds": 0.024, "dim": 2048}
+{"ts": "2026-09-12T18:02:30.771691+00:00", "event": "embed", "sec": "shirley_temple#s1", "seconds": 0.024, "dim": 2048}
+{"ts": "2026-09-12T18:02:30.794065+00:00", "event": "embed", "sec": "sinister_film#s1", "seconds": 0.022, "dim": 2048}
+{"ts": "2026-09-12T18:02:30.831048+00:00", "event": "embed", "sec": "tyler_bates#s1", "seconds": 0.037, "dim": 2048}
+{"ts": "2026-09-12T18:02:30.869575+00:00", "event": "embed", "sec": "village_accountant#s1", "seconds": 0.038, "dim": 2048}
+{"ts": "2026-09-12T18:02:30.899326+00:00", "event": "embed", "sec": "woodson_arkansas#s1", "seconds": 0.03, "dim": 2048}

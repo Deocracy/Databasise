@@ -1,0 +1,226 @@
+{
+ "units": [
+  "a_kiss_for_corliss",
+  "conrad_brooks",
+  "ed_wood_film",
+  "meet_corliss_archer",
+  "shirley_temple",
+  "woodson_arkansas"
+ ],
+ "corpus_hash": "ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd",
+ "load_seconds": 0.97,
+ "runs": [
+  {
+   "w": 1,
+   "wall_s": 58.81,
+   "docs_per_min": 6.12,
+   "graph_ops": 17,
+   "sql_ops": 3,
+   "dup_nodes": 2,
+   "conflicts": 0,
+   "per_doc": [
+    {
+     "doc": "a_kiss_for_corliss",
+     "emb_s": 0.132,
+     "dec_s": 28.41,
+     "passed": 0,
+     "failed": 0
+    },
+    {
+     "doc": "conrad_brooks",
+     "emb_s": 0.035,
+     "dec_s": 11.9,
+     "passed": 7,
+     "failed": 0
+    },
+    {
+     "doc": "ed_wood_film",
+     "emb_s": 0.027,
+     "dec_s": 3.11,
+     "passed": 2,
+     "failed": 0
+    },
+    {
+     "doc": "meet_corliss_archer",
+     "emb_s": 0.03,
+     "dec_s": 2.31,
+     "passed": 0,
+     "failed": 2
+    },
+    {
+     "doc": "shirley_temple",
+     "emb_s": 0.024,
+     "dec_s": 5.91,
+     "passed": 6,
+     "failed": 0
+    },
+    {
+     "doc": "woodson_arkansas",
+     "emb_s": 0.03,
+     "dec_s": 6.88,
+     "passed": 5,
+     "failed": 0
+    }
+   ]
+  },
+  {
+   "w": 2,
+   "wall_s": 60.16,
+   "docs_per_min": 5.98,
+   "graph_ops": 17,
+   "sql_ops": 3,
+   "dup_nodes": 2,
+   "conflicts": 0,
+   "per_doc": [
+    {
+     "doc": "a_kiss_for_corliss",
+     "emb_s": 0.029,
+     "dec_s": 27.56,
+     "passed": 0,
+     "failed": 0
+    },
+    {
+     "doc": "conrad_brooks",
+     "emb_s": 0.035,
+     "dec_s": 12.81,
+     "passed": 7,
+     "failed": 0
+    },
+    {
+     "doc": "ed_wood_film",
+     "emb_s": 0.027,
+     "dec_s": 3.35,
+     "passed": 2,
+     "failed": 0
+    },
+    {
+     "doc": "meet_corliss_archer",
+     "emb_s": 0.03,
+     "dec_s": 2.35,
+     "passed": 0,
+     "failed": 2
+    },
+    {
+     "doc": "shirley_temple",
+     "emb_s": 0.025,
+     "dec_s": 6.34,
+     "passed": 6,
+     "failed": 0
+    },
+    {
+     "doc": "woodson_arkansas",
+     "emb_s": 0.03,
+     "dec_s": 7.57,
+     "passed": 5,
+     "failed": 0
+    }
+   ]
+  },
+  {
+   "w": 4,
+   "wall_s": 61.34,
+   "docs_per_min": 5.87,
+   "graph_ops": 17,
+   "sql_ops": 3,
+   "dup_nodes": 2,
+   "conflicts": 0,
+   "per_doc": [
+    {
+     "doc": "a_kiss_for_corliss",
+     "emb_s": 0.029,
+     "dec_s": 28.62,
+     "passed": 0,
+     "failed": 0
+    },
+    {
+     "doc": "conrad_brooks",
+     "emb_s": 0.035,
+     "dec_s": 12.77,
+     "passed": 7,
+     "failed": 0
+    },
+    {
+     "doc": "ed_wood_film",
+     "emb_s": 0.027,
+     "dec_s": 3.65,
+     "passed": 2,
+     "failed": 0
+    },
+    {
+     "doc": "meet_corliss_archer",
+     "emb_s": 0.03,
+     "dec_s": 2.53,
+     "passed": 0,
+     "failed": 2
+    },
+    {
+     "doc": "shirley_temple",
+     "emb_s": 0.026,
+     "dec_s": 6.6,
+     "passed": 6,
+     "failed": 0
+    },
+    {
+     "doc": "woodson_arkansas",
+     "emb_s": 0.03,
+     "dec_s": 6.99,
+     "passed": 5,
+     "failed": 0
+    }
+   ]
+  },
+  {
+   "w": 8,
+   "wall_s": 61.11,
+   "docs_per_min": 5.89,
+   "graph_ops": 17,
+   "sql_ops": 3,
+   "dup_nodes": 2,
+   "conflicts": 0,
+   "per_doc": [
+    {
+     "doc": "a_kiss_for_corliss",
+     "emb_s": 0.029,
+     "dec_s": 28.33,
+     "passed": 0,
+     "failed": 0
+    },
+    {
+     "doc": "conrad_brooks",
+     "emb_s": 0.035,
+     "dec_s": 12.73,
+     "passed": 7,
+     "failed": 0
+    },
+    {
+     "doc": "ed_wood_film",
+     "emb_s": 0.027,
+     "dec_s": 3.79,
+     "passed": 2,
+     "failed": 0
+    },
+    {
+     "doc": "meet_corliss_archer",
+     "emb_s": 0.03,
+     "dec_s": 2.64,
+     "passed": 0,
+     "failed": 2
+    },
+    {
+     "doc": "shirley_temple",
+     "emb_s": 0.025,
+     "dec_s": 6.3,
+     "passed": 6,
+     "failed": 0
+    },
+    {
+     "doc": "woodson_arkansas",
+     "emb_s": 0.03,
+     "dec_s": 7.14,
+     "passed": 5,
+     "failed": 0
+    }
+   ]
+  }
+ ]
+}

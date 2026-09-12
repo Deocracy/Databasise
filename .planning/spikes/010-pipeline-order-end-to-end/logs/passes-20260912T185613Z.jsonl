@@ -1,0 +1,1 @@
+{"ts": "2026-09-12T18:56:13.196077+00:00", "event": "passes", "n_sections": 20, "emb_cos_min": 0.9999999999999999, "emb_cos_mean": 1.0, "ops_identical": 20, "one_wall_s": 163.9, "two_wall_s": 165.9, "one_docs_min": 7.32, "two_docs_min": 7.23, "one_proof": {"passed": 70, "failed": 28}, "two_proof": {"passed": 70, "failed": 28}, "one_load_s": 0.73, "two_load_s": 1.54}

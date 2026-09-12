@@ -1,0 +1,5 @@
+{"ts": "2026-09-12T17:29:08.318854+00:00", "event": "load", "model": "MiniCPM5-2B-Q8_0.gguf", "seconds": 0.81, "units": ["a_kiss_for_corliss", "conrad_brooks", "ed_wood_film", "meet_corliss_archer", "shirley_temple", "woodson_arkansas"]}
+{"ts": "2026-09-12T17:30:11.808154+00:00", "event": "w_run", "w": 1, "wall_s": 63.49, "docs_per_min": 5.67, "graph_ops": 17, "sql_ops": 3, "dup_nodes": 2, "conflicts": 0}
+{"ts": "2026-09-12T17:31:19.395366+00:00", "event": "w_run", "w": 2, "wall_s": 67.59, "docs_per_min": 5.33, "graph_ops": 17, "sql_ops": 3, "dup_nodes": 2, "conflicts": 0}
+{"ts": "2026-09-12T17:32:27.572152+00:00", "event": "w_run", "w": 4, "wall_s": 68.18, "docs_per_min": 5.28, "graph_ops": 17, "sql_ops": 3, "dup_nodes": 2, "conflicts": 0}
+{"ts": "2026-09-12T17:33:38.648282+00:00", "event": "w_run", "w": 8, "wall_s": 71.08, "docs_per_min": 5.06, "graph_ops": 17, "sql_ops": 3, "dup_nodes": 2, "conflicts": 0}

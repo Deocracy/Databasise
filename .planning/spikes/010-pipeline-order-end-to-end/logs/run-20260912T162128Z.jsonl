@@ -1,0 +1,324 @@
+{"ts":"2026-09-12T16:21:28Z","event":"run_start","stamp":"20260912T162128Z"}
+compile_ok n_scores=40 i1_spot_ok doc=a_kiss_for_corliss log=/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/010-pipeline-order-end-to-end/logs/score-check-20260912T162128Z.jsonl
+mode=onepass variant=whole sections=20 queries=118 log=/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/010-pipeline-order-end-to-end/logs/gpu-whole-20260912T162740Z.jsonl out=/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/010-pipeline-order-end-to-end/vectors/whole_onepass.json
+mode=embed2b variant=whole sections=20 queries=0 log=/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/010-pipeline-order-end-to-end/logs/gpu-whole2-20260912T164130Z.jsonl out=/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/010-pipeline-order-end-to-end/vectors/whole2_embed2b.json
+mode=ops2b variant=whole sections=20 queries=0 log=/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/010-pipeline-order-end-to-end/logs/gpu-whole2-20260912T164143Z.jsonl out=/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/010-pipeline-order-end-to-end/vectors/whole2_ops2b.json
+mode=onepass variant=split sections=40 queries=118 log=/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/010-pipeline-order-end-to-end/logs/gpu-split-20260912T170122Z.jsonl out=/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/010-pipeline-order-end-to-end/vectors/split_onepass.json
+mode=embed06 n=178 log=/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/010-pipeline-order-end-to-end/logs/gpu-all-20260912T172858Z.jsonl out=/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/010-pipeline-order-end-to-end/vectors/all_embed06.json
+ws=[1, 2, 4, 8] log=/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/010-pipeline-order-end-to-end/logs/workers-20260912T172907Z.jsonl
+W=1: wall=63.49s docs/min=5.67 graph=17 sql=3 dups=2
+W=2: wall=67.59s docs/min=5.33 graph=17 sql=3 dups=2
+W=4: wall=68.18s docs/min=5.28 graph=17 sql=3 dups=2
+W=8: wall=71.08s docs/min=5.06 graph=17 sql=3 dups=2
+proof passed/failed: {'STU': 70, 'SPL': 110, 'TEA': 204} {'STU': 28, 'SPL': 29, 'TEA': 0}
+{
+ "proof": {
+  "passed": {
+   "STU": 70,
+   "SPL": 110,
+   "TEA": 204
+  },
+  "failed": {
+   "STU": 28,
+   "SPL": 29,
+   "TEA": 0
+  }
+ },
+ "stores": {
+  "STU-streamed-write": {
+   "nodes": 17,
+   "edges": 50,
+   "sql_rows": 20,
+   "merged_aliases": 0,
+   "wall_s": 0.0001,
+   "checksum": "1bd50cb5b81e0958"
+  },
+  "STU-streamed-revise": {
+   "nodes": 17,
+   "edges": 50,
+   "sql_rows": 20,
+   "merged_aliases": 0,
+   "wall_s": 0.0001,
+   "checksum": "a2fc1e32286e7ae5"
+  },
+  "STU-batched-write": {
+   "nodes": 17,
+   "edges": 50,
+   "sql_rows": 20,
+   "merged_aliases": 0,
+   "wall_s": 0.0001,
+   "checksum": "1bd50cb5b81e0958"
+  },
+  "STU-batched-revise": {
+   "nodes": 17,
+   "edges": 50,
+   "sql_rows": 20,
+   "merged_aliases": 0,
+   "wall_s": 0.0001,
+   "checksum": "a2fc1e32286e7ae5"
+  },
+  "SPL-streamed-write": {
+   "nodes": 22,
+   "edges": 81,
+   "sql_rows": 29,
+   "merged_aliases": 0,
+   "wall_s": 0.0002,
+   "checksum": "bd8088970af1a34d"
+  },
+  "SPL-streamed-revise": {
+   "nodes": 22,
+   "edges": 81,
+   "sql_rows": 29,
+   "merged_aliases": 1,
+   "wall_s": 0.0001,
+   "checksum": "1593ac3a23f12283"
+  },
+  "SPL-batched-write": {
+   "nodes": 22,
+   "edges": 81,
+   "sql_rows": 29,
+   "merged_aliases": 0,
+   "wall_s": 0.0001,
+   "checksum": "bd8088970af1a34d"
+  },
+  "SPL-batched-revise": {
+   "nodes": 22,
+   "edges": 81,
+   "sql_rows": 29,
+   "merged_aliases": 1,
+   "wall_s": 0.0001,
+   "checksum": "1593ac3a23f12283"
+  },
+  "TEA-streamed-write": {
+   "nodes": 34,
+   "edges": 121,
+   "sql_rows": 83,
+   "merged_aliases": 0,
+   "wall_s": 0.0003,
+   "checksum": "fad9a44ea0d40cb7"
+  },
+  "TEA-streamed-revise": {
+   "nodes": 34,
+   "edges": 121,
+   "sql_rows": 83,
+   "merged_aliases": 0,
+   "wall_s": 0.0002,
+   "checksum": "b9bf3568ae1d74d9"
+  },
+  "TEA-batched-write": {
+   "nodes": 34,
+   "edges": 121,
+   "sql_rows": 83,
+   "merged_aliases": 0,
+   "wall_s": 0.0002,
+   "checksum": "fad9a44ea0d40cb7"
+  },
+  "TEA-batched-revise": {
+   "nodes": 34,
+   "edges": 121,
+   "sql_rows": 83,
+   "merged_aliases": 0,
+   "wall_s": 0.0002,
+   "checksum": "b9bf3568ae1d74d9"
+  }
+ }
+}
+{
+ "n_queries": 118,
+ "modes": {
+  "vec06": {
+   "r@1": 0.6949152542372882,
+   "r@3": 0.885593220338983,
+   "r@10": 0.9915254237288136,
+   "mrr": 0.8013922518159806
+  },
+  "vec2b": {
+   "r@1": 0.17796610169491525,
+   "r@3": 0.3516949152542373,
+   "r@10": 0.6610169491525424,
+   "mrr": 0.3225706382584433
+  },
+  "vec06_split": {
+   "r@1": 0.461864406779661,
+   "r@3": 0.6652542372881356,
+   "r@10": 0.8813559322033898,
+   "mrr": 0.6007240440129274
+  },
+  "graph_STU-write": {
+   "r@1": 0.1864406779661017,
+   "r@3": 0.2838983050847458,
+   "r@10": 0.5550847457627118,
+   "mrr": 0.3090237328220746,
+   "lat_ms_med": 0.016
+  },
+  "sql_STU-write": {
+   "r@1": 0.1016949152542373,
+   "r@3": 0.22033898305084745,
+   "r@10": 0.5169491525423728,
+   "mrr": 0.23996275613397933,
+   "lat_ms_med": 0.016
+  },
+  "fused_STU-write": {
+   "r@1": 0.6949152542372882,
+   "r@3": 0.8686440677966102,
+   "r@10": 0.9915254237288136,
+   "mrr": 0.7975383373688458,
+   "lat_ms_med": 0.005
+  },
+  "payload_STU-write": {
+   "words_mean": 118.9,
+   "tokens_mean": 203.3
+  },
+  "graph_STU-revise": {
+   "r@1": 0.1864406779661017,
+   "r@3": 0.2838983050847458,
+   "r@10": 0.5550847457627118,
+   "mrr": 0.3090237328220746,
+   "lat_ms_med": 0.016
+  },
+  "sql_STU-revise": {
+   "r@1": 0.1016949152542373,
+   "r@3": 0.22033898305084745,
+   "r@10": 0.5169491525423728,
+   "mrr": 0.23996275613397933,
+   "lat_ms_med": 0.016
+  },
+  "fused_STU-revise": {
+   "r@1": 0.6949152542372882,
+   "r@3": 0.8686440677966102,
+   "r@10": 0.9915254237288136,
+   "mrr": 0.7975383373688458,
+   "lat_ms_med": 0.005
+  },
+  "payload_STU-revise": {
+   "words_mean": 118.9,
+   "tokens_mean": 203.3
+  },
+  "graph_SPL-write": {
+   "r@1": 0.2245762711864407,
+   "r@3": 0.3093220338983051,
+   "r@10": 0.5677966101694916,
+   "mrr": 0.33709072232974213,
+   "lat_ms_med": 0.022
+  },
+  "sql_SPL-write": {
+   "r@1": 0.13983050847457626,
+   "r@3": 0.2542372881355932,
+   "r@10": 0.5508474576271186,
+   "mrr": 0.27259057198711917,
+   "lat_ms_med": 0.024
+  },
+  "fused_SPL-write": {
+   "r@1": 0.6949152542372882,
+   "r@3": 0.8686440677966102,
+   "r@10": 0.9915254237288136,
+   "mrr": 0.7979620661824052,
+   "lat_ms_med": 0.005
+  },
+  "payload_SPL-write": {
+   "words_mean": 119.2,
+   "tokens_mean": 203.8
+  },
+  "graph_SPL-revise": {
+   "r@1": 0.2245762711864407,
+   "r@3": 0.3093220338983051,
+   "r@10": 0.5677966101694916,
+   "mrr": 0.33709072232974213,
+   "lat_ms_med": 0.02
+  },
+  "sql_SPL-revise": {
+   "r@1": 0.13983050847457626,
+   "r@3": 0.2542372881355932,
+   "r@10": 0.5508474576271186,
+   "mrr": 0.27259057198711917,
+   "lat_ms_med": 0.024
+  },
+  "fused_SPL-revise": {
+   "r@1": 0.6949152542372882,
+   "r@3": 0.8686440677966102,
+   "r@10": 0.9915254237288136,
+   "mrr": 0.7979620661824052,
+   "lat_ms_med": 0.005
+  },
+  "payload_SPL-revise": {
+   "words_mean": 119.2,
+   "tokens_mean": 203.8
+  },
+  "graph_TEA-write": {
+   "r@1": 0.24152542372881355,
+   "r@3": 0.326271186440678,
+   "r@10": 0.5889830508474576,
+   "mrr": 0.3558354344692698,
+   "lat_ms_med": 0.031
+  },
+  "sql_TEA-write": {
+   "r@1": 0.15254237288135594,
+   "r@3": 0.2457627118644068,
+   "r@10": 0.5550847457627118,
+   "mrr": 0.2789435088708322,
+   "lat_ms_med": 0.034
+  },
+  "fused_TEA-write": {
+   "r@1": 0.6949152542372882,
+   "r@3": 0.8686440677966102,
+   "r@10": 0.9915254237288136,
+   "mrr": 0.798833064299166,
+   "lat_ms_med": 0.005
+  },
+  "payload_TEA-write": {
+   "words_mean": 119.7,
+   "tokens_mean": 204.7
+  },
+  "graph_TEA-revise": {
+   "r@1": 0.24152542372881355,
+   "r@3": 0.326271186440678,
+   "r@10": 0.5889830508474576,
+   "mrr": 0.3558354344692698,
+   "lat_ms_med": 0.031
+  },
+  "sql_TEA-revise": {
+   "r@1": 0.15254237288135594,
+   "r@3": 0.2457627118644068,
+   "r@10": 0.5550847457627118,
+   "mrr": 0.2789435088708322,
+   "lat_ms_med": 0.034
+  },
+  "fused_TEA-revise": {
+   "r@1": 0.6949152542372882,
+   "r@3": 0.8686440677966102,
+   "r@10": 0.9915254237288136,
+   "mrr": 0.798833064299166,
+   "lat_ms_med": 0.005
+  },
+  "payload_TEA-revise": {
+   "words_mean": 119.7,
+   "tokens_mean": 204.7
+  }
+ }
+}
+ws=[1, 2, 4, 8]
+W=1: wall=3.017s filed=60
+W=2: wall=3.016s filed=60
+W=4: wall=3.019s filed=60
+W=8: wall=3.023s filed=60
+{
+ "n_sections": 20,
+ "emb_cos_min": 0.9999999999999999,
+ "emb_cos_mean": 1.0,
+ "ops_identical": 20,
+ "one_wall_s": 161.4,
+ "two_wall_s": 161.4,
+ "one_docs_min": 7.44,
+ "two_docs_min": 7.44,
+ "one_proof": {
+  "passed": 70,
+  "failed": 28
+ },
+ "two_proof": {
+  "passed": 70,
+  "failed": 28
+ },
+ "one_load_s": 0.85,
+ "two_load_s": 1.67
+}
+{"ts":"2026-09-12T17:33:52Z","event":"run_done","stamp":"20260912T162128Z"}

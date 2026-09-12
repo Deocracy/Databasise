@@ -1,0 +1,112 @@
+{
+ "proof": {
+  "passed": {
+   "STU": 70,
+   "SPL": 110,
+   "TEA": 204
+  },
+  "failed": {
+   "STU": 28,
+   "SPL": 29,
+   "TEA": 0
+  }
+ },
+ "stores": {
+  "STU-streamed-write": {
+   "nodes": 17,
+   "edges": 50,
+   "sql_rows": 20,
+   "merged_aliases": 0,
+   "wall_s": 0.0001,
+   "checksum": "1bd50cb5b81e0958"
+  },
+  "STU-streamed-revise": {
+   "nodes": 17,
+   "edges": 50,
+   "sql_rows": 20,
+   "merged_aliases": 0,
+   "wall_s": 0.0001,
+   "checksum": "a2fc1e32286e7ae5"
+  },
+  "STU-batched-write": {
+   "nodes": 17,
+   "edges": 50,
+   "sql_rows": 20,
+   "merged_aliases": 0,
+   "wall_s": 0.0001,
+   "checksum": "1bd50cb5b81e0958"
+  },
+  "STU-batched-revise": {
+   "nodes": 17,
+   "edges": 50,
+   "sql_rows": 20,
+   "merged_aliases": 0,
+   "wall_s": 0.0001,
+   "checksum": "a2fc1e32286e7ae5"
+  },
+  "SPL-streamed-write": {
+   "nodes": 22,
+   "edges": 81,
+   "sql_rows": 29,
+   "merged_aliases": 0,
+   "wall_s": 0.0002,
+   "checksum": "bd8088970af1a34d"
+  },
+  "SPL-streamed-revise": {
+   "nodes": 22,
+   "edges": 81,
+   "sql_rows": 29,
+   "merged_aliases": 1,
+   "wall_s": 0.0001,
+   "checksum": "1593ac3a23f12283"
+  },
+  "SPL-batched-write": {
+   "nodes": 22,
+   "edges": 81,
+   "sql_rows": 29,
+   "merged_aliases": 0,
+   "wall_s": 0.0001,
+   "checksum": "bd8088970af1a34d"
+  },
+  "SPL-batched-revise": {
+   "nodes": 22,
+   "edges": 81,
+   "sql_rows": 29,
+   "merged_aliases": 1,
+   "wall_s": 0.0001,
+   "checksum": "1593ac3a23f12283"
+  },
+  "TEA-streamed-write": {
+   "nodes": 34,
+   "edges": 121,
+   "sql_rows": 83,
+   "merged_aliases": 0,
+   "wall_s": 0.0003,
+   "checksum": "fad9a44ea0d40cb7"
+  },
+  "TEA-streamed-revise": {
+   "nodes": 34,
+   "edges": 121,
+   "sql_rows": 83,
+   "merged_aliases": 0,
+   "wall_s": 0.0001,
+   "checksum": "b9bf3568ae1d74d9"
+  },
+  "TEA-batched-write": {
+   "nodes": 34,
+   "edges": 121,
+   "sql_rows": 83,
+   "merged_aliases": 0,
+   "wall_s": 0.0002,
+   "checksum": "fad9a44ea0d40cb7"
+  },
+  "TEA-batched-revise": {
+   "nodes": 34,
+   "edges": 121,
+   "sql_rows": 83,
+   "merged_aliases": 0,
+   "wall_s": 0.0002,
+   "checksum": "b9bf3568ae1d74d9"
+  }
+ }
+}

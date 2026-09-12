@@ -1,0 +1,2 @@
+{"ts": "2026-09-12T17:28:59.433214+00:00", "event": "load", "mode": "embed06", "model": "Qwen3-Embedding-0.6B-Q8_0.gguf", "n_embd": 1024, "pooling": 3, "seconds": 0.53}
+{"ts": "2026-09-12T17:29:00.469132+00:00", "event": "embedded", "n": 178, "seconds": 1.04}
