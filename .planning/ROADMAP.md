@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: The Seam** - §18 closed envelope, four selectors, trace and budget reporting, in-process and REST transports (completed 2026-09-06)
 - [x] **Phase 5: Opaque-Side Admission** - Ingest core and codebase-memory-mcp admitted under §8's conditions, plus the ingest/corpus surface (§BP rung 3) (completed 2026-09-08)
 - [ ] **Phase 6: HippoRAG 2 & Side-by-Side** - Second modality fully decomposed and both run on one corpus, compared in one call (§BP rung 4 — the proof point)
-- [ ] **Phase 7: Promotion & Rollback** - Append-only ledger, operator-asserted promotion path, and the owner's corpus in the bundle
+- [x] **Phase 7: Promotion & Rollback** - Append-only ledger, operator-asserted promotion path, and the owner's corpus in the bundle (completed 2026-09-12)
 
 ## Phase Details
 
@@ -345,7 +345,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. The Seam | 5/5 | Complete    | 2026-09-06 |
 | 5. Opaque-Side Admission | 9/9 | Complete    | 2026-09-08 |
 | 6. HippoRAG 2 & Side-by-Side | 17/17 | In Progress|  |
-| 7. Promotion & Rollback | 4/4 | In Progress|  |
+| 7. Promotion & Rollback | 5/5 | Complete    | 2026-09-12 |
 
 ## Requirement Coverage
 
