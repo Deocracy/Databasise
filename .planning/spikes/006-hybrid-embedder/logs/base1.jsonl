@@ -1,0 +1,9 @@
+{"ts": "2026-09-12T16:30:35.792356+00:00", "run": "base1", "event": "model_loaded", "model": "Qwen3-Embedding-0.6B-safetensors", "dim": 1024, "load_s": 1.45}
+{"ts": "2026-09-12T16:44:29.532463+00:00", "run": "base1", "event": "model_loaded", "model": "Qwen3-Embedding-0.6B-safetensors", "dim": 1024, "load_s": 1.22}
+{"ts": "2026-09-12T17:33:45.620628+00:00", "run": "base1", "event": "model_loaded", "model": "Qwen3-Embedding-0.6B-safetensors", "dim": 1024, "load_s": 1.4}
+{"ts": "2026-09-12T17:33:48.029124+00:00", "run": "base1", "event": "embedded", "n_docs": 20, "ms_per_doc": 99.6, "ms_per_query": 2.45}
+{"ts": "2026-09-12T17:33:48.443189+00:00", "run": "base1", "event": "teacher_saved", "n_q": 86, "n_d": 15}
+{"ts": "2026-09-12T17:33:58.945540+00:00", "run": "base1", "event": "arm_scored", "arm": "A", "test_mrr": 0.8014, "train_mrr": 0.7881, "gold_mrr": 1.0, "anisotropy": 0.2788}
+{"ts": "2026-09-12T21:31:14.018069+00:00", "run": "base1", "event": "model_loaded", "model": "Qwen3-Embedding-0.6B-safetensors", "dim": 1024, "load_s": 1.39}
+{"ts": "2026-09-12T21:31:15.223637+00:00", "run": "base1", "event": "embedded", "n_docs": 20, "ms_per_doc": 50.51, "ms_per_query": 1.08}
+{"ts": "2026-09-12T21:31:15.626264+00:00", "run": "base1", "event": "teacher_saved", "n_q": 86, "n_d": 15}

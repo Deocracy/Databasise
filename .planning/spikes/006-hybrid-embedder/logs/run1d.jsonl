@@ -1,0 +1,5 @@
+{"ts": "2026-09-12T18:56:42.786419+00:00", "run": "run1d", "event": "arm_scored", "arm": "A", "test_mrr": 0.8014, "train_mrr": 0.7881, "gold_mrr": 1.0, "anisotropy": 0.2788}
+{"ts": "2026-09-12T18:56:42.968422+00:00", "run": "run1d", "event": "arm_scored", "arm": "D0-qwen06base", "test_mrr": 0.3843, "train_mrr": 0.4804, "gold_mrr": 0.6, "anisotropy": 0.8455}
+{"ts": "2026-09-12T18:56:43.154345+00:00", "run": "run1d", "event": "arm_scored", "arm": "D-w0.25", "test_mrr": 0.5382, "train_mrr": 0.5835, "gold_mrr": 0.75, "anisotropy": 0.7618}
+{"ts": "2026-09-12T18:56:43.335543+00:00", "run": "run1d", "event": "arm_scored", "arm": "D-w0.5", "test_mrr": 0.6165, "train_mrr": 0.6436, "gold_mrr": 1.0, "anisotropy": 0.6254}
+{"ts": "2026-09-12T18:56:43.518448+00:00", "run": "run1d", "event": "arm_scored", "arm": "D-w0.75", "test_mrr": 0.66, "train_mrr": 0.6637, "gold_mrr": 1.0, "anisotropy": 0.4793}

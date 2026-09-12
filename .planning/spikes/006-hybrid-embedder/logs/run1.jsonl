@@ -1,0 +1,76 @@
+{"ts": "2026-09-12T17:34:27.793312+00:00", "run": "run1", "event": "model_loaded", "model": "MiniCPM5-2B-hf-bf16-untrained", "load_s": 3.99, "peak_vram_gb": 5.03}
+{"ts": "2026-09-12T17:34:32.026784+00:00", "run": "run1", "event": "embedded", "n_docs": 20, "ms_per_doc": 68.1}
+{"ts": "2026-09-12T17:37:01.780393+00:00", "run": "run1", "event": "model_loaded", "model": "MiniCPM5-2B+lora-r16-contrastive", "load_s": 1.57, "trainable_params": 25116672, "epochs": 6, "tau": 0.03, "lr": 0.0001, "batch": 8, "seed": 1234}
+{"ts": "2026-09-12T17:37:05.182427+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 1, "loss": 1.8457, "elapsed_s": 3.4}
+{"ts": "2026-09-12T17:37:13.127702+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 5, "loss": 2.3792, "elapsed_s": 11.3}
+{"ts": "2026-09-12T17:37:24.596824+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 10, "loss": 2.0928, "elapsed_s": 22.8}
+{"ts": "2026-09-12T17:37:36.829979+00:00", "run": "run1", "event": "step", "epoch": 1, "step": 15, "loss": 1.8174, "elapsed_s": 35.0}
+{"ts": "2026-09-12T17:37:47.179166+00:00", "run": "run1", "event": "step", "epoch": 1, "step": 20, "loss": 1.2026, "elapsed_s": 45.4}
+{"ts": "2026-09-12T17:37:57.783214+00:00", "run": "run1", "event": "step", "epoch": 2, "step": 25, "loss": 0.7246, "elapsed_s": 56.0}
+{"ts": "2026-09-12T17:38:08.888839+00:00", "run": "run1", "event": "step", "epoch": 2, "step": 30, "loss": 2.5408, "elapsed_s": 67.1}
+{"ts": "2026-09-12T17:38:20.018586+00:00", "run": "run1", "event": "step", "epoch": 3, "step": 35, "loss": 0.9129, "elapsed_s": 78.2}
+{"ts": "2026-09-12T17:38:30.975172+00:00", "run": "run1", "event": "step", "epoch": 3, "step": 40, "loss": 0.2463, "elapsed_s": 89.2}
+{"ts": "2026-09-12T17:38:42.582785+00:00", "run": "run1", "event": "step", "epoch": 4, "step": 45, "loss": 1.2139, "elapsed_s": 100.8}
+{"ts": "2026-09-12T17:38:52.976464+00:00", "run": "run1", "event": "step", "epoch": 4, "step": 50, "loss": 0.7687, "elapsed_s": 111.2}
+{"ts": "2026-09-12T17:39:04.225517+00:00", "run": "run1", "event": "step", "epoch": 4, "step": 55, "loss": 0.3526, "elapsed_s": 122.4}
+{"ts": "2026-09-12T17:39:14.933980+00:00", "run": "run1", "event": "step", "epoch": 5, "step": 60, "loss": 0.0228, "elapsed_s": 133.1}
+{"ts": "2026-09-12T17:39:26.346757+00:00", "run": "run1", "event": "step", "epoch": 5, "step": 65, "loss": 0.8014, "elapsed_s": 144.6}
+{"ts": "2026-09-12T17:39:29.149888+00:00", "run": "run1", "event": "train_done", "steps": 66, "train_s": 147.0, "peak_vram_gb": 7.08, "adapter": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/006-hybrid-embedder/adapters/lora_contrastive_run1", "sha256": "aa761ddcbc60a6974e7b951737d5ad58473dd9ad955c2228f8d6799d5ea5c44e"}
+{"ts": "2026-09-12T17:39:51.073464+00:00", "run": "run1", "event": "model_loaded", "model": "MiniCPM5-2B+B-minicpm2b", "load_s": 3.35, "proj": false}
+{"ts": "2026-09-12T17:39:58.661283+00:00", "run": "run1", "event": "embedded", "arm": "B-minicpm2b", "ms_per_doc": 90.33}
+{"ts": "2026-09-12T17:40:13.401567+00:00", "run": "run1", "event": "model_loaded", "model": "MiniCPM5-2B+lora-r16-distill", "load_s": 1.57, "trainable_params": 27214848, "epochs": 6, "tau": 0.03, "lr": 0.0001, "batch": 8, "lambda_nce": 1.0, "seed": 1234}
+{"ts": "2026-09-12T17:40:16.542312+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 1, "loss": 2.8047, "dist": 0.9947, "nce": 1.81, "elapsed_s": 3.1}
+{"ts": "2026-09-12T17:40:24.419684+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 5, "loss": 3.2779, "dist": 0.9558, "nce": 2.3221, "elapsed_s": 11.0}
+{"ts": "2026-09-12T17:40:35.908883+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 10, "loss": 2.7951, "dist": 0.9075, "nce": 1.8876, "elapsed_s": 22.5}
+{"ts": "2026-09-12T17:40:48.051547+00:00", "run": "run1", "event": "step", "epoch": 1, "step": 15, "loss": 2.255, "dist": 0.8663, "nce": 1.3887, "elapsed_s": 34.6}
+{"ts": "2026-09-12T17:40:58.549628+00:00", "run": "run1", "event": "step", "epoch": 1, "step": 20, "loss": 1.8862, "dist": 0.834, "nce": 1.0522, "elapsed_s": 45.1}
+{"ts": "2026-09-12T17:41:08.985110+00:00", "run": "run1", "event": "step", "epoch": 2, "step": 25, "loss": 0.9072, "dist": 0.7134, "nce": 0.1938, "elapsed_s": 55.6}
+{"ts": "2026-09-12T17:41:20.009985+00:00", "run": "run1", "event": "step", "epoch": 2, "step": 30, "loss": 2.6922, "dist": 0.6485, "nce": 2.0437, "elapsed_s": 66.6}
+{"ts": "2026-09-12T17:41:30.931351+00:00", "run": "run1", "event": "step", "epoch": 3, "step": 35, "loss": 1.4914, "dist": 0.6562, "nce": 0.8352, "elapsed_s": 77.5}
+{"ts": "2026-09-12T17:41:41.934727+00:00", "run": "run1", "event": "step", "epoch": 3, "step": 40, "loss": 0.8636, "dist": 0.6665, "nce": 0.1971, "elapsed_s": 88.5}
+{"ts": "2026-09-12T17:41:53.282983+00:00", "run": "run1", "event": "step", "epoch": 4, "step": 45, "loss": 0.999, "dist": 0.6211, "nce": 0.3779, "elapsed_s": 99.9}
+{"ts": "2026-09-12T17:42:03.587583+00:00", "run": "run1", "event": "step", "epoch": 4, "step": 50, "loss": 0.9097, "dist": 0.573, "nce": 0.3367, "elapsed_s": 110.2}
+{"ts": "2026-09-12T17:42:14.681440+00:00", "run": "run1", "event": "step", "epoch": 4, "step": 55, "loss": 0.7145, "dist": 0.5348, "nce": 0.1798, "elapsed_s": 121.3}
+{"ts": "2026-09-12T17:42:25.154553+00:00", "run": "run1", "event": "step", "epoch": 5, "step": 60, "loss": 0.6365, "dist": 0.5713, "nce": 0.0652, "elapsed_s": 131.7}
+{"ts": "2026-09-12T17:42:36.345779+00:00", "run": "run1", "event": "step", "epoch": 5, "step": 65, "loss": 1.0148, "dist": 0.5507, "nce": 0.4641, "elapsed_s": 142.9}
+{"ts": "2026-09-12T17:42:39.092184+00:00", "run": "run1", "event": "train_done", "steps": 66, "train_s": 145.3, "peak_vram_gb": 7.11, "adapter": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/006-hybrid-embedder/adapters/lora_distill_run1", "sha256": "4d93a2297d856e832de477aa4d4475b19923f82eb8b5009c25a5f19eade71a83"}
+{"ts": "2026-09-12T18:48:56.875184+00:00", "run": "run1", "event": "model_loaded", "model": "MiniCPM5-2B+C-minicpm2b", "load_s": 5.11, "proj": true}
+{"ts": "2026-09-12T18:49:05.171216+00:00", "run": "run1", "event": "embedded", "arm": "C-minicpm2b", "ms_per_doc": 103.03}
+{"ts": "2026-09-12T18:49:12.952452+00:00", "run": "run1", "event": "model_loaded", "model": "D0-qwen06base", "load_s": 1.73}
+{"ts": "2026-09-12T18:49:16.592375+00:00", "run": "run1", "event": "embedded", "arm": "D0-qwen06base", "ms_per_doc": 53.78}
+{"ts": "2026-09-12T18:49:37.211008+00:00", "run": "run1", "event": "merge_inventory", "shared": 309, "only_emb": [], "only_gen": ["lm_head.weight"], "emb_vocab": 151669, "gen_vocab": 151936}
+{"ts": "2026-09-12T18:49:37.524942+00:00", "run": "run1", "event": "vocab_check", "emb_vocab": 151643, "gen_vocab": 151643, "n_extra": 0, "extra_sample": []}
+{"ts": "2026-09-12T18:49:41.015318+00:00", "run": "run1", "event": "merged", "tag": "linear_w0.25", "w_embed": 0.25, "dir": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/006-hybrid-embedder/merged/qwen06_linear_w0.25_run1", "seconds": 2.3, "sha256": "4a8ce74b368bc07bd64862b719240a4aab3a91c8c644ec2d0a2bc8d09de66047"}
+{"ts": "2026-09-12T18:49:43.648818+00:00", "run": "run1", "event": "merged", "tag": "linear_w0.5", "w_embed": 0.5, "dir": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/006-hybrid-embedder/merged/qwen06_linear_w0.5_run1", "seconds": 1.7, "sha256": "b556e72f8fdedb4a94463c9d741a0076ec9c452c0c6da412cb09cd0c6e6abd10"}
+{"ts": "2026-09-12T18:49:45.740842+00:00", "run": "run1", "event": "merged", "tag": "linear_w0.75", "w_embed": 0.75, "dir": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/006-hybrid-embedder/merged/qwen06_linear_w0.75_run1", "seconds": 1.2, "sha256": "71fae1a38cab781efb1bfc713127c5e9bbbe84270283aab5fd9ba7ca79b88e61"}
+{"ts": "2026-09-12T18:49:50.497279+00:00", "run": "run1", "event": "ties_failed", "error": "PydanticUserError: `ConfiguredModuleArchitecture` is not fully defined; you should define `torch`, then call `ConfiguredModuleArchitecture.model_rebuild()`.\n\nFor further information visit https://errors.pydantic.dev/2.10/u/class-not-fully-defined"}
+{"ts": "2026-09-12T18:56:11.114064+00:00", "run": "run1", "event": "model_loaded", "model": "D-w0.25", "load_s": 1.8}
+{"ts": "2026-09-12T18:56:14.605078+00:00", "run": "run1", "event": "embedded", "arm": "D-w0.25", "ms_per_doc": 55.63}
+{"ts": "2026-09-12T18:56:20.451377+00:00", "run": "run1", "event": "model_loaded", "model": "D-w0.5", "load_s": 1.99}
+{"ts": "2026-09-12T18:56:23.624345+00:00", "run": "run1", "event": "embedded", "arm": "D-w0.5", "ms_per_doc": 48.05}
+{"ts": "2026-09-12T18:56:29.546965+00:00", "run": "run1", "event": "model_loaded", "model": "D-w0.75", "load_s": 2.09}
+{"ts": "2026-09-12T18:56:33.342335+00:00", "run": "run1", "event": "embedded", "arm": "D-w0.75", "ms_per_doc": 74.98}
+{"ts": "2026-09-12T18:56:54.976438+00:00", "run": "run1", "event": "model_loaded", "model": "gen-minicpm-base", "load_s": 1.58}
+{"ts": "2026-09-12T19:02:46.381970+00:00", "run": "run1", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.1, "parse_rate": 0.15, "proof_pass_rate": 1.0, "n_emitted": 9, "n_passed": 9, "tokens_per_para": 856.6, "secs_per_para": 17.57, "arm": "gen-minicpm-base"}
+{"ts": "2026-09-12T19:02:52.853468+00:00", "run": "run1", "event": "model_loaded", "model": "gen-lora_contrastive_run1", "load_s": 2.36}
+{"ts": "2026-09-12T19:07:05.374937+00:00", "run": "run1", "event": "model_loaded", "model": "gen-lora_contrastive_run1", "load_s": 2.56}
+{"ts": "2026-09-12T19:17:08.437109+00:00", "run": "run1", "event": "model_loaded", "model": "gen-lora_contrastive_run1", "load_s": 2.89}
+{"ts": "2026-09-12T19:33:35.947019+00:00", "run": "run1", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "tokens_per_para": 1020.5, "secs_per_para": 49.37, "arm": "gen-lora_contrastive_run1"}
+{"ts": "2026-09-12T19:33:42.604076+00:00", "run": "run1", "event": "model_loaded", "model": "gen-lora_distill_run1", "load_s": 2.35}
+{"ts": "2026-09-12T19:50:13.434752+00:00", "run": "run1", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "tokens_per_para": 989.3, "secs_per_para": 49.54, "arm": "gen-lora_distill_run1"}
+{"ts": "2026-09-12T19:51:56.773090+00:00", "run": "run1", "event": "model_loaded", "model": "gen-qwen06-base", "load_s": 1.49}
+{"ts": "2026-09-12T19:58:05.648630+00:00", "run": "run1", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "tokens_per_para": 1023.0, "secs_per_para": 18.44, "arm": "gen-qwen06-base"}
+{"ts": "2026-09-12T19:58:11.673959+00:00", "run": "run1", "event": "model_loaded", "model": "gen-qwen06_linear_w0.25_run1", "load_s": 2.05}
+{"ts": "2026-09-12T20:03:13.176207+00:00", "run": "run1", "event": "model_loaded", "model": "gen-qwen06-base", "load_s": 1.09}
+{"ts": "2026-09-12T20:09:41.247739+00:00", "run": "run1", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "tokens_per_para": 1023.0, "secs_per_para": 19.4, "arm": "gen-qwen06-base"}
+{"ts": "2026-09-12T20:09:47.007230+00:00", "run": "run1", "event": "model_loaded", "model": "gen-qwen06_linear_w0.25_run1", "load_s": 1.72}
+{"ts": "2026-09-12T21:05:15.363456+00:00", "run": "run1", "event": "model_loaded", "model": "gen-qwen06-base", "load_s": 0.94}
+{"ts": "2026-09-12T21:05:15.377978+00:00", "run": "run1", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "tokens_per_para": 1023.0, "secs_per_para": 19.4, "arm": "gen-qwen06-base"}
+{"ts": "2026-09-12T21:05:21.168133+00:00", "run": "run1", "event": "model_loaded", "model": "gen-qwen06_linear_w0.25_run1", "load_s": 1.68}
+{"ts": "2026-09-12T21:11:35.727585+00:00", "run": "run1", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "tokens_per_para": 1024.0, "secs_per_para": 18.72, "arm": "gen-qwen06_linear_w0.25_run1"}
+{"ts": "2026-09-12T21:11:42.161842+00:00", "run": "run1", "event": "model_loaded", "model": "gen-qwen06_linear_w0.5_run1", "load_s": 2.54}
+{"ts": "2026-09-12T21:17:56.156162+00:00", "run": "run1", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "tokens_per_para": 1023.4, "secs_per_para": 18.7, "arm": "gen-qwen06_linear_w0.5_run1"}
+{"ts": "2026-09-12T21:18:02.458803+00:00", "run": "run1", "event": "model_loaded", "model": "gen-qwen06_linear_w0.75_run1", "load_s": 2.15}
+{"ts": "2026-09-12T21:23:57.654211+00:00", "run": "run1", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "tokens_per_para": 1023.8, "secs_per_para": 17.76, "arm": "gen-qwen06_linear_w0.75_run1"}
+{"ts": "2026-09-12T21:24:10.055743+00:00", "run": "run1", "event": "model_loaded", "model": "gen-qwen06_linear_w0.75_run1", "load_s": 1.62}
+{"ts": "2026-09-12T21:24:10.061538+00:00", "run": "run1", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "tokens_per_para": 1023.8, "secs_per_para": 17.76, "arm": "gen-qwen06_linear_w0.75_run1"}

@@ -1,0 +1,3 @@
+{"ts": "2026-09-12T17:39:59.857173+00:00", "run": "run1b", "event": "arm_scored", "arm": "A", "test_mrr": 0.8014, "train_mrr": 0.7881, "gold_mrr": 1.0, "anisotropy": 0.2788}
+{"ts": "2026-09-12T17:40:00.231479+00:00", "run": "run1b", "event": "arm_scored", "arm": "E-minicpm2b", "test_mrr": 0.3158, "train_mrr": 0.3148, "gold_mrr": 0.125, "anisotropy": 0.9035}
+{"ts": "2026-09-12T17:40:00.607983+00:00", "run": "run1b", "event": "arm_scored", "arm": "B-minicpm2b", "test_mrr": 0.7483, "train_mrr": 0.9558, "gold_mrr": 0.75, "anisotropy": 0.679}

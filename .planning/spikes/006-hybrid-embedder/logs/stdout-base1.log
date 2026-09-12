@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/006-hybrid-embedder/embed_a.py", line 97, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/006-hybrid-embedder/embed_a.py", line 28, in main
+    from sentence_transformers import SentenceTransformer
+ModuleNotFoundError: No module named 'sentence_transformers'

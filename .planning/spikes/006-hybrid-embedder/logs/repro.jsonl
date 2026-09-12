@@ -1,0 +1,75 @@
+{"ts": "2026-09-12T21:31:21.481041+00:00", "run": "repro", "event": "model_loaded", "model": "MiniCPM5-2B-hf-bf16-untrained", "load_s": 1.6, "peak_vram_gb": 5.03}
+{"ts": "2026-09-12T21:31:25.615564+00:00", "run": "repro", "event": "embedded", "n_docs": 20, "ms_per_doc": 61.43}
+{"ts": "2026-09-12T21:31:31.945917+00:00", "run": "repro", "event": "model_loaded", "model": "MiniCPM5-2B+lora-r16-contrastive", "load_s": 1.47, "trainable_params": 25116672, "epochs": 6, "tau": 0.03, "lr": 0.0001, "batch": 8, "seed": 1234}
+{"ts": "2026-09-12T21:31:35.096385+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 1, "loss": 1.8457, "elapsed_s": 3.1}
+{"ts": "2026-09-12T21:31:42.876848+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 5, "loss": 2.375, "elapsed_s": 10.9}
+{"ts": "2026-09-12T21:31:54.175902+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 10, "loss": 2.0831, "elapsed_s": 22.2}
+{"ts": "2026-09-12T21:32:06.314716+00:00", "run": "repro", "event": "step", "epoch": 1, "step": 15, "loss": 1.814, "elapsed_s": 34.4}
+{"ts": "2026-09-12T21:32:16.637743+00:00", "run": "repro", "event": "step", "epoch": 1, "step": 20, "loss": 1.2373, "elapsed_s": 44.7}
+{"ts": "2026-09-12T21:32:27.171552+00:00", "run": "repro", "event": "step", "epoch": 2, "step": 25, "loss": 0.7509, "elapsed_s": 55.2}
+{"ts": "2026-09-12T21:32:38.263008+00:00", "run": "repro", "event": "step", "epoch": 2, "step": 30, "loss": 2.6706, "elapsed_s": 66.3}
+{"ts": "2026-09-12T21:32:49.247693+00:00", "run": "repro", "event": "step", "epoch": 3, "step": 35, "loss": 0.9513, "elapsed_s": 77.3}
+{"ts": "2026-09-12T21:33:00.318107+00:00", "run": "repro", "event": "step", "epoch": 3, "step": 40, "loss": 0.288, "elapsed_s": 88.4}
+{"ts": "2026-09-12T21:33:11.792260+00:00", "run": "repro", "event": "step", "epoch": 4, "step": 45, "loss": 1.1355, "elapsed_s": 99.8}
+{"ts": "2026-09-12T21:33:22.112736+00:00", "run": "repro", "event": "step", "epoch": 4, "step": 50, "loss": 0.6517, "elapsed_s": 110.2}
+{"ts": "2026-09-12T21:33:33.273480+00:00", "run": "repro", "event": "step", "epoch": 4, "step": 55, "loss": 0.3009, "elapsed_s": 121.3}
+{"ts": "2026-09-12T21:33:43.783108+00:00", "run": "repro", "event": "step", "epoch": 5, "step": 60, "loss": 0.023, "elapsed_s": 131.8}
+{"ts": "2026-09-12T21:33:54.950032+00:00", "run": "repro", "event": "step", "epoch": 5, "step": 65, "loss": 0.8103, "elapsed_s": 143.0}
+{"ts": "2026-09-12T21:33:57.633951+00:00", "run": "repro", "event": "train_done", "steps": 66, "train_s": 145.3, "peak_vram_gb": 7.08, "adapter": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/006-hybrid-embedder/adapters/lora_contrastive_repro", "sha256": "ae703ab1fd1ead24ec37af444186af679cabddbe5d8ba3b377607d1da4ba6885"}
+{"ts": "2026-09-12T21:34:33.329519+00:00", "run": "repro", "event": "model_loaded", "model": "MiniCPM5-2B+B-minicpm2b", "load_s": 2.01, "proj": false}
+{"ts": "2026-09-12T21:34:40.460168+00:00", "run": "repro", "event": "embedded", "arm": "B-minicpm2b", "ms_per_doc": 80.18}
+{"ts": "2026-09-12T21:37:42.784514+00:00", "run": "repro", "event": "model_loaded", "model": "MiniCPM5-2B+lora-r16-distill", "load_s": 1.46, "trainable_params": 27214848, "epochs": 6, "tau": 0.03, "lr": 0.0001, "batch": 8, "lambda_nce": 1.0, "seed": 1234}
+{"ts": "2026-09-12T21:37:45.946310+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 1, "loss": 2.8667, "dist": 1.0347, "nce": 1.832, "elapsed_s": 3.2}
+{"ts": "2026-09-12T21:37:53.597057+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 5, "loss": 3.2582, "dist": 0.9708, "nce": 2.2874, "elapsed_s": 10.8}
+{"ts": "2026-09-12T21:38:04.808282+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 10, "loss": 2.8173, "dist": 0.9357, "nce": 1.8816, "elapsed_s": 22.0}
+{"ts": "2026-09-12T21:38:16.763479+00:00", "run": "repro", "event": "step", "epoch": 1, "step": 15, "loss": 2.179, "dist": 0.8746, "nce": 1.3045, "elapsed_s": 34.0}
+{"ts": "2026-09-12T21:38:27.137673+00:00", "run": "repro", "event": "step", "epoch": 1, "step": 20, "loss": 1.7181, "dist": 0.7722, "nce": 0.9459, "elapsed_s": 44.3}
+{"ts": "2026-09-12T21:38:37.625106+00:00", "run": "repro", "event": "step", "epoch": 2, "step": 25, "loss": 0.9402, "dist": 0.6442, "nce": 0.2961, "elapsed_s": 54.8}
+{"ts": "2026-09-12T21:38:48.509272+00:00", "run": "repro", "event": "step", "epoch": 2, "step": 30, "loss": 2.8309, "dist": 0.6622, "nce": 2.1688, "elapsed_s": 65.7}
+{"ts": "2026-09-12T21:38:59.411375+00:00", "run": "repro", "event": "step", "epoch": 3, "step": 35, "loss": 1.456, "dist": 0.6474, "nce": 0.8086, "elapsed_s": 76.6}
+{"ts": "2026-09-12T21:39:10.259128+00:00", "run": "repro", "event": "step", "epoch": 3, "step": 40, "loss": 0.8414, "dist": 0.6576, "nce": 0.1838, "elapsed_s": 87.5}
+{"ts": "2026-09-12T21:39:21.601268+00:00", "run": "repro", "event": "step", "epoch": 4, "step": 45, "loss": 0.9291, "dist": 0.6495, "nce": 0.2797, "elapsed_s": 98.8}
+{"ts": "2026-09-12T21:39:31.723124+00:00", "run": "repro", "event": "step", "epoch": 4, "step": 50, "loss": 0.7705, "dist": 0.5908, "nce": 0.1797, "elapsed_s": 108.9}
+{"ts": "2026-09-12T21:39:42.943035+00:00", "run": "repro", "event": "step", "epoch": 4, "step": 55, "loss": 0.7286, "dist": 0.554, "nce": 0.1746, "elapsed_s": 120.2}
+{"ts": "2026-09-12T21:39:53.473098+00:00", "run": "repro", "event": "step", "epoch": 5, "step": 60, "loss": 0.6783, "dist": 0.5539, "nce": 0.1244, "elapsed_s": 130.7}
+{"ts": "2026-09-12T21:40:04.719994+00:00", "run": "repro", "event": "step", "epoch": 5, "step": 65, "loss": 0.8614, "dist": 0.5413, "nce": 0.3201, "elapsed_s": 141.9}
+{"ts": "2026-09-12T21:40:07.519402+00:00", "run": "repro", "event": "train_done", "steps": 66, "train_s": 144.3, "peak_vram_gb": 7.11, "adapter": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/006-hybrid-embedder/adapters/lora_distill_repro", "sha256": "551069e45e4ddbefd78b5cec150641d8036e5dae03c6268132ebb7114632a557"}
+{"ts": "2026-09-12T21:40:13.744736+00:00", "run": "repro", "event": "model_loaded", "model": "MiniCPM5-2B+C-minicpm2b", "load_s": 2.07, "proj": true}
+{"ts": "2026-09-12T21:40:21.066893+00:00", "run": "repro", "event": "embedded", "arm": "C-minicpm2b", "ms_per_doc": 85.25}
+{"ts": "2026-09-12T21:40:22.780922+00:00", "run": "repro", "event": "merge_inventory", "shared": 309, "only_emb": [], "only_gen": ["lm_head.weight"], "emb_vocab": 151669, "gen_vocab": 151936}
+{"ts": "2026-09-12T21:40:23.054118+00:00", "run": "repro", "event": "vocab_check", "emb_vocab": 151643, "gen_vocab": 151643, "n_extra": 0, "extra_sample": []}
+{"ts": "2026-09-12T21:40:24.939108+00:00", "run": "repro", "event": "merged", "tag": "linear_w0.25", "w_embed": 0.25, "dir": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/006-hybrid-embedder/merged/qwen06_linear_w0.25_repro", "seconds": 1.1, "sha256": "4a8ce74b368bc07bd64862b719240a4aab3a91c8c644ec2d0a2bc8d09de66047"}
+{"ts": "2026-09-12T21:40:26.829112+00:00", "run": "repro", "event": "merged", "tag": "linear_w0.5", "w_embed": 0.5, "dir": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/006-hybrid-embedder/merged/qwen06_linear_w0.5_repro", "seconds": 1.1, "sha256": "b556e72f8fdedb4a94463c9d741a0076ec9c452c0c6da412cb09cd0c6e6abd10"}
+{"ts": "2026-09-12T21:40:28.746686+00:00", "run": "repro", "event": "merged", "tag": "linear_w0.75", "w_embed": 0.75, "dir": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/006-hybrid-embedder/merged/qwen06_linear_w0.75_repro", "seconds": 1.1, "sha256": "71fae1a38cab781efb1bfc713127c5e9bbbe84270283aab5fd9ba7ca79b88e61"}
+{"ts": "2026-09-12T21:40:32.420159+00:00", "run": "repro", "event": "ties_failed", "error": "PydanticUserError: `ConfiguredModuleArchitecture` is not fully defined; you should define `torch`, then call `ConfiguredModuleArchitecture.model_rebuild()`.\n\nFor further information visit https://errors.pydantic.dev/2.10/u/class-not-fully-defined"}
+{"ts": "2026-09-12T21:40:48.319864+00:00", "run": "repro", "event": "model_loaded", "model": "D0-qwen06base", "load_s": 0.9}
+{"ts": "2026-09-12T21:40:51.692565+00:00", "run": "repro", "event": "embedded", "arm": "D0-qwen06base", "ms_per_doc": 49.62}
+{"ts": "2026-09-12T22:32:58.201046+00:00", "run": "repro", "event": "model_loaded", "model": "D-w0.25", "load_s": 2.05}
+{"ts": "2026-09-12T22:33:01.353386+00:00", "run": "repro", "event": "embedded", "arm": "D-w0.25", "ms_per_doc": 48.97}
+{"ts": "2026-09-12T22:33:23.503249+00:00", "run": "repro", "event": "model_loaded", "model": "D-w0.5", "load_s": 1.94}
+{"ts": "2026-09-12T22:33:26.662727+00:00", "run": "repro", "event": "embedded", "arm": "D-w0.5", "ms_per_doc": 46.65}
+{"ts": "2026-09-12T22:33:51.104253+00:00", "run": "repro", "event": "model_loaded", "model": "D-w0.75", "load_s": 1.72}
+{"ts": "2026-09-12T22:33:54.198364+00:00", "run": "repro", "event": "embedded", "arm": "D-w0.75", "ms_per_doc": 46.55}
+{"ts": "2026-09-12T22:33:55.522215+00:00", "run": "repro", "event": "arm_scored", "arm": "A", "test_mrr": 0.8014, "train_mrr": 0.7881, "gold_mrr": 1.0, "anisotropy": 0.2788}
+{"ts": "2026-09-12T22:33:55.875810+00:00", "run": "repro", "event": "arm_scored", "arm": "E-minicpm2b", "test_mrr": 0.3158, "train_mrr": 0.3148, "gold_mrr": 0.125, "anisotropy": 0.9035}
+{"ts": "2026-09-12T22:33:56.234323+00:00", "run": "repro", "event": "arm_scored", "arm": "B-minicpm2b", "test_mrr": 0.7244, "train_mrr": 0.9564, "gold_mrr": 0.75, "anisotropy": 0.6732}
+{"ts": "2026-09-12T22:33:56.588387+00:00", "run": "repro", "event": "arm_scored", "arm": "B-seed999", "test_mrr": 0.7259, "train_mrr": 0.9481, "gold_mrr": 0.5, "anisotropy": 0.5721}
+{"ts": "2026-09-12T22:33:56.770295+00:00", "run": "repro", "event": "arm_scored", "arm": "C-minicpm2b", "test_mrr": 0.6178, "train_mrr": 0.9748, "gold_mrr": 0.6667, "anisotropy": 0.7247}
+{"ts": "2026-09-12T22:33:56.949432+00:00", "run": "repro", "event": "arm_scored", "arm": "D0-qwen06base", "test_mrr": 0.3843, "train_mrr": 0.4804, "gold_mrr": 0.6, "anisotropy": 0.8455}
+{"ts": "2026-09-12T22:33:57.131890+00:00", "run": "repro", "event": "arm_scored", "arm": "D-w0.25", "test_mrr": 0.5382, "train_mrr": 0.5835, "gold_mrr": 0.75, "anisotropy": 0.7618}
+{"ts": "2026-09-12T22:33:57.313411+00:00", "run": "repro", "event": "arm_scored", "arm": "D-w0.5", "test_mrr": 0.6165, "train_mrr": 0.6436, "gold_mrr": 1.0, "anisotropy": 0.6254}
+{"ts": "2026-09-12T22:33:57.494365+00:00", "run": "repro", "event": "arm_scored", "arm": "D-w0.75", "test_mrr": 0.66, "train_mrr": 0.6637, "gold_mrr": 1.0, "anisotropy": 0.4793}
+{"ts": "2026-09-12T22:34:11.913846+00:00", "run": "repro", "event": "model_loaded", "model": "gen-minicpm-base", "load_s": 1.49}
+{"ts": "2026-09-12T22:40:09.398229+00:00", "run": "repro", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.1, "parse_rate": 0.15, "proof_pass_rate": 1.0, "n_emitted": 9, "n_passed": 9, "tokens_per_para": 856.6, "secs_per_para": 17.87, "arm": "gen-minicpm-base"}
+{"ts": "2026-09-12T22:40:24.816760+00:00", "run": "repro", "event": "model_loaded", "model": "gen-lora_contrastive_repro", "load_s": 11.07}
+{"ts": "2026-09-12T22:56:01.467194+00:00", "run": "repro", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "tokens_per_para": 1041.3, "secs_per_para": 46.83, "arm": "gen-lora_contrastive_repro"}
+{"ts": "2026-09-12T22:56:08.498942+00:00", "run": "repro", "event": "model_loaded", "model": "gen-lora_distill_repro", "load_s": 2.92}
+{"ts": "2026-09-12T23:11:47.628976+00:00", "run": "repro", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "tokens_per_para": 1023.0, "secs_per_para": 46.95, "arm": "gen-lora_distill_repro"}
+{"ts": "2026-09-12T23:11:53.058496+00:00", "run": "repro", "event": "model_loaded", "model": "gen-qwen06-base", "load_s": 1.47}
+{"ts": "2026-09-12T23:17:47.784946+00:00", "run": "repro", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "tokens_per_para": 1023.0, "secs_per_para": 17.73, "arm": "gen-qwen06-base"}
+{"ts": "2026-09-12T23:17:53.297421+00:00", "run": "repro", "event": "model_loaded", "model": "gen-qwen06_linear_w0.25_repro", "load_s": 1.71}
+{"ts": "2026-09-12T23:23:48.322751+00:00", "run": "repro", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "tokens_per_para": 1024.0, "secs_per_para": 17.75, "arm": "gen-qwen06_linear_w0.25_repro"}
+{"ts": "2026-09-12T23:23:54.091473+00:00", "run": "repro", "event": "model_loaded", "model": "gen-qwen06_linear_w0.5_repro", "load_s": 1.77}
+{"ts": "2026-09-12T23:29:45.158536+00:00", "run": "repro", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "tokens_per_para": 1023.4, "secs_per_para": 17.55, "arm": "gen-qwen06_linear_w0.5_repro"}
+{"ts": "2026-09-12T23:29:50.828117+00:00", "run": "repro", "event": "model_loaded", "model": "gen-qwen06_linear_w0.75_repro", "load_s": 1.9}
+{"ts": "2026-09-12T23:35:30.220155+00:00", "run": "repro", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "tokens_per_para": 1023.8, "secs_per_para": 16.96, "arm": "gen-qwen06_linear_w0.75_repro"}
