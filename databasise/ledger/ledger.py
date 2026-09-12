@@ -47,6 +47,20 @@ database, never falls back to a plausible string. All four columns land in the s
 TABLE IF NOT EXISTS`` column list, following the identical no-migration precedent the ``alias``
 column set: the table holds zero rows in every environment this milestone runs in.
 
+**07-05-PLAN.md (G-07-1): :meth:`Ledger.transaction`.** ``append()`` alone was never the gap —
+07-REVIEW.md's WR-01 and 07-UAT.md's reproduction both showed that ``seam/engine.py``'s three
+operator verbs read a guard (the tombstone check, the active-generation check, the prior-version
+read the semver mint depends on) and then, on a *separate* autocommit statement, ``append()``. A
+concurrent writer could commit between the read and the append, so the guard's own answer could go
+stale before the append it was gating ever ran. ``transaction()`` widens the span so the guard read
+and the append commit together, as one ``BEGIN IMMEDIATE`` transaction: no writer can commit
+between them, so a rollback can no longer land after a tombstone naming the same generation
+(D-05/D-07), and a losing caller either serializes onto freshly-committed state or refuses through
+the already-shipped ``TombstonedGenerationError`` — never a bare ``sqlite3`` exception. This adds
+no second write; it encloses the one ``INSERT`` each verb already made with its own decisive read
+(07-01-PLAN.md's "one ``INSERT`` in one transaction is the atomic alias repoint" still holds — the
+repoint was always atomic, the *decision* to repoint is what G-07-1 closes).
+
 **WR-03, deliberate exception:** every method on ``Ledger`` is plain synchronous ``def`` — this
 module has no ``async def`` surface to dispatch off the event loop in the first place, unlike
 ``stores/kv.py``/``stores/lexical.py`` (own deliberate-exception notes) or ``stores/graph.py``
@@ -61,8 +75,10 @@ caller that does not exist yet.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import sqlite3
+from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -110,6 +126,35 @@ class Ledger:
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._create_schema()
+
+    @contextlib.contextmanager
+    def transaction(self) -> Iterator[None]:
+        """G-07-1: widen a caller's guard-read-then-append into one ``BEGIN IMMEDIATE``
+        transaction, so no other writer can commit between the guard's read and the append it
+        gates. Entered around a promotion verb's own guard read (not just its final ``INSERT``) —
+        see the module docstring's "07-05-PLAN.md (G-07-1)" note for why the read has to be inside
+        the span, not only the write.
+
+        On success (the ``yield`` body raises nothing), commits. On any exception, rolls back and
+        re-raises — this rollback path is load-bearing: every refusal a wrapped verb raises exits
+        through here, and an unreleased write transaction would stall the *next* ``Ledger()``
+        construction for the full busy timeout, because ``__init__`` always runs ``_create_schema``
+        (DDL, which needs the write lock) even for a read-only caller.
+
+        ponytail: two ceilings, not enforced in code. (a) One ``append()`` per ``transaction()`` —
+        ``append()``'s own ``commit()`` ends the span early; a caller needing two appends in one
+        transaction would have to move that commit out. (b) Does not nest — a second
+        ``BEGIN IMMEDIATE`` inside an open one raises ``sqlite3.OperationalError: cannot start a
+        transaction within a transaction``.
+        """
+        self._conn.execute("BEGIN IMMEDIATE")
+        try:
+            yield
+        except BaseException:
+            self._conn.rollback()
+            raise
+        else:
+            self._conn.commit()
 
     def _create_schema(self) -> None:
         self._conn.execute(
