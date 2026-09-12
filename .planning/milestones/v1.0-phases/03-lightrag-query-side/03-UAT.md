@@ -4,6 +4,10 @@ phase: 03-lightrag-query-side
 source: [03-VERIFICATION.md]
 started: 2026-09-01T22:36:05Z
 updated: 2026-09-06T00:00:00Z
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-09-12
+  gap_snapshot: "testing::scenarios=2"
 ---
 
 ## Current Test
@@ -17,6 +21,7 @@ awaiting: user response
 ## Tests
 
 ### 1. Live five-arm parity comparison after rebuilding the v1 environment
+
 expected: Rebuild the v1 pinned environment (v1/README-PARITY.md), re-run v1's real ingest to produce v1/.venv, v1/.parity_working_dir, v1/.parity_v2_store, v1/.env.parity, then re-run `databasise.parity.run_comparison` for all five arms and `databasise.evidence.parity_report` to render PARITY-EVIDENCE.md. Each arm's status flips from `inconclusive` to `completed` with a real N=5 keyword variance band and real sym_diff numbers, or every out-of-tolerance excursion is named in DECLARED-DEVIATIONS.md.
 result: issue
 reported: "Live run succeeded (all 5 arms completed, real N=5 variance bands, hybrid/local/global sym_diff=0, storage audits clean) but PARITY-EVIDENCE.md cannot render: naive arm's tail-truncation excursions (sym_diff=2/4, agreement=1.000, first_disagreement=10) need a named cause and parity_report.py has no mechanism to accept one (_collect_deviations hardcodes cause=\"\"); prose sections also hardcode the environment-refusal narrative, now false. User: mark as issue."
@@ -24,6 +29,7 @@ severity: major
 status_update: "2026-09-06, 03-13-PLAN.md: the graph-arm crash this test's own G-03-1 follow-on named (hybrid/local/global's entity-hydrate-expand/relation-hydrate-expand NodeExecutionError) is now repaired (03-11/03-12) and a fresh five-arm run against that fixed source is committed. All five arms complete a real, non-degraded retrieval on both sides — see test 3 below for what that run actually measured and what remains outstanding."
 
 ### 2. Human spot-check of answer substance for the two corpus queries
+
 expected: With the v1 environment and imported index present, run q1 and q2 through `databasise.parity.run_comparison --arm naive` and through v1 directly, read both answers side by side, and record a match / no-match judgment with notes for each query pair.
 result: [pending]
 landing place: `databasise/evidence/human_findings.json`'s `answer_spotchecks` list (03-10-PLAN.md Task 3) — read and rendered by `databasise/evidence/parity_report.py`'s `_render_answer_spotcheck()` into `PARITY-EVIDENCE.md`'s "Human spot-check of answer substance" section, per query, on every render. Both q1 and q2 currently render as explicitly unrecorded; this test closes once an entry is added and the document re-rendered.
@@ -53,6 +59,7 @@ arm status update (2026-09-06, 03-13-PLAN.md): the graph-arm crash named above i
 - **Re-render after editing:** `cd databasise && uv run python -m databasise.evidence.parity_report` — this re-renders `PARITY-EVIDENCE.md`'s "Human spot-check of answer substance" section from the new entries.
 
 ### 3. CONTRACT §5 human-authored declared-deviation causes
+
 expected: |
   Every `declared_causes` entry in `databasise/evidence/human_findings.json` carries a cause the human owner (christopher@deocracy.org) personally holds, with `recorded_by` naming the owner, not an AI agent — CONTRACT §5's parity-not-gain rule requires a human-authored cause for each named excursion, and none on file today qualifies.
 result: [pending]

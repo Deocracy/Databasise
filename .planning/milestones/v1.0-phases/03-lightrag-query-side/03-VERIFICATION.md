@@ -6,6 +6,7 @@ score: 3/4 must-haves verified (criteria 4/5 remain N/A — legitimately deferre
 behavior_unverified: 0
 overrides_applied: 0
 covered_files:
+
   - ".planning/REQUIREMENTS.md"
   - ".planning/phases/03-lightrag-query-side/03-01-PLAN.md"
   - ".planning/phases/03-lightrag-query-side/03-01-SUMMARY.md"
@@ -43,6 +44,7 @@ covered_files:
   - "databasise/parts_core/lightrag/entity_hydrate_expand.py"
   - "databasise/parts_core/lightrag/relation_hydrate_expand.py"
   - "databasise/stores/vector.py"
+
 covered_digest: "v1:sha256:31af7c5a3acfa3bc6c78b14b0fea18c1572233399db50a56941506ce52c1b3c8"
 re_verification:
   previous_status: gaps_found
@@ -59,12 +61,17 @@ re_verification:
 gaps: []
 behavior_unverified_items: []
 human_verification:
+
   - test: "CONTRACT §5 human-authored declared-deviation causes (naive's 2 existing entries + 18 new hybrid/local/global excursions)"
     expected: "The human owner (christopher@deocracy.org) personally reviews each named excursion and records their own cause and recorded_by in databasise/evidence/human_findings.json's declared_causes list, replacing the two AI-authored entries and adding one entry per (arm, query, field) row DECLARED-DEVIATIONS.md's 'Outstanding' section lists. Exact commands, JSON shape, and the full 18-row breakdown are in 03-UAT.md test 3."
     why_human: "CONTRACT §5 requires a human-authored cause naming the human owner as recorded_by; an executor authoring this on the owner's behalf would be a false attestation of human review that did not happen (03-REVIEW-FIX.iter1.md's WR-02 explicitly declined to fabricate one for this reason). No code change closes this — it requires the owner's own judgment about whether each excursion is tolerable variance or a real defect."
   - test: "Human spot-check of answer substance for q1/q2 (criterion 6, D-05 substitute gate)"
     expected: "The owner runs q1 and q2 through databasise.parity.run_comparison --arm naive, compares the decomposed answer against v1's recorded original_arm_result.answer, and records a match/no-match/partial judgment with notes in human_findings.json's answer_spotchecks list. Exact commands and JSON fields are in 03-UAT.md test 2."
     why_human: "Answer substance from a stochastic generator is not mechanically checkable, and no A/A calibration floor exists yet to substitute a numeric threshold (MACH-02/MACH-03 deferred to Phase 6). This is the explicit human half of the D-05 substitute gate — 03-UAT.md test 2 has been [pending] since the prior verification and remains so; the landing mechanism is real and tested (parity_report.py's _render_answer_spotcheck renders it), only the judgment itself is missing."
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-09-12
+  status: human_needed
 ---
 
 # Phase 3: LightRAG Query Side Verification Report
