@@ -1,28 +1,21 @@
 ---
-status: testing
+status: complete
 phase: 07-promotion-rollback
 source: [07-VERIFICATION.md]
 started: 2026-09-12T06:53:47Z
-updated: 2026-09-12T06:53:47Z
+updated: 2026-09-12T07:17:45Z
 ---
 
 ## Current Test
 
-number: 1
-name: Concurrent promote/rollback/retire against the same alias serializes or cleanly refuses
-expected: |
-  Either true serialization (one call fully completes before the other starts reading prior
-  state) or a clean refusal for the loser — never two rows minting the same semver, and never
-  `retire()`'s `ActiveGenerationRetirementError` guard passing on a generation that becomes
-  active only after the guard's own read.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
 ### 1. Concurrent promote/rollback/retire against the same alias
 
 expected: Either true serialization (one call fully completes before the other starts reading prior state) or a clean refusal for the loser — never two rows minting the same semver, and never `retire()`'s `ActiveGenerationRetirementError` guard passing on a generation that becomes active only after the guard's own read.
-result: [pending]
+result: pass
 
 **How to run it:** fire two concurrent calls against the same alias — e.g. `asyncio.gather()` over
 two `promote()` calls, or a `promote()` racing a `retire()`; equivalently two REST or MCP
@@ -40,9 +33,9 @@ pre-existing and was out of that plan's scope — not a regression introduced by
 ## Summary
 
 total: 1
-passed: 0
+passed: 1
 issues: 0
-pending: 1
+pending: 0
 skipped: 0
 blocked: 0
 
