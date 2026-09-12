@@ -300,16 +300,29 @@ Plans:
 
 **Goal**: The owner can promote a wiring and roll it back on recorded evidence, with nothing inferable by absence
 **Depends on**: Phase 6 (code complete; SC6/MACH-03 and Phase 3's MODAL-01 owner items deferred per `.planning/phases/06-hipporag-2-side-by-side/06-GATE-AMENDMENT.md`)
-**Requirements**: MACH-07, API-09, HARD-04, HARD-01, HARD-02
+**Requirements**: MACH-07, API-09 *(amended 2026-09-11 per `.planning/phases/07-promotion-rollback/07-GATE-AMENDMENT.md`: HARD-04, HARD-01 and HARD-02 deferred out of this phase — the operator-asserted path consumes no eval bundle, no floor and no verdict, so none of the three is reached by anything Phase 7 builds)*
 **Success Criteria** (what must be TRUE):
 
   1. Every generation record in the append-only ledger carries both `change_origin` and `promotion_provenance` — never defaulted, never inferable by absence — a semver is minted at promotion and only at promotion, tombstoned losers are never lifted, and the active pointer answers as a derived query over the ledger rather than a written field
   2. Owner promotes a wiring by explicit call with `operator_asserted` provenance and non-empty `promotion_trace_ids`, carrying no verdict and no tier-of-decision; the ledger append is the decision and the alias repoint is atomic; rollback follows the same path
   3. Promote-next and promote-now stay unavailable for answer-level and index-side mutation classes under the default measurement posture, and the refusal names the posture rather than failing silently
-  4. The owner's own document corpus is layered into the eval bundle before any promotion decision is taken on it
-  5. The gate scripts fail on missing extraction instead of passing vacuously, and every ANATOMY §F row points at its landed repair with stale cross-document rows reconciled
+  4. ~~The owner's own document corpus is layered into the eval bundle before any promotion decision is taken on it~~ — **STRUCK 2026-09-11** *(deferred per `.planning/phases/07-promotion-rollback/07-GATE-AMENDMENT.md`: HARD-04 moves to the owner's in-depth testing / hardening phase, or the first gate-adjudicated promotion, whichever comes first — an operator-asserted promotion reads no eval bundle, so nothing in this phase consumes the owner-corpus layer. HARD-04 stays Pending.)*
+  5. ~~The gate scripts fail on missing extraction instead of passing vacuously, and every ANATOMY §F row points at its landed repair with stale cross-document rows reconciled~~ — **STRUCK 2026-09-11** *(deferred per `.planning/phases/07-promotion-rollback/07-GATE-AMENDMENT.md`: HARD-01 and HARD-02 move to the same phase, same point of first need — neither is consumed by the promote path, and where the repairs land relative to the never-edited `docs/system-model/` mirror travels with the deferral, unresolved. Both stay Pending.)*
 
-**Plans**: TBD
+**Plans**: 3 plans across 3 sequential waves (each plan modifies files the previous one created, so no two run in parallel)
+
+Plans:
+**Wave 1** *(tracer — runs alone, before any expansion)*
+
+- [ ] 07-01-PLAN.md — Tracer: an operator promotes a wiring in-process, one row lands in the append-only ledger, and the alias selector resolves to it through the unchanged Phase 4 read path — plus the four additive columns, the derived semver and mutation class, and SC3's posture refusal
+
+**Wave 2** *(blocked on 07-01 — shares `engine.py`, `promotion.py`, `refusals.py`)*
+
+- [ ] 07-02-PLAN.md — `rollback()` to an explicitly named semver and `retire()` as a tombstone on the same append-only path, with the never-lifted rule proven against the real write path
+
+**Wave 3** *(blocked on 07-02 — the three verbs must exist before the transports wrap them)*
+
+- [ ] 07-03-PLAN.md — API-09 across all three transports: three REST routes, three MCP tools, conformance parity, the §18.5 coverage record, and the phase's evidence document
 
 ## Progress
 
@@ -338,7 +351,7 @@ Every v1 requirement maps to exactly one phase. 34/34 mapped.
 | 4. The Seam | API-03, API-04, API-05, API-10, API-11, EMBED-02, MACH-11 | 7 |
 | 5. Opaque-Side Admission | MODAL-02, MODAL-03, MACH-04, API-01, API-02, API-06, API-07, HARD-03 | 8 |
 | 6. HippoRAG 2 & Side-by-Side | MODAL-04, MODAL-05, API-08, MACH-10, MACH-02, MACH-03 | 6 |
-| 7. Promotion & Rollback | MACH-07, API-09, HARD-04, HARD-01, HARD-02 | 5 |
+| 7. Promotion & Rollback | MACH-07, API-09 (+ HARD-04, HARD-01, HARD-02 deferred — see `.planning/phases/07-promotion-rollback/07-GATE-AMENDMENT.md`) | 2 built / 3 deferred |
 
 ## Ordering Constraints
 
@@ -349,4 +362,4 @@ These are binding, not preferences:
 - **Envelope before endpoints**: Phase 4 locks the §18.2 envelope shape (including MACH-11's seam-level event extension) before Phase 5 ships ingest, delete, and status endpoints.
 - **Rig before comparison surface**: API-08's comparison endpoint lands in Phase 6 with the side-by-side rig, not earlier. API-09's promotion path lands in Phase 7 with the ledger, not earlier.
 - **Eval infrastructure at point of need**: the bundle and A/A floor stand up at Phase 6's cross-modality run, before any promotion or parity claim rides on a measured number, per `.planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md` and its second deferral in `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`. Phase 3's parity comparison uses the deterministic retrieval-level substitute gate instead (D-05).
-- **HARD-04 before promotion**: the owner's corpus is in the bundle before any promotion decision rides on it (Phase 7).
+- **HARD-04 before promotion**: the owner's corpus is in the bundle before any promotion decision rides on it *(amended 2026-09-11 per `.planning/phases/07-promotion-rollback/07-GATE-AMENDMENT.md`: this constraint now reads "before any promotion decision that rides on a measured number" — the class it was written for. Phase 7 builds only the operator-asserted path, which carries no verdict and reads no bundle, so HARD-04 moves to the owner's hardening phase or the first gate-adjudicated promotion, whichever comes first.)*
