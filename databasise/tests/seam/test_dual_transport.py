@@ -46,7 +46,7 @@ from databasise.runner.trace import TokenAccounting
 from databasise.seam.engine import Databasise
 from databasise.seam.envelope import ResponseEnvelope
 from databasise.seam.query import QueryObject
-from databasise.seam.refusals import DisagreeingPromotionTraceIdsError
+from databasise.seam.refusals import DisagreeingPromotionTraceIdsError, UnrecognisedPromotionVerbError
 from databasise.seam.rest import create_app
 from databasise.seam.trace_store import TraceStore
 from databasise.wirings.resolve import all_wirings
@@ -447,5 +447,53 @@ async def test_refusal_parity_across_three_transports(tmp_path):
     mcp_detail_text = str(mcp_exc_info.value)
     mcp_detail = json.loads(mcp_detail_text[mcp_detail_text.index("{") :])
     assert mcp_detail["refusal_type"] == "DisagreeingPromotionTraceIdsError"
+
+    assert Ledger(store_root)._conn.execute("SELECT COUNT(*) FROM ledger").fetchone()[0] == 0
+
+
+async def test_an_out_of_enum_verb_refuses_identically_across_three_transports(tmp_path):
+    """07-04-PLAN.md: closes 07-VERIFICATION.md's `missing:` item 2's MCP half and all of item 3
+    — one out-of-enum ``verb`` string refuses under the identical named refusal
+    (``UnrecognisedPromotionVerbError``) on all three transports, mirroring
+    `test_refusal_parity_across_three_transports`'s own structure exactly: one shared store root
+    (safe here for the identical reason — the verb guard fires before any write, per Task 1's own
+    in-process test), one resolvable trace id, and a single body driven at all three transports in
+    turn."""
+    if not _mcp_available():
+        pytest.skip("the `mcp` extra is not installed")
+
+    store_root = tmp_path / "verb-refusal-3t-store"
+    store_root.mkdir()
+    trace_naive = _seed_fixed_trace(store_root, "naive", token="fixed-verb-refusal-naive")
+    alias = "three-transport-verb-refusal-alias"
+    body = {
+        "alias": alias,
+        "trace_ids": [trace_naive],
+        "change_origin": "human_edit",
+        "verb": "promote_next_typo",
+    }
+
+    in_process_engine = Databasise(store_root=store_root, workspace="verb-refusal-3t-ip")
+    with pytest.raises(UnrecognisedPromotionVerbError) as in_process_exc_info:
+        await in_process_engine.promote(
+            alias, [trace_naive], "human_edit", verb="promote_next_typo"
+        )
+    assert type(in_process_exc_info.value).__name__ == "UnrecognisedPromotionVerbError"
+
+    rest_app = create_app(store_root=store_root, workspace="verb-refusal-3t-rest")
+    rest_response = TestClient(rest_app).post("/promote", json=body)
+    assert rest_response.status_code == 422
+    assert rest_response.json()["refusal_type"] == "UnrecognisedPromotionVerbError"
+
+    from databasise.mcp import create_server
+    from databasise.mcp._sdk import import_sdk
+
+    ToolError = import_sdk("mcp.server.mcpserver.exceptions").ToolError
+    mcp_server = create_server(store_root=store_root, workspace="verb-refusal-3t-mcp")
+    with pytest.raises(ToolError) as mcp_exc_info:
+        await mcp_server.call_tool("promote", {"args": body})
+    mcp_detail_text = str(mcp_exc_info.value)
+    mcp_detail = json.loads(mcp_detail_text[mcp_detail_text.index("{") :])
+    assert mcp_detail["refusal_type"] == "UnrecognisedPromotionVerbError"
 
     assert Ledger(store_root)._conn.execute("SELECT COUNT(*) FROM ledger").fetchone()[0] == 0

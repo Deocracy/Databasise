@@ -28,11 +28,16 @@ collectible by pytest, so this table cannot drift from the code without failing 
 |---|---|---|---|
 | 1 | Every generation record carries `change_origin`/`promotion_provenance`, never defaulted; a semver is minted only at promotion; tombstoned losers are never lifted; the active pointer is a derived query | Holds | `tests/seam/test_promote.py::test_record_carries_change_origin_and_operator_asserted_provenance`, `tests/seam/test_promote.py::test_absent_change_origin_refuses_by_name`, `tests/seam/test_promote.py::test_first_promotion_mints_1_0_0`, `tests/seam/test_promote.py::test_no_path_mints_a_patch`, `tests/seam/test_retire.py::test_never_lifted_repromotion_is_a_new_generation`, `tests/ledger/test_ledger.py::test_3_active_pointer_is_computed_by_a_query_not_a_column` |
 | 2 | Owner promotes with `operator_asserted` provenance and non-empty `promotion_trace_ids`, no verdict/tier-of-decision; the ledger append is the decision, the alias repoint is atomic; rollback follows the same path | Holds | `tests/seam/test_promote.py::test_promote_appends_one_row_the_alias_selector_resolves`, `tests/seam/test_promote.py::test_empty_trace_ids_refuses_before_any_write`, `tests/seam/test_rollback.py::test_rollback_repoints_the_alias_to_the_named_generation`, `tests/seam/test_rollback.py::test_rollback_carries_no_verdict` |
-| 3 | `promote-next`/`promote-now` stay unavailable for answer-level and index-side classes under the default posture, and the refusal names the posture | Holds | `tests/seam/test_promotion_posture.py::test_promote_next_refuses_at_answer_level_naming_the_posture`, `tests/seam/test_promotion_posture.py::test_promote_next_refuses_at_retrieval_side_naming_the_missing_floor`, `tests/seam/test_promotion_posture.py::test_no_gate_verb_appends_a_row` |
+| 3 | `promote-next`/`promote-now` stay unavailable for answer-level and index-side classes under the default posture, and the refusal names the posture | Holds | `tests/seam/test_promotion_posture.py::test_promote_next_refuses_at_answer_level_naming_the_posture`, `tests/seam/test_promotion_posture.py::test_promote_next_refuses_at_retrieval_side_naming_the_missing_floor`, `tests/seam/test_promotion_posture.py::test_no_gate_verb_appends_a_row`, `tests/seam/test_promotion_posture.py::test_an_unrecognised_verb_refuses_by_name_before_any_trace_resolution[promote_next_typo]`, `tests/seam/test_dual_transport.py::test_an_out_of_enum_verb_refuses_identically_across_three_transports` |
 
 Every row above is `[code-verified]`: read directly from `databasise/seam/engine.py`,
 `databasise/seam/promotion.py`, `databasise/ledger/ledger.py` and the cited test files, this
 session, not inferred from the plan text.
+
+Criterion 3's verb-refusal architecture was completed in 07-04 after `07-VERIFICATION.md` scored it
+partial (`07-REVIEW.md` CR-01): an out-of-enum `verb` string now refuses by name
+(`UnrecognisedPromotionVerbError`) before any trace-id resolution runs, on all three transports,
+rather than crashing with a bare `ValueError`.
 
 ## API-09: the same three verbs, reachable identically over REST and MCP
 
@@ -109,11 +114,15 @@ dispatched-node-id-set signal a promote call needs is fully expressible without 
 
 **Limits, stated plainly:**
 
-- **The "Criteria" table's own collectibility check runs only against extras-free test files** (no
-  `rest`/`mcp` extra required) — a deliberate scope narrowing so `test_promotion_ledger_record.py`
-  passes under a bare `uv run pytest`, not a claim that the REST/MCP tests are less real; they are
-  cited in prose above and are genuinely collected and passing in this session's environment (both
-  extras installed).
+- **The "Criteria" table's own collectibility check runs only against extras-free test files**,
+  with one named exception added in 07-04: criterion 3 also cites
+  `tests/seam/test_dual_transport.py::test_an_out_of_enum_verb_refuses_identically_across_three_transports`,
+  which requires the `rest`/`mcp` extras to collect. That node id proves the three-transport parity
+  07-VERIFICATION.md's `missing:` item 3 required; every other cited node id in the table stays
+  extras-free. `test_promotion_ledger_record.py`'s own collectibility check runs in this project's
+  own dev environment, where both extras are already installed, so this does not change the check's
+  own pass/fail outcome here — it is stated so a reader running the check in a bare, extras-free
+  environment understands why this one node id would report "found no collectors" there.
 - **No real corpus, no live LLM/embedding call, no real spend** anywhere in this document's cited
   tests — every promotion target is a hand-seeded trace record naming a real registered arm
   (`naive`/`bypass`), never a fabricated wiring document, but never a live query run either.
