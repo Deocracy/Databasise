@@ -36,13 +36,13 @@
     {
       "number": "7",
       "name": "Promotion & Rollback",
-      "status": "pending"
+      "status": "in_progress"
     }
   ],
   "next": {
     "command": "/gsd:progress --next",
-    "label": "Advance to the next step",
-    "reason": "Phase 7 of 7 · executing"
+    "label": "Advance to the next step (verify)",
+    "reason": "Phase 7 of 7 · ready to verify"
   },
-  "updated_at": "2026-09-12T01:27:51.877Z"
+  "updated_at": "2026-09-12T05:27:18.089Z"
 }
