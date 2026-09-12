@@ -1,0 +1,8 @@
+{"ts": "2026-09-12T08:09:21.554509+00:00", "run": "edge2", "event": "prefix_asymmetry", "doc_prefix": "Passage: ", "query_prefix": "Query: ", "gold_r3": 0.75}
+{"ts": "2026-09-12T08:09:21.821278+00:00", "run": "edge2", "event": "prefix_asymmetry", "doc_prefix": "", "query_prefix": "Query: ", "gold_r3": 0.75}
+{"ts": "2026-09-12T08:09:22.092549+00:00", "run": "edge2", "event": "prefix_asymmetry", "doc_prefix": "Passage: ", "query_prefix": "", "gold_r3": 0.75}
+{"ts": "2026-09-12T08:09:26.050384+00:00", "run": "edge2", "event": "empty_input", "model": "A", "ok": true, "dim": 1024, "norm": 117.9813}
+{"ts": "2026-09-12T08:09:26.777464+00:00", "run": "edge2", "event": "empty_input", "model": "B", "ok": false, "error": "llama_decode returned -1"}
+{"ts": "2026-09-12T08:16:01.621736+00:00", "run": "edge2", "event": "prefix_asymmetry", "doc_prefix": "Passage: ", "query_prefix": "Query: ", "gold_r3": 0.75}
+{"ts": "2026-09-12T08:16:01.885881+00:00", "run": "edge2", "event": "prefix_asymmetry", "doc_prefix": "", "query_prefix": "Query: ", "gold_r3": 0.75}
+{"ts": "2026-09-12T08:16:02.154279+00:00", "run": "edge2", "event": "prefix_asymmetry", "doc_prefix": "Passage: ", "query_prefix": "", "gold_r3": 0.75}

@@ -1,0 +1,6 @@
+{"ts": "2026-09-12T08:05:19.585638+00:00", "run": "armB2_docs", "event": "model_loaded", "model": "Qwen3-1.7B-Q8_0.gguf", "pooling": "last", "effective_pooling": 3, "n_embd": 2048, "load_s": 1.39}
+{"ts": "2026-09-12T08:05:20.358393+00:00", "run": "armB2_docs", "event": "embedded", "n": 20, "prefix": "", "marker_mode": "emb", "embed_s": 0.772, "per_text_ms": 38.62}
+{"ts": "2026-09-12T08:05:20.384362+00:00", "run": "armB2_docs", "event": "saved", "path": ".planning/spikes/004-self-embedding-parity/results/armB2_docs.json"}
+{"ts": "2026-09-12T08:15:21.970388+00:00", "run": "armB2_docs", "event": "model_loaded", "model": "Qwen3-1.7B-Q8_0.gguf", "pooling": "last", "effective_pooling": 3, "n_embd": 2048, "load_s": 1.37}
+{"ts": "2026-09-12T08:15:22.749285+00:00", "run": "armB2_docs", "event": "embedded", "n": 20, "prefix": "", "marker_mode": "emb", "embed_s": 0.779, "per_text_ms": 38.94}
+{"ts": "2026-09-12T08:15:22.777660+00:00", "run": "armB2_docs", "event": "saved", "path": "results/armB2_docs.json"}

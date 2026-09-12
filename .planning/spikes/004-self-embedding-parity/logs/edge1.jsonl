@@ -1,0 +1,6 @@
+{"ts": "2026-09-12T08:08:46.131067+00:00", "run": "edge1", "event": "empty_input", "model": "A", "ok": true, "dim": 1024, "norm": 117.9813}
+{"ts": "2026-09-12T08:08:46.131789+00:00", "run": "edge1", "event": "empty_input", "model": "B", "ok": false, "error": "llama_decode returned -1"}
+{"ts": "2026-09-12T08:08:46.375070+00:00", "run": "edge1", "event": "truncation", "model": "A", "ok": true, "tokens": 4202, "n_ctx": 2048, "dim": 1024}
+{"ts": "2026-09-12T08:08:46.566792+00:00", "run": "edge1", "event": "truncation", "model": "B", "ok": true, "tokens": 4201, "n_ctx": 2048, "dim": 2048}
+{"ts": "2026-09-12T08:08:46.590915+00:00", "run": "edge1", "event": "marker_escape", "model": "A", "ok": true, "cos_with_and_without_trailing": 0.9899}
+{"ts": "2026-09-12T08:08:46.620566+00:00", "run": "edge1", "event": "marker_escape", "model": "B", "ok": true, "cos_with_and_without_trailing": 0.4775}

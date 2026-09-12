@@ -1,0 +1,8 @@
+{"ts": "2026-09-12T08:04:41.952948+00:00", "run": "armA_q", "event": "model_loaded", "model": "Qwen3-Embedding-0.6B-Q8_0.gguf", "pooling": "native", "effective_pooling": 3, "n_embd": 1024, "load_s": 0.5}
+{"ts": "2026-09-12T08:04:42.208846+00:00", "run": "armA_q", "event": "embedded", "n": 22, "prefix": "", "marker_mode": "none", "embed_s": 0.256, "per_text_ms": 11.62}
+{"ts": "2026-09-12T08:05:02.707218+00:00", "run": "armA_q", "event": "model_loaded", "model": "Qwen3-Embedding-0.6B-Q8_0.gguf", "pooling": "native", "effective_pooling": 3, "n_embd": 1024, "load_s": 0.48}
+{"ts": "2026-09-12T08:05:02.952906+00:00", "run": "armA_q", "event": "embedded", "n": 22, "prefix": "", "marker_mode": "none", "embed_s": 0.246, "per_text_ms": 11.16}
+{"ts": "2026-09-12T08:05:02.966617+00:00", "run": "armA_q", "event": "saved", "path": ".planning/spikes/004-self-embedding-parity/results/armA_q.json"}
+{"ts": "2026-09-12T08:15:13.256483+00:00", "run": "armA_q", "event": "model_loaded", "model": "Qwen3-Embedding-0.6B-Q8_0.gguf", "pooling": "native", "effective_pooling": 3, "n_embd": 1024, "load_s": 0.49}
+{"ts": "2026-09-12T08:15:13.501392+00:00", "run": "armA_q", "event": "embedded", "n": 22, "prefix": "", "marker_mode": "none", "embed_s": 0.245, "per_text_ms": 11.13}
+{"ts": "2026-09-12T08:15:13.520363+00:00", "run": "armA_q", "event": "saved", "path": "results/armA_q.json"}
