@@ -10,4 +10,6 @@ Run as `/gsd-spike melodyscribe` when there is GPU time. Two experiments, each w
 
 2. **2B routing accuracy.** Given extracted pieces from the same corpus, does MiniCPM5-2B choose graph / vector / SQL / Folio correctly against a frontier-labelled set, with grammar-constrained decoding on so only semantic errors count. Pass: accuracy threshold stated before the run. If it fails, the fine-tune path is MiniCPM's own recipe: frontier teacher on our schema, on-policy distillation into the 2B, producing `MelodyScribe-2B-v0.1`.
 
+3. **Cache reuse quality (added 2026-09-11).** On the same corpus, compare answer quality when retrieved chunks are composed as isolated KV modules (llama.cpp `seq_cp` + `seq_add`) versus fully prefilled, and versus llama-server `--cache-reuse` shift reuse. See `reference/micro-harnesses/score-format-and-cache.md` §4-5. Pass: stated non-inferiority margin.
+
 Evidence standard: no vendor benchmark number settles either; the rig does. Sources and prior art: `reference/micro-harnesses/`.
