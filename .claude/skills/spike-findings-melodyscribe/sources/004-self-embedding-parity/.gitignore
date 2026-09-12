@@ -1,0 +1,6 @@
+# vector dumps over 3 MB stay on disk; run.sh regenerates them
+results/headBplain_lam1_head.json
+results/armB2_chunks.json
+results/headB_lam1_head.json
+results/headB_lam100_head.json
+results/headB_lam100000_head.json
