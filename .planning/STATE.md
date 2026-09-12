@@ -1,19 +1,19 @@
 ---
-gsd_state_version: "1.0"
+gsd_state_version: 1.0
 milestone: v1.0
 current_phase: 06
 current_phase_name: HippoRAG 2 & Side-by-Side
 status: executing
-stopped_at: Phase 07 complete, ready to plan Phase 3
-last_updated: "2026-09-12T18:04:40.055Z"
+stopped_at: Completed 06-18-PLAN.md (Phase 6 gap-closure paperwork complete)
+last_updated: "2026-09-12T18:32:01.780Z"
 last_activity: 2026-09-12
-last_activity_desc: Phase 07 complete, transitioned to Phase 3
-state_head: e25198e5b4280ce92f0a4e97dece6e58637c3523
+last_activity_desc: Phase 06 execution started
+state_head: fa2077d614e1e4cad60ad1b667067fe93ac45dc0
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 64
-  completed_plans: 63
+  completed_plans: 64
 milestone_name: milestone
 ---
 
@@ -24,16 +24,16 @@ milestone_name: milestone
 See: .planning/PROJECT.md (updated 2026-09-12)
 
 **Core value:** Modalities are swappable without consumers noticing — LightRAG and HippoRAG 2 both live behind one unchanging §18 envelope, comparable side-by-side on the rig.
-**Current focus:** Phase 3 — LightRAG Query Side
+**Current focus:** Phase 06 — HippoRAG 2 & Side-by-Side
 
 ## Current Position
 
-Phase: 06 (HippoRAG 2 & Side-by-Side) — READY TO EXECUTE
-Plan: Not started
+Phase: 06 (HippoRAG 2 & Side-by-Side) — EXECUTING
+Plan: 2 of 18
   corrected here from find-phase's actual plan/summary counts rather than the stale
   auto-incremented counter, same drift-correction this section already noted before this session)
 Status: Ready to execute
-Last activity: 2026-09-12 — Phase 07 complete, transitioned to Phase 3
+Last activity: 2026-09-12 — Phase 06 execution started
 
 Progress: [██████████] 100%
 
@@ -103,6 +103,7 @@ Progress: [██████████] 100%
 | Phase 07 P03 | ~75min | 3 tasks | 10 files |
 | Phase 07 P04 | ~21 min | 2 tasks | 9 files |
 | Phase 07 P05 | 35min | 3 tasks | 6 files |
+| Phase 06-hipporag-2-side-by-side P18 | 12min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -195,6 +196,7 @@ scoped, single-cause bug fixes rather than redesigns, and are documented as Rule
 - [Phase 07]: 07-04: Kept PromoteRequest.verb/PromoteToolArgs.verb as plain str with no Literal/field_validator; a named UnrecognisedPromotionVerbError raised inside Databasise.promote() (checked before trace-id resolution) is the sole refusal mechanism, so REST/MCP/in-process all surface the identical refusal_type. Closes 07-VERIFICATION.md's sole gap and 07-REVIEW.md's CR-01.
 - [Phase 07]: 07-05: SQLite BEGIN IMMEDIATE transaction (Ledger.transaction()) over the WR-01-proposed asyncio.Lock — serializes at the file, covering multi-process/multi-instance access, not only one event loop. — An asyncio.Lock only serializes callers sharing one Databasise instance on one event loop; it does nothing for a second process or REST worker sharing the same store_root/ledger.db.
 - [Phase 07]: 07-05: DROP INDEX + CREATE UNIQUE INDEX under a new name (ux_ledger_generation), not CREATE UNIQUE INDEX IF NOT EXISTS reusing ix_ledger_generation. — Verified directly against SQLite 3.53.1 that reusing the old index name is a silent no-op over an existing plain index — the uniqueness constraint would never take effect on a database that already ran the old schema.
+- [Phase 06]: 06-18: SC6 annotated with 4th MACH-03 deferral (Phase 3 SC5 form, not struck-through); Plans line corrected to 18/18, 5/6, SC2 VERIFIED, WINDOWS entry 3 closed; redundant module-level pytestmark removed from test_aa_run.py (8 warnings -> 0, 1068 passed/1 skipped held).
 
 ### Pending Todos
 
@@ -232,6 +234,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-12T15:17:51.907Z
-Stopped at: Phase 07 complete, ready to plan Phase 3
+Last session: 2026-09-12T18:32:01.640Z
+Stopped at: Completed 06-18-PLAN.md (Phase 6 gap-closure paperwork complete)
 Resume file: None
