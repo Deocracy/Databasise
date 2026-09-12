@@ -265,3 +265,15 @@ None - no external service configuration required.
 ---
 *Phase: 07-promotion-rollback*
 *Completed: 2026-09-12*
+
+## Self-Check: PASSED
+
+All key files confirmed present on disk (`databasise/ledger/ledger.py`, `databasise/seam/engine.py`,
+`databasise/tests/seam/test_operator_verb_concurrency.py`,
+`databasise/tests/ledger/test_ledger_generation_uniqueness.py`,
+`databasise/evidence/PROMOTION-LEDGER-EVIDENCE.md`,
+`.planning/phases/07-promotion-rollback/COVERAGE.md`,
+`.planning/phases/07-promotion-rollback/07-05-SUMMARY.md`). All four commits confirmed in
+`git log` (`89d55fb`, `3fe2ee0`, `9882a4c`, `f8bd732`). All plan-level `<verification>` commands
+re-run and passing: both new test modules green, full suite 1067 passed/2 skipped/0 failed,
+`git diff databasise/seam/refusals.py` empty, `test_dual_transport.py` unmodified and passing.
