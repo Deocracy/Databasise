@@ -13,3 +13,5 @@ Run as `/gsd-spike melodyscribe` when there is GPU time. Per D-MS-05 the model s
 3. **Cache reuse quality (added 2026-09-11).** On the same corpus, compare answer quality when retrieved chunks are composed as isolated KV modules (llama.cpp `seq_cp` + `seq_add`) versus fully prefilled, and versus llama-server `--cache-reuse` shift reuse. See `reference/micro-harnesses/score-format-and-cache.md` §4-5. Pass: stated non-inferiority margin.
 
 Evidence standard: no vendor benchmark number settles either; the rig does. Sources and prior art: `reference/micro-harnesses/`.
+
+**Status (2026-09-12).** Ran as spikes 003 (experiment 2, VALIDATED), 004 (experiment 1 without the adapter, PARTIAL), 005 (experiment 3, PARTIAL); results in `reference/micro-harnesses/spike-results.md`. Remaining: the contrastive or LLM2Vec adapter half of experiment 1, which needs labelled query-passage pairs; spike 003's `teacher.json` supplies op labels but not query pairs.

@@ -1,0 +1,154 @@
+{
+ "arm": "minicpm1b",
+ "model_file": "MiniCPM5-1B-Q8_0.gguf",
+ "corpus_hash": "ac55d19ec162cc9abf51ddf8502436109b1439c5cbaea4cf41c448c11575d5bd",
+ "temperature": 0.0,
+ "seed": 1234,
+ "max_tokens": 1024,
+ "chat_template": false,
+ "grammar": "score-io-v0.2-spike003 file=graph,sql",
+ "schema": "ops.v0.2",
+ "load_seconds": 0.61,
+ "outputs": {
+  "a_kiss_for_corliss": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 330,
+   "completion_tokens": 4,
+   "seconds": 0.2,
+   "think_tag": false
+  },
+  "adam_collis": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 334,
+   "completion_tokens": 4,
+   "seconds": 0.09,
+   "think_tag": false
+  },
+  "charles_craft": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 533,
+   "completion_tokens": 4,
+   "seconds": 0.11,
+   "think_tag": false
+  },
+  "conrad_brooks": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 367,
+   "completion_tokens": 4,
+   "seconds": 0.09,
+   "think_tag": false
+  },
+  "deliver_us_from_evil_2014_film": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 345,
+   "completion_tokens": 4,
+   "seconds": 0.09,
+   "think_tag": false
+  },
+  "doctor_strange_2016_film": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 375,
+   "completion_tokens": 4,
+   "seconds": 0.09,
+   "think_tag": false
+  },
+  "ed_wood": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 260,
+   "completion_tokens": 4,
+   "seconds": 0.08,
+   "think_tag": false
+  },
+  "ed_wood_film": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 315,
+   "completion_tokens": 4,
+   "seconds": 0.08,
+   "think_tag": false
+  },
+  "janet_waldo": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 302,
+   "completion_tokens": 4,
+   "seconds": 0.09,
+   "think_tag": false
+  },
+  "kiss_and_tell_1945_film": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 296,
+   "completion_tokens": 4,
+   "seconds": 0.08,
+   "think_tag": false
+  },
+  "lord_high_treasurer": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 285,
+   "completion_tokens": 4,
+   "seconds": 0.08,
+   "think_tag": false
+  },
+  "meet_corliss_archer": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 340,
+   "completion_tokens": 4,
+   "seconds": 0.09,
+   "think_tag": false
+  },
+  "meet_corliss_archer_tv_series": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 309,
+   "completion_tokens": 4,
+   "seconds": 0.09,
+   "think_tag": false
+  },
+  "scott_derrickson": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 304,
+   "completion_tokens": 4,
+   "seconds": 0.1,
+   "think_tag": false
+  },
+  "secretary_of_state_for_constitutional_affairs": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 307,
+   "completion_tokens": 4,
+   "seconds": 0.09,
+   "think_tag": false
+  },
+  "shirley_temple": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 309,
+   "completion_tokens": 4,
+   "seconds": 0.09,
+   "think_tag": false
+  },
+  "sinister_film": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 287,
+   "completion_tokens": 4,
+   "seconds": 0.09,
+   "think_tag": false
+  },
+  "tyler_bates": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 394,
+   "completion_tokens": 4,
+   "seconds": 0.09,
+   "think_tag": false
+  },
+  "village_accountant": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 405,
+   "completion_tokens": 4,
+   "seconds": 0.09,
+   "think_tag": false
+  },
+  "woodson_arkansas": {
+   "text": "{\"ops\":[]}",
+   "prompt_tokens": 339,
+   "completion_tokens": 4,
+   "seconds": 0.09,
+   "think_tag": false
+  }
+ }
+}

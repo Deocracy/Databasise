@@ -17,6 +17,7 @@ context: /gsd-explore session on micro-harnesses; reference material collected i
 - D-MS-03: judge and falsifier roles are not MelodyScribe candidates (Phase 2 D-07, "judge never free", stands).
 - D-MS-04: naming convention per NAMING.md; models are `MelodyScribe-{size}-v{version}`.
 - D-MS-05 (2026-09-11): MelodyScribe is not bound to a 2B model. The starting ground is 1B to 10B dense, starting small; if a larger model, including a 30B to 40B mixture of experts, is better on the rig, that is what ships. Size is a variable the rig sweeps, and every size-specific note (VRAM sizing, KV arithmetic) is a worked example for the current candidate, not a constraint.
+- D-MS-05 measurement (2026-09-12, spike 003): MiniCPM5-1B emits no ops under greedy grammar decoding, raw or chat-templated; routing accuracy is flat 0.30 to 0.45 from 2B to 8B pre-fine-tune while recall rises only with verbosity (4 to 633 tokens and 0.1 to 25 s per paragraph). Cost is the differentiator today: the starting candidate is 2B-class and the size question reopens after fine-tuning on the teacher labels.
 
 **Evidence status.** The owner's motivating finding ("a very small model was as good as or better than a frontier model in many cases") is held in the dissertation workspace (spikes 001/017) and was not re-read; it stays unverified until reproduced on this rig. MiniCPM5-2B numbers are vendor-reported. See the ledgers in the reference folder.
 

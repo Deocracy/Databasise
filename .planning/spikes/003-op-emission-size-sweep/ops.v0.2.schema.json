@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "melodyscribe/ops/v0.2-spike003",
+  "title": "MelodyScribe op list (spike 003 v0.2 deviation: quote evidence)",
+  "description": "Local copy of spike-001 ops.schema.json with [start,end] character-offset evidence replaced by a verbatim quote substring. The harness resolves the quote to offsets (first occurrence after whitespace/case normalisation) and runs spike-001 Proof's span check unchanged. Spec v0.2 deviation, recorded in README; spike 001 untouched.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ops"],
+  "properties": {
+    "ops": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object", "additionalProperties": false,
+            "required": ["target", "s", "p", "o", "quote"],
+            "properties": {
+              "target": {"const": "graph"},
+              "s": {"type": "string", "minLength": 1, "maxLength": 512},
+              "p": {"type": "string", "minLength": 1, "maxLength": 128},
+              "o": {"type": "string", "minLength": 1, "maxLength": 512},
+              "s_type": {"type": "string", "maxLength": 64},
+              "o_type": {"type": "string", "maxLength": 64},
+              "quote": {"type": "string", "minLength": 3, "maxLength": 256}
+            }
+          },
+          {
+            "type": "object", "additionalProperties": false,
+            "required": ["target", "subject", "attribute", "value", "value_type", "quote"],
+            "properties": {
+              "target": {"const": "sql"},
+              "subject": {"type": "string", "minLength": 1, "maxLength": 512},
+              "attribute": {"type": "string", "minLength": 1, "maxLength": 128},
+              "value": {"type": "string", "minLength": 1, "maxLength": 512},
+              "value_type": {"enum": ["text", "number", "date"]},
+              "unit": {"type": "string", "maxLength": 32},
+              "valid_from": {"type": "string", "maxLength": 32},
+              "valid_to": {"type": "string", "maxLength": 32},
+              "quote": {"type": "string", "minLength": 3, "maxLength": 256}
+            }
+          }
+        ]
+      }
+    }
+  }
+}
