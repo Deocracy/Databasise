@@ -116,3 +116,33 @@ async def test_retire_vs_rollback_race_never_lets_a_rollback_outrun_a_tombstone(
                     "a rollback row committed after a tombstone naming the same generation "
                     f"(rows={rows})"
                 )
+
+
+async def test_six_concurrent_promotes_mint_six_distinct_versions_with_zero_exceptions():
+    """This race needs high concurrency — two concurrent promotes never reproduced it
+    (07-UAT.md); six is the count the original reproduction used, over the six registered arms."""
+    for _trial in range(_SIX_WAY_PROMOTE_TRIALS):
+        with tempfile.TemporaryDirectory() as tmp:
+            store_root = Path(tmp)
+            engine = _engine(store_root)
+            traces = [_seed_trace(store_root, arm) for arm in _SIX_ARMS]
+
+            results = await asyncio.gather(
+                *(
+                    engine.promote(_ALIAS, [trace], "human_edit")
+                    for trace in traces
+                ),
+                return_exceptions=True,
+            )
+
+            # Pure serialization: all six succeed, zero exceptions of any kind.
+            for outcome in results:
+                assert isinstance(outcome, PromotionResult), outcome
+
+            versions = [outcome.version for outcome in results]
+            assert len(set(versions)) == 6, f"duplicate minted semver among {versions}"
+
+            row_count = Ledger(store_root)._conn.execute(
+                "SELECT COUNT(*) FROM ledger"
+            ).fetchone()[0]
+            assert row_count == 6

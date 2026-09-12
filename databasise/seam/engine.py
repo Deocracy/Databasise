@@ -1172,7 +1172,12 @@ class Databasise:
         One ``INSERT`` in one transaction **is** the atomic alias repoint (CONTRACT §6) — no
         second write, no transaction wrapper around two statements. ``Ledger`` stays synchronous by
         its own deliberate exception; the append is offloaded at this async call site via
-        ``run_in_executor``.
+        ``run_in_executor``. **07-05-PLAN.md (G-07-1):** the read that mints the version (the
+        prior-active-generation read) now shares the INSERT's own ``BEGIN IMMEDIATE`` transaction
+        via :meth:`~databasise.ledger.ledger.Ledger.transaction` — still one INSERT, still no
+        second write, but the decision and the write are now atomic together, not only the write.
+        The gate-verb and not-built refusal branches raising inside that span are correct: they
+        are refusals, they write nothing, and the context manager rolls back an empty transaction.
         """
         if verb not in PROMOTION_VERBS:
             raise UnrecognisedPromotionVerbError(verb=verb)
@@ -1194,59 +1199,65 @@ class Databasise:
             offloaded call, so the read and the write are never split across two threads.
             """
             ledger = Ledger(self.store_root)
-            prior_record = ledger.by_alias(alias)
-            prior_resolved = (
-                resolved_wiring_for_arm(prior_record.mutation_id)
-                if prior_record is not None
-                else None
-            )
 
-            mutation_class = derive_mutation_class(new_resolved, prior_resolved)
+            with ledger.transaction():
+                prior_record = ledger.by_alias(alias)
+                prior_resolved = (
+                    resolved_wiring_for_arm(prior_record.mutation_id)
+                    if prior_record is not None
+                    else None
+                )
 
-            if verb in _GATE_VERBS:
-                enforce_gate_verb_posture(verb, mutation_class)  # always raises
+                mutation_class = derive_mutation_class(new_resolved, prior_resolved)
 
-            if verb != "operator-asserted":
-                # Unreachable by construction: promote()'s own top-of-body guard already raises
-                # UnrecognisedPromotionVerbError for anything outside PROMOTION_VERBS, and every
-                # member of that set is handled above (_NOT_BUILT_VERBS, _GATE_VERBS) or is this
-                # branch's own "operator-asserted". Kept as a backstop so a seventh PromotionVerb
-                # literal added without a matching branch here refuses by name instead of falling
-                # through into a ledger append (07-04-PLAN.md, closing 07-REVIEW.md CR-01).
-                raise UnrecognisedPromotionVerbError(verb=verb)
+                if verb in _GATE_VERBS:
+                    enforce_gate_verb_posture(verb, mutation_class)  # always raises
 
-            prior_version = prior_record.minted_version if prior_record is not None else None
-            prior_surface = (
-                declared_surface(prior_resolved, self.registry)
-                if prior_resolved is not None
-                else None
-            )
-            new_surface = declared_surface(new_resolved, self.registry)
-            minted_version = mint_version(prior_version, prior_surface, new_surface)
+                if verb != "operator-asserted":
+                    # Unreachable by construction: promote()'s own top-of-body guard already
+                    # raises UnrecognisedPromotionVerbError for anything outside
+                    # PROMOTION_VERBS, and every member of that set is handled above
+                    # (_NOT_BUILT_VERBS, _GATE_VERBS) or is this branch's own
+                    # "operator-asserted". Kept as a backstop so a seventh PromotionVerb literal
+                    # added without a matching branch here refuses by name instead of falling
+                    # through into a ledger append (07-04-PLAN.md, closing 07-REVIEW.md CR-01).
+                    raise UnrecognisedPromotionVerbError(verb=verb)
 
-            ledger_record = LedgerRecord(
-                mutation_id=arm_name,
-                mutation_class=mutation_class,
-                parent=prior_record.mutation_id if prior_record is not None else None,
-                arm_instance_hashes=arm_instance_hashes,
-                effect_size=None,
-                verdict=None,
-                evidence_pointer=None,
-                proposer_id="operator",
-                depth_label=None,
-                tier_of_decision=None,
-                decomposition_ratio=None,
-                opaque_ttl_renewals=[],
-                parity_records=[],
-                promotion_provenance=PROVENANCE_OPERATOR_ASSERTED,
-                promotion_trace_ids=list(trace_ids),
-                change_origin=change_origin,
-                record_kind=RECORD_KIND_PROMOTION,
-                alias=alias,
-                minted_version=minted_version,
-                targets_version=None,
-            )
-            return minted_version, ledger.append(ledger_record)
+                prior_version = (
+                    prior_record.minted_version if prior_record is not None else None
+                )
+                prior_surface = (
+                    declared_surface(prior_resolved, self.registry)
+                    if prior_resolved is not None
+                    else None
+                )
+                new_surface = declared_surface(new_resolved, self.registry)
+                minted_version = mint_version(prior_version, prior_surface, new_surface)
+
+                ledger_record = LedgerRecord(
+                    mutation_id=arm_name,
+                    mutation_class=mutation_class,
+                    parent=prior_record.mutation_id if prior_record is not None else None,
+                    arm_instance_hashes=arm_instance_hashes,
+                    effect_size=None,
+                    verdict=None,
+                    evidence_pointer=None,
+                    proposer_id="operator",
+                    depth_label=None,
+                    tier_of_decision=None,
+                    decomposition_ratio=None,
+                    opaque_ttl_renewals=[],
+                    parity_records=[],
+                    promotion_provenance=PROVENANCE_OPERATOR_ASSERTED,
+                    promotion_trace_ids=list(trace_ids),
+                    change_origin=change_origin,
+                    record_kind=RECORD_KIND_PROMOTION,
+                    alias=alias,
+                    minted_version=minted_version,
+                    targets_version=None,
+                )
+                generation_ordinal = ledger.append(ledger_record)
+            return minted_version, generation_ordinal
 
         minted_version, generation_ordinal = await asyncio.get_running_loop().run_in_executor(
             None, _promote_sync
