@@ -47,6 +47,16 @@ database, never falls back to a plausible string. All four columns land in the s
 TABLE IF NOT EXISTS`` column list, following the identical no-migration precedent the ``alias``
 column set: the table holds zero rows in every environment this milestone runs in.
 
+**07-05-PLAN.md (G-07-1): ``(alias, minted_version)`` is now UNIQUE.** A minted semver is a
+published name under D-06/CONTRACT §0.4 and is never reused; previously this rule was enforced
+only by a read (``by_alias``/``generation_state``) inside the promoting verb, which G-07-1 proved
+insufficient under concurrency — two racing writers could both read "no conflict" before either
+committed. ``ux_ledger_generation`` (see :meth:`Ledger._create_schema`) now enforces it at the
+database itself, independent of any Python read path. Tombstone rows are exempt by SQLite's own
+NULL-distinctness rule (verified: two rows with ``minted_version IS NULL`` on the same ``alias``
+are accepted under a plain unique index), not by a partial-index predicate — retirement stays
+unaffected.
+
 **07-05-PLAN.md (G-07-1): :meth:`Ledger.transaction`.** ``append()`` alone was never the gap —
 07-REVIEW.md's WR-01 and 07-UAT.md's reproduction both showed that ``seam/engine.py``'s three
 operator verbs read a guard (the tombstone check, the active-generation check, the prior-version
@@ -191,9 +201,28 @@ class Ledger:
         self._conn.execute(
             "CREATE INDEX IF NOT EXISTS ix_ledger_alias ON ledger(alias)"
         )
+        # G-07-1/07-05-PLAN.md: DROP the old plain index by name, then CREATE the UNIQUE index
+        # under a NEW name. Per the plan's own verified fact (mechanism_decision fact 2):
+        # `CREATE UNIQUE INDEX IF NOT EXISTS ix_ledger_generation ...` over an EXISTING plain
+        # index of that same name is a silent no-op in SQLite 3.53.1 — sqlite_master.sql would
+        # still read `CREATE INDEX`, and duplicates would still be accepted, on any database that
+        # already ran the old schema. Dropping first and naming the replacement differently is the
+        # whole fix; reusing the old name would ship a "fix" that does nothing on an existing
+        # ledger.db. Dropping/creating an index is not a row mutation, so the append-only
+        # BEFORE UPDATE/BEFORE DELETE triggers below are untouched.
+        self._conn.execute("DROP INDEX IF EXISTS ix_ledger_generation")
         self._conn.execute(
-            "CREATE INDEX IF NOT EXISTS ix_ledger_generation ON ledger(alias, minted_version)"
+            "CREATE UNIQUE INDEX IF NOT EXISTS ux_ledger_generation ON ledger(alias, minted_version)"
         )
+        # ponytail: a raw sqlite3.IntegrityError from this index is deliberately NOT wrapped into
+        # a SeamRefusalError. Once Ledger.transaction() (above) encloses every write path, this
+        # constraint is a backstop no caller can reach through the seam — it signals a broken
+        # machine invariant, not a caller error, exactly like _promote_sync's own unreachable-by-
+        # construction UnrecognisedPromotionVerbError backstop. Wrapping it would add new §18
+        # surface for a path no consumer can reach. Second ceiling: if a pre-existing database
+        # already holds duplicate (alias, minted_version) rows, this CREATE UNIQUE INDEX fails at
+        # open time — that is a genuine pre-existing invariant violation and must surface loudly;
+        # no repair machinery is added for it here.
         self._conn.execute(
             """
             CREATE TRIGGER IF NOT EXISTS trg_ledger_no_update
