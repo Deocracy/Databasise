@@ -119,6 +119,30 @@ return matches[0]
 
 ### WR-03 (new): Every `Ledger()` construction — including the read-only lookup ordinary queries make — contends for the same write lock `transaction()` holds, with no timeout tuning and no refusal wrapping
 
+> **ADDENDUM — adversarially re-checked, mechanism corrected, kernel fixed (orchestrator, 2026-09-12).**
+> Three independent skeptics tested this finding against the running code; the mechanism as written
+> above is **overstated in steady state**. Measured: with the schema already present, `_create_schema`
+> is all no-op `IF NOT EXISTS` DDL that takes **no write lock**, so a read-only `Ledger()` at
+> `selectors.py:265` returns in ~0.00s even while a promote holds `BEGIN IMMEDIATE` — five concurrent
+> constructions + `by_alias()` reads under a held write transaction each completed in ~1ms with no
+> blocking. **Ordinary `query()`/`compare()` calls do not contend.** The 5s block reproduces only when
+> `_create_schema` has genuine DDL to do (first-ever open, or the one-time index migration).
+>
+> The finding's **kernel is nonetheless real**, at a call site this entry did not name: `PRAGMA
+> journal_mode=WAL` in `Ledger.__init__`, which runs *before* any span and which SQLite refuses with
+> `SQLITE_BUSY` (no busy handler) when several connections open a fresh `ledger.db` at once —
+> reproduced at 5/360 constructions (1.4%), and at 1 failure in 30 runs of this phase's own gate test.
+> Latent since Phase 1 (`4aa1239`), not introduced by 07-05. **Fixed in `18a5346`** (`Ledger._set_wal`,
+> bounded retry, graceful degrade to the rollback journal). Post-fix: 0/360, and 40/40 on the
+> concurrency module.
+>
+> What remains open from this entry is the narrower, unfixed part: `sqlite3.connect()` still sets no
+> explicit `timeout=`, and a lock-timeout `OperationalError` is still not wrapped into a
+> `SeamRefusalError`. Reaching it now requires genuine write-lock saturation (~88 simultaneous
+> operator calls against a ~57ms span). Carried forward as an anti-pattern, not a Phase 7 gap — no
+> must-have, success criterion, MACH-07/API-09 clause, or CONTRACT §18 mandate covers it.
+
+
 **File:** `databasise/ledger/ledger.py:132-244` (`__init__`/`_create_schema`), `140-167`
 (`transaction`); `databasise/seam/selectors.py:265` (read-only `Ledger(store_root).by_alias`, called
 from every `query()`/`compare()` that resolves an alias-based selector)

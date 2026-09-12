@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 phase: 07-promotion-rollback
 source: [07-VERIFICATION.md]
 started: 2026-09-12T06:53:47Z
-updated: 2026-09-12T08:23:39Z
+updated: 2026-09-12T09:30:00Z
 ---
 
 ## Current Test
@@ -39,8 +39,8 @@ pre-existing and was out of that plan's scope — not a regression introduced by
 ## Summary
 
 total: 1
-passed: 0
-issues: 1
+passed: 1
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
@@ -49,8 +49,10 @@ blocked: 0
 
 - gap_id: G-07-1
   truth: "Concurrent promote/rollback/retire against one alias either serializes or cleanly refuses the loser — never two rows minting the same semver, and never a guard passing on state that changes after its own read"
-  status: failed
-  reason: "Reproduced: retire(v) vs rollback(v) at two-call concurrency accepted a post-tombstone rollback in 134/200 trials, both calls returning ok. Six-way promote concurrency minted duplicate semvers in 13/300 trials."
+  status: resolved
+  resolved_by: "07-05-PLAN.md (commits 89d55fb, 3fe2ee0, 9882a4c) + 18a5346"
+  resolution: "Ledger.transaction() (BEGIN IMMEDIATE) now spans each operator verb's guard read through its append, and UNIQUE ux_ledger_generation(alias, minted_version) backstops it at the database. Both races re-run green (40/40 runs of tests/seam/test_operator_verb_concurrency.py). A follow-on defect surfaced during adversarial re-verification — a raw sqlite3.OperationalError escaping PRAGMA journal_mode=WAL in Ledger.__init__, latent since Phase 1 (4aa1239), which made this phase's own gate test fail ~1 run in 30 — was fixed in 18a5346. Full suite: 1068 passed, 1 skipped, 0 failed."
+  original_reason: "Reproduced: retire(v) vs rollback(v) at two-call concurrency accepted a post-tombstone rollback in 134/200 trials, both calls returning ok. Six-way promote concurrency minted duplicate semvers in 13/300 trials."
   severity: major
   test: 1
   root_cause: "Check-then-act across separate autocommit statements on a per-call sqlite3 connection. No transaction spans the guard read and the append, there is no lock anywhere in the package, and the ledger's (alias, minted_version) index is non-UNIQUE — so a concurrent writer can commit between any guard's read and its own append."
