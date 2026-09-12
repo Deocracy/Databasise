@@ -22,7 +22,7 @@ The working definition above is a draft drawn from the owner's earlier work (see
 | `runtime-one-pass.md` | How one prefill yields both the paragraph embedding and the tool-call generation: prompt-layout rule, three verified routes (llama.cpp C API, llama-server prompt cache, SGLang hidden states), grammar-constrained op list, adapter-vs-head decision, the efficiency claim stated precisely. |
 | `runtime-and-training-stack.md` | Where PyTorch lives (training rig only), the three environments, serving on legion via Ollama with `ollama-cuda`, the causal-vs-bidirectional embed-adapter decision, training sized to a 16 GB card, what crosses the boundary. |
 | `feasibility.md` | Why the intersection is unbuilt (seven reasons), capability-by-capability feasibility with evidence, the skills store and its injection gate, the two rig experiments that settle the unknowns. |
-| `sources/` | Verbatim snapshots (dated) of the HF model card, the OpenBMB/MiniCPM README, and the TRL fine-tune cookbook. Re-fetch before relying on a number older than a month. |
+| `sources/` | Code and papers. One subfolder per project holding its shallow clone (`code/`, on disk only, pinned in `manifest.tsv`) and its paper(s); papers with no code sit at the top level; `sync.sh` re-creates everything. Index in `sources/README.md`. |
 
 ## Prior findings (owner's earlier work, outside this repo)
 
