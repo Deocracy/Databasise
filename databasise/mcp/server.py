@@ -1,6 +1,6 @@
 """``databasise.mcp.server`` — the MCP server factory (05-07-PLAN.md Task 1, action A/E). Copies
 ``databasise.seam.rest``'s "thin adapter, provably" architecture to a second protocol: one
-``Databasise`` instance, five tool bodies that are each exactly deserialize-then-await-then-return,
+``Databasise`` instance, nine tool bodies that are each exactly deserialize-then-await-then-return,
 and one shared refusal-to-tool-error mapper instead of one shared app-level exception handler.
 
 **Resolved server API (`mcp` 2.2.0, read from the installed package this session — action A).**
@@ -9,8 +9,9 @@ every pre-2.x tutorial and most cached training knowledge names) was renamed to 
 this major version — ``from mcp.server.mcpserver import MCPServer`` is the resolved import path
 (``mcp.server.fastmcp`` itself raises ``ModuleNotFoundError`` with a migration-guide pointer,
 confirmed live this session against the installed package, not assumed from memory).
-``MCPServer(name)`` constructs a server; ``@server.tool(name=...)`` registers an async (or sync)
-callable as a tool, inferring its input schema from the callable's own type-annotated parameter —
+``MCPServer(name)`` constructs a server; the ``server.tool`` decorator, given a ``name=`` keyword,
+registers an async (or sync) callable as a tool, inferring its input schema from the callable's own
+type-annotated parameter —
 a single Pydantic model parameter becomes the tool's one argument, exactly the shape
 ``IngestToolArgs``/``QueryToolArgs``/etc. in ``databasise.mcp.tools`` are built for.
 ``await server.list_tools()`` and ``await server.call_tool(name, arguments)`` are both async and
@@ -51,8 +52,11 @@ from databasise.mcp.tools import (
     CompareToolArgs,
     DeleteToolArgs,
     IngestToolArgs,
+    PromoteToolArgs,
     QueryToolArgs,
     ResolveToolArgs,
+    RetireToolArgs,
+    RollbackToolArgs,
     StatusToolArgs,
 )
 from databasise.parts.registry import PartRegistry
@@ -231,6 +235,27 @@ def create_server(
         handler = _RESOLVE_HANDLERS[args.scope]
         result = await handler(engine, args)
         return result
+
+    @server.tool(name="promote")
+    @_refusal_mapped
+    async def promote_tool(args: PromoteToolArgs) -> dict[str, Any]:
+        """07-03-PLAN.md: reaches the identical ``Databasise.promote()`` REST's ``POST /promote``
+        reaches — no per-tool try/except, ``_refusal_mapped`` already catches every Phase 7
+        refusal generically via the ``SeamRefusalError`` base class."""
+        outcome = await engine.promote(args.alias, args.trace_ids, args.change_origin, verb=args.verb)
+        return outcome.model_dump()
+
+    @server.tool(name="rollback")
+    @_refusal_mapped
+    async def rollback_tool(args: RollbackToolArgs) -> dict[str, Any]:
+        outcome = await engine.rollback(args.alias, args.version, args.trace_ids, args.change_origin)
+        return outcome.model_dump()
+
+    @server.tool(name="retire")
+    @_refusal_mapped
+    async def retire_tool(args: RetireToolArgs) -> dict[str, Any]:
+        outcome = await engine.retire(args.alias, args.version, args.trace_ids, args.change_origin)
+        return outcome.model_dump()
 
     return server
 

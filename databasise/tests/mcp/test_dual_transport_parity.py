@@ -58,6 +58,8 @@ from databasise.seam.engine import Databasise
 from databasise.seam.query import QueryObject
 from databasise.seam.refusals import EmptyQueryObjectError
 from databasise.seam.rest import create_app
+from databasise.seam.trace_store import TraceStore
+from databasise.wirings.resolve import all_wirings
 from databasise.seam.selectors import Selector
 from databasise.tests.seam.conftest import synthetic_naive_store  # noqa: F401 - fixture
 from databasise.tests.seam.test_compare import (
@@ -153,12 +155,13 @@ async def test_create_server_holds_exactly_one_databasise_instance_reachable_for
     assert isinstance(server.engine, Databasise)
 
 
-async def test_the_registered_tool_set_equals_tool_names_and_has_six_members(tmp_path):
+async def test_the_registered_tool_set_equals_tool_names_and_has_nine_members(tmp_path):
     server = create_server(store_root=tmp_path, workspace="mcp-tool-set")
     tools = await server.list_tools()
     assert sorted(tool.name for tool in tools) == sorted(TOOL_NAMES)
-    # 06-03-PLAN.md: grew from five to six — `compare` is a genuinely new operation.
-    assert len(TOOL_NAMES) == 6
+    # 07-03-PLAN.md: grew from six to nine — `promote`/`rollback`/`retire` are three genuinely
+    # new §18 operations.
+    assert len(TOOL_NAMES) == 9
 
 
 async def test_ingest_tool_accepts_structured_text_and_base64_raw_shapes(tmp_path):
@@ -418,6 +421,138 @@ async def _compare_scenario(engine, rest_client, server):
     return mcp_dict, rest_dict, in_process_dict, set()
 
 
+def _seed_trace_for_arm(store_root, arm_name: str) -> str:
+    """07-03-PLAN.md: mirrors `tests/seam/test_promote.py::_seed_trace` exactly — a minimal trace
+    record naming exactly `arm_name`'s own resolved node id set, through the same
+    `TraceStore.persist()` path the engine uses."""
+    resolved = next(resolved for name, resolved in all_wirings() if name == arm_name)
+    node_ids = sorted(resolved.get("nodes", {}).keys())
+    fake_record = {
+        "run_id": f"fake-run-{arm_name}",
+        "wiring_id": resolved.get("wiring_id"),
+        "wiring_instance_hash": f"sha256:{'0' * 63}{len(node_ids) % 10}",
+        "arm_id": "seam",
+        "nodes": [{"node_id": node_id} for node_id in node_ids],
+    }
+    return TraceStore(store_root).persist(fake_record)
+
+
+async def _promote_scenario(engine, rest_client, server):
+    """07-03-PLAN.md: a distinct alias per transport (excluded from comparison, alongside the
+    shared ledger's own row-id-derived `generation_ordinal`) keeps each promotion a genuinely
+    independent first promotion — reusing one alias across all three calls against the shared
+    store would mint 1.0.0/1.1.0/1.2.0 in sequence, an artifact of call order rather than a
+    transport divergence."""
+    store_root = engine.store_root
+    trace_mcp = _seed_trace_for_arm(store_root, "naive")
+    trace_rest = _seed_trace_for_arm(store_root, "naive")
+    trace_ip = _seed_trace_for_arm(store_root, "naive")
+
+    mcp_dict = _tool_json(
+        await server.call_tool(
+            "promote",
+            {"args": {"alias": "parity-promote-mcp", "trace_ids": [trace_mcp], "change_origin": "human_edit"}},
+        )
+    )
+    rest_dict = rest_client.post(
+        "/promote",
+        json={"alias": "parity-promote-rest", "trace_ids": [trace_rest], "change_origin": "human_edit"},
+    ).json()
+    in_process_dict = _model_or_dict(
+        await engine.promote("parity-promote-ip", [trace_ip], "human_edit")
+    )
+    return mcp_dict, rest_dict, in_process_dict, {"alias", "generation_ordinal"}
+
+
+async def _seed_two_generations(engine, alias: str) -> str:
+    """Two promotions of the identical arm (1.0.0, then 1.1.0 — a MINOR bump) under `alias`,
+    returning one more freshly seeded trace id for the caller's own rollback/retire call."""
+    store_root = engine.store_root
+    trace_1 = _seed_trace_for_arm(store_root, "naive")
+    trace_2 = _seed_trace_for_arm(store_root, "naive")
+    await engine.promote(alias, [trace_1], "human_edit")
+    await engine.promote(alias, [trace_2], "human_edit")
+    return _seed_trace_for_arm(store_root, "naive")
+
+
+async def _rollback_scenario(engine, rest_client, server):
+    trace_mcp = await _seed_two_generations(engine, "parity-rollback-mcp")
+    trace_rest = await _seed_two_generations(engine, "parity-rollback-rest")
+    trace_ip = await _seed_two_generations(engine, "parity-rollback-ip")
+
+    mcp_dict = _tool_json(
+        await server.call_tool(
+            "rollback",
+            {
+                "args": {
+                    "alias": "parity-rollback-mcp",
+                    "version": "1.0.0",
+                    "trace_ids": [trace_mcp],
+                    "change_origin": "human_edit",
+                }
+            },
+        )
+    )
+    rest_dict = rest_client.post(
+        "/rollback",
+        json={
+            "alias": "parity-rollback-rest",
+            "version": "1.0.0",
+            "trace_ids": [trace_rest],
+            "change_origin": "human_edit",
+        },
+    ).json()
+    in_process_dict = _model_or_dict(
+        await engine.rollback("parity-rollback-ip", "1.0.0", [trace_ip], "human_edit")
+    )
+    return mcp_dict, rest_dict, in_process_dict, {"alias", "generation_ordinal"}
+
+
+async def _seed_retirable_generation(engine, alias: str) -> str:
+    """`naive` (1.0.0) then `bypass` (2.0.0, MAJOR — a differing declared surface) under `alias`,
+    so the active generation is not the one a caller then retires (1.0.0) — retiring the alias's
+    own active generation is a named refusal (ActiveGenerationRetirementError)."""
+    store_root = engine.store_root
+    trace_naive = _seed_trace_for_arm(store_root, "naive")
+    trace_bypass = _seed_trace_for_arm(store_root, "bypass")
+    await engine.promote(alias, [trace_naive], "human_edit")
+    await engine.promote(alias, [trace_bypass], "human_edit")
+    return _seed_trace_for_arm(store_root, "naive")
+
+
+async def _retire_scenario(engine, rest_client, server):
+    trace_mcp = await _seed_retirable_generation(engine, "parity-retire-mcp")
+    trace_rest = await _seed_retirable_generation(engine, "parity-retire-rest")
+    trace_ip = await _seed_retirable_generation(engine, "parity-retire-ip")
+
+    mcp_dict = _tool_json(
+        await server.call_tool(
+            "retire",
+            {
+                "args": {
+                    "alias": "parity-retire-mcp",
+                    "version": "1.0.0",
+                    "trace_ids": [trace_mcp],
+                    "change_origin": "human_edit",
+                }
+            },
+        )
+    )
+    rest_dict = rest_client.post(
+        "/retire",
+        json={
+            "alias": "parity-retire-rest",
+            "version": "1.0.0",
+            "trace_ids": [trace_rest],
+            "change_origin": "human_edit",
+        },
+    ).json()
+    in_process_dict = _model_or_dict(
+        await engine.retire("parity-retire-ip", "1.0.0", [trace_ip], "human_edit")
+    )
+    return mcp_dict, rest_dict, in_process_dict, {"alias", "generation_ordinal"}
+
+
 _SCENARIOS = {
     "ingest": _ingest_scenario,
     "query": _query_scenario,
@@ -425,6 +560,9 @@ _SCENARIOS = {
     "status": _status_scenario,
     "resolve": _resolve_scenario,
     "compare": _compare_scenario,
+    "promote": _promote_scenario,
+    "rollback": _rollback_scenario,
+    "retire": _retire_scenario,
 }
 
 
