@@ -38,6 +38,13 @@ truth REST and MCP both defer to.
   second modality (HippoRAG) added zero tools to this roster, and ``compare`` itself is
   modality-agnostic — it names no wiring, arm or modality of its own, only caller-supplied
   selectors, exactly like ``query``.
+- ``promote``/``rollback``/``retire`` (07-03-PLAN.md, MACH-07/API-09): each writes one generation
+  record to the append-only ledger and repoints (or tombstones) an alias — no §18.4 selector can
+  express "mint a new generation and make it active," "return an alias to a named prior
+  generation," or "retire this generation," since a selector only ever *reads* which fitted
+  modality answers a query. Three separate operations under Phase 4 D-03's one-entry-per-operation
+  rule, never one lifecycle tool with a scope field: rollback and retire are distinguishable
+  effects (repoint vs. tombstone), not two shapes of one intention.
 """
 
 from __future__ import annotations
@@ -59,8 +66,21 @@ from databasise.seam.selectors import Selector
 # neither its length nor its members (proven by databasise/tests/mcp/test_tool_growth_invariant.py).
 # Grew from five to six members in 06-03-PLAN.md: ``compare`` is a genuinely new operation (see
 # module docstring), not a per-modality tool — the roster still grows by one for one operation,
-# never by one per modality.
-TOOL_NAMES: tuple[str, ...] = ("ingest", "query", "delete", "status", "resolve", "compare")
+# never by one per modality. Grew from six to nine in 07-03-PLAN.md: ``promote``, ``rollback`` and
+# ``retire`` are three genuinely new §18 operations (MACH-07/API-09) — Phase 4 D-03's one-entry-
+# per-operation rule, never one tool per modality, and never folded into one scope-dispatched tool
+# (RESEARCH.md Open Question 3's own recommendation against the ``status``/``resolve`` precedent).
+TOOL_NAMES: tuple[str, ...] = (
+    "ingest",
+    "query",
+    "delete",
+    "status",
+    "resolve",
+    "compare",
+    "promote",
+    "rollback",
+    "retire",
+)
 
 StatusScope = Literal["job", "corpus", "counts", "health"]
 ResolveScope = Literal["evidence", "trace"]
@@ -152,14 +172,51 @@ class ResolveToolArgs(_ToolArgs):
     debug: bool = False
 
 
+class PromoteToolArgs(_ToolArgs):
+    """07-03-PLAN.md: carries the seam's own ``Databasise.promote()`` field vocabulary exactly —
+    ``alias``, ``trace_ids``, ``change_origin`` and ``verb`` (defaulting to
+    ``"operator-asserted"``), the identical shape ``databasise.seam.rest.PromoteRequest``
+    deserializes into."""
+
+    alias: str
+    trace_ids: list[str]
+    change_origin: str | None = None
+    verb: str = "operator-asserted"
+
+
+class RollbackToolArgs(_ToolArgs):
+    """07-03-PLAN.md: carries ``Databasise.rollback()``'s own field vocabulary — ``version`` is
+    required with no default (D-05), the identical shape
+    ``databasise.seam.rest.RollbackRequest`` deserializes into."""
+
+    alias: str
+    version: str
+    trace_ids: list[str]
+    change_origin: str | None = None
+
+
+class RetireToolArgs(_ToolArgs):
+    """07-03-PLAN.md: carries ``Databasise.retire()``'s own field vocabulary — the identical shape
+    as ``RollbackToolArgs`` (D-07), and the identical shape
+    ``databasise.seam.rest.RetireRequest`` deserializes into."""
+
+    alias: str
+    version: str
+    trace_ids: list[str]
+    change_origin: str | None = None
+
+
 __all__ = [
     "TOOL_NAMES",
     "CompareToolArgs",
     "DeleteToolArgs",
     "IngestToolArgs",
+    "PromoteToolArgs",
     "QueryToolArgs",
     "ResolveScope",
     "ResolveToolArgs",
+    "RetireToolArgs",
+    "RollbackToolArgs",
     "StatusScope",
     "StatusToolArgs",
 ]

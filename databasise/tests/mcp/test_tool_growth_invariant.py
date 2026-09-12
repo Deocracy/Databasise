@@ -34,8 +34,11 @@ from databasise.mcp.tools import (
     CompareToolArgs,
     DeleteToolArgs,
     IngestToolArgs,
+    PromoteToolArgs,
     QueryToolArgs,
     ResolveToolArgs,
+    RetireToolArgs,
+    RollbackToolArgs,
     StatusToolArgs,
 )
 from databasise.parts.registry import default_registry
@@ -59,6 +62,9 @@ _TOOL_ARG_MODELS = (
     StatusToolArgs,
     ResolveToolArgs,
     CompareToolArgs,
+    PromoteToolArgs,
+    RollbackToolArgs,
+    RetireToolArgs,
 )
 _MCP_MODULES = (mcp_package_module, mcp_tools_module, mcp_server_module)
 
@@ -72,9 +78,10 @@ async def test_the_registered_tool_set_equals_tool_names_as_a_set_and_by_count(t
     server = create_server(store_root=tmp_path, workspace="growth-pin")
     names = [tool.name for tool in await server.list_tools()]
     assert set(names) == set(TOOL_NAMES)
-    # 06-03-PLAN.md: grew from five to six — `compare` is a genuinely new operation, not a
-    # per-modality tool (see databasise/mcp/tools.py's own module docstring).
-    assert len(names) == len(TOOL_NAMES) == 6
+    # 07-03-PLAN.md: grew from six to nine — `promote`/`rollback`/`retire` are three genuinely
+    # new §18 operations, not one tool per modality (see databasise/mcp/tools.py's own module
+    # docstring).
+    assert len(names) == len(TOOL_NAMES) == 9
 
 
 # --------------------------------------------------------------------------------------------- #
@@ -249,6 +256,9 @@ _OPERATION_TO_TOOLS: dict[str, tuple[str, ...]] = {
     "corpus status (paginated)": ("status",),
     "document counts": ("status",),
     "compare": ("compare",),
+    "promote": ("promote",),
+    "rollback": ("rollback",),
+    "retire": ("retire",),
 }
 
 
