@@ -318,7 +318,7 @@ Plans:
 
 **Wave 2** *(blocked on 07-01 — shares `engine.py`, `promotion.py`, `refusals.py`)*
 
-- [ ] 07-02-PLAN.md — `rollback()` to an explicitly named semver and `retire()` as a tombstone on the same append-only path, with the never-lifted rule proven against the real write path
+- [x] 07-02-PLAN.md — `rollback()` to an explicitly named semver and `retire()` as a tombstone on the same append-only path, with the never-lifted rule proven against the real write path
 
 **Wave 3** *(blocked on 07-02 — the three verbs must exist before the transports wrap them)*
 
