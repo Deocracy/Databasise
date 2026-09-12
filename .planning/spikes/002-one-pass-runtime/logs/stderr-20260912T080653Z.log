@@ -1,0 +1,13 @@
+/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/002-one-pass-runtime/tok_probe.py:74: SyntaxWarning: invalid escape sequence '\u'
+  if t in (b"", b"\ufffd", b"<unk>", b"\xef\xbf\xbd"):
+llama_context: n_ctx_seq (512) > n_ctx_train (0) -- possible training context overflow
+init: embeddings required but some input tokens were not marked as outputs -> overriding
+init: embeddings required but some input tokens were not marked as outputs -> overriding
+Traceback (most recent call last):
+  File "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/002-one-pass-runtime/one_pass.py", line 382, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/002-one-pass-runtime/one_pass.py", line 223, in main
+    m._batch.batch.seq_id[:] = 0  # set_batch already uses seq 0; explicit
+    ~~~~~~~~~~~~~~~~~~~~~^^^
+TypeError: sequence index must be integer, not 'slice'

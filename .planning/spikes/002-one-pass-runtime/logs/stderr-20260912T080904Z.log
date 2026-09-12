@@ -1,0 +1,17 @@
+llama_context: n_ctx_seq (512) > n_ctx_train (0) -- possible training context overflow
+init: embeddings required but some input tokens were not marked as outputs -> overriding
+init: embeddings required but some input tokens were not marked as outputs -> overriding
+Traceback (most recent call last):
+  File "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/002-one-pass-runtime/one_pass.py", line 394, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/002-one-pass-runtime/one_pass.py", line 188, in main
+    ev, _, _ = one_decode(f + [EMB_ID], len(f) + 1)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/002-one-pass-runtime/one_pass.py", line 161, in one_decode
+    ev = np.ctypeslib.as_array(
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/.venv/lib/python3.12/site-packages/numpy/ctypeslib/_ctypeslib.py", line 557, in as_array
+    obj = ctypes.cast(obj, p_arr_type).contents
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: NULL pointer access
