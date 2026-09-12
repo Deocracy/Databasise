@@ -16,6 +16,7 @@ context: /gsd-explore session on micro-harnesses; reference material collected i
 - D-MS-02: the frontier model gets exactly one human-authored skill (the MelodyScribe skill) describing the §18 REST/MCP tools; the model cannot write to that path. This closes the persistent-injection channel a model-written skill would otherwise open.
 - D-MS-03: judge and falsifier roles are not MelodyScribe candidates (Phase 2 D-07, "judge never free", stands).
 - D-MS-04: naming convention per NAMING.md; models are `MelodyScribe-{size}-v{version}`.
+- D-MS-05 (2026-09-11): MelodyScribe is not bound to a 2B model. The starting ground is 1B to 10B dense, starting small; if a larger model, including a 30B to 40B mixture of experts, is better on the rig, that is what ships. Size is a variable the rig sweeps, and every size-specific note (VRAM sizing, KV arithmetic) is a worked example for the current candidate, not a constraint.
 
 **Evidence status.** The owner's motivating finding ("a very small model was as good as or better than a frontier model in many cases") is held in the dissertation workspace (spikes 001/017) and was not re-read; it stays unverified until reproduced on this rig. MiniCPM5-2B numbers are vendor-reported. See the ledgers in the reference folder.
 

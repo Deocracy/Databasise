@@ -72,9 +72,13 @@ The single-GPU recipe the report assembles (lane 7): rationale-augmented SFT (Di
 6. **Benchmarks to pin now**: JSONSchemaBench (2501.10868) for constrained ops, BIRD dev (2305.03111) for SQL, HELMET at 8k/16k (2410.02694) and LongEmbed for embeddings, RAGBench (2407.11005); and our own rig corpus, because the memory-layer benchmarks the report screened do not replicate well.
 7. **Measure generation degradation from embedding duty at 2B** before anything else (gap 1, gap 6). It is the one unknown that decides whether one model or two.
 
+## 7b. Model size is a variable (D-MS-05), and what going bigger costs on legion (owner analysis)
+
+The starting ground is 1B to 10B dense; a larger model, including a mixture of experts, replaces it if the rig says so. Two numbers govern the choice: **active parameters** set decode cost per token, **total parameters** set memory. A mixture of experts with about 3B active (Qwen3-30B-A3B, Apache-2.0, from the Qwen3 report 2505.09388 already in section 6's list) decodes at roughly 3B-dense cost but needs the whole 30B resident: about 17 GB at 4-bit, which exceeds legion's 16 GB. llama.cpp can keep the expert weights in the 62 GB of system RAM and run attention on the GPU, at a decode speed then bounded by CPU memory bandwidth; workable for the rig, not for throughput. A 40B-class mixture is the same story at about 22 GB. Training is the harder limit: LoRA on a 30B to 40B base does not fit a 16 GB card even at 4-bit; those runs rent a larger GPU. So the practical ladder on this machine is: sweep 1B, 2B, 4B, 8B dense locally for both inference and training; evaluate a mixture of experts locally for inference with expert offload; and budget rented compute for its fine-tune only once the dense sweep shows the size trend is worth it.
+
 ## 8. The experiment order this implies
 
-1. Baseline: Qwen3-Embedding-0.6B index plus MiniCPM5-2B no-think op emission with grammar, batched on SGLang. Record every metric in section 0.
+1. Baseline: Qwen3-Embedding-0.6B index plus no-think op emission with grammar, batched on SGLang, **swept across sizes**: MiniCPM5-1B and -2B, Qwen3-1.7B, -4B, -8B, and one mixture of experts with expert offload. Record every metric in section 0 per size; the size-versus-accuracy curve is the first result.
 2. Add `[EMB]`/`[RQ]` tokens via OneGen-style joint LoRA; measure retrieval parity against the baseline and generation degradation on the op task.
 3. Distil the filing ops from the frontier teacher (rationale-augmented SFT), then RLVR on rig rewards (DeepRetrieval recipe).
 4. Query-time KV composition with selective recompute; length sweep; keep only if TTFT improves at equal quality.
