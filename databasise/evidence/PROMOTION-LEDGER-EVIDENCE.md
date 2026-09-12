@@ -27,7 +27,7 @@ collectible by pytest, so this table cannot drift from the code without failing 
 | # | ROADMAP Phase 7 criterion | Holds | Tests |
 |---|---|---|---|
 | 1 | Every generation record carries `change_origin`/`promotion_provenance`, never defaulted; a semver is minted only at promotion; tombstoned losers are never lifted; the active pointer is a derived query | Holds | `tests/seam/test_promote.py::test_record_carries_change_origin_and_operator_asserted_provenance`, `tests/seam/test_promote.py::test_absent_change_origin_refuses_by_name`, `tests/seam/test_promote.py::test_first_promotion_mints_1_0_0`, `tests/seam/test_promote.py::test_no_path_mints_a_patch`, `tests/seam/test_retire.py::test_never_lifted_repromotion_is_a_new_generation`, `tests/ledger/test_ledger.py::test_3_active_pointer_is_computed_by_a_query_not_a_column` |
-| 2 | Owner promotes with `operator_asserted` provenance and non-empty `promotion_trace_ids`, no verdict/tier-of-decision; the ledger append is the decision, the alias repoint is atomic; rollback follows the same path | Holds | `tests/seam/test_promote.py::test_promote_appends_one_row_the_alias_selector_resolves`, `tests/seam/test_promote.py::test_empty_trace_ids_refuses_before_any_write`, `tests/seam/test_rollback.py::test_rollback_repoints_the_alias_to_the_named_generation`, `tests/seam/test_rollback.py::test_rollback_carries_no_verdict` |
+| 2 | Owner promotes with `operator_asserted` provenance and non-empty `promotion_trace_ids`, no verdict/tier-of-decision; the ledger append is the decision, the alias repoint is atomic; rollback follows the same path | Holds | `tests/seam/test_promote.py::test_promote_appends_one_row_the_alias_selector_resolves`, `tests/seam/test_promote.py::test_empty_trace_ids_refuses_before_any_write`, `tests/seam/test_rollback.py::test_rollback_repoints_the_alias_to_the_named_generation`, `tests/seam/test_rollback.py::test_rollback_carries_no_verdict`, `tests/seam/test_operator_verb_concurrency.py::test_retire_vs_rollback_race_never_lets_a_rollback_outrun_a_tombstone`, `tests/seam/test_operator_verb_concurrency.py::test_six_concurrent_promotes_mint_six_distinct_versions_with_zero_exceptions`, `tests/ledger/test_ledger_generation_uniqueness.py::test_a_duplicate_non_null_alias_minted_version_pair_is_refused_by_the_database`, `tests/ledger/test_ledger_generation_uniqueness.py::test_reopening_a_database_carrying_the_old_plain_index_enforces_uniqueness` |
 | 3 | `promote-next`/`promote-now` stay unavailable for answer-level and index-side classes under the default posture, and the refusal names the posture | Holds | `tests/seam/test_promotion_posture.py::test_promote_next_refuses_at_answer_level_naming_the_posture`, `tests/seam/test_promotion_posture.py::test_promote_next_refuses_at_retrieval_side_naming_the_missing_floor`, `tests/seam/test_promotion_posture.py::test_no_gate_verb_appends_a_row`, `tests/seam/test_promotion_posture.py::test_an_unrecognised_verb_refuses_by_name_before_any_trace_resolution[promote_next_typo]`, `tests/seam/test_dual_transport.py::test_an_out_of_enum_verb_refuses_identically_across_three_transports` |
 
 Every row above is `[code-verified]`: read directly from `databasise/seam/engine.py`,
@@ -38,6 +38,22 @@ Criterion 3's verb-refusal architecture was completed in 07-04 after `07-VERIFIC
 partial (`07-REVIEW.md` CR-01): an out-of-enum `verb` string now refuses by name
 (`UnrecognisedPromotionVerbError`) before any trace-id resolution runs, on all three transports,
 rather than crashing with a bare `ValueError`.
+
+### G-07-1 correction — 2026-09-12
+
+Criterion 2's row body above is unchanged from how it originally read, per this document's own
+append-only discipline (mirroring 06-17's correction note on `06-VERIFICATION.md`). This note states
+what was not true before this plan, rather than rewriting or softening the row: **"the ledger append
+is the decision, the alias repoint is atomic" was true of the single `INSERT` but not of the
+decision until G-07-1 was closed by 07-05-PLAN.md.** The `INSERT` itself was always one atomic
+statement; the guard read that decided *what* to insert (the tombstone check, the active-generation
+check, the prior-version read the semver mint depends on) ran on a separate autocommit statement
+before it, so a concurrent writer could commit between the two. `07-UAT.md` reproduced this against
+unmodified library code: a `retire(v)`/`rollback(v)` race committed a rollback row after a tombstone
+naming the same generation in 134/200 trials, and six concurrent `promote()` calls minted a
+duplicate semver in 13/300 trials. `Ledger.transaction()` (a `BEGIN IMMEDIATE` span enclosing each
+verb's guard read through its `append()`) closes this; the four newly-cited node ids above
+re-reproduce both races at 20 trials each against the committed code and pass with zero violations.
 
 ## API-09: the same three verbs, reachable identically over REST and MCP
 
