@@ -21,3 +21,7 @@ v1/.env.parity
 # graphify build output and its 27MB copy under .planning/ (regenerate: /gsd-graphify build)
 graphify-out/
 .planning/graphs/
+
+# MelodyScribe third-party clones: on disk, pinned in sources/README.md, re-created by sources/sync.sh
+reference/micro-harnesses/sources/*/code/
+reference/micro-harnesses/sources/sync.log

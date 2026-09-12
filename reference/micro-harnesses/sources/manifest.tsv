@@ -1,0 +1,50 @@
+a-mem	code	https://github.com/agiresearch/A-mem	ceffb86	2026-09-11
+a-mem	paper	2502.12110	A-MEM: Agentic Memory for LLM Agents	2026-09-11
+cacheblend	code	https://github.com/LMCache/LMCache	68d3ce0	2026-09-11
+cacheblend	paper	2405.16444	CacheBlend: Fast Large Language Model Serving for RAG with Cached Knowledge Fusion	2026-09-11
+cognee	code	https://github.com/topoteretes/cognee	c0d18c8	2026-09-11
+dense-x-retrieval	code	https://github.com/chentong0/factoid-wiki	b066e8b	2026-09-11
+dense-x-retrieval	paper	2312.06648	Dense X Retrieval: What Retrieval Granularity Should We Use?	2026-09-11
+evaporate	code	https://github.com/HazyResearch/evaporate	59eda5d	2026-09-11
+evaporate	paper	2304.09433	Language Models Enable Simple Systems for Generating Structured Views of Heterogeneous Data Lakes	2026-09-11
+graphiti	code	https://github.com/getzep/graphiti	c035afb	2026-09-11
+graphiti	paper	2501.13956	Zep: A Temporal Knowledge Graph Architecture for Agent Memory	2026-09-11
+gritlm	code	https://github.com/ContextualAI/gritlm	9710681	2026-09-11
+gritlm	paper	2402.09906	Generative Representational Instruction Tuning	2026-09-11
+hindsight	code	https://github.com/vectorize-io/hindsight	4cc131c	2026-09-11
+hindsight	paper	2512.12818	Hindsight is 20/20: Building Agent Memory that Retains, Recalls, and Reflects	2026-09-11
+knn-lm	code	https://github.com/urvashik/knnlm	8afab92	2026-09-11
+knn-lm	paper	1911.00172	Generalization through Memorization: Nearest Neighbor Language Models	2026-09-11
+letta	code	https://github.com/letta-ai/letta	5bcdd17	2026-09-11
+letta	paper	2310.08560	MemGPT: Towards LLMs as Operating Systems	2026-09-11
+llama-cpp	code	https://github.com/ggml-org/llama.cpp	eafe15a	2026-09-11
+llm2vec	code	https://github.com/McGill-NLP/llm2vec	6bbd525	2026-09-11
+llm2vec	paper	2404.05961	LLM2Vec: Large Language Models Are Secretly Powerful Text Encoders	2026-09-11
+mem0	code	https://github.com/mem0ai/mem0	c7ee362	2026-09-11
+mem0	paper	2504.19413	Mem0: Building Production-Ready AI Agents with Scalable Long-Term Memory	2026-09-11
+mem-alpha	code	https://github.com/wangyu-ustc/Mem-alpha	9c0e1f6	2026-09-11
+mem-alpha	paper	2509.25911	Mem-α: Learning Memory Construction via Reinforcement Learning	2026-09-11
+memorag	code	https://github.com/qhjqhj00/MemoRAG	7c23dfa	2026-09-11
+memorag	paper	2409.05591	MemoRAG: Boosting Long Context Processing with Global Memory-Enhanced Retrieval Augmentation	2026-09-11
+memori	code	https://github.com/GibsonAI/memori	10d6501	2026-09-11
+memos	code	https://github.com/MemTensor/MemOS	de80694	2026-09-11
+memos	paper	2507.03724	MemOS: A Memory OS for AI System	2026-09-11
+minicpm	code	https://github.com/OpenBMB/MiniCPM	f798873	2026-09-11
+minicpm	paper	2506.07900	MiniCPM4: Ultra-Efficient LLMs on End Devices	2026-09-11
+minicpm	paper	2509.24663	InfLLM-V2: Dense-Sparse Switchable Attention for Seamless Short-to-Long Adaptation	2026-09-11
+minicpm	paper	2602.09003	Data Science and Technology Towards AGI Part I: Tiered Data Management	2026-09-11
+mirix	code	https://github.com/Mirix-AI/MIRIX	8cb06a6	2026-09-11
+mirix	paper	2507.07957	MIRIX: Multi-Agent Memory System for LLM-Based Agents	2026-09-11
+_	paper	2508.19828	Memory-R1: Enhancing Large Language Model Agents to Manage and Utilize Memories via Reinforcement Learning	2026-09-11
+prompt-cache	code	https://github.com/yale-sys/prompt-cache	9027040	2026-09-11
+prompt-cache	paper	2311.04934	Prompt Cache: Modular Attention Reuse for Low-Latency Inference	2026-09-11
+qwen3-embedding	code	https://github.com/QwenLM/Qwen3-Embedding	44548aa	2026-09-11
+qwen3-embedding	paper	2506.05176	Qwen3 Embedding: Advancing Text Embedding and Reranking Through Foundation Models	2026-09-11
+search-r1	code	https://github.com/PeterGriffinJin/Search-R1	598e61b	2026-09-11
+search-r1	paper	2503.09516	Search-R1: Training LLMs to Reason and Leverage Search Engines with Reinforcement Learning	2026-09-11
+self-rag	code	https://github.com/AkariAsai/self-rag	1fcdc42	2026-09-11
+self-rag	paper	2310.11511	Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection	2026-09-11
+sleep-time-compute	code	https://github.com/letta-ai/sleep-time-compute	ffdf662	2026-09-11
+sleep-time-compute	paper	2504.13171	Sleep-time Compute: Beyond Inference Scaling at Test-time	2026-09-11
+voyager	code	https://github.com/MineDojo/Voyager	55e45a8	2026-09-11
+voyager	paper	2305.16291	Voyager: An Open-Ended Embodied Agent with Large Language Models	2026-09-11

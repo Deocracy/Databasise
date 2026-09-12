@@ -2,9 +2,9 @@
 
 Snapshot date: 2026-09-11. Sources are the two primary pages the owner supplied, saved verbatim in `sources/`:
 
-- Model card: https://huggingface.co/openbmb/MiniCPM5-2B (`sources/2026-09-11_hf_openbmb_MiniCPM5-2B_model-card.md`)
-- Repo README: https://github.com/OpenBMB/MiniCPM (`sources/2026-09-11_gh_OpenBMB_MiniCPM_README.md`)
-- TRL fine-tune cookbook: https://github.com/OpenBMB/MiniCPM/blob/main/docs/finetune/trl.md (`sources/2026-09-11_gh_OpenBMB_MiniCPM_docs_finetune_trl.md`)
+- Model card: https://huggingface.co/openbmb/MiniCPM5-2B (`sources/minicpm/2026-09-11_hf_openbmb_MiniCPM5-2B_model-card.md`)
+- Repo README: https://github.com/OpenBMB/MiniCPM (`sources/minicpm/2026-09-11_gh_OpenBMB_MiniCPM_README.md`)
+- TRL fine-tune cookbook: https://github.com/OpenBMB/MiniCPM/blob/main/docs/finetune/trl.md (`sources/minicpm/2026-09-11_gh_OpenBMB_MiniCPM_docs_finetune_trl.md`)
 
 Every fact below is tagged with where it came from. Facts labelled **[owner analysis]** are our inference, not a source claim.
 
