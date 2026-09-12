@@ -357,6 +357,26 @@ class InvalidChangeOriginError(SeamRefusalError):
         )
 
 
+class UnrecognisedPromotionVerbError(SeamRefusalError):
+    """Raised by ``Databasise.promote()`` (07-04-PLAN.md, D-09, closing 07-REVIEW.md CR-01) when
+    ``verb`` is not one of ``databasise.seam.promotion.PromotionVerb``'s six declared literals.
+    Checked before trace-id resolution runs (07-VERIFICATION.md's `missing:` item 1) — an unknown
+    verb refuses immediately, the identical position ``GateVerbNotBuiltError`` already occupies for
+    a known-but-unbuilt verb. Typed ``Any`` rather than ``str``, for the identical reason
+    ``InvalidChangeOriginError`` types ``change_origin`` as ``Any``: a JSON body can deliver
+    ``None``, a number, or an object, and the refusal must name whatever actually arrived. Per this
+    module's own house style, the message names only the caller's own value — it does not
+    enumerate the accepted verb set as a menu to pattern-match against, and does not imply a
+    default exists.
+    """
+
+    def __init__(self, *, verb: Any):
+        self.verb = verb
+        super().__init__(
+            f"UnrecognisedPromotionVerbError: verb {verb!r} is not a recognised promotion verb"
+        )
+
+
 class GateVerbNotBuiltError(SeamRefusalError):
     """Raised by ``Databasise.promote()`` (07-01-PLAN.md, D-09) when ``verb`` is ``check``,
     ``preview``, or ``run`` — no gate implementation exists in this milestone, and Phase 7 does
@@ -503,6 +523,7 @@ __all__ = [
     "EmptyPromotionTraceIdsError",
     "DisagreeingPromotionTraceIdsError",
     "InvalidChangeOriginError",
+    "UnrecognisedPromotionVerbError",
     "GateVerbNotBuiltError",
     "MeasurementPostureRefusalError",
     "UncalibratedFloorRefusalError",
