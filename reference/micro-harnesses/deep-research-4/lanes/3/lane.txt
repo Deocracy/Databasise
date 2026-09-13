@@ -1,0 +1,2 @@
+Lane 3: Recall-side harnesses.
+Query routing across heterogeneous stores (LlamaIndex routers, SQLAutoVectorQueryEngine, MIRIX retrieval, Graphiti hybrid search), iterative and multi-hop loops (IRCoT, Self-RAG, FLARE, DRAGIN, Search-R1, Search-o1, DeepRAG, ReAct memory agents, OneGen retrieval tokens), stopping criteria and hop counts, fusion of results from different stores and when it hurts (RRF, rank-gated, LightRAG modes, HippoRAG 2 PPR), and small-model recall agents with numbers on LoCoMo, LongMemEval, or BRIGHT.

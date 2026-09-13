@@ -1,0 +1,2 @@
+Lane 8: Learning graphs and procedural memory.
+Voyager skill library, ExpeL, Reflexion, Agent Workflow Memory, A-MEM evolution, Hindsight mental models, Mem-alpha, Letta memory files, skill graphs and knowledge tracing from tutoring systems, learnings ledgers. Node and edge types, admission gating (verifier, human, sandbox), evidence of later task improvement, and security of persistent memory (MINJA, PoisonedRAG, AgentPoison). Answer: is a learning graph a v0.1 component or later, and what is its minimum schema?

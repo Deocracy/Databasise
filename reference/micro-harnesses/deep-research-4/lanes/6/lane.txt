@@ -1,0 +1,2 @@
+Lane 6: Caching and parallel workload.
+Prefix and radix KV caching (SGLang RadixAttention, vLLM automatic prefix caching), KV composition (CacheBlend, Prompt Cache, Block-Attention), semantic query caches (GPTCache and successors) with hit rates, result memoisation, continuous batching and chunked prefill (Sarathi-Serve, Orca), priority scheduling of real-time requests over bulk ingest on one GPU, one model process serving two jobs (embedding and generation), concurrent store writes with locks and idempotency, and cache invalidation when stores change.

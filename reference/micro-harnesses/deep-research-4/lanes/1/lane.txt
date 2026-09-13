@@ -1,0 +1,2 @@
+Lane 1: Micro-harness architectures for small models.
+How small models (0.5B to 8B) are wrapped as agents on device: MiniCPM cookbooks and Agent Skills (github.com/OpenBMB/MiniCPM), MiniCPM4-MCP, MiniCPM4-Survey, TinyAgent, Octopus, xLAM small, Phi-4-mini, Gemma 3n, SmolLM3 and LFM2 agent stacks, Apple on-device harnesses, llama.cpp and SGLang tool-call parsers, and academic small-model-in-the-loop harness designs. Answer: what does the harness do that the model does not, and which pieces are deterministic code versus model output?

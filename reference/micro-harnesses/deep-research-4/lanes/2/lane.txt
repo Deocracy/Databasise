@@ -1,0 +1,2 @@
+Lane 2: Ingest-side routing to typed stores.
+Memory layers that decide where a fact goes and with what schema: MIRIX six stores, Cognee, Mem0 graph plus vector, Hindsight, Letta, Memori, A-MEM, Zep and Graphiti, MemoryBank, HippoRAG ingest, Mem-alpha and Memory-R1 learned management, and any study measuring routing accuracy or the cost of a wrong store. Which store taxonomies converge, and how is 'this is code' or 'this is a date' decided (rules, classifier, or the model)?

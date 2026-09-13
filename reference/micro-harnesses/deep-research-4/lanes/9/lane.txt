@@ -1,0 +1,2 @@
+Lane 9: Structured facts store.
+How memory layers keep a fact vault (MIRIX knowledge vault, Graphiti bi-temporal edges, Zep), text-to-SQL at small scale (BIRD, Spider, small fine-tunes), one generic facts table versus typed schemas, entity resolution and alias merging at write time, temporal validity and contradiction handling, and what kinds of information (dates, numbers, tables, charts, settings) the literature says should not go in a vector or a graph. Answer: what schema should the SQL store have in v0.1, and how does the harness decide a piece is SQL-shaped?
