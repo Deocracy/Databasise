@@ -1,0 +1,12 @@
+{
+ "adapter": "adapters/lora_contrastive_repro",
+ "logit_maxabsdiff_disabled_vs_pure": 0.0,
+ "logit_maxabsdiff_enabled_vs_pure": 20.4375,
+ "greedy_eq_disabled_vs_pure": true,
+ "greedy_enabled_differs": true,
+ "samples": {
+  "pure": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"birth_date\",\"o\":\"February 4, 1920\",\"quote\":\"February 4, 1920\"},{\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"death_date\",\"o\":\"June 12, 2016\",\"quote\":\"June",
+  "disabled": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"birth_date\",\"o\":\"February 4, 1920\",\"quote\":\"February 4, 1920\"},{\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"death_date\",\"o\":\"June 12, 2016\",\"quote\":\"June",
+  "enabled": "{\"ops\":[{\"subject\":\"Jane Watson\",\"predicate\":\"maiden\",\"object\":\"Jane Watson\",\"quote\":\"Jane Watson\",\"target\":\"graph\"},{\"subject\":\"Jane Watson\",\"attribute\":\"maiden\",\"value\":\"Jane Watson\",\"value_type\":\"text\",\"target\":\"sql\"}]\n\nThe question asks to identify the subject, predicate,"
+ }
+}

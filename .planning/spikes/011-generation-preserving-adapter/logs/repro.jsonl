@@ -1,0 +1,119 @@
+{"ts": "2026-09-13T01:26:55.481356+00:00", "run": "repro", "event": "model_loaded", "model": "Qwen3-Embedding-0.6B-safetensors", "dim": 1024, "load_s": 0.9}
+{"ts": "2026-09-13T01:26:56.650753+00:00", "run": "repro", "event": "embedded", "n_docs": 20, "ms_per_doc": 49.0, "ms_per_query": 1.05}
+{"ts": "2026-09-13T01:26:57.049418+00:00", "run": "repro", "event": "teacher_saved", "n_q": 86, "n_d": 15}
+{"ts": "2026-09-13T01:27:02.380358+00:00", "run": "repro", "event": "model_loaded", "model": "MiniCPM5-2B-hf-bf16-untrained", "load_s": 1.43, "peak_vram_gb": 5.03}
+{"ts": "2026-09-13T01:27:06.133196+00:00", "run": "repro", "event": "embedded", "n_docs": 20, "ms_per_doc": 57.33}
+{"ts": "2026-09-13T01:27:11.353677+00:00", "run": "repro", "event": "model_loaded", "model": "MiniCPM5-2B-bias-probe", "load_s": 1.43}
+{"ts": "2026-09-13T01:27:12.144878+00:00", "run": "repro", "event": "bias_probed", "n": 3}
+{"ts": "2026-09-13T01:27:13.221716+00:00", "run": "repro", "event": "control_scored", "arm": "Cmean"}
+{"ts": "2026-09-13T01:27:14.042628+00:00", "run": "repro", "event": "control_scored", "arm": "Cwhiten"}
+{"ts": "2026-09-13T01:27:14.044353+00:00", "run": "repro", "event": "whiten_fit", "n_fit": 106, "eig_max": 0.02592800544947118, "eig_min": -3.775499577749214e-18}
+{"ts": "2026-09-13T01:27:14.141089+00:00", "run": "repro", "event": "control_scored", "arm": "Cbias"}
+{"ts": "2026-09-13T01:27:20.997888+00:00", "run": "repro", "event": "model_loaded", "model": "MiniCPM5-2B+lora-r16-contrastive", "load_s": 1.35, "trainable_params": 25116672, "epochs": 6, "tau": 0.03, "lr": 0.0001, "batch": 8, "seed": 1234}
+{"ts": "2026-09-13T01:27:24.064429+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 1, "loss": 1.8457, "elapsed_s": 3.1}
+{"ts": "2026-09-13T01:27:31.624625+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 5, "loss": 2.3761, "elapsed_s": 10.6}
+{"ts": "2026-09-13T01:27:42.702634+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 10, "loss": 2.0903, "elapsed_s": 21.7}
+{"ts": "2026-09-13T01:27:54.653291+00:00", "run": "repro", "event": "step", "epoch": 1, "step": 15, "loss": 1.8267, "elapsed_s": 33.7}
+{"ts": "2026-09-13T01:28:04.819384+00:00", "run": "repro", "event": "step", "epoch": 1, "step": 20, "loss": 1.2587, "elapsed_s": 43.8}
+{"ts": "2026-09-13T01:28:15.205338+00:00", "run": "repro", "event": "step", "epoch": 2, "step": 25, "loss": 0.7782, "elapsed_s": 54.2}
+{"ts": "2026-09-13T01:28:26.095359+00:00", "run": "repro", "event": "step", "epoch": 2, "step": 30, "loss": 2.5111, "elapsed_s": 65.1}
+{"ts": "2026-09-13T01:28:36.836886+00:00", "run": "repro", "event": "step", "epoch": 3, "step": 35, "loss": 0.9232, "elapsed_s": 75.8}
+{"ts": "2026-09-13T01:28:47.590701+00:00", "run": "repro", "event": "step", "epoch": 3, "step": 40, "loss": 0.2423, "elapsed_s": 86.6}
+{"ts": "2026-09-13T01:28:58.842447+00:00", "run": "repro", "event": "step", "epoch": 4, "step": 45, "loss": 1.1693, "elapsed_s": 97.8}
+{"ts": "2026-09-13T01:29:08.968081+00:00", "run": "repro", "event": "step", "epoch": 4, "step": 50, "loss": 0.7639, "elapsed_s": 108.0}
+{"ts": "2026-09-13T01:29:19.955275+00:00", "run": "repro", "event": "step", "epoch": 4, "step": 55, "loss": 0.3211, "elapsed_s": 119.0}
+{"ts": "2026-09-13T01:29:30.357455+00:00", "run": "repro", "event": "step", "epoch": 5, "step": 60, "loss": 0.0225, "elapsed_s": 129.4}
+{"ts": "2026-09-13T01:29:41.429854+00:00", "run": "repro", "event": "step", "epoch": 5, "step": 65, "loss": 0.7619, "elapsed_s": 140.4}
+{"ts": "2026-09-13T01:29:44.100459+00:00", "run": "repro", "event": "train_done", "steps": 66, "train_s": 142.8, "peak_vram_gb": 7.08, "adapter": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/011-generation-preserving-adapter/adapters/lora_contrastive_repro", "sha256": "89a1a00ab7e2541fe8f6de1ce9aef7430261a9211aa569cec9238d040ffc435c"}
+{"ts": "2026-09-13T01:29:49.643768+00:00", "run": "repro", "event": "model_loaded", "model": "MiniCPM5-2B+lora-r4-lowcap", "load_s": 1.15, "trainable_params": 2150400, "epochs": 2, "tau": 0.03, "lr": 2e-05, "batch": 8, "seed": 1234}
+{"ts": "2026-09-13T01:29:52.081417+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 1, "loss": 1.8457, "elapsed_s": 2.4}
+{"ts": "2026-09-13T01:29:57.625548+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 5, "loss": 2.2648, "elapsed_s": 8.0}
+{"ts": "2026-09-13T01:30:05.682396+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 10, "loss": 2.6194, "elapsed_s": 16.0}
+{"ts": "2026-09-13T01:30:14.257614+00:00", "run": "repro", "event": "step", "epoch": 1, "step": 15, "loss": 2.4674, "elapsed_s": 24.6}
+{"ts": "2026-09-13T01:30:21.865555+00:00", "run": "repro", "event": "step", "epoch": 1, "step": 20, "loss": 2.1548, "elapsed_s": 32.2}
+{"ts": "2026-09-13T01:30:25.125886+00:00", "run": "repro", "event": "train_done", "steps": 22, "train_s": 35.4, "peak_vram_gb": 6.71, "adapter": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/011-generation-preserving-adapter/adapters/lora_lowcap_repro", "sha256": "abeab5c313dfe9925e925a6323079ff9c9269604fbf8c943b20015fe494fd6bb"}
+{"ts": "2026-09-13T01:30:30.951507+00:00", "run": "repro", "event": "model_loaded", "model": "MiniCPM5-2B+lora-r16-kl0.1", "load_s": 1.41, "trainable_params": 25116672, "epochs": 6, "tau": 0.03, "lr": 0.0001, "batch": 8, "seed": 1234, "kl": 0.1}
+{"ts": "2026-09-13T01:30:34.435915+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 1, "loss": 1.8457, "nce": 1.8457, "kl": -0.0, "elapsed_s": 3.5}
+{"ts": "2026-09-13T01:30:43.718572+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 5, "loss": 2.6032, "nce": 2.3685, "kl": 2.3466, "elapsed_s": 12.8}
+{"ts": "2026-09-13T01:30:57.238457+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 10, "loss": 2.3949, "nce": 2.245, "kl": 1.4985, "elapsed_s": 26.3}
+{"ts": "2026-09-13T01:31:11.170174+00:00", "run": "repro", "event": "step", "epoch": 1, "step": 15, "loss": 2.1091, "nce": 2.019, "kl": 0.9014, "elapsed_s": 40.2}
+{"ts": "2026-09-13T01:31:23.455852+00:00", "run": "repro", "event": "step", "epoch": 1, "step": 20, "loss": 1.9558, "nce": 1.7769, "kl": 1.79, "elapsed_s": 52.5}
+{"ts": "2026-09-13T01:31:35.738270+00:00", "run": "repro", "event": "step", "epoch": 2, "step": 25, "loss": 1.5733, "nce": 1.4774, "kl": 0.9589, "elapsed_s": 64.8}
+{"ts": "2026-09-13T01:31:48.870264+00:00", "run": "repro", "event": "step", "epoch": 2, "step": 30, "loss": 2.7805, "nce": 2.644, "kl": 1.365, "elapsed_s": 77.9}
+{"ts": "2026-09-13T01:32:01.609212+00:00", "run": "repro", "event": "step", "epoch": 3, "step": 35, "loss": 1.742, "nce": 1.1159, "kl": 6.2605, "elapsed_s": 90.7}
+{"ts": "2026-09-13T01:32:14.449223+00:00", "run": "repro", "event": "step", "epoch": 3, "step": 40, "loss": 0.61, "nce": 0.4978, "kl": 1.1221, "elapsed_s": 103.5}
+{"ts": "2026-09-13T01:32:27.714471+00:00", "run": "repro", "event": "step", "epoch": 4, "step": 45, "loss": 1.2809, "nce": 1.0952, "kl": 1.857, "elapsed_s": 116.8}
+{"ts": "2026-09-13T01:32:39.803911+00:00", "run": "repro", "event": "step", "epoch": 4, "step": 50, "loss": 1.0838, "nce": 0.8508, "kl": 2.3302, "elapsed_s": 128.8}
+{"ts": "2026-09-13T01:32:52.977121+00:00", "run": "repro", "event": "step", "epoch": 4, "step": 55, "loss": 0.8636, "nce": 0.372, "kl": 4.9163, "elapsed_s": 142.0}
+{"ts": "2026-09-13T01:33:05.452998+00:00", "run": "repro", "event": "step", "epoch": 5, "step": 60, "loss": 0.687, "nce": 0.2017, "kl": 4.8525, "elapsed_s": 154.5}
+{"ts": "2026-09-13T01:33:18.705159+00:00", "run": "repro", "event": "step", "epoch": 5, "step": 65, "loss": 1.338, "nce": 0.9421, "kl": 3.9598, "elapsed_s": 167.8}
+{"ts": "2026-09-13T01:33:21.889609+00:00", "run": "repro", "event": "train_done", "steps": 66, "train_s": 170.6, "peak_vram_gb": 7.66, "adapter": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/011-generation-preserving-adapter/adapters/lora_kl0.1_repro", "sha256": "18a822ea9d8bf71c0474636a9c06d5a4af5e3edd3e7e8c6132e9873d45322fda"}
+{"ts": "2026-09-13T01:33:27.707307+00:00", "run": "repro", "event": "model_loaded", "model": "MiniCPM5-2B+lora-r16-kl1", "load_s": 1.41, "trainable_params": 25116672, "epochs": 6, "tau": 0.03, "lr": 0.0001, "batch": 8, "seed": 1234, "kl": 1.0}
+{"ts": "2026-09-13T01:33:31.129734+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 1, "loss": 1.8457, "nce": 1.8457, "kl": -0.0, "elapsed_s": 3.4}
+{"ts": "2026-09-13T01:33:40.272107+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 5, "loss": 6.5545, "nce": 2.323, "kl": 4.2315, "elapsed_s": 12.6}
+{"ts": "2026-09-13T01:33:53.404928+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 10, "loss": 4.2233, "nce": 2.5201, "kl": 1.7032, "elapsed_s": 25.7}
+{"ts": "2026-09-13T01:34:07.267533+00:00", "run": "repro", "event": "step", "epoch": 1, "step": 15, "loss": 3.6439, "nce": 2.3667, "kl": 1.2772, "elapsed_s": 39.6}
+{"ts": "2026-09-13T01:34:19.516563+00:00", "run": "repro", "event": "step", "epoch": 1, "step": 20, "loss": 4.512, "nce": 2.2826, "kl": 2.2294, "elapsed_s": 51.8}
+{"ts": "2026-09-13T01:34:31.748543+00:00", "run": "repro", "event": "step", "epoch": 2, "step": 25, "loss": 3.2777, "nce": 2.3661, "kl": 0.9117, "elapsed_s": 64.0}
+{"ts": "2026-09-13T01:34:44.898010+00:00", "run": "repro", "event": "step", "epoch": 2, "step": 30, "loss": 3.4085, "nce": 2.513, "kl": 0.8955, "elapsed_s": 77.2}
+{"ts": "2026-09-13T01:34:57.645547+00:00", "run": "repro", "event": "step", "epoch": 3, "step": 35, "loss": 7.5307, "nce": 2.3388, "kl": 5.1919, "elapsed_s": 89.9}
+{"ts": "2026-09-13T01:35:10.557290+00:00", "run": "repro", "event": "step", "epoch": 3, "step": 40, "loss": 3.0964, "nce": 2.1949, "kl": 0.9015, "elapsed_s": 102.8}
+{"ts": "2026-09-13T01:35:23.906601+00:00", "run": "repro", "event": "step", "epoch": 4, "step": 45, "loss": 3.9859, "nce": 2.357, "kl": 1.6289, "elapsed_s": 116.2}
+{"ts": "2026-09-13T01:35:36.184111+00:00", "run": "repro", "event": "step", "epoch": 4, "step": 50, "loss": 3.8916, "nce": 2.2323, "kl": 1.6593, "elapsed_s": 128.5}
+{"ts": "2026-09-13T01:35:49.353153+00:00", "run": "repro", "event": "step", "epoch": 4, "step": 55, "loss": 4.646, "nce": 1.8991, "kl": 2.7469, "elapsed_s": 141.6}
+{"ts": "2026-09-13T01:36:01.822763+00:00", "run": "repro", "event": "step", "epoch": 5, "step": 60, "loss": 3.211, "nce": 1.944, "kl": 1.267, "elapsed_s": 154.1}
+{"ts": "2026-09-13T01:36:15.111487+00:00", "run": "repro", "event": "step", "epoch": 5, "step": 65, "loss": 3.7732, "nce": 2.2198, "kl": 1.5534, "elapsed_s": 167.4}
+{"ts": "2026-09-13T01:36:18.293849+00:00", "run": "repro", "event": "train_done", "steps": 66, "train_s": 170.2, "peak_vram_gb": 7.66, "adapter": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/011-generation-preserving-adapter/adapters/lora_kl1_repro", "sha256": "5a1f4d655ddd2e58300fdc3889d80409358d00ed1dd6c9c0a665e9cfbc8218ae"}
+{"ts": "2026-09-13T01:36:24.045454+00:00", "run": "repro", "event": "model_loaded", "model": "MiniCPM5-2B+lora-r16-joint", "load_s": 1.36, "trainable_params": 25116672, "epochs": 6, "tau": 0.03, "lr": 0.0001, "batch": 8, "seed": 1234, "lam_lm": 0.5, "example_doc": "adam_collis", "lm_cap": 2048}
+{"ts": "2026-09-13T01:36:28.732253+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 1, "loss": 14.6976, "nce": 1.8457, "lm": 25.7039, "lm_doc": "tyler_bates", "elapsed_s": 4.7}
+{"ts": "2026-09-13T01:36:41.969549+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 5, "loss": 8.0293, "nce": 2.3613, "lm": 11.336, "lm_doc": "charles_craft", "elapsed_s": 17.9}
+{"ts": "2026-09-13T01:36:59.301957+00:00", "run": "repro", "event": "step", "epoch": 0, "step": 10, "loss": 5.0754, "nce": 2.3822, "lm": 5.3862, "lm_doc": "sinister_film", "elapsed_s": 35.3}
+{"ts": "2026-09-13T01:37:19.287178+00:00", "run": "repro", "event": "step", "epoch": 1, "step": 15, "loss": 4.267, "nce": 2.1415, "lm": 4.251, "lm_doc": "doctor_strange_2016_film", "elapsed_s": 55.2}
+{"ts": "2026-09-13T01:37:35.895641+00:00", "run": "repro", "event": "step", "epoch": 1, "step": 20, "loss": 2.7423, "nce": 1.5773, "lm": 2.3301, "lm_doc": "janet_waldo", "elapsed_s": 71.8}
+{"ts": "2026-09-13T01:37:51.758472+00:00", "run": "repro", "event": "step", "epoch": 2, "step": 25, "loss": 1.6048, "nce": 1.0113, "lm": 1.187, "lm_doc": "lord_high_treasurer", "elapsed_s": 87.7}
+{"ts": "2026-09-13T01:38:10.136401+00:00", "run": "repro", "event": "step", "epoch": 2, "step": 30, "loss": 2.9303, "nce": 2.6203, "lm": 0.62, "lm_doc": "charles_craft", "elapsed_s": 106.1}
+{"ts": "2026-09-13T01:38:27.364670+00:00", "run": "repro", "event": "step", "epoch": 3, "step": 35, "loss": 1.389, "nce": 1.1808, "lm": 0.4163, "lm_doc": "doctor_strange_2016_film", "elapsed_s": 123.3}
+{"ts": "2026-09-13T01:38:44.675353+00:00", "run": "repro", "event": "step", "epoch": 3, "step": 40, "loss": 0.5954, "nce": 0.4797, "lm": 0.2314, "lm_doc": "charles_craft", "elapsed_s": 140.6}
+{"ts": "2026-09-13T01:39:02.332390+00:00", "run": "repro", "event": "step", "epoch": 4, "step": 45, "loss": 1.0544, "nce": 1.0048, "lm": 0.0993, "lm_doc": "scott_derrickson", "elapsed_s": 158.3}
+{"ts": "2026-09-13T01:39:19.613031+00:00", "run": "repro", "event": "step", "epoch": 4, "step": 50, "loss": 0.6592, "nce": 0.6141, "lm": 0.0902, "lm_doc": "charles_craft", "elapsed_s": 175.6}
+{"ts": "2026-09-13T01:39:37.075184+00:00", "run": "repro", "event": "step", "epoch": 4, "step": 55, "loss": 0.3163, "nce": 0.2829, "lm": 0.0668, "lm_doc": "janet_waldo", "elapsed_s": 193.0}
+{"ts": "2026-09-13T01:39:54.590356+00:00", "run": "repro", "event": "step", "epoch": 5, "step": 60, "loss": 0.0707, "nce": 0.0675, "lm": 0.0065, "lm_doc": "lord_high_treasurer", "elapsed_s": 210.5}
+{"ts": "2026-09-13T01:40:11.688689+00:00", "run": "repro", "event": "step", "epoch": 5, "step": 65, "loss": 0.65, "nce": 0.6395, "lm": 0.0209, "lm_doc": "charles_craft", "elapsed_s": 227.6}
+{"ts": "2026-09-13T01:40:15.664862+00:00", "run": "repro", "event": "train_done", "steps": 66, "train_s": 231.3, "peak_vram_gb": 9.95, "adapter": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/011-generation-preserving-adapter/adapters/lora_joint_repro", "sha256": "848c9fa1f384e6e5b52ffdfe43545de1eea9f1775946b1bdd07bf496d6b7aed6"}
+{"ts": "2026-09-13T01:40:21.741567+00:00", "run": "repro", "event": "model_loaded", "model": "MiniCPM5-2B+R-minicpm2b", "load_s": 2.02, "proj": false}
+{"ts": "2026-09-13T01:40:28.966527+00:00", "run": "repro", "event": "embedded", "arm": "R-minicpm2b", "ms_per_doc": 81.83}
+{"ts": "2026-09-13T01:40:34.685293+00:00", "run": "repro", "event": "model_loaded", "model": "MiniCPM5-2B+L-minicpm2b", "load_s": 1.68, "proj": false}
+{"ts": "2026-09-13T01:40:40.265437+00:00", "run": "repro", "event": "embedded", "arm": "L-minicpm2b", "ms_per_doc": 70.31}
+{"ts": "2026-09-13T01:40:46.023177+00:00", "run": "repro", "event": "model_loaded", "model": "MiniCPM5-2B+K01-minicpm2b", "load_s": 1.87, "proj": false}
+{"ts": "2026-09-13T01:40:52.940237+00:00", "run": "repro", "event": "embedded", "arm": "K01-minicpm2b", "ms_per_doc": 79.17}
+{"ts": "2026-09-13T01:40:58.702329+00:00", "run": "repro", "event": "model_loaded", "model": "MiniCPM5-2B+K10-minicpm2b", "load_s": 1.87, "proj": false}
+{"ts": "2026-09-13T01:41:05.540351+00:00", "run": "repro", "event": "embedded", "arm": "K10-minicpm2b", "ms_per_doc": 78.98}
+{"ts": "2026-09-13T01:41:11.351919+00:00", "run": "repro", "event": "model_loaded", "model": "MiniCPM5-2B+J-minicpm2b", "load_s": 1.93, "proj": false}
+{"ts": "2026-09-13T01:41:18.200064+00:00", "run": "repro", "event": "embedded", "arm": "J-minicpm2b", "ms_per_doc": 79.13}
+{"ts": "2026-09-13T01:41:19.688163+00:00", "run": "repro", "event": "arm_scored", "arm": "A", "test_mrr": 0.8014, "train_mrr": 0.7881, "gold_mrr": 1.0, "anisotropy": 0.2788}
+{"ts": "2026-09-13T01:41:20.029103+00:00", "run": "repro", "event": "arm_scored", "arm": "E-minicpm2b", "test_mrr": 0.3158, "train_mrr": 0.3148, "gold_mrr": 0.125, "anisotropy": 0.9035}
+{"ts": "2026-09-13T01:41:20.378590+00:00", "run": "repro", "event": "arm_scored", "arm": "Cmean", "test_mrr": 0.3563, "train_mrr": 0.3517, "gold_mrr": 0.094, "anisotropy": -0.0493}
+{"ts": "2026-09-13T01:41:20.737823+00:00", "run": "repro", "event": "arm_scored", "arm": "Cwhiten", "test_mrr": 0.5867, "train_mrr": 0.4927, "gold_mrr": 1.0, "anisotropy": -0.0011}
+{"ts": "2026-09-13T01:41:21.085543+00:00", "run": "repro", "event": "arm_scored", "arm": "Cbias", "test_mrr": 0.4072, "train_mrr": 0.4324, "gold_mrr": 0.375, "anisotropy": 0.8428}
+{"ts": "2026-09-13T01:41:21.448210+00:00", "run": "repro", "event": "arm_scored", "arm": "R-minicpm2b", "test_mrr": 0.7178, "train_mrr": 0.9539, "gold_mrr": 0.75, "anisotropy": 0.6615}
+{"ts": "2026-09-13T01:41:21.800141+00:00", "run": "repro", "event": "arm_scored", "arm": "L-minicpm2b", "test_mrr": 0.3245, "train_mrr": 0.4141, "gold_mrr": 0.375, "anisotropy": 0.9318}
+{"ts": "2026-09-13T01:41:22.155384+00:00", "run": "repro", "event": "arm_scored", "arm": "K01-minicpm2b", "test_mrr": 0.6019, "train_mrr": 0.9359, "gold_mrr": 0.75, "anisotropy": 0.6973}
+{"ts": "2026-09-13T01:41:22.504311+00:00", "run": "repro", "event": "arm_scored", "arm": "K10-minicpm2b", "test_mrr": 0.5684, "train_mrr": 0.6821, "gold_mrr": 1.0, "anisotropy": 0.9571}
+{"ts": "2026-09-13T01:41:22.861188+00:00", "run": "repro", "event": "arm_scored", "arm": "J-minicpm2b", "test_mrr": 0.7361, "train_mrr": 0.9438, "gold_mrr": 0.6667, "anisotropy": 0.7053}
+{"ts": "2026-09-13T01:41:27.403071+00:00", "run": "repro", "event": "model_loaded", "model": "gen-minicpm-base", "load_s": 1.48}
+{"ts": "2026-09-13T01:47:20.670789+00:00", "run": "repro", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.1, "parse_rate": 0.15, "proof_pass_rate": 1.0, "n_emitted": 9, "n_passed": 9, "tokens_per_para": 856.6, "secs_per_para": 17.66, "arm": "gen-minicpm-base"}
+{"ts": "2026-09-13T01:47:26.426669+00:00", "run": "repro", "event": "model_loaded", "model": "gen-lora_contrastive_repro", "load_s": 1.98}
+{"ts": "2026-09-13T02:02:18.953704+00:00", "run": "repro", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "tokens_per_para": 1029.5, "secs_per_para": 44.62, "arm": "gen-lora_contrastive_repro"}
+{"ts": "2026-09-13T02:02:24.476812+00:00", "run": "repro", "event": "model_loaded", "model": "gen-lora_lowcap_repro", "load_s": 1.75}
+{"ts": "2026-09-13T02:11:47.071171+00:00", "run": "repro", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.15, "parse_rate": 0.2, "proof_pass_rate": 1.0, "n_emitted": 11, "n_passed": 11, "tokens_per_para": 851.8, "secs_per_para": 28.12, "arm": "gen-lora_lowcap_repro"}
+{"ts": "2026-09-13T02:11:52.880028+00:00", "run": "repro", "event": "model_loaded", "model": "gen-lora_kl0.1_repro", "load_s": 2.01}
+{"ts": "2026-09-13T02:24:19.998383+00:00", "run": "repro", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.1, "parse_rate": 0.2, "proof_pass_rate": 1.0, "n_emitted": 17, "n_passed": 17, "tokens_per_para": 880.3, "secs_per_para": 37.35, "arm": "gen-lora_kl0.1_repro"}
+{"ts": "2026-09-13T02:24:25.741065+00:00", "run": "repro", "event": "model_loaded", "model": "gen-lora_kl1_repro", "load_s": 1.99}
+{"ts": "2026-09-13T02:37:17.660156+00:00", "run": "repro", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.1, "parse_rate": 0.15, "proof_pass_rate": 1.0, "n_emitted": 9, "n_passed": 9, "tokens_per_para": 856.0, "secs_per_para": 38.59, "arm": "gen-lora_kl1_repro"}
+{"ts": "2026-09-13T02:37:23.802272+00:00", "run": "repro", "event": "model_loaded", "model": "gen-lora_joint_repro", "load_s": 2.1}
+{"ts": "2026-09-13T02:52:54.538649+00:00", "run": "repro", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "tokens_per_para": 1025.0, "secs_per_para": 46.53, "arm": "gen-lora_joint_repro"}
+{"ts": "2026-09-13T02:53:08.003345+00:00", "run": "repro", "event": "toggle_checked", "adapter": "adapters/lora_contrastive_repro", "maxdiff_disabled": 0.0, "eq": true, "differs": true}
+{"ts": "2026-09-13T02:53:13.404659+00:00", "run": "repro", "event": "model_loaded", "model": "oneshot-base", "load_s": 1.47}
+{"ts": "2026-09-13T02:54:59.557589+00:00", "run": "repro", "event": "oneshot_scored", "n_docs": 5, "example_doc": "adam_collis", "routing_exact": 0.0, "subjval_recall": 0.0, "op_p": 0.0, "op_r": 0.0, "op_f1": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "fail_reasons": {"unparseable-output": 5}, "fail_syntax": 5, "fail_grounding": 0, "tokens_per_para": 1025.0, "secs_per_para": 21.22, "arm": "oneshot-base"}
+{"ts": "2026-09-13T02:55:05.562971+00:00", "run": "repro", "event": "model_loaded", "model": "oneshot-lora_joint_repro", "load_s": 2.14}
+{"ts": "2026-09-13T02:59:02.734255+00:00", "run": "repro", "event": "oneshot_scored", "n_docs": 5, "example_doc": "adam_collis", "routing_exact": 0.0, "subjval_recall": 0.0, "op_p": 0.0, "op_r": 0.0, "op_f1": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "fail_reasons": {"unparseable-output": 5}, "fail_syntax": 5, "fail_grounding": 0, "tokens_per_para": 1025.0, "secs_per_para": 47.43, "arm": "oneshot-lora_joint_repro"}

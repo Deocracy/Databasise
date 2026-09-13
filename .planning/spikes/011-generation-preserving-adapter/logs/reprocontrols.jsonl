@@ -1,0 +1,5 @@
+{"ts": "2026-09-13T01:27:14.603808+00:00", "run": "reprocontrols", "event": "arm_scored", "arm": "A", "test_mrr": 0.8014, "train_mrr": 0.7881, "gold_mrr": 1.0, "anisotropy": 0.2788}
+{"ts": "2026-09-13T01:27:14.964482+00:00", "run": "reprocontrols", "event": "arm_scored", "arm": "E-minicpm2b", "test_mrr": 0.3158, "train_mrr": 0.3148, "gold_mrr": 0.125, "anisotropy": 0.9035}
+{"ts": "2026-09-13T01:27:15.321887+00:00", "run": "reprocontrols", "event": "arm_scored", "arm": "Cmean", "test_mrr": 0.3563, "train_mrr": 0.3517, "gold_mrr": 0.094, "anisotropy": -0.0493}
+{"ts": "2026-09-13T01:27:15.683378+00:00", "run": "reprocontrols", "event": "arm_scored", "arm": "Cwhiten", "test_mrr": 0.5867, "train_mrr": 0.4927, "gold_mrr": 1.0, "anisotropy": -0.0011}
+{"ts": "2026-09-13T01:27:16.030441+00:00", "run": "reprocontrols", "event": "arm_scored", "arm": "Cbias", "test_mrr": 0.4072, "train_mrr": 0.4324, "gold_mrr": 0.375, "anisotropy": 0.8428}

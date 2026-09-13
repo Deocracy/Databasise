@@ -1,0 +1,4 @@
+# vector dumps stay on disk; run.sh regenerates them
+results/vecs_*.json
+results/teacher_A_train.json
+results/bias_*.json

@@ -1,0 +1,12 @@
+{
+ "adapter": "adapters/lora_contrastive_run1",
+ "logit_maxabsdiff_disabled_vs_pure": 0.0,
+ "logit_maxabsdiff_enabled_vs_pure": 18.3125,
+ "greedy_eq_disabled_vs_pure": true,
+ "greedy_enabled_differs": true,
+ "samples": {
+  "pure": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"birth_date\",\"o\":\"February 4, 1920\",\"quote\":\"February 4, 1920\"},{\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"death_date\",\"o\":\"June 12, 2016\",\"quote\":\"June",
+  "disabled": "{\"ops\":[{\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"birth_date\",\"o\":\"February 4, 1920\",\"quote\":\"February 4, 1920\"},{\"target\":\"graph\",\"s\":\"Janet Waldo\",\"p\":\"death_date\",\"o\":\"June 12, 2016\",\"quote\":\"June",
+  "enabled": "{\"ops\":[{\"subject\":\"Marilyn Monroe\",\"predicate\":\"maiden\",\"object\":\"Marilyn Monroe\",\"quote\":\"Marilyn Monroe\"}]}\nMarilyn Monroe's maiden name was Monroe.\nMarilyn Monroe's first name was Mary.\nMarilyn Monroe's first name was Mary.\nMarilyn"
+ }
+}

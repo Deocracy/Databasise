@@ -1,0 +1,121 @@
+{"ts": "2026-09-12T23:45:47.279296+00:00", "run": "run1", "event": "model_loaded", "model": "Qwen3-Embedding-0.6B-safetensors", "dim": 1024, "load_s": 1.31}
+{"ts": "2026-09-12T23:45:48.473899+00:00", "run": "run1", "event": "embedded", "n_docs": 20, "ms_per_doc": 50.09, "ms_per_query": 1.07}
+{"ts": "2026-09-12T23:45:48.872831+00:00", "run": "run1", "event": "teacher_saved", "n_q": 86, "n_d": 15}
+{"ts": "2026-09-12T23:45:57.496650+00:00", "run": "run1", "event": "model_loaded", "model": "MiniCPM5-2B-hf-bf16-untrained", "load_s": 1.47, "peak_vram_gb": 5.03}
+{"ts": "2026-09-12T23:46:01.350826+00:00", "run": "run1", "event": "embedded", "n_docs": 20, "ms_per_doc": 58.96}
+{"ts": "2026-09-12T23:46:06.563109+00:00", "run": "run1", "event": "model_loaded", "model": "MiniCPM5-2B-bias-probe", "load_s": 1.44}
+{"ts": "2026-09-12T23:46:07.220128+00:00", "run": "run1", "event": "bias_probed", "n": 3}
+{"ts": "2026-09-12T23:46:12.918320+00:00", "run": "run1", "event": "control_scored", "arm": "Cmean"}
+{"ts": "2026-09-12T23:46:13.687150+00:00", "run": "run1", "event": "control_scored", "arm": "Cwhiten"}
+{"ts": "2026-09-12T23:46:13.689046+00:00", "run": "run1", "event": "whiten_fit", "n_fit": 106, "eig_max": 0.02592800544947118, "eig_min": -3.775499577749214e-18}
+{"ts": "2026-09-12T23:46:13.787252+00:00", "run": "run1", "event": "control_scored", "arm": "Cbias"}
+{"ts": "2026-09-12T23:46:31.661650+00:00", "run": "run1", "event": "model_loaded", "model": "MiniCPM5-2B+lora-r16-contrastive", "load_s": 1.37, "trainable_params": 25116672, "epochs": 6, "tau": 0.03, "lr": 0.0001, "batch": 8, "seed": 1234}
+{"ts": "2026-09-12T23:46:34.759970+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 1, "loss": 1.8457, "elapsed_s": 3.1}
+{"ts": "2026-09-12T23:46:42.358743+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 5, "loss": 2.3843, "elapsed_s": 10.7}
+{"ts": "2026-09-12T23:46:53.467156+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 10, "loss": 2.1024, "elapsed_s": 21.8}
+{"ts": "2026-09-12T23:47:05.451525+00:00", "run": "run1", "event": "step", "epoch": 1, "step": 15, "loss": 1.8445, "elapsed_s": 33.8}
+{"ts": "2026-09-12T23:47:15.636261+00:00", "run": "run1", "event": "step", "epoch": 1, "step": 20, "loss": 1.1328, "elapsed_s": 44.0}
+{"ts": "2026-09-12T23:47:26.041414+00:00", "run": "run1", "event": "step", "epoch": 2, "step": 25, "loss": 0.7845, "elapsed_s": 54.4}
+{"ts": "2026-09-12T23:47:36.959367+00:00", "run": "run1", "event": "step", "epoch": 2, "step": 30, "loss": 2.6697, "elapsed_s": 65.3}
+{"ts": "2026-09-12T23:47:47.713431+00:00", "run": "run1", "event": "step", "epoch": 3, "step": 35, "loss": 0.8689, "elapsed_s": 76.0}
+{"ts": "2026-09-12T23:47:58.476298+00:00", "run": "run1", "event": "step", "epoch": 3, "step": 40, "loss": 0.2969, "elapsed_s": 86.8}
+{"ts": "2026-09-12T23:48:09.766696+00:00", "run": "run1", "event": "step", "epoch": 4, "step": 45, "loss": 1.2233, "elapsed_s": 98.1}
+{"ts": "2026-09-12T23:48:19.913085+00:00", "run": "run1", "event": "step", "epoch": 4, "step": 50, "loss": 0.7375, "elapsed_s": 108.2}
+{"ts": "2026-09-12T23:48:30.916997+00:00", "run": "run1", "event": "step", "epoch": 4, "step": 55, "loss": 0.2728, "elapsed_s": 119.3}
+{"ts": "2026-09-12T23:48:41.378057+00:00", "run": "run1", "event": "step", "epoch": 5, "step": 60, "loss": 0.0274, "elapsed_s": 129.7}
+{"ts": "2026-09-12T23:48:52.487053+00:00", "run": "run1", "event": "step", "epoch": 5, "step": 65, "loss": 0.6809, "elapsed_s": 140.8}
+{"ts": "2026-09-12T23:48:55.153938+00:00", "run": "run1", "event": "train_done", "steps": 66, "train_s": 143.2, "peak_vram_gb": 7.08, "adapter": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/011-generation-preserving-adapter/adapters/lora_contrastive_run1", "sha256": "cf8f29b96e2dc029dd7eebb3e7b5fe3574b2c578706b76cf6aaf8681d4845615"}
+{"ts": "2026-09-12T23:49:10.858581+00:00", "run": "run1", "event": "model_loaded", "model": "MiniCPM5-2B+lora-r4-lowcap", "load_s": 1.19, "trainable_params": 2150400, "epochs": 2, "tau": 0.03, "lr": 2e-05, "batch": 8, "seed": 1234}
+{"ts": "2026-09-12T23:49:13.298376+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 1, "loss": 1.8457, "elapsed_s": 2.4}
+{"ts": "2026-09-12T23:49:18.851211+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 5, "loss": 2.2482, "elapsed_s": 8.0}
+{"ts": "2026-09-12T23:49:26.931039+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 10, "loss": 2.6341, "elapsed_s": 16.1}
+{"ts": "2026-09-12T23:49:35.532620+00:00", "run": "run1", "event": "step", "epoch": 1, "step": 15, "loss": 2.4693, "elapsed_s": 24.7}
+{"ts": "2026-09-12T23:49:43.157832+00:00", "run": "run1", "event": "step", "epoch": 1, "step": 20, "loss": 2.1462, "elapsed_s": 32.3}
+{"ts": "2026-09-12T23:49:46.426905+00:00", "run": "run1", "event": "train_done", "steps": 22, "train_s": 35.5, "peak_vram_gb": 6.71, "adapter": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/011-generation-preserving-adapter/adapters/lora_lowcap_run1", "sha256": "e0fe834061d2214a60b567a10372992b76f8293c80bfc921bf41cfb2e44b1bf1"}
+{"ts": "2026-09-12T23:49:57.175365+00:00", "run": "run1", "event": "model_loaded", "model": "MiniCPM5-2B+lora-r16-kl0.1", "load_s": 1.37, "trainable_params": 25116672, "epochs": 6, "tau": 0.03, "lr": 0.0001, "batch": 8, "seed": 1234, "kl": 0.1}
+{"ts": "2026-09-12T23:50:00.569151+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 1, "loss": 1.8457, "nce": 1.8457, "kl": -0.0, "elapsed_s": 3.4}
+{"ts": "2026-09-12T23:50:09.680510+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 5, "loss": 2.6092, "nce": 2.367, "kl": 2.4223, "elapsed_s": 12.5}
+{"ts": "2026-09-12T23:50:22.803766+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 10, "loss": 2.3557, "nce": 2.2413, "kl": 1.144, "elapsed_s": 25.6}
+{"ts": "2026-09-12T23:50:36.628307+00:00", "run": "run1", "event": "step", "epoch": 1, "step": 15, "loss": 2.1111, "nce": 2.0172, "kl": 0.9391, "elapsed_s": 39.4}
+{"ts": "2026-09-12T23:50:48.861604+00:00", "run": "run1", "event": "step", "epoch": 1, "step": 20, "loss": 1.9688, "nce": 1.7769, "kl": 1.9186, "elapsed_s": 51.7}
+{"ts": "2026-09-12T23:51:01.091982+00:00", "run": "run1", "event": "step", "epoch": 2, "step": 25, "loss": 1.5844, "nce": 1.4833, "kl": 1.0113, "elapsed_s": 63.9}
+{"ts": "2026-09-12T23:51:14.227620+00:00", "run": "run1", "event": "step", "epoch": 2, "step": 30, "loss": 2.8176, "nce": 2.6897, "kl": 1.2794, "elapsed_s": 77.0}
+{"ts": "2026-09-12T23:51:27.008003+00:00", "run": "run1", "event": "step", "epoch": 3, "step": 35, "loss": 1.4591, "nce": 1.1208, "kl": 3.3827, "elapsed_s": 89.8}
+{"ts": "2026-09-12T23:51:39.905382+00:00", "run": "run1", "event": "step", "epoch": 3, "step": 40, "loss": 0.6239, "nce": 0.513, "kl": 1.1096, "elapsed_s": 102.7}
+{"ts": "2026-09-12T23:51:53.263314+00:00", "run": "run1", "event": "step", "epoch": 4, "step": 45, "loss": 1.2448, "nce": 1.0509, "kl": 1.939, "elapsed_s": 116.1}
+{"ts": "2026-09-12T23:52:05.532217+00:00", "run": "run1", "event": "step", "epoch": 4, "step": 50, "loss": 1.1804, "nce": 0.8421, "kl": 3.3835, "elapsed_s": 128.4}
+{"ts": "2026-09-12T23:52:18.703937+00:00", "run": "run1", "event": "step", "epoch": 4, "step": 55, "loss": 0.9203, "nce": 0.3572, "kl": 5.6314, "elapsed_s": 141.5}
+{"ts": "2026-09-12T23:52:31.186874+00:00", "run": "run1", "event": "step", "epoch": 5, "step": 60, "loss": 0.5945, "nce": 0.1756, "kl": 4.189, "elapsed_s": 154.0}
+{"ts": "2026-09-12T23:52:44.464227+00:00", "run": "run1", "event": "step", "epoch": 5, "step": 65, "loss": 1.1869, "nce": 0.8714, "kl": 3.1552, "elapsed_s": 167.3}
+{"ts": "2026-09-12T23:52:47.653297+00:00", "run": "run1", "event": "train_done", "steps": 66, "train_s": 170.1, "peak_vram_gb": 7.66, "adapter": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/011-generation-preserving-adapter/adapters/lora_kl0.1_run1", "sha256": "ee7a16c000766b11c72cff6ce7d0f93411b967905d7747b857f3263705681b65"}
+{"ts": "2026-09-12T23:52:59.576123+00:00", "run": "run1", "event": "model_loaded", "model": "MiniCPM5-2B+lora-r16-kl1", "load_s": 1.37, "trainable_params": 25116672, "epochs": 6, "tau": 0.03, "lr": 0.0001, "batch": 8, "seed": 1234, "kl": 1.0}
+{"ts": "2026-09-12T23:53:02.991766+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 1, "loss": 1.8457, "nce": 1.8457, "kl": -0.0, "elapsed_s": 3.4}
+{"ts": "2026-09-12T23:53:12.115908+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 5, "loss": 6.527, "nce": 2.3208, "kl": 4.2063, "elapsed_s": 12.5}
+{"ts": "2026-09-12T23:53:25.237512+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 10, "loss": 3.6577, "nce": 2.5028, "kl": 1.1549, "elapsed_s": 25.7}
+{"ts": "2026-09-12T23:53:39.071226+00:00", "run": "run1", "event": "step", "epoch": 1, "step": 15, "loss": 3.086, "nce": 2.3558, "kl": 0.7302, "elapsed_s": 39.5}
+{"ts": "2026-09-12T23:53:51.321293+00:00", "run": "run1", "event": "step", "epoch": 1, "step": 20, "loss": 3.2857, "nce": 2.2608, "kl": 1.0249, "elapsed_s": 51.7}
+{"ts": "2026-09-12T23:54:03.559874+00:00", "run": "run1", "event": "step", "epoch": 2, "step": 25, "loss": 3.0053, "nce": 2.3235, "kl": 0.6818, "elapsed_s": 64.0}
+{"ts": "2026-09-12T23:54:16.697754+00:00", "run": "run1", "event": "step", "epoch": 2, "step": 30, "loss": 3.3291, "nce": 2.4921, "kl": 0.8369, "elapsed_s": 77.1}
+{"ts": "2026-09-12T23:54:29.433014+00:00", "run": "run1", "event": "step", "epoch": 3, "step": 35, "loss": 9.3138, "nce": 2.2948, "kl": 7.0189, "elapsed_s": 89.9}
+{"ts": "2026-09-12T23:54:42.335239+00:00", "run": "run1", "event": "step", "epoch": 3, "step": 40, "loss": 2.7834, "nce": 2.0948, "kl": 0.6886, "elapsed_s": 102.8}
+{"ts": "2026-09-12T23:54:55.679081+00:00", "run": "run1", "event": "step", "epoch": 4, "step": 45, "loss": 3.8791, "nce": 2.2964, "kl": 1.5827, "elapsed_s": 116.1}
+{"ts": "2026-09-12T23:55:07.984083+00:00", "run": "run1", "event": "step", "epoch": 4, "step": 50, "loss": 3.6195, "nce": 2.1814, "kl": 1.4381, "elapsed_s": 128.4}
+{"ts": "2026-09-12T23:55:21.169805+00:00", "run": "run1", "event": "step", "epoch": 4, "step": 55, "loss": 5.0699, "nce": 1.7539, "kl": 3.316, "elapsed_s": 141.6}
+{"ts": "2026-09-12T23:55:33.641438+00:00", "run": "run1", "event": "step", "epoch": 5, "step": 60, "loss": 4.7601, "nce": 1.8525, "kl": 2.9076, "elapsed_s": 154.1}
+{"ts": "2026-09-12T23:55:46.927426+00:00", "run": "run1", "event": "step", "epoch": 5, "step": 65, "loss": 3.6453, "nce": 2.0986, "kl": 1.5467, "elapsed_s": 167.3}
+{"ts": "2026-09-12T23:55:50.100498+00:00", "run": "run1", "event": "train_done", "steps": 66, "train_s": 170.2, "peak_vram_gb": 7.66, "adapter": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/011-generation-preserving-adapter/adapters/lora_kl1_run1", "sha256": "b08e86c9e226d391eda7884d314e19e74c593c4071c6011df4a8d3575d206fbe"}
+{"ts": "2026-09-12T23:56:01.808273+00:00", "run": "run1", "event": "model_loaded", "model": "MiniCPM5-2B+lora-r16-joint", "load_s": 1.37, "trainable_params": 25116672, "epochs": 6, "tau": 0.03, "lr": 0.0001, "batch": 8, "seed": 1234, "lam_lm": 0.5, "example_doc": "adam_collis", "lm_cap": 2048}
+{"ts": "2026-09-12T23:56:06.483582+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 1, "loss": 14.6976, "nce": 1.8457, "lm": 25.7039, "lm_doc": "tyler_bates", "elapsed_s": 4.7}
+{"ts": "2026-09-12T23:56:19.742156+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 5, "loss": 8.0675, "nce": 2.3438, "lm": 11.4473, "lm_doc": "charles_craft", "elapsed_s": 17.9}
+{"ts": "2026-09-12T23:56:37.151843+00:00", "run": "run1", "event": "step", "epoch": 0, "step": 10, "loss": 5.0304, "nce": 2.3603, "lm": 5.3402, "lm_doc": "sinister_film", "elapsed_s": 35.3}
+{"ts": "2026-09-12T23:56:57.172619+00:00", "run": "run1", "event": "step", "epoch": 1, "step": 15, "loss": 4.1945, "nce": 2.1129, "lm": 4.1631, "lm_doc": "doctor_strange_2016_film", "elapsed_s": 55.4}
+{"ts": "2026-09-12T23:57:13.809553+00:00", "run": "run1", "event": "step", "epoch": 1, "step": 20, "loss": 2.7314, "nce": 1.5974, "lm": 2.2679, "lm_doc": "janet_waldo", "elapsed_s": 72.0}
+{"ts": "2026-09-12T23:57:29.706030+00:00", "run": "run1", "event": "step", "epoch": 2, "step": 25, "loss": 1.5214, "nce": 0.9801, "lm": 1.0827, "lm_doc": "lord_high_treasurer", "elapsed_s": 87.9}
+{"ts": "2026-09-12T23:57:48.143376+00:00", "run": "run1", "event": "step", "epoch": 2, "step": 30, "loss": 2.7682, "nce": 2.4766, "lm": 0.5831, "lm_doc": "charles_craft", "elapsed_s": 106.3}
+{"ts": "2026-09-12T23:58:05.396527+00:00", "run": "run1", "event": "step", "epoch": 3, "step": 35, "loss": 1.3012, "nce": 1.118, "lm": 0.3665, "lm_doc": "doctor_strange_2016_film", "elapsed_s": 123.6}
+{"ts": "2026-09-12T23:58:22.722726+00:00", "run": "run1", "event": "step", "epoch": 3, "step": 40, "loss": 0.5432, "nce": 0.435, "lm": 0.2163, "lm_doc": "charles_craft", "elapsed_s": 140.9}
+{"ts": "2026-09-12T23:58:40.389703+00:00", "run": "run1", "event": "step", "epoch": 4, "step": 45, "loss": 0.9364, "nce": 0.9015, "lm": 0.0698, "lm_doc": "scott_derrickson", "elapsed_s": 158.6}
+{"ts": "2026-09-12T23:58:57.706694+00:00", "run": "run1", "event": "step", "epoch": 4, "step": 50, "loss": 0.648, "nce": 0.6041, "lm": 0.0877, "lm_doc": "charles_craft", "elapsed_s": 175.9}
+{"ts": "2026-09-12T23:59:15.185124+00:00", "run": "run1", "event": "step", "epoch": 4, "step": 55, "loss": 0.3083, "nce": 0.2763, "lm": 0.064, "lm_doc": "janet_waldo", "elapsed_s": 193.4}
+{"ts": "2026-09-12T23:59:32.595913+00:00", "run": "run1", "event": "step", "epoch": 5, "step": 60, "loss": 0.0859, "nce": 0.0812, "lm": 0.0094, "lm_doc": "lord_high_treasurer", "elapsed_s": 210.8}
+{"ts": "2026-09-12T23:59:49.651161+00:00", "run": "run1", "event": "step", "epoch": 5, "step": 65, "loss": 0.671, "nce": 0.6559, "lm": 0.0301, "lm_doc": "charles_craft", "elapsed_s": 227.8}
+{"ts": "2026-09-12T23:59:53.582508+00:00", "run": "run1", "event": "train_done", "steps": 66, "train_s": 231.4, "peak_vram_gb": 9.95, "adapter": "/home/chris/coding/Databasise-2.0-fully-agnostic-system/.planning/spikes/011-generation-preserving-adapter/adapters/lora_joint_run1", "sha256": "4d9325604b47be2c55c763b55f708ddaa5c465356735f58a84dc21bbc83cacb8"}
+{"ts": "2026-09-13T00:00:52.247576+00:00", "run": "run1", "event": "model_loaded", "model": "MiniCPM5-2B+R-minicpm2b", "load_s": 2.0, "proj": false}
+{"ts": "2026-09-13T00:00:59.254235+00:00", "run": "run1", "event": "embedded", "arm": "R-minicpm2b", "ms_per_doc": 81.16}
+{"ts": "2026-09-13T00:01:05.097153+00:00", "run": "run1", "event": "model_loaded", "model": "MiniCPM5-2B+L-minicpm2b", "load_s": 1.67, "proj": false}
+{"ts": "2026-09-13T00:01:10.687702+00:00", "run": "run1", "event": "embedded", "arm": "L-minicpm2b", "ms_per_doc": 69.33}
+{"ts": "2026-09-13T00:01:16.489285+00:00", "run": "run1", "event": "model_loaded", "model": "MiniCPM5-2B+K01-minicpm2b", "load_s": 1.88, "proj": false}
+{"ts": "2026-09-13T00:01:23.394112+00:00", "run": "run1", "event": "embedded", "arm": "K01-minicpm2b", "ms_per_doc": 79.81}
+{"ts": "2026-09-13T00:01:29.185889+00:00", "run": "run1", "event": "model_loaded", "model": "MiniCPM5-2B+K10-minicpm2b", "load_s": 1.88, "proj": false}
+{"ts": "2026-09-13T00:01:36.069387+00:00", "run": "run1", "event": "embedded", "arm": "K10-minicpm2b", "ms_per_doc": 79.32}
+{"ts": "2026-09-13T00:01:41.867496+00:00", "run": "run1", "event": "model_loaded", "model": "MiniCPM5-2B+J-minicpm2b", "load_s": 1.9, "proj": false}
+{"ts": "2026-09-13T00:01:48.701315+00:00", "run": "run1", "event": "embedded", "arm": "J-minicpm2b", "ms_per_doc": 78.85}
+{"ts": "2026-09-13T00:02:00.500083+00:00", "run": "run1", "event": "arm_scored", "arm": "A", "test_mrr": 0.8014, "train_mrr": 0.7881, "gold_mrr": 1.0, "anisotropy": 0.2788}
+{"ts": "2026-09-13T00:02:00.865738+00:00", "run": "run1", "event": "arm_scored", "arm": "E-minicpm2b", "test_mrr": 0.3158, "train_mrr": 0.3148, "gold_mrr": 0.125, "anisotropy": 0.9035}
+{"ts": "2026-09-13T00:02:01.217656+00:00", "run": "run1", "event": "arm_scored", "arm": "Cmean", "test_mrr": 0.3563, "train_mrr": 0.3517, "gold_mrr": 0.094, "anisotropy": -0.0493}
+{"ts": "2026-09-13T00:02:01.570713+00:00", "run": "run1", "event": "arm_scored", "arm": "Cwhiten", "test_mrr": 0.5867, "train_mrr": 0.4927, "gold_mrr": 1.0, "anisotropy": -0.0011}
+{"ts": "2026-09-13T00:02:01.924699+00:00", "run": "run1", "event": "arm_scored", "arm": "Cbias", "test_mrr": 0.4072, "train_mrr": 0.4324, "gold_mrr": 0.375, "anisotropy": 0.8428}
+{"ts": "2026-09-13T00:02:02.277857+00:00", "run": "run1", "event": "arm_scored", "arm": "R-minicpm2b", "test_mrr": 0.7075, "train_mrr": 0.9419, "gold_mrr": 0.75, "anisotropy": 0.687}
+{"ts": "2026-09-13T00:02:02.637515+00:00", "run": "run1", "event": "arm_scored", "arm": "L-minicpm2b", "test_mrr": 0.3257, "train_mrr": 0.412, "gold_mrr": 0.375, "anisotropy": 0.9304}
+{"ts": "2026-09-13T00:02:03.001804+00:00", "run": "run1", "event": "arm_scored", "arm": "K01-minicpm2b", "test_mrr": 0.5685, "train_mrr": 0.9322, "gold_mrr": 0.75, "anisotropy": 0.7232}
+{"ts": "2026-09-13T00:02:03.355521+00:00", "run": "run1", "event": "arm_scored", "arm": "K10-minicpm2b", "test_mrr": 0.6211, "train_mrr": 0.7033, "gold_mrr": 1.0, "anisotropy": 0.9537}
+{"ts": "2026-09-13T00:02:03.707903+00:00", "run": "run1", "event": "arm_scored", "arm": "J-minicpm2b", "test_mrr": 0.7381, "train_mrr": 0.9419, "gold_mrr": 0.75, "anisotropy": 0.7191}
+{"ts": "2026-09-13T00:02:32.114743+00:00", "run": "run1", "event": "model_loaded", "model": "gen-minicpm-base", "load_s": 1.59}
+{"ts": "2026-09-13T00:08:14.965052+00:00", "run": "run1", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.1, "parse_rate": 0.15, "proof_pass_rate": 1.0, "n_emitted": 9, "n_passed": 9, "tokens_per_para": 856.6, "secs_per_para": 17.14, "arm": "gen-minicpm-base"}
+{"ts": "2026-09-13T00:08:20.671588+00:00", "run": "run1", "event": "model_loaded", "model": "gen-lora_contrastive_run1", "load_s": 1.96}
+{"ts": "2026-09-13T00:23:04.703318+00:00", "run": "run1", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "tokens_per_para": 1019.9, "secs_per_para": 44.2, "arm": "gen-lora_contrastive_run1"}
+{"ts": "2026-09-13T00:23:10.241020+00:00", "run": "run1", "event": "model_loaded", "model": "gen-lora_lowcap_run1", "load_s": 1.75}
+{"ts": "2026-09-13T00:33:07.038205+00:00", "run": "run1", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.05, "parse_rate": 0.15, "proof_pass_rate": 1.0, "n_emitted": 9, "n_passed": 9, "tokens_per_para": 896.4, "secs_per_para": 29.84, "arm": "gen-lora_lowcap_run1"}
+{"ts": "2026-09-13T00:33:31.384463+00:00", "run": "run1", "event": "model_loaded", "model": "gen-lora_kl0.1_run1", "load_s": 2.02}
+{"ts": "2026-09-13T00:45:42.331306+00:00", "run": "run1", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.15, "parse_rate": 0.3, "proof_pass_rate": 0.957, "n_emitted": 23, "n_passed": 22, "tokens_per_para": 797.5, "secs_per_para": 36.54, "arm": "gen-lora_kl0.1_run1"}
+{"ts": "2026-09-13T00:45:48.143949+00:00", "run": "run1", "event": "model_loaded", "model": "gen-lora_kl1_run1", "load_s": 2.03}
+{"ts": "2026-09-13T00:57:59.293323+00:00", "run": "run1", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.1, "parse_rate": 0.2, "proof_pass_rate": 0.9, "n_emitted": 10, "n_passed": 9, "tokens_per_para": 850.6, "secs_per_para": 36.55, "arm": "gen-lora_kl1_run1"}
+{"ts": "2026-09-13T00:58:05.076771+00:00", "run": "run1", "event": "model_loaded", "model": "gen-lora_joint_run1", "load_s": 1.99}
+{"ts": "2026-09-13T01:12:51.090677+00:00", "run": "run1", "event": "gen_scored", "n_docs": 20, "routing_exact": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "tokens_per_para": 1025.0, "secs_per_para": 44.3, "arm": "gen-lora_joint_run1"}
+{"ts": "2026-09-13T01:13:20.490896+00:00", "run": "run1", "event": "toggle_checked", "adapter": "adapters/lora_contrastive_run1", "maxdiff_disabled": 0.0, "eq": true, "differs": true}
+{"ts": "2026-09-13T01:13:25.702728+00:00", "run": "run1", "event": "model_loaded", "model": "oneshot-base", "load_s": 1.44}
+{"ts": "2026-09-13T01:15:08.419010+00:00", "run": "run1", "event": "oneshot_scored", "n_docs": 5, "example_doc": "adam_collis", "routing_exact": 0.0, "subjval_recall": 0.0, "op_p": 0.0, "op_r": 0.0, "op_f1": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "fail_reasons": {"unparseable-output": 5}, "fail_syntax": 5, "fail_grounding": 0, "tokens_per_para": 1025.0, "secs_per_para": 20.53, "arm": "oneshot-base"}
+{"ts": "2026-09-13T01:15:22.908278+00:00", "run": "run1", "event": "model_loaded", "model": "oneshot-lora_joint_run1", "load_s": 2.05}
+{"ts": "2026-09-13T01:19:06.391103+00:00", "run": "run1", "event": "oneshot_scored", "n_docs": 5, "example_doc": "adam_collis", "routing_exact": 0.0, "subjval_recall": 0.0, "op_p": 0.0, "op_r": 0.0, "op_f1": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "fail_reasons": {"unparseable-output": 5}, "fail_syntax": 5, "fail_grounding": 0, "tokens_per_para": 1025.0, "secs_per_para": 44.69, "arm": "oneshot-lora_joint_run1"}
+{"ts": "2026-09-13T01:19:49.588804+00:00", "run": "run1", "event": "model_loaded", "model": "oneshot-lora_kl0.1_run1", "load_s": 2.05}
+{"ts": "2026-09-13T01:23:33.681101+00:00", "run": "run1", "event": "oneshot_scored", "n_docs": 5, "example_doc": "adam_collis", "routing_exact": 0.0, "subjval_recall": 0.0, "op_p": 0.0, "op_r": 0.0, "op_f1": 0.0, "parse_rate": 0.0, "proof_pass_rate": 1.0, "n_emitted": 0, "n_passed": 0, "fail_reasons": {"unparseable-output": 5}, "fail_syntax": 5, "fail_grounding": 0, "tokens_per_para": 1024.8, "secs_per_para": 44.81, "arm": "oneshot-lora_kl0.1_run1"}
