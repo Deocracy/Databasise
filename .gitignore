@@ -44,3 +44,5 @@ reference/micro-harnesses/deep-research-3/merged/papers/
 reference/micro-harnesses/deep-research-4/.logs/
 reference/micro-harnesses/deep-research-4/lanes/*/papers/
 reference/micro-harnesses/deep-research-4/merged/papers/
+.planning/spikes/012-harness-module-and-dataset/dataset/*.jsonl
+.planning/spikes/shared/corpus-v2/documents/
