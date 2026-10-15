@@ -8,6 +8,17 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 
 **Modalities are swappable without consumers noticing:** the same corpus, the same seam, N modalities running side-by-side and comparable on the rig — proven by LightRAG and HippoRAG 2 both live behind one unchanging §18 envelope by milestone end.
 
+## Current Milestone: v1.1 Engine Fixes + Operator Console
+
+**Goal:** Fix every confirmed engine defect, then build an operator console GUI as a client of the §18 REST API.
+
+**Target features (in this order):**
+- **Engine defects (F1 to F8):** every confirmed defect in `docs/gui/CODEBASE-MAP.md` section 4: 12 that block the GUI (M-01 to M-12), 37 the GUI must otherwise guard against (G-01 to G-37), 33 groups with no GUI impact, and the test-suite failures. The phases are: run the engine (F1), inputs/errors/security (F2), store locking (F3), the LightRAG corpus path (F4), HippoRAG (F5), selectors/wiring/runner (F6), promotion and the ledger (F7), offline tooling (F8).
+- **GUI connectors:** the operator read routes the console needs (`docs/gui/API-INVENTORY.md` section 5.3): alias list, alias history, trace list, `/info`, wirings, chunk browse, graph node list and graph node detail.
+- **GUI build:** a clickable mockup of the operator console (query/compare, documents/jobs, ledger, graph/vector browser), then connected to the live API screen by screen.
+
+**Inputs:** `docs/superpowers/specs/2026-10-14-operator-console-plan.md`, `docs/gui/API-INVENTORY.md`, `docs/gui/CODEBASE-MAP.md`. Design decisions deferred to their phases: M-04 (LightRAG write path), M-08 (hybrid/global selection), M-12/G-22 (HippoRAG corpus surface and generated answer), G-27 (v1 answer fidelity), G-01 (shared graph handle).
+
 ## Requirements
 
 ### Validated
@@ -34,7 +45,14 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 
 ### Active
 
-<!-- Carried out of v1.0. Not a phase: worked from .planning/TESTING-PLAN.md at the owner's pace, or picked up by the next milestone's requirements. -->
+<!-- v1.1 scope: REQUIREMENTS.md carries the full list with REQ-IDs. -->
+
+- [ ] Engine defects in CODEBASE-MAP.md section 4 fixed, each with a test that failed first (F1 to F8)
+- [ ] Engine runnable as a served process: launcher, model clients, CORS decision, one worker per store
+- [ ] Operator read routes for the console (aliases, history, traces, info, wirings, chunks, graph)
+- [ ] Operator console GUI: mockup, then connected to the live REST API
+
+<!-- Carried out of v1.0. Not a phase: worked from .planning/TESTING-PLAN.md at the owner's pace, or picked up by a later milestone's requirements. -->
 
 - [ ] First A/A calibration run and bootstrap p95 floor keyed `(bundle@v, tier, metric)` — **Falsifier 5 / MACH-03**, deferred four times, due at the first gate-adjudicated promotion (`06-GATE-AMENDMENT.md`); driver `databasise/eval/aa_run.py` is built and tested, only real judge spend is missing
 - [ ] MODAL-01 owner items: human-authored causes for the 20 hybrid/local/global excursions and the q1/q2 answer spot-check (CONTRACT §5; `03-UAT.md` tests 2 and 3)
@@ -45,7 +63,8 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 
 ### Out of Scope
 
-- Any UI (v1 WebUI or new) — API only; standalone means REST + MCP, every UI including Sourcerer is a client
+- Any UI inside the engine — Databasise stays API-first: REST + MCP is its voice. **Reversed in part for v1.1 (2026-10-14):** an operator console is in scope as a separate §18 REST client; consumer UIs (Sourcerer and others) stay out
+- The v1 WebUI (`v1/lightrag_webui/`) as a base — it calls the v1 server, not §18; reference only (its graph viewer may be reused)
 - Docker/k8s deliverables — embeddable-first, local NixOS runtime; v1's docker/k8s material is carried, not maintained
 - Re-litigating the architecture — D4 One Machine is **ratified by the owner (2026-08-29)**; SELECTION.md (incl. spike-005 amendment) governs on any disagreement
 - Self-improving RAG (automatic modality mutation) — the fitting enables it; building it is a later milestone
@@ -89,6 +108,8 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 | Hardening items folded into the build at first-touch | Avoids a stalled doc-only phase; each item has a natural rung (gate scripts → rung 1, DR-04 → rung 3) | ⚠️ Revisit — only DR-04 (HARD-03) landed at its rung; HARD-01/02 were moved twice and never reached, so first-touch did not hold for doc-only items |
 | Defer HARD-01/HARD-02/HARD-04 out of Phase 7 to their point of first need | The operator-asserted path consumes no eval bundle, no floor and no verdict, so none of the three is reached by anything Phase 7 builds (`07-GATE-AMENDMENT.md`) | — Pending (in `.planning/TESTING-PLAN.md`; due at the hardening pass or the first gate-adjudicated promotion) |
 | Close v1.0 with MACH-03 and MODAL-01 open under the gate amendments rather than insert a closure phase | Both gaps are owner decisions (spend, human judgment), not code; a phase would only re-record the decline. Owner testing tracked outside phases in `TESTING-PLAN.md` | — Pending (resolves when the owner runs the A/A calibration or records the §5 causes) |
+| v1.1: fix all engine defects before GUI work; operator console as a §18 REST client | Two independent re-checks found 12 defects that stop a GUI working at all (no launcher, no clients, ingest never reaches queried stores, promote 500s) and 70 more; a GUI on a broken engine would hide them | — Pending |
+| v1.1: run with GSD + BAK (ledger rows per requirement, ≤20 per phase, commit trailers) | The scope grew from "make a GUI" to ~85 defects plus the console; ledger-tracked requirements stop items being dropped silently | — Pending |
 | Close the operator verbs' check-then-act races with one `BEGIN IMMEDIATE` span per verb plus a UNIQUE `(alias, minted_version)` index | A guard read and the append it gates must commit together or the guard goes stale under concurrency; the schema constraint backstops it independently of any Python read path | ✓ Held (G-07-1 closed; 40/40 concurrency runs, full suite green) |
 
 ## Evolution
@@ -109,4 +130,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-12 after v1.0 milestone*
+*Last updated: 2026-10-14 at v1.1 milestone start*

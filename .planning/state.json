@@ -1,48 +1,12 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v1.0",
-  "phases": [
-    {
-      "number": "1",
-      "name": "Machine Core",
-      "status": "complete"
-    },
-    {
-      "number": "2",
-      "name": "Falsifier Gate",
-      "status": "complete"
-    },
-    {
-      "number": "3",
-      "name": "LightRAG Query Side",
-      "status": "pending"
-    },
-    {
-      "number": "4",
-      "name": "The Seam",
-      "status": "complete"
-    },
-    {
-      "number": "5",
-      "name": "Opaque-Side Admission",
-      "status": "complete"
-    },
-    {
-      "number": "6",
-      "name": "HippoRAG 2 & Side-by-Side",
-      "status": "pending"
-    },
-    {
-      "number": "7",
-      "name": "Promotion & Rollback",
-      "status": "complete"
-    }
-  ],
+  "milestone": "v1.1",
+  "phases": [],
   "next": {
-    "command": "/gsd:progress",
-    "label": "Show progress",
-    "reason": "Unsure of state — showing progress"
+    "command": "/gsd-discuss-phase",
+    "label": "Discuss the first phase",
+    "reason": "Project initialized — plan your first phase"
   },
-  "updated_at": "2026-09-12T20:14:03.974Z"
+  "updated_at": "2026-10-15T02:42:49.345Z"
 }

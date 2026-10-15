@@ -1,37 +1,33 @@
 ---
 gsd_state_version: "1.0"
-milestone: v1.0
-status: Awaiting next milestone
-stopped_at: Completed 06-18-PLAN.md (Phase 6 gap-closure paperwork complete)
-last_updated: "2026-09-12T20:14:03.956Z"
-last_activity: 2026-09-12
-last_activity_desc: Milestone v1.0 completed and archived
-state_head: eed5d1b2e969e04a0e66c2f44969801f8fde85ac
+milestone: v1.1
+milestone_name: Engine Fixes + Operator Console
+status: planning
+last_updated: "2026-10-15T02:42:49.343Z"
+last_activity: 2026-10-14
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 64
-  completed_plans: 64
-milestone_name: milestone
-current_phase: 06
-current_phase_name: HippoRAG 2 & Side-by-Side
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-12 after v1.0 milestone)
+See: .planning/PROJECT.md (updated 2026-10-14 at v1.1 milestone start)
 
 **Core value:** Modalities are swappable without consumers noticing — LightRAG and HippoRAG 2 both live behind one unchanging §18 envelope, comparable side-by-side on the rig.
-**Current focus:** v1.0 shipped 2026-09-12. Next: `/gsd-new-milestone`. Owner testing outside any phase per `.planning/TESTING-PLAN.md`.
+**Current focus:** v1.1 Engine Fixes + Operator Console — defining requirements. Fix all engine defects (docs/gui/CODEBASE-MAP.md §4), then GUI connectors, then GUI build.
 
 ## Current Position
 
-Phase: Milestone v1.0 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-09-12 — Milestone v1.0 completed and archived
+Status: Defining requirements
+Last activity: 2026-10-14 — Milestone v1.1 started
 
 ## Performance Metrics
 
