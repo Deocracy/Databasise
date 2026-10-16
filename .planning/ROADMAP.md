@@ -70,6 +70,7 @@ Some owner decisions are taken in one phase and consumed by later ones. Settle e
 ## Phase Details
 
 ### Phase 8: Run the Engine
+
 **Goal**: An operator can start the engine as a served process from the installed package, with real model clients and one engine process per store root, and the offline test suite is green so every later fix can be checked end to end
 **Depends on**: Nothing in v1.1 (builds on v1.0 Phase 7)
 **Requirements**: RUN-01, RUN-02, RUN-03, RUN-04, RUN-05, RUN-06, RUN-07, RUN-08, RUN-09, RUN-10, RUN-11, RUN-12
@@ -79,6 +80,7 @@ Some owner decisions are taken in one phase and consumed by later ones. Settle e
   3. With `--cors-origin <origin>` a browser preflight from that origin succeeds and an unlisted origin gets no allow header; with no flag the seam behaves exactly as before
   4. A provider response with no usage is counted as one unbudgetable call, and empty choices, None content, a mis-sized embedding batch and out-of-order embedding items raise named client errors or are returned in input order — never passed on silently
   5. From `databasise/`, `.venv/bin/pytest` and `.venv/bin/python -m pytest` both report 0 failed; the COVERAGE.md cross-check runs, the mcp SDK is detected, the upload and delete round-trip tests fail under the mutations they claim to catch, and live-endpoint tests run only under `-m live`
+
 **Owner decisions to settle in discuss-phase**:
 - RUN-01: where the live §18.5 COVERAGE.md record lives (default: a stable non-`.planning` path)
 - RUN-02: representation of unreported tokens (default: call_count=1 with the existing 'unbudgetable' sentinel)
@@ -88,21 +90,30 @@ Some owner decisions are taken in one phase and consumed by later ones. Settle e
 - RUN-07: how parity CLIs coexist with a running launcher (default: take the same lock and refuse); coordinate with G-01 in Phase 10
 - RUN-08: CORS allow-list or same-origin serving (default: explicit allow-list, empty by default, never '*')
 - RUN-11: parity similarity threshold (lower it, pin a deterministic endpoint, or retry and report flakiness)
+
 **Plans**: 10 plans
 
 Plans:
+**Wave 1**
 - [ ] 08-01-PLAN.md — Tracer: installed `databasise-rest` serves /health with builder-built clients and the store lock; `live` marker excludes live tests by default (wave 1)
 - [ ] 08-02-PLAN.md — OpenAI-compatible client: no-usage = one unbudgetable call; named errors for malformed responses (RUN-02, RUN-03; wave 1)
 - [ ] 08-03-PLAN.md — Live §18.5 COVERAGE.md record and non-vacuous cross-check; shadow-safe mcp SDK detection (RUN-01, RUN-04; wave 1)
 - [ ] 08-04-PLAN.md — Upload test checks the disk; round trips prove counts drop after delete (RUN-09, RUN-10; wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 08-05-PLAN.md — Rerank client, optional RERANK_* in the shared builder, /health clients map, API coverage table (RUN-05; wave 2, owner decision checkpoint)
 - [ ] 08-06-PLAN.md — `databasise-mcp` launcher, example stdio config, cross-process lock refusal tests (RUN-06, RUN-07; wave 2)
 - [ ] 08-07-PLAN.md — Parity CLIs take the store lock and refuse while a launcher holds it (RUN-07 D-03; wave 2)
 - [ ] 08-08-PLAN.md — Opt-in exact-origin CORS allow-list via `--cors-origin` (RUN-08; wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 08-09-PLAN.md — Dual-invocation offline gate script and non-loopback socket guard (RUN-12; wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 08-10-PLAN.md — Owner live measurements set the parity threshold; amended RUN-05 wording; ledger test_refs (RUN-11 + ledger; wave 4, owner checkpoints)
 
 ### Phase 9: Inputs, Errors & Security
+
 **Goal**: Every caller-facing failure on REST and MCP is a named refusal in one documented shape, and no caller input reaches the disk, a store or a node before it is validated
 **Depends on**: Phase 8
 **Requirements**: SEAM-01, SEAM-02, SEAM-03, SEAM-04, SEAM-05, SEAM-06, SEAM-07, SEAM-08, SEAM-09, SEAM-10, SEAM-11, SEAM-12, SEAM-13, SEAM-14, SEAM-15, SEAM-16
@@ -112,6 +123,7 @@ Plans:
   3. A v1 engine failure (subprocess error, timeout, missing interpreter, malformed driver output) on any route returns a structured machine-fault response containing no stderr, server paths or traceback text
   4. Selectors that cannot mean anything are refused before work starts: `capability: []`, colliding compare keys (zero arms run, zero traces persisted, each arm executing the wiring the pre-check resolved) and promote aliases no selector could carry; an upload selector field of `null` or `''` means the default selector
   5. Seam docstrings and field descriptions match behaviour (file_name handling stated or carried through, stale selector/refusal/corpus text removed) and the redact leak check still fires under `python -O`
+
 **Owner decisions to settle in discuss-phase**:
 - SEAM-01: name of the malformed-namespace refusal (proposed: InvalidEvidenceNamespaceError)
 - SEAM-02: confirm one refusal shape for every SeamRefusalError (proposed: RequestValidationError handler unwrapping ctx.error) and name the multi-member selector refusal (proposed: MultiMemberSelectorError)
@@ -124,9 +136,11 @@ Plans:
 - SEAM-09: whether whitespace-only text counts as empty (proposed: yes)
 - SEAM-11: compare key format (kind-prefixed keys change consumer-visible keys) and how a consumer tells a single envelope from a keyed map
 - SEAM-15: store file_name/content_type as citation metadata (needs the M-04 write path from Phase 11) or drop and document
+
 **Plans**: TBD
 
 ### Phase 10: Stores, Locking & Data Integrity
+
 **Goal**: Concurrent engine calls on one store root produce named outcomes instead of 500s, and every store commits all of a run's writes or none of them
 **Depends on**: Phase 8
 **Requirements**: STOR-01, STOR-02, STOR-03, STOR-04, STOR-05, STOR-06, STOR-07, STOR-08, STOR-09, STOR-10, STOR-11, STOR-12, STOR-13, STOR-14, STOR-15, STOR-16
@@ -136,6 +150,7 @@ Plans:
   3. A failed ingest or delete commits nothing and a successful one commits everything: after a refused run the kv, vector and graph stores hold no records from it, vector deletes are buffered and reverted like the other stores, and delete uses the wiring's declared namespaces
   4. A node that declares only read effects cannot mutate any store, and every store effect in the vocabulary either resolves to a wired store or is refused at parse time — no wiring parses and then fails with StoreNotWiredError
   5. Store adapters keep their own data consistent and refuse bad input by name: half-written Faiss directories raise corruption, reserved metadata keys are refused, a deleted graph node leaves no dangling edges, KV buffers are isolated from callers, blob digests cannot escape the blob root, lexical queries match all terms, and quarantined-namespace GC has a production caller that reports failures
+
 **Owner decisions to settle in discuss-phase**:
 - STOR-01: G-01 shared reference-counted CozoGraphStore per namespace, or a named StoreBusy refusal callers retry; G-36 parity-CLI handling (coordinate with RUN-07)
 - STOR-03: cache key and invalidation for opened FaissVectorStore instances (path + mtime/size, or explicit invalidation by import_index and flushes)
@@ -146,9 +161,11 @@ Plans:
 - STOR-12: wire the lexical and blob/artifact stores or delete them and drop the effects (decide together with TOOL-17); what writes_artifact means on embedder-index and graph-augment-persist. STOR-13 and STOR-14 apply only if the stores are kept
 - STOR-15: what triggers quarantined-namespace GC (generation retire, instance teardown, operator route), and derive_namespace layout vs docstring fix
 - STOR-16: reserved metadata keys rejected at upsert or moved under a sub-key
+
 **Plans**: TBD
 
 ### Phase 11: LightRAG Corpus Path
+
 **Goal**: A document ingested through the seam's LightRAG path is what the LightRAG query arms retrieve, uploads index their real content, health reports only facts it checked, and the KG arms answer the way v1 answers
 **Depends on**: Phase 10
 **Requirements**: LRAG-01, LRAG-02, LRAG-03, LRAG-04, LRAG-05, LRAG-06, LRAG-07, LRAG-08, LRAG-09, LRAG-10, LRAG-11, LRAG-12, LRAG-13, LRAG-14, LRAG-15, LRAG-16, LRAG-17, LRAG-18, LRAG-19, LRAG-20
@@ -158,6 +175,7 @@ Plans:
   3. v1 failures are readable and safe: missing v1 configuration names the missing keys (never values), a timed-out ingest leaves its document in a visible stuck/interrupted state with an explicit retry action, and driver failures surface as named refusals with no raw stderr for non-operator callers
   4. GET /health writes nothing and reports only what it checked: it covers the HippoRAG namespaces, is not 'ok' without model clients or on an empty store root, and returns a degraded report instead of a 500 when a store fails to finalize
   5. LightRAG hybrid/local/global answers use v1 kg_query's entity and relation context, prompt templates, retrieval ordering and selection (or the arms are relabelled per G-27); query traces carry no no-op embedder-index node; an unpopulated namespace is distinguishable from no match; write-side LLM spend is metered or declared unbudgetable; §8 conditions are numbered correctly; the half-wired entity driver ops are exposed or removed
+
 **Owner decisions to settle in discuss-phase**:
 - M-04 LightRAG write path (LRAG-01/02/03/15): (a) machine-native ingest writing v2 stores, (b) import_v1_index after every v1 ingest/delete, or (c) keep the split and label query data 'last parity import' — consumed by SEAM-15, TOOL-02, TOOL-11 and LIVE-05
 - M-12 (LRAG-01): whether GET /jobs/{job_id} for a HippoRAG job returns a final status or a named refusal (decide with HIPP-15)
@@ -172,9 +190,11 @@ Plans:
 - LRAG-16: refusal or envelope flag for an unpopulated namespace
 - LRAG-17/18: G-27 v1 answer fidelity — match v1 kg_query prompts exactly or relabel the arms; whether live rerank gets an API toggle
 - LRAG-20: expose a delete-impact/per-document entity view or remove the ops
+
 **Plans**: TBD
 
 ### Phase 12: HippoRAG Fixes
+
 **Goal**: HippoRAG ingests build a graph whose evidence resolves and accumulates correctly, its queries run only query-side work, and its documents have the same corpus lifecycle as LightRAG's
 **Depends on**: Phase 10
 **Requirements**: HIPP-01, HIPP-02, HIPP-03, HIPP-04, HIPP-05, HIPP-06, HIPP-07, HIPP-08, HIPP-09, HIPP-10, HIPP-11, HIPP-12, HIPP-13, HIPP-14, HIPP-15, HIPP-16, HIPP-17, HIPP-18, HIPP-19
@@ -184,6 +204,7 @@ Plans:
   3. A failed HippoRAG ingest commits nothing and its refusal names the failing node and its real exception; per-chunk OpenIE failures are counted and reported in the ingest outcome, and extraction runs with bounded concurrency
   4. A HippoRAG query runs only query-side nodes with the query embedded once, returns at most top_k non-zero-score items, carries an answer with the same meaning as LightRAG's (never the evidence texts joined), and the non-debug envelope shows when the DPR fallback fired
   5. HippoRAG documents have a full lifecycle: GET /jobs returns a terminal status for a HippoRAG ingest job, /corpus, /corpus/counts and /health cover HippoRAG, delete removes the document's records, re-ingest leaves no stale chunks, old evidence refs never resolve silently to new text, and every wiring config key and docstring claim is backed by code
+
 **Owner decisions to settle in discuss-phase**:
 - HIPP-04: in-process modality failures keep ForeignEngineRefusalError or get a distinct non-'foreign' refusal (changes the consumer-visible error code)
 - HIPP-08: merge rule for edge weights across ingests (sum co-occurrence; max or recompute synonymy)
@@ -194,9 +215,11 @@ Plans:
 - HIPP-14: fired-guard envelope shape — reuse degraded/partial or add a modality-neutral field
 - HIPP-15/16: M-12 corpus surface — selector parameter on jobs/corpus/counts/health or an engine-owned job registry; whether HippoRAG ingest returns a final job record; whether delete removes entities/facts that lose all provenance; re-ingest as delete-then-ingest
 - HIPP-17: chunk identity — content-addressed chunk ids or a content_hash on EvidenceRef (§18 change shared with LightRAG)
+
 **Plans**: TBD
 
 ### Phase 13: Selectors, Wiring & Runner
+
 **Goal**: Every query arm is selectable, the runner records every node truthfully, and consumers never see internal node ids or an unstructured 500 from the wiring layer
 **Depends on**: Phase 9
 **Requirements**: WIRE-01, WIRE-02, WIRE-03, WIRE-04, WIRE-05, WIRE-06, WIRE-07, WIRE-08, WIRE-09, WIRE-10, WIRE-11, WIRE-12, WIRE-13, WIRE-14, WIRE-15, WIRE-16, WIRE-17, WIRE-18
@@ -206,6 +229,7 @@ Plans:
   3. Every run record is complete and truthful: one NodeTrace per wiring node with completed/failed/cancelled/not-scheduled status, measured wall-clock time on failure, execution_mode stamped, unreported fields null rather than guessed, wiring identity that distinguishes the five LightRAG arms and is stable across queries on one arm, and runs that raise after executing nodes still persist a resolvable trace
   4. Guards fire only on the value they declare and misdeclared guards are refused before dispatch; the LightRAG keyword fall-through guards either fire on empty keywords or are removed with their documentation; seam events report failed versus halted correctly and ingest returns its seam events
   5. Engine internals fail by name and expose no dead API: malformed evidence output, the four advanced query members and environment-digest failures (reported by /health) are refused by name, execution placement has one source, partly-reachable refusals have tests pinning where they occur, and unused scheduling and budget APIs are wired or deleted
+
 **Owner decisions to settle in discuss-phase**:
 - WIRE-01: M-08 hybrid/global selection — a non-node-count tie-break, a distinguishing capability per arm, or an arm-name route without promote; whether {reads_graph} alone keeps resolving to HippoRAG (consumed by TOOL-09, CONN-03/05, GUI-04/05)
 - WIRE-02: M-11 which node's output counts as evidence for local/hybrid/global (join-chunks, rerank or assemble)
@@ -220,9 +244,11 @@ Plans:
 - WIRE-15: G-31 keep platform.platform() in environment_hash or reduce it to OS and architecture
 - WIRE-17: keep or delete MutableStoreComparisonExcludedError and the ingest NoWritePathForModalityError mapping
 - WIRE-18: wire or delete per-node max_concurrency and budget apportionment (coordinate with WIRE-12)
+
 **Plans**: TBD
 
 ### Phase 14: Promotion & Ledger
+
 **Goal**: The operator verbs never fail with a 500 on any trace, every alias with a generation can be selected and resolves, and an alias's history is readable from the ledger
 **Depends on**: Phase 11, Phase 12, Phase 13
 **Requirements**: LEDG-01, LEDG-02, LEDG-03, LEDG-04, LEDG-05, LEDG-06, LEDG-07, LEDG-08, LEDG-09, LEDG-10, LEDG-11, LEDG-12, LEDG-13, LEDG-14
@@ -232,6 +258,7 @@ Plans:
   3. The ledger never keeps serving a tombstoned generation: retiring the version an active rollback targets is refused with ActiveGenerationRetirementError and appends nothing
   4. An operator can read an alias's full history oldest first (generation ordinal, created_at, versions, record kind); ledger connections close after every call, refused verbs on a fresh store root create no ledger.db, trace debug accepts only a JSON boolean, and trace and alias isolation follows the G-35 tenancy decision
   5. Selection, validation and the registry agree with what wirings do: capability selection matches the effects an arm exercises (writes_* never selects a read-only arm), node-kind mismatches are refused by name, every registered part is reachable or unregistered, corpus wirings load through one path, and registry/ledger/selector docstrings are current
+
 **Owner decisions to settle in discuss-phase**:
 - LEDG-01: M-06 (a) refuse every partial trace for all three verbs, or (b) let rollback and retire accept partial traces (needs WIRE-12 arm identity); name the new refusal class
 - LEDG-02: G-18 whether rollback and retire apply the same partial=true rule (decide with M-06)
@@ -242,9 +269,11 @@ Plans:
 - LEDG-09: G-35 per-workspace trace/ledger namespaces or one store_root = one tenant; whether debug=true is operator-only
 - LEDG-10: capability matching on wiring-node effects or Part effects; whether HippoRAG's index-side nodes count at query time
 - LEDG-12: wire codebase-memory-mcp as a selectable wiring or unregister it (TOOL-15 and TOOL-18 follow)
+
 **Plans**: TBD
 
 ### Phase 15: Offline Tooling & Packaging
+
 **Goal**: The offline CLIs run from an installed wheel, refuse by name instead of crashing, never spend or write outside their store by default, and the evaluation and evidence records they produce state only what was measured
 **Depends on**: Phase 11, Phase 12
 **Requirements**: TOOL-01, TOOL-02, TOOL-03, TOOL-04, TOOL-05, TOOL-06, TOOL-07, TOOL-08, TOOL-09, TOOL-10, TOOL-11, TOOL-12, TOOL-13, TOOL-14, TOOL-15, TOOL-16, TOOL-17, TOOL-18, TOOL-19, TOOL-20
@@ -254,6 +283,7 @@ Plans:
   3. Parity and audit tools report what happened: partial, degraded or cyclic runs are 'inconclusive' or a non-zero exit, never 'completed'; verify_import catches a missing v2 graph; the v1 driver fails on a v1 failure and answers from the context it reports; cross-modality preflight refuses an unusable workspace without writing anything; HippoRAG can be audited
   4. Evaluation and evidence records are honest: calibration refuses unusable passes and persists a two-sided floor the promotion gate reads; bundle versions change when question text or gold ids change; parity, Falsifier 2, F-07 and cross-modality records render only states they read, compute verdicts and exit codes from results, and cite paths that exist
   5. Admission is enforced when the registry loads (§8 conditions 7, 10 and 11 for every opaque part; invalid effects, kinds and scopes refused), the artifact registry is wired or removed, the codebase-memory-mcp adapter refuses mutating tools and times out on launch, and every MCP tool publishes a non-empty description with no plan references
+
 **Owner decisions to settle in discuss-phase**:
 - TOOL-01: ship the fixture corpus and eval bundles as package data, or declare the offline CLIs source-checkout-only
 - TOOL-02: M-04 (from Phase 11) — whether re-import from v1/.corpus_working_dir is the sanctioned path; M-01 how the workspace string reaches the launcher
@@ -266,9 +296,11 @@ Plans:
 - TOOL-17: D5 wire the artifact registry into the runner or delete registry_artifact/ and stores/blob.py (decide with STOR-12)
 - TOOL-18: codebase-memory-mcp stays registered or is removed (from LEDG-12); whether it keeps declaring mutates_store
 - TOOL-19: MCP tools keep the single 'args' input and generic output schema, or publish per-tool schemas (affects every MCP client)
+
 **Plans**: TBD
 
 ### Phase 16: GUI Connectors
+
 **Goal**: The operator console has every read route it needs, served by the launcher's single engine through thin adapters, with nothing leaking store internals or credentials
 **Depends on**: Phase 14 (and starts only after every engine phase, 8-15, is complete)
 **Requirements**: CONN-01, CONN-02, CONN-03, CONN-04, CONN-05, CONN-06, CONN-07, CONN-08, CONN-09, CONN-10, CONN-11, CONN-12, CONN-13, CONN-14
@@ -278,6 +310,7 @@ Plans:
   3. An operator can list aliases, page an alias's history with active and tombstoned flags, list recent traces newest first, and preview a promotion (arm, mutation class, next version, promotable with reason) that writes nothing and matches the version /promote then mints
   4. An operator can page chunk refs and graph nodes (degrees computed in one batched query, optional id prefix filter) and open a node's edges, always chosen by selector and never by namespace name; an unknown node and a busy graph return named refusals, never a 500
   5. The repo holds a generated refusal catalogue and a selector-resolution fixture that tests keep in sync with the code, and a flag-gated GET /log tails the launcher's log file (404 without the flag)
+
 **Owner decisions to settle in discuss-phase**:
 - CONN-01/05 (open question 1): operator routes on the §18 app behind an explicit flag, or a separate operator app on its own localhost port (conflicts with §18.3 'no privileged client'); MCP tools plus COVERAGE.md rows, or REST-only
 - CONN-06 (open question 2): relax the no-enumeration decision D-12/FA-06 for an operator alias listing, or keep a client-side ledger log
@@ -286,9 +319,11 @@ Plans:
 - CONN-12 (open question 6): return node and edge attrs (overrides API-06) or references only with a separate dereference call
 - CONN-13: where the store-busy fields live (recommended: GET /info)
 - CONN-14 (open questions 1 and 5): a localhost-only flag-gated log tail, or the console reads the log out of band only
+
 **Plans**: TBD
 
 ### Phase 17: GUI Mockup
+
 **Goal**: The operator can click through a complete static mockup of the six console screens on fixture data shaped like the real API, with every control id-stamped and every missing backend visibly marked
 **Depends on**: Phase 16
 **Requirements**: GUI-01, GUI-02, GUI-03, GUI-04, GUI-05, GUI-06, GUI-07, GUI-08, GUI-09, GUI-10, GUI-11
@@ -298,6 +333,7 @@ Plans:
   3. On Query & Compare the operator runs a query or an N-column compare against fixtures and sees answer, badges, evidence, tokens, seam events and the trace link in every run state, and is blocked client-side from empty text, empty capability sets, hash-shaped aliases, multi-member selectors and duplicate compare keys
   4. Every screen that issues a call renders the three server error shapes distinctly: a typed refusal banner keyed on refusal_type, field errors for a validation 422, a server-failure banner with ForeignEngineRefusalError's cause behind a toggle, and a generic 5xx view
   5. The operator walks through evidence and trace inspection, paste/upload ingest with jobs and delete, corpus and health, the ledger promote form and alias timeline (Retire disabled on the active row, the active rollback's target and tombstoned rows), and the graph/vector browser by selector — each with the client-side pre-checks that stop the inputs behind the fixed defects
+
 **Owner decisions to settle in discuss-phase**:
 - GUI-01: headless-browser tool for the test suite (proposed: Playwright for Python under the dev extra)
 - GUI-02: data-mock-id naming scheme (proposed: `<screen>.<region>.<control>`) and where the id list lives (proposed: docs/gui/MOCK-IDS.json)
@@ -305,10 +341,12 @@ Plans:
 - GUI-06: refusal catalogue generated from code (CONN-02 already generates one) or hand-written
 - GUI-11: fixture shape follows open question 6 (attrs or references only, settled in Phase 16)
 - End of phase: the owner freezes a mockup variant (mockup_freeze) after recording new needs back into API-INVENTORY.md (required by LIVE-09)
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 18: GUI Live
+
 **Goal**: The operator runs the whole console against the live engine — query, compare, evidence, trace, ingest, corpus, health, ledger and graph/vector browsing — from a browser served by the launcher
 **Depends on**: Phase 17
 **Requirements**: LIVE-01, LIVE-02, LIVE-03, LIVE-04, LIVE-05, LIVE-06, LIVE-07, LIVE-08, LIVE-09
@@ -318,12 +356,14 @@ Plans:
   3. The operator inspects evidence (one request per ref per session) and traces (re-requested with debug), ingests, uploads and deletes documents with Query disabled while a write is in flight and the corpus refreshing after a delete, and health and counts poll only when allowed
   4. The operator promotes a query's trace to an alias and then queries through that alias, rolls back and retires from the timeline, and browses graph nodes, node edges and chunks by selector, with the store-busy refusal rendered while the graph is held
   5. A control keeps its needs-backend badge exactly when its route is absent from the live /openapi.json, no mockup control is removed, and the frozen mockup id check exits 0
+
 **Owner decisions to settle in discuss-phase**:
 - LIVE-01 (open questions 4 and 5): same-origin static serving from the FastAPI app, a Vite dev proxy, or an opt-in allow-list; localhost-only no-auth or a reverse proxy with auth; the build stack after the mockup (React 19 + Vite + Sigma.js, or plain HTML/JS)
 - LIVE-05 (open question 8): until M-04 (Phase 11) unifies LightRAG's write and read stores, the screen keeps the 'different stores' notice and the test asserts only the corpus-status path
 - LIVE-07 (open questions 2 and 3): if alias enumeration and trace listing stay closed (Phase 16), the pickers stay client-side with their needs-backend badges
 - LIVE-08: depends on the Phase 16 connector routes and open question 6
 - LIVE-09: depends on the mockup_freeze set at the end of Phase 17
+
 **Plans**: TBD
 **UI hint**: yes
 

@@ -1,12 +1,68 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v1.1",
-  "phases": [],
+  "milestone": "v1.1 — Engine Fixes + Operator Console",
+  "phases": [
+    {
+      "number": "8",
+      "name": "Run the Engine",
+      "status": "pending"
+    },
+    {
+      "number": "9",
+      "name": "Inputs, Errors & Security",
+      "status": "pending"
+    },
+    {
+      "number": "10",
+      "name": "Stores, Locking & Data Integrity",
+      "status": "pending"
+    },
+    {
+      "number": "11",
+      "name": "LightRAG Corpus Path",
+      "status": "pending"
+    },
+    {
+      "number": "12",
+      "name": "HippoRAG Fixes",
+      "status": "pending"
+    },
+    {
+      "number": "13",
+      "name": "Selectors, Wiring & Runner",
+      "status": "pending"
+    },
+    {
+      "number": "14",
+      "name": "Promotion & Ledger",
+      "status": "pending"
+    },
+    {
+      "number": "15",
+      "name": "Offline Tooling & Packaging",
+      "status": "pending"
+    },
+    {
+      "number": "16",
+      "name": "GUI Connectors",
+      "status": "pending"
+    },
+    {
+      "number": "17",
+      "name": "GUI Mockup",
+      "status": "pending"
+    },
+    {
+      "number": "18",
+      "name": "GUI Live",
+      "status": "pending"
+    }
+  ],
   "next": {
-    "command": "/gsd-discuss-phase",
-    "label": "Discuss the first phase",
-    "reason": "Project initialized — plan your first phase"
+    "command": "/gsd-progress --next",
+    "label": "Advance to the next step (plan phase 08)",
+    "reason": "Phase 1 of 11 — needs a plan"
   },
-  "updated_at": "2026-10-15T02:42:49.345Z"
+  "updated_at": "2026-10-16T23:54:58.474Z"
 }

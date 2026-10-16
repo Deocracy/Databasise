@@ -31,7 +31,7 @@ created: "2026-10-16"
 
 - **After every task commit:** Run the task's quick command, plus `tests/test_import_boundary.py` and `tests/seam/test_rest_transport.py` when `rest.py`, `clients/` or new top-level modules change
 - **After every plan wave:** Run `cd databasise && .venv/bin/pytest -q -rs`
-- **Before `/gsd-verify-work`:** Both invocation styles show 0 failed, `scripts/check_offline_suite.py` passes, owner-run `-m live` embedder test passed 5 times
+- **Before `/gsd-verify-work`:** Both invocation styles show 0 failed, `databasise/tools/check_offline_suite.py` passes, owner-run `-m live` embedder test passed 5 times
 - **Max feedback latency:** 230 seconds
 
 ---
@@ -53,7 +53,7 @@ Seeded per requirement from 08-RESEARCH.md; task IDs are filled once plans exist
 | TBD | TBD | TBD | RUN-09 | — | no file written outside `corpus-inbox` | unit + mutation | `.venv/bin/pytest -q tests/seam/test_rest_corpus_endpoints.py -k generated_on_disk_name` | ✅ rewrite | ⬜ pending |
 | TBD | TBD | TBD | RUN-10 | — | N/A | unit + mutation | `.venv/bin/pytest -q tests/seam/test_rest_corpus_endpoints.py -k round_trip` | ✅ rewrite | ⬜ pending |
 | TBD | TBD | TBD | RUN-11 | — | N/A | live (owner-run) | `.venv/bin/pytest -q tests/parity/test_embedder_index_reproduction.py` (shows `1 deselected`) | ✅ edit | ⬜ pending |
-| TBD | TBD | TBD | RUN-12 | — | N/A | gate script | `python scripts/check_offline_suite.py` | ❌ W0 | ⬜ pending |
+| TBD | TBD | TBD | RUN-12 | — | N/A | gate script | `cd databasise && .venv/bin/python tools/check_offline_suite.py` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -65,7 +65,7 @@ Seeded per requirement from 08-RESEARCH.md; task IDs are filled once plans exist
 - [ ] `databasise/tests/clients/test_build_clients.py`, `databasise/tests/clients/test_rerank_client.py` — RUN-05
 - [ ] `databasise/tests/seam/test_rest_cors.py` — RUN-08
 - [ ] `databasise/tests/foreign/test_mcp_sdk_guard.py` — RUN-04
-- [ ] `scripts/check_offline_suite.py` — RUN-12 gate
+- [ ] `databasise/tools/check_offline_suite.py` — RUN-12 gate
 - [ ] `databasise/evidence/COVERAGE.md` — RUN-01 data file
 - [ ] `databasise/pyproject.toml`: `markers`, `addopts`, `[project.scripts]`, `databasise.launcher` in `packages`, `httpx` dependency; then `uv lock` and `uv sync --extra rest --extra mcp`
 
