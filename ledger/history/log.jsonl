@@ -1,0 +1,2 @@
+{"v": 1, "ts": "2026-10-15T00:26:08Z", "op": "init", "id": ""}
+{"v": 2, "ts": "2026-10-15T00:26:08Z", "op": "enable-trace", "id": "", "changes": {"trace": [null, {"kind": "code", "since": 2}]}}

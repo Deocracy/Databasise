@@ -1,0 +1,24 @@
+{
+  "ledger_version": 2,
+  "frozen_at": null,
+  "items": [],
+  "current_phase": null,
+  "check_cmd": null,
+  "mockup_freeze": null,
+  "scope_lock": null,
+  "check_locks": null,
+  "trace": {
+    "kind": "code",
+    "since": 2
+  },
+  "stall_budgets": {
+    "repeat_block": 3,
+    "same_rounds": 2,
+    "no_progress_min": 60,
+    "hang_min": 10,
+    "owner_wait_h": 24
+  },
+  "check_guard": [],
+  "check_edit_grants": {},
+  "notify_cmd": null
+}
