@@ -88,7 +88,19 @@ Some owner decisions are taken in one phase and consumed by later ones. Settle e
 - RUN-07: how parity CLIs coexist with a running launcher (default: take the same lock and refuse); coordinate with G-01 in Phase 10
 - RUN-08: CORS allow-list or same-origin serving (default: explicit allow-list, empty by default, never '*')
 - RUN-11: parity similarity threshold (lower it, pin a deterministic endpoint, or retry and report flakiness)
-**Plans**: TBD
+**Plans**: 10 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Tracer: installed `databasise-rest` serves /health with builder-built clients and the store lock; `live` marker excludes live tests by default (wave 1)
+- [ ] 08-02-PLAN.md — OpenAI-compatible client: no-usage = one unbudgetable call; named errors for malformed responses (RUN-02, RUN-03; wave 1)
+- [ ] 08-03-PLAN.md — Live §18.5 COVERAGE.md record and non-vacuous cross-check; shadow-safe mcp SDK detection (RUN-01, RUN-04; wave 1)
+- [ ] 08-04-PLAN.md — Upload test checks the disk; round trips prove counts drop after delete (RUN-09, RUN-10; wave 1)
+- [ ] 08-05-PLAN.md — Rerank client, optional RERANK_* in the shared builder, /health clients map, API coverage table (RUN-05; wave 2, owner decision checkpoint)
+- [ ] 08-06-PLAN.md — `databasise-mcp` launcher, example stdio config, cross-process lock refusal tests (RUN-06, RUN-07; wave 2)
+- [ ] 08-07-PLAN.md — Parity CLIs take the store lock and refuse while a launcher holds it (RUN-07 D-03; wave 2)
+- [ ] 08-08-PLAN.md — Opt-in exact-origin CORS allow-list via `--cors-origin` (RUN-08; wave 2)
+- [ ] 08-09-PLAN.md — Dual-invocation offline gate script and non-loopback socket guard (RUN-12; wave 3)
+- [ ] 08-10-PLAN.md — Owner live measurements set the parity threshold; amended RUN-05 wording; ledger test_refs (RUN-11 + ledger; wave 4, owner checkpoints)
 
 ### Phase 9: Inputs, Errors & Security
 **Goal**: Every caller-facing failure on REST and MCP is a named refusal in one documented shape, and no caller input reaches the disk, a store or a node before it is validated
