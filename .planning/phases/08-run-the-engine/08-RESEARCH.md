@@ -183,8 +183,7 @@ databasise/
 │   ├── openai_compat.py     # RUN-02/03 edits
 │   └── base.py              # unchanged
 ├── launcher/                # NEW package (add "databasise.launcher" to [tool.setuptools] packages)
-│   ├── __init__.py
-│   ├── _common.py           # shared argparse options, defaults, client wiring, lock acquisition
+│   ├── __init__.py          # shared argparse options, defaults, client wiring, lock acquisition (plan 08-01)
 │   ├── serve_rest.py        # main() for databasise-rest, also `python -m databasise.launcher.serve_rest`
 │   └── serve_mcp.py         # main() for databasise-mcp
 ├── evidence/COVERAGE.md     # NEW (copy of archived §18.5 record; rows are added here from now on)
@@ -414,20 +413,26 @@ Put the assertion at module level so a missing file fails collection with the pa
 | A4 | The endpoint's embedding noise stays near the cosine 0.9961-0.9965 seen in DEFECTS `tests-run/T2` run A; the D-14 threshold of about 0.995 must be set from the new ~5 measured runs, not from this value | RUN-11 | Threshold too tight (flaky) or too loose (weak parity claim); mitigated by measuring |
 | A5 | Cohere charges per "search unit" so its usage is not a token count; treating Cohere tokens as unbudgetable is acceptable | Pattern 5 | Cohere runs would be flagged unbudgetable and refuse queries; only matters if the owner points `RERANK_*` at Cohere |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **`resolved_model_identity` for rerank servers that do not echo a model (Cohere).**
    - Known: repo rule forbids substituting the requested model id (`clients/base.py:8-14`); Cohere's response has no `model` `[CITED: docs.cohere.com/reference/rerank]`.
    - Unclear: whether the owner will point `RERANK_*` at Cohere or at a self-hosted vLLM.
    - Recommendation: follow the rule (raise `ModelIdentityMissingError`), tell the owner Cohere is unsupported until an explicit, recorded exception is approved (for example `RERANK_MODEL_IDENTITY` env key). Do not decide this silently in code.
+   - ROUTED: 08-05 Task 1 owner checkpoint (`checkpoint:decision`, `gate="blocking-human"`, decision B: options `recommended` / `info-route` strict, `identity-exception` adds `RERANK_MODEL_IDENTITY`). 08-05 Task 2 implements the owner's choice.
 2. **Adding `clients` to `HealthReport` changes the REST/MCP health payload.**
    - Known: D-08 requires `/health` to report rerank unavailability; the model is frozen/forbid-extra.
    - Unclear: whether the §18 contract text (`docs/system-model/CONTRACT.md` §18) pins the health field set.
    - Recommendation: add `clients: dict[str, bool]` (additive field), grep `docs/system-model/` and `docs/gui/API-INVENTORY.md` for health shape pins before the change, and list the field in `evidence/COVERAGE.md` notes.
+   - ROUTED: 08-05 Task 1 owner checkpoint (decision A: additive `clients` field on `/health` or a new `GET /info` route). The pre-change pin grep is 08-05 Task 3 step 2: it runs `grep -rn -i "health" docs/system-model/ docs/gui/API-INVENTORY.md` before the `HealthReport` edit, records the output in the 08-05 SUMMARY, and stops for the owner if `docs/system-model/` fixes the field set.
 3. **Which parity entry points take the lock.** D-03 names five; `parity/run_arm.py:344 main()` also opens the same default store (`run_arm(args.arm, args.query)` with `DEFAULT_STORE_ROOT`). Recommendation: include it as the sixth. `eval/corpus_ingest.py` and `eval/aa_run.py` use their own `_EVAL_INGEST_STORE_ROOT`, not the parity store; leave them out and say so.
+   - RESOLVED: plan 08-07 (D-03) adds the lock to `parity/run_arm.py:main` as the sixth caller and leaves the `eval/` entry points out, recording that in its SUMMARY.
 4. **Whether `--env-file` has a default.** Parity CLIs default to `DEFAULT_V1_ENV_PARITY` (`run_arm.py:49`). For the launcher, a default of that path is convenient but silently ties a served process to parity credentials. Recommendation: no default; required unless `--no-clients` (D-11), error names the flag.
+   - RESOLVED: plan 08-01 Task 1 step 3 (D-11): `--env-file` has no default; `check_engine_arguments` exits 2 naming `--env-file` unless `--no-clients` is given, tested by `test_env_file_is_required_without_no_clients`.
 5. **Amending the ledger/requirement text for RUN-05 and ROADMAP criterion 1** (D-07/D-08 note). Needs the owner's approval through `scripts/ledger-amend.py`; the plan must include that step and must not drop the rerank client to satisfy the old wording.
+   - ROUTED: 08-10 Task 1 owner step 4 (approve or replace the RUN-05 / ROADMAP criterion 1 wording); 08-10 Task 2 step 4 applies the approved wording without touching `ledger/`; 08-10 Task 3 owner step fills the ledger test_refs.
 6. **Live executions in this phase.** RUN-11 (5 runs of the embedder test) and the optional `-m live` rerank test spend real endpoint calls and need the owner's env file at runtime. Plan them as an explicit end-of-phase human step with the recorded numbers committed into the test docstring.
+   - ROUTED: 08-10 Task 1 owner steps 1 and 3 (five live measurement runs, optional live rerank test) and the 08-10 Task 2 `<human-check>` (five confirming `-m live` runs at the new threshold).
 
 ## Environment Availability
 
