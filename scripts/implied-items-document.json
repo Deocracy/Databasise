@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "kind": "document",
+  "rule": "For one stated document requirement, check each rule below and emit one candidate per implied requirement the text does not already satisfy. Read the text first and prune already-satisfied candidates before generating anything.",
+  "categories": [
+    {
+      "name": "term-defined",
+      "rule": "Every term is defined before its first use.",
+      "probe": "Grep earlier lines for a definition before proposing a new term item."
+    },
+    {
+      "name": "xref-resolves",
+      "rule": "Every cross-reference resolves to a section that exists.",
+      "probe": "Read the referenced heading before proposing a new cross-reference item."
+    },
+    {
+      "name": "toc-exists",
+      "rule": "Every chapter in the table of contents exists as a file.",
+      "probe": "Check the chapter file exists before proposing a new chapter item."
+    },
+    {
+      "name": "figure-referenced",
+      "rule": "Every figure is referenced by the text.",
+      "probe": "Grep the text for the figure label before proposing a new figure item."
+    },
+    {
+      "name": "table-referenced",
+      "rule": "Every table is referenced by the text.",
+      "probe": "Grep the text for the table label before proposing a new table item."
+    },
+    {
+      "name": "example-exists",
+      "rule": "Every example promised in the text exists.",
+      "probe": "Read the promised example before proposing a new example item."
+    },
+    {
+      "name": "exercise-count",
+      "rule": "Every chapter ends with the promised number of exercises.",
+      "probe": "Count the exercises at the chapter end before proposing a new exercise item."
+    }
+  ]
+}

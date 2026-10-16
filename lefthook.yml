@@ -1,0 +1,14 @@
+pre-commit:
+  jobs:
+    - name: no-planning-in-code-commit
+      run: |
+        files=$(git diff --cached --name-only --no-renames)
+        if printf '%s\n' "$files" | grep -q '^\.planning/' && printf '%s\n' "$files" | grep -qv '^\.planning/'; then
+          echo 'STOP: .planning/ changes go in their own docs commit (see gsd-pr-branch)'
+          exit 1
+        fi
+commit-msg:
+  jobs:
+    - name: commit-msg
+      run: |
+        python3 scripts/check-commit-msg.py {1}

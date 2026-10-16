@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "kind": "code",
+  "rule": "For one stated code requirement, check each rule below and emit one candidate per implied requirement the code does not already satisfy. Investigate the code first and prune already-satisfied candidates before generating anything.",
+  "categories": [
+    {
+      "name": "error-path",
+      "rule": "Every failure of the requirement has an observed error path with a failing-then-passing test.",
+      "probe": "Read the cited test file for a failing run before proposing a new error-path item."
+    },
+    {
+      "name": "input-validation",
+      "rule": "Every input of the requirement is validated and the allowed values are stated.",
+      "probe": "Read the validators for an existing rule before proposing a new validation item."
+    },
+    {
+      "name": "auth-check",
+      "rule": "Every state-changing operation checks who may run it.",
+      "probe": "Grep for the existing permission check before proposing a new auth item."
+    },
+    {
+      "name": "persist-shape",
+      "rule": "Every persisted field has a named key, type and default.",
+      "probe": "Grep the store for an existing key before proposing a new persist item."
+    },
+    {
+      "name": "exit-code",
+      "rule": "Every command reports success or failure through its exit code.",
+      "probe": "Read the command entry point for exit codes before proposing a new exit-code item."
+    },
+    {
+      "name": "log-line",
+      "rule": "Every state change leaves one log line the gate can read.",
+      "probe": "Grep for the existing log line before proposing a new logging item."
+    },
+    {
+      "name": "help-text",
+      "rule": "Every user-facing command documents its flags in help text.",
+      "probe": "Read the help output for existing flag docs before proposing a new help item."
+    },
+    {
+      "name": "rollback-note",
+      "rule": "Every migration states how it rolls back.",
+      "probe": "Read the migration notes for a rollback plan before proposing a new rollback item."
+    }
+  ]
+}

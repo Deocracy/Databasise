@@ -1,0 +1,96 @@
+name: bak-gate
+on:
+  push: null
+  pull_request: null
+jobs:
+  bak-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      # Add the project's toolchain setup steps before this gate step,
+      # so the ledger check_cmd runs with the same tools as local hooks.
+      - name: Merge check (G5, writes trace/s6.json for the gate below)
+        run: |
+          # A pull request runs on its merge commit and a pushed merge commit
+          # has a second parent; any other push has no merge to check.
+          # Not seen here: a merge below the pushed tip (only HEAD is checked),
+          # a pushed squash or rebase merge (no second parent) and a merge
+          # queue (no merge_group trigger). Run merge-check.py --base/--head
+          # by hand for those: --base the target branch before the merge,
+          # --head the merged branch's tip.
+          if git rev-parse -q --verify "HEAD^2" > /dev/null; then
+            python3 scripts/merge-check.py --root . --merge HEAD
+          else
+            echo "merge check skipped: HEAD is not a merge commit"
+          fi
+      - name: Completion gate (ledger, deferrals and check_cmd)
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          args="--root ."
+          if [[ "${GITHUB_REF_TYPE:-}" == "tag" ]]; then
+            args="$args --release"
+          fi
+          if git show "$BASE:ledger/history/log.jsonl" > "$RUNNER_TEMP/base-log.jsonl" 2>/dev/null; then
+            args="$args --base-log $RUNNER_TEMP/base-log.jsonl"
+          fi
+          python3 scripts/check-ledger.py $args --complete --run-check
+          rc=$?
+          exit $rc
+      - name: Check guard merge step (protected files changed by the merge)
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          base="$BASE"
+          case "$base" in
+            "" | 0000000000000000000000000000000000000000 | 00000000000000000000000000000000000000000)
+              merges="$(git rev-list --merges -n 1 HEAD 2>/dev/null || true)"
+              ;;
+            *)
+              merges="$(git rev-list --merges "$base"..HEAD 2>/dev/null || git rev-list --merges -n 1 HEAD)"
+              ;;
+          esac
+          rc=0
+          for c in $merges; do
+            python3 .claude/hooks/check-edit-guard.py --merge "$c" --root . || rc=1
+          done
+          exit $rc
+  q1-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Q1 smoke proof (the vendored trace gate refuses a broken trace file)
+        run: |
+          # A smoke proof only: the project's vendored trace-check.py runs,
+          # refuses an unparsable trace file in a copy, then checks the tree.
+          # The full Q1 must-fail and must-pass pairs run in the kit's own CI.
+          if [ ! -f scripts/trace-check.py ]; then
+            echo "q1-smoke: scripts/trace-check.py missing; run /bak:init"
+            exit 1
+          fi
+          if [ "$(python3 scripts/trace-check.py --root .)" = "trace: not enabled" ]; then
+            echo "q1-smoke skipped: trace is not enabled"
+            exit 0
+          fi
+          smoke="$RUNNER_TEMP/q1-smoke"
+          cp -R . "$smoke"
+          mkdir -p "$smoke/trace"
+          printf '{' > "$smoke/trace/s5-q1-smoke.json"
+          if python3 scripts/trace-check.py --root "$smoke" > "$RUNNER_TEMP/q1-smoke.txt" 2>&1; then
+            echo "q1-smoke failed: trace-check.py passed a planted invalid trace file"
+            exit 1
+          fi
+          if ! grep -Fx "trace/s5-q1-smoke.json: invalid (file does not parse)" "$RUNNER_TEMP/q1-smoke.txt"; then
+            echo "q1-smoke failed: trace-check.py failed on the planted copy without naming the planted file; its output:"
+            cat "$RUNNER_TEMP/q1-smoke.txt"
+            exit 1
+          fi
+          python3 scripts/trace-check.py --root .
