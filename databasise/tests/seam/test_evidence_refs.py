@@ -119,6 +119,48 @@ def test_mint_evidence_refs_raises_the_named_refusal_for_an_item_missing_its_id_
     assert exc_info.value.index == 1
 
 
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+def test_mint_evidence_refs_treats_a_non_finite_store_score_as_a_malformed_item_not_a_caller_refusal(bad):
+    """09 REVIEW WR-01: a bad score minted by a store is a machine fault, never a pydantic
+    ValidationError that the transports would report as a caller's NonFiniteNumberError."""
+    with pytest.raises(MalformedEvidenceItemError) as exc_info:
+        mint_evidence_refs([{"id": "chunk-1", "score": bad}], namespace=CHUNKS_NAMESPACE)
+
+    assert not isinstance(exc_info.value, pydantic.ValidationError)
+    assert exc_info.value.index == 0
+
+
+async def test_a_store_returning_a_nan_score_is_a_foreign_engine_fault_on_query_and_a_502_on_rest(
+    synthetic_naive_store, monkeypatch
+):
+    from databasise.seam.refusals import ForeignEngineRefusalError
+
+    async def _nan_query(self, vector, top_k=10):
+        return [{"id": "chunk-1", "score": float("nan"), "content": _CONTENT}]
+
+    monkeypatch.setattr(FaissVectorStore, "query", _nan_query)
+    engine = _engine_for(synthetic_naive_store, vector=synthetic_naive_store["query_vector"])
+
+    with pytest.raises(ForeignEngineRefusalError) as exc_info:
+        await engine.query(QueryObject(text="Which films did Ed Wood direct?"))
+    assert exc_info.value.failure_class == "MalformedDriverOutput"
+    assert exc_info.value.operation == "query"
+
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from databasise.seam.rest import create_app
+
+    app = create_app(
+        store_root=synthetic_naive_store["store_root"],
+        workspace=synthetic_naive_store["workspace"],
+        clients={"embedding": _StubEmbeddingClient(vector=synthetic_naive_store["query_vector"]), "llm": _StubLLMClient()},
+    )
+    response = TestClient(app).post("/query", json={"query": {"text": "Which films did Ed Wood direct?"}})
+    assert response.status_code == 502, response.text
+    assert response.json()["refusal_type"] == "ForeignEngineRefusalError"
+
+
 def test_module_docstring_names_each_chunkref_member_as_unpopulated():
     doc = evidence_module.__doc__ or ""
     for member in ("corpus_id", "recipe@version", "ordinal", "content_hash"):

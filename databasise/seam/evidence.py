@@ -86,12 +86,10 @@ class MalformedEvidenceItemError(RuntimeError):
     docstring is explicit that a seam refusal names only what the consumer supplied.
     """
 
-    def __init__(self, *, namespace: str, index: int):
+    def __init__(self, *, namespace: str, index: int, reason: str = "carries no 'id' key"):
         self.namespace = namespace
         self.index = index
-        super().__init__(
-            f"retrieval item at index {index} in namespace {namespace!r} carries no 'id' key"
-        )
+        super().__init__(f"retrieval item at index {index} in namespace {namespace!r} {reason}")
 
 
 def mint_evidence_refs(
@@ -102,14 +100,20 @@ def mint_evidence_refs(
     element-wise map, order-preserving by construction.
 
     Raises :class:`MalformedEvidenceItemError` — WR-03, never a bare ``KeyError`` — for an item
-    carrying no ``"id"`` key (a differently-shaped item a future retrieval node could return).
+    carrying no ``"id"`` key (a differently-shaped item a future retrieval node could return), and
+    the same error for a NaN or infinite ``score``: a store-minted bad value is a machine fault
+    (09 REVIEW WR-01), checked here before ``EvidenceRef``'s caller-input validator can blame the
+    caller for it. The engine reports both as a foreign-engine fault.
     """
     refs: list[EvidenceRef] = []
     for index, item in enumerate(items):
         item_id = item.get("id")
         if item_id is None:
             raise MalformedEvidenceItemError(namespace=namespace, index=index)
-        refs.append(EvidenceRef(ref=str(item_id), namespace=namespace, kind=kind, score=item.get("score")))
+        score = item.get("score")
+        if isinstance(score, float) and not math.isfinite(score):
+            raise MalformedEvidenceItemError(namespace=namespace, index=index, reason="carries a non-finite score")
+        refs.append(EvidenceRef(ref=str(item_id), namespace=namespace, kind=kind, score=score))
     return refs
 
 

@@ -176,6 +176,7 @@ from databasise.seam.envelope import PromotionResult, ResponseEnvelope, SeamEven
 from databasise.seam.evidence import (
     CHUNKS_NAMESPACE,
     EvidenceRef,
+    MalformedEvidenceItemError,
     mint_evidence_refs,
     resolve_evidence_ref,
     validate_evidence_namespace,
@@ -1161,7 +1162,10 @@ class Databasise:
             scheduled["results"].get(evidence_node_id) if evidence_node_id else None
         )
         retrieval_items = retrieval_output["items"] if isinstance(retrieval_output, dict) else []
-        evidence = mint_evidence_refs(retrieval_items, namespace=evidence_namespace)
+        try:
+            evidence = mint_evidence_refs(retrieval_items, namespace=evidence_namespace)
+        except MalformedEvidenceItemError as exc:  # 09 REVIEW WR-01: a store fault, not a caller refusal
+            raise _foreign_fault("query", exc, failure_class="MalformedDriverOutput") from exc
 
         # Task 3 (04-02): raises UnbudgetableParticipantError before any envelope is constructed if
         # a node reports the unbudgetable sentinel (D-08) — left to propagate unmodified.
