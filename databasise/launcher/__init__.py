@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import ipaddress
 import os
+import socket
 import sys
 from pathlib import Path
 from typing import Any
@@ -68,9 +69,19 @@ def is_loopback_host(host: str) -> bool:
 
 
 def _is_wildcard(host: str) -> bool:
+    """True for every spelling the socket layer binds to all interfaces: ``0.0.0.0``, ``::``, an empty
+    host, the short IPv4 forms (``0``, ``0.0``) and ``::ffff:0.0.0.0``."""
+    name = host.strip("[]")
+    if not name:
+        return True
     try:
-        return ipaddress.ip_address(host.strip("[]")).is_unspecified
+        ip = ipaddress.ip_address(name)
+        return ip.is_unspecified or (ip.version == 6 and ip.ipv4_mapped is not None and ip.ipv4_mapped.is_unspecified)
     except ValueError:
+        pass
+    try:
+        return socket.inet_aton(name) == bytes(4)  # inet_aton accepts the short forms ip_address rejects
+    except OSError:
         return False
 
 

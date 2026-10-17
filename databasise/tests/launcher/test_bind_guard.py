@@ -42,7 +42,7 @@ def test_rest_refuses_a_non_loopback_host_with_exit_2(store_root, capsys, monkey
     assert not (store_root / ".engine.lock").exists()
 
 
-@pytest.mark.parametrize("host", ["0.0.0.0", "::", "[::]"])
+@pytest.mark.parametrize("host", ["0.0.0.0", "::", "[::]", "0", "0.0", "", "::ffff:0.0.0.0"])
 @pytest.mark.parametrize("launcher", ["serve_rest", "serve_mcp"])
 def test_a_wildcard_bind_is_refused_even_with_the_flag(store_root, capsys, monkeypatch, launcher, host):
     import importlib
