@@ -256,6 +256,12 @@ def _foreign_fault(
     )
     return refusal
 
+def _log_staged_left(staged: Path) -> None:
+    """09 REVIEW WR-04: a fault after the v1 run started leaves the staged upload in place (v1 may
+    hold its path). Logged once, server-side, so an operator can reap it."""
+    logger.warning("staged upload left in place after an ingest fault: %s", staged)
+
+
 # v1's own docs_format vocabulary (lightrag.constants.FULL_DOCS_FORMAT_RAW/_PENDING_PARSE),
 # duplicated as bare string literals here rather than imported — databasise/tools/
 # check_import_boundary.py forbids importing lightrag anywhere under databasise/ except the named
@@ -804,11 +810,11 @@ class Databasise:
         # {"kv": "hipporag-text-chunks", "graph": "hipporag-graph"}, landing an ingest in the same
         # directories base.json's query side reads.
         stores = _build_stores(self.store_root, self.workspace, resolved)
+        wrote_staged = False
         try:
             if staged is not None:
                 # shortcut: inbox is per store not per workspace, upgrade when the protected corpus-endpoint test may change
                 staged.parent.mkdir(parents=True, exist_ok=True)
-                wrote_staged = False
                 try:
                     # Exclusive create: an earlier upload with this id may still be parsed by v1.
                     with open(staged, "xb") as handle:
@@ -820,6 +826,7 @@ class Databasise:
                     # Pre-run only: nothing has started v1 yet, so the partial file is ours to remove.
                     if wrote_staged:
                         staged.unlink(missing_ok=True)
+                        wrote_staged = False
                     raise
             scheduled = await _scheduler.run_wiring(
                 parsed,
@@ -841,6 +848,10 @@ class Databasise:
             # index_done_callback all early-return when nothing is pending).
             for store in stores.values():
                 await store.index_done_callback()
+        except BaseException:
+            if wrote_staged:
+                _log_staged_left(staged)
+            raise
         finally:
             for store in stores.values():
                 await store.finalize()
@@ -850,7 +861,12 @@ class Databasise:
         # in the run's own node_exceptions/results maps instead, and this module's own shared
         # _node_result_or_refuse re-raises it here as the seam-facing ForeignEngineRefusalError,
         # whatever the underlying failure actually was.
-        result = _node_result_or_refuse(scheduled, result_node_id, "ingest")
+        try:
+            result = _node_result_or_refuse(scheduled, result_node_id, "ingest")
+        except ForeignEngineRefusalError:
+            if wrote_staged:
+                _log_staged_left(staged)
+            raise
         # 06-10-PLAN.md: a terminal node reporting its own "enqueued" count wins (LightRAG's own
         # full-ingest); otherwise this call submitted exactly one document, so that is what is
         # reported — never a fabricated literal 0 for a node that simply does not report the field
@@ -861,6 +877,8 @@ class Databasise:
                 enqueued = 1
             return IngestJob(job_id=str(result.get("track_id") or track_id), enqueued=int(enqueued))
         except _MALFORMED_RESULT as exc:  # 09 REVIEW WR-02: malformed driver output is a 502, as on the read routes
+            if wrote_staged:
+                _log_staged_left(staged)
             raise _foreign_fault("ingest", exc, failure_class="MalformedDriverOutput") from exc
 
     async def delete_document(

@@ -134,3 +134,18 @@ async def test_malformed_driver_output_leaves_the_staged_file(tmp_path, monkeypa
 
     assert exc_info.value.failure_class == "MalformedDriverOutput"
     assert len(inbox_files(tmp_path)) == 1
+
+
+async def test_a_fault_after_the_run_started_logs_the_staged_path_once(tmp_path, monkeypatch, caplog):
+    def _raise(*_args, **_kwargs):
+        raise CorpusOpTimeoutError("ingest", 1.0)
+
+    monkeypatch.setattr(full_ingest, "run_corpus_op", _raise)
+    engine = Databasise(store_root=tmp_path, workspace="staging-log")
+
+    with caplog.at_level("WARNING", logger=engine_module.logger.name), pytest.raises(ForeignEngineRefusalError):
+        await engine.ingest(_doc(b"bytes"))
+
+    [staged] = inbox_files(tmp_path)
+    logged = [r for r in caplog.records if "staged upload left in place" in r.getMessage()]
+    assert len(logged) == 1 and str(staged) in logged[0].getMessage()
