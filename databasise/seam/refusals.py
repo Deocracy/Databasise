@@ -240,13 +240,16 @@ class InvalidDocumentIdError(SeamRefusalError):
 class DuplicateDocumentIdError(SeamRefusalError):
     """Raised by ``Databasise.ingest()`` (09 REVIEW WR-04) when a raw upload's staged file for
     ``document_id`` already exists in the inbox: an earlier upload with that id may still be parsed
-    by v1, and overwriting it would make that job parse the newer bytes. ``document_id`` is the
-    caller's own input."""
+    by v1, and overwriting it would make that job parse the newer bytes. Delete the document first
+    (``delete_document`` releases the staged file) to re-upload the id. The inbox is per store, not
+    per workspace, so a staged upload in another workspace of the same store also refuses.
+    ``document_id`` is the caller's own input."""
 
     def __init__(self, *, document_id: str):
         self.document_id = document_id
         super().__init__(
-            f"DuplicateDocumentIdError: a raw upload for document id {document_id!r} is already staged"
+            f"DuplicateDocumentIdError: document id {document_id!r} has a staged upload in this store; "
+            "delete the document first to re-upload it"
         )
 
 

@@ -1,15 +1,18 @@
-"""09 REVIEW WR-04: a raw upload is staged in the inbox only right before the v1 run, by exclusive
-create. A second upload with the same document id is refused (it never overwrites a file v1 may
-still be parsing), and a request that fails before or during the run leaves no staged file."""
+"""09 REVIEW CR-01/WR-04: a raw upload is staged in the inbox only right before the v1 run, by
+exclusive create under ``generated_on_disk_name(document_id)``. A second upload with the same
+document id is refused while its staged file exists (it never overwrites a file v1 may still be
+parsing). ``delete_document`` releases the staged file, so delete then re-upload always works. The
+staged file is removed only for a failure before v1 starts; after the run begins (timeout, malformed
+output) it stays, because v1 may hold its path."""
 
 from __future__ import annotations
 
 import pytest
 
-from databasise.foreign import CorpusOpSubprocessError
-from databasise.parts_core.lightrag import full_ingest
+from databasise.foreign import CorpusOpSubprocessError, CorpusOpTimeoutError
+from databasise.parts_core.lightrag import full_delete, full_ingest
 from databasise.seam import engine as engine_module
-from databasise.seam.corpus import IngestDocument
+from databasise.seam.corpus import IngestDocument, generated_on_disk_name
 from databasise.seam.engine import Databasise
 from databasise.seam.refusals import DuplicateDocumentIdError, ForeignEngineRefusalError
 from databasise.tests.seam._probes import inbox_files
@@ -19,8 +22,8 @@ def _ok(*_args, **_kwargs):
     return {"track_id": "t", "enqueued": 1, "usage": None}
 
 
-def _fail(*_args, **_kwargs):
-    raise CorpusOpSubprocessError(1, "boom")
+def _delete(status):
+    return lambda *_args, **_kwargs: {"status": status, "message": ""}
 
 
 def _doc(raw: bytes) -> IngestDocument:
@@ -40,6 +43,52 @@ async def test_a_second_upload_with_the_same_id_is_refused_and_keeps_the_first_b
     assert staged.read_bytes() == b"first"
 
 
+async def test_upload_delete_then_reupload_of_the_same_id_is_accepted(tmp_path, monkeypatch):
+    monkeypatch.setattr(full_ingest, "run_corpus_op", _ok)
+    monkeypatch.setattr(full_delete, "run_corpus_op", _delete("success"))
+    engine = Databasise(store_root=tmp_path, workspace="staging-cycle")
+
+    await engine.ingest(_doc(b"first"))
+    outcome = await engine.delete_document("doc-1")
+    assert outcome.status == "success"
+    assert inbox_files(tmp_path) == []
+
+    job = await engine.ingest(_doc(b"second"))
+    assert job.enqueued == 1
+    [staged] = inbox_files(tmp_path)
+    assert staged.read_bytes() == b"second"
+
+
+async def test_deleting_an_unknown_id_removes_an_orphaned_staged_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(full_delete, "run_corpus_op", _delete("not_found"))
+    engine = Databasise(store_root=tmp_path, workspace="staging-orphan")
+    orphan = tmp_path / "corpus-inbox" / generated_on_disk_name("doc-1")
+    orphan.parent.mkdir(parents=True)
+    orphan.write_bytes(b"left by a crashed upload")
+
+    outcome = await engine.delete_document("doc-1")
+
+    assert outcome.status == "not_found"
+    assert not orphan.exists()
+
+
+async def test_a_failure_removing_the_staged_file_does_not_fail_a_delete(tmp_path, monkeypatch):
+    monkeypatch.setattr(full_delete, "run_corpus_op", _delete("success"))
+    engine = Databasise(store_root=tmp_path, workspace="staging-rm-error")
+    orphan = tmp_path / "corpus-inbox" / generated_on_disk_name("doc-1")
+    orphan.parent.mkdir(parents=True)
+    orphan.write_bytes(b"x")
+
+    def _denied(self, missing_ok=False):
+        raise PermissionError("denied")
+
+    monkeypatch.setattr(type(orphan), "unlink", _denied)
+
+    outcome = await engine.delete_document("doc-1")
+
+    assert outcome.status == "success"
+
+
 async def test_a_failure_before_the_run_leaves_no_staged_file(tmp_path, monkeypatch):
     def _boom(*_args, **_kwargs):
         raise RuntimeError("store build failed")
@@ -53,15 +102,35 @@ async def test_a_failure_before_the_run_leaves_no_staged_file(tmp_path, monkeypa
     assert inbox_files(tmp_path) == []
 
 
-async def test_a_faulted_run_removes_its_staged_file_so_a_retry_can_reuse_the_id(tmp_path, monkeypatch):
-    monkeypatch.setattr(full_ingest, "run_corpus_op", _fail)
+@pytest.mark.parametrize(
+    "fault",
+    [
+        pytest.param(CorpusOpTimeoutError("ingest", 1.0), id="timeout"),
+        pytest.param(CorpusOpSubprocessError(1, "boom"), id="subprocess-failure"),
+    ],
+)
+async def test_a_driver_fault_after_the_run_started_leaves_the_staged_file(tmp_path, monkeypatch, fault):
+    def _raise(*_args, **_kwargs):
+        raise fault
+
+    monkeypatch.setattr(full_ingest, "run_corpus_op", _raise)
     engine = Databasise(store_root=tmp_path, workspace="staging-fault")
 
     with pytest.raises(ForeignEngineRefusalError):
         await engine.ingest(_doc(b"bytes"))
-    assert inbox_files(tmp_path) == []
 
-    monkeypatch.setattr(full_ingest, "run_corpus_op", _ok)
-    job = await engine.ingest(_doc(b"bytes"))
-    assert job.enqueued == 1
+    [staged] = inbox_files(tmp_path)
+    assert staged.read_bytes() == b"bytes"
+
+
+async def test_malformed_driver_output_leaves_the_staged_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        full_ingest, "run_corpus_op", lambda *_a, **_k: {"track_id": "t", "enqueued": "many", "usage": None}
+    )
+    engine = Databasise(store_root=tmp_path, workspace="staging-malformed")
+
+    with pytest.raises(ForeignEngineRefusalError) as exc_info:
+        await engine.ingest(_doc(b"bytes"))
+
+    assert exc_info.value.failure_class == "MalformedDriverOutput"
     assert len(inbox_files(tmp_path)) == 1

@@ -742,8 +742,12 @@ class Databasise:
         raw payload's bytes are written server-side under ``store_root/corpus-inbox/`` using
         ``generated_on_disk_name`` (never the caller's own ``document_id`` string joined directly,
         and never ``file_name`` at all) immediately before the run, by exclusive create: an existing
-        file for that id is refused as ``DuplicateDocumentIdError``, and the file is removed again if
-        the run fails. A successful upload's file stays (v1 holds its path).
+        file for that id is refused as ``DuplicateDocumentIdError`` (delete the document first to
+        re-upload it; ``delete_document`` removes the staged file). The staged file is removed again
+        only when the write itself fails, before the v1 subprocess starts. After that it stays, on
+        success and on timeout, cancellation or malformed output alike, because v1 may hold its path.
+        The inbox is per store, not per workspace: an id with a staged upload in one workspace is
+        refused in another until it is deleted there.
         """
         # D-12: only None is absent; a caller-supplied '' reaches the token check and is refused.
         document_id = document.document_id if document.document_id is not None else uuid.uuid4().hex
@@ -800,10 +804,11 @@ class Databasise:
         # {"kv": "hipporag-text-chunks", "graph": "hipporag-graph"}, landing an ingest in the same
         # directories base.json's query side reads.
         stores = _build_stores(self.store_root, self.workspace, resolved)
-        wrote_staged = False
         try:
             if staged is not None:
+                # shortcut: inbox is per store not per workspace, upgrade when the protected corpus-endpoint test may change
                 staged.parent.mkdir(parents=True, exist_ok=True)
+                wrote_staged = False
                 try:
                     # Exclusive create: an earlier upload with this id may still be parsed by v1.
                     with open(staged, "xb") as handle:
@@ -811,6 +816,11 @@ class Databasise:
                         handle.write(document.raw)
                 except FileExistsError:
                     raise DuplicateDocumentIdError(document_id=document_id) from None
+                except Exception:
+                    # Pre-run only: nothing has started v1 yet, so the partial file is ours to remove.
+                    if wrote_staged:
+                        staged.unlink(missing_ok=True)
+                    raise
             scheduled = await _scheduler.run_wiring(
                 parsed,
                 self.registry,
@@ -831,11 +841,6 @@ class Databasise:
             # index_done_callback all early-return when nothing is pending).
             for store in stores.values():
                 await store.index_done_callback()
-        except BaseException:
-            # A failed request must not strand its staged file (it would also refuse every retry).
-            if wrote_staged:
-                staged.unlink(missing_ok=True)
-            raise
         finally:
             for store in stores.values():
                 await store.finalize()
@@ -845,12 +850,7 @@ class Databasise:
         # in the run's own node_exceptions/results maps instead, and this module's own shared
         # _node_result_or_refuse re-raises it here as the seam-facing ForeignEngineRefusalError,
         # whatever the underlying failure actually was.
-        try:
-            result = _node_result_or_refuse(scheduled, result_node_id, "ingest")
-        except ForeignEngineRefusalError:
-            if wrote_staged:
-                staged.unlink(missing_ok=True)
-            raise
+        result = _node_result_or_refuse(scheduled, result_node_id, "ingest")
         # 06-10-PLAN.md: a terminal node reporting its own "enqueued" count wins (LightRAG's own
         # full-ingest); otherwise this call submitted exactly one document, so that is what is
         # reported — never a fabricated literal 0 for a node that simply does not report the field
@@ -873,6 +873,10 @@ class Databasise:
         value can itself express "delete this document from the corpus" — ``selector`` here names
         which fitted modality's index the delete reaches, the same thing it already names for
         ``ingest``/``query``/``compare``.
+
+        After v1 has answered (any status), the raw upload's staged inbox file for this id is removed
+        if present, so delete followed by re-upload always works, including after a crash orphan or
+        a failed asynchronous parse.
 
         A document v1 itself reports ``not_found`` (already deleted, or never ingested) is a
         normal outcome carried in ``DeletionOutcome.status`` — never a refusal. Only a
@@ -932,6 +936,13 @@ class Databasise:
         # Called before the MACH-11 correlation below so a refused run mints no seam events for a
         # node that did not run.
         result = _node_result_or_refuse(scheduled, delete_node_id, "delete")
+        # 09 REVIEW CR-01: whatever v1 reported (including not_found), a raw upload's staged file
+        # for this id is released so the id can be uploaded again. A removal error never turns a
+        # delete v1 already performed into a failure.
+        try:
+            (self.store_root / "corpus-inbox" / generated_on_disk_name(document_id)).unlink(missing_ok=True)
+        except OSError:
+            logger.exception("could not remove the staged upload for document id %r", document_id)
         node_by_id = {node.node_id: node for node in scheduled["nodes"]}
         seam_events = _mach11_events(parsed, touches, node_by_id)
 
