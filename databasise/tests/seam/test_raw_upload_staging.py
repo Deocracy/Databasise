@@ -115,6 +115,29 @@ async def test_a_delete_v1_refused_or_failed_leaves_the_staged_file_and_owner_re
     assert staged.read_bytes() == b"bytes" and owner.read_text() == "staging-busy"
 
 
+@pytest.mark.parametrize("record", [b"\xff\xfe", b"", b"  \n"], ids=["not-utf8", "empty", "blank"])
+async def test_an_unreadable_or_empty_owner_record_counts_as_no_record(tmp_path, monkeypatch, record):
+    monkeypatch.setattr(full_ingest, "run_corpus_op", _ok)
+    monkeypatch.setattr(full_delete, "run_corpus_op", _delete("success"))
+    engine = Databasise(store_root=tmp_path, workspace="staging-bad-record")
+    owner = tmp_path / "corpus-inbox-owners" / generated_on_disk_name("doc-1")
+
+    await engine.ingest(_doc(b"bytes"))
+    owner.write_bytes(record)
+
+    assert (await engine.delete_document("doc-1")).status == "success"
+    assert inbox_files(tmp_path) == [] and not owner.exists()
+
+
+async def test_the_owner_record_is_written_atomically(tmp_path, monkeypatch):
+    monkeypatch.setattr(full_ingest, "run_corpus_op", _ok)
+    engine = Databasise(store_root=tmp_path, workspace="staging-atomic")
+
+    await engine.ingest(_doc(b"bytes"))
+
+    assert [p.name for p in (tmp_path / "corpus-inbox-owners").iterdir()] == [generated_on_disk_name("doc-1")]
+
+
 async def test_a_failed_owner_record_write_removes_the_staged_file(tmp_path, monkeypatch):
     monkeypatch.setattr(full_ingest, "run_corpus_op", _ok)
     (tmp_path / "corpus-inbox-owners").write_text("a file where the directory should be")

@@ -144,6 +144,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import os
 import uuid
 from collections.abc import AsyncIterator, Iterator, Sequence
 from pathlib import Path
@@ -824,8 +825,14 @@ class Databasise:
                     # The create above won, so any owner record already here is stale. The record
                     # sits outside corpus-inbox and names the uploading workspace (09 REVIEW CR-01).
                     owner.parent.mkdir(parents=True, exist_ok=True)
-                    # The staged file's exclusive create already serialises this id, so a plain write is safe.
-                    owner.write_bytes(self.workspace.encode("utf-8"))
+                    # Atomic (temp file, then replace) so a crash never leaves a partial record.
+                    pending = owner.with_name(f".{owner.name}.{uuid.uuid4().hex}.tmp")
+                    try:
+                        pending.write_bytes(self.workspace.encode("utf-8"))
+                        os.replace(pending, owner)
+                    except BaseException:
+                        pending.unlink(missing_ok=True)
+                        raise
                 except FileExistsError:
                     if not wrote_staged:
                         raise DuplicateDocumentIdError(document_id=document_id) from None
@@ -903,7 +910,11 @@ class Databasise:
         try:
             if not staged.exists() and not owner.exists():
                 return
-            recorded = owner.read_text(encoding="utf-8") if owner.exists() else None
+            try:
+                text = owner.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):  # unreadable counts as no record
+                text = ""
+            recorded = text if text.strip() else None  # empty counts as no record
             # Only after v1 released the document: on not_allowed or fail it may still be parsing this file.
             released = v1_status in ("success", "not_found")
             if released and (recorded == self.workspace or (recorded is None and v1_status == "success")):
