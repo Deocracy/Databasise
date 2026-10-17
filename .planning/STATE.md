@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 10
 current_phase_name: Stores, Locking & Data Integrity
 status: executing
-stopped_at: Completed 10-02-PLAN.md
-last_updated: "2026-10-17T22:14:34.541Z"
+stopped_at: Completed 10-03-PLAN.md
+last_updated: "2026-10-17T22:25:45.083Z"
 last_activity: 2026-10-17
 last_activity_desc: Phase 9 complete, transitioned to Phase 10
-state_head: 04efe454141425bb376fe81b58e8cee03a48c8bb
+state_head: 03cb337ccc55007c8b1d6f3eeee308f7a363af97
 progress:
   total_phases: 11
   completed_phases: 2
   total_plans: 32
-  completed_plans: 21
+  completed_plans: 22
   percent: 18
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-17 after Phase 9)
 ## Current Position
 
 Phase: 10 (Stores, Locking & Data Integrity) — EXECUTING
-Plan: 2 of 12
+Plan: 3 of 12
 Status: Executing (10-02 complete)
 Last activity: 2026-10-17 — 10-02 complete (lexical, blob, artifact registry removed, D-15)
 
@@ -82,6 +82,7 @@ Progress: [██░░░░░░░░] 18% (2/11 phases)
 | Phase 09 P09 | 20 min | 2 tasks | 7 files |
 | Phase 09 P10 | 25min | 3 tasks | 4 files |
 | Phase 10 P02 | 15min | 2 tasks | 19 files |
+| Phase 10 P03 | 11min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,7 @@ Recent decisions affecting current work:
 - [Phase 09]: redact.py is a test-time gate; its checks raise AssertionError explicitly so python -O cannot disable them
 - [Phase 09]: Selector candidate pool is all_wirings(); capability ties break by pool order; selectors._ARM_NAMES/_DEFAULT_ARM removed
 - [Phase 10]: 10-02: lexical store, blob store and artifact registry deleted (D-15); STOR-13/14 met by removal; tests/test_removed_stores_absent.py guards it
+- [Phase 10]: 10-03: gc_namespaces CLI treats a symlinked quarantined-* entry as present so gc_namespace raises NamespaceGCError on it
 
 ### Pending Todos
 
@@ -167,8 +169,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-17T22:14:18.387Z
-Stopped at: Completed 10-02-PLAN.md
+Last session: 2026-10-17T22:25:45.002Z
+Stopped at: Completed 10-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

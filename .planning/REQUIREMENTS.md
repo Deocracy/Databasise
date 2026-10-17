@@ -171,7 +171,7 @@
   - Defects: stores/ST-14
   - Owner decision first: Conditional on STOR-12 keeping the lexical store.
   - Phase 10 D-15 exception (owner-delegated 2026-10-17): satisfied by removal. SqliteLexicalStore is deleted (TOOL-17's removed branch), so no lexical query exists; verified by tests/test_removed_stores_absent.py.
-- [ ] **STOR-15**: Quarantined-namespace GC is a real operation. gc_namespace has a production caller that removes an instance's quarantined namespace directories when that instance is retired or torn down. A removal failure other than 'directory absent' raises a named refusal instead of being suppressed by ignore_errors=True. The namespaces.py D-07 docstring matches the actual layout: either the seam stores derive their directories through derive_namespace, or the docstring states that the seam stores use fixed names and that derive_namespace is called only by parity/import_index.py. (Phase 10 D-16 exception, owner-delegated 2026-10-17: the production caller is an operator GC CLI that takes the store lock and accepts only quarantined-* tokens; no generation-to-namespace record exists, so instance retirement does not trigger GC.)
+- [x] **STOR-15**: Quarantined-namespace GC is a real operation. gc_namespace has a production caller that removes an instance's quarantined namespace directories when that instance is retired or torn down. A removal failure other than 'directory absent' raises a named refusal instead of being suppressed by ignore_errors=True. The namespaces.py D-07 docstring matches the actual layout: either the seam stores derive their directories through derive_namespace, or the docstring states that the seam stores use fixed names and that derive_namespace is called only by parity/import_index.py. (Phase 10 D-16 exception, owner-delegated 2026-10-17: the production caller is an operator GC CLI that takes the store lock and accepts only quarantined-* tokens; no generation-to-namespace record exists, so instance retirement does not trigger GC.)
   - Test: tests/test_namespaces_gc.py has two parts. (a) gc_namespace on a namespace directory that contains a read-only subdirectory holding a file raises the named GC error (before the fix it returns silently, and the test must run as a non-root user). gc_namespace on a missing directory does nothing. (b) Run the chosen trigger (e.g. engine retire of a generation that wrote a quarantined namespace) and assert the namespace directory is gone. Before the fix it remains.
   - Defects: mcp-clients/D12
   - Owner decision first: What triggers quarantined-namespace GC: generation retire, instance teardown, or an explicit operator GC route. Also whether the seam stores move to derive_namespace-derived directories or the D-07 docstring is corrected to describe the fixed-name layout.
@@ -860,7 +860,7 @@ These fail today.
 | STOR-12 | Phase 10 | Complete |
 | STOR-13 | Phase 10 | Complete |
 | STOR-14 | Phase 10 | Complete |
-| STOR-15 | Phase 10 | Pending |
+| STOR-15 | Phase 10 | Complete |
 | STOR-16 | Phase 10 | Pending |
 | LRAG-01 | Phase 11 | Pending |
 | LRAG-02 | Phase 11 | Pending |
