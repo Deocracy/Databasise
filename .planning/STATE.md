@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 08
 current_phase_name: Run the Engine
 status: executing
-stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-10-17T00:14:51.007Z"
+stopped_at: Completed 08-02-PLAN.md
+last_updated: "2026-10-17T00:18:47.366Z"
 last_activity: 2026-10-16
 last_activity_desc: Phase 08 execution started
-state_head: 318170559287885e53a57e742583ce3847fd2872
+state_head: 0dfdfbcd67840ec499e6b53de5c426079e7fb003
 progress:
   total_phases: 11
   completed_phases: 0
   total_plans: 10
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-14 at v1.1 milestone start)
 ## Current Position
 
 Phase: 08 (Run the Engine) — EXECUTING
-Plan: 2 of 10
+Plan: 3 of 10
 Status: Ready to execute
 Last activity: 2026-10-16 — Phase 08 execution started
 
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0% (0/11 phases)
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 08 P01 | 35 min | 2 tasks | 11 files |
+| Phase 08 P02 | ~10min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,7 @@ Recent decisions affecting current work:
 - Roadmap v1.1: every phase holds at most 20 requirements (BAK size gate); every defect requirement needs a regression test that fails before the fix
 - Roadmap v1.1: owner design decisions ("Owner decision first" lines) are listed per phase in ROADMAP.md and settle in discuss-phase before planning; decisions consumed across phases are listed under "Cross-phase decisions" in ROADMAP.md
 - [Phase 08]: 08-01: UnparseableProviderRoutingError message withholds the env value (raw_value attribute only); launcher has no default env file (D-11); DEFAULT_WORKSPACE is the literal RUN-06 workspace so snapshot drift cannot stop serving
+- [Phase 08]: 08-02: clients/ keeps the literal 'unbudgetable' (cannot import seam/); no-usage response = one unbudgetable call, no estimate (D-05)
 
 ### Pending Todos
 
@@ -112,8 +114,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-17T00:14:50.987Z
-Stopped at: Completed 08-01-PLAN.md
+Last session: 2026-10-17T00:18:47.346Z
+Stopped at: Completed 08-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

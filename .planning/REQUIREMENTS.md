@@ -15,11 +15,11 @@
   - Test: `.venv/bin/pytest tests/mcp/test_tool_growth_invariant.py` currently reports 2 failed, 5 passed (FileNotFoundError). After the fix it reports 7 passed. A second check: registering an extra tool name in a temporary server instance with no COVERAGE.md row makes test_every_tool_has_a_coverage_row... fail. This proves the guard detects drift again and does not pass vacuously.
   - Defects: tests/T-01, mcp-live/MCP-09, tests-run/T1, doc-audit-5/D11
   - Owner decision first: Where the live section 18.5 coverage record lives for v1.1. One option is to point the test at the archived .planning/milestones/v1.0-phases/05-opaque-side-admission/COVERAGE.md, which is then frozen. The other is to copy it to a non-archived location, for example docs/ or the v1.1 phase directory, that v1.1 operator tools and routes will add rows to. Default if not decided: move it to a stable non-.planning path so the next milestone archive does not break the test again.
-- [ ] **RUN-02**: OpenAICompatibleClient._token_accounting (databasise/clients/openai_compat.py:159-161) records call_count=1 for every completed provider call, including a response with no usage object. A chat() or embed() whose response has usage=None returns TokenAccounting with call_count == 1 and counted_by == 'unbudgetable'. That is the existing sentinel used by parts_core/lightrag/full_ingest.py:238, and the aggregation in parts_core/hipporag/openie.py:121 and entity_fact_embed.py:62 already propagates it. It no longer returns call_count == 0 with counted_by set to the model identity, which made the result indistinguishable from a real zero-token count.
+- [x] **RUN-02**: OpenAICompatibleClient._token_accounting (databasise/clients/openai_compat.py:159-161) records call_count=1 for every completed provider call, including a response with no usage object. A chat() or embed() whose response has usage=None returns TokenAccounting with call_count == 1 and counted_by == 'unbudgetable'. That is the existing sentinel used by parts_core/lightrag/full_ingest.py:238, and the aggregation in parts_core/hipporag/openie.py:121 and entity_fact_embed.py:62 already propagates it. It no longer returns call_count == 0 with counted_by set to the model identity, which made the result indistinguishable from a real zero-token count.
   - Test: Add cases to the existing databasise/tests/clients/test_openai_compat.py. With a fake AsyncOpenAI that returns a chat completion and an embeddings response with usage=None, the call_count == 1 and counted_by == 'unbudgetable' assertions fail before the fix (call_count is 0) and pass after. A companion case with usage present still returns the provider's prompt/completion/cached counts and call_count == 1.
   - Defects: mcp-clients/D7
   - Owner decision first: How to represent unreported tokens. Option (a): call_count=1 with zero token counts and the existing 'unbudgetable' sentinel. Option (b): a new sentinel, which would also need handling in every aggregator that checks for 'unbudgetable'. Option (c): estimate tokens locally with tiktoken. Default: (a). It reuses the sentinel the aggregators already handle, and it does not put an estimate in the token table.
-- [ ] **RUN-03**: OpenAICompatibleClient no longer passes malformed provider responses to callers unchecked (databasise/clients/openai_compat.py:131, 149). (1) A chat response with an empty choices list raises a named client error, not IndexError. (2) A chat response whose choices[0].message.content is None (tool-call or refusal) raises a named client error, never ChatResult(text=None). (3) An embed response whose len(response.data) != len(texts) raises a named client error. (4) embed() returns vectors ordered by each item's .index, so vectors[i] belongs to texts[i] even when the provider returns items out of order.
+- [x] **RUN-03**: OpenAICompatibleClient no longer passes malformed provider responses to callers unchecked (databasise/clients/openai_compat.py:131, 149). (1) A chat response with an empty choices list raises a named client error, not IndexError. (2) A chat response whose choices[0].message.content is None (tool-call or refusal) raises a named client error, never ChatResult(text=None). (3) An embed response whose len(response.data) != len(texts) raises a named client error. (4) embed() returns vectors ordered by each item's .index, so vectors[i] belongs to texts[i] even when the provider returns items out of order.
   - Test: In the existing databasise/tests/clients/test_openai_compat.py, using fake responses, four cases fail before the fix and pass after: empty choices fails with IndexError today; None content returns text None today; 2 vectors returned for 3 inputs is accepted today; and items returned with index [1,0] come back in provider order today. After the fix the first three raise the named error types, and the reordered case returns vectors in input order.
   - Defects: mcp-clients/D9
   - Owner decision first: Whether content=None (a refusal or tool-call answer) should raise, or map to an empty string with a stop_reason the trace can show. Default: raise a named error so the node failure is named in the trace and not reported as a blank answer.
@@ -470,7 +470,9 @@
 - CorpusDriftError and MissingTargetFamilyError.
 - aa_run's ValueErrors from paired_differences, family coverage and empty gold ids.
 - Provider client network errors in remint and aa_run.
+
 Invalid numeric options such as `--n-resamples 0` are rejected at parse time with exit 2. aa_run's multi-family --spend run uses one event loop, or fresh clients per family, so the second family never raises APIConnectionError('Event loop is closed'). remint's _REPO_EVAL_DIR constant is renamed to name the package directory it holds, and _COMMITTED_BUNDLE_ROOT still resolves to databasise/evidence/eval-bundles.
+
   - Test: databasise/tests/test_cli_refusals.py is parametrised over the six CLI main functions and the errors each can raise. It injects each named error from the client builder or loader via monkeypatch and asserts SystemExit code 1 and a single stderr line containing the error class name. aa_run with --n-resamples 0 exits 2 before any client is built. A fake client whose transport binds to the loop of first use completes a two-family aa_run --spend run. remint's bundle root path is unchanged. Each error case fails on at least one CLI today.
   - Defects: other-surfaces/OS-06, parity-b/P-B7, parity-a/PAR-07, eval/EVAL-07, eval/EVAL-09, eval/EVAL-11
 - [ ] **TOOL-05**: parity.build_hipporag_index and eval.remint default to an estimate-only dry run. The dry run makes no LLM or embedding call and exits 0 with the estimate. Live spend happens only with `--spend`. build_hipporag_index no longer refuses when store_root/workspace lacks a LightRAG import; it creates the workspace dir. Its post-build check fails with a named error when the hipporag-chunks vector count is zero or differs from the computed chunk count.
@@ -478,7 +480,9 @@ Invalid numeric options such as `--n-resamples 0` are rejected at parse time wit
 - main([]) with counting fake clients records 0 calls.
 - main(['--spend']) on an empty tmp store root (no LightRAG dir) builds.
 - A build whose fake chunk embedder writes nothing raises the named post-build error.
+
 All three fail today: both CLIs spend immediately, the build refuses without the LightRAG dir, and the chunk count is not checked.
+
   - Defects: other-surfaces/OS-12, parity-b/P-B10
 - [ ] **TOOL-06**: parity.run_comparison changes as follows:
 - A decomposed run that is partial, degraded or cyclic produces a record with status 'inconclusive', a reason naming partial, degraded or cycle, and no diff. It is never 'completed', and the existing status Literal is kept.
@@ -494,7 +498,9 @@ All three fail today: both CLIs spend immediately, the build refuses without the
 - A completed naive record has run_count >= 1.
 - _build_stores receives the resolved wiring.
 - _run_cli(['--arm','naive','--query','nope']) exits 2 and the hash of the pre-existing results file is unchanged.
+
 All fail today.
+
   - Defects: parity-a/PAR-01, parity-a/PAR-02, parity-a/PAR-08, parity-a/PAR-09, other-surfaces/OS-04
 - [ ] **TOOL-07**: v1_driver_script and v1_arm change as follows:
 - v1_driver_script exits 1 with a named error when v1 aquery_data returns a non-success status, instead of returning an empty success.
@@ -508,7 +514,9 @@ All fail today.
 - An unpinned hybrid run gives a stub keyword-extraction counter of 1.
 - The context passed to the answer step equals the chunks of the reported ids.
 - v1_arm with a tmp v1 dir that lacks .env.parity raises MissingParityEnvError, and the subprocess launcher is not called.
+
 All fail today.
+
   - Defects: parity-b/P-B2, parity-b/P-B3, parity-b/P-B4, parity-b/P-B5, parity-b/P-B14
   - Owner decision first: G-27 v1 answer fidelity: whether the v1 arm may generate its answer from the aquery_data context (one execution) or must call v1 aquery unchanged. Also whether IN-01 (a missing .env.parity treated as empty) is reversed.
 - [ ] **TOOL-08**: parity.storage_audit exits non-zero and prints 'partial' or 'cycle' when run_audit returns a partial run or a cyclic wiring. Nodes that were never dispatched are reported as 'unreached', not 'no-touch'. parity.storage_audit and parity.run_arm accept `--arm hipporag`, resolve it through the wiring loader and build stores from the resolved wiring, so HippoRAG store_namespaces are audited. The redundant in-function `import json` in run_arm.main is removed.
@@ -517,7 +525,9 @@ All fail today.
 - A cyclic wiring returns exit != 0 with 'cycle'.
 - storage_audit main(['--arm','hipporag']) with fake clients produces rows for hipporag nodes.
 - run_arm's argparse accepts 'hipporag'.
+
 All fail today.
+
   - Defects: parity-b/P-B6, parity-b/P-B8, parity-a/PAR-12
 - [ ] **TOOL-09**: parity.run_cross_modality changes as follows:
 - Preflight refuses when the LightRAG chunks namespace has zero vectors, so a HippoRAG-only workspace no longer passes.
@@ -531,7 +541,9 @@ All fail today.
 - A monkeypatched selector that resolves the second arm to 'local' gives a refusal before any client call.
 - A fake degraded second query leaves a results file containing the first query's record, and the refusal names the query and the arm.
 - A custom query list gives a corpus_hash that differs from the default.
+
 All fail today.
+
   - Defects: parity-a/PAR-03, parity-a/PAR-04, parity-a/PAR-05, parity-a/PAR-06, parity-a/PAR-11
   - Owner decision first: M-08 hybrid/global selection: whether cross-modality arms are named explicitly (by wiring id) instead of chosen by capability selector.
 - [ ] **TOOL-10**: databasise.run_wiring canonicalises the wiring document before executing it, so a wiring containing an integer outside int64 raises CanonicalisationError with zero nodes run. It finalizes every store in a finally block, so a scheduler exception still finalizes the SqliteKVStore.
@@ -547,8 +559,10 @@ All fail today.
 - A scheduler trace from a part that omits cache_hit carries None, and calibration refuses.
 - Synthetic run_b = run_a + 0.1 gives floor >= 0.
 - The four verdict strings parse to CORRECT.
+
 databasise/tests/seam/test_promotion_floor.py: after a floor is persisted, a gate verb for that arm no longer raises UncalibratedFloorRefusalError.
 All fail today.
+
   - Defects: eval/EVAL-03, eval/EVAL-06, eval/EVAL-10, eval/EVAL-12
   - Owner decision first: G-19 floor store and gate verbs: where floors are persisted, their staleness key, and whether gate verbs stay disabled until then (EVAL-10). The scheduler's cache_hit None change crosses into the runner and must be coordinated with the phase that owns M-06.
 - [ ] **TOOL-13**: eval.bundle changes as follows:
@@ -560,7 +574,9 @@ All fail today.
 - After open_sealed(v1), the v1 usage log contains 'sealed_open', and re-minting identical inputs returns a version flagged as opened, or a new version.
 - Editing one question's text or gold_document_ids changes content_hash.
 - A minted bundle.json has realised counts equal to the length of each split.
+
 All fail today.
+
   - Defects: eval/EVAL-04, eval/EVAL-05, eval/EVAL-13
 - [ ] **TOOL-14**: evidence.parity_report renders only states it reads:
 - When no excursion has a cause, the deviations document does not print 'Zero declared deviations' and lists the pending excursions.
@@ -582,7 +598,9 @@ All fail today.
 - A cause containing '|' and a newline keeps the table row count.
 - recorded_by appears in the verdict section.
 - Every '.planning/...' path that appears in parity_report.py, DECLARED-DEVIATIONS.md, PARITY-EVIDENCE.md and FALSIFIER-5-EVIDENCE.md exists on disk.
+
 All fail today.
+
   - Defects: evidence-pkg/EV-01, evidence-pkg/EV-02, evidence-pkg/EV-03, evidence-pkg/EV-04, evidence-pkg/EV-05, evidence-pkg/EV-06, evidence-pkg/EV-07, evidence-pkg/EV-08, other-surfaces/OS-08
   - Owner decision first: EV-02: whether AI-recorded causes in human_findings.json are accepted (shown with recorded_by) or refused by the renderer as not human-authored.
 - [ ] **TOOL-15**: evidence.falsifier2's verdict paragraph and the exit status of main() are computed from evaluate_probe results. Any 'DID NOT FIRE' or 'UNEXPECTED VIOLATION' row yields a 'Falsifier 2 fired' verdict and exit 1. evidence.f07_report gains a main() that writes F-07-MUTABLE-STORE-DISPOSITION.md and derives the excluded component names from the registered mutates_store parts. The F-07 verdict no longer claims the exclusion is enforced in a reachable comparison path. The F-07 record and the CROSS-MODALITY-EVIDENCE.md title, Status section and body all state the same MODAL-05 status.
@@ -596,7 +614,9 @@ All fail today.
 - kind='opaque', structural_depth='stage', artifact_scope='shared' raises ForbiddenSharedScopeError.
 - effects=['bogus'] raises.
 - default_registry() still builds.
+
 All fail today except the last.
+
   - Defects: registry-ledger/D1, registry-ledger/D2, registry-ledger/D3, registry-ledger/D4
 - [ ] **TOOL-17**: The artifact registry is either wired into the runner or removed. If it is kept:
 - write_artifact is called for the parts that declare writes_artifact (lightrag/full-ingest, lightrag/embedder-index, hipporag/graph-materializer), so a run produces registry rows.
@@ -610,7 +630,9 @@ All fail today except the last.
 - write_artifact(scope='bogus') raises the named error and the blob dir is empty.
 - A patched connection that raises SQLITE_BUSY once on the WAL pragma succeeds on retry.
 - An engine run of embedder-index leaves >= 1 row in artifact_registry.db.
+
 All fail today. If the registry is removed instead, the modules and their tests are deleted, and a grep test confirms that no references to registry_artifact or stores/blob remain.
+
   - Defects: registry-ledger/D5, registry-ledger/D6, registry-ledger/D7, registry-ledger/D8, registry-ledger/D19
   - Owner decision first: D5: wire the artifact registry into the runner (the second blast-radius call site, §16.1 discovery), or delete registry_artifact/ and stores/blob.py.
 - [ ] **TOOL-18**: The codebase-memory-mcp adapter and part change as follows:
@@ -628,7 +650,9 @@ All fail today. If the registry is removed instead, the modules and their tests 
 - An emitted derived_finding has derived_from as a list.
 - The part's declared effects are consistent with the store touches it records.
 - A spy on hashlib and subprocess shows no call during `import databasise.parts_core.codebase_memory_mcp`.
+
 All fail today.
+
   - Defects: foreign/FOR-01, foreign/FOR-02, foreign/FOR-11, parts-lightrag/PC-13, foreign/FOR-12, foreign/FOR-13, parts-lightrag/PC-14
   - Owner decision first: Whether the codebase-memory-mcp part stays registered (unreachable from every served wiring, F-07 exclusion) or is removed from default_registry. Whether it keeps declaring mutates_store, which determines whether F-07 (TOOL-15) still lists it as excluded.
 - [ ] **TOOL-19**: Each of the nine MCP tools in TOOL_NAMES publishes a non-empty usage description with no internal plan references (no 'PLAN.md', 'Phase 7' or '_refusal_mapped'). The mcp package docstring, the tools.py and create_server docstrings and tests/mcp/test_dual_transport_parity.py state nine tools or reference TOOL_NAMES. The PartRegistry docstring, the falsifier2.probe_registry docstring and the rendered falsifier2 text describe default_registry() without a fixed part count, replacing 'D-04's seven entries' and 'Phase-1 entries'.
@@ -646,7 +670,9 @@ All fail today.
 - The CROSS-MODALITY-EVIDENCE.md Findings rows that say the build was never invoked are marked as superseded.
 - evidence.__doc__ mentions parity_report and f07_report.
 - The w2-codebase-memory-mcp.json rationale and FALSIFIER-2-EVIDENCE.md do not contain 'once consuming machine-produced chunks'.
+
 These fail today.
+
   - Defects: other-surfaces/OS-07, parity-a/PAR-10, parity-b/P-B9, evidence-pkg/EV-14, evidence-pkg/EV-15
 
 ### GUI connectors
@@ -791,8 +817,8 @@ These fail today.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | RUN-01 | Phase 8 | Pending |
-| RUN-02 | Phase 8 | Pending |
-| RUN-03 | Phase 8 | Pending |
+| RUN-02 | Phase 8 | Complete |
+| RUN-03 | Phase 8 | Complete |
 | RUN-04 | Phase 8 | Pending |
 | RUN-05 | Phase 8 | Pending |
 | RUN-06 | Phase 8 | Pending |
