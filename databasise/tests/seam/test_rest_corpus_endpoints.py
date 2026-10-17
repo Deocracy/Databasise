@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -342,18 +343,26 @@ def test_rest_module_still_calls_no_selector_resolution_redaction_or_envelope_as
     assert not overlap, f"databasise/seam/rest.py calls forbidden seam-logic function(s): {overlap}"
 
 
-def test_generated_on_disk_name_is_reachable_for_a_multipart_uploaded_document(client):
-    """The multipart upload path reaches the driver with the deferred-parse document format and a
-    server-generated on-disk name — never the caller's own filename (05-04-PLAN.md Task 2's own
-    behaviour bullet, mirroring 05-01's own raw-upload proof for the in-process path)."""
+def test_generated_on_disk_name_is_reachable_for_a_multipart_uploaded_document(client, store_root):
+    """The multipart upload path writes the bytes under a server-generated on-disk name, never the
+    caller's own filename. Reads the disk: the inbox holds exactly one file whose stem is a
+    uuid4 hex id and whose name is ``generated_on_disk_name(stem)``, and nothing named
+    ``escape.pdf`` exists in the store root, the inbox, or the store root's parent."""
     response = client.post(
         "/documents/upload",
         files={"file": ("../escape.pdf", b"raw pdf bytes", "application/pdf")},
     )
     assert response.status_code == 200
-    # A malicious client-supplied filename never reaches generated_on_disk_name() as the
-    # document_id — the server mints its own uuid4-derived id regardless of the filename.
-    assert generated_on_disk_name(response.json()["job_id"] or "deadbeef")
+
+    written = sorted((store_root / "corpus-inbox").iterdir())
+    assert len(written) == 1
+    stem = written[0].stem
+    assert re.fullmatch(r"[0-9a-f]{32}", stem)
+    assert written[0].name == generated_on_disk_name(stem)
+
+    assert not (store_root / "escape.pdf").exists()
+    assert not (store_root / "corpus-inbox" / "escape.pdf").exists()
+    assert not (store_root.parent / "escape.pdf").exists()
 
 
 # --------------------------------------------------------------------------------------------- #
