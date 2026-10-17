@@ -182,9 +182,9 @@ LIGHTRAG_FULL_DELETE_ADMISSION = AdmissionRecord(
             verdict="satisfied (machine-side obligation)",
             evidence=(
                 "enforced by databasise.parts.admission.cross_check_conditions: this part's "
-                "artifact_scope=None can never be enumerated as an SA-1-shareable artifact by "
-                "databasise.registry_artifact.index.ArtifactRegistry.discover, since it declares "
-                "no artifact scope at all"
+                "artifact_scope=None declares no artifact scope at all, and the machine keeps no "
+                "artifact registry (removed in Phase 10, D-15), so nothing enumerates this part's "
+                "output as an SA-1-shareable artifact"
             ),
         ),
         ConditionVerdict(

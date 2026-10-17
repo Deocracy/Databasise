@@ -86,6 +86,24 @@ def test_no_module_imports_a_removed_store():
     assert offenders == []
 
 
+_FORBIDDEN_TEXT = (
+    *_REMOVED,
+    "ArtifactRegistry",
+    "FilesystemBlobStore",
+    "SqliteLexicalStore",
+)
+
+
+def test_no_source_names_a_removed_store():
+    offenders = [
+        f"{path.relative_to(_ROOT)}: {needle}"
+        for path in _scanned_sources()
+        for needle in _FORBIDDEN_TEXT
+        if needle in path.read_text(encoding="utf-8")
+    ]
+    assert offenders == []
+
+
 def test_pyproject_does_not_package_the_artifact_registry():
     pyproject = tomllib.loads((_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     assert "databasise.registry_artifact" not in pyproject["tool"]["setuptools"]["packages"]

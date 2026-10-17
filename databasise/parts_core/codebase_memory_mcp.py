@@ -267,10 +267,9 @@ CODEBASE_MEMORY_MCP_ADMISSION = AdmissionRecord(
             verdict="satisfied",
             evidence=(
                 "enforced by databasise.parts.admission.cross_check_conditions: this part's "
-                "artifact_scope='self_storage' can never be enumerated as an SA-1-shareable "
-                "artifact by databasise.registry_artifact.index.ArtifactRegistry.discover — "
-                "nothing this engine produces ever crosses into the machine's artifact registry "
-                "(PARTS.md ## §X condition 10)."
+                "artifact_scope is 'self_storage', and the machine keeps no artifact registry "
+                "(removed in Phase 10, D-15), so nothing enumerates this part's output as an "
+                "SA-1-shareable artifact (PARTS.md ## §X condition 10)."
             ),
         ),
         ConditionVerdict(

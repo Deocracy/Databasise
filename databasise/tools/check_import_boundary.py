@@ -161,7 +161,7 @@ def check_upstream_refs(package_root: Path, repo_root: Path) -> list[Violation]:
     """For every class defined in a ``databasise/stores/*.py`` module (excluding ``__init__.py``
     and the shared ``base.py`` lifecycle ABC) that declares a non-empty class-level
     ``upstream_ref``, assert the referenced path exists under ``repo_root``. A module declaring no
-    ``upstream_ref`` at all (a new primitive with no v1 analog, e.g. the lexical/blob stores)
+    ``upstream_ref`` at all (a new primitive with no v1 analog, e.g. a store module written fresh for v2)
     contributes no violation — this check only holds *declared* provenance to account, per its own
     docstring.
     """

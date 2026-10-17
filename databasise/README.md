@@ -36,7 +36,7 @@ databasise/
 ├── parts/        # explicit in-code part registry, NodeKind tagged sum (D-13)
 ├── validator/     # parse, cycle detection, depth, execution_mode
 ├── runner/        # TopologicalSorter + TaskGroup scheduler, budget, trace
-├── stores/        # Cozo (graph), Faiss (vector), SQLite (KV/lexical) adapters
+├── stores/        # Cozo (graph), Faiss (vector), SQLite (KV) adapters
 └── tests/         # pytest harness; conftest.py provides store_root, rig_trace_schema,
                     # assert_valid_trace fixtures for every later test in this phase
 ```

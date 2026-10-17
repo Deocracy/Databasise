@@ -182,8 +182,9 @@ LIGHTRAG_FULL_INGEST_ADMISSION = AdmissionRecord(
             verdict="satisfied (machine-side obligation)",
             evidence=(
                 "enforced by databasise.parts.admission.cross_check_conditions: this part's "
-                "quarantined artifact_scope can never be enumerated as an SA-1-shareable artifact "
-                "by databasise.registry_artifact.index.ArtifactRegistry.discover"
+                "artifact_scope is quarantined, and the machine keeps no artifact registry "
+                "(removed in Phase 10, D-15), so nothing enumerates this part's output as an "
+                "SA-1-shareable artifact"
             ),
         ),
         ConditionVerdict(
