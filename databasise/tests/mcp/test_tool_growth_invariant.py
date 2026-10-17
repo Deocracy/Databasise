@@ -13,6 +13,7 @@ from __future__ import annotations
 import inspect
 import json
 import re
+from collections.abc import Iterable
 from pathlib import Path
 
 import pytest
@@ -49,11 +50,18 @@ from databasise.seam.selectors import _ARM_NAMES as _PRODUCTION_ARM_NAMES
 from databasise.tests._ast_helpers import called_names
 from databasise.wirings.resolve import resolve_arm
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
 _WIRINGS_ROOT = Path(__file__).resolve().parents[2] / "wirings"
-_COVERAGE_PATH = (
-    _REPO_ROOT / ".planning" / "phases" / "05-opaque-side-admission" / "COVERAGE.md"
-)
+
+
+def _require_coverage_file(path: Path) -> Path:
+    # An explicit raise (not `assert`) so it still fires under `python -O`.
+    if not path.is_file():
+        raise AssertionError(f"§18.5 coverage record not found; expected at {path}")
+    return path
+
+
+# Live record (RUN-01, D-13); the v1.0 original under .planning/milestones/ stays frozen.
+_COVERAGE_PATH = _require_coverage_file(Path(__file__).resolve().parents[2] / "evidence" / "COVERAGE.md")
 
 _TOOL_ARG_MODELS = (
     IngestToolArgs,
@@ -279,11 +287,10 @@ def _parse_markdown_table(markdown: str, header_prefix: str) -> list[list[str]]:
     return rows
 
 
-def test_every_tool_has_a_coverage_row_and_every_both_transport_row_has_a_tool():
+def _check_coverage(markdown: str, tool_names: Iterable[str]) -> None:
     """Every row in COVERAGE.md's §18.5 operations table maps to a known tool (or is deliberately
-    tool-less, e.g. streaming — no MCP analog in this milestone), and every one of ``TOOL_NAMES``
+    tool-less, e.g. streaming — no MCP analog in this milestone), and every one of ``tool_names``
     is reachable from at least one row whose ``transports`` column names ``MCP``."""
-    markdown = _COVERAGE_PATH.read_text(encoding="utf-8")
     rows = _parse_markdown_table(markdown, "| operation | transports | plan |")
     assert rows, "no operations rows parsed from COVERAGE.md's §18.5 table"
 
@@ -299,7 +306,11 @@ def test_every_tool_has_a_coverage_row_and_every_both_transport_row_has_a_tool()
         if "MCP" in transports:
             covered_tools.update(matched)
 
-    assert covered_tools == set(TOOL_NAMES)
+    assert covered_tools == set(tool_names)
+
+
+def test_every_tool_has_a_coverage_row_and_every_both_transport_row_has_a_tool():
+    _check_coverage(_COVERAGE_PATH.read_text(encoding="utf-8"), TOOL_NAMES)
 
 
 def test_compare_is_present_in_tool_names_and_absent_from_the_deliberately_absent_table():
