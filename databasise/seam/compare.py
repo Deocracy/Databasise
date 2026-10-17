@@ -29,7 +29,7 @@ from collections.abc import Awaitable, Callable, Sequence
 
 from databasise.seam.envelope import ResponseEnvelope
 from databasise.seam.query import QueryObject
-from databasise.seam.refusals import DuplicateComparisonKeyError
+from databasise.seam.refusals import DuplicateComparisonKeyError, EmptyCapabilitySelectorError
 from databasise.seam.selectors import Selector
 
 # The separator joining a multi-capability selector's own requested values, in the caller's own
@@ -44,7 +44,9 @@ def render_selector_key(selector: Selector) -> str:
     never normalised, case-folded, sorted or deduplicated. An ``alias``/``harness`` selector
     renders as its own string value unchanged. A ``capability`` selector renders as its requested
     capability set, joined in the caller's own supplied order by :data:`CAPABILITY_KEY_SEPARATOR`
-    — a bare string request renders as itself (a one-element join). A selector with none of the
+    — a bare string request renders as itself (a one-element join); an empty list raises
+    :class:`~databasise.seam.refusals.EmptyCapabilitySelectorError` (SEAM-10) so no empty key is
+    ever rendered. A selector with none of the
     three members set (the default selector, legal per ``Selector``'s own model but never produced
     by any candidate this module resolves today) renders as the literal ``"default"`` rather than
     raising, since declaring the behaviour now is cheaper than discovering it undefined later.
@@ -54,6 +56,8 @@ def render_selector_key(selector: Selector) -> str:
     if selector.harness is not None:
         return selector.harness
     if selector.capability is not None:
+        if selector.capability == []:
+            raise EmptyCapabilitySelectorError()
         values = selector.capability if isinstance(selector.capability, list) else [selector.capability]
         return CAPABILITY_KEY_SEPARATOR.join(values)
     return "default"

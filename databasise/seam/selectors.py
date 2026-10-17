@@ -72,6 +72,7 @@ from pydantic import BaseModel, ConfigDict, model_validator
 from databasise.ledger.ledger import Ledger
 from databasise.parts.registry import PartRegistry
 from databasise.seam.refusals import (
+    EmptyCapabilitySelectorError,
     ForbiddenSelectorInputError,
     MultiMemberSelectorError,
     UnsatisfiableSelectorError,
@@ -237,6 +238,8 @@ def resolve_selector(
             raise ValueError("resolving an alias selector requires store_root")
         return _resolve_alias(selector.alias, store_root=store_root)
     if selector is not None and selector.capability is not None:
+        if selector.capability == []:
+            raise EmptyCapabilitySelectorError()
         return _resolve_capability(selector.capability, registry=registry)
     if selector is not None and selector.harness is not None:
         return _resolve_harness(selector.harness, registry=registry)

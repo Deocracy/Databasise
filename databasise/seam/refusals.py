@@ -125,6 +125,30 @@ class ForbiddenSelectorInputError(SeamRefusalError):
         )
 
 
+class EmptyCapabilitySelectorError(SeamRefusalError):
+    """Raised by ``resolve_selector`` and ``render_selector_key`` (09-07-PLAN.md, SEAM-10) for
+    ``Selector(capability=[])``. An empty requested set is a subset of every wiring's effects, so it
+    would resolve to the smallest wiring (bypass) and render an empty compare key; it is refused by
+    name instead. Carries no caller value."""
+
+    def __init__(self) -> None:
+        super().__init__("EmptyCapabilitySelectorError: a capability selector must name at least one capability")
+
+
+class InvalidPromotionAliasError(SeamRefusalError):
+    """Raised by ``Databasise.promote`` (09-07-PLAN.md, SEAM-12) for an alias that is empty or
+    shaped like an internal instance hash: no ``Selector`` could name it, so promoting it would
+    write a ledger row nobody can select. Refused before any ledger touch. ``alias`` is the
+    caller's own input."""
+
+    def __init__(self, *, alias: str):
+        self.alias = alias
+        super().__init__(
+            f"InvalidPromotionAliasError: alias {alias!r} is empty or shaped like an internal "
+            "instance hash, so no selector could name it"
+        )
+
+
 class MultiMemberSelectorError(SeamRefusalError):
     """Raised at ``Selector`` model validation (09-01-PLAN.md, SEAM-02) when more than one of
     ``alias``/``capability``/``harness`` is set -- the three selector forms are mutually exclusive.
@@ -705,6 +729,8 @@ __all__ = [
     "UnsatisfiableSelectorError",
     "ForbiddenSelectorInputError",
     "MultiMemberSelectorError",
+    "EmptyCapabilitySelectorError",
+    "InvalidPromotionAliasError",
     "AmbiguousIngestPayloadError",
     "OversizedDocumentError",
     "InvalidDocumentIdError",
