@@ -429,6 +429,10 @@ class MutableStoreComparisonExcludedError(SeamRefusalError):
     under RIG `§RUN.3`'s degenerate-width rule, and `§14.4` point 3 excludes the component from
     `§5`'s parity/determinism *comparisons*, not from being run — ``query()`` and the one-selector
     ``compare()`` path never raise this.
+
+    Currently unreachable with the query candidates: no wiring in ``all_wirings()`` declares
+    ``mutates_store``. It is exercised only by ``tests/seam/test_mutable_store_exclusion.py``,
+    which adds the codebase-memory-mcp wiring to the candidate pool.
     """
 
     def __init__(self, *, component: str) -> None:
@@ -495,9 +499,11 @@ class UnrecognisedPromotionVerbError(SeamRefusalError):
     ``verb`` is not one of ``databasise.seam.promotion.PromotionVerb``'s six declared literals.
     Checked before trace-id resolution runs (07-VERIFICATION.md's `missing:` item 1) — an unknown
     verb refuses immediately, the identical position ``GateVerbNotBuiltError`` already occupies for
-    a known-but-unbuilt verb. Typed ``Any`` rather than ``str``, for the identical reason
-    ``InvalidChangeOriginError`` types ``change_origin`` as ``Any``: a JSON body can deliver
-    ``None``, a number, or an object, and the refusal must name whatever actually arrived. Per this
+    a known-but-unbuilt verb. Both transports type ``verb`` as ``str``, so a non-string verb
+    (None, a number, an object) never reaches ``promote()`` over REST (FastAPI validation error)
+    or MCP (argument validation error); only a non-member string does. The attribute is typed
+    ``Any`` so an in-process caller passing a non-string still gets a refusal naming whatever
+    arrived. Per this
     module's own house style, the message names only the caller's own value — it does not
     enumerate the accepted verb set as a menu to pattern-match against, and does not imply a
     default exists.

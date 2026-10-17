@@ -13,8 +13,10 @@ own group.
 
 **The ``unbudgetable`` sentinel (this module's own convention).** §8's opaque-node admission
 vocabulary marks a participant ``unbudgetable`` when its own token spend cannot be counted
-(CONTRACT.md §4/§8) — no dedicated field exists on ``TokenAccounting`` for this label, since no
-opaque node is registered anywhere in this milestone's parts registry. This module detects it
+(CONTRACT.md §4/§8) — no dedicated field exists on ``TokenAccounting`` for this label. The
+registry holds three opaque parts, ``lightrag/full-ingest``, ``lightrag/full-delete`` and
+``codebase-memory-mcp``; ``full_delete`` always reports ``counted_by='unbudgetable'`` and
+``full_ingest`` reports it only when v1 returns no usage. This module detects it
 through the same ``counted_by`` string field every node already uses to report its own tokenizer
 identity, reserving the literal value ``"unbudgetable"`` as a sentinel a node's own body sets to
 mean "this participant's tokens cannot be counted" — distinct from ``"none"`` (a real, honestly

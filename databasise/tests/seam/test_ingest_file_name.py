@@ -11,13 +11,12 @@ import pytest
 
 pytest.importorskip("fastapi")
 
-from fastapi.testclient import TestClient
-
 import databasise.seam.corpus as corpus_module
 from databasise.mcp import create_server
 from databasise.seam.rest import create_app
 from databasise.tests.seam._probes import inbox_files
 from databasise.tests.seam.test_rest_corpus_endpoints import _make_registry
+from fastapi.testclient import TestClient
 
 _FIELDS = ("file_name", "content_type")
 

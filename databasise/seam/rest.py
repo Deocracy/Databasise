@@ -29,11 +29,9 @@ await the identical ``Databasise`` method an in-process caller awaits, and retur
 FastAPI to serialize. No selector resolution, no redaction and no envelope assembly happens in
 this module — those live in ``databasise.seam.engine``/``selectors``/``envelope``/``redact``, and
 ``databasise/tests/seam/test_rest_transport.py`` proves the absence by walking this module's own
-AST rather than by convention. One application-level exception handler maps every
-``SeamRefusalError`` subclass to a non-success response, enumerated at runtime from
-``SeamRefusalError.__subclasses__()`` (transitively, via every seam module this app already
-imports) rather than a hand-maintained list, so a refusal type added later cannot silently fall
-through to a generic 500 (T-04-27).
+AST rather than by convention. One application-level exception handler is registered on
+``SeamRefusalError`` itself, and Starlette matches every subclass through the exception's MRO, so
+a refusal type added later cannot silently fall through to a generic 500 (T-04-27).
 
 **Exposure note (T-04-25 Spoofing, T-04-26 Denial of Service; disposition: transfer,
 04-05-PLAN.md's threat register).** This app ships with no authentication, no authorization, no
@@ -216,12 +214,11 @@ class PromoteRequest(_RequestModel):
     in-process call sees the identical vocabulary. ``change_origin`` defaults to ``None`` rather
     than being a required JSON key — an absent value still reaches ``Databasise.promote()``, which
     raises the named ``InvalidChangeOriginError`` refusal itself (D-08); this model adds no
-    validation of its own beyond deserialization. ``verb`` stays a plain ``str`` here by the
-    identical rule stated above for ``change_origin`` (07-04-PLAN.md): an out-of-enum value is
-    allowed to reach ``Databasise.promote()``, which raises the named
-    ``UnrecognisedPromotionVerbError`` refusal itself (D-09) — so this endpoint's out-of-enum
-    response is the status ``_status_for`` assigns, carrying the same ``refusal_type`` as every
-    other seam refusal, rather than a request-validation body that carries no refusal name."""
+    validation of its own beyond deserialization. ``verb`` is typed ``str``, so a non-string verb
+    (JSON null, a number, an object) is a request validation error with FastAPI's ``detail``
+    shape and no ``refusal_type``; only a string outside the six declared verbs reaches
+    ``Databasise.promote()``, which raises the named ``UnrecognisedPromotionVerbError`` refusal
+    itself (D-09, 07-04-PLAN.md) with the status ``_status_for`` assigns."""
 
     alias: str
     trace_ids: list[str]

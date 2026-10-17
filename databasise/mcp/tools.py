@@ -181,9 +181,11 @@ class PromoteToolArgs(_ToolArgs):
     """07-03-PLAN.md: carries the seam's own ``Databasise.promote()`` field vocabulary exactly —
     ``alias``, ``trace_ids``, ``change_origin`` and ``verb`` (defaulting to
     ``"operator-asserted"``), the identical shape ``databasise.seam.rest.PromoteRequest``
-    deserializes into. ``verb`` stays ``str`` (07-04-PLAN.md) so an out-of-enum value reaches the
-    engine and surfaces through ``mcp/server.py``'s ``_DatabasiseServer.call_tool`` as a
-    ``RefusalToolError`` carrying the same ``refusal_type`` name REST reports (D-09); no validator here either."""
+    deserializes into. ``verb`` is ``str``: a non-string verb is an argument validation error (SDK
+    text, no refusal); a non-member string reaches the engine and returns
+    ``UnrecognisedPromotionVerbError`` as bare JSON through ``mcp/server.py``'s ``call_tool``
+    override, carrying the same ``refusal_type`` name REST reports (D-09, 07-04-PLAN.md); no
+    validator here either."""
 
     alias: str
     trace_ids: list[str]
