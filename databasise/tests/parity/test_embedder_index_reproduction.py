@@ -12,6 +12,9 @@ genuinely wrong id-to-text pairing, a stale embedding, or a real re-embedding bu
 similarity nowhere near that noise floor (typically well under 0.9 for unrelated text), so 0.999
 stays sensitive to a real divergence while carrying enormous headroom past measured noise.
 
+This threshold is unmeasured: the five live runs that would set it (D-14) are owner-deferred
+and tracked in ``.planning/TESTING-PLAN.md`` §2, so 0.999 stands until they are run.
+
 This is where §L.1's substantive difference gets priced rather than assumed: feeding the store a
 precomputed vector (this port's shape — ``embedder-index`` calls the embedding client directly,
 never a store-internal fallback) supersedes v1's own store-internal embedding fallback path
@@ -155,6 +158,11 @@ def test_below_threshold_violations_is_empty_when_every_vector_matches():
     v1_vectors = {"chunk-a": np.array([1.0, 0.0, 0.0])}
 
     assert _below_threshold_violations(reproduced, v1_vectors, _SIMILARITY_THRESHOLD) == []
+
+
+def test_a_similarity_equal_to_the_threshold_is_not_a_violation():
+    """The comparison is a strict ``<``, so a similarity exactly at the threshold passes."""
+    assert _below_threshold_violations({"a": [1.0, 0.0]}, {"a": np.array([1.0, 0.0])}, 1.0) == []
 
 
 # --------------------------------------------------------------------------------------------- #
