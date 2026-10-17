@@ -1,0 +1,1 @@
+No external API integration: Phase 10 changes the engine's own embedded stores (Cozo, Faiss, sqlite), its own REST/MCP refusal and health surface, and an operator CLI; no third-party API capability is added or removed.

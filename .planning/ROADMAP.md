@@ -185,7 +185,21 @@ Plans (one plan per wave; every plan edits the shared refusal, engine or transpo
 - STOR-15: what triggers quarantined-namespace GC (generation retire, instance teardown, operator route), and derive_namespace layout vs docstring fix
 - STOR-16: reserved metadata keys rejected at upsert or moved under a sub-key
 
-**Plans**: TBD
+**Plans**: 12 plans
+
+Plans (nine waves; the shared engine and store modules force most plans into sequence, and wave 1 and wave 6 each hold plans with no shared file):
+- [ ] 10-01-PLAN.md — Shared refcounted Cozo client, StoreBusyError 409, a failed store open finalizes every opened store (STOR-01, STOR-02; wave 1)
+- [ ] 10-02-PLAN.md — Remove the lexical store, blob store and artifact registry; grep test; admission text (STOR-12, STOR-13, STOR-14; wave 1)
+- [ ] 10-03-PLAN.md — Operator GC CLI under the store lock; NamespaceGCError; layout docstring (STOR-15; wave 1)
+- [ ] 10-04-PLAN.md — A failed or early-stopped ingest commits nothing; StoreFault and RunIncomplete; no in-node flush (STOR-06; wave 2)
+- [ ] 10-05-PLAN.md — Prepare-all then commit-all across kv, vector and graph under one lock; Faiss rebase (STOR-06; wave 3)
+- [ ] 10-06-PLAN.md — Faiss committed-snapshot cache for evidence resolve; half-written directory is corruption (STOR-03, STOR-08; wave 4)
+- [ ] 10-07-PLAN.md — Read-only health over every shipped namespace: ok, absent, corrupted, busy (STOR-04; wave 5)
+- [ ] 10-08-PLAN.md — EFFECT_TO_STORE table and read-only allowlist proxies; engine-only lifecycle (STOR-05; wave 6)
+- [ ] 10-09-PLAN.md — Graph delete cascades and auto-creates endpoints; KV buffer isolation (STOR-10, STOR-11; wave 6)
+- [ ] 10-10-PLAN.md — Delete uses the wiring's namespaces and commits all or nothing; buffered vector delete (STOR-07; wave 7)
+- [ ] 10-11-PLAN.md — Reserved metadata keys refused; named vector input refusals (STOR-09, STOR-16; wave 8)
+- [ ] 10-12-PLAN.md — unwired-store-effect parse refusal and UnparseableWiringError; writes_artifact marker; phase offline gate (STOR-12; wave 9)
 
 ### Phase 11: LightRAG Corpus Path
 
