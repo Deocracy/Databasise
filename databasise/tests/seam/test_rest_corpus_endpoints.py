@@ -18,8 +18,8 @@ import asyncio
 import dataclasses
 import re
 import sys
-from pathlib import Path
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import pytest
