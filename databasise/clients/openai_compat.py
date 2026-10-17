@@ -17,7 +17,10 @@ declared"). A response whose ``model`` field is empty or absent raises
 ``TokenAccounting.counted_by`` is set to the provider-reported tokenizer identity when the
 response's ``usage`` object carries one (a ``tokenizer_id`` attribute — no such field exists on
 the real OpenAI SDK's ``CompletionUsage`` today, so this branch only fires against a
-provider/proxy that adds one), and to ``resolved_model_identity`` otherwise.
+provider/proxy that adds one), and to ``resolved_model_identity`` otherwise. A response with no
+``usage`` at all is the exception (RUN-02, D-05): it counts as one call with ``counted_by``
+``"unbudgetable"`` (the ``seam.tokens`` sentinel) and zero counts, so a real spend is never recorded
+as zero and ``/query`` refuses by name; no tiktoken estimate is substituted.
 
 06-14-PLAN.md: ``embed`` refuses an empty batch, or a batch containing a zero-length or
 whitespace-only item, by raising :class:`EmptyEmbeddingInputError` before any request reaches the
@@ -158,7 +161,8 @@ class OpenAICompatibleClient:
 
     def _token_accounting(self, usage: Any, resolved_model_identity: str) -> TokenAccounting:
         if usage is None:
-            return TokenAccounting(counted_by=resolved_model_identity)
+            # D-05: no usage means the spend is unknowable, not zero. One call, no estimate.
+            return TokenAccounting(call_count=1, counted_by="unbudgetable")  # seam.tokens.UNBUDGETABLE_SENTINEL
 
         details = getattr(usage, "prompt_tokens_details", None)
         cached_read_tokens = getattr(details, "cached_tokens", 0) or 0 if details is not None else 0
