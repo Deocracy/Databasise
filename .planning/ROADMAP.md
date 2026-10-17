@@ -145,7 +145,20 @@ Plans:
 - SEAM-11: compare key format (kind-prefixed keys change consumer-visible keys) and how a consumer tells a single envelope from a keyed map
 - SEAM-15: store file_name/content_type as citation metadata (needs the M-04 write path from Phase 11) or drop and document
 
-**Plans**: TBD
+**Plans**: 10 plans
+
+Plans (one plan per wave; every plan edits the shared refusal, engine or transport modules, so the waves run in sequence):
+
+- [ ] 09-01-PLAN.md — Tracer: one refusal body for validator-raised refusals on every JSON route; one refusal catalogue (SEAM-02, SEAM-14; wave 1)
+- [ ] 09-02-PLAN.md — Upload route reports the broken rule, null/'' selector means default, 404 for the four lookups (SEAM-02, SEAM-04, SEAM-07, SEAM-13; wave 2, owner grant checkpoint)
+- [ ] 09-03-PLAN.md — InvalidDocumentIdError on every ingest/delete entry point; PageBoundsError and one shared checked_page (SEAM-07, SEAM-08; wave 3)
+- [ ] 09-04-PLAN.md — MCP returns every refusal as bare JSON with isError; named scope-precondition refusals (SEAM-03; wave 4)
+- [ ] 09-05-PLAN.md — v1 engine failures are 502/503 machine faults with no stderr on every route; OpenAPI declares them (SEAM-05, SEAM-06; wave 5)
+- [ ] 09-06-PLAN.md — Evidence namespace guard before any store; empty and whitespace inputs and invalid base64 refused (SEAM-01, SEAM-09; wave 6)
+- [ ] 09-07-PLAN.md — capability [] refused on every selector route; unselectable promote aliases refused (SEAM-10, SEAM-12; wave 7)
+- [ ] 09-08-PLAN.md — Compare checks keys before any arm and runs each pre-resolved wiring once; envelope-versus-map rule documented (SEAM-11; wave 8)
+- [ ] 09-09-PLAN.md — file_name/content_type documented as not stored; stale seam docstrings corrected (SEAM-15, SEAM-16; wave 9)
+- [ ] 09-10-PLAN.md — redact checks fire under python -O; dead selector constants removed; phase offline gate (SEAM-16; wave 10, owner grant checkpoint)
 
 ### Phase 10: Stores, Locking & Data Integrity
 
@@ -401,7 +414,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 8. Run the Engine | 10/10 | Complete    | 2026-10-16 |
-| 9. Inputs, Errors & Security | 0/TBD | Not started | - |
+| 9. Inputs, Errors & Security | 0/10 | Planned | - |
 | 10. Stores, Locking & Data Integrity | 0/TBD | Not started | - |
 | 11. LightRAG Corpus Path | 0/TBD | Not started | - |
 | 12. HippoRAG Fixes | 0/TBD | Not started | - |
