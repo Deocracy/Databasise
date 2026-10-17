@@ -771,6 +771,19 @@ class ForeignEngineRefusalError(SeamRefusalError):
         return self._cause
 
 
+class StoreBusyError(SeamRefusalError):
+    """Raised before any node runs when a store this call needs is held by another OS process, or by
+    an open that cannot share the in-process client (Phase 10 D-01). REST answers 409 (D-02): the
+    request is fine, the store is busy. Only ``store_kind`` (``"graph"``) is public; the store path
+    and namespace are never named, and the cause is logged server-side once."""
+
+    def __init__(self, *, store_kind: str):
+        self.store_kind = store_kind
+        super().__init__(
+            f"StoreBusyError: the {store_kind} store is held by another process; retry once it is released"
+        )
+
+
 __all__ = [
     "SeamRefusalError",
     "EmptyQueryObjectError",
@@ -798,6 +811,7 @@ __all__ = [
     "DuplicateComparisonKeyError",
     "MutableStoreComparisonExcludedError",
     "ForeignEngineRefusalError",
+    "StoreBusyError",
     "EmptyPromotionTraceIdsError",
     "DisagreeingPromotionTraceIdsError",
     "InvalidChangeOriginError",

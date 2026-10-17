@@ -213,6 +213,7 @@ from databasise.seam.refusals import (
     NoRawUploadPathForModalityError,
     NoWritePathForModalityError,
     SeamRefusalError,
+    StoreBusyError,
     TombstonedGenerationError,
     UnknownGenerationVersionError,
     UnknownJobError,
@@ -227,7 +228,7 @@ from databasise.seam.selectors import (
 )
 from databasise.seam.tokens import TokenBreakdownEntry, assemble_token_breakdown
 from databasise.seam.trace_store import TraceStore
-from databasise.stores.graph import CozoGraphStore
+from databasise.stores.graph import CozoGraphStore, GraphStoreBusyError
 from databasise.stores.kv import SqliteKVStore
 from databasise.stores.vector import MultiNamespaceVectorStore
 from databasise.validator.parse import ParsedWiring, parse_wiring
@@ -381,11 +382,20 @@ def _build_stores(
     store_namespaces = (resolved or {}).get("store_namespaces") or {}
     kv_namespace = store_namespaces.get("kv", _TEXT_CHUNKS_KIND)
     graph_namespace = store_namespaces.get("graph", _GRAPH_KIND)
-    return {
+    stores = {
         "kv": SqliteKVStore(namespace=kv_namespace, workspace=workspace, store_root=store_root),
         "vector": MultiNamespaceVectorStore(workspace=workspace, store_root=store_root),
-        "graph": CozoGraphStore(namespace=graph_namespace, workspace=workspace, store_root=store_root),
     }
+    try:
+        stores["graph"] = CozoGraphStore(
+            namespace=graph_namespace, workspace=workspace, store_root=store_root
+        )
+    except GraphStoreBusyError as exc:
+        # Phase 10 D-01/D-02: the cause text embeds the store path, so it is logged here once and
+        # the caller sees only store_kind (research Pitfall 17).
+        logger.warning("graph store busy", exc_info=exc)
+        raise StoreBusyError(store_kind="graph") from None
+    return stores
 
 
 def _corpus_wiring(query_wiring: dict[str, Any], operation: str) -> dict[str, Any]:

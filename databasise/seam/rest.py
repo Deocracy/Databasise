@@ -102,6 +102,7 @@ from databasise.seam.refusals import (
     ForeignEngineRefusalError,
     MalformedSelectorPayloadError,
     SeamRefusalError,
+    StoreBusyError,
     UnknownGenerationVersionError,
     UnknownJobError,
     UnknownTraceReferenceError,
@@ -111,10 +112,12 @@ from databasise.seam.refusals import (
 )
 from databasise.seam.selectors import Selector
 
-# The HTTP status of every refusal comes from `_status_for` alone (09-02-PLAN.md, SEAM-04, D-03).
-# 404 is for the four lookups of a caller-supplied reference that names nothing: a trace reference,
-# a job id, an evidence reference and a generation version. Every other refusal is a caller refusal
-# ("the request, as given, cannot be satisfied") and returns 422. A 2xx is never possible, the one
+# The HTTP status of every refusal comes from `_status_for` alone (09-02-PLAN.md, SEAM-04, D-03;
+# Phase 10 D-02). Three caller-facing statuses: 409 when a store is busy (StoreBusyError: another
+# process holds it; the input is fine, retry later); 404 for the four lookups of a caller-supplied
+# reference that names nothing: a trace reference, a job id, an evidence reference and a generation
+# version; 422 for every other refusal ("the request, as given, cannot be satisfied"). Faults stay
+# 502/503 (below). A 2xx is never possible, the one
 # property T-04-27's mitigation depends on. 404 never discloses whether an internal identity
 # (wiring, arm, node) exists: all four lookups are of the caller's own references.
 _NOT_FOUND_REFUSALS: tuple[type[SeamRefusalError], ...] = (
@@ -132,6 +135,8 @@ _ENGINE_UNAVAILABLE = frozenset({"MissingV1InterpreterError", "CorpusOpTimeoutEr
 
 
 def _status_for(exc: SeamRefusalError) -> int:
+    if isinstance(exc, StoreBusyError):
+        return 409
     if isinstance(exc, ForeignEngineRefusalError):
         return 503 if exc.failure_class in _ENGINE_UNAVAILABLE else 502
     return 404 if isinstance(exc, _NOT_FOUND_REFUSALS) else 422

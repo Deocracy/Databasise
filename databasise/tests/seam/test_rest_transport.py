@@ -70,6 +70,7 @@ from databasise.seam.refusals import (
     OversizedDocumentError,
     PageSizeExceededError,
     SeamRefusalError,
+    StoreBusyError,
     ActiveGenerationRetirementError,
     TombstonedGenerationError,
     UncalibratedFloorRefusalError,
@@ -432,6 +433,7 @@ _REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
     UnresolvableEvidenceReferenceError: lambda: UnresolvableEvidenceReferenceError(
         EvidenceRef(ref="missing", namespace="chunks", kind="text_chunk")
     ),
+    StoreBusyError: lambda: StoreBusyError(store_kind="graph"),
     ForeignEngineRefusalError: lambda: ForeignEngineRefusalError(
         operation="ingest", cause=RuntimeError("stub subprocess failure")
     ),

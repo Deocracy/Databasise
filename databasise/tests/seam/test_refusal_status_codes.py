@@ -23,7 +23,7 @@ _NOT_FOUND = {
     "UnknownGenerationVersionError",
 }
 # ForeignEngineRefusalError is a fault, not a caller refusal; 09-05 gives it its own status.
-_MAPPED_ELSEWHERE = {"ForeignEngineRefusalError"}
+_MAPPED_ELSEWHERE = {"ForeignEngineRefusalError", "StoreBusyError"}
 _CATALOGUE = sorted(
     name
     for name in refusals.__all__

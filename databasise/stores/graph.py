@@ -1,8 +1,12 @@
 """Embedded Cozo graph store, ported by deliberate copy — never import — from v1's
 ``CozoGraphStorage`` (upstream_ref: v1/lightrag/kg/cozo_impl.py). D-14 keeps this package's import
 boundary intact: nothing here imports from v1's ``lightrag`` package, and nothing here reproduces
-v1's process-wide ``shared_storage`` locking singleton (D-11's rejected anti-analog) — this store
-is single-writer, single-process, in-process only, matching EMBED-01's no-external-server claim.
+v1's process-wide ``shared_storage`` locking singleton (D-11's rejected anti-analog). In one
+process, every instance on one resolved ``graph.cozo`` path shares one reference-counted pycozo
+``Client`` (``_ClientRegistry``, Phase 10 D-01); each instance keeps its own pending buffers, flushes
+on one path are serialized, and the last release closes the client. An open that cannot share (the
+path held by another OS process) raises ``GraphStoreBusyError``. In-process only, matching
+EMBED-01's no-external-server claim.
 
 Cozo 0.7.6 (pinned exactly in ``pyproject.toml``) is architecture-frozen: it ships four known
 correctness bugs with no upstream fix expected. The query-shape constraints below are permanent
@@ -51,6 +55,8 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import threading
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -94,6 +100,71 @@ def _attrs_to_dict(raw: Any) -> dict[str, Any]:
     return json.loads(raw)
 
 
+class GraphStoreBusyError(RuntimeError):
+    """Raised at open time (Phase 10 D-01) when RocksDB refuses the ``graph.cozo`` lock: the path is
+    held by another OS process, or by an open that cannot share the registry's client. The message is
+    fixed and never carries the path (RocksDB's own lock text embeds it); the engine translates this
+    into the seam's ``StoreBusyError``.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(
+            "graph store is held by another process or by an open that cannot share it; "
+            "retry once it is released"
+        )
+
+
+def _is_lock_error(exc: BaseException) -> bool:
+    """RocksDB's two verified lock-refusal texts (10-RESEARCH R7 same process, R8 other process)."""
+    text = str(exc.args[0]) if exc.args else str(exc)
+    return "kIOError" in text and ("lock hold by current process" in text or "While lock file" in text)
+
+
+@dataclass
+class _SharedClient:
+    client: Any
+    refcount: int = 1
+    flush_lock: threading.Lock = field(default_factory=threading.Lock)
+
+
+class _ClientRegistry:
+    """One pycozo ``Client`` per resolved ``graph.cozo`` path, reference-counted (D-01). The dict and
+    every refcount change only under ``_lock``, so threads (a REST worker, the test loop) can acquire
+    the same path concurrently without a double open."""
+
+    _entries: dict[str, _SharedClient] = {}
+    _lock = threading.Lock()
+
+    @classmethod
+    def acquire(cls, db_path: str | Path) -> tuple[str, _SharedClient]:
+        key = str(Path(db_path).resolve())
+        with cls._lock:
+            entry = cls._entries.get(key)
+            if entry is not None:
+                entry.refcount += 1
+                return key, entry
+            try:
+                client = CozoClient("rocksdb", key, dataframe=False)
+            except Exception as exc:
+                if _is_lock_error(exc):
+                    raise GraphStoreBusyError() from exc
+                raise
+            entry = cls._entries[key] = _SharedClient(client=client)
+            return key, entry
+
+    @classmethod
+    def release(cls, key: str) -> None:
+        with cls._lock:
+            entry = cls._entries.get(key)
+            if entry is None:
+                return
+            entry.refcount -= 1
+            if entry.refcount > 0:
+                return
+            del cls._entries[key]
+        entry.client.close()
+
+
 class CozoGraphStore(StorageNameSpace):
     """Embedded Cozo (RocksDB) graph store, one database file per namespace directory."""
 
@@ -104,8 +175,14 @@ class CozoGraphStore(StorageNameSpace):
         self._dir = Path(store_root) / workspace / namespace
         self._dir.mkdir(parents=True, exist_ok=True)
         self._db_path = self._dir / "graph.cozo"
-        self._client = CozoClient("rocksdb", str(self._db_path))
-        self._ensure_relations()
+        self._registry_key, self._shared = _ClientRegistry.acquire(self._db_path)
+        self._client = self._shared.client
+        self._released = False
+        try:
+            self._ensure_relations()
+        except BaseException:
+            self._release()
+            raise
 
         self._pending_node_puts: dict[str, dict[str, Any]] = {}
         self._pending_edge_puts: dict[tuple[str, str], dict[str, Any]] = {}
@@ -324,6 +401,10 @@ class CozoGraphStore(StorageNameSpace):
         edge_rms = set(self._pending_edge_rms)
 
         def _do_flush() -> None:
+            with self._shared.flush_lock:
+                _flush_locked()
+
+        def _flush_locked() -> None:
             mt = self._client.multi_transact(write=True)
             try:
                 if node_puts:
@@ -373,6 +454,17 @@ class CozoGraphStore(StorageNameSpace):
         except Exception as exc:  # noqa: BLE001 — drop()'s own documented contract (v1 StorageNameSpace)
             return {"status": "error", "message": str(exc)}
 
+    def _release(self) -> None:
+        if self._released:
+            return
+        self._released = True
+        _ClientRegistry.release(self._registry_key)
+
     async def finalize(self) -> None:
+        """Release this instance's client reference once; idempotent (an engine ``finally`` may run
+        after a partial construction). The last release closes the shared client."""
+        if self._released:
+            return
+        self._released = True  # set on the loop thread, so two concurrent finalizes release once
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self._client.close)
+        await loop.run_in_executor(None, _ClientRegistry.release, self._registry_key)
