@@ -105,6 +105,8 @@ databasise-rest = "databasise.launcher.serve_rest:main"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = ["live: calls a real model endpoint and spends tokens; owner-run only, select with -m live (RUN-11, RUN-12)"]
+addopts = '-m "not live"'
 
 [tool.ruff]
 target-version = "py311"

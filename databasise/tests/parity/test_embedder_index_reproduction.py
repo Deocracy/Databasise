@@ -162,6 +162,7 @@ def test_below_threshold_violations_is_empty_when_every_vector_matches():
 # --------------------------------------------------------------------------------------------- #
 
 
+@pytest.mark.live
 async def test_embedder_index_reproduces_v1_stored_vectors_on_a_sample(
     v1_index_dir, v1_env_parity_path
 ):
@@ -196,6 +197,12 @@ async def test_embedder_index_reproduces_v1_stored_vectors_on_a_sample(
     reproduced = result["artifact"]["vectors"]
     assert set(reproduced.keys()) == set(sample_ids)
     assert result["tokens"].call_count > 0
+
+    similarities = {cid: _cosine_similarity(reproduced[cid], v1_vectors[cid]) for cid in sample_ids}
+    print(
+        f"LIVE-MEASURE min_cosine={min(similarities.values()):.6f} "
+        f"per_chunk={json.dumps(similarities, sort_keys=True)} threshold={_SIMILARITY_THRESHOLD}"
+    )
 
     violations = _below_threshold_violations(reproduced, v1_vectors, _SIMILARITY_THRESHOLD)
     assert not violations, [

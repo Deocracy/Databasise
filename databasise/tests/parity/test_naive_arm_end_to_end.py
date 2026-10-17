@@ -322,6 +322,7 @@ async def test_hybrid_arm_embedder_query_embeds_the_real_query_text_via_run_wiri
 # --------------------------------------------------------------------------------------------- #
 
 
+@pytest.mark.live
 async def test_real_naive_arm_run_against_the_imported_index_and_live_endpoints(
     v2_parity_store_dir, v1_env_parity_path, corpus_snapshot, assert_valid_trace
 ):

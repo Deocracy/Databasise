@@ -170,6 +170,7 @@ async def test_a_refused_precondition_also_yields_inconclusive_never_a_plain_ver
 # --------------------------------------------------------------------------------------------- #
 
 
+@pytest.mark.live
 async def test_real_naive_arm_comparison_runs_end_to_end_against_the_real_index(
     v1_venv_python, v2_parity_store_dir, v1_env_parity_path, corpus_snapshot
 ):
