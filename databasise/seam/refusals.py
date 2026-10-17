@@ -20,6 +20,7 @@ factory in ``tests/seam/test_rest_transport.py::_REFUSAL_FACTORIES``.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable
 from typing import Any
 
@@ -30,19 +31,32 @@ class SeamRefusalError(ValueError):
     """Base class for every typed refusal raised at the ``databasise.seam`` boundary."""
 
 
+def _finite(value: Any) -> Any:
+    """``value`` with every non-finite float (NaN, +/-inf) replaced by ``None``, recursively through
+    dicts, lists and tuples. A refusal body must be strict JSON on both transports."""
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, dict):
+        return {key: _finite(item) for key, item in value.items()}
+    if isinstance(value, list | tuple):
+        return [_finite(item) for item in value]
+    return value
+
+
 def refusal_body(exc: SeamRefusalError) -> dict[str, Any]:
     """The one refusal body both transports return (09-01-PLAN.md, SEAM-02/D-01): the refusal's
     class name, its message, and every public attribute off ``vars(exc)``. A leading-underscore
     attribute is never exposed (CR-03: ``UnbudgetableParticipantError._internal_node_id`` is the
     machine's own node id; ``ForeignEngineRefusalError._cause`` is the foreign engine's stderr).
-    A ``BaseModel`` value is dumped."""
+    A ``BaseModel`` value is dumped. A non-finite float in any value becomes ``None`` (CR-01):
+    ``JSONResponse`` refuses NaN/inf and ``json.dumps`` would emit invalid JSON."""
     body: dict[str, Any] = {"refusal_type": type(exc).__name__, "message": str(exc)}
     for key, value in vars(exc).items():
         if key.startswith("_"):
             continue
         if isinstance(value, BaseModel):
             value = value.model_dump()
-        body[key] = value
+        body[key] = _finite(value)
     return body
 
 
@@ -67,6 +81,18 @@ class EmptyQueryObjectError(SeamRefusalError):
         super().__init__(
             f"query object carries no set member, or its text is empty or whitespace-only: {query_object!r}"
         )
+
+
+class NonFiniteNumberError(SeamRefusalError):
+    """Raised at ``EvidenceRef`` / ``QueryObject`` validation (09 REVIEW CR-01) when ``field`` (``"score"``
+    or ``"embedding"``) carries NaN or +/-infinity. JSON cannot represent them, so they are refused
+    at the input boundary by name rather than echoed back in a body. ``field`` names the caller's own
+    input slot, never the value."""
+
+    def __init__(self, *, field: str):
+        self.field = field
+        # The literal class name is load-bearing: raised inside a pydantic validator.
+        super().__init__(f"NonFiniteNumberError: field {field!r} must hold finite numbers (no NaN or infinity)")
 
 
 class EmptyIngestDocumentError(SeamRefusalError):
@@ -731,6 +757,7 @@ class ForeignEngineRefusalError(SeamRefusalError):
 __all__ = [
     "SeamRefusalError",
     "EmptyQueryObjectError",
+    "NonFiniteNumberError",
     "UnconsumableQueryMemberError",
     "UnsatisfiableSelectorError",
     "ForbiddenSelectorInputError",

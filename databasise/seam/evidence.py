@@ -29,12 +29,16 @@ changes (the plan's own prohibition).
 
 from __future__ import annotations
 
+import math
 import re
 from typing import Any
+
+from pydantic import field_validator
 
 from databasise.seam._base import _StrictModel
 from databasise.seam.refusals import (  # moved to refusals.py (SEAM-14); re-exported
     InvalidEvidenceNamespaceError,
+    NonFiniteNumberError,
     UnresolvableEvidenceReferenceError,
 )
 
@@ -60,6 +64,13 @@ class EvidenceRef(_StrictModel):
     kind: str
     score: float | None = None
     tier: str | None = None
+
+    @field_validator("score")
+    @classmethod
+    def _score_is_finite(cls, value: float | None) -> float | None:
+        if value is not None and not math.isfinite(value):
+            raise NonFiniteNumberError(field="score")
+        return value
 
 
 class MalformedEvidenceItemError(RuntimeError):

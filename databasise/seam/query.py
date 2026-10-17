@@ -27,12 +27,17 @@ list.
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from databasise.parts.registry import PartRegistry
-from databasise.seam.refusals import EmptyQueryObjectError, UnconsumableQueryMemberError
+from databasise.seam.refusals import (
+    EmptyQueryObjectError,
+    NonFiniteNumberError,
+    UnconsumableQueryMemberError,
+)
 
 _QUERY_MEMBERS: tuple[str, ...] = ("text", "embedding", "predicates", "profile_ref", "formal_query")
 
@@ -58,6 +63,13 @@ class QueryObject(BaseModel):
     predicates: dict[str, Any] | None = None
     profile_ref: str | None = None
     formal_query: str | None = None
+
+    @field_validator("embedding")
+    @classmethod
+    def _embedding_is_finite(cls, value: list[float] | None) -> list[float] | None:
+        if value is not None and not all(math.isfinite(x) for x in value):
+            raise NonFiniteNumberError(field="embedding")
+        return value
 
 
 def _registered_capabilities(registry: PartRegistry) -> set[str]:
