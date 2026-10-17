@@ -43,7 +43,7 @@ module rather than duplicating it.
 from __future__ import annotations
 
 import importlib
-import importlib.util
+import importlib.machinery
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -78,16 +78,16 @@ def _resolves_inside_project(path_str: str) -> bool:
 def mcp_sdk_is_installed() -> bool:
     """True only if the real third-party ``mcp`` package is importable — never true merely
     because some part of this project's own source tree happens to shadow the bare top-level name
-    ``mcp`` (module docstring, both known shapes)."""
-    spec = importlib.util.find_spec("mcp")
-    if spec is None:
-        return False
-    if spec.origin:
-        return not _resolves_inside_project(spec.origin)
-    # A namespace package (no single origin file) — the real SDK is a regular package (it ships
-    # its own __init__.py) and is therefore never resolved this way; any namespace resolution is
-    # this project's own shadow, not the real SDK.
-    return False
+    ``mcp`` (module docstring, both known shapes).
+
+    Applies the same ``sys.path`` stripping as :func:`import_real_mcp` and looks the name up with
+    ``PathFinder`` directly, bypassing ``sys.modules``: a cached shadow entry made the answer
+    depend on test order, and the CWD-shaped ``''`` entry made it depend on the working directory.
+    """
+    stripped = [entry for entry in sys.path if not _resolves_inside_project(entry)]
+    spec = importlib.machinery.PathFinder.find_spec("mcp", stripped)
+    # A namespace spec has no origin; the real SDK is a regular package, so it never matches.
+    return spec is not None and spec.origin is not None
 
 
 def import_real_mcp(dotted_name: str) -> ModuleType:

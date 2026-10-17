@@ -9,7 +9,6 @@ import sys
 from pathlib import Path
 
 import pytest
-
 from databasise.foreign import _mcp_sdk_guard
 from databasise.foreign._mcp_sdk_guard import mcp_sdk_is_installed
 
@@ -36,8 +35,8 @@ def test_sdk_detected_from_inside_the_project_directory():
         [
             sys.executable,
             "-c",
-            "from databasise.foreign._mcp_sdk_guard import mcp_sdk_is_installed; "
-            "print(mcp_sdk_is_installed())",
+            ("from databasise.foreign._mcp_sdk_guard import mcp_sdk_is_installed; "
+             "print(mcp_sdk_is_installed())"),
         ],
         cwd=_PROJECT_DIR,
         capture_output=True,
