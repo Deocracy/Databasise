@@ -44,15 +44,23 @@ there was none. This is an optional, locally-bound embedded surface: binding, TL
 connection-count/timeout/body-size limits and access control are the operator's own boundary, not
 this module's. FastAPI's native ``EventSourceResponse`` (see the streaming endpoint below) handles
 SSE keep-alive and buffering headers; it does not handle any of the above.
+
+**08-08-PLAN.md (RUN-08, D-12): ``create_app(cors_origins=...)``.** An explicit, opt-in CORS
+allow-list of exact ``scheme://host[:port]`` origins so a browser console on another origin can
+call this seam. Empty (the default) adds no middleware and the app behaves exactly as before.
+Never ``*``, never credentials: seam authentication stays a separate, open decision.
 """
 
 from __future__ import annotations
 
+import re
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
 try:
     from fastapi import Depends, FastAPI, Form, Query, UploadFile
+    from fastapi.middleware.cors import CORSMiddleware
     from fastapi.requests import Request
     from fastapi.responses import JSONResponse
     from fastapi.sse import EventSourceResponse
@@ -232,12 +240,33 @@ def _refusal_response(_request: Request, exc: SeamRefusalError) -> JSONResponse:
     return JSONResponse(status_code=_REFUSAL_STATUS_CODE, content=detail)
 
 
+class InvalidCorsOriginError(ValueError):
+    """A CORS origin that is not an exact ``scheme://host[:port]`` value (D-12)."""
+
+    def __init__(self, origin: str) -> None:
+        self.origin = origin
+        super().__init__(
+            f"invalid CORS origin {origin!r}: origins must be exact scheme://host[:port] values "
+            "with no path, trailing slash, query or wildcard (D-12)"
+        )
+
+
+def validate_cors_origin(origin: str) -> str:
+    """Returns ``origin`` unchanged when it is an exact ``http(s)://host[:port]`` origin, else raises
+    :class:`InvalidCorsOriginError`. No normalisation: the browser's ``Origin`` header is matched
+    byte for byte, so a trailing slash or a wildcard could never match and is refused instead."""
+    if not re.fullmatch(r"https?://[^/\s*?#]+", origin):
+        raise InvalidCorsOriginError(origin)
+    return origin
+
+
 def create_app(
     *,
     store_root: str | Path,
     workspace: str,
     registry: PartRegistry | None = None,
     clients: dict[str, Any] | None = None,
+    cors_origins: Sequence[str] = (),
 ) -> FastAPI:
     """The application factory (D-17): builds one ``Databasise`` instance — the same object an
     in-process caller would construct against the same ``store_root``/``workspace`` — and wires
@@ -248,6 +277,14 @@ def create_app(
     app = FastAPI(title="databasise", version="0.1.0")
     app.state.engine = engine
     app.add_exception_handler(SeamRefusalError, _refusal_response)
+    if cors_origins:
+        origins = list(dict.fromkeys(validate_cors_origin(origin) for origin in cors_origins))
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_methods=["GET", "POST", "DELETE"],
+            allow_headers=["Content-Type"],
+        )
 
     @app.post("/query")
     async def post_query(body: QueryRequest) -> ResponseEnvelope:
@@ -391,5 +428,7 @@ __all__ = [
     "PromoteRequest",
     "RollbackRequest",
     "RetireRequest",
+    "InvalidCorsOriginError",
     "create_app",
+    "validate_cors_origin",
 ]
