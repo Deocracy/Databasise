@@ -72,7 +72,14 @@ def _registered_capabilities(registry: PartRegistry) -> set[str]:
 def check_consumable(query_object: QueryObject, registry: PartRegistry) -> None:
     """D-14: refuse a query object with zero set members, and refuse — by name — any set member
     no part in ``registry`` can consume. Runs before any wiring is resolved.
+
+    Empty or whitespace-only ``text`` (``str.strip()`` rules) is refused as
+    :class:`EmptyQueryObjectError` whatever other members are set (09-06-PLAN.md, SEAM-09, D-08),
+    before the set-member and consumability checks: it is never passed on beside another member.
     """
+    if query_object.text is not None and query_object.text.strip() == "":
+        raise EmptyQueryObjectError(query_object)
+
     set_members = [name for name in _QUERY_MEMBERS if getattr(query_object, name) is not None]
     if not set_members:
         raise EmptyQueryObjectError(query_object)

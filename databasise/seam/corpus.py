@@ -34,6 +34,7 @@ from pydantic import BaseModel, ConfigDict, model_validator
 from databasise.seam.envelope import SeamEvent
 from databasise.seam.refusals import (
     AmbiguousIngestPayloadError,
+    EmptyIngestDocumentError,
     InvalidDocumentIdError,
     OversizedDocumentError,
     PageBoundsError,
@@ -67,7 +68,8 @@ class IngestDocument(BaseModel):
     neither (``AmbiguousIngestPayloadError``, naming what was missing/duplicated). A ``raw``
     payload (or a ``text`` payload whose UTF-8 encoding) larger than ``MAX_DOCUMENT_BYTES`` is
     refused (``OversizedDocumentError``) before any bytes are written to disk and before the
-    subprocess is launched.
+    subprocess is launched. An empty payload is refused as ``EmptyIngestDocumentError`` (SEAM-09,
+    D-08): whitespace-only ``text`` counts as empty; ``raw`` bytes are checked only for length 0.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -90,6 +92,11 @@ class IngestDocument(BaseModel):
             actual_bytes = len(self.text.encode("utf-8"))
             if actual_bytes > MAX_DOCUMENT_BYTES:
                 raise OversizedDocumentError(actual_bytes=actual_bytes, limit_bytes=MAX_DOCUMENT_BYTES)
+
+        if self.text is not None and self.text.strip() == "":
+            raise EmptyIngestDocumentError(member="text")
+        if self.raw is not None and len(self.raw) == 0:
+            raise EmptyIngestDocumentError(member="raw")
         return self
 
 

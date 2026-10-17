@@ -111,7 +111,7 @@ class IngestToolArgs(_ToolArgs):
     def to_ingest_document(self) -> IngestDocument:
         if self.raw_base64 is not None:
             try:
-                raw = base64.b64decode(self.raw_base64)
+                raw = base64.b64decode(self.raw_base64, validate=True)
             except binascii.Error as exc:
                 raise MalformedBase64PayloadError(field="raw_base64") from exc
         else:
