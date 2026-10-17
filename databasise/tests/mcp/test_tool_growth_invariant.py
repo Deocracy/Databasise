@@ -318,3 +318,27 @@ def test_compare_is_present_in_tool_names_and_absent_from_the_deliberately_absen
         )
 
     assert "compare" in TOOL_NAMES
+
+
+def test_require_coverage_file_names_the_expected_path(tmp_path):
+    absent = tmp_path / "absent.md"
+    with pytest.raises(AssertionError) as excinfo:
+        _require_coverage_file(absent)
+    assert str(absent) in str(excinfo.value)
+
+
+async def test_coverage_check_fails_for_a_registered_tool_with_no_coverage_row(tmp_path):
+    """Non-vacuity: a real extra tool on a temporary server, with no row in the record, must make
+    the cross-check raise rather than pass."""
+
+    async def unlisted_probe_tool() -> dict:
+        return {}
+
+    server = create_server(store_root=tmp_path, workspace="growth-extra")
+    server.add_tool(unlisted_probe_tool, name="unlisted_probe_tool")
+    names = [tool.name for tool in await server.list_tools()]
+    assert "unlisted_probe_tool" in names
+
+    markdown = _COVERAGE_PATH.read_text(encoding="utf-8")
+    with pytest.raises(AssertionError):
+        _check_coverage(markdown, names)
