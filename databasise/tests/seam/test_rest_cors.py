@@ -132,3 +132,50 @@ def test_duplicate_origins_are_collapsed(store_root):
 
     assert response.status_code == 200
     assert response.headers.get_list("access-control-allow-origin") == [_ORIGIN]
+
+
+def _launcher_app(store_root, *flags: str):
+    from databasise.launcher import serve_rest
+
+    args = serve_rest.build_parser().parse_args(
+        ["--store-root", str(store_root), "--workspace", "w", "--no-clients", *flags]
+    )
+    # An explicit loopback base_url: the launcher's host guard rejects TestClient's default Host.
+    return TestClient(serve_rest.build_app(args, None), base_url="http://127.0.0.1:8000")
+
+
+def test_the_launcher_built_app_allows_the_flagged_origin(store_root):
+    client = _launcher_app(store_root, "--cors-origin", _ORIGIN)
+
+    response = client.options("/query", headers=_PREFLIGHT)
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == _ORIGIN
+
+
+def test_the_launcher_without_the_flag_builds_the_unchanged_app(store_root):
+    response = _launcher_app(store_root).options("/query", headers=_PREFLIGHT)
+
+    assert response.status_code == 405
+
+
+def test_the_launcher_refuses_an_invalid_origin_with_exit_2(store_root, capsys):
+    from databasise.launcher import serve_rest
+
+    argv = ["--store-root", str(store_root), "--workspace", "w", "--no-clients"]
+    with pytest.raises(SystemExit) as excinfo:
+        serve_rest.main([*argv, "--cors-origin", "http://localhost:5173/"])
+
+    assert excinfo.value.code == 2
+    assert "invalid CORS origin 'http://localhost:5173/'" in capsys.readouterr().err
+    assert not (store_root / ".engine.lock").exists()
+
+
+def test_repeated_flags_allow_every_listed_origin(store_root):
+    client = _launcher_app(
+        store_root, "--cors-origin", _ORIGIN, "--cors-origin", "http://localhost:3000"
+    )
+
+    for origin in (_ORIGIN, "http://localhost:3000"):
+        response = client.options("/query", headers={**_PREFLIGHT, "Origin": origin})
+        assert response.headers["access-control-allow-origin"] == origin
