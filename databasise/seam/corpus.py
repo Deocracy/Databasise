@@ -196,15 +196,19 @@ class HealthReport(BaseModel):
     """The result ``Databasise.health()`` returns (05-04-PLAN.md Task 1, API-06) — a fixed-size
     record: an overall ``status``, a per-store reachability map (``stores``, keyed by ``"kv"``/
     ``"vector"``/``"graph"``) and the foreign engine's own liveness fields (``engine``, keyed by
-    ``"interpreter_present"``/``"working_dir_present"``/``"storages_initialized"``). Never raises
-    for an unreachable store or an unreachable foreign engine — an unreachable participant is
-    reported as unreachable, which is what a health check is for."""
+    ``"interpreter_present"``/``"working_dir_present"``/``"storages_initialized"``) and a client
+    presence map (``clients``, keyed by ``"llm"``/``"embedding"``/``"rerank"``, 08-05 D-08): whether
+    a client is wired under each key — never a URL, model name or key, never a live probe, and it
+    never affects ``status``. Never raises for an unreachable store or an unreachable foreign
+    engine — an unreachable participant is reported as unreachable, which is what a health check is
+    for."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     status: Literal["ok", "degraded"]
     stores: dict[str, bool]
     engine: dict[str, bool]
+    clients: dict[str, bool]
 
 
 def generated_on_disk_name(document_id: str) -> str:

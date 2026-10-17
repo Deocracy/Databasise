@@ -148,6 +148,7 @@ from collections.abc import AsyncIterator, Iterator, Sequence
 from pathlib import Path
 from typing import Any
 
+from databasise.clients import CLIENT_EFFECT_TO_KEY
 from databasise.foreign import run_corpus_op
 from databasise.foreign.v1_corpus_adapter import (
     DEFAULT_V1_INTERPRETER,
@@ -960,6 +961,7 @@ class Databasise:
             status="ok" if overall_ok else "degraded",
             stores=store_reachability,
             engine=engine_report,
+            clients={key: key in (self.clients or {}) for key in CLIENT_EFFECT_TO_KEY.values()},
         )
 
     async def _execute(

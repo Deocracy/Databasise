@@ -185,7 +185,13 @@ def test_builder_errors_name_keys_never_values(tmp_path: Path):
 
     assert "OPENAI_LLM_EXTRA_BODY" in str(bad_routing.value)
     assert "stub-route-marker" in bad_routing.value.raw_value
-    secrets = [*REQUIRED.values(), *RERANK.values(), "stub-route-marker", "stub-binding-marker"]
+    # RERANK_BINDING's own value is a public shape name, listed in the refusal text on purpose.
+    secrets = [
+        *REQUIRED.values(),
+        *(v for k, v in RERANK.items() if k != "RERANK_BINDING"),
+        "stub-route-marker",
+        "stub-binding-marker",
+    ]
     for error in (missing_file.value, missing_key.value, bad_routing.value, bad_binding.value):
         for secret in secrets:
             assert secret not in str(error)

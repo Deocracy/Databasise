@@ -15,10 +15,17 @@ from pathlib import Path
 from typing import Any
 
 from databasise.clients.openai_compat import OpenAICompatibleClient
+from databasise.clients.rerank import (
+    RERANK_BINDINGS,
+    HttpRerankClient,
+    UnsupportedRerankBindingError,
+)
 
 __all__ = [
     "PROVIDER_ROUTING_ENV_KEY",
     "REQUIRED_ENV_KEYS",
+    "RERANK_BINDING_ENV_KEY",
+    "RERANK_ENV_KEYS",
     "MissingParityEnvError",
     "MissingParityEnvKeyError",
     "UnparseableProviderRoutingError",
@@ -98,6 +105,11 @@ REQUIRED_ENV_KEYS = (
 # missing-key tests that assert exactly which keys are required.
 PROVIDER_ROUTING_ENV_KEY = "OPENAI_LLM_EXTRA_BODY"
 
+# Optional rerank wiring (D-08), key names from v1/env.example. RERANK_BINDING picks the request
+# shape (cohere, jina, aliyun); "null" or an empty value means absent, as in v1.
+RERANK_BINDING_ENV_KEY = "RERANK_BINDING"
+RERANK_ENV_KEYS = ("RERANK_BINDING_HOST", "RERANK_MODEL", "RERANK_BINDING_API_KEY")
+
 
 class UnparseableProviderRoutingError(RuntimeError):
     """Raised when ``OPENAI_LLM_EXTRA_BODY`` is present in the env file but is not valid JSON —
@@ -139,22 +151,46 @@ def build_clients(env: dict[str, str]) -> dict[str, Any]:
     """One ``OpenAICompatibleClient`` construction shape (D-07) reaches both the LLM and the
     embedding endpoint the pinned config names — real network calls, never a cache, never a stub.
 
-    WR-01: refuses with a named ``MissingParityEnvKeyError`` naming every absent key, rather than
-    a bare ``KeyError`` on whichever key happens to be read first.
+    Rerank is optional (D-08), in three cases over ``RERANK_BINDING`` plus ``RERANK_ENV_KEYS``
+    (a value that is empty, or ``null`` for the binding, counts as absent): none present -> the
+    result is ``{llm, embedding}`` and rerank is not wired; all present -> a ``rerank`` entry is
+    added; some present -> a named ``MissingParityEnvKeyError`` listing the absent rerank keys.
+
+    WR-01: refuses with a named ``MissingParityEnvKeyError`` naming every absent key (required and
+    rerank together), rather than a bare ``KeyError`` on whichever key happens to be read first.
     """
     missing = [key for key in REQUIRED_ENV_KEYS if key not in env]
+    binding = env.get(RERANK_BINDING_ENV_KEY)
+    if binding == "null":
+        binding = None
+    rerank_values = {key: env.get(key) for key in RERANK_ENV_KEYS}
+    if binding or any(rerank_values.values()):
+        if not binding:
+            missing.append(RERANK_BINDING_ENV_KEY)
+        missing.extend(key for key, value in rerank_values.items() if not value)
     if missing:
         raise MissingParityEnvKeyError(missing)
+    if binding and binding not in RERANK_BINDINGS:
+        raise UnsupportedRerankBindingError(RERANK_BINDING_ENV_KEY)
     provider_routing_body = parse_provider_routing_body(env)
-    llm = OpenAICompatibleClient(
-        base_url=env["LLM_BINDING_HOST"],
-        model=env["LLM_MODEL"],
-        api_key=env["LLM_BINDING_API_KEY"],
-        provider_routing_body=provider_routing_body,
-    )
-    embedding = OpenAICompatibleClient(
-        base_url=env["EMBEDDING_BINDING_HOST"],
-        model=env["EMBEDDING_MODEL"],
-        api_key=env["EMBEDDING_BINDING_API_KEY"],
-    )
-    return {"llm": llm, "embedding": embedding}
+    clients: dict[str, Any] = {
+        "llm": OpenAICompatibleClient(
+            base_url=env["LLM_BINDING_HOST"],
+            model=env["LLM_MODEL"],
+            api_key=env["LLM_BINDING_API_KEY"],
+            provider_routing_body=provider_routing_body,
+        ),
+        "embedding": OpenAICompatibleClient(
+            base_url=env["EMBEDDING_BINDING_HOST"],
+            model=env["EMBEDDING_MODEL"],
+            api_key=env["EMBEDDING_BINDING_API_KEY"],
+        ),
+    }
+    if binding:
+        clients["rerank"] = HttpRerankClient(
+            url=env["RERANK_BINDING_HOST"],
+            model=env["RERANK_MODEL"],
+            binding=binding,
+            api_key=env["RERANK_BINDING_API_KEY"],
+        )
+    return clients
