@@ -105,7 +105,7 @@
 - [ ] **SEAM-13**: On POST /documents/upload, a selector form field that holds the JSON literal 'null' or an empty string means 'no selector' (the default wiring). This is the same as omitting the field and the same as selector null on the JSON routes.
   - Test: tests/seam/test_upload_selector_field.py: uploads with selector='null', with selector='' and with the field omitted all return 200 and enqueue through the default wiring. selector='{"alias":' still returns 422 MalformedSelectorPayloadError. Fails today: 'null' returns 422 MalformedSelectorPayloadError.
   - Defects: rest-live/REST-12
-- [ ] **SEAM-14**: Every concrete SeamRefusalError subclass that a transport can return is exported from one refusal catalogue (refusals.__all__ or a documented re-export list). This includes NoRawUploadPathForModalityError, UnknownTraceReferenceError, UnresolvableEvidenceReferenceError, UnbudgetableParticipantError and every refusal added in this phase, so a typed client generated from the catalogue covers every refusal_type.
+- [x] **SEAM-14**: Every concrete SeamRefusalError subclass that a transport can return is exported from one refusal catalogue (refusals.__all__ or a documented re-export list). This includes NoRawUploadPathForModalityError, UnknownTraceReferenceError, UnresolvableEvidenceReferenceError, UnbudgetableParticipantError and every refusal added in this phase, so a typed client generated from the catalogue covers every refusal_type.
   - Test: tests/seam/test_refusal_catalogue.py imports databasise.seam and databasise.mcp, walks SeamRefusalError.__subclasses__() recursively, and asserts that every class name is in the catalogue export list. Fails today on NoRawUploadPathForModalityError and on the three refusals defined outside refusals.py.
   - Defects: seam-rest/SEAM-20, contract/D-16
 - [ ] **SEAM-15**: An ingest's file_name is either carried through to the v1 document record, so citations name the uploaded file instead of '<document_id>.bin' or 'unknown_source', or the corpus.py module docstring, the IngestDocument docstring and the REST/MCP field descriptions state that file_name and content_type are discarded.
@@ -841,7 +841,7 @@ These fail today.
 | SEAM-11 | Phase 9 | Pending |
 | SEAM-12 | Phase 9 | Pending |
 | SEAM-13 | Phase 9 | Pending |
-| SEAM-14 | Phase 9 | Pending |
+| SEAM-14 | Phase 9 | Complete |
 | SEAM-15 | Phase 9 | Pending |
 | SEAM-16 | Phase 9 | Pending |
 | STOR-01 | Phase 10 | Pending |

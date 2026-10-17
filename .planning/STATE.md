@@ -1,20 +1,20 @@
 ---
-gsd_state_version: "1.0"
+gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Engine Fixes + Operator Console
 current_phase: 09
 current_phase_name: Inputs, Errors & Security
 status: executing
-stopped_at: Phase 08 complete, ready to plan Phase 9
-last_updated: "2026-10-17T06:05:17.390Z"
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-10-17T06:13:59.788Z"
 last_activity: 2026-10-16
-last_activity_desc: Phase 08 complete, transitioned to Phase 9
-state_head: 9bea94e7ad5d3d768afd2f73f0e49f91c2c4b0c6
+last_activity_desc: Phase 09 execution started
+state_head: 228d79b99a72c1ef467b2a192378654c3a620fce
 progress:
   total_phases: 11
   completed_phases: 1
   total_plans: 20
-  completed_plans: 10
+  completed_plans: 11
   percent: 9
 ---
 
@@ -25,14 +25,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-16 after Phase 8)
 
 **Core value:** Modalities are swappable without consumers noticing — LightRAG and HippoRAG 2 both live behind one unchanging §18 envelope, comparable side-by-side on the rig.
-**Current focus:** Phase 9 — Inputs, Errors & Security
+**Current focus:** Phase 09 — Inputs, Errors & Security
 
 ## Current Position
 
-Phase: 09 (Inputs, Errors & Security) — READY TO EXECUTE
-Plan: Not started
+Phase: 09 (Inputs, Errors & Security) — EXECUTING
+Plan: 2 of 10
 Status: Ready to execute
-Last activity: 2026-10-16 — Phase 08 complete, transitioned to Phase 9
+Last activity: 2026-10-16 — Phase 09 execution started
 
 Progress: [█░░░░░░░░░] 9% (1/11 phases)
 
@@ -70,6 +70,7 @@ Progress: [█░░░░░░░░░] 9% (1/11 phases)
 | Phase 08 P08 | 35 min | 3 tasks | 7 files |
 | Phase 08 P09 | 25min | 2 tasks | 3 files |
 | Phase 08 P10 | 2 min | 1 tasks | 4 files |
+| Phase 09 P01 | 35 min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,7 @@ Recent decisions affecting current work:
 - [Phase 08]: 08-09: offline guard wraps socket connect/connect_ex in-process only; the RUN-12 gate adds no marker expression and relies on addopts
 - [Phase 08]: 08-10: _SIMILARITY_THRESHOLD stays 0.999 and is documented unmeasured; the D-14 live measurement is owner-deferred to TESTING-PLAN section 2 (owner: run measurements only for debugging)
 - [Phase 08]: 08-10: RUN-11 left open; the twelve ledger set lines, with RUN-05 evidence node names corrected, are parked in 08-10-SUMMARY.md for the owner
+- [Phase 09]: 09-01: a request with both a schema error and a refusal returns the refusal body; moved refusals are re-exported from their old modules
 
 ### Pending Todos
 
@@ -136,8 +138,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-17T02:00:16.069Z
-Stopped at: Phase 08 complete, ready to plan Phase 9
+Last session: 2026-10-17T06:13:59.741Z
+Stopped at: Completed 09-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
