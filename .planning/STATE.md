@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 09
 current_phase_name: Inputs, Errors & Security
 status: executing
-stopped_at: Completed 09-02-PLAN.md
-last_updated: "2026-10-17T07:59:41.460Z"
+stopped_at: Completed 09-03-PLAN.md
+last_updated: "2026-10-17T08:08:45.959Z"
 last_activity: 2026-10-16
 last_activity_desc: Phase 09 execution started
-state_head: 3fb9c81412da441c132cd6bfd74c8937d6401a73
+state_head: 1eac0bbe7fbbe8e8486d52991163bcc4698e4aa3
 progress:
   total_phases: 11
   completed_phases: 1
   total_plans: 20
-  completed_plans: 12
+  completed_plans: 13
   percent: 9
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-16 after Phase 8)
 ## Current Position
 
 Phase: 09 (Inputs, Errors & Security) — EXECUTING
-Plan: 3 of 10
+Plan: 4 of 10
 Status: Ready to execute
 Last activity: 2026-10-16 — Phase 09 execution started
 
@@ -72,6 +72,7 @@ Progress: [█░░░░░░░░░] 9% (1/11 phases)
 | Phase 08 P10 | 2 min | 1 tasks | 4 files |
 | Phase 09 P01 | 35 min | 2 tasks | 11 files |
 | Phase 09 P02 | n/a (continuation) | 3 tasks | 5 files |
+| Phase 09 P03 | n/a | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,8 @@ Recent decisions affecting current work:
 - [Phase 09]: 09-01: a request with both a schema error and a refusal returns the refusal body; moved refusals are re-exported from their old modules
 - [Phase 09]: 404 limited to the four caller-supplied lookups; every other refusal is 422 via rest._status_for (D-03) — A not-found status must not disclose internal identities
 - [Phase 09]: pydantic.ValidationError with no refusal inside is re-raised and stays a 500; upload selector null/empty/whitespace means default — A refusal-free schema failure is a server bug; matches JSON routes' selector null
+- [Phase 09]: D-12 revised: only None is an absent document id; a blank upload FORM field is normalised to absent in the route, JSON/MCP '' and '   ' are refused as InvalidDocumentIdError
+- [Phase 09]: Page and checked_page check the upper cap before lower bounds; PageBoundsError for limit<1 or offset<0; one shared checked_page for REST and MCP
 
 ### Pending Todos
 
@@ -141,8 +144,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-17T07:59:41.416Z
-Stopped at: Completed 09-02-PLAN.md
+Last session: 2026-10-17T08:08:45.913Z
+Stopped at: Completed 09-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
