@@ -113,6 +113,9 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 | v1.1 Phase 8: rerank client mirrors LightRAG v1 bindings (cohere/jina/aliyun via RERANK_BINDING); identity falls back to the configured RERANK_MODEL when the server reports none | Owner: "use a reranker the same way lightrag uses it"; a rerank-scoped exception to the hash-what-is-installed identity rule, LLM/embedding stay strict | — Pending (live rerank test owner-deferred) |
 | v1.1 Phase 8: launchers bind loopback only and guard writes — wildcard binds refused, foreign-Origin state-changing requests 403, DNS-rebinding Host checks; seam auth still undecided | Code review reproduced a cross-site write to the unauthenticated loopback app; these close exposure without settling the CONN-phase auth decision | ✓ Good (owner-approved 2026-10-16) |
 | v1.1 Phase 8: live measurements run only for debugging, after the build | Owner: "we dont need to run any of those mesherment untill everthing is build"; RUN-11 threshold stays 0.999 until then | — Pending (TESTING-PLAN.md §2) |
+| v1.1 Phase 9: one refusal body `{refusal_type, message, <public fields>}` on REST and MCP; 404 for the four not-found lookups, 422 for other refusals, 502/503 `ForeignEngineRefusalError` for machine faults; launcher transport guards keep their own shape | Owner delegated the grey areas ("You decide"); D-12/D-13 exception clauses owner-ratified 2026-10-16 | ✓ Good (verified 5/5, 16/16 SEAM) |
+| v1.1 Phase 9: raw uploads staged by exclusive create plus an owner record naming the workspace; a staged id is unique per store; delete releases it only on v1 success/not_found | Three review iterations: overwrite, burned ids and cross-workspace unlink were each found and closed; the protected corpus-endpoint test pins the flat inbox layout | — Pending (crash-orphan reaper is an owner decision; operator removes orphans by hand) |
+| v1.1 Phase 9: v1 free-text errors reach callers only through a best-effort regex scrub (paths to basenames, URLs to `<url>`, tracebacks cut, 200-char cap) | An allow-list of error categories would lose the diagnostic text; seam auth is still undecided | — Pending (revisit with the CONN-phase auth decision) |
 | Close the operator verbs' check-then-act races with one `BEGIN IMMEDIATE` span per verb plus a UNIQUE `(alias, minted_version)` index | A guard read and the append it gates must commit together or the guard goes stale under concurrency; the schema constraint backstops it independently of any Python read path | ✓ Held (G-07-1 closed; 40/40 concurrency runs, full suite green) |
 
 ## Evolution
@@ -133,4 +136,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-16 after Phase 8*
+*Last updated: 2026-10-17 after Phase 9*
