@@ -120,6 +120,34 @@ def test_the_bound_remote_host_is_allowed_and_a_foreign_one_is_not(store_root, m
     assert client.get("/health", headers={"Host": "evil.example"}).status_code == 400
 
 
+def _upload(client, origin: str | None):
+    headers = {"Host": "127.0.0.1:8000", **({"Origin": origin} if origin else {})}
+    return client.post(
+        "/documents/upload",
+        files={"file": ("report.pdf", b"raw pdf bytes", "application/pdf")},
+        headers=headers,
+    )
+
+
+def test_a_cross_site_write_is_refused_whether_or_not_cors_is_configured(store_root, monkeypatch):
+    for flags in ((), ("--cors-origin", "http://localhost:5173")):
+        client = _rest_client(store_root, monkeypatch, *flags)
+
+        response = _upload(client, "http://evil.example")
+
+        assert response.status_code == 403
+        assert response.json() == {"detail": "origin not allowed"}
+        assert client.get("/jobs/x", headers={"Origin": "http://evil.example"}).status_code != 403
+
+
+def test_writes_with_no_origin_a_loopback_origin_or_a_listed_origin_pass_the_guard(store_root, monkeypatch):
+    client = _rest_client(store_root, monkeypatch, "--cors-origin", "http://localhost:5173")
+
+    for origin in (None, "http://127.0.0.1:8000", "http://localhost:8000", "http://localhost:5173"):
+        assert _upload(client, origin).status_code != 403
+    assert _upload(client, "http://127.0.0.1:9999").status_code == 403
+
+
 def test_create_app_itself_keeps_accepting_any_host(store_root, monkeypatch):
     from databasise.seam.rest import create_app
     from databasise.tests.seam.test_rest_cors import _patch_health

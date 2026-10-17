@@ -10,6 +10,7 @@ from typing import Any
 from databasise.launcher import (
     LAUNCH_REFUSALS,
     add_engine_arguments,
+    bracketed,
     check_engine_arguments,
     open_engine,
     refuse,
@@ -32,6 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def build_app(args: argparse.Namespace, clients: dict[str, Any] | None):
     from databasise.seam.rest import create_app
+    from fastapi.responses import JSONResponse
     from starlette.middleware.trustedhost import TrustedHostMiddleware
 
     app = create_app(
@@ -45,6 +47,20 @@ def build_app(args: argparse.Namespace, clients: dict[str, Any] | None):
     # an IP literal cannot be rebound, so that is accepted.
     allowed = ["localhost", "127.0.0.1", "[", args.host.strip("[]")]
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed)
+
+    # WR-01: CORS only hides the response from a foreign page; a form POST (/documents/upload) still runs.
+    # Refuse a state-changing request whose Origin is neither listed nor this loopback/bound host. No Origin
+    # (curl, MCP, agents) passes: browsers always send one on a cross-site POST.
+    own = {f"http://{name}:{args.port}" for name in ("localhost", "127.0.0.1", "[::1]", bracketed(args.host))}
+    permitted = own | set(args.cors_origin or ())
+
+    @app.middleware("http")
+    async def origin_guard(request, call_next):
+        origin = request.headers.get("origin")
+        if request.method not in ("GET", "HEAD", "OPTIONS") and origin is not None and origin not in permitted:
+            return JSONResponse(status_code=403, content={"detail": "origin not allowed"})
+        return await call_next(request)
+
     return app
 
 
