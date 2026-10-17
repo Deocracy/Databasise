@@ -138,6 +138,12 @@ class DeletionOutcome(BaseModel):
     message: str
     seam_events: list[SeamEvent] = []
 
+    @field_validator("message")
+    @classmethod
+    def _scrub_message(cls, value: str) -> str:
+        # 09 REVIEW WR-03: v1's failure text (``str(e)``) can name storage paths.
+        return scrub_error_message(value) or ""
+
 
 class Page(BaseModel):
     """A bounded page request (API-06) — a ``limit`` outside 1..``MAX_PAGE_SIZE`` or a negative
@@ -182,19 +188,33 @@ def checked_page(limit: int, offset: int) -> Page:
 
 MAX_ERROR_MESSAGE_CHARS = 200
 
-# An absolute POSIX or Windows path token, not preceded by a word character (so ``a/b`` stays).
-_ABSOLUTE_PATH_RE = re.compile(r"""(?<![\w.~-])(?:[A-Za-z]:[\\/]|/)[^\s'"`<>()\[\],;]*""")
+# Where a filesystem path starts: a Windows drive, a UNC share, ``~``/``~user``, ``./``, ``../`` or
+# an absolute ``/``. The lookbehind keeps ``a/b`` (a word character before the slash) untouched.
+_PATH_START = r"(?:[A-Za-z]:[\\/]|\\\\|~[\w.-]*/|\.{1,2}/|/)"
+_PATH_RE = re.compile(rf"""(?<![\w.~-]){_PATH_START}[^\s'"`<>()\[\],;]*""")
+# The same path inside matching quotes, which may hold spaces (``'/home/u/my docs/a b.bin'``).
+_QUOTED_PATH_RE = re.compile(rf"""(?P<q>['"])(?P<p>{_PATH_START}[^'"\n]*)(?P=q)""")
+_URL_RE = re.compile(r"""\b(?:file|https?)://[^\s'"`<>()\[\],;]*""", re.IGNORECASE)
+
+
+def _basename(path: str) -> str:
+    return re.split(r"[\\/]", path.rstrip("\\/"))[-1] or "<path>"
 
 
 def scrub_error_message(text: str | None) -> str | None:
-    """09 REVIEW WR-03: v1's free-text failure message made safe to return to any caller. Cuts a
-    traceback, keeps the first line, replaces each absolute path by its basename (``<path>`` when it
-    has none) and caps the length. The one helper every transport reaches through
-    ``DocumentStatusEntry``."""
+    """09 REVIEW WR-03/WR-02: a best-effort scrub of v1's free-text failure message before it goes
+    to a caller. It is a regex heuristic, not an allow-list, and does not guarantee that no server
+    detail remains (an unquoted path containing spaces keeps its tail, for one). It cuts a
+    traceback, keeps the first line, replaces each ``file://`` or ``http(s)://`` URL with
+    ``<url>``, replaces each absolute, ``~``, UNC or ``./``/``../`` path (quoted paths may hold
+    spaces) with its basename (``<path>`` when it has none) and caps the length. The one helper
+    every transport reaches through ``DocumentStatusEntry`` and ``DeletionOutcome``."""
     if text is None:
         return None
     first = next((ln.strip() for ln in text.split("Traceback (most recent call last)")[0].splitlines() if ln.strip()), "")
-    scrubbed = _ABSOLUTE_PATH_RE.sub(lambda m: re.split(r"[\\/]", m.group(0).rstrip("\\/"))[-1] or "<path>", first)
+    scrubbed = _URL_RE.sub("<url>", first)
+    scrubbed = _QUOTED_PATH_RE.sub(lambda m: f"{m['q']}{_basename(m['p'])}{m['q']}", scrubbed)
+    scrubbed = _PATH_RE.sub(lambda m: _basename(m.group(0)), scrubbed)
     if len(scrubbed) > MAX_ERROR_MESSAGE_CHARS:
         scrubbed = scrubbed[: MAX_ERROR_MESSAGE_CHARS - 1] + "…"
     return scrubbed or None
@@ -204,8 +224,8 @@ class DocumentStatusEntry(BaseModel):
     """One document's status within a ``JobStatus``/``CorpusStatus`` page — carries only an
     identifier, a status, a timestamp and an optional error message. No field here ever carries
     document text, chunk text, an embedding vector, or a graph node payload (API-06). The error
-    message is v1's text passed through :func:`scrub_error_message`: no absolute path, no traceback,
-    bounded length."""
+    message is v1's text passed through :func:`scrub_error_message`, a best-effort scrub (paths
+    and URLs replaced, no traceback, bounded length), not a guarantee."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 

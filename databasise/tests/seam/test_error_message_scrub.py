@@ -13,7 +13,12 @@ pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 
 from databasise.seam import engine as engine_module
-from databasise.seam.corpus import MAX_ERROR_MESSAGE_CHARS, DocumentStatusEntry, scrub_error_message
+from databasise.seam.corpus import (
+    MAX_ERROR_MESSAGE_CHARS,
+    DeletionOutcome,
+    DocumentStatusEntry,
+    scrub_error_message,
+)
 from databasise.seam.rest import create_app
 from databasise.tests.seam.test_rest_corpus_endpoints import _make_registry
 
@@ -32,10 +37,44 @@ _TRACEBACK = 'Parse error\nTraceback (most recent call last):\n  File "/home/chr
         (_TRACEBACK, "Parse error"),
         ("Traceback (most recent call last):\n  File \"/x/y.py\"", None),
         ("", None),
+        # 09 REVIEW iteration 2 WR-02: the forms the first heuristic let through.
+        ("Failed parsing ~/store/a.bin", "Failed parsing a.bin"),
+        ("x ~chris/s/a.bin y", "x a.bin y"),
+        ("err '/home/chris/my docs/a b.bin' ok", "err 'a b.bin' ok"),
+        ('err "C:\\Users\\me\\my docs\\a b.pdf" ok', 'err "a b.pdf" ok'),
+        ("\\\\server\\share\\a.bin bad", "a.bin bad"),
+        ("see ./store/corpus-inbox/a.bin", "see a.bin"),
+        ("../../etc/passwd", "passwd"),
+        ("GET http://host:8000/path/to failed", "GET <url> failed"),
+        ("fetched https://h/x?k=1 and file:///home/u/a.bin", "fetched <url> and <url>"),
     ],
 )
 def test_scrub_error_message(raw, expected):
     assert scrub_error_message(raw) == expected
+
+
+def test_deletion_outcome_message_is_scrubbed_on_construction():
+    outcome = DeletionOutcome(
+        document_id="d", status="fail", message="Error while deleting: [Errno 2] '/srv/db/my store/x.json'"
+    )
+    assert outcome.message == "Error while deleting: [Errno 2] 'x.json'"
+    assert DeletionOutcome(document_id="d", status="success", message="").message == ""
+
+
+def test_rest_delete_returns_the_scrubbed_message(tmp_path, monkeypatch):
+    registry = _make_registry(delete_status="fail")
+    real = engine_module._node_result_or_refuse
+
+    def _with_path(scheduled, node_id, operation):
+        return {**real(scheduled, node_id, operation), "message": "boom at /home/chris/store/a.json"}
+
+    monkeypatch.setattr(engine_module, "_node_result_or_refuse", _with_path)
+    client = TestClient(create_app(store_root=tmp_path, workspace="scrub-del", registry=registry))
+
+    response = client.delete("/documents/doc-1")
+
+    assert response.status_code == 200, response.text
+    assert response.json()["message"] == "boom at a.json"
 
 
 def test_scrub_caps_length():
