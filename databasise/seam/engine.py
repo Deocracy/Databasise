@@ -185,7 +185,7 @@ from databasise.seam.evidence import (
     resolve_evidence_ref,
     validate_evidence_namespace,
 )
-from databasise.seam.compare import compare_arms
+from databasise.seam.compare import comparison_keys
 from databasise.seam.promotion import (
     CHANGE_ORIGINS,
     PROMOTION_VERBS,
@@ -664,10 +664,11 @@ class Databasise:
         degenerates to a run, not a comparison (RIG.md ## §RUN.3's degenerate-width rule): it
         returns ``await self._execute(query_object, selectors[0])`` unchanged — the identical bare
         ``ResponseEnvelope`` ``query()`` already returns, never a one-key mapping. Two or more
-        selectors delegate to :func:`~databasise.seam.compare.compare_arms`, which awaits this
-        engine's own bound ``_execute`` once per selector — the identical path every other §18
-        query already runs, so the §4 ``provenance`` redaction and the §18.2 closed-envelope rule
-        apply to every arm by construction (see ``compare.py``'s own module docstring).
+        selectors check every comparison key (:func:`~databasise.seam.compare.comparison_keys`),
+        resolve each selector once, and run each resolved wiring through ``_execute_resolved`` —
+        the same body ``_execute`` runs after resolution, so the §4 ``provenance`` redaction and the
+        §18.2 closed-envelope rule apply to every arm by construction. A key collision refuses
+        before any selector is resolved and before any arm runs (SEAM-11).
 
         ``debug`` is accepted and discarded for signature stability with ``query``/``query_stream``,
         exactly as those two methods already do. Arms run sequentially, in the caller's own
@@ -683,7 +684,7 @@ class Databasise:
         :func:`~databasise.seam.selectors._wiring_effects` (never a second copy of that
         computation). A ``mutates_store`` effect anywhere in that union raises
         :class:`~databasise.seam.refusals.MutableStoreComparisonExcludedError` naming the
-        offending component — before ``compare_arms`` is called at all, so no envelope is produced
+        offending component — before the first arm runs, so no envelope is produced
         and no store is written for any arm, including one that would otherwise have run first in
         the caller's own order.
         """
@@ -693,13 +694,17 @@ class Databasise:
             raise EmptyComparisonRequestError()
         if len(selectors) == 1:
             return await self._execute(query_object, selectors[0])
-        for selector in selectors:
-            resolved = resolve_selector(selector, registry=self.registry, store_root=self.store_root)
+        keys = comparison_keys(selectors)
+        wirings = [
+            resolve_selector(selector, registry=self.registry, store_root=self.store_root)
+            for selector in selectors
+        ]
+        for resolved in wirings:
             if "mutates_store" in _wiring_effects(resolved, self.registry):
                 raise MutableStoreComparisonExcludedError(
                     component=_mutates_store_component(resolved, self.registry)
                 )
-        return await compare_arms(self._execute, query_object, selectors)
+        return {key: await self._execute_resolved(query_object, wiring) for key, wiring in zip(keys, wirings)}
 
     async def ingest(self, document: IngestDocument, selector: Selector | None = None) -> IngestJob:
         """The fourth §18 operation this seam exposes (05-01-PLAN.md; selector parameter added
@@ -1024,8 +1029,19 @@ class Databasise:
         docstring (04-05, Task 2) for why splitting it out this way is what makes "shares
         resolution, execution and redaction" true by construction rather than by convention."""
         check_consumable(query_object, self.registry)
-
         resolved = resolve_selector(selector, registry=self.registry, store_root=self.store_root)
+        return await self._execute_resolved(query_object, resolved)
+
+    async def _execute_resolved(
+        self,
+        query_object: QueryObject,
+        resolved: dict[str, Any],
+    ) -> ResponseEnvelope:
+        """Everything in :meth:`_execute` after selector resolution (09-08-PLAN.md, SEAM-11):
+        ``compare`` resolves each selector once and hands that wiring here, so the arm that runs
+        is the wiring the pre-check inspected even if an alias is repointed in between. Never
+        resolves a selector. ``resolved`` is mutated by the query/token-allowance injection, so
+        pass each resolved wiring to exactly one call."""
         resolved = _inject_query(resolved, query_object.text or "")
         resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
         parsed = parse_wiring(resolved, self.registry)

@@ -11,9 +11,10 @@ and the §18.2 closed-envelope rule apply to the comparison case by construction
 second copy of the rule (RIG.md ## §RUN.4's own anti-pattern warning, restated in 06-RESEARCH.md's
 "Comparison as a thin fan-out" pattern).
 
-This module holds no import back into ``databasise.seam.engine`` — ``Databasise.compare`` (in
-``engine.py``) is the only caller, and it passes its own bound ``self._execute`` in rather than this
-module reaching back into the engine module itself.
+This module holds no import back into ``databasise.seam.engine``. ``Databasise.compare`` (in
+``engine.py``) uses :func:`comparison_keys` to refuse every key problem before any arm runs, then
+executes the wirings it resolved once (09-08-PLAN.md, SEAM-11); :func:`compare_arms` remains the
+public keys-first fan-out helper over any ``execute(query_object, selector)`` callable.
 
 **Selector-key rendering (06-03-PLAN.md's own flagged assumption).** §18.4 names the four selectors
 but never states how a multi-capability selector renders as a response key. The joined-in-
@@ -29,7 +30,11 @@ from collections.abc import Awaitable, Callable, Sequence
 
 from databasise.seam.envelope import ResponseEnvelope
 from databasise.seam.query import QueryObject
-from databasise.seam.refusals import DuplicateComparisonKeyError, EmptyCapabilitySelectorError
+from databasise.seam.refusals import (
+    DuplicateComparisonKeyError,
+    EmptyCapabilitySelectorError,
+    EmptyComparisonRequestError,
+)
 from databasise.seam.selectors import Selector
 
 # The separator joining a multi-capability selector's own requested values, in the caller's own
@@ -63,6 +68,25 @@ def render_selector_key(selector: Selector) -> str:
     return "default"
 
 
+def comparison_keys(selectors: Sequence[Selector]) -> list[str]:
+    """Every selector's rendered comparison key, in the caller's own order (SEAM-11, D-09). Pure:
+    nothing is resolved or executed. Zero selectors refuse with
+    :class:`~databasise.seam.refusals.EmptyComparisonRequestError`; the first key that repeats an
+    earlier one raises :class:`~databasise.seam.refusals.DuplicateComparisonKeyError`, so a
+    comparison that will refuse does so before any arm spends an LLM call or persists a trace.
+    Keys compare exactly as rendered (``"X"`` and ``"x"`` are distinct).
+    """
+    if not selectors:
+        raise EmptyComparisonRequestError()
+    keys: list[str] = []
+    for selector in selectors:
+        key = render_selector_key(selector)
+        if key in keys:
+            raise DuplicateComparisonKeyError(key=key)
+        keys.append(key)
+    return keys
+
+
 async def compare_arms(
     execute: Callable[[QueryObject, Selector], Awaitable[ResponseEnvelope]],
     query_object: QueryObject,
@@ -79,13 +103,8 @@ async def compare_arms(
     partial mapping with one arm silently missing, which is the one shape a consumer cannot
     distinguish from a modality that legitimately returned nothing.
     """
-    results: dict[str, ResponseEnvelope] = {}
-    for selector in selectors:
-        key = render_selector_key(selector)
-        if key in results:
-            raise DuplicateComparisonKeyError(key=key)
-        results[key] = await execute(query_object, selector)
-    return results
+    keys = comparison_keys(selectors)
+    return {key: await execute(query_object, selector) for key, selector in zip(keys, selectors)}
 
 
-__all__ = ["CAPABILITY_KEY_SEPARATOR", "compare_arms", "render_selector_key"]
+__all__ = ["CAPABILITY_KEY_SEPARATOR", "compare_arms", "comparison_keys", "render_selector_key"]

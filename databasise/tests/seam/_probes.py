@@ -9,6 +9,7 @@ from pathlib import Path
 
 from databasise.clients.base import ChatResult, EmbeddingResult
 from databasise.runner.trace import TokenAccounting
+from databasise.seam import Databasise
 
 
 class CountingEmbeddingClient:
@@ -59,3 +60,15 @@ def inbox_files(store_root: str | Path) -> list[Path]:
     """Every file under ``store_root/corpus-inbox``; empty when the directory does not exist."""
     inbox = Path(store_root) / "corpus-inbox"
     return sorted(inbox.rglob("*")) if inbox.exists() else []
+
+
+async def promote_alias(store_root: str | Path, alias: str, arm_name: str = "naive") -> None:
+    """Promote ``alias`` to ``arm_name``'s wiring: seed a trace naming that arm, then promote
+    through ``Databasise.promote`` (the call the REST and MCP routes make)."""
+    # Imported here: test_rest_transport imports fastapi, which the rest of this module must not need.
+    from databasise.tests.seam.test_rest_transport import _seed_trace
+
+    token = _seed_trace(store_root, arm_name)
+    await Databasise(store_root=store_root, workspace="probe-promote").promote(
+        alias, [token], "human_edit"
+    )

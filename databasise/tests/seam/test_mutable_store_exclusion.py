@@ -19,10 +19,11 @@ wiring file's own JSON content and the *real* registered Part's own declared eff
 *real* selector-resolution and refusal-check code path, rather than a hand-built stand-in
 candidate.
 
-``engine._execute`` is replaced with a call-recording spy rather than seeded with real store
-data: since every store write a comparison could make happens strictly inside ``_execute()``, a
-spy with zero recorded calls is a direct, sufficient proof that no arm ran and therefore no store
-was written — stronger than asserting on the raised exception alone (this plan's own instruction:
+``engine._execute`` (one selector) or ``engine._execute_resolved`` (two or more, the call
+``compare`` makes since 09-08) is replaced with a call-recording spy rather than seeded with real
+store data: since every store write a comparison could make happens strictly inside that execution
+path, a spy with zero recorded calls is a direct, sufficient proof that no arm ran and therefore no
+store was written — stronger than asserting on the raised exception alone (this plan's own instruction:
 "assert on the absence of any store write, not only on the raised exception, so a refusal that
 fires after an arm already ran would still fail").
 """
@@ -95,10 +96,23 @@ class _ExecuteSpy:
         return ResponseEnvelope(answer="", depth_label="stage", partial=False, degraded=False)
 
 
+class _ResolvedSpy:
+    """Stands in for ``Databasise._execute_resolved``: records every resolved wiring it is awaited
+    with, in order, and returns the same fixed minimal envelope."""
+
+    def __init__(self) -> None:
+        self.calls: list[dict] = []
+
+    async def __call__(self, query_object: QueryObject, resolved: dict) -> ResponseEnvelope:
+        del query_object
+        self.calls.append(resolved)
+        return ResponseEnvelope(answer="", depth_label="stage", partial=False, degraded=False)
+
+
 async def test_comparison_resolving_mutates_store_wiring_is_refused(cbm_reachable, tmp_path):
     engine = _make_engine(tmp_path)
-    spy = _ExecuteSpy()
-    engine._execute = spy
+    spy = _ResolvedSpy()
+    engine._execute_resolved = spy
 
     with pytest.raises(MutableStoreComparisonExcludedError) as exc_info:
         await engine.compare(
@@ -117,8 +131,8 @@ async def test_refusal_fires_before_any_arm_executes_no_store_write_possible(cbm
     every selector before any execution starts, not lazily per-arm as ``compare_arms`` would
     otherwise process them."""
     engine = _make_engine(tmp_path)
-    spy = _ExecuteSpy()
-    engine._execute = spy
+    spy = _ResolvedSpy()
+    engine._execute_resolved = spy
 
     with pytest.raises(MutableStoreComparisonExcludedError):
         await engine.compare(
@@ -126,7 +140,7 @@ async def test_refusal_fires_before_any_arm_executes_no_store_write_possible(cbm
             [Selector(capability=_MUTATES_STORE_CAPABILITY), Selector(capability=_LIGHTRAG_CAPABILITY)],
         )
 
-    # No store write is possible unless _execute is called — zero calls is the direct proof, not
+    # No store write is possible unless _execute_resolved is called — zero calls is the direct proof, not
     # merely the absence of a raised-late exception.
     assert spy.calls == []
 
@@ -151,8 +165,8 @@ async def test_comparison_between_two_non_mutable_wirings_is_unaffected(tmp_path
     production, and neither LightRAG's naive arm nor the HippoRAG base wiring declares
     mutates_store, so this comparison must proceed exactly as it did before this plan."""
     engine = _make_engine(tmp_path)
-    spy = _ExecuteSpy()
-    engine._execute = spy
+    spy = _ResolvedSpy()
+    engine._execute_resolved = spy
 
     result = await engine.compare(
         QueryObject(text=_QUERY_TEXT),
@@ -165,7 +179,7 @@ async def test_comparison_between_two_non_mutable_wirings_is_unaffected(tmp_path
 
 async def test_refusal_names_only_the_excluded_component(cbm_reachable, tmp_path):
     engine = _make_engine(tmp_path)
-    engine._execute = _ExecuteSpy()
+    engine._execute_resolved = _ResolvedSpy()
 
     with pytest.raises(MutableStoreComparisonExcludedError) as exc_info:
         await engine.compare(
