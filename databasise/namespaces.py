@@ -12,9 +12,12 @@ writes ``quarantined`` and never ``shared``, and its index is therefore instance
 SA-1-shareable; collapsing the two scopes into one namespace would make that distinction
 unimplementable.
 
-D-07 (costly reversibility): this one-directory-per-namespace layout is baked into every
-namespace-derivation call site and into every artifact-registry row written under it. Changing
-the layout later is a migration of on-disk state, not a config edit.
+D-07 layout (corrected in Phase 10, D-16): the flat ``store_root/<namespace>`` layout belongs to
+derived namespaces only. The seam stores do not derive their directories: they use fixed names
+under ``store_root/<workspace>/<namespace>``. Only ``parity/import_index.py`` calls
+``derive_namespace``. The artifact registry was removed (Phase 10, D-15), so no record maps a
+generation or instance to a namespace, and retiring an instance does not trigger GC. Quarantined
+namespaces are removed by the operator GC CLI, ``databasise.launcher.gc_namespaces``.
 """
 
 from __future__ import annotations
@@ -100,12 +103,30 @@ def artifacts_overlap(recipe_hash_a: str, recipe_hash_b: str) -> bool:
     return recipe_hash_a == recipe_hash_b
 
 
+class NamespaceGCError(RuntimeError):
+    """A namespace directory exists but could not be removed (STOR-15, D-16)."""
+
+    def __init__(self, namespace: str, reason: str):
+        self.namespace = namespace
+        self.reason = reason
+        super().__init__(f"NamespaceGCError: could not remove namespace {namespace!r} ({reason})")
+
+
 def gc_namespace(store_root: Path, namespace: str) -> None:
     """Delete exactly ``namespace``'s directory tree under ``store_root``.
 
     This is what makes CONTRACT §3's "GC'd with the instance that produced it" rule for the
     ``quarantined`` scope a real operation rather than a promise. ``namespace_dir`` already
-    refuses to resolve outside ``store_root``, so this never deletes anything else.
+    refuses to resolve outside ``store_root``, so this never deletes anything else. Its
+    production caller is the operator GC CLI ``databasise.launcher.gc_namespaces`` (D-16).
+
+    An absent directory is not an error. Any other removal failure, including a symlinked
+    namespace entry (``shutil.rmtree`` refuses to follow it), raises :class:`NamespaceGCError`.
     """
     target = namespace_dir(store_root, namespace)
-    shutil.rmtree(target, ignore_errors=True)
+    try:
+        shutil.rmtree(target)
+    except FileNotFoundError:
+        return
+    except OSError as exc:
+        raise NamespaceGCError(namespace, type(exc).__name__) from exc

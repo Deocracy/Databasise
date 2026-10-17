@@ -12,7 +12,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from databasise.namespaces import gc_namespace, namespace_dir
+from databasise.namespaces import NamespaceGCError, gc_namespace, namespace_dir
 from databasise.store_lock import StoreLockedError, store_lock
 
 _QUARANTINED_PREFIX = "quarantined-"
@@ -48,7 +48,7 @@ def main(argv: list[str] | None = None) -> int:
                     continue
                 gc_namespace(store_root, token)
                 print(f"removed {token}")
-    except StoreLockedError as exc:
+    except (StoreLockedError, NamespaceGCError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
     return 0
