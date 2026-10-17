@@ -128,7 +128,7 @@ _NOT_FOUND_REFUSALS: tuple[type[SeamRefusalError], ...] = (
 # A ForeignEngineRefusalError is a machine fault, never a caller refusal (09-05-PLAN.md, SEAM-05,
 # SEAM-06, D-04): 502 when the v1 run fails or returns malformed output, 503 when v1 is unavailable
 # (missing interpreter, timeout). A consumer is never told to change input that was not at fault.
-_ENGINE_UNAVAILABLE = frozenset({"MissingV1InterpreterError", "CorpusOpTimeoutError"})
+_ENGINE_UNAVAILABLE = frozenset({"MissingV1InterpreterError", "CorpusOpTimeoutError", "DriverUnavailable"})
 
 
 def _status_for(exc: SeamRefusalError) -> int:

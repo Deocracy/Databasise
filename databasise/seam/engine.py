@@ -150,12 +150,7 @@ from pathlib import Path
 from typing import Any
 
 from databasise.clients import CLIENT_EFFECT_TO_KEY
-from databasise.foreign import (
-    CorpusOpSubprocessError,
-    CorpusOpTimeoutError,
-    MissingV1InterpreterError,
-    run_corpus_op,
-)
+from databasise.foreign import run_corpus_op
 from databasise.foreign.v1_corpus_adapter import (
     DEFAULT_V1_INTERPRETER,
     STATUS_WALL_CLOCK_CEILING_SECONDS,
@@ -214,6 +209,7 @@ from databasise.seam.refusals import (
     MutableStoreComparisonExcludedError,
     NoRawUploadPathForModalityError,
     NoWritePathForModalityError,
+    SeamRefusalError,
     TombstonedGenerationError,
     UnknownGenerationVersionError,
     UnknownJobError,
@@ -405,14 +401,21 @@ _MALFORMED_RESULT = (TypeError, ValueError, AttributeError, KeyError)
 
 
 async def _corpus_op_or_refuse(op: str, payload: dict[str, Any], operation: str) -> Any:
-    """09-05-PLAN.md (SEAM-06, D-04): the read routes' call into the v1 corpus driver. The four
-    adapter failure modes become the same ``ForeignEngineRefusalError`` fault the write routes raise;
-    any other exception is not an adapter failure mode and propagates. ``run_corpus_op`` is looked up
+    """09-05-PLAN.md (SEAM-06, D-04): the read routes' call into the v1 corpus driver. Any
+    non-refusal exception from the adapter (its four named failure modes, but also undecodable
+    driver bytes and ``OSError`` from a missing or unrunnable interpreter or cwd) becomes the same
+    ``ForeignEngineRefusalError`` fault the write routes raise, so a read route never answers with a
+    bare 500 (09 REVIEW WR-01). A ``SeamRefusalError`` passes through. ``run_corpus_op`` is looked up
     as a module global at call time so tests can monkeypatch ``databasise.seam.engine.run_corpus_op``."""
     try:
         return await asyncio.to_thread(run_corpus_op, op, payload, timeout=STATUS_WALL_CLOCK_CEILING_SECONDS)
-    except (MissingV1InterpreterError, CorpusOpSubprocessError, CorpusOpTimeoutError, json.JSONDecodeError) as exc:
-        raise _foreign_fault(operation, exc) from exc
+    except SeamRefusalError:
+        raise
+    except Exception as exc:
+        # An OSError (PermissionError, FileNotFoundError) means the v1 interpreter or cwd is unusable.
+        raise _foreign_fault(
+            operation, exc, failure_class="DriverUnavailable" if isinstance(exc, OSError) else None
+        ) from exc
 
 
 def _node_result_or_refuse(scheduled: dict[str, Any], node_id: str, operation: str) -> dict[str, Any]:
