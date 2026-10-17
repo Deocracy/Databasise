@@ -73,6 +73,13 @@ def is_loopback_host(host: str) -> bool:
         return False
 
 
+def _is_wildcard(host: str) -> bool:
+    try:
+        return ipaddress.ip_address(host.strip("[]")).is_unspecified
+    except ValueError:
+        return False
+
+
 def bracketed(host: str) -> str:
     """The form a Host header carries: an IPv6 literal gets brackets."""
     name = host.strip("[]")
@@ -88,6 +95,13 @@ def check_engine_arguments(parser: argparse.ArgumentParser, args: argparse.Names
         parser.error(
             f"--host {args.host} is not a loopback address and the seam has no authentication; "
             "bind 127.0.0.1, or pass --allow-remote-unauthenticated to accept that"
+        )
+    # WR-03: the Host allow-list names the bound host and no client sends Host: 0.0.0.0, so a wildcard
+    # bind would answer every remote request with 400/421 even with the flag.
+    if binds_a_port and _is_wildcard(args.host):
+        parser.error(
+            f"--host {args.host} is a wildcard bind and the Host allow-list could never match a remote "
+            "client; name the interface address to bind (e.g. --host 192.168.1.5)"
         )
 
 

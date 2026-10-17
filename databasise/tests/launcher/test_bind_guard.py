@@ -42,6 +42,22 @@ def test_rest_refuses_a_non_loopback_host_with_exit_2(store_root, capsys, monkey
     assert not (store_root / ".engine.lock").exists()
 
 
+@pytest.mark.parametrize("host", ["0.0.0.0", "::", "[::]"])
+@pytest.mark.parametrize("launcher", ["serve_rest", "serve_mcp"])
+def test_a_wildcard_bind_is_refused_even_with_the_flag(store_root, capsys, monkeypatch, launcher, host):
+    import importlib
+
+    module = importlib.import_module(f"databasise.launcher.{launcher}")
+    _never_start(monkeypatch, module)
+    extra = ["--transport", "sse"] if launcher == "serve_mcp" else []
+    with pytest.raises(SystemExit) as excinfo:
+        module.main(_argv(store_root, *extra, "--host", host, "--allow-remote-unauthenticated"))
+
+    assert excinfo.value.code == 2
+    assert "wildcard" in capsys.readouterr().err
+    assert not (store_root / ".engine.lock").exists()
+
+
 @pytest.mark.parametrize("transport", ["sse", "streamable-http"])
 def test_mcp_http_transports_refuse_a_non_loopback_host_with_exit_2(
     store_root, capsys, monkeypatch, transport
@@ -75,7 +91,7 @@ def test_loopback_hosts_pass_validation(store_root, host):
     check_engine_arguments(parser, parser.parse_args(_argv(store_root, "--host", host)))
 
 
-@pytest.mark.parametrize("host", _REMOTE_HOSTS)
+@pytest.mark.parametrize("host", ["192.168.1.5", "example.com"])
 def test_the_flag_lets_a_non_loopback_host_pass_validation(store_root, host):
     from databasise.launcher import check_engine_arguments, serve_rest
 
