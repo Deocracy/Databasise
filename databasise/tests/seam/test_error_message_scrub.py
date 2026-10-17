@@ -47,6 +47,7 @@ _TRACEBACK = 'Parse error\nTraceback (most recent call last):\n  File "/home/chr
         ("../../etc/passwd", "passwd"),
         ("GET http://host:8000/path/to failed", "GET <url> failed"),
         ("fetched https://h/x?k=1 and file:///home/u/a.bin", "fetched <url> and <url>"),
+        ("read s3://bucket/key failed", "read <url> failed"),
     ],
 )
 def test_scrub_error_message(raw, expected):

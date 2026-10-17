@@ -194,7 +194,7 @@ _PATH_START = r"(?:[A-Za-z]:[\\/]|\\\\|~[\w.-]*/|\.{1,2}/|/)"
 _PATH_RE = re.compile(rf"""(?<![\w.~-]){_PATH_START}[^\s'"`<>()\[\],;]*""")
 # The same path inside matching quotes, which may hold spaces (``'/home/u/my docs/a b.bin'``).
 _QUOTED_PATH_RE = re.compile(rf"""(?P<q>['"])(?P<p>{_PATH_START}[^'"\n]*)(?P=q)""")
-_URL_RE = re.compile(r"""\b(?:file|https?)://[^\s'"`<>()\[\],;]*""", re.IGNORECASE)
+_URL_RE = re.compile(r"""\b[a-z][a-z0-9+.-]*://[^\s'"`<>()\[\],;]*""", re.IGNORECASE)
 
 
 def _basename(path: str) -> str:
