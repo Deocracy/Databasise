@@ -904,7 +904,9 @@ class Databasise:
             if not staged.exists() and not owner.exists():
                 return
             recorded = owner.read_text(encoding="utf-8") if owner.exists() else None
-            if recorded == self.workspace or (recorded is None and v1_status == "success"):
+            # Only after v1 released the document: on not_allowed or fail it may still be parsing this file.
+            released = v1_status in ("success", "not_found")
+            if released and (recorded == self.workspace or (recorded is None and v1_status == "success")):
                 staged.unlink(missing_ok=True)
                 owner.unlink(missing_ok=True)
             else:
@@ -929,8 +931,9 @@ class Databasise:
         ``ingest``/``query``/``compare``.
 
         After v1 has answered, the raw upload's staged inbox file for this id is removed if the
-        owner record names this workspace, or if there is no record (a legacy or orphaned file) and
-        v1 reported ``success``; otherwise it is left and logged. So delete followed by re-upload
+        owner record names this workspace and v1 reported ``success`` or ``not_found``, or if there
+        is no record (a legacy file) and v1 reported ``success``; otherwise (including v1
+        ``not_allowed`` or ``fail``, when v1 may still read the file) it is left and logged. So delete followed by re-upload
         works after a failed asynchronous parse, and another workspace's delete never removes it.
 
         A document v1 itself reports ``not_found`` (already deleted, or never ingested) is a

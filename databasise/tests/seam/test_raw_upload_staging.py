@@ -99,6 +99,22 @@ async def test_another_workspaces_delete_leaves_the_staged_file_and_owner_record
     assert staged.read_bytes() == b"w2 bytes" and owner.read_text() == "ws-two"
 
 
+@pytest.mark.parametrize("status", ["not_allowed", "fail"])
+async def test_a_delete_v1_refused_or_failed_leaves_the_staged_file_and_owner_record(
+    tmp_path, monkeypatch, status
+):
+    monkeypatch.setattr(full_ingest, "run_corpus_op", _ok)
+    monkeypatch.setattr(full_delete, "run_corpus_op", _delete(status))
+    engine = Databasise(store_root=tmp_path, workspace="staging-busy")
+    owner = tmp_path / "corpus-inbox-owners" / generated_on_disk_name("doc-1")
+
+    await engine.ingest(_doc(b"bytes"))
+    assert (await engine.delete_document("doc-1")).status == status
+
+    [staged] = inbox_files(tmp_path)
+    assert staged.read_bytes() == b"bytes" and owner.read_text() == "staging-busy"
+
+
 async def test_a_failed_owner_record_write_removes_the_staged_file(tmp_path, monkeypatch):
     monkeypatch.setattr(full_ingest, "run_corpus_op", _ok)
     (tmp_path / "corpus-inbox-owners").write_text("a file where the directory should be")
