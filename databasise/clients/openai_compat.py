@@ -90,6 +90,55 @@ class EmptyEmbeddingInputError(ValueError):
         super().__init__(message)
 
 
+class EmptyChoicesError(RuntimeError):
+    """Raised by :meth:`OpenAICompatibleClient.chat` when the response carries no ``choices``.
+    There is no completion to return, and indexing ``choices[0]`` would surface as an anonymous
+    ``IndexError``; the refusal names the model that served the call instead (RUN-03, D-06).
+    """
+
+    def __init__(self, resolved_model_identity: str):
+        self.resolved_model_identity = resolved_model_identity
+        super().__init__(
+            f"chat response from {resolved_model_identity!r} carried no choices; "
+            "refusing to return an answer"
+        )
+
+
+class MissingCompletionContentError(RuntimeError):
+    """Raised by :meth:`OpenAICompatibleClient.chat` when ``choices[0].message.content`` is
+    ``None``: a refusal or a tool-call answer. Mapping it to empty text would hand the caller a
+    blank answer that looks like a successful one, so it is raised by name with the
+    ``finish_reason`` (RUN-03, D-06). Refusal text and tool-call arguments stay out of the message.
+    An empty string is a valid completion and is not refused.
+    """
+
+    def __init__(self, resolved_model_identity: str, finish_reason: str | None):
+        self.resolved_model_identity = resolved_model_identity
+        self.finish_reason = finish_reason
+        super().__init__(
+            f"chat response from {resolved_model_identity!r} carried no completion content "
+            f"(finish_reason={finish_reason!r}); refusing to return an empty answer"
+        )
+
+
+class EmbeddingBatchMismatchError(RuntimeError):
+    """Raised by :meth:`OpenAICompatibleClient.embed` when the response items cannot be matched
+    one-to-one to the input texts: a different count, or item indices that are not exactly
+    ``0..n-1`` (duplicate, gap or absent). :class:`~databasise.clients.base.EmbeddingResult`
+    promises ``vectors[i]`` belongs to ``texts[i]``, so a batch that cannot honour that is refused
+    rather than bound to the wrong text (RUN-03, D-06).
+    """
+
+    def __init__(self, expected: int, received: int, indices: list[int | None]):
+        self.expected = expected
+        self.received = received
+        self.indices = indices
+        super().__init__(
+            f"embeddings response does not match the batch: expected {expected} items indexed "
+            f"0..{expected - 1}, received {received} with indices {indices}"
+        )
+
+
 class OpenAICompatibleClient:
     """Chat-completions + embeddings over any OpenAI-compatible endpoint (D-07): construct once
     with the target ``base_url``/``model``/``api_key`` and the identical code path reaches
@@ -131,7 +180,14 @@ class OpenAICompatibleClient:
         )
         resolved_model_identity = self._resolved_identity(getattr(response, "model", None))
         tokens = self._token_accounting(getattr(response, "usage", None), resolved_model_identity)
-        text = response.choices[0].message.content
+        if not response.choices:
+            raise EmptyChoicesError(resolved_model_identity)
+        choice = response.choices[0]
+        text = choice.message.content
+        if text is None:
+            raise MissingCompletionContentError(
+                resolved_model_identity, getattr(choice, "finish_reason", None)
+            )
         return ChatResult(text=text, tokens=tokens, resolved_model_identity=resolved_model_identity)
 
     async def embed(self, texts: list[str], **kwargs: Any) -> EmbeddingResult:
@@ -149,7 +205,12 @@ class OpenAICompatibleClient:
         response = await self._client.embeddings.create(model=self._model, input=texts, **kwargs)
         resolved_model_identity = self._resolved_identity(getattr(response, "model", None))
         tokens = self._token_accounting(getattr(response, "usage", None), resolved_model_identity)
-        vectors = [item.embedding for item in response.data]
+        items = list(response.data)
+        indices = [getattr(item, "index", None) for item in items]
+        if len(items) != len(texts) or None in indices or sorted(indices) != list(range(len(texts))):
+            raise EmbeddingBatchMismatchError(len(texts), len(items), indices)
+        # Providers may return items out of order; `index` is the position in the request.
+        vectors = [item.embedding for item in sorted(items, key=lambda item: item.index)]
         return EmbeddingResult(
             vectors=vectors, tokens=tokens, resolved_model_identity=resolved_model_identity
         )
@@ -177,4 +238,11 @@ class OpenAICompatibleClient:
         )
 
 
-__all__ = ["OpenAICompatibleClient", "ModelIdentityMissingError", "EmptyEmbeddingInputError"]
+__all__ = [
+    "EmbeddingBatchMismatchError",
+    "EmptyChoicesError",
+    "EmptyEmbeddingInputError",
+    "MissingCompletionContentError",
+    "ModelIdentityMissingError",
+    "OpenAICompatibleClient",
+]
