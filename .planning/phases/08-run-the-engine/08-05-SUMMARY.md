@@ -181,6 +181,7 @@ Risk to note: because the owner does not know TEI, the "TEI refused ok" signal i
 - **Consequences for the plan's own wording:** the acceptance criterion `grep -n "ModelIdentityMissingError" databasise/clients/rerank.py` returns no line (the owner decision replaces the strict behaviour); the plan's `HttpRerankClient(url, model, api_key, transport, timeout)` signature has `binding` added (default `cohere`); "all three RERANK keys add a rerank client" became "binding plus all three".
 - **Interpretation choice:** `RERANK_BINDING=null` with the other three keys set is treated as the binding being absent, so it raises a partial-set error naming `RERANK_BINDING`, rather than silently disabling rerank. This follows the owner-approved rule as written; v1 would treat it as rerank off.
 - **Files:** `databasise/clients/rerank.py`, `databasise/clients/builder.py`, both test files, `COVERAGE.md`.
+- **Follow-up (orchestrator, owner directive wins):** the `RERANK_BINDING=null` interpretation above was reversed to match v1: a binding present as `null` (any case) or empty now means rerank is OFF and unwired whatever the other three keys hold, never raising; only an ABSENT binding key with another rerank key present is a partial-set error naming `RERANK_BINDING`. Commits `2eeb889` (RED) and the fix commit that follows it.
 
 ### Auto-fixed Issues
 
