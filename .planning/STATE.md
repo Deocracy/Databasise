@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 10
 current_phase_name: Stores, Locking & Data Integrity
 status: executing
-stopped_at: Completed 10-04-PLAN.md
-last_updated: "2026-10-17T23:17:22.793Z"
+stopped_at: Completed 10-05-PLAN.md
+last_updated: "2026-10-17T23:43:25.793Z"
 last_activity: 2026-10-17
 last_activity_desc: Phase 9 complete, transitioned to Phase 10
-state_head: 673699c206a84bf5326c98ddccff9ca76a94f925
+state_head: fd579143ad9bdc3b3ea447f0642495998bafe428
 progress:
   total_phases: 11
   completed_phases: 2
   total_plans: 32
-  completed_plans: 24
+  completed_plans: 25
   percent: 18
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-17 after Phase 9)
 ## Current Position
 
 Phase: 10 (Stores, Locking & Data Integrity) — EXECUTING
-Plan: 5 of 12
+Plan: 6 of 12
 Status: Executing (10-02 complete)
 Last activity: 2026-10-17 — 10-02 complete (lexical, blob, artifact registry removed, D-15)
 
@@ -85,6 +85,7 @@ Progress: [██░░░░░░░░] 18% (2/11 phases)
 | Phase 10 P03 | 11min | 2 tasks | 3 files |
 | Phase 10 P01 | 24min | 3 tasks | 10 files |
 | Phase 10 P04 | 22min | 2 tasks | 5 files |
+| Phase 10 P05 | 35min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -131,6 +132,9 @@ Recent decisions affecting current work:
 - [Phase 10]: 10-01: only the engine translates GraphStoreBusyError to StoreBusyError (409); parity run_arm lets it propagate under the store-root lock
 - [Phase 10]: 10-04: a refused ingest (any node exception, partial, stop_reason or cycle) drops every store's pending writes; store errors surface as failure_class StoreFault, early stops as RunIncomplete (both 502)
 - [Phase 10]: 10-04: ForeignEngineRefusalError message is now "operation 'x' failed (<class>)"; no test pinned the old text
+- [Phase 10]: 10-05: _commit_all prepares every store then commits every store under one asyncio.Lock per (event loop, resolved store root); a prepare or commit failure aborts and raises StoreFault; cancellation aborts and re-raises
+- [Phase 10]: 10-05: FaissVectorStore.prepare rebases on the on-disk (st_ino, st_mtime_ns, st_size) signature, so overlapping per-call writers keep each other's vectors
+- [Phase 10]: 10-05: vector and graph drop_pending_index_ops delegate to abort_prepared; CozoGraphStore.finalize aborts an open prepared transaction before releasing the shared client
 
 ### Pending Todos
 
@@ -175,8 +179,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-17T23:17:22.681Z
-Stopped at: Completed 10-04-PLAN.md
+Last session: 2026-10-17T23:43:25.682Z
+Stopped at: Completed 10-05-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
