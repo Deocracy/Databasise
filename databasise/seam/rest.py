@@ -139,6 +139,28 @@ def _status_for(exc: SeamRefusalError) -> int:
     return 404 if isinstance(exc, _NOT_FOUND_REFUSALS) else 422
 
 
+class RefusalBody(BaseModel):
+    """The documented refusal and fault body (``refusal_body``): ``refusal_type`` and ``message``
+    plus the refusal's own public attributes (``failure_class`` and ``operation`` for a fault)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    refusal_type: str
+    message: str
+
+
+_FAULT_RESPONSES: dict[int | str, dict[str, Any]] = {
+    502: {
+        "model": RefusalBody,
+        "description": "Machine fault: the v1 engine run failed or returned malformed output (ForeignEngineRefusalError)",
+    },
+    503: {
+        "model": RefusalBody,
+        "description": "Machine fault: the v1 engine is unavailable (missing interpreter or timeout)",
+    },
+}
+
+
 class _RequestModel(BaseModel):
     """The shared strict base for this module's own request DTOs — never the seam's own frozen
     models (``QueryObject``/``Selector``), which stay exactly as 04-01/04-03 declared them. These
@@ -362,11 +384,11 @@ def create_app(
     async def post_resolve_trace(body: TraceRequest) -> dict[str, Any]:
         return await engine.resolve_trace(body.trace_reference, debug=body.debug)
 
-    @app.post("/documents")
+    @app.post("/documents", responses=_FAULT_RESPONSES)
     async def post_documents(body: IngestRequest) -> IngestJob:
         return await engine.ingest(body.document, body.selector)
 
-    @app.post("/documents/upload")
+    @app.post("/documents/upload", responses=_FAULT_RESPONSES)
     async def post_documents_upload(
         file: UploadFile,
         document_id: str | None = Form(default=None),
@@ -418,7 +440,7 @@ def create_app(
                 ) from exc
         return await engine.ingest(document, parsed_selector)
 
-    @app.get("/jobs/{job_id}")
+    @app.get("/jobs/{job_id}", responses=_FAULT_RESPONSES)
     async def get_job_status(
         job_id: str,
         limit: int = Query(default=50),
@@ -426,7 +448,7 @@ def create_app(
     ) -> JobStatus:
         return await engine.get_job_status(job_id, checked_page(limit, offset))
 
-    @app.delete("/documents/{document_id}")
+    @app.delete("/documents/{document_id}", responses=_FAULT_RESPONSES)
     async def delete_document(document_id: str, body: DeleteRequest = DeleteRequest()) -> DeletionOutcome:
         """06-10-PLAN.md Task 2: ``body`` defaults to an empty ``DeleteRequest`` (``selector=None``)
         so a caller sending no body at all — every existing REST delete call — keeps working
@@ -439,14 +461,14 @@ def create_app(
     async def get_health() -> HealthReport:
         return await engine.health()
 
-    @app.get("/corpus")
+    @app.get("/corpus", responses=_FAULT_RESPONSES)
     async def get_corpus(
         limit: int = Query(default=50),
         offset: int = Query(default=0),
     ) -> CorpusStatus:
         return await engine.corpus_status(checked_page(limit, offset))
 
-    @app.get("/corpus/counts")
+    @app.get("/corpus/counts", responses=_FAULT_RESPONSES)
     async def get_corpus_counts() -> DocumentCounts:
         return await engine.document_counts()
 

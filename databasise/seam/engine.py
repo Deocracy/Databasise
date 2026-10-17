@@ -150,7 +150,12 @@ from pathlib import Path
 from typing import Any
 
 from databasise.clients import CLIENT_EFFECT_TO_KEY
-from databasise.foreign import run_corpus_op
+from databasise.foreign import (
+    CorpusOpSubprocessError,
+    CorpusOpTimeoutError,
+    MissingV1InterpreterError,
+    run_corpus_op,
+)
 from databasise.foreign.v1_corpus_adapter import (
     DEFAULT_V1_INTERPRETER,
     STATUS_WALL_CLOCK_CEILING_SECONDS,
@@ -384,6 +389,22 @@ def _corpus_wiring(query_wiring: dict[str, Any], operation: str) -> dict[str, An
     if not path.is_file():
         raise NoWritePathForModalityError(operation=operation)
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+# What a well-formed JSON driver result of the wrong shape raises when parsed (SEAM-06). Deliberately
+# not caught around UnknownJobError, which is a ValueError and is raised outside every parse wrapper.
+_MALFORMED_RESULT = (TypeError, ValueError, AttributeError, KeyError)
+
+
+async def _corpus_op_or_refuse(op: str, payload: dict[str, Any], operation: str) -> Any:
+    """09-05-PLAN.md (SEAM-06, D-04): the read routes' call into the v1 corpus driver. The four
+    adapter failure modes become the same ``ForeignEngineRefusalError`` fault the write routes raise;
+    any other exception is not an adapter failure mode and propagates. ``run_corpus_op`` is looked up
+    as a module global at call time so tests can monkeypatch ``databasise.seam.engine.run_corpus_op``."""
+    try:
+        return await asyncio.to_thread(run_corpus_op, op, payload, timeout=STATUS_WALL_CLOCK_CEILING_SECONDS)
+    except (MissingV1InterpreterError, CorpusOpSubprocessError, CorpusOpTimeoutError, json.JSONDecodeError) as exc:
+        raise _foreign_fault(operation, exc) from exc
 
 
 def _node_result_or_refuse(scheduled: dict[str, Any], node_id: str, operation: str) -> dict[str, Any]:
@@ -880,24 +901,27 @@ class Databasise:
         unknown job, mirroring ``TraceStore.resolve``'s own raise-not-None precedent.
         """
         page = page or Page()
-        result = await asyncio.to_thread(
-            run_corpus_op,
-            "status",
-            {"track_id": job_id, "limit": page.limit, "offset": page.offset},
-            timeout=STATUS_WALL_CLOCK_CEILING_SECONDS,
+        result = await _corpus_op_or_refuse(
+            "status", {"track_id": job_id, "limit": page.limit, "offset": page.offset}, "job_status"
         )
-        total = int(result.get("total", 0))
+        try:
+            total = int(result.get("total", 0))
+        except _MALFORMED_RESULT as exc:
+            raise _foreign_fault("job_status", exc, failure_class="MalformedDriverOutput") from exc
+        # Outside every parse wrapper: UnknownJobError is a ValueError and must not be swallowed.
         if total == 0:
             raise UnknownJobError(job_id=job_id)
 
-        documents = [DocumentStatusEntry(**doc) for doc in result.get("documents", [])]
-        next_offset = _next_offset(page, documents, total)
-        return JobStatus(
-            job_id=job_id,
-            documents=documents,
-            counts=dict(result.get("counts") or {}),
-            next_offset=next_offset,
-        )
+        try:
+            documents = [DocumentStatusEntry(**doc) for doc in result.get("documents", [])]
+            return JobStatus(
+                job_id=job_id,
+                documents=documents,
+                counts=dict(result.get("counts") or {}),
+                next_offset=_next_offset(page, documents, total),
+            )
+        except _MALFORMED_RESULT as exc:
+            raise _foreign_fault("job_status", exc, failure_class="MalformedDriverOutput") from exc
 
     async def corpus_status(self, page: Page | None = None) -> CorpusStatus:
         """The seventh §18 operation (05-04-PLAN.md Task 1, API-06) — a bounded, paginated
@@ -905,34 +929,33 @@ class Databasise:
         refused by :class:`~databasise.seam.corpus.Page`'s own validator before this method is
         ever reached."""
         page = page or Page()
-        result = await asyncio.to_thread(
-            run_corpus_op,
-            "status",
-            {"track_id": None, "limit": page.limit, "offset": page.offset},
-            timeout=STATUS_WALL_CLOCK_CEILING_SECONDS,
+        result = await _corpus_op_or_refuse(
+            "status", {"track_id": None, "limit": page.limit, "offset": page.offset}, "corpus_status"
         )
-        total = int(result.get("total", 0))
-        documents = [DocumentStatusEntry(**doc) for doc in result.get("documents", [])]
-        next_offset = _next_offset(page, documents, total)
-        return CorpusStatus(
-            documents=documents,
-            counts=dict(result.get("counts") or {}),
-            total=total,
-            next_offset=next_offset,
-        )
+        try:
+            total = int(result.get("total", 0))
+            documents = [DocumentStatusEntry(**doc) for doc in result.get("documents", [])]
+            return CorpusStatus(
+                documents=documents,
+                counts=dict(result.get("counts") or {}),
+                total=total,
+                next_offset=_next_offset(page, documents, total),
+            )
+        except _MALFORMED_RESULT as exc:
+            raise _foreign_fault("corpus_status", exc, failure_class="MalformedDriverOutput") from exc
 
     async def document_counts(self) -> DocumentCounts:
         """The eighth §18 operation (05-04-PLAN.md Task 1, API-06) — a fixed-size record, never a
         per-document list. Calls the same ``"status"`` op ``corpus_status`` calls, with a
         zero-length page, and reads only its ``counts`` field."""
-        result = await asyncio.to_thread(
-            run_corpus_op,
-            "status",
-            {"track_id": None, "limit": 0, "offset": 0},
-            timeout=STATUS_WALL_CLOCK_CEILING_SECONDS,
+        result = await _corpus_op_or_refuse(
+            "status", {"track_id": None, "limit": 0, "offset": 0}, "document_counts"
         )
-        by_status = dict(result.get("counts") or {})
-        return DocumentCounts(by_status=by_status, total=sum(by_status.values()))
+        try:
+            by_status = dict(result.get("counts") or {})
+            return DocumentCounts(by_status=by_status, total=sum(by_status.values()))
+        except _MALFORMED_RESULT as exc:
+            raise _foreign_fault("document_counts", exc, failure_class="MalformedDriverOutput") from exc
 
     async def health(self) -> HealthReport:
         """The ninth §18 operation (05-04-PLAN.md Task 1, API-06) — a fixed-size liveness record.
