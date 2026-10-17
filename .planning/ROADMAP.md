@@ -93,14 +93,14 @@ Some owner decisions are taken in one phase and consumed by later ones. Settle e
 - RUN-08: CORS allow-list or same-origin serving (default: explicit allow-list, empty by default, never '*')
 - RUN-11: parity similarity threshold (lower it, pin a deterministic endpoint, or retry and report flakiness)
 
-**Plans**: 2/10 plans executed
+**Plans**: 3/10 plans executed
 
 Plans:
 **Wave 1**
 
 - [x] 08-01-PLAN.md — Tracer: installed `databasise-rest` serves /health with builder-built clients and the store lock; `live` marker excludes live tests by default (wave 1)
 - [x] 08-02-PLAN.md — OpenAI-compatible client: no-usage = one unbudgetable call; named errors for malformed responses (RUN-02, RUN-03; wave 1)
-- [ ] 08-03-PLAN.md — Live §18.5 COVERAGE.md record and non-vacuous cross-check; shadow-safe mcp SDK detection (RUN-01, RUN-04; wave 1)
+- [x] 08-03-PLAN.md — Live §18.5 COVERAGE.md record and non-vacuous cross-check; shadow-safe mcp SDK detection (RUN-01, RUN-04; wave 1)
 - [ ] 08-04-PLAN.md — Upload test checks the disk; round trips prove counts drop after delete (RUN-09, RUN-10; wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -400,7 +400,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 8. Run the Engine | 2/10 | In Progress|  |
+| 8. Run the Engine | 3/10 | In Progress|  |
 | 9. Inputs, Errors & Security | 0/TBD | Not started | - |
 | 10. Stores, Locking & Data Integrity | 0/TBD | Not started | - |
 | 11. LightRAG Corpus Path | 0/TBD | Not started | - |
