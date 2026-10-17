@@ -174,6 +174,8 @@ def build_clients(env: dict[str, str]) -> dict[str, Any]:
         missing.extend(key for key, value in rerank_values.items() if not value)
     if missing:
         raise MissingParityEnvKeyError(missing)
+    if binding:
+        binding = binding.strip().lower()  # v1 values are lowercase; match as the "null"/"off" check does
     if binding and binding not in RERANK_BINDINGS:
         raise UnsupportedRerankBindingError(RERANK_BINDING_ENV_KEY)
     provider_routing_body = parse_provider_routing_body(env)

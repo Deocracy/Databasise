@@ -45,7 +45,7 @@ from databasise.parity.import_index import DEFAULT_STORE_ROOT
 from databasise.parts.registry import PartRegistry, default_registry
 from databasise.runner import scheduler as _scheduler
 from databasise.runner.scheduler import TouchRecorder
-from databasise.store_lock import StoreLockedError, store_lock
+from databasise.store_lock import store_lock
 from databasise.validator.parse import ParsedWiring, parse_wiring
 from databasise.wirings.resolve import resolve_arm
 
@@ -243,7 +243,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         with store_lock(import_index.DEFAULT_STORE_ROOT):  # D-03
             result = asyncio.run(run_audit(args.arm, args.query))
-    except (StoreLockedError, _run_arm.MissingParityEnvError) as exc:
+    except _run_arm._CLI_REFUSALS as exc:
         print(str(exc), file=sys.stderr)
         return 1
 

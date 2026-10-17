@@ -18,6 +18,7 @@ from databasise.clients.builder import (
     MissingParityEnvError,
     MissingParityEnvKeyError,
     UnparseableProviderRoutingError,
+    UnsupportedRerankBindingError,
     build_clients,
     load_env_file,
 )
@@ -39,6 +40,9 @@ LAUNCH_REFUSALS = (
     MissingParityEnvError,
     MissingParityEnvKeyError,
     UnparseableProviderRoutingError,
+    UnsupportedRerankBindingError,
+    OSError,  # an unreadable --env-file or store root
+    UnicodeDecodeError,  # an --env-file that is not UTF-8
 )
 
 
@@ -100,5 +104,7 @@ def open_engine(args: argparse.Namespace) -> tuple[int, dict[str, Any] | None]:
 
 
 def refuse(exc: BaseException) -> int:
-    print(f"databasise: {exc}", file=sys.stderr)
+    # A decode error's text quotes bytes of the env file; name the file problem without them (RUN-05).
+    detail = "the --env-file is not valid UTF-8" if isinstance(exc, UnicodeDecodeError) else exc
+    print(f"databasise: {detail}", file=sys.stderr)
     return 1
