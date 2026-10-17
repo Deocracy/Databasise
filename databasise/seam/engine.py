@@ -136,6 +136,18 @@ since no HippoRAG delete node exists anywhere in this repository (removing a doc
 HippoRAG's index would mean retracting its chunk/entity/fact vectors and its fact/passage/synonymy
 edges — new node code, out of this plan's scope); an unselected or LightRAG-selected delete
 resolves to the identical wiring the former ``_DELETE_WIRING_PATH`` constant named, byte-for-byte.
+
+**10-05-PLAN.md (STOR-06, D-07): a successful run commits through prepare-all, then commit-all.**
+:func:`_commit_all` holds one ``asyncio.Lock`` per (event loop, store root) from the first
+``prepare`` to the last ``commit_prepared``. Every store prepares first: kv runs its DML inside an
+uncommitted ``BEGIN IMMEDIATE`` transaction, the vector store writes its ``.tmp`` file pair, and the
+graph store stages a ``multi_transact``. Any prepare failure aborts every store, commits nothing and
+raises ``ForeignEngineRefusalError(failure_class="StoreFault")``. The lock is taken before any DML,
+so a second run waits on an ``await`` instead of blocking the loop on sqlite's busy timeout or
+RocksDB's one-second key-lock timeout. Residual window: commits run kv, then vector, then graph,
+and are not one transaction. A crash between two stores' commits, or between the vector store's two
+``os.replace`` calls, leaves a partial commit; the vector sidecar checksum detects a torn index pair
+at the next open (``VectorStoreCorruptedError``).
 """
 
 from __future__ import annotations
@@ -147,6 +159,7 @@ import logging
 import os
 import sqlite3
 import uuid
+import weakref
 from collections.abc import AsyncIterator, Iterator, Sequence
 from pathlib import Path
 from typing import Any
@@ -460,6 +473,55 @@ async def _drop_pending(stores: dict[str, Any]) -> None:
             await store.drop_pending_index_ops()
         except Exception:  # noqa: BLE001 - keep dropping the other stores
             logger.exception("drop_pending_index_ops failed for store %s", name)
+
+
+# Keyed by the running loop (research A7): one engine can see several loops under the REST TestClient,
+# and an asyncio.Lock must not be shared across loops.
+_FLUSH_LOCKS: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, dict[str, asyncio.Lock]] = (
+    weakref.WeakKeyDictionary()
+)
+
+
+def _flush_lock(store_root: Path) -> asyncio.Lock:
+    """The one lock serializing prepare-to-commit for ``store_root`` on the running loop (D-07)."""
+    locks = _FLUSH_LOCKS.setdefault(asyncio.get_running_loop(), {})
+    key = str(Path(store_root).resolve())
+    if key not in locks:
+        locks[key] = asyncio.Lock()
+    return locks[key]
+
+
+async def _abort_prepared(stores: dict[str, Any]) -> None:
+    for name, store in stores.items():
+        try:
+            await store.abort_prepared()
+        except Exception:  # noqa: BLE001 - keep aborting the other stores
+            logger.exception("abort_prepared failed for store %s", name)
+
+
+async def _commit_all(stores: dict[str, Any], operation: str, store_root: Path) -> None:
+    """D-07 (STOR-06): prepare every store, then commit every store, under the store root's flush
+    lock. A prepare failure aborts all of them; a commit failure aborts the ones not yet committed
+    (the documented residual window). Either raises ``StoreFault``."""
+    async with _flush_lock(store_root):
+        try:
+            for store in stores.values():
+                await store.prepare()
+        except BaseException as exc:
+            await _abort_prepared(stores)
+            if not isinstance(exc, Exception):
+                raise
+            raise _foreign_fault(operation, exc, failure_class="StoreFault") from exc
+        remaining = dict(stores)
+        try:
+            for name, store in stores.items():
+                await store.commit_prepared()
+                del remaining[name]
+        except BaseException as exc:
+            await _abort_prepared(remaining)
+            if not isinstance(exc, Exception):
+                raise
+            raise _foreign_fault(operation, exc, failure_class="StoreFault") from exc
 
 
 def _node_result_or_refuse(scheduled: dict[str, Any], node_id: str, operation: str) -> dict[str, Any]:
@@ -926,8 +988,8 @@ class Databasise:
             # LightRAG's own opaque full-ingest never touches ctx.stores at all, so this flush is a
             # safe no-op for the default (no-selector) path (kv.py/vector.py/graph.py's own
             # index_done_callback all early-return when nothing is pending).
-            for store in stores.values():
-                await store.index_done_callback()
+            # 10-05 (D-07): all stores prepare, then all commit, or none does.
+            await _commit_all(stores, "ingest", self.store_root)
         except BaseException:
             if wrote_staged:
                 _log_staged_left(staged)

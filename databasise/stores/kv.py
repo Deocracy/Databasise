@@ -98,8 +98,13 @@ class SqliteKVStore(StorageNameSpace):
         count = row[0] if row else 0
         return count == 0
 
-    async def index_done_callback(self) -> None:
+    async def prepare(self) -> None:
+        """D-07: run the pending DML inside an open ``BEGIN IMMEDIATE`` transaction, uncommitted.
+        A failure rolls back and keeps the buffers."""
+        if not (self._pending_upserts or self._pending_deletes):
+            return
         try:
+            self._conn.execute("BEGIN IMMEDIATE")
             for key, value in self._pending_upserts.items():
                 self._conn.execute(
                     "INSERT INTO kv (id, value) VALUES (?, ?) "
@@ -108,12 +113,27 @@ class SqliteKVStore(StorageNameSpace):
                 )
             for key in self._pending_deletes:
                 self._conn.execute("DELETE FROM kv WHERE id = ?", (key,))
-            self._conn.commit()
+        except Exception:
+            self._conn.rollback()
+            raise
+
+    async def commit_prepared(self) -> None:
+        try:
+            self._conn.commit()  # a no-op when prepare staged nothing
         except Exception:
             self._conn.rollback()
             raise
         self._pending_upserts.clear()
         self._pending_deletes.clear()
+
+    async def abort_prepared(self) -> None:
+        self._conn.rollback()
+        self._pending_upserts.clear()
+        self._pending_deletes.clear()
+
+    async def index_done_callback(self) -> None:
+        await self.prepare()
+        await self.commit_prepared()
 
     async def drop_pending_index_ops(self) -> None:
         self._pending_upserts.clear()

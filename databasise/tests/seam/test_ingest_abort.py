@@ -181,6 +181,50 @@ async def test_an_early_stop_with_no_exception_is_run_incomplete_and_drops_every
     await _assert_nothing_committed(store_root)
 
 
+# --------------------------------------------------------------------------------------------- #
+# 10-05 (D-07): a successful run commits through prepare-all, then commit-all.
+# --------------------------------------------------------------------------------------------- #
+
+_STORE_CLASSES = (SqliteKVStore, MultiNamespaceVectorStore, CozoGraphStore)
+
+
+async def test_every_store_prepares_before_any_store_commits(store_root, monkeypatch):
+    calls: list[tuple[str, str]] = []
+    for store_cls in _STORE_CLASSES:
+        for method in ("prepare", "commit_prepared"):
+            original = getattr(store_cls, method)
+
+            async def _spy(self, _original=original, _method=method):
+                calls.append((type(self).__name__, _method))
+                return await _original(self)
+
+            monkeypatch.setattr(store_cls, method, _spy)
+
+    await _make_engine(store_root).ingest(
+        IngestDocument(document_id="prepared-doc-1", text=_DOCUMENT_TEXT), selector=_selector()
+    )
+    monkeypatch.undo()
+
+    assert [method for _, method in calls] == ["prepare"] * 3 + ["commit_prepared"] * 3
+    assert {name for name, _ in calls[:3]} == {cls.__name__ for cls in _STORE_CLASSES}
+
+
+async def test_a_graph_prepare_failure_aborts_every_store_and_is_a_store_fault(store_root, monkeypatch):
+    async def _raise(self):
+        raise sqlite3.OperationalError("prepare failed")
+
+    monkeypatch.setattr(CozoGraphStore, "prepare", _raise)
+    with pytest.raises(ForeignEngineRefusalError) as exc_info:
+        await _make_engine(store_root).ingest(
+            IngestDocument(document_id="prepared-doc-2", text=_DOCUMENT_TEXT), selector=_selector()
+        )
+    monkeypatch.undo()
+
+    assert exc_info.value.failure_class == "StoreFault"
+    await _assert_nothing_committed(store_root)
+    assert not list((store_root / _WORKSPACE).rglob("*.tmp"))
+
+
 @pytest.mark.parametrize("failure_class", ["StoreFault", "RunIncomplete"])
 def test_store_fault_and_run_incomplete_answer_502(failure_class):
     pytest.importorskip("fastapi")

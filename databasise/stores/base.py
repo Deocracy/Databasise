@@ -37,6 +37,18 @@ class StorageNameSpace(ABC):
         """Discard any not-yet-flushed buffered writes (the abort path)."""
         return
 
+    async def prepare(self) -> None:
+        """Stage the pending writes without committing them (D-07); the default stages nothing."""
+        return
+
+    async def commit_prepared(self) -> None:
+        """Commit what ``prepare`` staged; the default commits in one call."""
+        await self.index_done_callback()
+
+    async def abort_prepared(self) -> None:
+        """Discard what ``prepare`` staged and the pending writes; the default drops them."""
+        await self.drop_pending_index_ops()
+
     @abstractmethod
     async def drop(self) -> dict[str, str]:
         """Drop all data from storage and clean up resources."""
