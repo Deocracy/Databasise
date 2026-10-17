@@ -34,6 +34,10 @@ below produces a false positive, the fix is a more precise version of the same t
 narrowing ``FREEFORM_VALUE_KEYS`` further if needed — never narrowing the forbidden set or swapping
 the corpus for a quieter one. If it produces a true positive, the fix is the redaction bug, not this
 module.
+
+**This is a test-time gate, not a response-time check.** It is called by tests and by the leak gate
+over recorded responses, never on the response path while serving. Its checks raise
+``AssertionError`` explicitly rather than using ``assert``, so they still fire under ``python -O``.
 """
 
 from __future__ import annotations
@@ -74,7 +78,8 @@ def assert_no_forbidden_keys(obj: Any, low_entropy: set[str], path: str = "$") -
     """
     if isinstance(obj, dict):
         for key, value in obj.items():
-            assert key not in low_entropy, f"forbidden key {key!r} found at {path}.{key}"
+            if key in low_entropy:
+                raise AssertionError(f"forbidden key {key!r} found at {path}.{key}")
             assert_no_forbidden_keys(value, low_entropy, f"{path}.{key}")
     elif isinstance(obj, list):
         for i, item in enumerate(obj):
@@ -100,9 +105,8 @@ def assert_no_forbidden_values(
             if key in freeform_keys:
                 continue
             if isinstance(value, str):
-                assert value not in low_entropy, (
-                    f"forbidden low-entropy value {value!r} found at {child_path}"
-                )
+                if value in low_entropy:
+                    raise AssertionError(f"forbidden low-entropy value {value!r} found at {child_path}")
             else:
                 assert_no_forbidden_values(value, low_entropy, freeform_keys=freeform_keys, path=child_path)
     elif isinstance(obj, list):

@@ -6,6 +6,8 @@ encoding; phrases that wrap across a source line are checked on whitespace-colla
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -14,6 +16,7 @@ pytest.importorskip("fastapi")
 
 import databasise.mcp.tools as tools_module
 import databasise.seam.corpus as corpus_module
+import databasise.seam.redact as redact_module
 import databasise.seam.refusals as refusals_module
 import databasise.seam.rest as rest_module
 import databasise.seam.tokens as tokens_module
@@ -93,3 +96,54 @@ def test_tokens_docstring_names_the_three_opaque_parts():
 
 def test_corpus_module_no_longer_claims_server_minted_only_ids():
     assert "built only from the server-minted" not in _source(corpus_module)
+
+
+# --------------------------------------------------------------------------------------------- #
+# 09-10 (SEAM-16): the identity-leak gate is not switched off by `python -O`.
+# --------------------------------------------------------------------------------------------- #
+
+
+def _run_dash_o(code: str, tmp_path):
+    """Run ``code`` under ``python -O`` in the project interpreter, in an empty cwd."""
+    return subprocess.run(
+        [sys.executable, "-O", "-c", code],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+
+
+def test_key_check_fires_under_python_dash_o(tmp_path):
+    result = _run_dash_o(
+        "from databasise.seam.redact import assert_no_forbidden_keys\n"
+        "assert_no_forbidden_keys({'node-x': 1}, {'node-x'})\n",
+        tmp_path,
+    )
+    assert result.returncode != 0
+    assert "AssertionError" in result.stderr
+
+
+def test_value_check_fires_under_python_dash_o(tmp_path):
+    result = _run_dash_o(
+        "from databasise.seam.redact import assert_no_forbidden_values\n"
+        "assert_no_forbidden_values({'component': 'node-x'}, {'node-x'})\n",
+        tmp_path,
+    )
+    assert result.returncode != 0
+    assert "AssertionError" in result.stderr
+
+
+def test_clean_envelope_with_an_empty_forbidden_set_passes_both_checks_under_python_dash_o(tmp_path):
+    result = _run_dash_o(
+        "from databasise.seam.redact import assert_no_forbidden_keys, assert_no_forbidden_values\n"
+        "env = {'answer': 'node-x', 'evidence': []}\n"
+        "assert_no_forbidden_keys(env, set())\n"
+        "assert_no_forbidden_values(env, set())\n",
+        tmp_path,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_redact_docstring_says_it_is_a_test_time_gate():
+    assert "test-time gate" in _doc(redact_module)
