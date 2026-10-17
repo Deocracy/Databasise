@@ -4,17 +4,17 @@ milestone: v1.1
 milestone_name: Engine Fixes + Operator Console
 current_phase: 09
 current_phase_name: Inputs, Errors & Security
-status: executing
-stopped_at: Completed 09-09-PLAN.md
-last_updated: "2026-10-17T09:09:59.084Z"
+status: verifying
+stopped_at: Completed 09-10-PLAN.md
+last_updated: "2026-10-17T15:35:18.397Z"
 last_activity: 2026-10-16
 last_activity_desc: Phase 09 execution started
-state_head: b5153e4c72b59cbe6bedad16a1ef9dc301790de9
+state_head: 2b310c4c71afe373cf9e26a61ddf0ade85ca7c5c
 progress:
   total_phases: 11
   completed_phases: 1
   total_plans: 20
-  completed_plans: 19
+  completed_plans: 20
   percent: 9
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-10-16 after Phase 8)
 
 Phase: 09 (Inputs, Errors & Security) — EXECUTING
 Plan: 10 of 10
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-16 — Phase 09 execution started
 
 Progress: [█░░░░░░░░░] 9% (1/11 phases)
@@ -79,6 +79,7 @@ Progress: [█░░░░░░░░░] 9% (1/11 phases)
 | Phase 09 P07 | 15 min | 2 tasks | 7 files |
 | Phase 09 P08 | 25 min | 2 tasks | 7 files |
 | Phase 09 P09 | 20 min | 2 tasks | 7 files |
+| Phase 09 P10 | 25min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -117,6 +118,8 @@ Recent decisions affecting current work:
 - [Phase 09]: SEAM-12: Databasise.promote refuses an empty or hash-shaped alias with one InvalidPromotionAliasError using Selector's own _INSTANCE_HASH_PATTERN, before trace resolution and any ledger write
 - [Phase 09]: 09-08 SEAM-11: compare checks every key (comparison_keys) before resolving any selector, resolves each once and executes the resolved wiring via _execute_resolved; keys stay unprefixed, envelope vs map is told by the number of selectors sent (D-09, D-10)
 - [Phase 09]: D-11 discard-and-document for SEAM-15: file_name/content_type documented as not stored; citation carry-through deferred to M-04 (Phase 11)
+- [Phase 09]: redact.py is a test-time gate; its checks raise AssertionError explicitly so python -O cannot disable them
+- [Phase 09]: Selector candidate pool is all_wirings(); capability ties break by pool order; selectors._ARM_NAMES/_DEFAULT_ARM removed
 
 ### Pending Todos
 
@@ -158,8 +161,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-17T09:09:59.019Z
-Stopped at: Completed 09-09-PLAN.md
+Last session: 2026-10-17T15:35:18.328Z
+Stopped at: Completed 09-10-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

@@ -145,7 +145,7 @@ Plans:
 - SEAM-11: compare key format (kind-prefixed keys change consumer-visible keys) and how a consumer tells a single envelope from a keyed map
 - SEAM-15: store file_name/content_type as citation metadata (needs the M-04 write path from Phase 11) or drop and document
 
-**Plans**: 9/10 plans executed
+**Plans**: 10/10 plans executed
 
 Plans (one plan per wave; every plan edits the shared refusal, engine or transport modules, so the waves run in sequence):
 
@@ -158,7 +158,7 @@ Plans (one plan per wave; every plan edits the shared refusal, engine or transpo
 - [x] 09-07-PLAN.md — capability [] refused on every selector route; unselectable promote aliases refused (SEAM-10, SEAM-12; wave 7)
 - [x] 09-08-PLAN.md — Compare checks keys before any arm and runs each pre-resolved wiring once; envelope-versus-map rule documented (SEAM-11; wave 8)
 - [x] 09-09-PLAN.md — file_name/content_type documented as not stored; stale seam docstrings corrected (SEAM-15, SEAM-16; wave 9)
-- [ ] 09-10-PLAN.md — redact checks fire under python -O; dead selector constants removed; phase offline gate (SEAM-16; wave 10, owner grant checkpoint)
+- [x] 09-10-PLAN.md — redact checks fire under python -O; dead selector constants removed; phase offline gate (SEAM-16; wave 10, owner grant checkpoint)
 
 ### Phase 10: Stores, Locking & Data Integrity
 
@@ -414,7 +414,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 8. Run the Engine | 10/10 | Complete    | 2026-10-16 |
-| 9. Inputs, Errors & Security | 9/10 | In Progress|  |
+| 9. Inputs, Errors & Security | 10/10 | In Progress|  |
 | 10. Stores, Locking & Data Integrity | 0/TBD | Not started | - |
 | 11. LightRAG Corpus Path | 0/TBD | Not started | - |
 | 12. HippoRAG Fixes | 0/TBD | Not started | - |
