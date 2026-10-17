@@ -310,6 +310,20 @@ class MalformedBase64PayloadError(SeamRefusalError):
         super().__init__(f"field {field!r} is not decodable in its declared base64 encoding")
 
 
+class MissingScopeArgumentError(SeamRefusalError):
+    """Raised by the MCP ``status`` and ``resolve`` tools (09-04-PLAN.md, SEAM-03, D-02) when the
+    chosen ``scope`` needs an argument the call left out (``status`` scope ``job`` needs ``job_id``,
+    ``resolve`` scope ``evidence`` needs ``evidence_ref``, scope ``trace`` needs
+    ``trace_reference``). ``tool``, ``scope`` and ``argument`` name only the tool's own vocabulary,
+    never a caller-supplied value."""
+
+    def __init__(self, *, tool: str, scope: str, argument: str):
+        self.tool = tool
+        self.scope = scope
+        self.argument = argument
+        super().__init__(f"MissingScopeArgumentError: the {tool} tool's scope {scope!r} requires {argument}")
+
+
 class MalformedSelectorPayloadError(SeamRefusalError):
     """Raised by ``databasise.seam.rest``'s ``POST /documents/upload`` route (CR-02 gap closure)
     when the ``selector`` multipart form field is not valid JSON matching ``Selector``'s own
@@ -649,6 +663,7 @@ __all__ = [
     "PageSizeExceededError",
     "PageBoundsError",
     "MalformedBase64PayloadError",
+    "MissingScopeArgumentError",
     "MalformedSelectorPayloadError",
     "EmptyComparisonRequestError",
     "DuplicateComparisonKeyError",

@@ -54,6 +54,7 @@ from databasise.seam.refusals import (
     MalformedBase64PayloadError,
     MalformedSelectorPayloadError,
     MeasurementPostureRefusalError,
+    MissingScopeArgumentError,
     MultiMemberSelectorError,
     MutableStoreComparisonExcludedError,
     NoRawUploadPathForModalityError,
@@ -427,6 +428,9 @@ _REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
     OversizedDocumentError: lambda: OversizedDocumentError(actual_bytes=100, limit_bytes=10),
     InvalidDocumentIdError: lambda: InvalidDocumentIdError(document_id="../escape"),
     PageBoundsError: lambda: PageBoundsError(limit=0, offset=-1),
+    MissingScopeArgumentError: lambda: MissingScopeArgumentError(
+        tool="status", scope="job", argument="job_id"
+    ),
     UnknownDocumentError: lambda: UnknownDocumentError(document_id="../escape"),
     NoWritePathForModalityError: lambda: NoWritePathForModalityError(operation="delete"),
     NoRawUploadPathForModalityError: lambda: NoRawUploadPathForModalityError(operation="ingest"),

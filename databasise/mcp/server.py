@@ -77,7 +77,12 @@ from databasise.mcp.tools import (
 from databasise.parts.registry import PartRegistry
 from databasise.seam.corpus import checked_page
 from databasise.seam.engine import Databasise
-from databasise.seam.refusals import SeamRefusalError, refusal_body, refusal_from_errors
+from databasise.seam.refusals import (
+    MissingScopeArgumentError,
+    SeamRefusalError,
+    refusal_body,
+    refusal_from_errors,
+)
 
 # Resolved through _sdk.import_sdk (module docstring) — never a bare `from mcp... import ...`,
 # which reproduces a CWD-shadow circular import under `cd databasise && python -c ...` (the exact
@@ -123,7 +128,7 @@ class _DatabasiseServer(MCPServer):
 
 async def _status_job(engine: Databasise, args: StatusToolArgs) -> Any:
     if args.job_id is None:
-        raise ToolError("status tool: scope 'job' requires a job_id")
+        raise MissingScopeArgumentError(tool="status", scope="job", argument="job_id")
     return await engine.get_job_status(args.job_id, checked_page(args.limit, args.offset))
 
 
@@ -156,13 +161,13 @@ _STATUS_HANDLERS: dict[str, Callable[[Databasise, StatusToolArgs], Awaitable[Any
 
 async def _resolve_evidence_scope(engine: Databasise, args: ResolveToolArgs) -> dict[str, Any]:
     if args.evidence_ref is None:
-        raise ToolError("resolve tool: scope 'evidence' requires an evidence_ref")
+        raise MissingScopeArgumentError(tool="resolve", scope="evidence", argument="evidence_ref")
     return await engine.resolve_evidence(args.evidence_ref)
 
 
 async def _resolve_trace_scope(engine: Databasise, args: ResolveToolArgs) -> dict[str, Any]:
     if args.trace_reference is None:
-        raise ToolError("resolve tool: scope 'trace' requires a trace_reference")
+        raise MissingScopeArgumentError(tool="resolve", scope="trace", argument="trace_reference")
     return await engine.resolve_trace(args.trace_reference, debug=args.debug)
 
 

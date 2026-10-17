@@ -335,10 +335,12 @@ async def test_hipporag_ingest_parity_across_rest_mcp_and_in_process_transports(
     from databasise.mcp._sdk import import_sdk
 
     ToolError = import_sdk("mcp.server.mcpserver.exceptions").ToolError
-    with pytest.raises(ToolError):
+    with pytest.raises(ToolError) as exc_info:
         await mcp_server.call_tool(
             "delete", {"args": {"document_id": "hipporag-doc-mcp", "selector": selector_payload}}
         )
+    mcp_text = str(exc_info.value)
+    assert json.loads(mcp_text[mcp_text.index("{") :])["refusal_type"] == "NoWritePathForModalityError"
 
 
 def _tool_json(result) -> dict:

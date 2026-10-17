@@ -18,11 +18,16 @@ try:
 except ImportError:
     pytest.skip("the `mcp` extra is not installed", allow_module_level=True)
 
+pytest.importorskip("fastapi")
+
 from databasise.mcp import create_server
 from databasise.mcp._sdk import import_sdk
 from databasise.seam import refusals
 from databasise.seam.refusals import SeamRefusalError, refusal_body
+from databasise.seam.rest import create_app
+from databasise.tests.seam.test_rest_corpus_endpoints import _patch_status_and_health
 from databasise.tests.seam.test_rest_transport import _REFUSAL_FACTORIES
+from fastapi.testclient import TestClient
 
 ToolError = import_sdk("mcp.server.mcpserver.exceptions").ToolError
 mcp = import_sdk("mcp")
@@ -106,3 +111,80 @@ async def test_a_schema_error_carrying_no_refusal_keeps_the_sdk_text(tmp_path):
 
     assert str(exc).startswith("Error executing tool ingest: ")
     assert not str(exc).startswith("{")
+
+
+_OVERSIZED_TEXT = "x" * 26214401  # one byte over the 25 MiB ingest limit
+
+_REQUIREMENTS_CALLS = [
+    ("ingest", {"args": {}}, "AmbiguousIngestPayloadError"),
+    ("ingest", {"args": {"text": "a", "raw_base64": "YQ=="}}, "AmbiguousIngestPayloadError"),
+    ("ingest", {"args": {"text": _OVERSIZED_TEXT}}, "OversizedDocumentError"),
+    ("status", {"args": {"scope": "corpus", "offset": -1}}, "PageBoundsError"),
+    ("status", {"args": {"scope": "job"}}, "MissingScopeArgumentError"),
+    ("resolve", {"args": {"scope": "evidence"}}, "MissingScopeArgumentError"),
+    ("resolve", {"args": {"scope": "trace"}}, "MissingScopeArgumentError"),
+    (
+        "resolve",
+        {"args": {"scope": "trace", "trace_reference": "nope"}},
+        "UnknownTraceReferenceError",
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("tool", "arguments", "refusal_type"),
+    _REQUIREMENTS_CALLS,
+    ids=[f"{tool}-{refusal}-{i}" for i, (tool, _, refusal) in enumerate(_REQUIREMENTS_CALLS)],
+)
+async def test_requirements_calls_each_return_their_named_refusal_as_bare_json(
+    tmp_path, tool, arguments, refusal_type
+):
+    exc = await _raised(_server(tmp_path), tool, arguments)
+
+    assert _bare_json(exc)["refusal_type"] == refusal_type
+
+
+@pytest.mark.parametrize(
+    ("tool", "arguments", "argument"),
+    [
+        ("status", {"args": {"scope": "job"}}, "job_id"),
+        ("resolve", {"args": {"scope": "evidence"}}, "evidence_ref"),
+        ("resolve", {"args": {"scope": "trace"}}, "trace_reference"),
+    ],
+)
+async def test_scope_preconditions_carry_tool_scope_and_argument(tmp_path, tool, arguments, argument):
+    body = _bare_json(await _raised(_server(tmp_path), tool, arguments))
+
+    assert body["refusal_type"] == "MissingScopeArgumentError"
+    assert body["tool"] == tool
+    assert body["scope"] == arguments["args"]["scope"]
+    assert body["argument"] == argument
+
+
+async def test_page_limit_boundary_100_succeeds_and_101_is_refused(tmp_path, monkeypatch):
+    server = _server(tmp_path, "mcp-page-boundary")
+    _patch_status_and_health(monkeypatch, documents=[], counts={})
+
+    ok = await server.call_tool("status", {"args": {"scope": "corpus", "limit": 100}})
+    assert ok is not None
+
+    body = _bare_json(await _raised(server, "status", {"args": {"scope": "corpus", "limit": 101}}))
+    assert body["refusal_type"] == "PageSizeExceededError"
+
+
+async def test_page_size_refusal_matches_the_rest_body_field_for_field(tmp_path):
+    workspace = "mcp-rest-body-parity"
+    mcp_body = _bare_json(
+        await _raised(
+            _server(tmp_path, workspace), "status", {"args": {"scope": "corpus", "limit": 999999}}
+        )
+    )
+    rest_body = (
+        TestClient(create_app(store_root=tmp_path, workspace=workspace))
+        .get("/corpus", params={"limit": 999999})
+        .json()
+    )
+
+    assert mcp_body == rest_body
+    assert mcp_body["requested"] == 999999
+    assert isinstance(mcp_body["limit"], int)
