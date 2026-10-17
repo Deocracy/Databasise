@@ -163,7 +163,44 @@ async def test_health_returns_the_fixed_field_set(store_root, monkeypatch):
     assert isinstance(report, HealthReport)
     assert set(report.stores) == {"kv", "vector", "graph"}
     assert set(report.engine) == {"interpreter_present", "working_dir_present", "storages_initialized"}
+    assert set(report.clients) == {"llm", "embedding", "rerank"}
     assert report.status in ("ok", "degraded")
+
+
+async def test_health_reports_which_clients_are_wired(store_root, monkeypatch):
+    from databasise.clients.builder import build_clients
+
+    monkeypatch.setattr(engine_module, "run_corpus_op", _make_fake_run_corpus_op())
+    stub_env = {
+        "LLM_BINDING_HOST": "http://llm.invalid",
+        "LLM_MODEL": "m",
+        "LLM_BINDING_API_KEY": "k",
+        "EMBEDDING_BINDING_HOST": "http://embed.invalid",
+        "EMBEDDING_MODEL": "m",
+        "EMBEDDING_BINDING_API_KEY": "k",
+    }
+    wired = Databasise(store_root=store_root, workspace="health-wired", clients=build_clients(stub_env))
+    bare = Databasise(store_root=store_root, workspace="health-bare", clients=None)
+
+    wired_report = await wired.health()
+    bare_report = await bare.health()
+
+    assert wired_report.clients == {"llm": True, "embedding": True, "rerank": False}
+    assert bare_report.clients == {"llm": False, "embedding": False, "rerank": False}
+    # presence only: the clients map never changes status
+    assert wired_report.status == bare_report.status
+
+
+async def test_rest_health_serialises_the_clients_map(store_root, monkeypatch):
+    from databasise.seam.rest import create_app
+    from fastapi.testclient import TestClient
+
+    monkeypatch.setattr(engine_module, "run_corpus_op", _make_fake_run_corpus_op())
+    app = create_app(store_root=store_root, workspace="health-rest", clients={"llm": object()})
+
+    body = TestClient(app).get("/health").json()
+
+    assert body["clients"] == {"llm": True, "embedding": False, "rerank": False}
 
 
 async def test_health_reports_degraded_and_never_raises_when_the_foreign_engine_op_fails(
