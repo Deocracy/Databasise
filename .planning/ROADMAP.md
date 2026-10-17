@@ -145,12 +145,12 @@ Plans:
 - SEAM-11: compare key format (kind-prefixed keys change consumer-visible keys) and how a consumer tells a single envelope from a keyed map
 - SEAM-15: store file_name/content_type as citation metadata (needs the M-04 write path from Phase 11) or drop and document
 
-**Plans**: 1/10 plans executed
+**Plans**: 2/10 plans executed
 
 Plans (one plan per wave; every plan edits the shared refusal, engine or transport modules, so the waves run in sequence):
 
 - [x] 09-01-PLAN.md — Tracer: one refusal body for validator-raised refusals on every JSON route; one refusal catalogue (SEAM-02, SEAM-14; wave 1)
-- [ ] 09-02-PLAN.md — Upload route reports the broken rule, null/'' selector means default, 404 for the four lookups (SEAM-02, SEAM-04, SEAM-07, SEAM-13; wave 2, owner grant checkpoint)
+- [x] 09-02-PLAN.md — Upload route reports the broken rule, null/'' selector means default, 404 for the four lookups (SEAM-02, SEAM-04, SEAM-07, SEAM-13; wave 2, owner grant checkpoint)
 - [ ] 09-03-PLAN.md — InvalidDocumentIdError on every ingest/delete entry point; PageBoundsError and one shared checked_page (SEAM-07, SEAM-08; wave 3)
 - [ ] 09-04-PLAN.md — MCP returns every refusal as bare JSON with isError; named scope-precondition refusals (SEAM-03; wave 4)
 - [ ] 09-05-PLAN.md — v1 engine failures are 502/503 machine faults with no stderr on every route; OpenAPI declares them (SEAM-05, SEAM-06; wave 5)
@@ -414,7 +414,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 8. Run the Engine | 10/10 | Complete    | 2026-10-16 |
-| 9. Inputs, Errors & Security | 1/10 | In Progress|  |
+| 9. Inputs, Errors & Security | 2/10 | In Progress|  |
 | 10. Stores, Locking & Data Integrity | 0/TBD | Not started | - |
 | 11. LightRAG Corpus Path | 0/TBD | Not started | - |
 | 12. HippoRAG Fixes | 0/TBD | Not started | - |
