@@ -1,5 +1,5 @@
 {
-  "ledger_version": 352,
+  "ledger_version": 353,
   "frozen_at": null,
   "items": [
     {
@@ -2386,6 +2386,11 @@
     "owner_wait_h": 24
   },
   "check_guard": [],
-  "check_edit_grants": {},
+  "check_edit_grants": {
+    "databasise/tests/seam/test_rest_corpus_endpoints.py": {
+      "reason": "09-02 Task 3 (SEAM-04, D-03): unknown job id now returns 404; rename the 422 test and change one status assertion",
+      "granted_at": 353
+    }
+  },
   "notify_cmd": null
 }
