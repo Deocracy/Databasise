@@ -830,10 +830,13 @@ class Databasise:
         # full-ingest); otherwise this call submitted exactly one document, so that is what is
         # reported — never a fabricated literal 0 for a node that simply does not report the field
         # (HippoRAG's graph-augment-persist), per this codebase's no-fabricated-zero discipline.
-        enqueued = result.get("enqueued")
-        if enqueued is None:
-            enqueued = 1
-        return IngestJob(job_id=str(result.get("track_id") or track_id), enqueued=int(enqueued))
+        try:
+            enqueued = result.get("enqueued")
+            if enqueued is None:
+                enqueued = 1
+            return IngestJob(job_id=str(result.get("track_id") or track_id), enqueued=int(enqueued))
+        except _MALFORMED_RESULT as exc:  # 09 REVIEW WR-02: malformed driver output is a 502, as on the read routes
+            raise _foreign_fault("ingest", exc, failure_class="MalformedDriverOutput") from exc
 
     async def delete_document(
         self, document_id: str, selector: Selector | None = None
@@ -907,12 +910,15 @@ class Databasise:
         node_by_id = {node.node_id: node for node in scheduled["nodes"]}
         seam_events = _mach11_events(parsed, touches, node_by_id)
 
-        return DeletionOutcome(
-            document_id=document_id,
-            status=result.get("status") or "fail",
-            message=str(result.get("message") or ""),
-            seam_events=seam_events,
-        )
+        try:
+            return DeletionOutcome(
+                document_id=document_id,
+                status=result.get("status") or "fail",
+                message=str(result.get("message") or ""),
+                seam_events=seam_events,
+            )
+        except _MALFORMED_RESULT as exc:  # 09 REVIEW WR-02: e.g. a status outside the Literal
+            raise _foreign_fault("delete", exc, failure_class="MalformedDriverOutput") from exc
 
     async def get_job_status(self, job_id: str, page: Page | None = None) -> JobStatus:
         """The sixth §18 operation this seam exposes (05-04-PLAN.md Task 1) — API-01's polling
