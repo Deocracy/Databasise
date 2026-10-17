@@ -37,7 +37,7 @@ covered_files:
   - databasise/seam/rest.py
   - databasise/seam/selectors.py
   - databasise/seam/tokens.py
-covered_digest: "v3:sha256:ccba9b9669ad523b1d932f49d88bc8c9858fe44c0475925539d8f5ec0e6b429b"
+covered_digest: "v3:sha256:e0c55dcf75ac6a66e5b92fba2a24e0e63081dfa9351657b3675135b37848518d"
 behavior_unverified: 0
 overrides_applied: 0
 ---
@@ -47,7 +47,7 @@ overrides_applied: 0
 **Phase Goal:** Every caller-facing failure on REST and MCP is a named refusal in one documented shape, and no caller input reaches the disk, a store or a node before it is validated. The Phase 8 launcher transport guards keep their own shape (D-13).
 **Verified:** 2026-10-17
 **Status:** passed
-**Re-verification:** No, initial verification
+**Re-verification:** No, initial verification. Re-verified after d4316bf (URL scrub widened in corpus.py): scrub, adapter-failure and foreign-engine-refusal tests 63 passed; SEAM-05, SEAM-06 and criterion 3 unchanged.
 
 ## Goal Achievement
 
