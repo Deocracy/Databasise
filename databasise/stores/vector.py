@@ -34,7 +34,9 @@ symlink flip), the sidecar instead carries a SHA-256 ``index_checksum`` of the i
 written to accompany; ``__init__`` recomputes that checksum against whatever index file is
 actually on disk and refuses (``VectorStoreCorruptedError``) rather than silently loading a
 half-committed pair — the crash window still exists, but a pair it produces is now detected and
-refused at the next open instead of used.
+refused at the next open instead of used. A directory holding only one of the two files (STOR-08: a
+crash inside the very first commit, or a file removed by hand) is refused the same way, with the
+missing file named, rather than opened empty and overwritten by the next flush.
 
 Metadata sidecar: the Faiss index and a ``.meta.json`` sidecar both live inside this store's own
 namespace directory (``<store_root>/<workspace>/<namespace>/``), matching D-07's
@@ -76,7 +78,8 @@ except ImportError as _faiss_import_err:
 
 class VectorStoreCorruptedError(RuntimeError):
     """Raised at open time (WR-02) when the on-disk index file's SHA-256 does not match the
-    ``index_checksum`` its own metadata sidecar claims. This is the signature of the two-file
+    ``index_checksum`` its own metadata sidecar claims, or (STOR-08) when only one of the two files
+    exists: ``expected`` is then ``None`` and ``actual`` names the missing file. This is the signature of the two-file
     commit's known non-atomic window (two independent ``os.replace`` calls — see module
     docstring): a crash landing exactly between them can pair a new index with a stale sidecar
     (or vice versa). Rather than silently loading a mismatched pair, this store refuses by name so
@@ -151,7 +154,7 @@ def _read_snapshot(index_path: Path, meta_path: Path, signature: _Signature) -> 
 
 def load_committed(dir_path: Path) -> _Committed | None:
     """The committed snapshot of the namespace directory ``dir_path``, or ``None`` when neither file
-    exists. Never creates a directory. A hit costs two ``stat`` calls; a miss reads the sidecar,
+    exists; exactly one file is ``VectorStoreCorruptedError`` (STOR-08). Never creates a directory. A hit costs two ``stat`` calls; a miss reads the sidecar,
     hashes and reads the index, then stats again: a signature that changed during the read (a reader
     inside another writer's two-rename window, research Pitfall 4) is retried once, then refused as
     ``VectorStoreCorruptedError``."""
@@ -160,8 +163,14 @@ def load_committed(dir_path: Path) -> _Committed | None:
     error: VectorStoreCorruptedError | None = None
     for _attempt in range(2):
         index_sig, meta_sig = _stat_signature(index_path), _stat_signature(meta_path)
-        if index_sig is None or meta_sig is None:
+        if index_sig is None and meta_sig is None:
             return None
+        if index_sig is None:
+            error = VectorStoreCorruptedError(meta_path, None, "<missing vector.faiss>")
+            continue
+        if meta_sig is None:
+            error = VectorStoreCorruptedError(index_path, None, "<missing vector.meta.json>")
+            continue
         signature: _Signature = (index_sig, meta_sig)
         key = (str(dir_path), signature)
         with _SNAPSHOT_LOCK:

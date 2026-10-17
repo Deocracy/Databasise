@@ -244,7 +244,7 @@ from databasise.seam.tokens import TokenBreakdownEntry, assemble_token_breakdown
 from databasise.seam.trace_store import TraceStore
 from databasise.stores.graph import CozoGraphStore, GraphStoreBusyError
 from databasise.stores.kv import SqliteKVStore
-from databasise.stores.vector import MultiNamespaceVectorStore
+from databasise.stores.vector import MultiNamespaceVectorStore, VectorStoreCorruptedError
 from databasise.validator.parse import ParsedWiring, parse_wiring
 from databasise.wirings.resolve import wiring_family
 
@@ -1388,6 +1388,8 @@ class Databasise:
         (``InvalidEvidenceNamespaceError``), then the namespace directory must already exist
         (``UnresolvableEvidenceReferenceError``, so an unknown namespace creates nothing), and only
         then is the vector store built — the kv and graph stores are never opened by this read.
+        A corrupted namespace (checksum mismatch or a half-written directory, STOR-08) is the
+        ``StoreCorrupted`` fault (Q6), never the "record no longer present" refusal.
         """
         validate_evidence_namespace(ref.namespace)
         if not (self.store_root / self.workspace / ref.namespace).is_dir():
@@ -1396,6 +1398,8 @@ class Databasise:
         try:
             vector = MultiNamespaceVectorStore(workspace=self.workspace, store_root=self.store_root)
             return resolve_evidence_ref(ref, vector)
+        except VectorStoreCorruptedError as exc:
+            raise _foreign_fault("resolve_evidence", exc, failure_class="StoreCorrupted") from exc
         finally:
             if vector is not None:
                 await vector.finalize()
