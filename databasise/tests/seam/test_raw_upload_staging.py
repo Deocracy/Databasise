@@ -62,6 +62,8 @@ async def test_upload_delete_then_reupload_of_the_same_id_is_accepted(tmp_path, 
 async def test_an_orphan_without_an_owner_record_is_removed_only_when_v1_deleted_successfully(
     tmp_path, monkeypatch
 ):
+    # Accepted limit (09 REVIEW WR-02): a file without a record is released only on v1 success, so a
+    # crash orphan (which v1 never saw, hence not_found) needs manual removal.
     engine = Databasise(store_root=tmp_path, workspace="staging-orphan")
     orphan = tmp_path / "corpus-inbox" / generated_on_disk_name("doc-1")
     orphan.parent.mkdir(parents=True)

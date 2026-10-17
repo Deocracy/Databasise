@@ -756,6 +756,10 @@ class Databasise:
         Limit: a staged id is unique per store, not per workspace. An owner record at
         ``store_root/corpus-inbox-owners/`` names the uploading workspace, so another workspace's
         ``delete_document`` never removes this file.
+        Accepted limit (09 REVIEW WR-02): a crash between the exclusive create and the record write
+        leaves a staged file with no record. v1 never saw it, so a delete answers ``not_found`` and
+        does not release it; an operator removes the file by hand. Writing the record first would let
+        a losing duplicate overwrite the live upload's record, which is worse.
         """
         # D-12: only None is absent; a caller-supplied '' reaches the token check and is refused.
         document_id = document.document_id if document.document_id is not None else uuid.uuid4().hex
