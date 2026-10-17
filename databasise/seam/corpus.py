@@ -30,7 +30,7 @@ from __future__ import annotations
 import re
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from databasise.seam.envelope import SeamEvent
 from databasise.seam.refusals import (
@@ -180,10 +180,32 @@ def checked_page(limit: int, offset: int) -> Page:
     return Page(limit=limit, offset=offset)
 
 
+MAX_ERROR_MESSAGE_CHARS = 200
+
+# An absolute POSIX or Windows path token, not preceded by a word character (so ``a/b`` stays).
+_ABSOLUTE_PATH_RE = re.compile(r"""(?<![\w.~-])(?:[A-Za-z]:[\\/]|/)[^\s'"`<>()\[\],;]*""")
+
+
+def scrub_error_message(text: str | None) -> str | None:
+    """09 REVIEW WR-03: v1's free-text failure message made safe to return to any caller. Cuts a
+    traceback, keeps the first line, replaces each absolute path by its basename (``<path>`` when it
+    has none) and caps the length. The one helper every transport reaches through
+    ``DocumentStatusEntry``."""
+    if text is None:
+        return None
+    first = next((ln.strip() for ln in text.split("Traceback (most recent call last)")[0].splitlines() if ln.strip()), "")
+    scrubbed = _ABSOLUTE_PATH_RE.sub(lambda m: re.split(r"[\\/]", m.group(0).rstrip("\\/"))[-1] or "<path>", first)
+    if len(scrubbed) > MAX_ERROR_MESSAGE_CHARS:
+        scrubbed = scrubbed[: MAX_ERROR_MESSAGE_CHARS - 1] + "…"
+    return scrubbed or None
+
+
 class DocumentStatusEntry(BaseModel):
     """One document's status within a ``JobStatus``/``CorpusStatus`` page — carries only an
     identifier, a status, a timestamp and an optional error message. No field here ever carries
-    document text, chunk text, an embedding vector, or a graph node payload (API-06)."""
+    document text, chunk text, an embedding vector, or a graph node payload (API-06). The error
+    message is v1's text passed through :func:`scrub_error_message`: no absolute path, no traceback,
+    bounded length."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -191,6 +213,11 @@ class DocumentStatusEntry(BaseModel):
     status: str
     updated_at: str
     error_message: str | None = None
+
+    @field_validator("error_message")
+    @classmethod
+    def _scrub_error_message(cls, value: str | None) -> str | None:
+        return scrub_error_message(value)
 
 
 class JobStatus(BaseModel):
@@ -272,6 +299,8 @@ __all__ = [
     "Page",
     "checked_page",
     "DocumentStatusEntry",
+    "MAX_ERROR_MESSAGE_CHARS",
+    "scrub_error_message",
     "JobStatus",
     "CorpusStatus",
     "DocumentCounts",
