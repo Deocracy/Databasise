@@ -17,16 +17,15 @@ from databasise.parity import import_index
 from databasise.store_lock import store_lock
 
 _NOT_STARTED = "work started while the store root was held"
-_LOCKED_IN_TASK_2 = pytest.mark.xfail(strict=True, reason="locked in Task 2")
 
 # (module, argv, work functions that must never be reached)
 _ENTRY_POINTS = [
     pytest.param("import_index", [], ["import_v1_index", "verify_import"], id="import_index"),
     pytest.param("build_hipporag_index", [], ["build_index"], id="build_hipporag_index"),
     pytest.param("run_arm", ["--arm", "naive", "--query", "q"], ["run_arm"], id="run_arm"),
-    pytest.param("run_comparison", ["--arm", "naive"], ["_run_cli"], id="run_comparison", marks=_LOCKED_IN_TASK_2),
-    pytest.param("run_cross_modality", [], ["run_cross_modality"], id="run_cross_modality", marks=_LOCKED_IN_TASK_2),
-    pytest.param("storage_audit", ["--arm", "naive"], ["run_audit"], id="storage_audit", marks=_LOCKED_IN_TASK_2),
+    pytest.param("run_comparison", ["--arm", "naive"], ["_run_cli"], id="run_comparison"),
+    pytest.param("run_cross_modality", [], ["run_cross_modality"], id="run_cross_modality"),
+    pytest.param("storage_audit", ["--arm", "naive"], ["run_audit"], id="storage_audit"),
 ]
 
 
