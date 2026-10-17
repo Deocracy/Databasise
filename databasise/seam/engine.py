@@ -207,7 +207,6 @@ from databasise.seam.refusals import (
     NoRawUploadPathForModalityError,
     NoWritePathForModalityError,
     TombstonedGenerationError,
-    UnknownDocumentError,
     UnknownGenerationVersionError,
     UnknownJobError,
     UnrecognisedPromotionVerbError,
@@ -676,7 +675,8 @@ class Databasise:
         ``generated_on_disk_name`` (never the caller's own ``document_id`` string joined directly,
         and never ``file_name`` at all) before the node config is stamped.
         """
-        document_id = document.document_id or uuid.uuid4().hex
+        # D-12: only None is absent; a caller-supplied '' reaches the token check and is refused.
+        document_id = document.document_id if document.document_id is not None else uuid.uuid4().hex
         # A caller-supplied document_id is validated through the same bare-token rule a
         # server-minted one already satisfies by construction — a caller-supplied id can never
         # widen the on-disk path.
@@ -784,7 +784,7 @@ class Databasise:
         normal outcome carried in ``DeletionOutcome.status`` — never a refusal. Only a
         ``document_id`` that fails the machine's own token discipline (the same bare-token rule
         ``generated_on_disk_name`` enforces for a raw-upload's on-disk name) is refused, as
-        :class:`~databasise.seam.refusals.UnknownDocumentError`, before any wiring is even loaded.
+        :class:`~databasise.seam.refusals.InvalidDocumentIdError`, before any wiring is even loaded.
 
         Passes **the same recorder-callable shape ``_execute()`` passes to ``run_wiring``** — this
         is the load-bearing line documented in this module's own docstring's 05-03 section:
@@ -798,10 +798,7 @@ class Databasise:
         :class:`~databasise.seam.refusals.NoWritePathForModalityError` rather than deleting from a
         different modality's index than the caller selected.
         """
-        try:
-            generated_on_disk_name(document_id)
-        except ValueError as exc:
-            raise UnknownDocumentError(document_id=document_id) from exc
+        generated_on_disk_name(document_id)
 
         query_wiring = resolve_selector(selector, registry=self.registry, store_root=self.store_root)
         resolved = _corpus_wiring(query_wiring, "delete")

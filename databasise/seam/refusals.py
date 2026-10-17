@@ -158,20 +158,32 @@ class OversizedDocumentError(SeamRefusalError):
         )
 
 
-class UnknownDocumentError(SeamRefusalError):
-    """Raised by ``Databasise.delete_document()`` (05-03-PLAN.md Task 2) when ``document_id``
-    fails the machine's own token discipline — the same bare-token rule
-    ``databasise.seam.corpus.generated_on_disk_name`` already enforces for a raw-upload's on-disk
-    name. Never raised for an id that is well-formed but simply does not exist in the corpus — v1
-    itself reports that case as a normal ``"not_found"`` status carried in
-    ``databasise.seam.corpus.DeletionOutcome.status``, not a refusal.
+class InvalidDocumentIdError(SeamRefusalError):
+    """Raised by ``databasise.seam.corpus.generated_on_disk_name`` (09-03-PLAN.md, SEAM-07, D-06)
+    when a caller-supplied ``document_id`` is not a non-empty token of letters, digits, ``_`` or
+    ``-`` (so ``''``, ``'../x'``, ``'a.b'`` and ``'a\\n'`` are all refused). Raised by
+    ``Databasise.ingest()`` and ``Databasise.delete_document()`` before any file is written or any
+    wiring is loaded. Names only the caller's own value.
     """
 
     def __init__(self, *, document_id: str):
         self.document_id = document_id
         super().__init__(
-            f"document id {document_id!r} fails the machine's own token discipline"
+            f"InvalidDocumentIdError: document id {document_id!r} must be a non-empty token of "
+            "letters, digits, '_' or '-'"
         )
+
+
+class UnknownDocumentError(SeamRefusalError):
+    """Reserved for a well-formed document id that does not exist in the corpus. A malformed id is
+    :class:`InvalidDocumentIdError`, never this. Nothing raises this today because v1 itself reports
+    an unknown id as a normal ``"not_found"`` status carried in
+    ``databasise.seam.corpus.DeletionOutcome.status``, not a refusal.
+    """
+
+    def __init__(self, *, document_id: str):
+        self.document_id = document_id
+        super().__init__(f"document id {document_id!r} does not exist in the corpus")
 
 
 class NoWritePathForModalityError(SeamRefusalError):
@@ -612,6 +624,7 @@ __all__ = [
     "MultiMemberSelectorError",
     "AmbiguousIngestPayloadError",
     "OversizedDocumentError",
+    "InvalidDocumentIdError",
     "UnknownDocumentError",
     "NoWritePathForModalityError",
     "NoRawUploadPathForModalityError",

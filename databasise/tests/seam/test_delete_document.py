@@ -26,7 +26,7 @@ from databasise.parts_core.declared_only import LIGHTRAG_FULL_DELETE_PART
 from databasise.runner.trace import TokenAccounting
 from databasise.seam.corpus import DeletionOutcome
 from databasise.seam.engine import Databasise
-from databasise.seam.refusals import ForeignEngineRefusalError, UnknownDocumentError
+from databasise.seam.refusals import ForeignEngineRefusalError, InvalidDocumentIdError
 
 _STUB_DRIVER = Path(__file__).resolve().parents[1] / "fixtures" / "v1_corpus_driver_stub.py"
 
@@ -149,12 +149,12 @@ async def test_delete_document_returns_document_id_and_a_message(store_root):
     assert outcome.message
 
 
-async def test_a_malformed_document_id_raises_unknown_document_error_before_any_wiring_loads(
+async def test_a_malformed_document_id_raises_invalid_document_id_error_before_any_wiring_loads(
     store_root,
 ):
     engine = _make_engine(store_root, body=_make_stub_full_delete_body(timeout=5.0))
 
-    with pytest.raises(UnknownDocumentError) as exc_info:
+    with pytest.raises(InvalidDocumentIdError) as exc_info:
         await engine.delete_document("../escape")
 
     assert exc_info.value.document_id == "../escape"

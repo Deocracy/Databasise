@@ -397,6 +397,10 @@ def create_app(
         convention for the identical "no native shape" problem) — parsed via ``Selector``'s own
         ``model_validate_json``, never a hand-rolled parse.
 
+        A blank ``document_id`` form field (exactly ``''``) means absent and the server mints the id
+        (D-12), for the same reason as a blank selector field; any non-empty id goes through the
+        token check and a malformed one is refused as ``InvalidDocumentIdError``.
+
         **Selector field rules (09-02-PLAN.md, SEAM-13, SEAM-02).** An omitted, empty,
         whitespace-only or ``null`` field means no selector, the same as ``selector: null`` on the
         JSON routes. Valid JSON that breaks a selector rule returns that rule's own refusal
@@ -414,7 +418,7 @@ def create_app(
         raw = await file.read()
         document = IngestDocument(
             raw=raw,
-            document_id=document_id,
+            document_id=document_id or None,
             file_name=file.filename,
             content_type=file.content_type,
         )
@@ -441,7 +445,8 @@ def create_app(
         """06-10-PLAN.md Task 2: ``body`` defaults to an empty ``DeleteRequest`` (``selector=None``)
         so a caller sending no body at all — every existing REST delete call — keeps working
         byte-for-byte; a caller sending ``{"selector": ...}`` names which fitted modality's index
-        the delete reaches."""
+        the delete reaches. A malformed ``document_id`` is refused as ``InvalidDocumentIdError``
+        (422) before any wiring runs."""
         return await engine.delete_document(document_id, body.selector)
 
     @app.get("/health")

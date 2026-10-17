@@ -8,9 +8,10 @@ extracted payload) or ``raw``+``content_type`` (an opaque byte blob v1's own par
 never both, never neither. ``file_name`` and ``content_type`` are advisory metadata only, carried
 into the job payload for citation; neither is ever used to build a filesystem path.
 ``generated_on_disk_name`` is what makes that true structurally: the on-disk name is derived only
-from a server-minted ``document_id``, refusing any id that does not match the same bare-token
-discipline ``databasise/namespaces.py``'s ``_NAMESPACE_TOKEN_RE`` already enforces for a namespace
-directory name.
+from a ``document_id`` (server-minted or caller-supplied), refusing any id that is not a non-empty
+token of letters, digits, ``_`` or ``-`` (``InvalidDocumentIdError``) -- the same bare-token
+discipline ``databasise/namespaces.py``'s ``_NAMESPACE_TOKEN_RE`` enforces for a namespace
+directory name, matched with ``fullmatch`` so a trailing newline is not accepted.
 
 **05-04-PLAN.md Task 1: the bounded read surface.** ``Page``/``MAX_PAGE_SIZE``,
 ``DocumentStatusEntry``, ``JobStatus``, ``CorpusStatus``, ``DocumentCounts`` and ``HealthReport``
@@ -33,6 +34,7 @@ from pydantic import BaseModel, ConfigDict, model_validator
 from databasise.seam.envelope import SeamEvent
 from databasise.seam.refusals import (
     AmbiguousIngestPayloadError,
+    InvalidDocumentIdError,
     OversizedDocumentError,
     PageSizeExceededError,
 )
@@ -53,7 +55,8 @@ MAX_DOCUMENT_BYTES = 25 * 1024 * 1024
 # (05-03-PLAN.md Task 3's own corpus fixture ids — "a_kiss_for_corliss" and its siblings — are
 # exactly this case). Underscore introduces no path-traversal risk; forbidding it was stricter
 # than the actual security requirement.
-_DOCUMENT_ID_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+# Used with ``fullmatch`` (09-03-PLAN.md, SEAM-07): ``$`` would let a trailing newline through.
+_DOCUMENT_ID_TOKEN_RE = re.compile(r"[A-Za-z0-9_-]+")
 
 _ON_DISK_SUFFIX = ".bin"
 
@@ -212,17 +215,14 @@ class HealthReport(BaseModel):
 
 
 def generated_on_disk_name(document_id: str) -> str:
-    """The on-disk file name for a raw-upload document, built only from the server-minted
-    ``document_id`` and a fixed suffix. Refuses any ``document_id`` that does not match the bare-
-    token discipline ``databasise/namespaces.py``'s ``_NAMESPACE_TOKEN_RE`` already enforces — no
-    path separator, no parent-directory reference, so the returned name can never resolve outside
-    the directory it is joined under.
+    """The on-disk file name for a raw-upload document, built only from ``document_id`` (server-
+    minted or caller-supplied) and a fixed suffix. Raises :class:`InvalidDocumentIdError` for any
+    ``document_id`` that is not a non-empty token of letters, digits, ``_`` or ``-`` -- no path
+    separator, no dot, no newline, so the returned name can never resolve outside the directory it
+    is joined under.
     """
-    if not _DOCUMENT_ID_TOKEN_RE.match(document_id):
-        raise ValueError(
-            f"invalid document id {document_id!r}: must match {_DOCUMENT_ID_TOKEN_RE.pattern} "
-            "(no path separator, no parent-directory reference)"
-        )
+    if not _DOCUMENT_ID_TOKEN_RE.fullmatch(document_id):
+        raise InvalidDocumentIdError(document_id=document_id)
     return f"{document_id}{_ON_DISK_SUFFIX}"
 
 
