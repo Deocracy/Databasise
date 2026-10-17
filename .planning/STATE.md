@@ -1,20 +1,20 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Engine Fixes + Operator Console
 current_phase: 09
 current_phase_name: Inputs, Errors & Security
 status: executing
-stopped_at: Completed 09-05-PLAN.md
-last_updated: "2026-10-17T08:33:08.968Z"
+stopped_at: Completed 09-06-PLAN.md
+last_updated: "2026-10-17T08:42:46.126Z"
 last_activity: 2026-10-16
 last_activity_desc: Phase 09 execution started
-state_head: 1d2a1fd9e87bb1131151733bde25b5f22ecbaf0c
+state_head: e27093a32f69255dd8eded578e37d18171fa853c
 progress:
   total_phases: 11
   completed_phases: 1
   total_plans: 20
-  completed_plans: 15
+  completed_plans: 16
   percent: 9
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-16 after Phase 8)
 ## Current Position
 
 Phase: 09 (Inputs, Errors & Security) — EXECUTING
-Plan: 6 of 10
+Plan: 7 of 10
 Status: Ready to execute
 Last activity: 2026-10-16 — Phase 09 execution started
 
@@ -75,6 +75,7 @@ Progress: [█░░░░░░░░░] 9% (1/11 phases)
 | Phase 09 P03 | n/a | 2 tasks | 10 files |
 | Phase 09 P04 | 15min | 2 tasks | 6 files |
 | Phase 09 P05 | 25 min | 2 tasks | 5 files |
+| Phase 09 P06 | 20 min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,8 @@ Recent decisions affecting current work:
 - [Phase 09]: Page and checked_page check the upper cap before lower bounds; PageBoundsError for limit<1 or offset<0; one shared checked_page for REST and MCP
 - [Phase 09]: D-02:MCP-refusal-is-isError-bare-JSON-via-_DatabasiseServer.call_tool-override;_refusal_mapped-and-_refusal_detail-deleted
 - [Phase 09]: 09-05: a v1 engine failure is a machine fault (502 run failed or malformed output, 503 v1 unavailable), cause private and logged once; failure_class tokens MalformedDriverOutput and UnclassifiedEngineFailure are executor-chosen
+- [Phase 09]: D-05: an evidence namespace must fullmatch [A-Za-z0-9-]+; otherwise InvalidEvidenceNamespaceError before any store or directory; resolve_evidence builds only the vector store
+- [Phase 09]: D-08: blank query text is EmptyQueryObjectError beside any member; blank ingest text and 0-byte raw are EmptyIngestDocumentError(member); MCP base64 is strict (validate=True)
 
 ### Pending Todos
 
@@ -148,8 +151,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-17T08:33:08.922Z
-Stopped at: Completed 09-05-PLAN.md
+Last session: 2026-10-17T08:42:46.063Z
+Stopped at: Completed 09-06-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

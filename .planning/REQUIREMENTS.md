@@ -56,7 +56,7 @@
 
 ### Inputs, errors and security (F2)
 
-- [ ] **SEAM-01**: POST /evidence/resolve and the MCP resolve tool (scope evidence) refuse any EvidenceRef.namespace that does not fullmatch ^[A-Za-z0-9-]+$ (for example '../../escape_probe', '../other-ws/chunks', an absolute path, 'chunks\n'). The refusal is a dedicated named input refusal returned with status 422 and a refusal_type, and it is raised before any vector store is constructed. No directory is created inside or outside store_root. A well-formed unknown namespace ('zzz') creates no directory and returns UnresolvableEvidenceReferenceError at the status SEAM-04 assigns. No index outside <store_root>/<workspace> is ever opened. All current namespaces (chunks, entities, relationships, hipporag-chunks, hipporag-entities, hipporag-facts) still resolve.
+- [x] **SEAM-01**: POST /evidence/resolve and the MCP resolve tool (scope evidence) refuse any EvidenceRef.namespace that does not fullmatch ^[A-Za-z0-9-]+$ (for example '../../escape_probe', '../other-ws/chunks', an absolute path, 'chunks\n'). The refusal is a dedicated named input refusal returned with status 422 and a refusal_type, and it is raised before any vector store is constructed. No directory is created inside or outside store_root. A well-formed unknown namespace ('zzz') creates no directory and returns UnresolvableEvidenceReferenceError at the status SEAM-04 assigns. No index outside <store_root>/<workspace> is ever opened. All current namespaces (chunks, entities, relationships, hipporag-chunks, hipporag-entities, hipporag-facts) still resolve.
   - Test: tests/seam/test_evidence_namespace_guard.py uses a tmp store_root. POST /evidence/resolve with namespace '../../escape_probe', with an absolute tmp path and with 'chunks\n' each returns 422 with the namespace refusal_type. 'zzz' returns UnresolvableEvidenceReferenceError. A before/after directory listing of store_root, its parent and the absolute target shows no new directory for any of the four. The same inputs through MCP resolve raise a ToolError carrying the refusal_type. A valid 'chunks' ref still resolves. Fails today because '../../escape_probe' creates a directory outside store_root and 'zzz' leaves an empty directory in the workspace.
   - Defects: seam-rest/SEAM-06, rest-live/REST-04, doc-audit-5/D7
   - Owner decision first: Name of the malformed-namespace refusal (proposed: InvalidEvidenceNamespaceError).
@@ -88,7 +88,7 @@
   - Test: tests/seam/test_page_bounds.py: GET /corpus with ?limit=0, ?limit=-1, ?limit=-5 and ?offset=-1, and GET /jobs/job-abc?limit=0, each return 422 with refusal_type (offset included, not FastAPI's ge=0 validation body). MCP status with {scope:'corpus', limit:0}, {limit:-1} and {offset:-1} each raise a ToolError with the same refusal_type. A spy on run_corpus_op records no call for any of these inputs. Page(limit=0) in-process raises the documented exception. Fails today: limit=0 and limit=-1 return 200, and limit=-1 returns total-1 rows.
   - Defects: mcp-clients/D1, seam-engine/ENG-17, seam-rest/SEAM-15, rest-live/REST-07, tests/T-13, doc-audit-5/D8, mcp-live/MCP-03, tests/T-16
   - Owner decision first: Refusal name for the lower bounds: extend PageSizeExceededError to cover limit < 1 and offset < 0, or add PageBoundsError.
-- [ ] **SEAM-09**: Empty inputs are refused instead of being run or enqueued. Query text that is '' or whitespace-only returns EmptyQueryObjectError before any node runs: no LLM or embedding call, and no trace is persisted. Text ingest with '' or whitespace-only text, a 0-byte upload, and MCP raw_base64 '' are refused (AmbiguousIngestPayloadError or a dedicated empty-document refusal), and nothing is written to corpus-inbox. MCP raw_base64 is decoded with base64.b64decode(..., validate=True), so any character outside the base64 alphabet ('YW!Jj', '!!!!', 'YW*Jj') returns MalformedBase64PayloadError.
+- [x] **SEAM-09**: Empty inputs are refused instead of being run or enqueued. Query text that is '' or whitespace-only returns EmptyQueryObjectError before any node runs: no LLM or embedding call, and no trace is persisted. Text ingest with '' or whitespace-only text, a 0-byte upload, and MCP raw_base64 '' are refused (AmbiguousIngestPayloadError or a dedicated empty-document refusal), and nothing is written to corpus-inbox. MCP raw_base64 is decoded with base64.b64decode(..., validate=True), so any character outside the base64 alphabet ('YW!Jj', '!!!!', 'YW*Jj') returns MalformedBase64PayloadError.
   - Test: tests/seam/test_empty_inputs.py: POST /query with {query:{text:''}} and with {text:'   '} each return 422 EmptyQueryObjectError; the stub LLM and embedder record zero calls, and trace.db gains no row. POST /documents {document:{text:''}} with the default selector and with the HippoRAG selector capability ['reads_graph','reads_kv'] returns 422, an upload of b'' returns 422, and corpus-inbox stays empty. MCP ingest with {raw_base64:''}, {raw_base64:'!!!!'} and {raw_base64:'YW*Jj'} each raise a ToolError with refusal_type. Fails today: the queries return 200, and the ingests return 200 with enqueued:1.
   - Defects: rest-live/REST-10, rest-live/REST-11, mcp-live/MCP-06, doc-audit-5/D5, mcp-clients/D5
   - Owner decision first: Whether whitespace-only text counts as empty for query and text ingest (proposed: yes; raw bytes are checked only for length 0).
@@ -828,7 +828,7 @@ These fail today.
 | RUN-10 | Phase 8 | Complete |
 | RUN-11 | Phase 8 | Complete |
 | RUN-12 | Phase 8 | Complete |
-| SEAM-01 | Phase 9 | Pending |
+| SEAM-01 | Phase 9 | Complete |
 | SEAM-02 | Phase 9 | Complete |
 | SEAM-03 | Phase 9 | Complete |
 | SEAM-04 | Phase 9 | Complete |
@@ -836,7 +836,7 @@ These fail today.
 | SEAM-06 | Phase 9 | Complete |
 | SEAM-07 | Phase 9 | Complete |
 | SEAM-08 | Phase 9 | Complete |
-| SEAM-09 | Phase 9 | Pending |
+| SEAM-09 | Phase 9 | Complete |
 | SEAM-10 | Phase 9 | Pending |
 | SEAM-11 | Phase 9 | Pending |
 | SEAM-12 | Phase 9 | Pending |
