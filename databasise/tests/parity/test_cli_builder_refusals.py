@@ -17,7 +17,7 @@ _ENV = (
 )
 
 _CASES = [
-    ("databasise.parity.run_arm", ["--arm", "naive", "--query", "q"], {"_build_stores": lambda *a, **k: {}}),
+    ("databasise.parity.run_arm", ["--arm", "naive", "--query", "q"], {}),
     ("databasise.parity.storage_audit", ["--arm", "naive"], {}),
     (
         "databasise.parity.run_cross_modality",
@@ -40,6 +40,8 @@ def test_a_bad_rerank_binding_is_a_named_refusal_not_a_traceback(
     env_file.write_text(_ENV, encoding="utf-8")
     monkeypatch.setattr(import_index, "DEFAULT_STORE_ROOT", tmp_path / "store")
     monkeypatch.setattr(run_arm, "DEFAULT_V1_ENV_PARITY", env_file)  # storage_audit reads it off run_arm
+    # run_arm and storage_audit open the real store (a RocksDB lock) before building clients; stub it.
+    monkeypatch.setattr(run_arm, "_build_stores", lambda *a, **k: {})
     if hasattr(module, "DEFAULT_V1_ENV_PARITY"):
         monkeypatch.setattr(module, "DEFAULT_V1_ENV_PARITY", env_file)
     for name, stub in patches.items():
