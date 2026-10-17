@@ -229,12 +229,12 @@ async def test_get_jobs_returns_the_same_job_status_an_in_process_get_job_status
     assert rest_response.json() == in_process.model_dump()
 
 
-def test_get_jobs_for_an_unknown_job_id_returns_422_with_the_refusal_type_name(client, monkeypatch):
+def test_get_jobs_for_an_unknown_job_id_returns_404_with_the_refusal_type_name(client, monkeypatch):
     _patch_status_and_health(monkeypatch, documents=[])
 
     response = client.get("/jobs/no-such-job")
 
-    assert response.status_code == 422
+    assert response.status_code == 404
     assert response.json()["refusal_type"] == "UnknownJobError"
 
 
