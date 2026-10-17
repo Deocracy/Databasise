@@ -5,8 +5,9 @@
 
 ``IngestDocument`` accepts exactly one of two input shapes — ``text`` (a structured, already-
 extracted payload) or ``raw``+``content_type`` (an opaque byte blob v1's own parser handles) —
-never both, never neither. ``file_name`` and ``content_type`` are advisory metadata only, carried
-into the job payload for citation; neither is ever used to build a filesystem path.
+never both, never neither. ``file_name`` and ``content_type`` are not stored: they are discarded at
+ingest and neither is ever used to build a filesystem path or a citation name (carrying them into v1
+citation metadata is deferred to the LightRAG write-path work, M-04, Phase 11).
 ``generated_on_disk_name`` is what makes that true structurally: the on-disk name is derived only
 from a ``document_id`` (server-minted or caller-supplied), refusing any id that is not a non-empty
 token of letters, digits, ``_`` or ``-`` (``InvalidDocumentIdError``) -- the same bare-token
@@ -29,7 +30,7 @@ from __future__ import annotations
 import re
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from databasise.seam.envelope import SeamEvent
 from databasise.seam.refusals import (
@@ -70,15 +71,23 @@ class IngestDocument(BaseModel):
     refused (``OversizedDocumentError``) before any bytes are written to disk and before the
     subprocess is launched. An empty payload is refused as ``EmptyIngestDocumentError`` (SEAM-09,
     D-08): whitespace-only ``text`` counts as empty; ``raw`` bytes are checked only for length 0.
+
+    ``file_name`` and ``content_type`` are not stored: both are discarded at ingest (D-11). Carrying
+    them into v1 citation metadata is deferred to the LightRAG write-path work (M-04, Phase 11).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     text: str | None = None
     document_id: str | None = None
-    file_name: str | None = None  # advisory metadata only, never a path component
+    file_name: str | None = Field(
+        default=None,
+        description="Advisory only and not stored: discarded at ingest, never used as a path or a citation name.",
+    )
     raw: bytes | None = None
-    content_type: str | None = None
+    content_type: str | None = Field(
+        default=None, description="Advisory only and not stored: discarded at ingest."
+    )
 
     @model_validator(mode="after")
     def _exactly_one_payload_shape_within_the_size_cap(self) -> "IngestDocument":

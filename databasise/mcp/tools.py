@@ -53,7 +53,7 @@ import base64
 import binascii
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from databasise.seam.corpus import IngestDocument
 from databasise.seam.evidence import EvidenceRef
@@ -103,9 +103,14 @@ class IngestToolArgs(_ToolArgs):
 
     text: str | None = None
     document_id: str | None = None
-    file_name: str | None = None
+    file_name: str | None = Field(
+        default=None,
+        description="Advisory only and not stored: discarded at ingest, never used as a path or a citation name.",
+    )
     raw_base64: str | None = None
-    content_type: str | None = None
+    content_type: str | None = Field(
+        default=None, description="Advisory only and not stored: discarded at ingest."
+    )
     selector: Selector | None = None
 
     def to_ingest_document(self) -> IngestDocument:
