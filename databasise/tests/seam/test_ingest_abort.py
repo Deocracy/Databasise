@@ -7,6 +7,7 @@ Reuses ``test_hipporag_write_path.py``'s stub clients, workspace and HippoRAG se
 
 from __future__ import annotations
 
+import asyncio
 import sqlite3
 
 import pytest
@@ -223,6 +224,39 @@ async def test_a_graph_prepare_failure_aborts_every_store_and_is_a_store_fault(s
     assert exc_info.value.failure_class == "StoreFault"
     await _assert_nothing_committed(store_root)
     assert not list((store_root / _WORKSPACE).rglob("*.tmp"))
+
+
+_SECOND_DOCUMENT_TEXT = "Ed Wood also wrote many pulp novels."
+
+
+async def _committed_chunks(store_root) -> tuple[set[str], set[str]]:
+    vector = FaissVectorStore("hipporag-chunks", _WORKSPACE, store_root)
+    vector_ids = {doc_id for doc_id, _ in vector.iter_vectors()}
+    await vector.finalize()
+    kv = SqliteKVStore("hipporag-text-chunks", _WORKSPACE, store_root)
+    try:
+        kv_ids = {row[0] for row in kv._conn.execute("SELECT id FROM kv")}
+    finally:
+        await kv.finalize()
+    return vector_ids, kv_ids
+
+
+async def test_two_concurrent_hipporag_ingests_on_one_root_both_commit_in_full(store_root, tmp_path):
+    documents = [
+        IngestDocument(document_id="concurrent-doc-1", text=_DOCUMENT_TEXT),
+        IngestDocument(document_id="concurrent-doc-2", text=_SECOND_DOCUMENT_TEXT),
+    ]
+    sequential_root = tmp_path / "sequential"
+    sequential_root.mkdir()
+    for document in documents:
+        await _make_engine(sequential_root).ingest(document, selector=_selector())
+    expected_vectors, expected_kv = await _committed_chunks(sequential_root)
+    assert len(expected_vectors) >= 2
+
+    engine = _make_engine(store_root)
+    await asyncio.gather(*(engine.ingest(document, selector=_selector()) for document in documents))
+
+    assert await _committed_chunks(store_root) == (expected_vectors, expected_kv)
 
 
 @pytest.mark.parametrize("failure_class", ["StoreFault", "RunIncomplete"])

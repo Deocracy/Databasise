@@ -118,23 +118,38 @@ class FaissVectorStore(StorageNameSpace):
         self._meta_path = self._dir / "vector.meta.json"
 
         self._pending: dict[str, _PendingVectorDoc] = {}
+        self._prepared: tuple[Any, dict[str, dict[str, Any]], int] | None = None
         self._dim: int | None = None
         self._index: Any = None
         self._entries: dict[str, dict[str, Any]] = {}
         self._next_int_id: int = 0
+        self._loaded_signature = self._committed_signature()
+        self._read_committed()
 
-        if self._index_path.exists() and self._meta_path.exists():
-            with self._meta_path.open("r", encoding="utf-8") as f:
-                meta = json.load(f)
-            expected_checksum = meta.get("index_checksum")
-            actual_checksum = _sha256_of(self._index_path)
-            if expected_checksum != actual_checksum:
-                raise VectorStoreCorruptedError(self._index_path, expected_checksum, actual_checksum)
+    def _committed_signature(self) -> tuple[tuple[int, int, int], ...] | None:
+        """``(st_ino, st_mtime_ns, st_size)`` of the committed pair, or ``None`` when absent.
+        ``os.replace`` changes the inode, so any other writer's commit changes it."""
+        try:
+            stats = (self._index_path.stat(), self._meta_path.stat())
+        except FileNotFoundError:
+            return None
+        return tuple((st.st_ino, st.st_mtime_ns, st.st_size) for st in stats)
 
-            self._index = faiss.read_index(str(self._index_path))
-            self._dim = self._index.d
-            self._entries = meta["entries"]
-            self._next_int_id = meta["next_int_id"]
+    def _read_committed(self) -> None:
+        """Load the committed index, entries and next id, refusing a torn pair (WR-02)."""
+        if not (self._index_path.exists() and self._meta_path.exists()):
+            return
+        with self._meta_path.open("r", encoding="utf-8") as f:
+            meta = json.load(f)
+        expected_checksum = meta.get("index_checksum")
+        actual_checksum = _sha256_of(self._index_path)
+        if expected_checksum != actual_checksum:
+            raise VectorStoreCorruptedError(self._index_path, expected_checksum, actual_checksum)
+
+        self._index = faiss.read_index(str(self._index_path))
+        self._dim = self._index.d
+        self._entries = meta["entries"]
+        self._next_int_id = meta["next_int_id"]
 
     # ------------------------------------------------------------------ #
     # Writes — buffered, flushed at index_done_callback                    #
@@ -209,6 +224,7 @@ class FaissVectorStore(StorageNameSpace):
         new_index, new_entries = await loop.run_in_executor(None, _do_delete)
         self._index = new_index
         self._entries = new_entries
+        self._loaded_signature = self._committed_signature()
 
     # ------------------------------------------------------------------ #
     # Reads — only committed (flushed) data is queryable                  #
@@ -341,24 +357,32 @@ class FaissVectorStore(StorageNameSpace):
     # Lifecycle                                                            #
     # ------------------------------------------------------------------ #
 
-    async def index_done_callback(self) -> None:
-        """Flush the pending buffer into the index and sidecar, off-loop (WR-03): ``np.vstack``,
-        ``faiss.add_with_ids``, and ``faiss.write_index`` are not obviously cheap at scale, and
-        under the runner's structured concurrency (``runner/scheduler.py``'s ``asyncio.TaskGroup``
-        batch dispatch) a slow flush here would otherwise stall every sibling node in the same
-        batch — the exact concern ``stores/graph.py``'s own docstring names for its own
-        ``run_in_executor`` dispatch. ``self._index``/``self._entries``/``self._next_int_id`` are
-        reassigned only after the executor call returns, on the event-loop thread, so a concurrent
-        ``query()`` never races a worker-thread mutation of those attributes.
+    async def prepare(self) -> None:
+        """D-07: stage the pending buffer as the ``.tmp`` file pair, leaving the committed pair
+        untouched. If another writer committed since this instance loaded, rebase on the on-disk
+        state first, so its vectors are kept and int ids never collide (research Pitfall 3). A
+        failure leaves no ``.tmp`` and keeps ``_pending``.
+
+        Off-loop (WR-03): ``np.vstack``, ``faiss.add_with_ids`` and ``faiss.write_index`` are not
+        obviously cheap at scale, and a slow flush on the loop would stall every sibling node in the
+        runner's batch. ``self._index``/``self._entries``/``self._next_int_id`` are reassigned only on
+        the event-loop thread, in ``commit_prepared``, so a concurrent ``query()`` never races a
+        worker-thread mutation.
         """
         if not self._pending:
             return
 
-        if self._index is None:
-            self._dim = next(iter(self._pending.values())).vector.shape[0]
-            self._index = faiss.IndexIDMap2(faiss.IndexFlatIP(self._dim))
+        signature = self._committed_signature()
+        if signature != self._loaded_signature:
+            self._index, self._entries, self._next_int_id = None, {}, 0
+            self._read_committed()
+            self._loaded_signature = signature
 
-        base_index = self._index
+        if self._index is None:
+            dim = next(iter(self._pending.values())).vector.shape[0]
+            base_index = faiss.IndexIDMap2(faiss.IndexFlatIP(dim))
+        else:
+            base_index = self._index
         base_entries = dict(self._entries)
         base_next_int_id = self._next_int_id
         pending = dict(self._pending)
@@ -383,34 +407,56 @@ class FaissVectorStore(StorageNameSpace):
                 matrix = np.vstack(vectors).astype("float32")
                 staging.add_with_ids(matrix, np.array(int_ids, dtype="int64"))
 
-            self._persist(staging, staging_entries, next_int_id)
+            self._write_staged(staging, staging_entries, next_int_id)
             return staging, staging_entries, next_int_id
 
         loop = asyncio.get_running_loop()
-        new_index, new_entries, new_next_int_id = await loop.run_in_executor(None, _do_flush)
-        self._index = new_index
-        self._entries = new_entries
-        self._next_int_id = new_next_int_id
+        self._prepared = await loop.run_in_executor(None, _do_flush)
+
+    async def commit_prepared(self) -> None:
+        """Rename the staged pair into place, then adopt it on the event-loop thread."""
+        if self._prepared is not None:
+            self._commit_staged()
+            self._index, self._entries, self._next_int_id = self._prepared
+            self._dim = self._index.d
+            self._loaded_signature = self._committed_signature()
+            self._prepared = None
         self._pending.clear()
+
+    async def abort_prepared(self) -> None:
+        for tmp in self._tmp_paths():
+            tmp.unlink(missing_ok=True)
+        self._prepared = None
+        self._pending.clear()
+
+    async def index_done_callback(self) -> None:
+        """Flush the pending buffer into the index and sidecar: ``prepare`` then
+        ``commit_prepared`` in one call."""
+        await self.prepare()
+        await self.commit_prepared()
+
+    def _tmp_paths(self) -> tuple[Path, Path]:
+        return (
+            self._index_path.with_suffix(self._index_path.suffix + ".tmp"),
+            self._meta_path.with_suffix(self._meta_path.suffix + ".tmp"),
+        )
 
     def _persist(
         self, index: Any, entries: dict[str, dict[str, Any]], next_int_id: int
     ) -> None:
-        """Write the index and sidecar to temp files, then rename both into place. An ordinary
-        Python exception during either write leaves the previously-committed pair on disk
-        untouched and raises rather than partially writing; the two ``os.replace`` calls below
-        still are not a single transaction (WR-02 — see module docstring), so the sidecar carries
-        a SHA-256 ``index_checksum`` of the index file it is written to accompany, checked back
-        against the on-disk index at the next ``__init__``.
+        """Write the pair to temp files, then rename both into place (``delete_by_ids`` still
+        persists immediately). Runs in a worker thread, so it never assigns instance state."""
+        self._write_staged(index, entries, next_int_id)
+        self._commit_staged()
 
-        Deliberately does not assign ``self._index``/``self._entries``/``self._next_int_id`` —
-        both callers (``index_done_callback``, ``delete_by_ids``) dispatch this method itself off
-        the event loop (WR-03), and assigning here would mutate this store's own instance state
-        from a worker thread; both callers instead assign those attributes back on the event-loop
-        thread once their ``run_in_executor`` call returns.
-        """
-        tmp_index = self._index_path.with_suffix(self._index_path.suffix + ".tmp")
-        tmp_meta = self._meta_path.with_suffix(self._meta_path.suffix + ".tmp")
+    def _write_staged(
+        self, index: Any, entries: dict[str, dict[str, Any]], next_int_id: int
+    ) -> None:
+        """Write the index and sidecar to the ``.tmp`` pair. An ordinary Python exception during
+        either write removes both and raises, so the committed pair stays untouched. The sidecar
+        carries a SHA-256 ``index_checksum`` of the index it accompanies, checked at the next open
+        (WR-02)."""
+        tmp_index, tmp_meta = self._tmp_paths()
         try:
             faiss.write_index(index, str(tmp_index))
             index_checksum = _sha256_of(tmp_index)
@@ -424,11 +470,15 @@ class FaissVectorStore(StorageNameSpace):
             tmp_meta.unlink(missing_ok=True)
             raise
 
+    def _commit_staged(self) -> None:
+        """Two renames, not one transaction (WR-02, module docstring): the sidecar checksum catches
+        a crash between them at the next open."""
+        tmp_index, tmp_meta = self._tmp_paths()
         os.replace(tmp_index, self._index_path)
         os.replace(tmp_meta, self._meta_path)
 
     async def drop_pending_index_ops(self) -> None:
-        self._pending.clear()
+        await self.abort_prepared()
 
     async def drop(self) -> dict[str, str]:
         try:
@@ -538,6 +588,18 @@ class MultiNamespaceVectorStore(StorageNameSpace):
     async def drop_pending_index_ops(self) -> None:
         for child in self._children.values():
             await child.drop_pending_index_ops()
+
+    async def prepare(self) -> None:
+        for child in self._children.values():
+            await child.prepare()
+
+    async def commit_prepared(self) -> None:
+        for child in self._children.values():
+            await child.commit_prepared()
+
+    async def abort_prepared(self) -> None:
+        for child in self._children.values():
+            await child.abort_prepared()
 
     async def drop(self) -> dict[str, str]:
         errors: dict[str, str] = {}

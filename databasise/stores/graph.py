@@ -178,6 +178,7 @@ class CozoGraphStore(StorageNameSpace):
         self._registry_key, self._shared = _ClientRegistry.acquire(self._db_path)
         self._client = self._shared.client
         self._released = False
+        self._prepared_mt: Any = None
         try:
             self._ensure_relations()
         except BaseException:
@@ -385,60 +386,104 @@ class CozoGraphStore(StorageNameSpace):
     # Lifecycle                                                            #
     # ------------------------------------------------------------------ #
 
-    async def index_done_callback(self) -> None:
-        """Flush all four buffers to Cozo in one atomic ``multi_transact``, off-loop."""
-        if not (
+    def _has_pending(self) -> bool:
+        return bool(
             self._pending_node_puts
             or self._pending_edge_puts
             or self._pending_node_rms
             or self._pending_edge_rms
-        ):
-            return
+        )
 
-        node_puts = dict(self._pending_node_puts)
-        edge_puts = dict(self._pending_edge_puts)
-        node_rms = set(self._pending_node_rms)
-        edge_rms = set(self._pending_edge_rms)
+    def _snapshot(self) -> tuple[Any, ...]:
+        """Copies of the four buffers, taken on the loop thread before an executor call."""
+        return (
+            dict(self._pending_node_puts),
+            dict(self._pending_edge_puts),
+            set(self._pending_node_rms),
+            set(self._pending_edge_rms),
+        )
+
+    def _stage(self, snapshot: tuple[Any, ...]) -> Any:
+        """Open a write ``multi_transact`` and run every buffered statement in it, uncommitted
+        (research R3: invisible to plain ``run()`` until commit). Aborts and re-raises on error."""
+        node_puts, edge_puts, node_rms, edge_rms = snapshot
+        mt = self._client.multi_transact(write=True)
+        try:
+            if node_puts:
+                rows = [[nid, attrs] for nid, attrs in node_puts.items()]
+                mt.run("?[id, attrs] <- $rows :put nodes {id => attrs}", {"rows": rows})
+            if edge_puts:
+                rows = [[src, tgt, attrs] for (src, tgt), attrs in edge_puts.items()]
+                mt.run(
+                    "?[src, tgt, attrs] <- $rows :put edges {src, tgt => attrs}",
+                    {"rows": rows},
+                )
+            for node_id in node_rms:
+                mt.run("?[id] <- [[$id]] :rm nodes {id}", {"id": node_id})
+            for src, tgt in edge_rms:
+                mt.run("?[src, tgt] <- [[$s, $t]] :rm edges {src, tgt}", {"s": src, "t": tgt})
+        except Exception:
+            with contextlib.suppress(Exception):
+                mt.abort()
+            raise
+        return mt
+
+    @staticmethod
+    def _commit_or_abort(mt: Any) -> None:
+        """Commit a staged transaction exactly once; a failed commit is aborted (research R10)."""
+        try:
+            mt.commit()
+        except Exception:
+            with contextlib.suppress(Exception):
+                mt.abort()
+            raise
+
+    def _clear_pending(self) -> None:
+        self._pending_node_puts.clear()
+        self._pending_edge_puts.clear()
+        self._pending_node_rms.clear()
+        self._pending_edge_rms.clear()
+
+    async def prepare(self) -> None:
+        """D-07: stage the buffers in an open ``multi_transact``. It holds per-key locks (R6) until
+        ``commit_prepared`` or ``abort_prepared``, so the engine serializes this window."""
+        if not self._has_pending():
+            return
+        loop = asyncio.get_running_loop()
+        self._prepared_mt = await loop.run_in_executor(None, self._stage, self._snapshot())
+
+    async def commit_prepared(self) -> None:
+        mt, self._prepared_mt = self._prepared_mt, None
+        if mt is not None:
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, self._commit_or_abort, mt)  # R4: any thread may commit
+        self._clear_pending()
+
+    async def abort_prepared(self) -> None:
+        mt, self._prepared_mt = self._prepared_mt, None
+        if mt is not None:
+            loop = asyncio.get_running_loop()
+            with contextlib.suppress(Exception):
+                await loop.run_in_executor(None, mt.abort)
+        self._clear_pending()
+
+    async def index_done_callback(self) -> None:
+        """Flush all four buffers to Cozo in one atomic ``multi_transact``, off-loop, under the
+        path's flush lock (direct users; the engine uses prepare/commit under its own lock)."""
+        if not self._has_pending():
+            return
+        snapshot = self._snapshot()
 
         def _do_flush() -> None:
             with self._shared.flush_lock:
-                _flush_locked()
-
-        def _flush_locked() -> None:
-            mt = self._client.multi_transact(write=True)
-            try:
-                if node_puts:
-                    rows = [[nid, attrs] for nid, attrs in node_puts.items()]
-                    mt.run("?[id, attrs] <- $rows :put nodes {id => attrs}", {"rows": rows})
-                if edge_puts:
-                    rows = [[src, tgt, attrs] for (src, tgt), attrs in edge_puts.items()]
-                    mt.run(
-                        "?[src, tgt, attrs] <- $rows :put edges {src, tgt => attrs}",
-                        {"rows": rows},
-                    )
-                for node_id in node_rms:
-                    mt.run("?[id] <- [[$id]] :rm nodes {id}", {"id": node_id})
-                for src, tgt in edge_rms:
-                    mt.run("?[src, tgt] <- [[$s, $t]] :rm edges {src, tgt}", {"s": src, "t": tgt})
-                mt.commit()
-            except Exception:
-                with contextlib.suppress(Exception):
-                    mt.abort()
-                raise
+                self._commit_or_abort(self._stage(snapshot))
 
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, _do_flush)
-
-        self._pending_node_puts.clear()
-        self._pending_edge_puts.clear()
-        self._pending_node_rms.clear()
-        self._pending_edge_rms.clear()
+        self._clear_pending()
 
     async def drop_pending_index_ops(self) -> None:
-        self._pending_node_puts.clear()
-        self._pending_edge_puts.clear()
-        self._pending_node_rms.clear()
-        self._pending_edge_rms.clear()
+        await self.abort_prepared()
 
     async def drop(self) -> dict[str, str]:
         try:
@@ -462,9 +507,16 @@ class CozoGraphStore(StorageNameSpace):
 
     async def finalize(self) -> None:
         """Release this instance's client reference once; idempotent (an engine ``finally`` may run
-        after a partial construction). The last release closes the shared client."""
+        after a partial construction). The last release closes the shared client. A still-open
+        prepared transaction is aborted first: the client must not close under one (research R10)."""
         if self._released:
             return
         self._released = True  # set on the loop thread, so two concurrent finalizes release once
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, _ClientRegistry.release, self._registry_key)
+        try:
+            mt, self._prepared_mt = self._prepared_mt, None
+            if mt is not None:
+                with contextlib.suppress(Exception):
+                    await loop.run_in_executor(None, mt.abort)
+        finally:
+            await loop.run_in_executor(None, _ClientRegistry.release, self._registry_key)
