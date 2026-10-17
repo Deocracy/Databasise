@@ -47,11 +47,13 @@ from databasise.clients.builder import (  # noqa: F401
 )
 # isort: on
 from databasise.identity.canon import canonicalise
+from databasise.parity import import_index
 from databasise.parity.import_index import DEFAULT_STORE_ROOT
 from databasise.parity.import_index import _import_workspace as _parity_workspace
 from databasise.parts.registry import PartRegistry, default_registry
 from databasise.runner import scheduler as _scheduler
 from databasise.runner.trace import RunRecord
+from databasise.store_lock import StoreLockedError, store_lock
 from databasise.stores.graph import CozoGraphStore
 from databasise.stores.kv import SqliteKVStore
 from databasise.stores.vector import MultiNamespaceVectorStore
@@ -241,8 +243,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        result = asyncio.run(run_arm(args.arm, args.query))
-    except MissingParityEnvError as exc:
+        with store_lock(import_index.DEFAULT_STORE_ROOT):  # D-03
+            result = asyncio.run(run_arm(args.arm, args.query))
+    except (StoreLockedError, MissingParityEnvError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
 

@@ -73,6 +73,7 @@ from databasise.parts_core.hipporag.entity_fact_embed import (
 )
 from databasise.runner import scheduler as _scheduler
 from databasise.runner.trace import RunRecord
+from databasise.store_lock import StoreLockedError, store_lock
 from databasise.seam.tokens import assemble_token_breakdown
 from databasise.validator.parse import parse_wiring
 from databasise.wirings.resolve import load_wiring
@@ -335,8 +336,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.parse_args(argv)
 
     try:
-        result = asyncio.run(build_index())
+        with store_lock(import_index.DEFAULT_STORE_ROOT):  # D-03
+            result = asyncio.run(build_index())
     except (
+        StoreLockedError,
         MissingParityEnvError,
         MissingParityEnvKeyError,
         MissingParityLightRAGIndexError,

@@ -54,6 +54,7 @@ import numpy as np
 
 from databasise.namespaces import derive_namespace
 from databasise.parity.corpus import load_snapshot
+from databasise.store_lock import StoreLockedError, store_lock
 from databasise.stores.graph import CozoGraphStore
 from databasise.stores.kv import SqliteKVStore
 from databasise.stores.vector import FaissVectorStore
@@ -511,9 +512,13 @@ def main(argv: list[str] | None = None) -> int:
         return await verify_import(DEFAULT_V1_WORKING_DIR, DEFAULT_STORE_ROOT, workspace)
 
     try:
-        result = asyncio.run(_run())
+        with store_lock(DEFAULT_STORE_ROOT):  # D-03: read at call time, one monkeypatch covers every CLI
+            result = asyncio.run(_run())
     except MissingV1IndexError as exc:
         print(str(exc))
+        return 1
+    except StoreLockedError as exc:
+        print(str(exc), file=sys.stderr)
         return 1
 
     if result.status == "verified":
