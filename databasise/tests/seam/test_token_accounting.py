@@ -6,9 +6,12 @@ named refusal instead of producing any envelope (D-08, §9).
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pydantic
 import pytest
 from databasise.clients.base import ChatResult, EmbeddingResult
+from databasise.clients.openai_compat import OpenAICompatibleClient
 from databasise.runner.trace import TokenAccounting
 from databasise.seam import Databasise, QueryObject
 from databasise.seam._base import _StrictModel
@@ -146,6 +149,33 @@ async def test_an_unbudgetable_participant_raises_the_named_refusal_and_no_envel
     engine = _engine_with(
         synthetic_naive_store, embedding=_UnbudgetableEmbeddingClient(), llm=_StubLLMClient()
     )
+
+    with pytest.raises(UnbudgetableParticipantError):
+        await engine.query(QueryObject(text="anything"))
+
+
+class _NoUsageEmbeddingsEndpoint:
+    """An ``embeddings.create`` double for a provider that omits ``usage`` from its response."""
+
+    async def create(self, **kwargs):
+        return SimpleNamespace(
+            model="stub-embed-model",
+            usage=None,
+            data=[
+                SimpleNamespace(index=i, embedding=[1.0, 0.0, 0.0]) for i in range(len(kwargs["input"]))
+            ],
+        )
+
+
+async def test_a_no_usage_openai_compatible_embedding_makes_query_refuse(synthetic_naive_store):
+    # RUN-02 / D-05: a provider that omits usage is unbudgetable, so /query refuses by name rather
+    # than reporting the real embedding spend as zero.
+    no_usage_client = OpenAICompatibleClient(
+        base_url="http://ignored",
+        model="requested-embed",
+        client=SimpleNamespace(embeddings=_NoUsageEmbeddingsEndpoint()),
+    )
+    engine = _engine_with(synthetic_naive_store, embedding=no_usage_client, llm=_StubLLMClient())
 
     with pytest.raises(UnbudgetableParticipantError):
         await engine.query(QueryObject(text="anything"))

@@ -251,3 +251,65 @@ async def test_15_embed_handed_ordinary_non_empty_strings_still_reaches_the_prov
     assert result.resolved_model_identity == "embed-model"
     assert stub.embeddings.captured_kwargs is not None
     assert stub.embeddings.captured_kwargs["input"] == ["one text", "another text"]
+
+
+# --------------------------------------------------------------------------------------------- #
+# 08-02-PLAN.md Task 1 (RUN-02, D-05): a response with no usage is one unbudgetable call, never a
+# real spend recorded as zero. Present usage (even all zero) keeps counting by the resolved model.
+# --------------------------------------------------------------------------------------------- #
+
+
+def _no_usage(response: Any) -> Any:
+    response.usage = None
+    return response
+
+
+async def test_16_a_chat_response_with_no_usage_counts_one_unbudgetable_call():
+    from databasise.seam.tokens import UNBUDGETABLE_SENTINEL
+
+    stub = _StubOpenAIClient(chat_response=_no_usage(_chat_response(model="served-model")))
+    client = OpenAICompatibleClient(base_url="http://ignored", model="requested-model", client=stub)
+
+    result = await client.chat([{"role": "user", "content": "hi"}])
+
+    assert result.tokens.call_count == 1
+    assert result.tokens.counted_by == "unbudgetable" == UNBUDGETABLE_SENTINEL
+    assert (result.tokens.prompt_tokens, result.tokens.completion_tokens) == (0, 0)
+    assert result.tokens.cached_read_tokens == 0
+
+
+async def test_17_an_embed_response_with_no_usage_counts_one_unbudgetable_call():
+    stub = _StubOpenAIClient(embedding_response=_no_usage(_embedding_response(model="embed-model")))
+    client = OpenAICompatibleClient(base_url="http://ignored", model="requested-embed", client=stub)
+
+    result = await client.embed(["one text"])
+
+    assert result.tokens.call_count == 1
+    assert result.tokens.counted_by == "unbudgetable"
+    assert (result.tokens.prompt_tokens, result.tokens.completion_tokens) == (0, 0)
+    assert result.tokens.cached_read_tokens == 0
+
+
+async def test_18_a_present_all_zero_usage_still_counts_by_the_resolved_model():
+    response = _chat_response(model="served-model")
+    response.usage = SimpleNamespace(prompt_tokens=0, completion_tokens=0, prompt_tokens_details=None)
+    stub = _StubOpenAIClient(chat_response=response)
+    client = OpenAICompatibleClient(base_url="http://ignored", model="requested-model", client=stub)
+
+    result = await client.chat([{"role": "user", "content": "hi"}])
+
+    assert result.tokens.call_count == 1
+    assert result.tokens.counted_by == "served-model"
+
+
+async def test_19_a_usage_with_none_prompt_tokens_reports_zero_and_one_call():
+    response = _chat_response(model="served-model")
+    response.usage = SimpleNamespace(prompt_tokens=None, completion_tokens=3, prompt_tokens_details=None)
+    stub = _StubOpenAIClient(chat_response=response)
+    client = OpenAICompatibleClient(base_url="http://ignored", model="requested-model", client=stub)
+
+    result = await client.chat([{"role": "user", "content": "hi"}])
+
+    assert result.tokens.prompt_tokens == 0
+    assert result.tokens.completion_tokens == 3
+    assert result.tokens.call_count == 1
