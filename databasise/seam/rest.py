@@ -101,6 +101,7 @@ from databasise.seam.envelope import PromotionResult, ResponseEnvelope
 from databasise.seam.evidence import EvidenceRef
 from databasise.seam.query import QueryObject
 from databasise.seam.refusals import (
+    ForeignEngineRefusalError,
     MalformedSelectorPayloadError,
     SeamRefusalError,
     UnknownGenerationVersionError,
@@ -126,7 +127,15 @@ _NOT_FOUND_REFUSALS: tuple[type[SeamRefusalError], ...] = (
 )
 
 
+# A ForeignEngineRefusalError is a machine fault, never a caller refusal (09-05-PLAN.md, SEAM-05,
+# SEAM-06, D-04): 502 when the v1 run fails or returns malformed output, 503 when v1 is unavailable
+# (missing interpreter, timeout). A consumer is never told to change input that was not at fault.
+_ENGINE_UNAVAILABLE = frozenset({"MissingV1InterpreterError", "CorpusOpTimeoutError"})
+
+
 def _status_for(exc: SeamRefusalError) -> int:
+    if isinstance(exc, ForeignEngineRefusalError):
+        return 503 if exc.failure_class in _ENGINE_UNAVAILABLE else 502
     return 404 if isinstance(exc, _NOT_FOUND_REFUSALS) else 422
 
 

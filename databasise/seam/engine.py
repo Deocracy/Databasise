@@ -143,6 +143,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import uuid
 from collections.abc import AsyncIterator, Iterator, Sequence
 from pathlib import Path
@@ -228,6 +229,21 @@ from databasise.wirings.resolve import wiring_family
 # named only LightRAG's own two corpus wirings — the node id each operation targets is now read
 # off the resolved corpus wiring's own consumes_documents[0]/provides[0], never a module constant.
 _WIRINGS_ROOT = Path(__file__).resolve().parent.parent / "wirings"
+
+logger = logging.getLogger(__name__)
+
+
+def _foreign_fault(
+    operation: str, cause: BaseException, *, failure_class: str | None = None
+) -> ForeignEngineRefusalError:
+    """09-05-PLAN.md (SEAM-05, D-04): the one place a foreign-engine fault is built and logged. The
+    full cause (stderr, traceback) goes to the server log exactly once; the returned refusal carries
+    it privately and exposes only the operation and the allow-listed ``failure_class``."""
+    refusal = ForeignEngineRefusalError(operation=operation, cause=cause, failure_class=failure_class)
+    logger.error(
+        "foreign engine fault: operation=%s failure_class=%s", operation, refusal.failure_class, exc_info=cause
+    )
+    return refusal
 
 # v1's own docs_format vocabulary (lightrag.constants.FULL_DOCS_FORMAT_RAW/_PENDING_PARSE),
 # duplicated as bare string literals here rather than imported — databasise/tools/
@@ -392,12 +408,11 @@ def _node_result_or_refuse(scheduled: dict[str, Any], node_id: str, operation: s
     """
     node_exception = scheduled.get("node_exceptions", {}).get(node_id)
     if node_exception is not None:
-        raise ForeignEngineRefusalError(operation=operation, cause=node_exception) from node_exception
+        raise _foreign_fault(operation, node_exception) from node_exception
     result = scheduled["results"].get(node_id)
     if result is None:
-        raise ForeignEngineRefusalError(
-            operation=operation,
-            cause=RuntimeError(f"the {operation!r} node produced no result and no exception"),
+        raise _foreign_fault(
+            operation, RuntimeError(f"the {operation!r} node produced no result and no exception")
         )
     return result
 

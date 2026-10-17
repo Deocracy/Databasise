@@ -34,16 +34,14 @@ def refusal_body(exc: SeamRefusalError) -> dict[str, Any]:
     """The one refusal body both transports return (09-01-PLAN.md, SEAM-02/D-01): the refusal's
     class name, its message, and every public attribute off ``vars(exc)``. A leading-underscore
     attribute is never exposed (CR-03: ``UnbudgetableParticipantError._internal_node_id`` is the
-    machine's own node id). A ``BaseModel`` value is dumped; an exception value is stringified
-    (``ForeignEngineRefusalError.cause``) since neither is JSON-serializable as-is."""
+    machine's own node id; ``ForeignEngineRefusalError._cause`` is the foreign engine's stderr).
+    A ``BaseModel`` value is dumped."""
     body: dict[str, Any] = {"refusal_type": type(exc).__name__, "message": str(exc)}
     for key, value in vars(exc).items():
         if key.startswith("_"):
             continue
         if isinstance(value, BaseModel):
             value = value.model_dump()
-        elif isinstance(value, BaseException):
-            value = str(value)
         body[key] = value
     return body
 
@@ -631,19 +629,44 @@ class UnbudgetableParticipantError(SeamRefusalError):
         super().__init__("a participant is admitted unbudgetable; no token comparison may include it")
 
 
+# The public vocabulary of ``ForeignEngineRefusalError.failure_class`` (D-04). Keyed by the cause's
+# type name so this module imports nothing from ``databasise.foreign``; any other cause type is
+# ``UnclassifiedEngineFailure``, never its own class name (an unknown class name could be sensitive).
+_FOREIGN_FAILURE_CLASSES: dict[str, str] = {
+    "MissingV1InterpreterError": "MissingV1InterpreterError",
+    "CorpusOpSubprocessError": "CorpusOpSubprocessError",
+    "CorpusOpTimeoutError": "CorpusOpTimeoutError",
+    "JSONDecodeError": "MalformedDriverOutput",
+}
+
+
 class ForeignEngineRefusalError(SeamRefusalError):
-    """The seam-facing wrapper for a foreign-engine subprocess failure
-    (``databasise.foreign.CorpusOpSubprocessError``/``CorpusOpTimeoutError``) — so
-    ``rest.py``'s existing generic ``SeamRefusalError`` handler maps it without a new
-    endpoint-level branch. ``operation`` names the seam operation that was attempted (e.g.
-    ``"ingest"``); ``cause`` carries the underlying foreign-engine exception. The message never
-    enumerates this machine's own wirings, arms or node ids, per this module's own docstring rule.
+    """A machine fault, not a caller refusal (09-05-PLAN.md, SEAM-05, D-04): the foreign (v1) engine
+    failed, was unavailable, or returned malformed output. ``operation`` names the seam operation
+    that was attempted (e.g. ``"ingest"``); ``failure_class`` is the allow-listed public name of
+    what went wrong. REST answers 502 (the run failed or returned malformed output) or 503 (v1 is
+    unavailable) by ``failure_class``.
+
+    The underlying exception is private: stored on ``_cause`` (so ``refusal_body`` never exposes it),
+    readable in-process through the read-only ``cause`` property, and logged in full by the engine
+    (``databasise.seam.engine._foreign_fault``). The message names only the operation and the failure
+    class, never stderr, a traceback, a server path or an env-var name; no flag exposes the cause
+    while seam authentication is undecided.
     """
 
-    def __init__(self, *, operation: str, cause: BaseException):
+    def __init__(self, *, operation: str, cause: BaseException, failure_class: str | None = None):
         self.operation = operation
-        self.cause = cause
-        super().__init__(f"the foreign engine refused operation {operation!r}: {cause}")
+        self.failure_class = failure_class or _FOREIGN_FAILURE_CLASSES.get(
+            type(cause).__name__, "UnclassifiedEngineFailure"
+        )
+        self._cause = cause
+        super().__init__(
+            f"ForeignEngineRefusalError: the foreign engine failed operation {operation!r} ({self.failure_class})"
+        )
+
+    @property
+    def cause(self) -> BaseException:
+        return self._cause
 
 
 __all__ = [
