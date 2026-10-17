@@ -1,20 +1,20 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Engine Fixes + Operator Console
 current_phase: 09
 current_phase_name: Inputs, Errors & Security
 status: executing
-stopped_at: Completed 09-08-PLAN.md
-last_updated: "2026-10-17T09:01:04.904Z"
+stopped_at: Completed 09-09-PLAN.md
+last_updated: "2026-10-17T09:09:59.084Z"
 last_activity: 2026-10-16
 last_activity_desc: Phase 09 execution started
-state_head: 5ebbec6f86b37efe1dc5e597ba34a6318571c250
+state_head: b5153e4c72b59cbe6bedad16a1ef9dc301790de9
 progress:
   total_phases: 11
   completed_phases: 1
   total_plans: 20
-  completed_plans: 18
+  completed_plans: 19
   percent: 9
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-16 after Phase 8)
 ## Current Position
 
 Phase: 09 (Inputs, Errors & Security) — EXECUTING
-Plan: 9 of 10
+Plan: 10 of 10
 Status: Ready to execute
 Last activity: 2026-10-16 — Phase 09 execution started
 
@@ -78,6 +78,7 @@ Progress: [█░░░░░░░░░] 9% (1/11 phases)
 | Phase 09 P06 | 20 min | 2 tasks | 10 files |
 | Phase 09 P07 | 15 min | 2 tasks | 7 files |
 | Phase 09 P08 | 25 min | 2 tasks | 7 files |
+| Phase 09 P09 | 20 min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -115,6 +116,7 @@ Recent decisions affecting current work:
 - [Phase 09]: SEAM-10: Selector(capability=[]) is refused in resolve_selector and render_selector_key, not in Selector's validator, so construction still succeeds and every selector route is covered
 - [Phase 09]: SEAM-12: Databasise.promote refuses an empty or hash-shaped alias with one InvalidPromotionAliasError using Selector's own _INSTANCE_HASH_PATTERN, before trace resolution and any ledger write
 - [Phase 09]: 09-08 SEAM-11: compare checks every key (comparison_keys) before resolving any selector, resolves each once and executes the resolved wiring via _execute_resolved; keys stay unprefixed, envelope vs map is told by the number of selectors sent (D-09, D-10)
+- [Phase 09]: D-11 discard-and-document for SEAM-15: file_name/content_type documented as not stored; citation carry-through deferred to M-04 (Phase 11)
 
 ### Pending Todos
 
@@ -156,8 +158,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-17T09:01:04.859Z
-Stopped at: Completed 09-08-PLAN.md
+Last session: 2026-10-17T09:09:59.019Z
+Stopped at: Completed 09-09-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

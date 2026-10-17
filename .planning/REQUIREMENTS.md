@@ -108,7 +108,7 @@
 - [x] **SEAM-14**: Every concrete SeamRefusalError subclass that a transport can return is exported from one refusal catalogue (refusals.__all__ or a documented re-export list). This includes NoRawUploadPathForModalityError, UnknownTraceReferenceError, UnresolvableEvidenceReferenceError, UnbudgetableParticipantError and every refusal added in this phase, so a typed client generated from the catalogue covers every refusal_type.
   - Test: tests/seam/test_refusal_catalogue.py imports databasise.seam and databasise.mcp, walks SeamRefusalError.__subclasses__() recursively, and asserts that every class name is in the catalogue export list. Fails today on NoRawUploadPathForModalityError and on the three refusals defined outside refusals.py.
   - Defects: seam-rest/SEAM-20, contract/D-16
-- [ ] **SEAM-15**: An ingest's file_name is either carried through to the v1 document record, so citations name the uploaded file instead of '<document_id>.bin' or 'unknown_source', or the corpus.py module docstring, the IngestDocument docstring and the REST/MCP field descriptions state that file_name and content_type are discarded.
+- [x] **SEAM-15**: An ingest's file_name is either carried through to the v1 document record, so citations name the uploaded file instead of '<document_id>.bin' or 'unknown_source', or the corpus.py module docstring, the IngestDocument docstring and the REST/MCP field descriptions state that file_name and content_type are discarded.
   - Test: tests/seam/test_ingest_file_name.py: if file_name is carried, ingest with file_name 'report.pdf' and assert that the v1 job payload's file_paths contains 'report.pdf'. If it is discarded, assert that the IngestDocument field descriptions in the OpenAPI schema contain the documented 'not stored' wording and that corpus.py no longer says 'carried into the job payload for citation'. Fails today in both cases: the payload carries only '<id>.bin' or 'unknown_source', while the docstring says the name is carried.
   - Defects: doc-audit-3/D9
   - Owner decision first: Whether ingest stores file_name and content_type as citation metadata (this requires a change on the LightRAG write path, M-04, which belongs to another phase) or drops them and documents that.
@@ -842,7 +842,7 @@ These fail today.
 | SEAM-12 | Phase 9 | Complete |
 | SEAM-13 | Phase 9 | Complete |
 | SEAM-14 | Phase 9 | Complete |
-| SEAM-15 | Phase 9 | Pending |
+| SEAM-15 | Phase 9 | Complete |
 | SEAM-16 | Phase 9 | Pending |
 | STOR-01 | Phase 10 | Pending |
 | STOR-02 | Phase 10 | Pending |
