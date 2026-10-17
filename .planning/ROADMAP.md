@@ -120,7 +120,7 @@ Plans:
 
 ### Phase 9: Inputs, Errors & Security
 
-**Goal**: Every caller-facing failure on REST and MCP is a named refusal in one documented shape, and no caller input reaches the disk, a store or a node before it is validated
+**Goal**: Every caller-facing failure on REST and MCP is a named refusal in one documented shape, and no caller input reaches the disk, a store or a node before it is validated (the Phase 8 launcher transport guards keep their own shape; owner-ratified D-13)
 **Depends on**: Phase 8
 **Requirements**: SEAM-01, SEAM-02, SEAM-03, SEAM-04, SEAM-05, SEAM-06, SEAM-07, SEAM-08, SEAM-09, SEAM-10, SEAM-11, SEAM-12, SEAM-13, SEAM-14, SEAM-15, SEAM-16
 **Success Criteria** (what must be TRUE):
