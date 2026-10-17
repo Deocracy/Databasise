@@ -214,8 +214,14 @@ def test_databasise_mcp_passes_each_transport_to_the_server_run_method(transport
         "--port", "8123",
     ]  # fmt: skip
     assert serve_mcp.main(argv) == 0
-    expected = {} if transport == "stdio" else {"host": "127.0.0.1", "port": 8123}
-    assert calls == [(transport, expected)]
+    assert [name for name, _ in calls] == [transport]
+    kwargs = dict(calls[0][1])
+    if transport == "stdio":
+        assert kwargs == {}
+        return
+    security = kwargs.pop("transport_security")  # DNS-rebinding settings (08-08 addendum)
+    assert security.enable_dns_rebinding_protection is True
+    assert kwargs == {"host": "127.0.0.1", "port": 8123}
 
 
 def test_example_mcp_config_invokes_databasise_mcp_over_stdio():

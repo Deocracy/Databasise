@@ -32,13 +32,20 @@ def build_parser() -> argparse.ArgumentParser:
 
 def build_app(args: argparse.Namespace, clients: dict[str, Any] | None):
     from databasise.seam.rest import create_app
+    from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-    return create_app(
+    app = create_app(
         store_root=args.store_root,
         workspace=args.workspace,
         clients=clients,
         cors_origins=args.cors_origin or (),
     )
+    # DNS-rebinding guard, launcher-only so create_app keeps accepting any Host. Starlette compares the
+    # Host header up to its first ":", so ports are moot and every bracketed IPv6 literal reduces to "[";
+    # an IP literal cannot be rebound, so that is accepted.
+    allowed = ["localhost", "127.0.0.1", "[", args.host.strip("[]")]
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed)
+    return app
 
 
 def main(argv: list[str] | None = None) -> int:

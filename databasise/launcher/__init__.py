@@ -8,6 +8,7 @@ prints an env-file value; refusals name keys only (RUN-05).
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import os
 import sys
 from pathlib import Path
@@ -25,6 +26,9 @@ from databasise.store_lock import StoreLockedError, acquire_store_lock
 
 # The REST app has no authentication, so never bind all interfaces by default.
 DEFAULT_HOST = "127.0.0.1"
+# Host names always accepted in a Host header: the seam is a local surface (DNS-rebinding guard).
+LOOPBACK_HOST_NAMES = ("localhost", "127.0.0.1", "[::1]")
+
 # The literal RUN-06 names, the only populated store. Equals import_index._import_workspace() for the
 # committed snapshot; hard-coded so serving the store never depends on the snapshot verifying.
 DEFAULT_WORKSPACE = "shared-4fab18fef508b7bc3dda1cc2d8f12e36"
@@ -47,11 +51,40 @@ def add_engine_arguments(parser: argparse.ArgumentParser, *, default_port: int) 
     parser.add_argument("--no-clients", action="store_true")
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", type=int, default=default_port)
+    parser.add_argument(
+        "--allow-remote-unauthenticated",
+        action="store_true",
+        help="bind a non-loopback --host although the seam has no authentication",
+    )
+
+
+def is_loopback_host(host: str) -> bool:
+    """True for ``localhost`` and any 127.0.0.0/8 or ``::1`` address literal (brackets allowed)."""
+    name = host.strip("[]")
+    if name == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(name).is_loopback
+    except ValueError:
+        return False
+
+
+def bracketed(host: str) -> str:
+    """The form a Host header carries: an IPv6 literal gets brackets."""
+    name = host.strip("[]")
+    return f"[{name}]" if ":" in name else name
 
 
 def check_engine_arguments(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
     if args.env_file is None and not args.no_clients:
         parser.error("--env-file is required unless --no-clients is given (D-11)")
+    # stdio (the MCP launcher only) opens no port; every other launch binds --host:--port.
+    binds_a_port = getattr(args, "transport", None) != "stdio"
+    if binds_a_port and not args.allow_remote_unauthenticated and not is_loopback_host(args.host):
+        parser.error(
+            f"--host {args.host} is not a loopback address and the seam has no authentication; "
+            "bind 127.0.0.1, or pass --allow-remote-unauthenticated to accept that"
+        )
 
 
 def open_engine(args: argparse.Namespace) -> tuple[int, dict[str, Any] | None]:
