@@ -326,7 +326,7 @@ Parse failures of a well-formed-JSON-but-wrong-shape result (`DocumentStatusEntr
 - **Catching `ValueError` broadly around the read-op parse**: swallows `UnknownJobError` (a `SeamRefusalError(ValueError)`).
 - **Resolving selectors in `rest.py`/`mcp/`**: the AST tests forbid *calling* any name in `selectors.__all__` minus `Selector`, any name in `redact.__all__`, and `ResponseEnvelope` (`tests/seam/test_rest_transport.py:195-200`, `tests/mcp/test_tool_growth_invariant.py:224-232`). Do not add new names to those two `__all__` lists that a transport would call.
 - **`re.match` with `$`** for ids/namespaces: `$` matches before a trailing `\n`. Use `fullmatch`.
-- **Keeping `document.document_id or uuid4().hex`**: an explicit `document_id=''` is silently replaced by a generated id; test `is None` instead so `''` is refused.
+- **Keeping `document.document_id or uuid4().hex`**: an explicit `document_id=''` is silently replaced by a generated id; test `is None` instead so `''` is refused (D-12: only a blank upload form field is normalised to `None`, in the upload route).
 
 ## Requirement implementation map
 
@@ -352,7 +352,7 @@ Line numbers are HEAD as of this session. `[VERIFIED: files read this session]`
 
 ### R-07 SEAM-07 ingest ids and size
 - `corpus.py:56` `_DOCUMENT_ID_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]+$")` used with `.match` at `corpus.py:221`: change to `fullmatch`, and raise `InvalidDocumentIdError(document_id=...)` from `generated_on_disk_name` itself (it is a `SeamRefusalError`, hence still a `ValueError` for `tests/parts_core/lightrag/test_full_ingest.py:353-359`). `engine.py:683` (ingest, currently an uncaught `ValueError` -> 500) and `engine.py:801-804` (delete wraps it as `UnknownDocumentError`) then share one raise; drop the delete wrapper. `UnknownDocumentError` stays in the catalogue (its docstring becomes "well-formed id that does not exist"; nothing raises it today, since v1 reports `not_found` as a normal outcome).
-- `document.document_id or uuid.uuid4().hex` (`engine.py:679`) stays: per D-12 (added at plan-check iteration 1) an empty `document_id` means absent and gets a minted id; only a non-empty malformed id is refused.
+- `document.document_id or uuid.uuid4().hex` (`engine.py:679`) becomes an `is None` test: per D-12 (revised at plan-check iteration 2) a caller-supplied `''` on POST /documents or MCP ingest reaches `generated_on_disk_name` and is refused as `InvalidDocumentIdError`, as SEAM-07(b) states. Only the upload route normalises a blank `document_id` form field (exactly `''`) to `None` at the form-parsing boundary (`document_id=document_id or None` in the `IngestDocument(...)` call), so the server mints the id there.
 - Upload oversize: caused by the unhandled `ValidationError` at `rest.py:364`; the pydantic handler from R-02 maps it to `OversizedDocumentError`. Starlette spools multipart uploads to a temp file before the route runs; the app has no body-size limit by design (`rest.py` exposure note) - out of scope (Open Question 9). `await file.read()` could cheaply become `file.read(MAX_DOCUMENT_BYTES + 1)`, optional.
 
 ### R-08 SEAM-08 page bounds
