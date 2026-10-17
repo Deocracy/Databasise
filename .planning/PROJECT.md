@@ -48,7 +48,7 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 <!-- v1.1 scope: REQUIREMENTS.md carries the full list with REQ-IDs. -->
 
 - [ ] Engine defects in CODEBASE-MAP.md section 4 fixed, each with a test that failed first (F1 to F8)
-- [ ] Engine runnable as a served process: launcher, model clients, CORS decision, one worker per store
+- [x] Engine runnable as a served process: launcher, model clients, CORS decision, one worker per store — Phase 8 (RUN-11 live measurement in TESTING-PLAN.md)
 - [ ] Operator read routes for the console (aliases, history, traces, info, wirings, chunks, graph)
 - [ ] Operator console GUI: mockup, then connected to the live REST API
 
@@ -110,6 +110,9 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 | Close v1.0 with MACH-03 and MODAL-01 open under the gate amendments rather than insert a closure phase | Both gaps are owner decisions (spend, human judgment), not code; a phase would only re-record the decline. Owner testing tracked outside phases in `TESTING-PLAN.md` | — Pending (resolves when the owner runs the A/A calibration or records the §5 causes) |
 | v1.1: fix all engine defects before GUI work; operator console as a §18 REST client | Two independent re-checks found 12 defects that stop a GUI working at all (no launcher, no clients, ingest never reaches queried stores, promote 500s) and 70 more; a GUI on a broken engine would hide them | — Pending |
 | v1.1: run with GSD + BAK (ledger rows per requirement, ≤20 per phase, commit trailers) | The scope grew from "make a GUI" to ~85 defects plus the console; ledger-tracked requirements stop items being dropped silently | — Pending |
+| v1.1 Phase 8: rerank client mirrors LightRAG v1 bindings (cohere/jina/aliyun via RERANK_BINDING); identity falls back to the configured RERANK_MODEL when the server reports none | Owner: "use a reranker the same way lightrag uses it"; a rerank-scoped exception to the hash-what-is-installed identity rule, LLM/embedding stay strict | — Pending (live rerank test owner-deferred) |
+| v1.1 Phase 8: launchers bind loopback only and guard writes — wildcard binds refused, foreign-Origin state-changing requests 403, DNS-rebinding Host checks; seam auth still undecided | Code review reproduced a cross-site write to the unauthenticated loopback app; these close exposure without settling the CONN-phase auth decision | ✓ Good (owner-approved 2026-10-16) |
+| v1.1 Phase 8: live measurements run only for debugging, after the build | Owner: "we dont need to run any of those mesherment untill everthing is build"; RUN-11 threshold stays 0.999 until then | — Pending (TESTING-PLAN.md §2) |
 | Close the operator verbs' check-then-act races with one `BEGIN IMMEDIATE` span per verb plus a UNIQUE `(alias, minted_version)` index | A guard read and the append it gates must commit together or the guard goes stale under concurrency; the schema constraint backstops it independently of any Python read path | ✓ Held (G-07-1 closed; 40/40 concurrency runs, full suite green) |
 
 ## Evolution
@@ -130,4 +133,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-14 at v1.1 milestone start*
+*Last updated: 2026-10-16 after Phase 8*

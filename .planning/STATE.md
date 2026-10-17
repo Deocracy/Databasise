@@ -22,10 +22,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-14 at v1.1 milestone start)
+See: .planning/PROJECT.md (updated 2026-10-16 after Phase 8)
 
 **Core value:** Modalities are swappable without consumers noticing — LightRAG and HippoRAG 2 both live behind one unchanging §18 envelope, comparable side-by-side on the rig.
-**Current focus:** Phase 08 — Run the Engine
+**Current focus:** Phase 9 — Inputs, Errors & Security
 
 ## Current Position
 
@@ -34,7 +34,7 @@ Plan: Not started
 Status: Ready to plan
 Last activity: 2026-10-16 — Phase 08 complete, transitioned to Phase 9
 
-Progress: [█░░░░░░░░░] 9% (0/11 phases)
+Progress: [█░░░░░░░░░] 9% (1/11 phases)
 
 ## Performance Metrics
 
@@ -105,6 +105,8 @@ None yet.
 - Overlapping requirements across phases: STOR-06/HIPP-03 (ingest abort commits nothing), STOR-03/STOR-07/WIRE-14 (evidence-resolve and delete store construction), STOR-04/LRAG-13/LRAG-14/HIPP-15 (health), SEAM-08/LRAG-05 (page lower bounds), SEAM-12/LEDG-05 (promote alias validation), HIPP-04/WIRE-14 (real failing-node exception), WIRE-11/TOOL-12 (cache_hit None). The later phase's regression test may already pass on arrival; record it as satisfied by the earlier commit instead of fabricating a failing-first run.
 - GUI-04, GUI-05 and CONN-03 hard-code hybrid and global as unreachable; WIRE-01 (Phase 13) makes every arm reachable, so those fixtures and the §3.0 table must be regenerated from the post-WIRE-01 resolution rules.
 - ⚠️ [v1.0 Phase 07 WR-03] `sqlite3.connect()` sets no explicit `timeout=` and a lock-timeout `OperationalError` is not wrapped into a `SeamRefusalError`. Relevant to LEDG-06 (Phase 14).
+- [Phase 08] Ledger test files for RUN-01..RUN-10 and RUN-12 are now protected: Phase 9+ edits to test_rest_corpus_endpoints.py, test_openai_compat.py, test_launchers.py etc. need the owner's grant-check-edit. RUN-11 test_ref and RUN-02..08 record-fail (BASE = parent of the first (08-NN) commit) remain owner steps.
+- [Phase 08] `v1/.env.teachers` is untracked and not gitignored; move or ignore it before any record-fail run.
 - Cozo 0.7.6 is architecture-frozen with four known correctness bugs and no upstream fixes expected; relevant to STOR-01 and STOR-10 (Phase 10).
 
 ### Quick Tasks Completed
@@ -140,4 +142,5 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Discuss Phase 8 with /gsd-discuss-phase 8 (settles the RUN owner decisions), then /gsd-plan-phase 8
+- Phase 9 (Inputs, Errors & Security) is next in the autonomous run
+- Owner, when ready: TESTING-PLAN.md §2 RUN-11 live runs, parity-env check, optional live rerank test
