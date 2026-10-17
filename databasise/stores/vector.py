@@ -40,6 +40,12 @@ Metadata sidecar: the Faiss index and a ``.meta.json`` sidecar both live inside 
 namespace directory (``<store_root>/<workspace>/<namespace>/``), matching D-07's
 one-directory-per-namespace layout — the same layout ``stores/kv.py`` and ``stores/graph.py``
 already use.
+
+Committed-snapshot cache (D-05, STOR-03): every committed-state read goes through
+:func:`load_committed`, a bounded process-level cache of read-only snapshots keyed on the resolved
+directory plus ``(st_ino, st_mtime_ns, st_size)`` of both files. ``os.replace`` gives each commit a
+new inode, so a flush invalidates the key with no hook. The cache holds snapshots, never store
+objects: writers build their own ``FaissVectorStore`` and clone the index before changing it.
 """
 
 from __future__ import annotations
@@ -48,9 +54,12 @@ import asyncio
 import hashlib
 import json
 import os
-from collections.abc import Iterator
+import threading
+from collections import OrderedDict
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any
 
 import numpy as np
@@ -94,6 +103,90 @@ def _sha256_of(path: Path) -> str:
     return digest.hexdigest()
 
 
+_Signature = tuple[tuple[int, int, int], tuple[int, int, int]]
+
+
+@dataclass(frozen=True)
+class _Committed:
+    """A read-only committed snapshot of one namespace, shared by every reader (D-05). ``entries``
+    is a ``MappingProxyType``; writers copy it and clone ``index`` before any change."""
+
+    index: Any
+    entries: Mapping[str, dict[str, Any]]
+    next_int_id: int
+    dim: int
+    signature: _Signature
+
+
+# shortcut: fixed LRU of 32 snapshots, make it configurable if a deployment serves more namespaces
+_SNAPSHOT_CACHE_SIZE = 32
+_SNAPSHOT_CACHE: OrderedDict[tuple[str, _Signature], _Committed] = OrderedDict()
+_SNAPSHOT_LOCK = threading.Lock()
+
+
+def _stat_signature(path: Path) -> tuple[int, int, int] | None:
+    try:
+        st = path.stat()
+    except FileNotFoundError:
+        return None
+    return (st.st_ino, st.st_mtime_ns, st.st_size)
+
+
+def _read_snapshot(index_path: Path, meta_path: Path, signature: _Signature) -> _Committed:
+    with meta_path.open("r", encoding="utf-8") as f:
+        meta = json.load(f)
+    expected_checksum = meta.get("index_checksum")
+    actual_checksum = _sha256_of(index_path)
+    if expected_checksum != actual_checksum:
+        raise VectorStoreCorruptedError(index_path, expected_checksum, actual_checksum)
+    index = faiss.read_index(str(index_path))
+    return _Committed(
+        index=index,
+        entries=MappingProxyType(meta["entries"]),
+        next_int_id=meta["next_int_id"],
+        dim=index.d,
+        signature=signature,
+    )
+
+
+def load_committed(dir_path: Path) -> _Committed | None:
+    """The committed snapshot of the namespace directory ``dir_path``, or ``None`` when neither file
+    exists. Never creates a directory. A hit costs two ``stat`` calls; a miss reads the sidecar,
+    hashes and reads the index, then stats again: a signature that changed during the read (a reader
+    inside another writer's two-rename window, research Pitfall 4) is retried once, then refused as
+    ``VectorStoreCorruptedError``."""
+    dir_path = Path(dir_path).resolve()
+    index_path, meta_path = dir_path / "vector.faiss", dir_path / "vector.meta.json"
+    error: VectorStoreCorruptedError | None = None
+    for _attempt in range(2):
+        index_sig, meta_sig = _stat_signature(index_path), _stat_signature(meta_path)
+        if index_sig is None or meta_sig is None:
+            return None
+        signature: _Signature = (index_sig, meta_sig)
+        key = (str(dir_path), signature)
+        with _SNAPSHOT_LOCK:
+            hit = _SNAPSHOT_CACHE.get(key)
+            if hit is not None:
+                _SNAPSHOT_CACHE.move_to_end(key)
+                return hit
+        try:
+            snapshot, error = _read_snapshot(index_path, meta_path, signature), None
+        except VectorStoreCorruptedError as exc:
+            snapshot, error = None, exc
+        if (_stat_signature(index_path), _stat_signature(meta_path)) != signature:
+            continue
+        if snapshot is None:
+            raise error  # type: ignore[misc]
+        with _SNAPSHOT_LOCK:
+            for stale in [k for k in _SNAPSHOT_CACHE if k[0] == key[0]]:
+                del _SNAPSHOT_CACHE[stale]
+            _SNAPSHOT_CACHE[key] = snapshot
+            while len(_SNAPSHOT_CACHE) > _SNAPSHOT_CACHE_SIZE:
+                _SNAPSHOT_CACHE.popitem(last=False)
+        return snapshot
+    raise error or VectorStoreCorruptedError(index_path, None, "<changed while being read>")
+
+
 @dataclass
 class _PendingVectorDoc:
     """A buffered upsert awaiting flush into the Faiss index. ``vector`` is already an
@@ -121,9 +214,9 @@ class FaissVectorStore(StorageNameSpace):
         self._prepared: tuple[Any, dict[str, dict[str, Any]], int] | None = None
         self._dim: int | None = None
         self._index: Any = None
-        self._entries: dict[str, dict[str, Any]] = {}
+        self._entries: Mapping[str, dict[str, Any]] = {}
         self._next_int_id: int = 0
-        self._loaded_signature = self._committed_signature()
+        self._loaded_signature: _Signature | None = None
         self._read_committed()
 
     def _committed_signature(self) -> tuple[tuple[int, int, int], ...] | None:
@@ -136,20 +229,16 @@ class FaissVectorStore(StorageNameSpace):
         return tuple((st.st_ino, st.st_mtime_ns, st.st_size) for st in stats)
 
     def _read_committed(self) -> None:
-        """Load the committed index, entries and next id, refusing a torn pair (WR-02)."""
-        if not (self._index_path.exists() and self._meta_path.exists()):
+        """Adopt the committed snapshot from :func:`load_committed` (shared, read-only, D-05),
+        refusing a torn pair (WR-02)."""
+        snapshot = load_committed(self._dir)
+        if snapshot is None:
+            self._index, self._entries, self._next_int_id = None, {}, 0
+            self._loaded_signature = None
             return
-        with self._meta_path.open("r", encoding="utf-8") as f:
-            meta = json.load(f)
-        expected_checksum = meta.get("index_checksum")
-        actual_checksum = _sha256_of(self._index_path)
-        if expected_checksum != actual_checksum:
-            raise VectorStoreCorruptedError(self._index_path, expected_checksum, actual_checksum)
-
-        self._index = faiss.read_index(str(self._index_path))
-        self._dim = self._index.d
-        self._entries = meta["entries"]
-        self._next_int_id = meta["next_int_id"]
+        self._index, self._entries = snapshot.index, snapshot.entries
+        self._next_int_id, self._dim = snapshot.next_int_id, snapshot.dim
+        self._loaded_signature = snapshot.signature
 
     # ------------------------------------------------------------------ #
     # Writes — buffered, flushed at index_done_callback                    #
@@ -374,9 +463,7 @@ class FaissVectorStore(StorageNameSpace):
 
         signature = self._committed_signature()
         if signature != self._loaded_signature:
-            self._index, self._entries, self._next_int_id = None, {}, 0
             self._read_committed()
-            self._loaded_signature = signature
 
         if self._index is None:
             dim = next(iter(self._pending.values())).vector.shape[0]
