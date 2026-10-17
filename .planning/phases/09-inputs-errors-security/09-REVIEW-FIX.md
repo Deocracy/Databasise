@@ -76,7 +76,7 @@ _Iteration: 3_
 A targeted verification pass over the iteration-3 commits (185e0f1..54dabda) rated all five fixes RESOLVED and found two regressions. The orchestrator fixed both in 2da7ad9:
 
 - **WR-A:** the owner-record temp name `.{id}.bin.{hex}.tmp` exceeded NAME_MAX for ids of 214 to 251 characters. It is now `.{hex}.tmp`. Test: `test_a_document_id_that_fits_as_a_file_name_also_fits_its_owner_record_temp_file`.
-- **WR-B:** `_URL_RE` with an unbounded scheme took quadratic time, about 10 s on a 40 K line. The scheme is now `{0,31}` and the input is cut to 1 KB before the regexes. Test: `test_scrub_stays_fast_on_a_long_line_without_a_url`.
+- **WR-B:** `_URL_RE` with an unbounded scheme took quadratic time, about 10 s on a 40 K line. A first fix cut the input to 1 KB, but an automated security review showed that could split a quoted path. Replaced in the follow-up commit: the match now starts only at the head of a scheme-character run (lookbehind), which is linear, with no truncation and no scheme cap. Test: `test_scrub_stays_fast_on_a_long_line_without_a_url`.
 
 These were not fixed:
 - The cleanup's `owner.unlink` is unguarded when the owner path is a directory. This is pathological.
