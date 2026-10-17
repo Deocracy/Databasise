@@ -152,19 +152,23 @@ def build_clients(env: dict[str, str]) -> dict[str, Any]:
     embedding endpoint the pinned config names — real network calls, never a cache, never a stub.
 
     Rerank is optional (D-08), in three cases over ``RERANK_BINDING`` plus ``RERANK_ENV_KEYS``
-    (a value that is empty, or ``null`` for the binding, counts as absent): none present -> the
-    result is ``{llm, embedding}`` and rerank is not wired; all present -> a ``rerank`` entry is
-    added; some present -> a named ``MissingParityEnvKeyError`` listing the absent rerank keys.
+    (an empty value for the other three counts as absent): none present, or the binding present as
+    empty or ``null`` (v1's "rerank off") -> ``{llm, embedding}``, rerank not wired; all present ->
+    a ``rerank`` entry is added; some present -> a named ``MissingParityEnvKeyError`` listing the
+    absent rerank keys, ``RERANK_BINDING`` included when the key is absent.
 
     WR-01: refuses with a named ``MissingParityEnvKeyError`` naming every absent key (required and
     rerank together), rather than a bare ``KeyError`` on whichever key happens to be read first.
     """
     missing = [key for key in REQUIRED_ENV_KEYS if key not in env]
     binding = env.get(RERANK_BINDING_ENV_KEY)
-    if binding == "null":
+    # As in v1: a binding that is present and empty or "null" (any case) switches rerank off, whatever
+    # the other RERANK_* keys hold. Only an ABSENT binding key makes the other keys a partial set.
+    rerank_off = binding is not None and binding.strip().lower() in ("", "null")
+    if rerank_off:
         binding = None
     rerank_values = {key: env.get(key) for key in RERANK_ENV_KEYS}
-    if binding or any(rerank_values.values()):
+    if not rerank_off and (binding or any(rerank_values.values())):
         if not binding:
             missing.append(RERANK_BINDING_ENV_KEY)
         missing.extend(key for key, value in rerank_values.items() if not value)
