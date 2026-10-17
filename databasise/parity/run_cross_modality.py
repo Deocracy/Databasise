@@ -45,14 +45,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from databasise.clients.builder import BUILDER_REFUSALS
 from databasise.identity.canon import canonicalise
 from databasise.namespaces import artifacts_overlap
 from databasise.parity import import_index
 from databasise.parity.corpus import CorpusQuery, load_snapshot
 from databasise.parity.run_arm import (
     DEFAULT_V1_ENV_PARITY,
-    MissingParityEnvError,
-    MissingParityEnvKeyError,
     _build_clients,
     _load_env_file,
 )
@@ -396,8 +395,7 @@ def main(argv: list[str] | None = None) -> int:
             record = asyncio.run(run_cross_modality())
     except (
         StoreLockedError,
-        MissingParityEnvError,
-        MissingParityEnvKeyError,
+        *BUILDER_REFUSALS,
         MissingArmIndexError,
         OverlappingStoreDirectoriesError,
         DegradedCrossModalityRunError,

@@ -36,6 +36,7 @@ from typing import Any
 # their identity.
 # isort: off
 from databasise.clients.builder import (  # noqa: F401
+    BUILDER_REFUSALS,
     PROVIDER_ROUTING_ENV_KEY as _PROVIDER_ROUTING_ENV_KEY,
     REQUIRED_ENV_KEYS as _REQUIRED_ENV_KEYS,
     MissingParityEnvError,
@@ -231,16 +232,6 @@ async def run_arm(
     return {"run_record": record.to_dict(), "provided": provided}
 
 
-# The refusals a parity CLI turns into a clean exit 1 (builder env/config errors plus the store lock).
-_CLI_REFUSALS = (
-    StoreLockedError,
-    MissingParityEnvError,
-    MissingParityEnvKeyError,
-    UnparseableProviderRoutingError,
-    UnsupportedRerankBindingError,
-)
-
-
 def main(argv: list[str] | None = None) -> int:
     """``uv run python -m databasise.parity.run_arm --arm naive --query "..."`` — prints the run
     record as JSON and the ``provides`` node's output, following the committed-and-re-runnable
@@ -256,7 +247,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         with store_lock(import_index.DEFAULT_STORE_ROOT):  # D-03
             result = asyncio.run(run_arm(args.arm, args.query))
-    except _CLI_REFUSALS as exc:
+    except (StoreLockedError, *BUILDER_REFUSALS) as exc:
         print(str(exc), file=sys.stderr)
         return 1
 

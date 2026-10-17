@@ -50,13 +50,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from databasise.clients.builder import BUILDER_REFUSALS
 from databasise.identity.canon import canonicalise
 from databasise.parity import import_index
 from databasise.parity.corpus import load_snapshot
 from databasise.parity.run_arm import (
     DEFAULT_V1_ENV_PARITY,
-    MissingParityEnvError,
-    MissingParityEnvKeyError,
     _build_clients,
     _build_stores,
     _CONCURRENCY_SETTING,
@@ -340,8 +339,7 @@ def main(argv: list[str] | None = None) -> int:
             result = asyncio.run(build_index())
     except (
         StoreLockedError,
-        MissingParityEnvError,
-        MissingParityEnvKeyError,
+        *BUILDER_REFUSALS,
         MissingParityLightRAGIndexError,
         HippoRAGIndexBuildRefusedError,
     ) as exc:

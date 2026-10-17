@@ -15,10 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from databasise.clients.builder import (
-    MissingParityEnvError,
-    MissingParityEnvKeyError,
-    UnparseableProviderRoutingError,
-    UnsupportedRerankBindingError,
+    BUILDER_REFUSALS,
     build_clients,
     load_env_file,
 )
@@ -37,10 +34,7 @@ DEFAULT_WORKSPACE = "shared-4fab18fef508b7bc3dda1cc2d8f12e36"
 # No CorpusDriftError: the launcher never verifies the corpus snapshot.
 LAUNCH_REFUSALS = (
     StoreLockedError,
-    MissingParityEnvError,
-    MissingParityEnvKeyError,
-    UnparseableProviderRoutingError,
-    UnsupportedRerankBindingError,
+    *BUILDER_REFUSALS,
     OSError,  # an unreadable --env-file or store root
     UnicodeDecodeError,  # an --env-file that is not UTF-8
 )

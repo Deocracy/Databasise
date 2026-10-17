@@ -52,12 +52,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Literal
 
+from databasise.clients.builder import BUILDER_REFUSALS
 from databasise.identity.canon import canonicalise
 from databasise.parity import import_index
 from databasise.parity.corpus import CorpusSnapshot, load_snapshot
 from databasise.parity.run_arm import (
     DEFAULT_V1_ENV_PARITY,
-    MissingParityEnvError,
     _build_clients,
     _build_stores,
     _DETERMINISM_SETTING as _DECOMPOSED_DETERMINISM_SETTING,
@@ -698,7 +698,7 @@ async def _run_cli(arm_name: str, query_ids: list[str] | None) -> tuple[list[Com
             record = await compare_arm_on_query(
                 arm_name, query.id, query.question, corpus_hash=snapshot.corpus_hash
             )
-        except (MissingParityEnvError, MissingV1InterpreterError, V1ArmSubprocessError) as exc:
+        except (*BUILDER_REFUSALS, MissingV1InterpreterError, V1ArmSubprocessError) as exc:
             had_error = True
             print(f"error comparing query {query.id!r}: {exc}", file=sys.stderr)
             continue

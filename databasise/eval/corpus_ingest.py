@@ -44,11 +44,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from databasise.clients.builder import BUILDER_REFUSALS
 from databasise.parity.corpus import CorpusSnapshot, load_snapshot
 from databasise.parity.run_arm import (
     DEFAULT_V1_ENV_PARITY,
-    MissingParityEnvError,
-    MissingParityEnvKeyError,
     _build_clients,
     _load_env_file,
 )
@@ -218,7 +217,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         env = _load_env_file(DEFAULT_V1_ENV_PARITY)
         clients = _build_clients(env)
-    except (MissingParityEnvError, MissingParityEnvKeyError) as exc:
+    except BUILDER_REFUSALS as exc:
         print(str(exc), file=sys.stderr)
         return 1
 

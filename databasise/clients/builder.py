@@ -22,6 +22,7 @@ from databasise.clients.rerank import (
 )
 
 __all__ = [
+    "BUILDER_REFUSALS",
     "PROVIDER_ROUTING_ENV_KEY",
     "REQUIRED_ENV_KEYS",
     "RERANK_BINDING_ENV_KEY",
@@ -145,6 +146,15 @@ def parse_provider_routing_body(env: dict[str, str]) -> dict[str, Any] | None:
             raw,
             problem=f"is not valid JSON ({exc.msg} at line {exc.lineno} column {exc.colno})",
         ) from exc
+
+
+# Every error build_clients/load_env_file raise by name; a CLI turns these into a clean refusal.
+BUILDER_REFUSALS = (
+    MissingParityEnvError,
+    MissingParityEnvKeyError,
+    UnparseableProviderRoutingError,
+    UnsupportedRerankBindingError,
+)
 
 
 def build_clients(env: dict[str, str]) -> dict[str, Any]:

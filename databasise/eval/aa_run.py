@@ -56,6 +56,7 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Any
 
+from databasise.clients.builder import BUILDER_REFUSALS
 from databasise.eval.bundle import (
     ANSWER_LEVEL_FAMILY,
     GOLD_PASSAGE_FAMILY,
@@ -75,8 +76,6 @@ from databasise.eval.remint import _COMMITTED_BUNDLE_ROOT
 from databasise.eval.remint import _JUDGE_PROMPT_PATH as JUDGE_PROMPT_PATH
 from databasise.parity.run_arm import (
     DEFAULT_V1_ENV_PARITY,
-    MissingParityEnvError,
-    MissingParityEnvKeyError,
     _build_clients,
     _load_env_file,
 )
@@ -547,7 +546,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         env = _load_env_file(DEFAULT_V1_ENV_PARITY)
         clients = _build_clients(env)
-    except (MissingParityEnvError, MissingParityEnvKeyError) as exc:
+    except BUILDER_REFUSALS as exc:
         print(str(exc), file=sys.stderr)
         return 1
 
