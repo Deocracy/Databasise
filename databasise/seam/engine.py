@@ -201,6 +201,7 @@ from databasise.seam.promotion import (
 from databasise.seam.query import QueryObject, check_consumable
 from databasise.seam.refusals import (
     ActiveGenerationRetirementError,
+    DuplicateDocumentIdError,
     EmptyComparisonRequestError,
     ForeignEngineRefusalError,
     GateVerbNotBuiltError,
@@ -739,7 +740,9 @@ class Databasise:
         identical path (Task 3) — one operation, two input shapes, never two execution paths. A
         raw payload's bytes are written server-side under ``store_root/corpus-inbox/`` using
         ``generated_on_disk_name`` (never the caller's own ``document_id`` string joined directly,
-        and never ``file_name`` at all) before the node config is stamped.
+        and never ``file_name`` at all) immediately before the run, by exclusive create: an existing
+        file for that id is refused as ``DuplicateDocumentIdError``, and the file is removed again if
+        the run fails. A successful upload's file stays (v1 holds its path).
         """
         # D-12: only None is absent; a caller-supplied '' reaches the token check and is refused.
         document_id = document.document_id if document.document_id is not None else uuid.uuid4().hex
@@ -770,11 +773,12 @@ class Databasise:
         # wiring's own consumes_documents names which node the documents land on, but the per-item
         # key each node's body reads for its own document id differs, and one caller-supplied
         # document list must satisfy either reader without a per-family branch here.
+        # 09 REVIEW WR-04: the raw bytes are staged only right before the run (below), after
+        # parse_wiring and _build_stores can no longer fail, so a pre-run failure leaves no file.
+        staged: Path | None = None
         if document.raw is not None:
-            inbox_dir = self.store_root / "corpus-inbox"
-            inbox_dir.mkdir(parents=True, exist_ok=True)
-            on_disk_path = inbox_dir / generated_on_disk_name(document_id)
-            on_disk_path.write_bytes(document.raw)
+            on_disk_path = self.store_root / "corpus-inbox" / generated_on_disk_name(document_id)
+            staged = on_disk_path
             node_config["documents"] = [{"id": document_id, "document_id": document_id, "text": ""}]
             node_config["file_paths"] = [str(on_disk_path)]
             node_config["docs_format"] = _DOCS_FORMAT_PENDING_PARSE
@@ -795,7 +799,17 @@ class Databasise:
         # {"kv": "hipporag-text-chunks", "graph": "hipporag-graph"}, landing an ingest in the same
         # directories base.json's query side reads.
         stores = _build_stores(self.store_root, self.workspace, resolved)
+        wrote_staged = False
         try:
+            if staged is not None:
+                staged.parent.mkdir(parents=True, exist_ok=True)
+                try:
+                    # Exclusive create: an earlier upload with this id may still be parsed by v1.
+                    with open(staged, "xb") as handle:
+                        wrote_staged = True
+                        handle.write(document.raw)
+                except FileExistsError:
+                    raise DuplicateDocumentIdError(document_id=document_id) from None
             scheduled = await _scheduler.run_wiring(
                 parsed,
                 self.registry,
@@ -816,6 +830,11 @@ class Databasise:
             # index_done_callback all early-return when nothing is pending).
             for store in stores.values():
                 await store.index_done_callback()
+        except BaseException:
+            # A failed request must not strand its staged file (it would also refuse every retry).
+            if wrote_staged:
+                staged.unlink(missing_ok=True)
+            raise
         finally:
             for store in stores.values():
                 await store.finalize()
@@ -825,7 +844,12 @@ class Databasise:
         # in the run's own node_exceptions/results maps instead, and this module's own shared
         # _node_result_or_refuse re-raises it here as the seam-facing ForeignEngineRefusalError,
         # whatever the underlying failure actually was.
-        result = _node_result_or_refuse(scheduled, result_node_id, "ingest")
+        try:
+            result = _node_result_or_refuse(scheduled, result_node_id, "ingest")
+        except ForeignEngineRefusalError:
+            if wrote_staged:
+                staged.unlink(missing_ok=True)
+            raise
         # 06-10-PLAN.md: a terminal node reporting its own "enqueued" count wins (LightRAG's own
         # full-ingest); otherwise this call submitted exactly one document, so that is what is
         # reported — never a fabricated literal 0 for a node that simply does not report the field

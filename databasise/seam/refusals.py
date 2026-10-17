@@ -237,6 +237,19 @@ class InvalidDocumentIdError(SeamRefusalError):
         )
 
 
+class DuplicateDocumentIdError(SeamRefusalError):
+    """Raised by ``Databasise.ingest()`` (09 REVIEW WR-04) when a raw upload's staged file for
+    ``document_id`` already exists in the inbox: an earlier upload with that id may still be parsed
+    by v1, and overwriting it would make that job parse the newer bytes. ``document_id`` is the
+    caller's own input."""
+
+    def __init__(self, *, document_id: str):
+        self.document_id = document_id
+        super().__init__(
+            f"DuplicateDocumentIdError: a raw upload for document id {document_id!r} is already staged"
+        )
+
+
 class UnknownDocumentError(SeamRefusalError):
     """Reserved for a well-formed document id that does not exist in the corpus. A malformed id is
     :class:`InvalidDocumentIdError`, never this. Nothing raises this today because v1 itself reports
@@ -768,6 +781,7 @@ __all__ = [
     "AmbiguousIngestPayloadError",
     "OversizedDocumentError",
     "InvalidDocumentIdError",
+    "DuplicateDocumentIdError",
     "UnknownDocumentError",
     "NoWritePathForModalityError",
     "NoRawUploadPathForModalityError",
