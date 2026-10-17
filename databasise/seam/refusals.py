@@ -58,12 +58,27 @@ def refusal_from_errors(errors: Iterable[Any]) -> SeamRefusalError | None:
 
 
 class EmptyQueryObjectError(SeamRefusalError):
-    """Raised when a query object carries no set member at all (§18.1) — refused before any
-    wiring is resolved, never silently answered as an empty-text query."""
+    """Raised when a query object carries no set member at all (§18.1), or when its ``text`` is
+    empty or whitespace-only (09-06-PLAN.md, SEAM-09, D-08) — refused before any wiring is
+    resolved, never silently answered as an empty-text query."""
 
     def __init__(self, query_object: Any):
         self.query_object = query_object
-        super().__init__(f"query object carries no set member: {query_object!r}")
+        super().__init__(
+            f"query object carries no set member, or its text is empty or whitespace-only: {query_object!r}"
+        )
+
+
+class EmptyIngestDocumentError(SeamRefusalError):
+    """Raised at ``IngestDocument`` validation when the one payload the caller set is empty
+    (09-06-PLAN.md, SEAM-09, D-08): ``member`` is ``"text"`` for empty or whitespace-only text and
+    ``"raw"`` for a zero-byte payload. Nothing is enqueued or written."""
+
+    def __init__(self, *, member: str):
+        self.member = member
+        # The literal class name is load-bearing: raised inside a pydantic validator, so a caller
+        # reading a wrapped ValidationError message needs the name to survive in the text.
+        super().__init__(f"EmptyIngestDocumentError: the ingest document's {member} payload is empty")
 
 
 class UnconsumableQueryMemberError(SeamRefusalError):
@@ -609,6 +624,20 @@ class UnresolvableEvidenceReferenceError(SeamRefusalError):
         )
 
 
+class InvalidEvidenceNamespaceError(SeamRefusalError):
+    """Raised by ``databasise.seam.evidence.validate_evidence_namespace`` (09-06-PLAN.md, SEAM-01,
+    D-05) when an ``EvidenceRef`` namespace is not a non-empty token of letters, digits or ``-``.
+    The namespace becomes a directory name under ``<store_root>/<workspace>``, so a path-like value
+    must be refused before any store is opened. ``namespace`` is the caller's own input."""
+
+    def __init__(self, *, namespace: str):
+        self.namespace = namespace
+        super().__init__(
+            f"InvalidEvidenceNamespaceError: evidence namespace {namespace!r} must be a non-empty "
+            "token of letters, digits or '-'"
+        )
+
+
 class UnbudgetableParticipantError(SeamRefusalError):
     """Raised when a run contains a node whose own ``TokenAccounting.counted_by`` reports the
     ``unbudgetable`` sentinel (§8 opaque-node admission). No envelope is produced on this path, and
@@ -704,5 +733,7 @@ __all__ = [
     "ActiveGenerationRetirementError",
     "UnknownTraceReferenceError",
     "UnresolvableEvidenceReferenceError",
+    "InvalidEvidenceNamespaceError",
+    "EmptyIngestDocumentError",
     "UnbudgetableParticipantError",
 ]

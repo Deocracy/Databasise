@@ -183,6 +183,7 @@ from databasise.seam.evidence import (
     EvidenceRef,
     mint_evidence_refs,
     resolve_evidence_ref,
+    validate_evidence_namespace,
 )
 from databasise.seam.compare import compare_arms
 from databasise.seam.promotion import (
@@ -216,6 +217,7 @@ from databasise.seam.refusals import (
     UnknownGenerationVersionError,
     UnknownJobError,
     UnrecognisedPromotionVerbError,
+    UnresolvableEvidenceReferenceError,
 )
 from databasise.seam.selectors import Selector, _wiring_effects, resolve_selector
 from databasise.seam.tokens import TokenBreakdownEntry, assemble_token_breakdown
@@ -1128,15 +1130,19 @@ class Databasise:
     async def resolve_evidence(self, ref: EvidenceRef) -> dict[str, Any]:
         """The second §18 operation the seam exposes (§18.5 — per part kind, evidence, never per
         modality): resolves an evidence reference back through the same store handle it was minted
-        from. Opens the store set the same way ``query`` does and finalizes it in a ``finally``
-        block, mirroring ``query``'s own store lifecycle exactly.
+        from. Order matters (09-06-PLAN.md, SEAM-01, D-05): the namespace is validated first
+        (``InvalidEvidenceNamespaceError``), then the namespace directory must already exist
+        (``UnresolvableEvidenceReferenceError``, so an unknown namespace creates nothing), and only
+        then is the vector store built — the kv and graph stores are never opened by this read.
         """
-        stores = _build_stores(self.store_root, self.workspace)
+        validate_evidence_namespace(ref.namespace)
+        if not (self.store_root / self.workspace / ref.namespace).is_dir():
+            raise UnresolvableEvidenceReferenceError(ref)
+        vector = MultiNamespaceVectorStore(workspace=self.workspace, store_root=self.store_root)
         try:
-            return resolve_evidence_ref(ref, stores["vector"])
+            return resolve_evidence_ref(ref, vector)
         finally:
-            for store in stores.values():
-                await store.finalize()
+            await vector.finalize()
 
     async def resolve_trace(self, trace_reference: str, *, debug: bool = False) -> dict[str, Any]:
         """The third §18 operation the seam exposes (API-10, D-06), per part kind and not per

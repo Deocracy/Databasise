@@ -45,12 +45,14 @@ from databasise.seam.refusals import (
     DisagreeingPromotionTraceIdsError,
     DuplicateComparisonKeyError,
     EmptyComparisonRequestError,
+    EmptyIngestDocumentError,
     EmptyPromotionTraceIdsError,
     EmptyQueryObjectError,
     ForbiddenSelectorInputError,
     ForeignEngineRefusalError,
     GateVerbNotBuiltError,
     InvalidChangeOriginError,
+    InvalidEvidenceNamespaceError,
     MalformedBase64PayloadError,
     MalformedSelectorPayloadError,
     MeasurementPostureRefusalError,
@@ -404,6 +406,8 @@ def test_the_trace_resolve_endpoints_non_debug_output_passes_both_leak_gate_tier
 _REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
     EmptyQueryObjectError: lambda: EmptyQueryObjectError(QueryObject()),
     EmptyComparisonRequestError: lambda: EmptyComparisonRequestError(),
+    EmptyIngestDocumentError: lambda: EmptyIngestDocumentError(member="text"),
+    InvalidEvidenceNamespaceError: lambda: InvalidEvidenceNamespaceError(namespace="../../escape"),
     DuplicateComparisonKeyError: lambda: DuplicateComparisonKeyError(key="reads_vector"),
     MutableStoreComparisonExcludedError: lambda: MutableStoreComparisonExcludedError(
         component="codebase-memory-mcp@0.1.0"

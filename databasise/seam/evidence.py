@@ -29,10 +29,14 @@ changes (the plan's own prohibition).
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from databasise.seam._base import _StrictModel
-from databasise.seam.refusals import UnresolvableEvidenceReferenceError  # moved to refusals.py (SEAM-14); re-exported
+from databasise.seam.refusals import (  # moved to refusals.py (SEAM-14); re-exported
+    InvalidEvidenceNamespaceError,
+    UnresolvableEvidenceReferenceError,
+)
 
 # The naive arm's own retrieval position (databasise/parts_core/lightrag/chunk_vector.py) selects
 # this namespace off the multi-namespace vector store handle. Exposed here as the default so a
@@ -98,6 +102,18 @@ def mint_evidence_refs(
     return refs
 
 
+# A namespace becomes a directory name under <store_root>/<workspace>, so it must be a bare token.
+# Every existing name (chunks, entities, relationships, hipporag-*) matches.
+_EVIDENCE_NAMESPACE_RE = re.compile(r"[A-Za-z0-9-]+")
+
+
+def validate_evidence_namespace(namespace: str) -> None:
+    """Refuse (09-06-PLAN.md, SEAM-01, D-05) any namespace that is not a non-empty token of letters,
+    digits or ``-``. ``fullmatch``, not ``match``: a trailing newline or slash is refused."""
+    if not _EVIDENCE_NAMESPACE_RE.fullmatch(namespace):
+        raise InvalidEvidenceNamespaceError(namespace=namespace)
+
+
 def resolve_evidence_ref(ref: EvidenceRef, vector_store: Any) -> dict[str, Any]:
     """Resolve ``ref`` back through the same store handle it was minted from —
     ``vector_store.select(ref.namespace).get_by_id(ref.ref)``, the same namespace-scoped Faiss
@@ -117,7 +133,9 @@ __all__ = [
     "TEXT_CHUNK_KIND",
     "EvidenceRef",
     "MalformedEvidenceItemError",
+    "InvalidEvidenceNamespaceError",
     "UnresolvableEvidenceReferenceError",
     "mint_evidence_refs",
     "resolve_evidence_ref",
+    "validate_evidence_namespace",
 ]
