@@ -1,7 +1,7 @@
 ---
 phase: 08-run-the-engine
 verified: 2026-10-17T03:30:00Z
-status: human_needed
+status: passed
 score: 5/5 roadmap success criteria verified (RUN-11 measurement owner-deferred, tracked as human item)
 covered_files:
   - ".planning/phases/08-run-the-engine/08-01-PLAN.md"
@@ -69,7 +69,7 @@ human_verification:
 
 **Phase Goal:** An operator can start the engine as a served process from the installed package, with real model clients and one engine process per store root, and the offline test suite is green so every later fix can be checked end to end
 **Verified:** 2026-10-17
-**Status:** human_needed
+**Status:** passed (owner-approved 2026-10-16: "All good — continue"; live items owner-deferred to TESTING-PLAN.md §2)
 **Re-verification:** No, initial verification (no prior VERIFICATION.md existed)
 
 The goal is achieved in the codebase. Nothing is FAILED. The status is `human_needed` only because RUN-11 (measured threshold, five live runs) and two no-spend/live checks were deliberately deferred by the owner, and because the post-execution review fixes ask for a human intent check.

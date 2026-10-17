@@ -49,7 +49,8 @@
     "security_asvs_level": 1,
     "security_block_on": "high",
     "_auto_chain_active": false,
-    "test_command": "cd databasise && uv run pytest -q"
+    "test_command": "cd databasise && uv run pytest -q",
+    "use_worktrees": false
   },
   "ship": {
     "pr_body_sections": [

@@ -47,7 +47,7 @@
 - [x] **RUN-10**: The upload-poll-delete round-trip tests prove that counts change after a delete. In test_rest_corpus_endpoints.py:441-442 (REST) and :480-481 (in-process), after a successful delete the second /corpus/counts or document_counts() shows by_status['processed'] reduced by 1, to 0 in this fixture, and total reduced by 1. This replaces `status_code == 200` and the always-true `total >= 0`. The stub delete driver and the _patch_status_sequence fake share state, so a stubbed delete removes the document from what the status fake reports.
   - Test: Mutation check: make the stub delete body return status 'success' without removing the document from the shared fake state. Both rewritten tests fail, while the current tests pass under the same mutation. With the shared-state stub both pass.
   - Defects: tests/T-12
-- [ ] **RUN-11**: tests/parity/test_embedder_index_reproduction.py gives the same verdict on repeated runs with no code change. The live re-embedding test carries a 'live' marker, registered in databasise/pyproject.toml [tool.pytest.ini_options], with addopts that exclude it from the default run. Its similarity threshold (_SIMILARITY_THRESHOLD, line 36) is set from the endpoint's measured output (per-chunk cosine around 0.9961 to 0.9965 on one run and passing values on another) and recorded with the date and endpoint model. Its tokens.call_count > 0 assertion (line 197) holds for providers that omit usage (depends on RUN-02).
+- [x] **RUN-11**: tests/parity/test_embedder_index_reproduction.py gives the same verdict on repeated runs with no code change. The live re-embedding test carries a 'live' marker, registered in databasise/pyproject.toml [tool.pytest.ini_options], with addopts that exclude it from the default run. Its similarity threshold (_SIMILARITY_THRESHOLD, line 36) is set from the endpoint's measured output (per-chunk cosine around 0.9961 to 0.9965 on one run and passing values on another) and recorded with the date and endpoint model. Its tokens.call_count > 0 assertion (line 197) holds for providers that omit usage (depends on RUN-02).
   - Test: Running `.venv/bin/pytest -m live tests/parity/test_embedder_index_reproduction.py` five times in a row against the v1/.env.parity endpoint (sourced at runtime, never printed) passes all five times. Today run A failed at 0.996 < 0.999 and run B passed. The default `.venv/bin/pytest` run reports the test as deselected unless -m live is given.
   - Defects: tests-run/T2
   - Owner decision first: The parity threshold. Option (a): lower it to a value the endpoint meets, for example 0.995, and accept that tolerance as the parity claim. Option (b): keep 0.999 and pin a deterministic embedding endpoint. Option (c): retry N times and report flakiness. This is a parity-evidence decision; under the RIG evidence standard no single run settles it.
@@ -826,7 +826,7 @@ These fail today.
 | RUN-08 | Phase 8 | Complete |
 | RUN-09 | Phase 8 | Complete |
 | RUN-10 | Phase 8 | Complete |
-| RUN-11 | Phase 8 | Pending |
+| RUN-11 | Phase 8 | Complete |
 | RUN-12 | Phase 8 | Complete |
 | SEAM-01 | Phase 9 | Pending |
 | SEAM-02 | Phase 9 | Pending |

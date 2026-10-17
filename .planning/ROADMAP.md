@@ -38,7 +38,7 @@ Audit: `.planning/milestones/v1.0-MILESTONE-AUDIT.md` (29/34 requirements, 7/7 i
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 8: Run the Engine** - Installed launchers for REST and MCP, one shared client builder, one engine process per store root, CORS decision, and a green offline suite (F1)
+- [x] **Phase 8: Run the Engine** - Installed launchers for REST and MCP, one shared client builder, one engine process per store root, CORS decision, and a green offline suite (F1) (completed 2026-10-16)
 - [ ] **Phase 9: Inputs, Errors & Security** - One refusal shape on both transports, caller input refused before it touches disk or a node, machine faults without leaked stderr (F2)
 - [ ] **Phase 10: Stores, Locking & Data Integrity** - Graph lock contention as a named outcome, all-or-nothing ingest/delete commits, read-only handles, consistent store adapters (F3)
 - [ ] **Phase 11: LightRAG Corpus Path** - Ingested documents reach the queried stores, uploads index their content, honest health, and v1-faithful KG answers (F4)
@@ -93,7 +93,7 @@ Some owner decisions are taken in one phase and consumed by later ones. Settle e
 - RUN-08: CORS allow-list or same-origin serving (default: explicit allow-list, empty by default, never '*')
 - RUN-11: parity similarity threshold (lower it, pin a deterministic endpoint, or retry and report flakiness)
 
-**Plans**: 10/10 plans executed
+**Plans**: 10/10 plans complete
 
 Plans:
 **Wave 1**
@@ -400,7 +400,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 8. Run the Engine | 10/10 | In Progress|  |
+| 8. Run the Engine | 10/10 | Complete    | 2026-10-16 |
 | 9. Inputs, Errors & Security | 0/TBD | Not started | - |
 | 10. Stores, Locking & Data Integrity | 0/TBD | Not started | - |
 | 11. LightRAG Corpus Path | 0/TBD | Not started | - |
