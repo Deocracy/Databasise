@@ -246,6 +246,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "faiss-cpu" },
+    { name = "httpx" },
     { name = "igraph" },
     { name = "jsonpatch" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -281,6 +282,7 @@ dev = [
 requires-dist = [
     { name = "faiss-cpu", specifier = ">=1.7.0,<2.0.0" },
     { name = "fastapi", marker = "extra == 'rest'", specifier = ">=0.135" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "igraph", specifier = ">=0.11,<2.0" },
     { name = "jsonpatch" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=2.2.0" },

@@ -47,6 +47,9 @@ dependencies = [
     # method="percentile"). Package-legitimacy gate approved 2026-09-09 — see
     # 06-CHECKPOINT-ANSWERS.md (cleared for 06-04/06-06's use, added here by 06-06).
     "scipy>=1.11",
+    # The rerank client (clients/rerank.py) imports httpx at runtime. Approved 2026-09-06 as a dev
+    # dependency (04-CHECKPOINT-ANSWERS.md) and already in uv.lock: moved here as metadata, no new package.
+    "httpx>=0.28.1",
 ]
 
 # PEP 735 dependency group, not [project.optional-dependencies]: uv installs the `dev`
@@ -98,9 +101,10 @@ mcp = [
     "mcp>=2.2.0",
 ]
 
-# 08-01-PLAN.md (RUN-06): the operator-facing REST launcher; the MCP launcher joins in a later plan.
+# 08-01-PLAN.md (RUN-06): the operator-facing REST and MCP launchers.
 [project.scripts]
 databasise-rest = "databasise.launcher.serve_rest:main"
+databasise-mcp = "databasise.launcher.serve_mcp:main"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "databasise": {
+      "command": "/ABSOLUTE/PATH/TO/databasise/.venv/bin/databasise-mcp",
+      "args": [
+        "--transport", "stdio",
+        "--store-root", "/ABSOLUTE/PATH/TO/v1/.parity_v2_store",
+        "--workspace", "shared-4fab18fef508b7bc3dda1cc2d8f12e36",
+        "--env-file", "/ABSOLUTE/PATH/TO/engine.env"
+      ]
+    }
+  }
+}

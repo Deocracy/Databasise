@@ -48,3 +48,19 @@ cd databasise
 uv sync
 uv run pytest
 ```
+
+## Run the engine
+
+```bash
+databasise-rest --env-file /path/to/engine.env [--store-root DIR] [--workspace NAME] [--host 127.0.0.1] [--port 8000]
+databasise-mcp  --env-file /path/to/engine.env [--transport stdio|sse|streamable-http] [same flags, --port 8001]
+```
+
+- `--env-file` is required unless `--no-clients` is given; refusals name missing keys, never values.
+- `--host` defaults to 127.0.0.1 because the REST app has no authentication.
+- One engine process per store root: a second launcher, or a parity CLI, on a held root exits with the
+  store-lock error naming the root and the holder PID. `--workers` must be 1.
+- `python -m databasise.launcher.serve_rest` and `python -m databasise.launcher.serve_mcp` are equivalent.
+- `examples/mcp-client.stdio.json` is an example MCP client config (deliberately not named `.mcp.json`,
+  so no client loads it by itself and takes the store lock). Replace each `/ABSOLUTE/PATH/TO` prefix
+  with your own absolute path: the default store root is relative to the source tree.

@@ -7,6 +7,7 @@ collects on the pre-phase tree (plan 08-10's fail-first check).
 
 from __future__ import annotations
 
+import json
 import socket
 import subprocess
 import sys
@@ -158,3 +159,69 @@ def test_workers_above_one_is_refused_naming_the_store_lock(launch, tmp_path):
     assert proc.wait(60) == 2
     assert "store lock" in _stderr(proc)
     assert not (root / ".engine.lock").exists()
+
+
+def test_both_console_scripts_are_installed_entry_points():
+    from importlib.metadata import entry_points
+
+    scripts = {ep.name: ep.value for ep in entry_points(group="console_scripts")}
+    assert scripts["databasise-rest"] == "databasise.launcher.serve_rest:main"
+    assert scripts["databasise-mcp"] == "databasise.launcher.serve_mcp:main"
+
+
+@pytest.mark.parametrize("module", ["databasise.launcher.serve_rest", "databasise.launcher.serve_mcp"])
+def test_python_m_modules_print_help(module):
+    result = subprocess.run(
+        [sys.executable, "-m", module, "--help"], capture_output=True, text=True, timeout=120, check=False
+    )
+    assert result.returncode == 0, result.stderr
+    assert "--store-root" in result.stdout
+
+
+async def test_databasise_mcp_stdio_lists_the_in_process_tool_set(tmp_path):
+    from databasise.foreign._mcp_sdk_guard import import_real_mcp
+    from databasise.mcp import TOOL_NAMES, create_server
+
+    mcp = import_real_mcp("mcp")
+    stdio = import_real_mcp("mcp.client.stdio")
+    params = mcp.StdioServerParameters(
+        command=str(Path(sys.executable).parent / "databasise-mcp"),
+        args=["--transport", "stdio", "--store-root", str(tmp_path / "root_a"), "--workspace", "w", "--no-clients"],
+    )
+    async with stdio.stdio_client(params) as (read, write), mcp.ClientSession(read, write) as session:
+        await session.initialize()
+        over_stdio = sorted(tool.name for tool in (await session.list_tools()).tools)
+    in_process = sorted(
+        tool.name for tool in await create_server(store_root=tmp_path / "root_b", workspace="w").list_tools()
+    )
+    assert over_stdio == in_process == sorted(TOOL_NAMES)
+
+
+@pytest.mark.parametrize("transport", ["stdio", "sse", "streamable-http"])
+def test_databasise_mcp_passes_each_transport_to_the_server_run_method(transport, tmp_path, monkeypatch):
+    from databasise.launcher import serve_mcp
+    from databasise.mcp import create_server
+
+    calls: list[tuple] = []
+    server_cls = type(create_server(store_root=tmp_path / "probe", workspace="w"))
+    monkeypatch.setattr(server_cls, "run", lambda self, name, **kwargs: calls.append((name, kwargs)))
+    argv = [
+        "--transport", transport,
+        "--store-root", str(tmp_path / "root"),
+        "--workspace", "w",
+        "--no-clients",
+        "--port", "8123",
+    ]  # fmt: skip
+    assert serve_mcp.main(argv) == 0
+    expected = {} if transport == "stdio" else {"host": "127.0.0.1", "port": 8123}
+    assert calls == [(transport, expected)]
+
+
+def test_example_mcp_config_invokes_databasise_mcp_over_stdio():
+    example = Path(__file__).resolve().parents[2] / "examples" / "mcp-client.stdio.json"
+    entry = json.loads(example.read_text(encoding="utf-8"))["mcpServers"]["databasise"]
+    args = entry["args"]
+    assert entry["command"].endswith("databasise-mcp")
+    assert args[args.index("--transport") + 1] == "stdio"
+    for flag in ("--store-root", "--env-file"):
+        assert args[args.index(flag) + 1].startswith("/")
