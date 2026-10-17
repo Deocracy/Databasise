@@ -72,11 +72,11 @@
   - Test: tests/seam/test_refusal_status_codes.py: POST /trace/resolve {trace_reference:'nope'} returns 404 with refusal_type UnknownTraceReferenceError; GET /jobs/job-missing returns 404 UnknownJobError; a rollback to an unknown version returns 404 UnknownGenerationVersionError; a representative non-lookup refusal (PageSizeExceededError, limit=101) still returns 422. Fails today: all four return 422.
   - Defects: seam-rest/SEAM-13
   - Owner decision first: Refusal status mapping: keep a uniform 422 for every refusal (the current §18 implementation; the GUI branches on refusal_type), or move not-found lookups to 404. If uniform 422 is kept, this requirement becomes a documentation-only change, and its acceptance is a test that pins 422.
-- [ ] **SEAM-05**: ForeignEngineRefusalError is reported as a server-side failure, not as a 422 caller refusal (proposed: 502). Its public body does not contain raw subprocess stderr: 'message' names only the operation and the exception class, 'cause' is not copied into 'message', and the stderr/traceback text (absolute server paths, env-var names) is not in the default response. That text is logged server-side and is exposed, if at all, only to an operator.
+- [x] **SEAM-05**: ForeignEngineRefusalError is reported as a server-side failure, not as a 422 caller refusal (proposed: 502). Its public body does not contain raw subprocess stderr: 'message' names only the operation and the exception class, 'cause' is not copied into 'message', and the stderr/traceback text (absolute server paths, env-var names) is not in the default response. That text is logged server-side and is exposed, if at all, only to an operator.
   - Test: tests/seam/test_foreign_engine_refusal.py patches run_corpus_op to raise CorpusOpSubprocessError carrying 3,000 characters of stderr that contain '/home/' and 'Traceback'. A delete or ingest that reaches it (through _node_result_or_refuse) returns the chosen 5xx status, refusal_type ForeignEngineRefusalError, and a body under 1 KB that contains neither '/home/' nor 'Traceback'. The MCP ToolError payload meets the same conditions. Fails today: the response is 422 and contains the stderr text twice.
   - Defects: seam-rest/SEAM-12, contract/D-13, doc-audit-1/D9
   - Owner decision first: Status code for machine faults (500 or 502/503), and whether the diagnostic cause is withheld entirely, truncated, or exposed behind an operator/auth flag (this ties to the console auth decision).
-- [ ] **SEAM-06**: GET /corpus, GET /corpus/counts and GET /jobs/{id} never return an unstructured 500 when the v1 corpus adapter fails. MissingV1InterpreterError, CorpusOpSubprocessError, CorpusOpTimeoutError and a JSON decode error each return the structured machine-fault response chosen in SEAM-05 (a refusal_type naming the failure, no stderr). The OpenAPI schema for these three routes declares that response.
+- [x] **SEAM-06**: GET /corpus, GET /corpus/counts and GET /jobs/{id} never return an unstructured 500 when the v1 corpus adapter fails. MissingV1InterpreterError, CorpusOpSubprocessError, CorpusOpTimeoutError and a JSON decode error each return the structured machine-fault response chosen in SEAM-05 (a refusal_type naming the failure, no stderr). The OpenAPI schema for these three routes declares that response.
   - Test: tests/seam/test_corpus_adapter_failures.py is parametrised over the four exception types patched into run_corpus_op. GET /corpus, GET /corpus/counts and GET /jobs/x each return the SEAM-05 status with a JSON body that carries refusal_type. GET /health still returns 200 'degraded'. Fails today: the three routes return 500 text/plain.
   - Defects: rest-live/REST-06
   - Owner decision first: Depends on SEAM-05: reuse ForeignEngineRefusalError for read-route adapter failures, or add a dedicated 'v1 engine unavailable or not configured' refusal.
@@ -832,8 +832,8 @@ These fail today.
 | SEAM-02 | Phase 9 | Complete |
 | SEAM-03 | Phase 9 | Complete |
 | SEAM-04 | Phase 9 | Complete |
-| SEAM-05 | Phase 9 | Pending |
-| SEAM-06 | Phase 9 | Pending |
+| SEAM-05 | Phase 9 | Complete |
+| SEAM-06 | Phase 9 | Complete |
 | SEAM-07 | Phase 9 | Complete |
 | SEAM-08 | Phase 9 | Complete |
 | SEAM-09 | Phase 9 | Pending |
