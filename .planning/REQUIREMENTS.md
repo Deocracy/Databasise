@@ -137,7 +137,7 @@
   - Test: tests/runner/test_capability_scoping_modes.py has four cases. (1) A fixture part declaring effects=['reads_kv'] calls ctx.stores['kv'].upsert({...}). Before the fix the upsert succeeds. After the fix the node records UndeclaredEffectError naming writes_kv. (2) The same part with ['reads_vector'] calls ctx.stores['vector'].select('chunks').delete_by_ids([...]) and is refused. (3) A part declaring ['reads_kv','writes_kv'] runs the upsert successfully. (4) CapabilityScopedStores.require('mutates_store') does not look up raw_stores['store'].
   - Defects: runner/RUN-16, parts-lightrag/PC-17
   - Owner decision first: The read/write method split per store kind, meaning which methods a read-only proxy exposes, and how mutates_store/self_storage resolve: an explicit effect-to-store table or a refusal. writes_artifact resolution is decided in STOR-12.
-- [ ] **STOR-06**: An ingest whose wiring records any node failure commits nothing. When run_wiring returns node_exceptions, the engine calls drop_pending_index_ops on every store instead of index_done_callback, then raises ForeignEngineRefusalError. After a refused HippoRAG ingest, the kv and vector stores hold no records for that document_id, and query evidence cannot return its chunks.
+- [x] **STOR-06**: An ingest whose wiring records any node failure commits nothing. When run_wiring returns node_exceptions, the engine calls drop_pending_index_ops on every store instead of index_done_callback, then raises ForeignEngineRefusalError. After a refused HippoRAG ingest, the kv and vector stores hold no records for that document_id, and query evidence cannot return its chunks.
   - Test: tests/seam/test_ingest_abort.py: run a HippoRAG ingest with stub clients where a node after chunk-embed (e.g. graph-augment-persist) raises. Assert that the call raises ForeignEngineRefusalError, and that after reopening, SqliteKVStore('hipporag-text-chunks') and the hipporag-chunks vector namespace are empty. Before the fix, the chunk records are committed.
   - Defects: stores/ST-03
   - Owner decision first: Cross-store atomicity: whether a flush failure in a later store (graph after kv/vector committed) needs compensation or a two-phase commit, or is accepted and documented as non-atomic.
@@ -851,7 +851,7 @@ These fail today.
 | STOR-03 | Phase 10 | Pending |
 | STOR-04 | Phase 10 | Pending |
 | STOR-05 | Phase 10 | Pending |
-| STOR-06 | Phase 10 | Pending |
+| STOR-06 | Phase 10 | Complete |
 | STOR-07 | Phase 10 | Pending |
 | STOR-08 | Phase 10 | Pending |
 | STOR-09 | Phase 10 | Pending |

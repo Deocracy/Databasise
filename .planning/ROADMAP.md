@@ -185,13 +185,13 @@ Plans (one plan per wave; every plan edits the shared refusal, engine or transpo
 - STOR-15: what triggers quarantined-namespace GC (generation retire, instance teardown, operator route), and derive_namespace layout vs docstring fix
 - STOR-16: reserved metadata keys rejected at upsert or moved under a sub-key
 
-**Plans**: 3/12 plans executed
+**Plans**: 4/12 plans executed
 
 Plans (nine waves; the shared engine and store modules force most plans into sequence, and wave 1 and wave 6 each hold plans with no shared file):
 - [x] 10-01-PLAN.md — Shared refcounted Cozo client, StoreBusyError 409, a failed store open finalizes every opened store (STOR-01, STOR-02; wave 1, owner grant checkpoint for one protected test line)
 - [x] 10-02-PLAN.md — Remove the lexical store, blob store and artifact registry; grep test; admission text (STOR-12, STOR-13, STOR-14; wave 1)
 - [x] 10-03-PLAN.md — Operator GC CLI under the store lock; NamespaceGCError; layout docstring (STOR-15; wave 1)
-- [ ] 10-04-PLAN.md — A failed or early-stopped ingest commits nothing; StoreFault and RunIncomplete; no in-node flush (STOR-06; wave 2)
+- [x] 10-04-PLAN.md — A failed or early-stopped ingest commits nothing; StoreFault and RunIncomplete; no in-node flush (STOR-06; wave 2)
 - [ ] 10-05-PLAN.md — Prepare-all then commit-all across kv, vector and graph under one lock; Faiss rebase (STOR-06; wave 3)
 - [ ] 10-06-PLAN.md — Faiss committed-snapshot cache for evidence resolve; half-written directory is corruption (STOR-03, STOR-08; wave 4)
 - [ ] 10-07-PLAN.md — Read-only health over every shipped namespace: ok, absent, corrupted, busy (STOR-04; wave 5)
@@ -429,7 +429,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 |-------|----------------|--------|-----------|
 | 8. Run the Engine | 10/10 | Complete    | 2026-10-16 |
 | 9. Inputs, Errors & Security | 10/10 | Complete    | 2026-10-17 |
-| 10. Stores, Locking & Data Integrity | 3/12 | In Progress | - |
+| 10. Stores, Locking & Data Integrity | 4/12 | In Progress | - |
 | 11. LightRAG Corpus Path | 0/TBD | Not started | - |
 | 12. HippoRAG Fixes | 0/TBD | Not started | - |
 | 13. Selectors, Wiring & Runner | 0/TBD | Not started | - |

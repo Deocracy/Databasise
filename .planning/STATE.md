@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 10
 current_phase_name: Stores, Locking & Data Integrity
 status: executing
-stopped_at: Completed 10-01-PLAN.md
-last_updated: "2026-10-17T22:53:56.180Z"
+stopped_at: Completed 10-04-PLAN.md
+last_updated: "2026-10-17T23:17:22.793Z"
 last_activity: 2026-10-17
 last_activity_desc: Phase 9 complete, transitioned to Phase 10
-state_head: 0729b55c8139bca8f7de2c2c2f71a52a657dfa6a
+state_head: 673699c206a84bf5326c98ddccff9ca76a94f925
 progress:
   total_phases: 11
   completed_phases: 2
   total_plans: 32
-  completed_plans: 23
+  completed_plans: 24
   percent: 18
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-17 after Phase 9)
 ## Current Position
 
 Phase: 10 (Stores, Locking & Data Integrity) — EXECUTING
-Plan: 4 of 12
+Plan: 5 of 12
 Status: Executing (10-02 complete)
 Last activity: 2026-10-17 — 10-02 complete (lexical, blob, artifact registry removed, D-15)
 
@@ -84,6 +84,7 @@ Progress: [██░░░░░░░░] 18% (2/11 phases)
 | Phase 10 P02 | 15min | 2 tasks | 19 files |
 | Phase 10 P03 | 11min | 2 tasks | 3 files |
 | Phase 10 P01 | 24min | 3 tasks | 10 files |
+| Phase 10 P04 | 22min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -128,6 +129,8 @@ Recent decisions affecting current work:
 - [Phase 10]: 10-03: gc_namespaces CLI treats a symlinked quarantined-* entry as present so gc_namespace raises NamespaceGCError on it
 - [Phase 10]: 10-01: CozoGraphStore.finalize sets its released flag on the loop thread before the executor release, so concurrent finalizes release the shared client once
 - [Phase 10]: 10-01: only the engine translates GraphStoreBusyError to StoreBusyError (409); parity run_arm lets it propagate under the store-root lock
+- [Phase 10]: 10-04: a refused ingest (any node exception, partial, stop_reason or cycle) drops every store's pending writes; store errors surface as failure_class StoreFault, early stops as RunIncomplete (both 502)
+- [Phase 10]: 10-04: ForeignEngineRefusalError message is now "operation 'x' failed (<class>)"; no test pinned the old text
 
 ### Pending Todos
 
@@ -172,8 +175,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-17T22:53:56.061Z
-Stopped at: Completed 10-01-PLAN.md
+Last session: 2026-10-17T23:17:22.681Z
+Stopped at: Completed 10-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
