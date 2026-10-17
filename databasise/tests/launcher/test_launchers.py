@@ -55,6 +55,7 @@ def launch(tmp_path):
                 stderr=err,
             )
         proc.stderr_path = tmp_path / f"proc{n}.err"  # type: ignore[attr-defined]
+        proc.stdout_path = tmp_path / f"proc{n}.out"  # type: ignore[attr-defined]
         procs.append(proc)
         return proc
 
@@ -225,3 +226,50 @@ def test_example_mcp_config_invokes_databasise_mcp_over_stdio():
     assert args[args.index("--transport") + 1] == "stdio"
     for flag in ("--store-root", "--env-file"):
         assert args[args.index(flag) + 1].startswith("/")
+
+
+def test_second_launcher_on_a_held_store_root_exits_with_the_store_lock_error(launch, tmp_path):
+    root = tmp_path / "store"
+    port_a = _free_port()
+    env_file = _write_stub_env(tmp_path / "stub.env")
+    first = launch(
+        "databasise-rest",
+        "--store-root", str(root),
+        "--workspace", "w",
+        "--port", str(port_a),
+        "--env-file", str(env_file),
+    )  # fmt: skip
+    _wait_ready(port_a, first)
+    second_rest = launch(
+        "databasise-rest", "--store-root", str(root), "--workspace", "w", "--port", str(_free_port()), "--no-clients"
+    )
+    second_mcp = launch(
+        "databasise-mcp", "--transport", "stdio", "--store-root", str(root), "--workspace", "w", "--no-clients"
+    )
+    for refused in (second_rest, second_mcp):
+        assert refused.wait(30) not in (0, None)
+        err = _stderr(refused)
+        assert str(root) in err and str(first.pid) in err
+        assert "one engine process per store root" in err
+    assert second_mcp.stdout_path.read_bytes() == b""  # type: ignore[attr-defined]
+    assert httpx.get(f"http://127.0.0.1:{port_a}/health", timeout=90).status_code == 200
+
+
+def test_a_released_store_root_can_be_launched_again(launch, tmp_path):
+    root = tmp_path / "store"
+    env_file = _write_stub_env(tmp_path / "stub.env")
+    port_first = _free_port()
+    first = launch(
+        "databasise-rest", "--store-root", str(root), "--workspace", "w",
+        "--port", str(port_first), "--env-file", str(env_file),
+    )  # fmt: skip
+    _wait_ready(port_first, first)
+    first.terminate()
+    first.wait(30)
+    port = _free_port()
+    again = launch(
+        "databasise-rest", "--store-root", str(root), "--workspace", "w",
+        "--port", str(port), "--env-file", str(env_file),
+    )  # fmt: skip
+    _wait_ready(port, again)
+    assert httpx.get(f"http://127.0.0.1:{port}/health", timeout=90).status_code == 200
