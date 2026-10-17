@@ -25,6 +25,7 @@ Privacy: no message, log line or attribute here carries the request headers or t
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from databasise.clients.base import RerankResult
@@ -72,7 +73,8 @@ class UnsupportedRerankBindingError(ValueError):
 
 
 def _is_number(value: Any) -> bool:
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
+    # math.isfinite: json accepts NaN/Infinity literals, and a NaN score has no defined sort position.
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
 
 class HttpRerankClient:
@@ -145,7 +147,8 @@ class HttpRerankClient:
             raise RerankResponseError("results is missing or not a list")
         ranked = self._validated_ranking(results, len(documents), top_n)
 
-        identity = body.get("model") or self._model
+        model = body.get("model")
+        identity = model if isinstance(model, str) and model else self._model
         return RerankResult(
             ranked_indices=ranked,
             tokens=self._token_accounting(body.get("usage"), identity),

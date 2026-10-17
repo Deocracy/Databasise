@@ -147,6 +147,15 @@ async def test_response_model_is_the_resolved_identity():
     assert result.resolved_model_identity == "served-reranker-v2"
 
 
+@pytest.mark.parametrize("model", [{"name": "x"}, 7, ["m"], ""])
+async def test_a_non_string_response_model_falls_back_to_the_configured_model(model):
+    handler = _respond({"model": model, "results": _results((0, 1.0), (1, 0.5), (2, 0.1))})
+
+    result = await _client(handler).rerank("q", DOCS)
+
+    assert result.resolved_model_identity == "rerank-test"
+
+
 @pytest.mark.parametrize("binding,payload_key", [("cohere", None), ("aliyun", "output")])
 async def test_missing_response_model_falls_back_to_the_configured_model(binding, payload_key):
     results = _results((0, 1.0), (1, 0.5), (2, 0.1))
@@ -217,6 +226,8 @@ async def test_http_500_raises_rerank_response_error_with_the_status():
         {"results": _results((0, 0.9), (0, 0.5), (1, 0.1))},
         {"results": _results((0, 0.9), (1, 0.5))},
         {"output": {"no": "results"}},
+        b'{"results": [{"index": 0, "relevance_score": NaN}, {"index": 1, "relevance_score": 0.5}, {"index": 2, "relevance_score": 0.1}]}',
+        b'{"results": [{"index": 0, "relevance_score": Infinity}, {"index": 1, "relevance_score": 0.5}, {"index": 2, "relevance_score": 0.1}]}',
     ],
 )
 async def test_malformed_or_incomplete_responses_are_refused_by_name(payload):
