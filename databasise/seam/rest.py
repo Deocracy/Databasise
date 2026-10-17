@@ -45,6 +45,17 @@ connection-count/timeout/body-size limits and access control are the operator's 
 this module's. FastAPI's native ``EventSourceResponse`` (see the streaming endpoint below) handles
 SSE keep-alive and buffering headers; it does not handle any of the above.
 
+**09-01-PLAN.md (SEAM-02, D-01): one refusal body.** Every refusal reaches the client as the
+top-level ``{refusal_type, message, <public attributes>}`` body with no ``detail`` wrapper. A
+refusal raised inside a pydantic validator is unwrapped from ``ctx.error`` by the
+``RequestValidationError`` handler; when one request carries both a schema error and a refusal,
+the refusal body wins. FastAPI's own ``{detail: [...]}`` shape remains only for schema errors with
+no refusal (wrong JSON types) and is the only other documented 4xx shape. The Phase 8 launcher
+guards (TrustedHost 400, Origin 403 ``{"detail": "origin not allowed"}`` in
+``launcher/serve_rest.py``) run before the seam and are transport guards that keep their own
+shapes, not refusals (D-13). The refusal shape covers every refusal raised by ``create_app`` routes
+and MCP tools.
+
 **08-08-PLAN.md (RUN-08, D-12): ``create_app(cors_origins=...)``.** An explicit, opt-in CORS
 allow-list of exact ``scheme://host[:port]`` origins so a browser console on another origin can
 call this seam. Empty (the default) adds no middleware and the app behaves exactly as before.
@@ -60,9 +71,11 @@ from typing import Any
 
 try:
     from fastapi import Depends, FastAPI, Form, Query, UploadFile
+    from fastapi.exception_handlers import request_validation_exception_handler
+    from fastapi.exceptions import RequestValidationError
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.requests import Request
-    from fastapi.responses import JSONResponse
+    from fastapi.responses import JSONResponse, Response
     from fastapi.sse import EventSourceResponse
 except ImportError as exc:  # pragma: no cover - exercised only without the `rest` extra installed
     raise ImportError(
@@ -92,6 +105,8 @@ from databasise.seam.refusals import (
     MalformedSelectorPayloadError,
     PageSizeExceededError,
     SeamRefusalError,
+    refusal_body,
+    refusal_from_errors,
 )
 from databasise.seam.selectors import Selector
 
@@ -213,11 +228,10 @@ def _checked_page(limit: int, offset: int) -> Page:
 
 def _refusal_response(_request: Request, exc: SeamRefusalError) -> JSONResponse:
     """The one application-level exception handler for every ``SeamRefusalError`` subclass
-    (T-04-27). Carries the refusal's own named attribute(s) — read generically off ``vars(exc)``
-    rather than a hand-maintained per-type mapping, since every refusal in
-    ``databasise.seam.refusals``/``evidence``/``tokens``/``trace_store`` already stores its own
-    offending value on a named attribute in its constructor (house style, see
-    ``databasise/seam/refusals.py``'s own module docstring).
+    (T-04-27). The body is built by ``databasise.seam.refusals.refusal_body``: the refusal's own
+    named attribute(s), read generically off ``vars(exc)`` rather than a hand-maintained per-type
+    mapping, since every refusal already stores its own offending value on a named attribute in
+    its constructor (house style, see ``databasise/seam/refusals.py``'s own module docstring).
 
     **CR-03: a leading-underscore attribute is never exposed.** Every refusal names only the
     consumer's own input, except ``UnbudgetableParticipantError`` (``databasise/seam/tokens.py``),
@@ -225,19 +239,20 @@ def _refusal_response(_request: Request, exc: SeamRefusalError) -> JSONResponse:
     specifically so a generic ``vars(exc)`` dump like this one cannot leak it — the same convention
     any future refusal with an internal-only value should follow.
     """
-    detail: dict[str, Any] = {"refusal_type": type(exc).__name__, "message": str(exc)}
-    for key, value in vars(exc).items():
-        if key.startswith("_"):
-            continue
-        if isinstance(value, BaseModel):
-            value = value.model_dump()
-        # 05-01-PLAN.md: ForeignEngineRefusalError's own `cause` attribute carries a raw
-        # exception object (a foreign-engine subprocess failure) — not JSON-serializable as-is;
-        # stringified here exactly like every other refusal's own message, never dropped.
-        elif isinstance(value, BaseException):
-            value = str(value)
-        detail[key] = value
-    return JSONResponse(status_code=_REFUSAL_STATUS_CODE, content=detail)
+    return JSONResponse(status_code=_REFUSAL_STATUS_CODE, content=refusal_body(exc))
+
+
+async def _validation_response(request: Request, exc: RequestValidationError) -> Response:
+    """09-01-PLAN.md (SEAM-02, D-01): a refusal raised inside a pydantic validator reaches here
+    wrapped in ``RequestValidationError``, with the original exception on ``ctx["error"]``; it is
+    unwrapped and answered with the same body ``_refusal_response`` builds. A schema error carrying
+    no refusal keeps FastAPI's own JSON-safe ``{detail: [...]}`` shape. ``exc.errors()`` is never
+    passed to ``JSONResponse`` directly: ``ctx.error`` is an exception object. Holds no state, so
+    concurrent requests cannot see each other's refusal."""
+    refusal = refusal_from_errors(exc.errors())
+    if refusal is None:
+        return await request_validation_exception_handler(request, exc)
+    return _refusal_response(request, refusal)
 
 
 class InvalidCorsOriginError(ValueError):
@@ -277,6 +292,7 @@ def create_app(
     app = FastAPI(title="databasise", version="0.1.0")
     app.state.engine = engine
     app.add_exception_handler(SeamRefusalError, _refusal_response)
+    app.add_exception_handler(RequestValidationError, _validation_response)
     if cors_origins:
         origins = list(dict.fromkeys(validate_cors_origin(origin) for origin in cors_origins))
         app.add_middleware(

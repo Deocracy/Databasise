@@ -32,6 +32,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def build_app(args: argparse.Namespace, clients: dict[str, Any] | None):
+    """Wraps ``create_app`` with the launcher's transport guards (D-13). The TrustedHost 400 and the
+    Origin-guard 403 ``{"detail": ...}`` are transport-level defences in front of the seam and keep
+    their own shapes; every refusal the seam raises (``create_app`` routes, MCP tools) uses the one
+    refusal body documented in ``databasise/seam/rest.py``."""
     from databasise.seam.rest import create_app
     from fastapi.responses import JSONResponse
     from starlette.middleware.trustedhost import TrustedHostMiddleware

@@ -71,7 +71,11 @@ from pydantic import BaseModel, ConfigDict, model_validator
 
 from databasise.ledger.ledger import Ledger
 from databasise.parts.registry import PartRegistry
-from databasise.seam.refusals import ForbiddenSelectorInputError, UnsatisfiableSelectorError
+from databasise.seam.refusals import (
+    ForbiddenSelectorInputError,
+    MultiMemberSelectorError,
+    UnsatisfiableSelectorError,
+)
 from databasise.validator.depth import effective_depth
 from databasise.validator.parse import parse_wiring
 from databasise.wirings.resolve import all_wirings, resolve_arm
@@ -105,9 +109,7 @@ class Selector(BaseModel):
     def _at_most_one_member_set(self) -> "Selector":
         set_members = [name for name in _SELECTOR_MEMBERS if getattr(self, name) is not None]
         if len(set_members) > 1:
-            raise ValueError(
-                f"a selector may set at most one of {_SELECTOR_MEMBERS!r}; got {set_members!r} set"
-            )
+            raise MultiMemberSelectorError(set_members=set_members)
         return self
 
     @model_validator(mode="after")

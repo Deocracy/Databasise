@@ -54,6 +54,7 @@ from databasise.seam.refusals import (
     MalformedBase64PayloadError,
     MalformedSelectorPayloadError,
     MeasurementPostureRefusalError,
+    MultiMemberSelectorError,
     MutableStoreComparisonExcludedError,
     NoRawUploadPathForModalityError,
     NoWritePathForModalityError,
@@ -411,6 +412,7 @@ _REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
     ForbiddenSelectorInputError: lambda: ForbiddenSelectorInputError(
         member_name="alias", value="a" * 64
     ),
+    MultiMemberSelectorError: lambda: MultiMemberSelectorError(set_members=["alias", "capability"]),
     UnknownTraceReferenceError: lambda: UnknownTraceReferenceError("bogus-token"),
     UnbudgetableParticipantError: lambda: UnbudgetableParticipantError("some-node"),
     UnresolvableEvidenceReferenceError: lambda: UnresolvableEvidenceReferenceError(

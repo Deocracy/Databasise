@@ -14,11 +14,43 @@ asked for, never what the machine has.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
+
+from pydantic import BaseModel
 
 
 class SeamRefusalError(ValueError):
     """Base class for every typed refusal raised at the ``databasise.seam`` boundary."""
+
+
+def refusal_body(exc: SeamRefusalError) -> dict[str, Any]:
+    """The one refusal body both transports return (09-01-PLAN.md, SEAM-02/D-01): the refusal's
+    class name, its message, and every public attribute off ``vars(exc)``. A leading-underscore
+    attribute is never exposed (CR-03: ``UnbudgetableParticipantError._internal_node_id`` is the
+    machine's own node id). A ``BaseModel`` value is dumped; an exception value is stringified
+    (``ForeignEngineRefusalError.cause``) since neither is JSON-serializable as-is."""
+    body: dict[str, Any] = {"refusal_type": type(exc).__name__, "message": str(exc)}
+    for key, value in vars(exc).items():
+        if key.startswith("_"):
+            continue
+        if isinstance(value, BaseModel):
+            value = value.model_dump()
+        elif isinstance(value, BaseException):
+            value = str(value)
+        body[key] = value
+    return body
+
+
+def refusal_from_errors(errors: Iterable[Any]) -> SeamRefusalError | None:
+    """The first ``SeamRefusalError`` a ``pydantic.ValidationError.errors()`` /
+    ``RequestValidationError.errors()`` list carries on ``ctx["error"]`` (pydantic keeps the
+    original exception object there when a validator raises), in list order; ``None`` if none."""
+    for err in errors:
+        original = (err.get("ctx") or {}).get("error")
+        if isinstance(original, SeamRefusalError):
+            return original
+    return None
 
 
 class EmptyQueryObjectError(SeamRefusalError):
@@ -71,6 +103,21 @@ class ForbiddenSelectorInputError(SeamRefusalError):
         super().__init__(
             f"selector member {member_name!r} carries a value shaped like an internal identity: "
             f"{value!r}"
+        )
+
+
+class MultiMemberSelectorError(SeamRefusalError):
+    """Raised at ``Selector`` model validation (09-01-PLAN.md, SEAM-02) when more than one of
+    ``alias``/``capability``/``harness`` is set -- the three selector forms are mutually exclusive.
+    ``set_members`` names which members the caller set. Names only the caller's own member names,
+    never a candidate wiring."""
+
+    def __init__(self, *, set_members: list[str]):
+        self.set_members = list(set_members)
+        # The literal class name is load-bearing for the same reason as PageSizeExceededError's.
+        super().__init__(
+            "MultiMemberSelectorError: a selector may set at most one of alias, capability, "
+            f"harness; got {self.set_members!r} set"
         )
 
 
@@ -508,6 +555,7 @@ __all__ = [
     "UnconsumableQueryMemberError",
     "UnsatisfiableSelectorError",
     "ForbiddenSelectorInputError",
+    "MultiMemberSelectorError",
     "AmbiguousIngestPayloadError",
     "OversizedDocumentError",
     "UnknownDocumentError",
