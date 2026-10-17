@@ -352,7 +352,7 @@ Line numbers are HEAD as of this session. `[VERIFIED: files read this session]`
 
 ### R-07 SEAM-07 ingest ids and size
 - `corpus.py:56` `_DOCUMENT_ID_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]+$")` used with `.match` at `corpus.py:221`: change to `fullmatch`, and raise `InvalidDocumentIdError(document_id=...)` from `generated_on_disk_name` itself (it is a `SeamRefusalError`, hence still a `ValueError` for `tests/parts_core/lightrag/test_full_ingest.py:353-359`). `engine.py:683` (ingest, currently an uncaught `ValueError` -> 500) and `engine.py:801-804` (delete wraps it as `UnknownDocumentError`) then share one raise; drop the delete wrapper. `UnknownDocumentError` stays in the catalogue (its docstring becomes "well-formed id that does not exist"; nothing raises it today, since v1 reports `not_found` as a normal outcome).
-- `document.document_id or uuid.uuid4().hex` (`engine.py:679`) -> `... if document.document_id is not None else ...`.
+- `document.document_id or uuid.uuid4().hex` (`engine.py:679`) stays: per D-12 (added at plan-check iteration 1) an empty `document_id` means absent and gets a minted id; only a non-empty malformed id is refused.
 - Upload oversize: caused by the unhandled `ValidationError` at `rest.py:364`; the pydantic handler from R-02 maps it to `OversizedDocumentError`. Starlette spools multipart uploads to a temp file before the route runs; the app has no body-size limit by design (`rest.py` exposure note) - out of scope (Open Question 9). `await file.read()` could cheaply become `file.read(MAX_DOCUMENT_BYTES + 1)`, optional.
 
 ### R-08 SEAM-08 page bounds
@@ -362,7 +362,7 @@ Line numbers are HEAD as of this session. `[VERIFIED: files read this session]`
 - Test must spy `engine_module.run_corpus_op` and assert zero calls for the refused inputs.
 
 ### R-09 SEAM-09 empties
-- Query: `query.py:72-86` `check_consumable` treats a member as set when `is not None`; make `text` count only if `text.strip()`; `QueryObject(text='   ')` alone -> `EmptyQueryObjectError`; whitespace text plus another member still reports that other member's `UnconsumableQueryMemberError`. Called at `engine.py:640` (compare) and `:975` (`_execute`), before any resolution, so no node runs and no trace is persisted.
+- Query: `query.py:72-86` `check_consumable` treats a member as set when `is not None`; make `text` count only if `text.strip()`; `QueryObject(text='   ')` alone -> `EmptyQueryObjectError`; per the plan-check iteration 1 ruling, empty or whitespace-only text is refused as `EmptyQueryObjectError` whatever other members are set (checked before the consumability check). Called at `engine.py:640` (compare) and `:975` (`_execute`), before any resolution, so no node runs and no trace is persisted.
 - Ingest: add to `IngestDocument._exactly_one_payload_shape_within_the_size_cap` (`corpus.py:77-89`): `text` empty/whitespace-only -> new `EmptyIngestDocumentError(member='text')`; `raw` of length 0 -> `member='raw'` (D-08 leaves the name to discretion; `AmbiguousIngestPayloadError` would give a misleading "exactly one of text/raw" message). Raised in a validator, so the message must contain the class name and REST/MCP rely on the unwrap paths.
 - Base64: `tools.py:114` `base64.b64decode(self.raw_base64)` -> `base64.b64decode(self.raw_base64, validate=True)`; `binascii.Error` already maps to `MalformedBase64PayloadError` (`:115-116`). `raw_base64=''` decodes to `b''` and is then refused as empty.
 
@@ -516,14 +516,14 @@ Deprecated: `rest._refusal_response`'s inline dump and `mcp.server._refusal_deta
 | A6 | `EmptyIngestDocumentError` / `EmptyCapabilitySelectorError` / `InvalidPromotionAliasError` / `MissingScopeArgumentError` as class names | R-09/10/12/03 | Low; discretion area |
 | A7 | Satisfying D-02 via a raised `ToolError` subclass (wire result is `CallToolResult(isError=True)`) rather than a returned `CallToolResult` matches the owner's intent | Pattern 3 | Low; the wire bytes are identical, and REQUIREMENTS SEAM-03's test wording ("raises a ToolError") matches this mechanism |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **SEAM-03 mechanism: raise vs return** - D-02 says `CallToolResult(isError=True)`; REQUIREMENTS' test says "raises a ToolError".
    - **RESOLVED (by D-02, mechanism verified):** raise `RefusalToolError(ToolError)` from `call_tool`; the SDK converts it to `CallToolResult(is_error=True)` with the bare JSON as text. Prove with `mcp.Client` and with `pytest.raises(ToolError)` both.
 2. **Two edits to ledger-protected test files** (`test_tool_growth_invariant.py:49`; `test_rest_corpus_endpoints.py:237`).
-   - **ROUTED:** Plan F (and Plan B for the 404 assertion) must open with an owner `grant-check-edit` request (`checkpoint:human-action`) naming both exact one-line edits. Until granted, do not delete `selectors._ARM_NAMES` and expect `test_get_jobs_for_an_unknown_job_id...` to fail on the 404.
+   - **RESOLVED (owner checkpoints planned):** `test_rest_corpus_endpoints.py` is granted at 09-02 Task 2 and `test_tool_growth_invariant.py` at 09-10 Task 2, each a blocking `checkpoint:human-action` naming the exact one-line edit. Until granted, do not delete `selectors._ARM_NAMES` and expect `test_get_jobs_for_an_unknown_job_id...` to fail on the 404.
 3. **Launcher guard bodies** (`serve_rest.py:61` `{"detail": "origin not allowed"}` 403; Starlette TrustedHost 400 text) are not `SeamRefusalError`s and are pinned by `tests/launcher/test_bind_guard.py:155`.
-   - **RESOLVED (by D-01 scope: "every refusal"):** leave unchanged; document in the `rest.py` module docstring as pre-seam transport guards. Owner can reopen; changing them needs `grant-check-edit` on `tests/launcher/*`.
+   - **RESOLVED (locked as D-13):** leave unchanged; the `rest.py` module docstring (09-01 Task 1) and the `serve_rest.build_app` docstring state that they are transport guards in front of the seam. Owner can reopen; changing them needs `grant-check-edit` on `tests/launcher/*`.
 4. **Name/shape of the empty-ingest refusal** (D-08 leaves the name open).
    - **RESOLVED (Claude's discretion):** `EmptyIngestDocumentError(member)`.
 5. **Names for `capability: []` and promote alias refusals.**
@@ -531,13 +531,13 @@ Deprecated: `rest._refusal_response`'s inline dump and `mcp.server._refusal_deta
 6. **Where `capability: []` is refused.**
    - **RESOLVED:** in `resolve_selector` (REQUIREMENTS test text), not in the `Selector` validator.
 7. **BAK ledger `test_ref` for SEAM-01..16** (rows exist with empty `test_ref`; the ledger is frozen except via `scripts/ledger-amend.py`).
-   - **ROUTED:** after verification passes, a final owner-approved ledger step as in Phase 8 (`d505c5d chore(bak): set test_refs for RUN-01..`). Not part of the code plans. Note the ledger gate currently reports RUN-01..12 open (Phase 8 leftovers, RUN-11 live items) - not Phase 9's to close.
+   - **RESOLVED (post-verification ledger step, outside the code plans):** after verification passes, the orchestrator runs a final owner-approved ledger step as in Phase 8 (`d505c5d chore(bak): set test_refs for RUN-01..`). Not part of the code plans. Note the ledger gate currently reports RUN-01..12 open (Phase 8 leftovers, RUN-11 live items) - not Phase 9's to close.
 8. **Generic non-refusal exceptions still produce text/plain 500** (e.g. the cyclic-wiring `RuntimeError`, `MalformedEvidenceItemError`).
    - **RESOLVED (out of scope):** success criterion 3 covers v1 engine failures; D-01..D-11 add no catch-all. Candidate for a later hardening item.
 9. **Upload temp-file / body-size limits.**
    - **RESOLVED (out of scope):** `rest.py` exposure note makes body-size limits the operator's boundary.
 10. **`stop_reason` text names internal node ids** (seen in degraded `/query` envelopes during the repro).
-    - **ROUTED:** WIRE-03 (Phase 13), not SEAM.
+    - **RESOLVED (assigned to WIRE-03, Phase 13):** not a SEAM requirement; WIRE-03 owns node-free `stop_reason`/`degradation_reason` text.
 11. **COVERAGE.md rows** - no new routes or tools are added by this phase and the table has no status-code column (`databasise/evidence/COVERAGE.md:89-112`).
     - **RESOLVED:** no COVERAGE.md edit required; `test_every_tool_has_a_coverage_row...` is unaffected. If a plan adds a route or tool anyway, add its row and map it in `_OPERATION_TO_TOOLS` (protected test).
 
