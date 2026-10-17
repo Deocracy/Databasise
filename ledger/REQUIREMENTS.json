@@ -1,5 +1,5 @@
 {
-  "ledger_version": 399,
+  "ledger_version": 400,
   "frozen_at": null,
   "items": [
     {
@@ -2394,6 +2394,10 @@
     "databasise/tests/mcp/test_tool_growth_invariant.py": {
       "reason": "09-10 Task 3 (SEAM-16): import _ARM_NAMES from databasise.wirings.resolve after selectors._ARM_NAMES is removed; one import line",
       "granted_at": 354
+    },
+    "databasise/tests/seam/test_refusal_status_codes.py": {
+      "reason": "10-01 Task 2 (STOR-01, D-02): add StoreBusyError to _MAPPED_ELSEWHERE so the 422 catalogue parametrisation skips the 409 refusal; one line",
+      "granted_at": 400
     }
   },
   "notify_cmd": null
