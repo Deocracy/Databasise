@@ -31,6 +31,10 @@ Every caller-facing failure on REST and MCP becomes a named refusal in one docum
 - **D-10:** SEAM-11 envelope rule: a consumer tells a single envelope from a keyed map by the number of selectors it sent (one selector gives a single envelope; two or more give a keyed map). The rule is documented in the compare docstrings and OpenAPI description; no wrapper field is added. An alias named `answer` therefore cannot make a keyed map look like an envelope.
 - **D-11:** SEAM-15: `file_name` and `content_type` are discarded at ingest, and the `corpus.py` module docstring, the `IngestDocument` docstring and the REST/MCP field descriptions say so ("not stored"). Carrying them into citation metadata is deferred to the LightRAG write-path work (M-04, Phase 11).
 
+### Added during planning (Claude's decisions on the owner's delegation, plan-check iteration 1)
+- **D-12:** An empty `document_id` (`''`) on any ingest/upload entry point means "absent": the server mints the id, exactly as for a missing field (consistent with SEAM-13's `null`/`''` selector rule). Only a non-empty malformed id (`../x`, `a.b`, `a\n`, ...) is refused as `InvalidDocumentIdError`.
+- **D-13:** The Phase 8 launcher guards in `databasise/launcher/serve_rest.py` (Origin guard 403 `{"detail": ...}`, `TrustedHostMiddleware` 400) are transport-level defences in front of the seam and keep their own shapes; the Phase 9 refusal shape (D-01) covers every refusal raised by the seam (`create_app` routes and MCP tools). The `rest.py` module docstring and the launcher docstring state this boundary.
+
 ### Claude's Discretion
 - Exact class placement and message wording for the new refusals, following `databasise/seam/refusals.py` house style (named attributes carrying the caller's own offending value; leading-underscore attributes never exposed).
 - Whether the unprefixed-key collision pre-check reuses `DuplicateComparisonKeyError` (expected) or needs an additional named refusal.
