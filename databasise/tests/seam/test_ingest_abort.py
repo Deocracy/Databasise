@@ -7,15 +7,18 @@ Reuses ``test_hipporag_write_path.py``'s stub clients, workspace and HippoRAG se
 
 from __future__ import annotations
 
+import sqlite3
+
 import pytest
 
+from databasise.runner import scheduler as _scheduler
 from databasise.seam import QueryObject
 from databasise.seam.corpus import IngestDocument
 from databasise.seam.refusals import ForeignEngineRefusalError
 from databasise.seam.selectors import Selector
 from databasise.stores.graph import CozoGraphStore
 from databasise.stores.kv import SqliteKVStore
-from databasise.stores.vector import FaissVectorStore
+from databasise.stores.vector import FaissVectorStore, MultiNamespaceVectorStore
 from seam.test_hipporag_write_path import _DOCUMENT_TEXT, _HIPPORAG_CAPABILITY, _WORKSPACE, _make_engine
 
 _VECTOR_NAMESPACES = ("hipporag-chunks", "hipporag-entities", "hipporag-facts")
@@ -93,3 +96,96 @@ async def test_a_successful_hipporag_ingest_still_commits(store_root):
         assert list(chunks.iter_vectors())
     finally:
         await chunks.finalize()
+
+
+# --------------------------------------------------------------------------------------------- #
+# Task 2: StoreFault and RunIncomplete (D-13, Q2), and any node's exception refuses (D-06).
+# --------------------------------------------------------------------------------------------- #
+
+
+async def test_a_store_error_inside_a_node_is_a_store_fault(store_root, monkeypatch):
+    refusal = await _refused_ingest(store_root, monkeypatch, sqlite3.OperationalError("simulated store fault"))
+
+    assert refusal.failure_class == "StoreFault"
+    assert "v1" not in str(refusal)
+    assert "foreign engine" not in str(refusal).lower()
+    await _assert_nothing_committed(store_root)
+
+
+async def test_a_non_store_exception_keeps_its_existing_class(store_root, monkeypatch):
+    refusal = await _refused_ingest(store_root, monkeypatch, RuntimeError("boom"))
+
+    assert refusal.failure_class == "UnclassifiedEngineFailure"
+
+
+def _fake_run_wiring(scheduled_extra: dict, calls: list):
+    async def _run_wiring(parsed, registry, stores, **kwargs):
+        await stores["kv"].upsert({"leaked-chunk": {"content": "must not survive"}})
+        calls.append("run_wiring")
+        scheduled = {
+            "results": {node_id: {"artifact": {}} for node_id in parsed.parts},
+            "nodes": [],
+            "partial": False,
+            "stop_reason": None,
+            "degraded": False,
+            "degradation_reason": None,
+            "node_exceptions": {},
+        }
+        scheduled.update(scheduled_extra)
+        return scheduled
+
+    return _run_wiring
+
+
+async def test_an_exception_on_a_non_result_node_still_refuses_and_commits_nothing(store_root, monkeypatch):
+    calls: list = []
+    extra = {"node_exceptions": {"chunk-embed": RuntimeError("non-result node failed")}}
+    monkeypatch.setattr(_scheduler, "run_wiring", _fake_run_wiring(extra, calls))
+
+    with pytest.raises(ForeignEngineRefusalError):
+        await _make_engine(store_root).ingest(
+            IngestDocument(document_id="abort-doc-2", text=_DOCUMENT_TEXT), selector=_selector()
+        )
+
+    assert calls == ["run_wiring"]
+    await _assert_nothing_committed(store_root)
+
+
+async def test_an_early_stop_with_no_exception_is_run_incomplete_and_drops_every_store(store_root, monkeypatch):
+    calls: list = []
+    extra = {"partial": True, "stop_reason": "budget_halt", "degraded": True, "degradation_reason": "budget_halt"}
+    monkeypatch.setattr(_scheduler, "run_wiring", _fake_run_wiring(extra, calls))
+    lifecycle: list[tuple[str, str]] = []
+    for store_cls in (SqliteKVStore, MultiNamespaceVectorStore, CozoGraphStore):
+        for method in ("drop_pending_index_ops", "index_done_callback"):
+            original = getattr(store_cls, method)
+
+            async def _spy(self, _original=original, _method=method):
+                lifecycle.append((type(self).__name__, _method))
+                return await _original(self)
+
+            monkeypatch.setattr(store_cls, method, _spy)
+
+    with pytest.raises(ForeignEngineRefusalError) as exc_info:
+        await _make_engine(store_root).ingest(
+            IngestDocument(document_id="abort-doc-3", text=_DOCUMENT_TEXT), selector=_selector()
+        )
+    monkeypatch.undo()
+
+    assert exc_info.value.failure_class == "RunIncomplete"
+    assert sorted(lifecycle) == [
+        ("CozoGraphStore", "drop_pending_index_ops"),
+        ("MultiNamespaceVectorStore", "drop_pending_index_ops"),
+        ("SqliteKVStore", "drop_pending_index_ops"),
+    ]
+    await _assert_nothing_committed(store_root)
+
+
+@pytest.mark.parametrize("failure_class", ["StoreFault", "RunIncomplete"])
+def test_store_fault_and_run_incomplete_answer_502(failure_class):
+    pytest.importorskip("fastapi")
+    from databasise.seam.rest import _status_for
+
+    refusal = ForeignEngineRefusalError(operation="ingest", cause=RuntimeError("x"), failure_class=failure_class)
+
+    assert _status_for(refusal) == 502

@@ -129,8 +129,10 @@ _NOT_FOUND_REFUSALS: tuple[type[SeamRefusalError], ...] = (
 
 
 # A ForeignEngineRefusalError is a machine fault, never a caller refusal (09-05-PLAN.md, SEAM-05,
-# SEAM-06, D-04): 502 when the v1 run fails or returns malformed output, 503 when v1 is unavailable
-# (missing interpreter, timeout). A consumer is never told to change input that was not at fault.
+# SEAM-06, D-04): 503 when v1 is unavailable (missing interpreter, timeout); 502 for every other
+# class, i.e. an engine run, a store (StoreFault) or the v1 engine failed, stopped early
+# (RunIncomplete) or returned malformed output. A consumer is never told to change input that was
+# not at fault.
 _ENGINE_UNAVAILABLE = frozenset({"MissingV1InterpreterError", "CorpusOpTimeoutError", "DriverUnavailable"})
 
 
@@ -155,7 +157,10 @@ class RefusalBody(BaseModel):
 _FAULT_RESPONSES: dict[int | str, dict[str, Any]] = {
     502: {
         "model": RefusalBody,
-        "description": "Machine fault: the v1 engine run failed or returned malformed output (ForeignEngineRefusalError)",
+        "description": (
+            "Machine fault: an engine run, a store or the v1 engine failed, stopped early or returned "
+            "malformed output (ForeignEngineRefusalError)"
+        ),
     },
     503: {
         "model": RefusalBody,

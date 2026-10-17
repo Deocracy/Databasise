@@ -743,11 +743,14 @@ _FOREIGN_FAILURE_CLASSES: dict[str, str] = {
 
 
 class ForeignEngineRefusalError(SeamRefusalError):
-    """A machine fault, not a caller refusal (09-05-PLAN.md, SEAM-05, D-04): the foreign (v1) engine
-    failed, was unavailable, or returned malformed output. ``operation`` names the seam operation
-    that was attempted (e.g. ``"ingest"``); ``failure_class`` is the allow-listed public name of
-    what went wrong. REST answers 502 (the run failed or returned malformed output) or 503 (v1 is
-    unavailable) by ``failure_class``.
+    """A machine fault, not a caller refusal (09-05-PLAN.md, SEAM-05, D-04). One fault type covers
+    every engine-side failure: the v1 engine failed, was unavailable or returned malformed output
+    (the v1 classes above); a store failed inside a node or during the flush (``StoreFault``, or
+    ``StoreCorrupted``); or the run stopped early with no exception (``RunIncomplete``, Phase 10
+    D-06, D-13). The class name is historical; a store fault is not a v1 failure. ``operation``
+    names the seam operation that was attempted (e.g. ``"ingest"``); ``failure_class`` is the
+    allow-listed public name of what went wrong. REST answers 503 when v1 is unavailable and 502
+    for every other class.
 
     The underlying exception is private: stored on ``_cause`` (so ``refusal_body`` never exposes it),
     readable in-process through the read-only ``cause`` property, and logged in full by the engine
@@ -763,7 +766,7 @@ class ForeignEngineRefusalError(SeamRefusalError):
         )
         self._cause = cause
         super().__init__(
-            f"ForeignEngineRefusalError: the foreign engine failed operation {operation!r} ({self.failure_class})"
+            f"ForeignEngineRefusalError: operation {operation!r} failed ({self.failure_class})"
         )
 
     @property

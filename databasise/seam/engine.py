@@ -145,6 +145,7 @@ import hashlib
 import json
 import logging
 import os
+import sqlite3
 import uuid
 from collections.abc import AsyncIterator, Iterator, Sequence
 from pathlib import Path
@@ -249,14 +250,20 @@ logger = logging.getLogger(__name__)
 def _foreign_fault(
     operation: str, cause: BaseException, *, failure_class: str | None = None
 ) -> ForeignEngineRefusalError:
-    """09-05-PLAN.md (SEAM-05, D-04): the one place a foreign-engine fault is built and logged. The
-    full cause (stderr, traceback) goes to the server log exactly once; the returned refusal carries
-    it privately and exposes only the operation and the allow-listed ``failure_class``."""
+    """09-05-PLAN.md (SEAM-05, D-04): the one place an engine fault is built and logged, whether
+    the v1 engine, a store (D-13) or the run itself (an early stop) failed. The full cause (stderr,
+    traceback) goes to the server log exactly once; the returned refusal carries it privately and
+    exposes only the operation and the allow-listed ``failure_class``."""
     refusal = ForeignEngineRefusalError(operation=operation, cause=cause, failure_class=failure_class)
-    logger.error(
-        "foreign engine fault: operation=%s failure_class=%s", operation, refusal.failure_class, exc_info=cause
-    )
+    logger.error("engine fault: operation=%s failure_class=%s", operation, refusal.failure_class, exc_info=cause)
     return refusal
+
+
+def _is_store_fault(exc: BaseException) -> bool:
+    """D-13: a sqlite error, or any exception type defined by ``databasise.stores`` or pycozo, is a
+    store fault (judged by the type's module, so ``stores/`` need not export a common base)."""
+    module = type(exc).__module__ or ""
+    return isinstance(exc, sqlite3.Error) or module.startswith(("databasise.stores", "pycozo"))
 
 def _log_staged_left(staged: Path) -> None:
     """09 REVIEW WR-04: a fault after the v1 run started leaves the staged upload in place (v1 may
@@ -463,7 +470,8 @@ def _node_result_or_refuse(scheduled: dict[str, Any], node_id: str, operation: s
 
     D-06 (STOR-06): the whole run counts, not only ``node_id``. In order:
     1. a cyclic wiring (``"cycle"``) refuses as ``RunIncomplete``;
-    2. ``node_id``'s recorded exception, else the first recorded exception of any other node;
+    2. ``node_id``'s recorded exception, else the first recorded exception of any other node; a
+       store error is ``StoreFault`` (D-13), anything else keeps its existing class;
     3. ``partial`` or ``stop_reason`` (an early stop with no exception) refuses as ``RunIncomplete``;
     4. no result for ``node_id`` refuses with a synthesized cause (a cancelled sibling, a dropped
        dispatch). The synthesized ``RuntimeError`` is used only where no real exception exists.
@@ -480,6 +488,8 @@ def _node_result_or_refuse(scheduled: dict[str, Any], node_id: str, operation: s
     if node_exception is None and node_exceptions:
         node_exception = next(iter(node_exceptions.values()))
     if node_exception is not None:
+        if _is_store_fault(node_exception):
+            raise _foreign_fault(operation, node_exception, failure_class="StoreFault") from node_exception
         raise _foreign_fault(operation, node_exception) from node_exception
     stop_reason = scheduled.get("stop_reason")
     if scheduled.get("partial") or stop_reason:
