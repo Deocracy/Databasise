@@ -93,7 +93,7 @@ Some owner decisions are taken in one phase and consumed by later ones. Settle e
 - RUN-08: CORS allow-list or same-origin serving (default: explicit allow-list, empty by default, never '*')
 - RUN-11: parity similarity threshold (lower it, pin a deterministic endpoint, or retry and report flakiness)
 
-**Plans**: 4/10 plans executed
+**Plans**: 5/10 plans executed
 
 Plans:
 **Wave 1**
@@ -105,7 +105,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 08-05-PLAN.md — Rerank client, optional RERANK_* in the shared builder, /health clients map, API coverage table (RUN-05; wave 2, owner decision checkpoint)
+- [x] 08-05-PLAN.md — Rerank client, optional RERANK_* in the shared builder, /health clients map, API coverage table (RUN-05; wave 2, owner decision checkpoint)
 - [ ] 08-06-PLAN.md — `databasise-mcp` launcher, example stdio config, cross-process lock refusal tests (RUN-06, RUN-07; wave 2)
 - [ ] 08-07-PLAN.md — Parity CLIs take the store lock and refuse while a launcher holds it (RUN-07 D-03; wave 2)
 - [ ] 08-08-PLAN.md — Opt-in exact-origin CORS allow-list via `--cors-origin` (RUN-08; wave 2)
@@ -400,7 +400,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 8. Run the Engine | 4/10 | In Progress|  |
+| 8. Run the Engine | 5/10 | In Progress|  |
 | 9. Inputs, Errors & Security | 0/TBD | Not started | - |
 | 10. Stores, Locking & Data Integrity | 0/TBD | Not started | - |
 | 11. LightRAG Corpus Path | 0/TBD | Not started | - |
