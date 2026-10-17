@@ -255,6 +255,17 @@ async def _validation_response(request: Request, exc: RequestValidationError) ->
     return _refusal_response(request, refusal)
 
 
+def _pydantic_validation_response(request: Request, exc: ValidationError) -> JSONResponse:
+    """09-02-PLAN.md (SEAM-02, SEAM-07): a ``pydantic.ValidationError`` raised inside a route body
+    (``IngestDocument(raw=...)`` on the upload route) carries the real refusal on ``ctx["error"]``;
+    it is answered with the same body ``_refusal_response`` builds. One with no refusal inside is a
+    server bug and is re-raised, so it stays a visible 500."""
+    refusal = refusal_from_errors(exc.errors())
+    if refusal is None:
+        raise exc
+    return _refusal_response(request, refusal)
+
+
 class InvalidCorsOriginError(ValueError):
     """A CORS origin that is not an exact ``scheme://host[:port]`` value (D-12)."""
 
@@ -293,6 +304,7 @@ def create_app(
     app.state.engine = engine
     app.add_exception_handler(SeamRefusalError, _refusal_response)
     app.add_exception_handler(RequestValidationError, _validation_response)
+    app.add_exception_handler(ValidationError, _pydantic_validation_response)
     if cors_origins:
         origins = list(dict.fromkeys(validate_cors_origin(origin) for origin in cors_origins))
         app.add_middleware(
@@ -370,11 +382,19 @@ def create_app(
         convention for the identical "no native shape" problem) — parsed via ``Selector``'s own
         ``model_validate_json``, never a hand-rolled parse.
 
-        CR-02 gap closure: this parse happens directly in the route body, never inside a pydantic
-        validator, so a raw ``pydantic.ValidationError`` on malformed input is not itself a
-        ``SeamRefusalError`` the registered handler can map — it must be caught and translated
-        here, mirroring ``MalformedBase64PayloadError``'s own house pattern for exactly this
-        "manually parsed field" situation.
+        **Selector field rules (09-02-PLAN.md, SEAM-13, SEAM-02).** An omitted, empty,
+        whitespace-only or ``null`` field means no selector, the same as ``selector: null`` on the
+        JSON routes. Valid JSON that breaks a selector rule returns that rule's own refusal
+        (``ForbiddenSelectorInputError`` for a hash-shaped alias, and so on), unwrapped from the
+        ``ValidationError`` with ``refusal_from_errors``. ``MalformedSelectorPayloadError`` is only
+        for unparseable JSON or a schema error that carries no refusal (``{"alias": 5}``); ``NULL``
+        is not the JSON literal and is malformed. The parse is a pure function of the field, so
+        concurrent uploads cannot see each other's selector.
+
+        The selector parse happens in the route body, never inside a pydantic validator, so its
+        ``ValidationError`` is translated here (mirroring ``MalformedBase64PayloadError``'s house
+        pattern). The ``IngestDocument(...)`` construction is left unwrapped: its refusals (oversize,
+        ambiguity) reach the client through the app-level ``pydantic.ValidationError`` handler.
         """
         raw = await file.read()
         document = IngestDocument(
@@ -383,10 +403,14 @@ def create_app(
             file_name=file.filename,
             content_type=file.content_type,
         )
-        try:
-            parsed_selector = Selector.model_validate_json(selector) if selector else None
-        except ValidationError as exc:
-            raise MalformedSelectorPayloadError(field="selector") from exc
+        parsed_selector = None
+        if selector is not None and selector.strip() not in ("", "null"):
+            try:
+                parsed_selector = Selector.model_validate_json(selector)
+            except ValidationError as exc:
+                raise (
+                    refusal_from_errors(exc.errors()) or MalformedSelectorPayloadError(field="selector")
+                ) from exc
         return await engine.ingest(document, parsed_selector)
 
     @app.get("/jobs/{job_id}")

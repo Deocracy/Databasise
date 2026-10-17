@@ -91,6 +91,45 @@ def test_an_oversized_text_is_refused_by_byte_count_without_echoing_the_input(cl
     assert len(response.content) < 4096
 
 
+def test_upload_with_a_hash_shaped_selector_field_returns_the_forbidden_selector_refusal(client):
+    response = client.post(
+        "/documents/upload",
+        files={"file": ("doc.txt", b"hello", "text/plain")},
+        data={"selector": '{"alias":"%s"}' % _HASH_A},
+    )
+    body = _assert_refusal(response, "ForbiddenSelectorInputError")
+    assert body["member_name"] == "alias"
+
+
+def test_an_oversized_upload_is_a_422_refusal_and_writes_nothing_to_the_inbox(client, tmp_path):
+    raw = b"a" * (_MAX_DOCUMENT_BYTES + 1)
+    response = client.post(
+        "/documents/upload", files={"file": ("big.txt", raw, "text/plain")}
+    )
+    body = _assert_refusal(response, "OversizedDocumentError")
+    assert body["actual_bytes"] == _MAX_DOCUMENT_BYTES + 1
+    assert len(response.content) < 4096
+    inbox = tmp_path / "corpus-inbox"
+    assert not inbox.exists() or not any(inbox.iterdir())
+
+
+def test_a_route_validation_error_with_no_refusal_inside_stays_a_server_error(tmp_path):
+    from pydantic import BaseModel
+
+    class _Strict(BaseModel):
+        n: int
+
+    app = create_app(store_root=tmp_path, workspace="refusal-body-shape-500")
+
+    @app.get("/_test/bare-validation-error")
+    async def _bare():
+        _Strict(n="not an int")
+
+    response = TestClient(app, raise_server_exceptions=False).get("/_test/bare-validation-error")
+    assert response.status_code == 500
+    assert "refusal_type" not in response.text
+
+
 def test_a_schema_error_with_no_refusal_keeps_fastapis_detail_shape(client):
     response = client.post("/query", json={"query": {"text": 5}})
     assert response.status_code == 422
