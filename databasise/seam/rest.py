@@ -87,7 +87,6 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 
 from databasise.parts.registry import PartRegistry
 from databasise.seam.corpus import (
-    MAX_PAGE_SIZE,
     CorpusStatus,
     DeletionOutcome,
     DocumentCounts,
@@ -95,7 +94,7 @@ from databasise.seam.corpus import (
     IngestDocument,
     IngestJob,
     JobStatus,
-    Page,
+    checked_page,
 )
 from databasise.seam.engine import Databasise, stream_envelope_events
 from databasise.seam.envelope import PromotionResult, ResponseEnvelope
@@ -103,7 +102,6 @@ from databasise.seam.evidence import EvidenceRef
 from databasise.seam.query import QueryObject
 from databasise.seam.refusals import (
     MalformedSelectorPayloadError,
-    PageSizeExceededError,
     SeamRefusalError,
     UnknownGenerationVersionError,
     UnknownJobError,
@@ -218,27 +216,6 @@ class RetireRequest(_RequestModel):
     version: str
     trace_ids: list[str]
     change_origin: str | None = None
-
-
-def _checked_page(limit: int, offset: int) -> Page:
-    """[Rule 1 - Bug] Refuses ``limit`` above ``MAX_PAGE_SIZE`` by raising
-    ``PageSizeExceededError`` directly, never by letting ``Page(limit=limit, offset=offset)``
-    raise it — ``Page``'s own ``model_validator`` (05-04-PLAN.md Task 1) is designed for an
-    in-process caller, and pydantic wraps a validator-raised exception into a
-    ``pydantic.ValidationError`` at the construction call site (the same behaviour
-    ``AmbiguousIngestPayloadError``'s own module docstring documents for ``IngestDocument``). A
-    ``Page`` built by hand inside a route body, from raw query parameters FastAPI has already
-    finished parsing, is *not* the same code path FastAPI's own request-body parsing uses — the
-    wrapped ``ValidationError`` would propagate as an unmatched exception (Starlette's exception
-    middleware matches by ``type(exc).__mro__`` against the registered ``SeamRefusalError``
-    handler, and ``pydantic.ValidationError`` is not in that hierarchy), producing an unhandled
-    500 instead of the documented 422. Raising the refusal here, before ``Page`` is ever
-    constructed, keeps the 422/``requested``/``limit`` contract every other refusal in this module
-    already has via ``_refusal_response``'s generic ``vars(exc)`` dump.
-    """
-    if limit > MAX_PAGE_SIZE:
-        raise PageSizeExceededError(requested=limit, limit=MAX_PAGE_SIZE)
-    return Page(limit=limit, offset=offset)
 
 
 def _refusal_response(_request: Request, exc: SeamRefusalError) -> JSONResponse:
@@ -436,9 +413,9 @@ def create_app(
     async def get_job_status(
         job_id: str,
         limit: int = Query(default=50),
-        offset: int = Query(default=0, ge=0),
+        offset: int = Query(default=0),
     ) -> JobStatus:
-        return await engine.get_job_status(job_id, _checked_page(limit, offset))
+        return await engine.get_job_status(job_id, checked_page(limit, offset))
 
     @app.delete("/documents/{document_id}")
     async def delete_document(document_id: str, body: DeleteRequest = DeleteRequest()) -> DeletionOutcome:
@@ -456,9 +433,9 @@ def create_app(
     @app.get("/corpus")
     async def get_corpus(
         limit: int = Query(default=50),
-        offset: int = Query(default=0, ge=0),
+        offset: int = Query(default=0),
     ) -> CorpusStatus:
-        return await engine.corpus_status(_checked_page(limit, offset))
+        return await engine.corpus_status(checked_page(limit, offset))
 
     @app.get("/corpus/counts")
     async def get_corpus_counts() -> DocumentCounts:

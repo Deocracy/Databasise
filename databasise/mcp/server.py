@@ -60,9 +60,9 @@ from databasise.mcp.tools import (
     StatusToolArgs,
 )
 from databasise.parts.registry import PartRegistry
-from databasise.seam.corpus import MAX_PAGE_SIZE, Page
+from databasise.seam.corpus import checked_page
 from databasise.seam.engine import Databasise
-from databasise.seam.refusals import PageSizeExceededError, SeamRefusalError
+from databasise.seam.refusals import SeamRefusalError
 
 # Resolved through _sdk.import_sdk (module docstring) — never a bare `from mcp... import ...`,
 # which reproduces a CWD-shadow circular import under `cd databasise && python -c ...` (the exact
@@ -108,29 +108,14 @@ def _refusal_mapped(fn: _AsyncToolFn) -> _AsyncToolFn:
     return wrapper
 
 
-def _checked_page(limit: int, offset: int) -> Page:
-    """Refuses ``limit`` above ``MAX_PAGE_SIZE`` by raising ``PageSizeExceededError`` directly,
-    never by letting ``Page``'s own constructor and its ``model_validator`` raise it —
-    see ``databasise.seam.rest._checked_page``'s own docstring for the exact pydantic-wrapping
-    mechanism this mirrors (a validator-raised refusal is wrapped into a ``pydantic.ValidationError``
-    at the construction call site, losing the original exception object). This transport needs its
-    own copy rather than importing REST's: ``databasise/mcp/`` must not import ``fastapi``, and
-    ``rest.py`` is guarded behind the ``rest`` extra, so importing from it would couple the MCP
-    transport to the web stack, which 05-07-PLAN.md's own acceptance criterion forbids.
-    """
-    if limit > MAX_PAGE_SIZE:
-        raise PageSizeExceededError(requested=limit, limit=MAX_PAGE_SIZE)
-    return Page(limit=limit, offset=offset)
-
-
 async def _status_job(engine: Databasise, args: StatusToolArgs) -> Any:
     if args.job_id is None:
         raise ToolError("status tool: scope 'job' requires a job_id")
-    return await engine.get_job_status(args.job_id, _checked_page(args.limit, args.offset))
+    return await engine.get_job_status(args.job_id, checked_page(args.limit, args.offset))
 
 
 async def _status_corpus(engine: Databasise, args: StatusToolArgs) -> Any:
-    return await engine.corpus_status(_checked_page(args.limit, args.offset))
+    return await engine.corpus_status(checked_page(args.limit, args.offset))
 
 
 async def _status_counts(engine: Databasise, args: StatusToolArgs) -> Any:

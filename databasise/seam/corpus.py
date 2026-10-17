@@ -36,6 +36,7 @@ from databasise.seam.refusals import (
     AmbiguousIngestPayloadError,
     InvalidDocumentIdError,
     OversizedDocumentError,
+    PageBoundsError,
     PageSizeExceededError,
 )
 
@@ -123,11 +124,13 @@ class DeletionOutcome(BaseModel):
 
 
 class Page(BaseModel):
-    """A bounded page request (API-06) — ``limit`` above ``MAX_PAGE_SIZE`` is refused
-    (``PageSizeExceededError``), never clamped down to the cap, per this codebase's
-    refusals-over-silent-narrowing house style. A negative ``offset`` is refused as a plain
-    ``ValueError`` — there is no named refusal type for it because, unlike an oversized limit, a
-    negative offset carries no interesting caller-facing value worth naming beyond "invalid"."""
+    """A bounded page request (API-06) — a ``limit`` outside 1..``MAX_PAGE_SIZE`` or a negative
+    ``offset`` is refused, never clamped, per this codebase's refusals-over-silent-narrowing house
+    style (SEAM-08, D-07): ``limit`` above the cap is ``PageSizeExceededError``, ``limit`` below 1
+    or a negative ``offset`` is ``PageBoundsError``. An in-process caller constructing ``Page``
+    directly receives a ``pydantic.ValidationError`` whose message contains the refusal class name
+    (``PageSizeExceededError`` or ``PageBoundsError``); :func:`checked_page` raises the refusal
+    itself."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -138,9 +141,27 @@ class Page(BaseModel):
     def _bounded(self) -> "Page":
         if self.limit > MAX_PAGE_SIZE:
             raise PageSizeExceededError(requested=self.limit, limit=MAX_PAGE_SIZE)
-        if self.offset < 0:
-            raise ValueError(f"offset must be non-negative, got {self.offset}")
+        if self.limit < 1 or self.offset < 0:
+            raise PageBoundsError(limit=self.limit, offset=self.offset)
         return self
+
+
+def checked_page(limit: int, offset: int) -> Page:
+    """The one page check both transports call (SEAM-08, D-07). Raises ``PageSizeExceededError``
+    for ``limit`` above ``MAX_PAGE_SIZE``, then ``PageBoundsError`` for ``limit`` below 1 or a
+    negative ``offset``, directly -- never by letting ``Page``'s own ``model_validator`` raise
+    them: pydantic wraps a validator-raised exception into a ``pydantic.ValidationError`` at the
+    construction call site (the same behaviour ``AmbiguousIngestPayloadError``'s module docstring
+    documents for ``IngestDocument``), and Starlette's exception middleware matches by
+    ``type(exc).__mro__`` against the registered ``SeamRefusalError`` handler, so the wrapped error
+    would be an unhandled 500 instead of the documented 422. The upper cap is checked before the
+    lower bounds, so ``limit=101, offset=-1`` is ``PageSizeExceededError``.
+    """
+    if limit > MAX_PAGE_SIZE:
+        raise PageSizeExceededError(requested=limit, limit=MAX_PAGE_SIZE)
+    if limit < 1 or offset < 0:
+        raise PageBoundsError(limit=limit, offset=offset)
+    return Page(limit=limit, offset=offset)
 
 
 class DocumentStatusEntry(BaseModel):
@@ -233,6 +254,7 @@ __all__ = [
     "IngestJob",
     "DeletionOutcome",
     "Page",
+    "checked_page",
     "DocumentStatusEntry",
     "JobStatus",
     "CorpusStatus",

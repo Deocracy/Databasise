@@ -284,6 +284,14 @@ _NON_DEBUG_TRACE_FIELDS = frozenset(
 )
 
 
+def _next_offset(page: Page, documents: list[Any], total: int) -> int | None:
+    """SEAM-08: ``offset + len(documents)`` when that is below ``total`` and the page returned rows,
+    else ``None``. A driver page with zero rows below ``total`` is ``None``, never the same offset
+    again, so a polling caller cannot loop forever."""
+    reached = page.offset + len(documents)
+    return reached if documents and reached < total else None
+
+
 def _inject_query(resolved: dict[str, Any], query: str) -> dict[str, Any]:
     """06-01-PLAN.md: stamps ``query`` onto every node the resolved wiring's own declared
     ``consumes_query`` array names — a no-op for a node the resolved wiring does not contain
@@ -868,12 +876,12 @@ class Databasise:
             raise UnknownJobError(job_id=job_id)
 
         documents = [DocumentStatusEntry(**doc) for doc in result.get("documents", [])]
-        next_offset = page.offset + len(documents)
+        next_offset = _next_offset(page, documents, total)
         return JobStatus(
             job_id=job_id,
             documents=documents,
             counts=dict(result.get("counts") or {}),
-            next_offset=next_offset if next_offset < total else None,
+            next_offset=next_offset,
         )
 
     async def corpus_status(self, page: Page | None = None) -> CorpusStatus:
@@ -890,12 +898,12 @@ class Databasise:
         )
         total = int(result.get("total", 0))
         documents = [DocumentStatusEntry(**doc) for doc in result.get("documents", [])]
-        next_offset = page.offset + len(documents)
+        next_offset = _next_offset(page, documents, total)
         return CorpusStatus(
             documents=documents,
             counts=dict(result.get("counts") or {}),
             total=total,
-            next_offset=next_offset if next_offset < total else None,
+            next_offset=next_offset,
         )
 
     async def document_counts(self) -> DocumentCounts:

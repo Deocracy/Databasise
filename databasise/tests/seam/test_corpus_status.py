@@ -130,6 +130,7 @@ def test_page_with_a_negative_offset_raises_value_error():
     with pytest.raises(pydantic.ValidationError) as exc_info:
         Page(offset=-1)
     assert "non-negative" in str(exc_info.value)
+    assert "PageBoundsError" in str(exc_info.value)
 
 
 # ------------------------------------------------------------------------------------------- #

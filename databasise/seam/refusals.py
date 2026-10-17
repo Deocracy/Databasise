@@ -271,6 +271,23 @@ class PageSizeExceededError(SeamRefusalError):
         )
 
 
+class PageBoundsError(SeamRefusalError):
+    """Raised by ``databasise.seam.corpus.Page`` validation and ``checked_page`` (09-03-PLAN.md,
+    SEAM-08, D-07) when ``limit`` is below 1 or ``offset`` is negative. Refused, never clamped or
+    widened, so a negative limit can never slice the whole corpus. ``limit`` above
+    ``MAX_PAGE_SIZE`` stays :class:`PageSizeExceededError`."""
+
+    def __init__(self, *, limit: int, offset: int):
+        self.limit = limit
+        self.offset = offset
+        # The literal class name is load-bearing for the same reason as PageSizeExceededError's:
+        # Page's validator raises this, and pydantic wraps it into a ValidationError message.
+        super().__init__(
+            "PageBoundsError: page limit must be at least 1 and offset must be non-negative; "
+            f"got limit={limit}, offset={offset}"
+        )
+
+
 class MalformedBase64PayloadError(SeamRefusalError):
     """Raised by ``databasise.mcp.tools.IngestToolArgs.to_ingest_document()`` when ``field`` is
     not decodable in its declared base64 encoding — ``binascii.Error`` never escapes the tool body
@@ -630,6 +647,7 @@ __all__ = [
     "NoRawUploadPathForModalityError",
     "UnknownJobError",
     "PageSizeExceededError",
+    "PageBoundsError",
     "MalformedBase64PayloadError",
     "MalformedSelectorPayloadError",
     "EmptyComparisonRequestError",
