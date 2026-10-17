@@ -1,20 +1,20 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Engine Fixes + Operator Console
 current_phase: 08
 current_phase_name: Run the Engine
-status: executing
-stopped_at: Completed 08-09-PLAN.md
-last_updated: "2026-10-17T01:53:28.482Z"
+status: verifying
+stopped_at: Completed 08-10-PLAN.md (owner-narrowed; Tasks 1 and 3 deferred)
+last_updated: "2026-10-17T02:00:16.100Z"
 last_activity: 2026-10-16
 last_activity_desc: Phase 08 execution started
-state_head: 54d4ea7cf771ced45a0e9b9e5096d8651d887e6f
+state_head: 491cb63cd1a3414c3ca1981ba4bc45f0380fe84b
 progress:
   total_phases: 11
   completed_phases: 0
   total_plans: 10
-  completed_plans: 9
+  completed_plans: 10
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-10-14 at v1.1 milestone start)
 
 Phase: 08 (Run the Engine) — EXECUTING
 Plan: 10 of 10
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-16 — Phase 08 execution started
 
 Progress: [░░░░░░░░░░] 0% (0/11 phases)
@@ -69,6 +69,7 @@ Progress: [░░░░░░░░░░] 0% (0/11 phases)
 | Phase 08 P07 | 12 min | 2 tasks | 7 files |
 | Phase 08 P08 | 35 min | 3 tasks | 7 files |
 | Phase 08 P09 | 25min | 2 tasks | 3 files |
+| Phase 08 P10 | 2 min | 1 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,8 @@ Recent decisions affecting current work:
 - [Phase 08]: 08-08: seam hardening lives in the launchers (TrustedHostMiddleware, TransportSecuritySettings, non-loopback bind refusal); create_app keeps accepting any Host; seam authentication stays an open owner decision for the CONN phases
 - [Phase 08]: 08-08: CORS origins are validated exact scheme://host[:port] values, GET/POST/DELETE + Content-Type only, no credentials, never '*' (D-12)
 - [Phase 08]: 08-09: offline guard wraps socket connect/connect_ex in-process only; the RUN-12 gate adds no marker expression and relies on addopts
+- [Phase 08]: 08-10: _SIMILARITY_THRESHOLD stays 0.999 and is documented unmeasured; the D-14 live measurement is owner-deferred to TESTING-PLAN section 2 (owner: run measurements only for debugging)
+- [Phase 08]: 08-10: RUN-11 left open; the twelve ledger set lines, with RUN-05 evidence node names corrected, are parked in 08-10-SUMMARY.md for the owner
 
 ### Pending Todos
 
@@ -131,8 +134,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-17T01:53:28.456Z
-Stopped at: Completed 08-09-PLAN.md
+Last session: 2026-10-17T02:00:16.069Z
+Stopped at: Completed 08-10-PLAN.md (owner-narrowed; Tasks 1 and 3 deferred)
 Resume file: None
 
 ## Operator Next Steps
