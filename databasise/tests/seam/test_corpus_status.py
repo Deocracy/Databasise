@@ -191,6 +191,27 @@ async def test_health_reports_which_clients_are_wired(store_root, monkeypatch):
     assert wired_report.status == bare_report.status
 
 
+async def test_health_reports_rerank_unavailable_when_the_binding_is_null(store_root, monkeypatch):
+    from databasise.clients.builder import build_clients
+
+    monkeypatch.setattr(engine_module, "run_corpus_op", _make_fake_run_corpus_op())
+    env = {
+        "LLM_BINDING_HOST": "http://llm.invalid",
+        "LLM_MODEL": "m",
+        "LLM_BINDING_API_KEY": "k",
+        "EMBEDDING_BINDING_HOST": "http://embed.invalid",
+        "EMBEDDING_MODEL": "m",
+        "EMBEDDING_BINDING_API_KEY": "k",
+        "RERANK_BINDING": "null",
+        "RERANK_BINDING_HOST": "http://rerank.invalid/rerank",
+        "RERANK_MODEL": "m",
+        "RERANK_BINDING_API_KEY": "k",
+    }
+    engine = Databasise(store_root=store_root, workspace="health-null", clients=build_clients(env))
+
+    assert (await engine.health()).clients == {"llm": True, "embedding": True, "rerank": False}
+
+
 async def test_rest_health_serialises_the_clients_map(store_root, monkeypatch):
     from databasise.seam.rest import create_app
     from fastapi.testclient import TestClient

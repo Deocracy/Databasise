@@ -118,6 +118,15 @@ def test_empty_and_null_rerank_values_count_as_absent():
     assert set(build_clients({**REQUIRED, "RERANK_BINDING": "null"})) == {"llm", "embedding"}
 
 
+@pytest.mark.parametrize("off_value", ["null", "NULL", "Null", ""])
+def test_binding_explicitly_off_leaves_rerank_unwired_even_with_the_other_keys_set(off_value):
+    from databasise.clients.builder import build_clients
+
+    env = {**REQUIRED, **RERANK, "RERANK_BINDING": off_value}
+
+    assert set(build_clients(env)) == {"llm", "embedding"}
+
+
 def test_required_and_rerank_gaps_are_named_together():
     from databasise.clients.builder import MissingParityEnvKeyError, build_clients
 
