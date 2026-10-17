@@ -42,24 +42,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from databasise.seam.refusals import SeamRefusalError
+from databasise.seam.refusals import UnknownTraceReferenceError  # moved to refusals.py (SEAM-14); re-exported
 
 # secrets.token_urlsafe(32) -> 256 bits of entropy from os.urandom, well above the 128-bit floor
 # API-10's acceptance criteria require.
 _TOKEN_BYTES = 32
-
-
-class UnknownTraceReferenceError(SeamRefusalError):
-    """Raised when a trace reference names no record this store currently holds. Never returns
-    ``None`` and never a partial record (API-10's own truth: an unknown reference resolves to a
-    named refusal, never a partial or empty record) — an untrusted reference handed back to the
-    seam gets a raise, not a value a caller could mistake for "the run had no trace"."""
-
-    def __init__(self, trace_reference: str):
-        self.trace_reference = trace_reference
-        super().__init__(
-            f"trace reference {trace_reference!r} does not resolve to any stored run record"
-        )
 
 
 class TraceStore:

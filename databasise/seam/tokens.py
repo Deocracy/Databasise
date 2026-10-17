@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from databasise.runner.trace import NodeTrace
 from databasise.seam._base import _StrictModel
-from databasise.seam.refusals import SeamRefusalError
+from databasise.seam.refusals import UnbudgetableParticipantError  # moved to refusals.py (SEAM-14); re-exported
 
 # See module docstring: a node's own body sets counted_by to this literal value to report that its
 # tokens cannot be counted at all — never inferred from a zero count, which is a different, real
@@ -47,26 +47,6 @@ class TokenBreakdownEntry(_StrictModel):
     completion_tokens: int = 0
     cached_read_tokens: int = 0
     call_count: int = 0
-
-
-class UnbudgetableParticipantError(SeamRefusalError):
-    """Raised when a run contains a node whose own ``TokenAccounting.counted_by`` reports the
-    ``unbudgetable`` sentinel (§8 opaque-node admission). No envelope is produced on this path, and
-    no token number is substituted or estimated in its place (D-08, T-04-10's mitigation — a
-    plausible-looking fabricated count is worse than a refusal because it reads as measured).
-
-    **CR-03: never names the machine's own node id.** Every other refusal in this package names
-    only the consumer's own input (``refusals.py``'s own module docstring). ``node_id`` here is the
-    *machine's* internal wiring-node identity, never something the consumer supplied — so, unlike
-    every other refusal's named attribute, it is stored on a leading-underscore attribute rather
-    than a plain one. ``rest.py``'s ``_refusal_response`` skips leading-underscore attributes when
-    it dumps ``vars(exc)`` into the REST body for exactly this reason: this is the one refusal in
-    the package whose own offending value must never reach a consumer, in the message or the body.
-    """
-
-    def __init__(self, node_id: str):
-        self._internal_node_id = node_id  # never exposed via the message or vars()
-        super().__init__("a participant is admitted unbudgetable; no token comparison may include it")
 
 
 def assemble_token_breakdown(nodes: list[NodeTrace]) -> list[TokenBreakdownEntry]:

@@ -32,7 +32,7 @@ from __future__ import annotations
 from typing import Any
 
 from databasise.seam._base import _StrictModel
-from databasise.seam.refusals import SeamRefusalError
+from databasise.seam.refusals import UnresolvableEvidenceReferenceError  # moved to refusals.py (SEAM-14); re-exported
 
 # The naive arm's own retrieval position (databasise/parts_core/lightrag/chunk_vector.py) selects
 # this namespace off the multi-namespace vector store handle. Exposed here as the default so a
@@ -76,19 +76,6 @@ class MalformedEvidenceItemError(RuntimeError):
         self.index = index
         super().__init__(
             f"retrieval item at index {index} in namespace {namespace!r} carries no 'id' key"
-        )
-
-
-class UnresolvableEvidenceReferenceError(SeamRefusalError):
-    """Raised when an ``EvidenceRef`` names a record its own namespace's store does not currently
-    hold (§4's deref-raising discipline, T-04-08's mitigation). Never returns ``None`` and never an
-    empty result — either would be indistinguishable from evidence that was legitimately empty."""
-
-    def __init__(self, ref: EvidenceRef):
-        self.ref = ref
-        super().__init__(
-            f"evidence reference {ref.ref!r} in namespace {ref.namespace!r} does not resolve to "
-            "any record the store currently holds"
         )
 
 

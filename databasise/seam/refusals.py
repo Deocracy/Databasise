@@ -10,6 +10,12 @@ input — enumerating the machine's own candidate set in a consumer-visible mess
 identity disclosure §18.2 forbids. The selector refusals 04-03 adds to this module (an
 unsatisfiable alias/capability/harness selector) depend on this same rule: name what the consumer
 asked for, never what the machine has.
+
+**``__all__`` is the refusal catalogue (SEAM-14).** It lists every refusal type either transport
+can return; each is defined in this module (``tests/seam/test_refusal_catalogue.py`` walks
+``SeamRefusalError.__subclasses__()`` to prove it). ``refusal_body`` and ``refusal_from_errors``
+are helpers and deliberately not in it. A refusal added later goes into ``__all__`` and gets a
+factory in ``tests/seam/test_rest_transport.py::_REFUSAL_FACTORIES``.
 """
 
 from __future__ import annotations
@@ -534,6 +540,54 @@ class ActiveGenerationRetirementError(SeamRefusalError):
         )
 
 
+class UnknownTraceReferenceError(SeamRefusalError):
+    """Raised when a trace reference names no record the trace store currently holds. Never returns
+    ``None`` and never a partial record (API-10's own truth: an unknown reference resolves to a
+    named refusal, never a partial or empty record) — an untrusted reference handed back to the
+    seam gets a raise, not a value a caller could mistake for "the run had no trace"."""
+
+    def __init__(self, trace_reference: str):
+        self.trace_reference = trace_reference
+        super().__init__(
+            f"trace reference {trace_reference!r} does not resolve to any stored run record"
+        )
+
+
+class UnresolvableEvidenceReferenceError(SeamRefusalError):
+    """Raised when an ``EvidenceRef`` names a record its own namespace's store does not currently
+    hold (§4's deref-raising discipline, T-04-08's mitigation). Never returns ``None`` and never an
+    empty result — either would be indistinguishable from evidence that was legitimately empty.
+    ``ref`` is annotated ``Any`` because importing ``EvidenceRef`` here would create an import
+    cycle; ``refusal_body`` dumps it with ``model_dump()``."""
+
+    def __init__(self, ref: Any):
+        self.ref = ref
+        super().__init__(
+            f"evidence reference {ref.ref!r} in namespace {ref.namespace!r} does not resolve to "
+            "any record the store currently holds"
+        )
+
+
+class UnbudgetableParticipantError(SeamRefusalError):
+    """Raised when a run contains a node whose own ``TokenAccounting.counted_by`` reports the
+    ``unbudgetable`` sentinel (§8 opaque-node admission). No envelope is produced on this path, and
+    no token number is substituted or estimated in its place (D-08, T-04-10's mitigation — a
+    plausible-looking fabricated count is worse than a refusal because it reads as measured).
+
+    **CR-03: never names the machine's own node id.** Every other refusal in this package names
+    only the consumer's own input (this module's own docstring). ``node_id`` here is the
+    *machine's* internal wiring-node identity, never something the consumer supplied — so, unlike
+    every other refusal's named attribute, it is stored on a leading-underscore attribute rather
+    than a plain one. ``refusal_body`` skips leading-underscore attributes when it dumps
+    ``vars(exc)`` into a transport body for exactly this reason: this is the one refusal in the
+    package whose own offending value must never reach a consumer, in the message or the body.
+    """
+
+    def __init__(self, node_id: str):
+        self._internal_node_id = node_id  # never exposed via the message or vars()
+        super().__init__("a participant is admitted unbudgetable; no token comparison may include it")
+
+
 class ForeignEngineRefusalError(SeamRefusalError):
     """The seam-facing wrapper for a foreign-engine subprocess failure
     (``databasise.foreign.CorpusOpSubprocessError``/``CorpusOpTimeoutError``) — so
@@ -560,6 +614,7 @@ __all__ = [
     "OversizedDocumentError",
     "UnknownDocumentError",
     "NoWritePathForModalityError",
+    "NoRawUploadPathForModalityError",
     "UnknownJobError",
     "PageSizeExceededError",
     "MalformedBase64PayloadError",
@@ -578,4 +633,7 @@ __all__ = [
     "UnknownGenerationVersionError",
     "TombstonedGenerationError",
     "ActiveGenerationRetirementError",
+    "UnknownTraceReferenceError",
+    "UnresolvableEvidenceReferenceError",
+    "UnbudgetableParticipantError",
 ]
