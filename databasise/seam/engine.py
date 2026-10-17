@@ -210,6 +210,7 @@ from databasise.seam.refusals import (
     ForeignEngineRefusalError,
     GateVerbNotBuiltError,
     InvalidChangeOriginError,
+    InvalidPromotionAliasError,
     MutableStoreComparisonExcludedError,
     NoRawUploadPathForModalityError,
     NoWritePathForModalityError,
@@ -219,7 +220,12 @@ from databasise.seam.refusals import (
     UnrecognisedPromotionVerbError,
     UnresolvableEvidenceReferenceError,
 )
-from databasise.seam.selectors import Selector, _wiring_effects, resolve_selector
+from databasise.seam.selectors import (
+    _INSTANCE_HASH_PATTERN,
+    Selector,
+    _wiring_effects,
+    resolve_selector,
+)
 from databasise.seam.tokens import TokenBreakdownEntry, assemble_token_breakdown
 from databasise.seam.trace_store import TraceStore
 from databasise.stores.graph import CozoGraphStore
@@ -1213,6 +1219,9 @@ class Databasise:
         by name, before anything else runs — before the not-built check and before any trace-id
         resolution. Then a gate-ladder verb not built in this milestone (``check``, ``preview``,
         ``run``) refuses immediately, before anything else runs — there is nothing to resolve.
+        Then an ``alias`` that is empty or shaped like an instance hash refuses as
+        :class:`~databasise.seam.refusals.InvalidPromotionAliasError` (09-07, SEAM-12: no
+        ``Selector`` could name it), before ``change_origin`` and trace ids are looked at.
         Otherwise: an invalid ``change_origin`` refuses; an empty, unknown, or disagreeing
         ``trace_ids`` refuses (via :func:`~databasise.seam.promotion.resolve_single_arm`); the
         mutation class is derived against the alias's prior active generation (if any); a
@@ -1235,6 +1244,11 @@ class Databasise:
 
         if verb in _NOT_BUILT_VERBS:
             raise GateVerbNotBuiltError(verb=verb)
+
+        # SEAM-12: an alias no Selector could carry would write a row nobody can select. Same
+        # pattern Selector's validator refuses, checked before trace resolution and any ledger touch.
+        if alias == "" or _INSTANCE_HASH_PATTERN.match(alias):
+            raise InvalidPromotionAliasError(alias=alias)
 
         _resolved_records, arm_name, arm_instance_hashes = self._resolve_operator_preconditions(
             alias, trace_ids, change_origin
