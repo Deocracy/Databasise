@@ -157,16 +157,16 @@
 - [ ] **STOR-11**: SqliteKVStore keeps its pending buffer separate from callers. get_by_id returns a copy, so mutating it does not change the buffered record, and upsert stores a copy of the caller's dict. is_empty returns True when every committed and pending row is pending deletion.
   - Test: tests/stores/test_kv_buffer_isolation.py has three checks. (1) upsert({'a':{'v':1}}), r=get_by_id('a'), r['v']=2, flush, reopen, then assert get_by_id('a')['v']==1. (2) Mutate the dict passed to upsert before flush and assert the stored value is unchanged. (3) upsert and flush 'a', call delete(['a']), and assert is_empty() is True. Each fails on the current code.
   - Defects: stores/ST-13
-- [ ] **STOR-12**: Every store effect the effect vocabulary accepts (reads_lexical, writes_lexical, reads_blob, writes_artifact) meets one of two conditions. Either it resolves to a store wired by _build_stores at run time, or a wiring with a node that both declares it and needs its store is refused at parse_wiring with a named refusal. No wiring parses successfully and then fails at run time with StoreNotWiredError. The shipped wirings that already declare writes_artifact still parse and run: lightrag/embedder-index in wirings/lightrag/base.json and every arm patch, and hipporag/graph-augment-persist in wirings/hipporag/corpus-ingest.json. SqliteLexicalStore, FilesystemBlobStore and registry_artifact.write_artifact are either wired into the engine or removed.
+- [x] **STOR-12**: Every store effect the effect vocabulary accepts (reads_lexical, writes_lexical, reads_blob, writes_artifact) meets one of two conditions. Either it resolves to a store wired by _build_stores at run time, or a wiring with a node that both declares it and needs its store is refused at parse_wiring with a named refusal. No wiring parses successfully and then fails at run time with StoreNotWiredError. The shipped wirings that already declare writes_artifact still parse and run: lightrag/embedder-index in wirings/lightrag/base.json and every arm patch, and hipporag/graph-augment-persist in wirings/hipporag/corpus-ingest.json. SqliteLexicalStore, FilesystemBlobStore and registry_artifact.write_artifact are either wired into the engine or removed.
   - Test: tests/wirings/test_store_effects_wired.py: call parse_wiring on a fixture wiring with a node that declares reads_lexical and accesses ctx.stores['lexical'], and on one that declares writes_artifact and accesses its store. After the fix, each either runs against a real store or parse_wiring raises the named refusal. Before the fix, parsing succeeds and the run fails with StoreNotWiredError. Also assert that the shipped LightRAG base.json (with every arm patch) and HippoRAG corpus-ingest.json still parse and run with stub clients.
   - Defects: stores/ST-09
   - Owner decision first: Either wire the lexical and blob/artifact stores into _build_stores (and the artifact registry write path) in v1.1, or delete the modules and drop the effects from the vocabulary. If the effects are dropped, decide what writes_artifact means on embedder-index and graph-augment-persist. Also decide how writes_artifact resolves to a store key. STOR-13 and STOR-14 apply only if the stores are kept.
-- [ ] **STOR-13**: FilesystemBlobStore validates digests against ^[0-9a-f]{64}$ inside the store. get, read_range and delete refuse '../../etc/hostname' and any digest containing '/' or '..' with a named refusal, and never touch a path outside the blob root. put removes its temp file when write_bytes or os.replace raises. read_range refuses a negative length.
+- [x] **STOR-13**: FilesystemBlobStore validates digests against ^[0-9a-f]{64}$ inside the store. get, read_range and delete refuse '../../etc/hostname' and any digest containing '/' or '..' with a named refusal, and never touch a path outside the blob root. put removes its temp file when write_bytes or os.replace raises. read_range refuses a negative length.
   - Test: tests/stores/test_blob_validation.py has three checks. (1) For each of get, read_range and delete with the digests '../../etc/hostname', 'ab/../../x' and a 63-character hex string, assert the named refusal is raised. A spy on Path.unlink, Path.read_bytes and Path.open records no call. (2) Monkeypatch os.replace to raise during put and assert no temp file remains in the blob directory. (3) read_range(d, 0, -1) raises. Before the fix, delete calls unlink on '/etc/hostname' (refused only by permissions), the temp file remains, and the negative read returns the rest of the file.
   - Defects: stores/ST-01, stores/ST-15
   - Owner decision first: Conditional on STOR-12 keeping the blob store.
   - Phase 10 D-15 exception (owner-delegated 2026-10-17): satisfied by removal. FilesystemBlobStore is deleted (TOOL-17's removed branch), so no digest path exists to validate; verified by tests/test_removed_stores_absent.py.
-- [ ] **STOR-14**: SqliteLexicalStore.query('alpha beta') matches documents that contain both terms in any position, with each term bound and quoted separately and combined with AND, as the module docstring states. Returned scores follow the vector store convention: higher is better, sorted descending.
+- [x] **STOR-14**: SqliteLexicalStore.query('alpha beta') matches documents that contain both terms in any position, with each term bound and quoted separately and combined with AND, as the module docstring states. Returned scores follow the vector store convention: higher is better, sorted descending.
   - Test: tests/stores/test_lexical_query.py: index doc1 'alpha gamma beta' and doc2 'alpha beta'. Assert query('alpha beta') returns both (before the fix it returns only doc2). Assert the scores are non-increasing and the best match has the highest score.
   - Defects: stores/ST-14
   - Owner decision first: Conditional on STOR-12 keeping the lexical store.
@@ -857,9 +857,9 @@ These fail today.
 | STOR-09 | Phase 10 | Pending |
 | STOR-10 | Phase 10 | Pending |
 | STOR-11 | Phase 10 | Pending |
-| STOR-12 | Phase 10 | Pending |
-| STOR-13 | Phase 10 | Pending |
-| STOR-14 | Phase 10 | Pending |
+| STOR-12 | Phase 10 | Complete |
+| STOR-13 | Phase 10 | Complete |
+| STOR-14 | Phase 10 | Complete |
 | STOR-15 | Phase 10 | Pending |
 | STOR-16 | Phase 10 | Pending |
 | LRAG-01 | Phase 11 | Pending |

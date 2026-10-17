@@ -16,7 +16,7 @@
     {
       "number": "10",
       "name": "Stores, Locking & Data Integrity",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "number": "11",
@@ -64,5 +64,5 @@
     "label": "Advance to the next step",
     "reason": "Phase 3 of 11 · 18% · executing"
   },
-  "updated_at": "2026-10-17T21:58:34.340Z"
+  "updated_at": "2026-10-17T22:14:34.551Z"
 }
