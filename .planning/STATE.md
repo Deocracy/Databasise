@@ -1,20 +1,20 @@
 ---
-gsd_state_version: "1.0"
+gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Engine Fixes + Operator Console
 current_phase: 08
 current_phase_name: Run the Engine
 status: executing
-stopped_at: Completed 08-03-PLAN.md
-last_updated: "2026-10-17T00:23:17.625Z"
+stopped_at: Completed 08-04-PLAN.md
+last_updated: "2026-10-17T00:26:49.892Z"
 last_activity: 2026-10-16
 last_activity_desc: Phase 08 execution started
-state_head: f1d1cd9db8b7f170f4d3467709af274ea900d8b2
+state_head: 6143311b0d14470979998b95e36681a6fc3ec427
 progress:
   total_phases: 11
   completed_phases: 0
   total_plans: 10
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-14 at v1.1 milestone start)
 ## Current Position
 
 Phase: 08 (Run the Engine) — EXECUTING
-Plan: 4 of 10
+Plan: 5 of 10
 Status: Ready to execute
 Last activity: 2026-10-16 — Phase 08 execution started
 
@@ -63,6 +63,7 @@ Progress: [░░░░░░░░░░] 0% (0/11 phases)
 | Phase 08 P01 | 35 min | 2 tasks | 11 files |
 | Phase 08 P02 | ~10min | 2 tasks | 3 files |
 | Phase 08 P03 | 8 min | 2 tasks | 5 files |
+| Phase 08 P04 | 15 min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,7 @@ Recent decisions affecting current work:
 - [Phase 08]: 08-01: UnparseableProviderRoutingError message withholds the env value (raw_value attribute only); launcher has no default env file (D-11); DEFAULT_WORKSPACE is the literal RUN-06 workspace so snapshot drift cannot stop serving
 - [Phase 08]: 08-02: clients/ keeps the literal 'unbudgetable' (cannot import seam/); no-usage response = one unbudgetable call, no estimate (D-05)
 - [Phase 08]: 08-03: live section 18.5 record at databasise/evidence/COVERAGE.md is a verbatim copy; archived v1.0 record stays frozen (D-13). mcp_sdk_is_installed uses PathFinder over the project-stripped sys.path, bypassing sys.modules.
+- [Phase 08]: 08-04: RUN-09 mutation run as an in-test monkeypatch of engine.generated_on_disk_name; engine.py untouched
 
 ### Pending Todos
 
@@ -116,8 +118,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-17T00:23:17.596Z
-Stopped at: Completed 08-03-PLAN.md
+Last session: 2026-10-17T00:26:49.845Z
+Stopped at: Completed 08-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
