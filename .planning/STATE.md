@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 08
 current_phase_name: Run the Engine
 status: executing
-stopped_at: Completed 08-07-PLAN.md
-last_updated: "2026-10-17T01:26:13.401Z"
+stopped_at: Completed 08-08-PLAN.md
+last_updated: "2026-10-17T01:37:14.833Z"
 last_activity: 2026-10-16
 last_activity_desc: Phase 08 execution started
-state_head: b5db885f3c6f2272a3be79cf24398f8ed8808aff
+state_head: fb722645ed51ac73f74fdece1d7bcf0d9641d689
 progress:
   total_phases: 11
   completed_phases: 0
   total_plans: 10
-  completed_plans: 7
+  completed_plans: 8
   percent: 0
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-14 at v1.1 milestone start)
 ## Current Position
 
 Phase: 08 (Run the Engine) — EXECUTING
-Plan: 8 of 10
+Plan: 9 of 10
 Status: Ready to execute
 Last activity: 2026-10-16 — Phase 08 execution started
 
@@ -67,6 +67,7 @@ Progress: [░░░░░░░░░░] 0% (0/11 phases)
 | Phase 08 P05 | 25 min | 3 tasks | 8 files |
 | Phase 08 P06 | 20 min | 2 tasks | 7 files |
 | Phase 08 P07 | 12 min | 2 tasks | 7 files |
+| Phase 08 P08 | 35 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,8 @@ Recent decisions affecting current work:
 - [Phase 08]: 08-05: HealthReport gains additive clients map (llm, embedding, rerank), presence only, never affects status; TEI native shape and v1 chunking are OPT-OUT
 - [Phase 08]: 08-06: example MCP client config is examples/mcp-client.stdio.json, never a repo-root .mcp.json, so no Claude session auto-starts the engine and holds the parity store lock
 - [Phase 08]: 08-07: run_arm.main is the sixth locked parity CLI; eval/corpus_ingest, aa_run and remint stay unlocked (own v1/.eval_corpus_store root). Library functions take no lock.
+- [Phase 08]: 08-08: seam hardening lives in the launchers (TrustedHostMiddleware, TransportSecuritySettings, non-loopback bind refusal); create_app keeps accepting any Host; seam authentication stays an open owner decision for the CONN phases
+- [Phase 08]: 08-08: CORS origins are validated exact scheme://host[:port] values, GET/POST/DELETE + Content-Type only, no credentials, never '*' (D-12)
 
 ### Pending Todos
 
@@ -126,8 +129,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-17T01:26:13.377Z
-Stopped at: Completed 08-07-PLAN.md
+Last session: 2026-10-17T01:37:14.807Z
+Stopped at: Completed 08-08-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
