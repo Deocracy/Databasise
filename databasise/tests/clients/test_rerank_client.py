@@ -254,7 +254,10 @@ async def test_unsupported_keyword_is_a_type_error_naming_it():
 
 
 def test_unsupported_binding_is_refused_without_echoing_the_value():
-    from databasise.clients.rerank import HttpRerankClient, UnsupportedRerankBindingError
+    from databasise.clients.rerank import (
+        HttpRerankClient,
+        UnsupportedRerankBindingError,
+    )
 
     with pytest.raises(UnsupportedRerankBindingError) as exc_info:
         HttpRerankClient(url=URL, model="m", binding="secret-binding-marker")
@@ -299,7 +302,11 @@ async def test_the_lightrag_rerank_part_body_reorders_items_by_the_client_rankin
 async def test_live_rerank_round_trip():
     from pathlib import Path
 
-    from databasise.clients.builder import RERANK_BINDING_ENV_KEY, RERANK_ENV_KEYS, load_env_file
+    from databasise.clients.builder import (
+        RERANK_BINDING_ENV_KEY,
+        RERANK_ENV_KEYS,
+        load_env_file,
+    )
     from databasise.clients.rerank import HttpRerankClient
 
     env_path = os.environ.get("DATABASISE_RERANK_ENV_FILE")
