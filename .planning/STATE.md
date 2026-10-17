@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 09
 current_phase_name: Inputs, Errors & Security
 status: executing
-stopped_at: Completed 09-07-PLAN.md
-last_updated: "2026-10-17T08:51:39.442Z"
+stopped_at: Completed 09-08-PLAN.md
+last_updated: "2026-10-17T09:01:04.904Z"
 last_activity: 2026-10-16
 last_activity_desc: Phase 09 execution started
-state_head: ce666e5a2a2281f335d74402bf92a03cc2df3924
+state_head: 5ebbec6f86b37efe1dc5e597ba34a6318571c250
 progress:
   total_phases: 11
   completed_phases: 1
   total_plans: 20
-  completed_plans: 17
+  completed_plans: 18
   percent: 9
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-16 after Phase 8)
 ## Current Position
 
 Phase: 09 (Inputs, Errors & Security) — EXECUTING
-Plan: 8 of 10
+Plan: 9 of 10
 Status: Ready to execute
 Last activity: 2026-10-16 — Phase 09 execution started
 
@@ -77,6 +77,7 @@ Progress: [█░░░░░░░░░] 9% (1/11 phases)
 | Phase 09 P05 | 25 min | 2 tasks | 5 files |
 | Phase 09 P06 | 20 min | 2 tasks | 10 files |
 | Phase 09 P07 | 15 min | 2 tasks | 7 files |
+| Phase 09 P08 | 25 min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,7 @@ Recent decisions affecting current work:
 - [Phase 09]: D-08: blank query text is EmptyQueryObjectError beside any member; blank ingest text and 0-byte raw are EmptyIngestDocumentError(member); MCP base64 is strict (validate=True)
 - [Phase 09]: SEAM-10: Selector(capability=[]) is refused in resolve_selector and render_selector_key, not in Selector's validator, so construction still succeeds and every selector route is covered
 - [Phase 09]: SEAM-12: Databasise.promote refuses an empty or hash-shaped alias with one InvalidPromotionAliasError using Selector's own _INSTANCE_HASH_PATTERN, before trace resolution and any ledger write
+- [Phase 09]: 09-08 SEAM-11: compare checks every key (comparison_keys) before resolving any selector, resolves each once and executes the resolved wiring via _execute_resolved; keys stay unprefixed, envelope vs map is told by the number of selectors sent (D-09, D-10)
 
 ### Pending Todos
 
@@ -154,8 +156,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-17T08:51:39.396Z
-Stopped at: Completed 09-07-PLAN.md
+Last session: 2026-10-17T09:01:04.859Z
+Stopped at: Completed 09-08-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

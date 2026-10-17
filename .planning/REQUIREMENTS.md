@@ -95,7 +95,7 @@
 - [x] **SEAM-10**: Selector(capability=[]) is refused with a named refusal on every route that accepts a selector (/query, /compare, /documents, /documents/upload, DELETE /documents, and the MCP tools). It never resolves to the bypass wiring, never renders an empty compare key, and no node runs.
   - Test: tests/seam/test_empty_capability_selector.py: resolve_selector(Selector(capability=[])) raises the refusal. POST /query {selector:{capability:[]}} returns 422 with refusal_type, and the stub LLM records zero calls. POST /compare with selectors [{capability:[]}, {}] returns 422 before any arm runs. Fails today: the query returns 200 from bypass.
   - Defects: seam-rest/SEAM-04, contract/D-10, doc-audit-2/D2
-- [ ] **SEAM-11**: POST /compare detects every comparison-key collision before any arm executes, and each arm executes exactly the wiring that the pre-check resolved. The selector pairs [{},{}], [{alias:'default'},{}], [{alias:'x'},{harness:'x'}] and [{alias:'a+b'},{capability:['a','b']}] each either produce distinct keys or return 422 DuplicateComparisonKeyError with zero arms run, zero LLM/embedding calls and zero traces persisted. ([{},{}] is always a duplicate.) Selectors are resolved once and the resolved wirings are passed to execution; _execute does not call resolve_selector a second time. An alias named 'answer' cannot make a keyed compare map indistinguishable from a single envelope.
+- [x] **SEAM-11**: POST /compare detects every comparison-key collision before any arm executes, and each arm executes exactly the wiring that the pre-check resolved. The selector pairs [{},{}], [{alias:'default'},{}], [{alias:'x'},{harness:'x'}] and [{alias:'a+b'},{capability:['a','b']}] each either produce distinct keys or return 422 DuplicateComparisonKeyError with zero arms run, zero LLM/embedding calls and zero traces persisted. ([{},{}] is always a duplicate.) Selectors are resolved once and the resolved wirings are passed to execution; _execute does not call resolve_selector a second time. An alias named 'answer' cannot make a keyed compare map indistinguishable from a single envelope.
   - Test: tests/seam/test_compare_keys.py is parametrised over the four colliding selector pairs. POST /compare returns the chosen outcome; on refusal, the stub LLM and embedder record zero calls and the trace.db row count is unchanged. A test that repoints an alias through a hook between the pre-check and execution shows that the pre-checked wiring is the one executed. POST /compare with an alias 'answer' plus another selector returns a response that a client can classify by the documented rule. Fails today: [{},{}] runs the first arm and persists its trace before refusing.
   - Defects: seam-engine/ENG-07, seam-rest/SEAM-05, rest-live/REST-17, tests/T-09, doc-audit-2/D7
   - Owner decision first: Compare key format (§18 compatibility): add a kind prefix to rendered keys (alias:x, capability:a+b, default), which changes the response keys consumers see, or keep unprefixed keys and only move the collision check ahead of execution. Also decide how a consumer tells a single envelope from a keyed map: by the number of selectors sent, or by a wrapper field.
@@ -838,7 +838,7 @@ These fail today.
 | SEAM-08 | Phase 9 | Complete |
 | SEAM-09 | Phase 9 | Complete |
 | SEAM-10 | Phase 9 | Complete |
-| SEAM-11 | Phase 9 | Pending |
+| SEAM-11 | Phase 9 | Complete |
 | SEAM-12 | Phase 9 | Complete |
 | SEAM-13 | Phase 9 | Complete |
 | SEAM-14 | Phase 9 | Complete |
