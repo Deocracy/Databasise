@@ -2,7 +2,7 @@
 phase: 09-inputs-errors-security
 reviewed: 2026-10-17T00:00:00Z
 depth: standard
-files_reviewed: 38
+files_reviewed: 43
 files_reviewed_list:
   - databasise/launcher/serve_rest.py
   - databasise/mcp/server.py
@@ -42,151 +42,162 @@ files_reviewed_list:
   - databasise/tests/seam/test_rest_transport.py
   - databasise/tests/seam/test_seam_doc_consistency.py
   - databasise/tests/seam/test_upload_selector_field.py
+  - databasise/tests/seam/test_non_finite_numbers.py
+  - databasise/tests/seam/test_read_route_fault_breadth.py
+  - databasise/tests/seam/test_error_message_scrub.py
+  - databasise/tests/seam/test_raw_upload_staging.py
+  - databasise/tests/seam/test_evidence_refs.py
 findings:
   critical: 1
-  warning: 4
-  info: 5
-  total: 10
+  warning: 2
+  info: 8
+  total: 11
 status: issues_found
 ---
 
-# Phase 9: Code Review Report
+# Phase 9: Code Review Report (iteration 3)
 
 **Reviewed:** 2026-10-17
 **Depth:** standard
-**Files Reviewed:** 38
+**Files Reviewed:** 43
 **Status:** issues_found
 
 ## Summary
 
-`tests/seam` and `tests/mcp` pass (648 passed, 1 skipped, no `-m live`). The core D-01..D-13 work is sound. I checked these and found no defect:
+I re-read commits 1f00236 through be65af3 against the iteration-2 findings. I ran the targeted test files (`test_raw_upload_staging`, `test_error_message_scrub`, `test_evidence_refs`, `test_non_finite_numbers`, `test_read_route_fault_breadth`: 70 passed) and probe scripts for each point you listed. The probes ran against the real `Databasise` with the driver op monkeypatched, in a temp store. Nothing was left in the repo.
 
-- The one refusal body with no `detail` wrapper, and the unwrap of validator-wrapped refusals on both transports.
-- 404 vs 422 vs 502/503 mapping through `_status_for`.
-- Leading-underscore attributes (`_cause`, `_internal_node_id`) stay out of bodies, and the fault message names only the operation and failure class.
-- Input is validated before any disk or store side effect on ingest, delete and evidence resolve (document id, evidence namespace, raw-upload gate, page bounds).
-- The compare key and mutable-store pre-check runs before any arm executes, selectors are resolved once, and `all_wirings()` returns fresh dicts, so `_execute_resolved` mutating its input is safe.
-- The MCP `call_tool` override matches the installed SDK signature, and `UnexpectedToolError` subclasses `ToolError`.
+Status of the iteration-2 findings:
 
-The defects are in the gaps around those paths. A refusal body that carries a non-finite float turns into an unhandled 500 on REST and invalid JSON on MCP. The read routes and write routes catch driver failures with different breadth, so some driver failures still escape as bare 500s. v1's own `error_message` text is passed through unredacted.
+- **CR-01 (burned id): mostly resolved, with a regression.** Delete then re-upload works, including after a failed asynchronous parse. The owner record is written only after the exclusive create wins, and it lives outside `corpus-inbox`. The new release rule removes the file in cases where v1 refused or failed the delete (CR-01 below).
+- **WR-01 (store NaN reported as caller refusal): resolved.** `MalformedEvidenceItemError` becomes a `ForeignEngineRefusalError` (502) in `_execute`. NaN, inf, -inf and numpy float32/float64 are caught. Two non-`Real` shapes still reach the old path (IN-02).
+- **WR-02 (scrub leaks): resolved for the listed forms.** `~`, `~user`, UNC, `./`, `../`, quoted paths with spaces and `file://`/`http(s)://` are handled. Residue is in IN-01.
+- **WR-03 (`DeletionOutcome.message` unscrubbed): resolved.** The field validator covers REST, MCP and in-process callers.
+- **WR-04 (cleanup under a running job): resolved for the ingest side.** The file is removed only when the staged write fails, before the run starts. Every post-run fault leaves it and logs the path once. The same hazard exists on the delete side (CR-01).
+
+The specific checks you asked for:
+
+- **Owner-record path from unvalidated input:** no. The path is built only from `generated_on_disk_name(document_id)`, which is a `fullmatch` on `[A-Za-z0-9_-]+`. The check runs in `ingest` (line 764) and `delete_document` (line 954), and again inside `_staged_owner_path`.
+- **Path traversal through the workspace value:** no. The workspace string is written as the record's content and compared by equality. It is never joined into a path by this code.
+- **Crash window that burns an id:** yes, narrow (WR-02).
+- **Delete then re-upload failing:** it works when a record exists or v1 reports `success`. It fails for the orphan cases in WR-02.
+- **Removal error failing a delete:** an `OSError` is handled. A `UnicodeDecodeError` from reading the record is not (WR-01).
 
 ## Critical Issues
 
-### CR-01: A refusal that echoes a non-finite float is a 500 on REST and invalid JSON on MCP
+### CR-01: `delete_document` removes the staged upload when v1 answered `not_allowed` or `fail`, so the document stays registered while its input file is gone
 
-**File:** `databasise/seam/refusals.py:33-46` (`refusal_body`); `databasise/seam/rest.py:262` (`JSONResponse`); `databasise/mcp/server.py:126` (`json.dumps`)
-**Issue:** `refusal_body` copies caller-supplied models and values into the body unchanged. Two refusals echo float-bearing input:
-- `UnresolvableEvidenceReferenceError.ref` carries `EvidenceRef.score: float | None`.
-- `EmptyQueryObjectError.query_object` carries `QueryObject.embedding: list[float]`.
+**File:** `databasise/seam/engine.py:906-909` (`_release_staged_upload`), called from `engine.py:994`
+**Issue:** The condition is `recorded == self.workspace or (recorded is None and v1_status == "success")`. The first clause ignores `v1_status`. v1's `DeletionResult.status` is one of `success`, `not_found`, `not_allowed` and `fail`. `not_allowed` is returned when the v1 pipeline is busy (`v1/lightrag/lightrag.py:3167-3192`), which is exactly when the document may be parsing from the staged path. `fail` is returned when the delete raised.
 
-FastAPI parses the JSON literal `NaN`, and pydantic accepts it as a float. Starlette's `JSONResponse` renders with `allow_nan=False`, so building the refusal response raises `ValueError`. This is verified live:
+I confirmed this with a probe: after a raw upload by workspace `w`, a v1 delete answer of `not_allowed` returned status `not_allowed` and the inbox was empty afterwards. The same happened for `fail`. Consequences:
 
-```
-POST /evidence/resolve {"ref":"x","namespace":"chunks","kind":"text_chunk","score":NaN}   -> 500 Internal Server Error
-POST /query {"query":{"text":"  ","embedding":[NaN]}}                                      -> 500 Internal Server Error
-```
+- The document is still registered in v1 (nothing was deleted), and a running parse loses its input file. This is the hazard iteration-2 WR-04 was filed to prevent, re-introduced on the delete path.
+- The caller is told the delete did not happen, but the staged bytes are gone. A retry of the delete finds no file. A re-upload of the id is accepted by the seam and is then refused by v1 as a duplicate id, with a staged file left behind.
+- The method docstring ("after v1 has answered ... removed if the owner record names this workspace") reads as if status does not matter. The no-record branch already gates on `success`, so the two branches are inconsistent.
 
-On MCP the same input does not fail. `json.dumps` default `allow_nan=True` emits `"score": NaN` inside the `isError` text, which a strict JSON client cannot parse. This breaks the phase invariant (SEAM-02/03) that every caller-facing failure is a named refusal in one JSON shape. A single unauthenticated request triggers it, and the 500 hides the real refusal.
-
-**Fix:** Refuse non-finite floats at the model boundary and make the body builder safe:
+**Fix:** Gate both branches on v1 having actually released the document. A `not_found` answer is also safe, because v1 holds no document that could be reading the file:
 ```python
-# evidence.py
-score: float | None = Field(default=None, allow_inf_nan=False)
-# query.py
-embedding: list[Annotated[float, Field(allow_inf_nan=False)]] | None = None
+released = v1_status in ("success", "not_found")
+if released and (recorded == self.workspace or (recorded is None and v1_status == "success")):
+    staged.unlink(missing_ok=True)
+    owner.unlink(missing_ok=True)
 ```
-Also sanitise in `refusal_body` so no future refusal reintroduces this. Dump models with `mode="json"` and `ser_json_inf_nan="null"` (or recursively replace non-finite floats with `None`). Add a regression test for both routes and the MCP tool.
+Add a test: upload, delete answered `not_allowed` and `fail`, assert the staged file and the owner record both remain.
 
 ## Warnings
 
-### WR-01: The read-route fault wrapper catches a closed list, so driver failures still escape as bare 500s
+### WR-01: A corrupt, truncated or empty owner record fails the delete after v1 already deleted the document, or makes the id permanently undeletable
 
-**File:** `databasise/seam/engine.py:407-415` (`_corpus_op_or_refuse`)
-**Issue:** D-04 and SEAM-06 say `ForeignEngineRefusalError` is the one fault type on `GET /corpus`, `/corpus/counts` and `/jobs/{id}`. The wrapper catches only `MissingV1InterpreterError`, `CorpusOpSubprocessError`, `CorpusOpTimeoutError` and `json.JSONDecodeError`. `run_corpus_op` (`foreign/v1_corpus_adapter.py:101-149`) can also raise:
-- `UnicodeDecodeError` from `subprocess.run(text=True)` when the driver writes non-UTF-8 bytes. This is malformed driver output.
-- `OSError` subclasses: `PermissionError` on an interpreter that exists but is not executable, or `FileNotFoundError` if `v1/` is missing as the cwd.
+**File:** `databasise/seam/engine.py:906` (`owner.read_text(encoding="utf-8")`), `engine.py:917` (`except OSError`)
+**Issue:** Two failures come from the same read.
 
-Verified live: monkeypatching `run_corpus_op` to raise either gives `GET /corpus` -> 500 `Internal Server Error`. The 500 body leaks nothing, but it is the wrong class and status, and the caller cannot tell a fault from a bug. The inline comment ("any other exception is not an adapter failure mode") is wrong for these.
+1. `read_text` raises `UnicodeDecodeError` (a `ValueError`, not an `OSError`) for non-UTF-8 content. The `except OSError` does not catch it. I confirmed with a probe that a record holding `b"\xff\xfe"` makes `delete_document` raise `UnicodeDecodeError` after v1 returned `success`. This contradicts the documented rule that a removal error never fails a delete v1 already performed. A crash during `owner.write_bytes` (which truncates first) can leave exactly this kind of file, as can a truncated multi-byte workspace name.
+2. An empty record (crash between truncation and write) decodes to `""`. It is not `None`, and it equals no workspace, so every workspace's delete logs "left in place" and the staged file can never be removed. The id is permanently refused as `DuplicateDocumentIdError`.
 
-**Fix:**
-```python
-except (MissingV1InterpreterError, CorpusOpSubprocessError, CorpusOpTimeoutError,
-        json.JSONDecodeError, UnicodeDecodeError, OSError) as exc:
-    raise _foreign_fault(operation, exc) from exc
-```
-Add `UnicodeDecodeError` and `OSError` to `_FOREIGN_FAILURE_CLASSES`. Map `UnicodeDecodeError` to `MalformedDriverOutput`, and `OSError` to 503 (v1 unavailable) in `_ENGINE_UNAVAILABLE`.
-
-### WR-02: Write-path result parsing is not wrapped, so malformed driver output on ingest or delete is a 500
-
-**File:** `databasise/seam/engine.py:830-833` (`ingest`), `engine.py:907-912` (`delete_document`)
-**Issue:** The read methods wrap result parsing in `except _MALFORMED_RESULT` and raise `MalformedDriverOutput`. The write methods do not:
-- `ingest` runs `int(enqueued)`, which raises `ValueError` for a non-numeric `enqueued`.
-- `delete_document` builds `DeletionOutcome(status=result.get("status") or "fail", ...)`. `status` is a `Literal`, so an unexpected v1 status string raises `pydantic.ValidationError`.
-
-`_pydantic_validation_response` re-raises a `ValidationError` that carries no refusal, so both end as a bare 500. This was not run end to end; the re-raise behaviour is confirmed by `test_a_route_validation_error_with_no_refusal_inside_stays_a_server_error`. The result is inconsistent with D-04: the same malformed output is a 502 on three routes and a 500 on two.
-
-**Fix:** Wrap the final model construction in both methods:
+**Fix:** Treat an unreadable or empty record the same as a missing one:
 ```python
 try:
-    return IngestJob(job_id=str(result.get("track_id") or track_id), enqueued=int(enqueued))
-except _MALFORMED_RESULT as exc:
-    raise _foreign_fault("ingest", exc, failure_class="MalformedDriverOutput") from exc
+    recorded = owner.read_text(encoding="utf-8") if owner.exists() else None
+except (OSError, UnicodeDecodeError):
+    recorded = None
+recorded = recorded or None
+...
+except (OSError, UnicodeError):
+    logger.exception(...)
 ```
-Do the same around `DeletionOutcome(...)` with `"delete"`.
+Better still, write the record atomically (write a temp file in the same directory, then `os.replace`) so a crash never leaves a partial record.
 
-### WR-03: v1 `error_message` text is returned verbatim on the status routes
+### WR-02: A crash between the exclusive create and the owner-record write leaves an orphan that no delete can ever release
 
-**File:** `databasise/seam/corpus.py:183-193` (`DocumentStatusEntry.error_message`); `databasise/foreign/v1_corpus_driver_script.py:312`
-**Issue:** `GET /corpus` and `GET /jobs/{id}` (and the MCP `status` tool) return `doc_status.error_msg` from v1 unmodified. It is v1's free-text failure message for a failed document. Raw uploads are handed to v1 as an absolute path (`engine.py:776`, `file_paths=[str(on_disk_path)]`), and failure messages typically name the file and the exception text. Verified live that the text is passed through with no filtering: a driver value `"Failed parsing /home/chris/store/corpus-inbox/a.bin"` reaches the 200 body unchanged. Phase 9 closed server-path leaks on refusal and fault bodies (D-04) but not on this success body. It is a server-internals disclosure on an unauthenticated read route.
+**File:** `databasise/seam/engine.py:821-828` (create, then record write); `engine.py:907` (no-record branch requires `success`)
+**Issue:** If the process dies after `open(staged, "xb")` and before `owner.write_bytes(...)`, the staged file has no record. The v1 run never started, so v1 knows no such document. `delete_document` for that id returns v1 `not_found`, and the no-record branch removes the file only on `success`, so the file stays. Every re-upload of the id is refused. The test `test_an_orphan_without_an_owner_record_is_removed_only_when_v1_deleted_successfully` pins this behaviour (lines 62-76), but the case it describes (an orphan left by a crashed upload) is the one that can never reach `success`. Only a legacy file that v1 does hold can.
 
-**Fix:** Either do both of these, or document the field as raw v1 text and make the exposure an explicit owner decision:
-- Replace `error_message` with a bounded, allow-listed category such as `"parse_failed"`, and log the raw text server-side as `_foreign_fault` does.
-- If the text must stay, strip absolute paths and cap the length before it crosses the seam.
+This is the same crash class that iteration-2 CR-01 was filed to close. The window is small, so I rate it a warning, not a blocker. The id is burned with no product-surface way to recover.
 
-### WR-04: A raw upload is written to the inbox before the run, never cleaned up, and silently overwritten on id reuse
-
-**File:** `databasise/seam/engine.py:770-777`
-**Issue:** `ingest` writes `corpus-inbox/<document_id>.bin` before `parse_wiring`, `_build_stores` and the scheduler run. Nothing removes the file, whether the run succeeds, hits `parse_wiring` errors, or ends in a 502/503 fault, so failed attempts leave orphan files. Since D-12/SEAM-07 a caller can supply the id. A second upload with the same `document_id` does `write_bytes` over the file of an earlier ingest that v1 may still be parsing (`docs_format=pending_parse` is read asynchronously). The earlier job then silently parses the newer bytes. Input validation is correct (the write happens after the token check), but the side-effect ordering and lifetime are not.
-
-**Fix:** Write only after `parse_wiring` and `_build_stores` succeed. Refuse a pre-existing path with `open(path, "xb")` (a named refusal such as `DuplicateDocumentIdError`) or mint a unique on-disk name distinct from the document id. Remove the file in a `finally` once the run is refused. If v1 consumes it asynchronously, document who owns cleanup.
+**Fix:** Pick one:
+- Write the record first, to a temp name in `corpus-inbox-owners`, create the staged file with `xb`, then `os.replace` the temp record into place. A leftover temp file can then be ignored or reaped, and no staged file ever exists without a record.
+- Or accept `not_found` in the no-record branch as well. The cost is that a legacy file staged by another workspace could be removed by a workspace whose v1 does not hold the id, which the record rule exists to prevent. Because pre-record files are a legacy case only, state the trade-off in the docstring if this is chosen.
 
 ## Info
 
-### IN-01: Every node exception is reported as "the foreign engine failed"
+### IN-01: `scrub_error_message` mangles and leaks non-listed URL schemes, and an unquoted path with spaces keeps its tail
 
-**File:** `databasise/seam/engine.py:438-446` (`_node_result_or_refuse`)
-**Issue:** Any `node_exceptions` entry becomes `ForeignEngineRefusalError` (message "the foreign engine failed operation ..."), including machine-side failures such as `VectorStoreCorruptedError`, a `KeyError` in a HippoRAG node (not a foreign engine), or a programming error. Callers see 502 `UnclassifiedEngineFailure` and may retry what is a local bug. The server log keeps the real traceback, so this is a diagnosability issue, not a leak.
-**Fix:** Classify by origin: foreign-adapter exceptions become the fault, and other exceptions propagate as a 500 (or get their own machine-fault class).
+**File:** `databasise/seam/corpus.py:183-221` (`_URL_RE`, `_PATH_RE`)
+**Issue:** `_URL_RE` knows only `file`, `http` and `https`. I probed `s3://bucket/key and ftp://host/x`, which becomes `s3:key and ftp:x`: the bucket path tail leaks and the scheme is mangled. `file /srv/my data/a.bin missing` becomes `file my data/a.bin missing`, which the docstring already admits. This is the accepted best-effort limit and not a defect on its own. It is listed because the scheme list is an easy extension.
+**Fix:** Widen to any scheme: `\b[a-z][a-z0-9+.-]*://[^\s'"`<>()\[\],;]*`.
 
-### IN-02: The generated OpenAPI documents the wrong 422 shape and omits the 404 shape
+### IN-02: Non-`Real` and huge-int scores from a store still take the wrong failure path
 
-**File:** `databasise/seam/rest.py:150-159`, route decorators
-**Issue:** `responses=_FAULT_RESPONSES` declares only 502/503 on the five corpus routes. FastAPI adds its own 422 `HTTPValidationError` (`{detail: [...]}`) to every route with a body or params, but refusals are the top-level `RefusalBody` (D-01). The 404 refusal shape (`UnknownJobError`, trace, evidence, generation) is not declared at all. An OpenAPI-generated client will mis-model the main error body.
-**Fix:** Add `422: {"model": RefusalBody}` and `404: {"model": RefusalBody}` to the relevant routes (or app-wide), and say in the description that bare `{detail}` appears only for schema errors.
+**File:** `databasise/seam/evidence.py:115-116`
+**Issue:** The finite check is `isinstance(score, numbers.Real) and not math.isfinite(float(score))`. I probed these:
 
-### IN-03: A catalogued refusal can never be raised, and some docstrings are stale
+- A string `"nan"` and `Decimal("NaN")` are not `Real`. They reach `EvidenceRef`, whose validator raises `NonFiniteNumberError`, so the 422 caller refusal returns for a store fault.
+- An integer such as `10**400` is `Real`, and `float(score)` raises `OverflowError` before any check. The error is not a `MalformedEvidenceItemError`, so it surfaces as an unclassified 500.
+- `True` passes as `1.0`.
 
-**File:** `databasise/seam/refusals.py:214-223` (`UnknownDocumentError`), `refusals.py:364-378` (`MalformedSelectorPayloadError`), `refusals.py:14-19`
-**Issue:**
-- `UnknownDocumentError` is in `__all__`, which the module docstring defines as "every refusal type either transport can return", but its own docstring says nothing raises it. A consumer matching on the catalogue will wait for a refusal that never arrives.
-- `MalformedSelectorPayloadError`'s docstring says an escaping `ValidationError` "produces an unhandled 500", which is no longer true now that `_pydantic_validation_response` exists.
+All three are unlikely store outputs, so this is not a regression of the iteration-2 fix.
+**Fix:** In `mint_evidence_refs`, wrap the check in `try: math.isfinite(float(score)) except (TypeError, ValueError, OverflowError)` and raise `MalformedEvidenceItemError` for any score that is not a finite real number.
 
-**Fix:** Remove `UnknownDocumentError` from `__all__`, or wire a real raise-site. Update the stale docstring.
+### IN-03: `DuplicateDocumentIdError` is a 422 caller refusal, and the OpenAPI document does not declare it
 
-### IN-04: Refusals echo unbounded caller input, twice
+**File:** `databasise/seam/rest.py` (`_FAULT_RESPONSES`, upload route); `databasise/seam/refusals.py:240-254`
+**Issue:** Carried over from iteration-2 IN-02 and extended: the generated OpenAPI documents only 502/503 and does not list the 404 or 422 refusal shapes, including the new duplicate-id refusal. A 409 would also describe a state conflict more accurately than 422.
+**Fix:** Add `404`/`422` `RefusalBody` entries to the declared responses.
 
-**File:** `databasise/seam/refusals.py:65-69` (`EmptyQueryObjectError`), `198-211` (`InvalidDocumentIdError`)
-**Issue:** `EmptyQueryObjectError` puts `{query_object!r}` in the message and the model in the body. A multi-megabyte whitespace `text` or a large `embedding` comes back in the response about twice. `InvalidDocumentIdError` echoes an arbitrarily long id the same way. `OversizedDocumentError` deliberately avoids echoing; these do not. This is not an information disclosure (it is the caller's own input), but it amplifies response size.
-**Fix:** Cap echoed values (for example `repr()[:200]`) in the message and attribute. At minimum, drop `query_object` from the message.
+### IN-04: Every node exception, and every read-route exception, is reported as "the foreign engine failed"
 
-### IN-05: The compare envelope-rule text is copied in three places, and a mid-run arm failure leaves earlier arms' traces
+**File:** `databasise/seam/engine.py` (`_corpus_op_or_refuse`, `_node_result_or_refuse`)
+**Issue:** Carried over from iteration-2 IN-01. A local `TypeError` becomes `UnclassifiedEngineFailure` 502. The server log keeps the traceback.
+**Fix:** Classify by origin where practical, or say so in the docstrings.
 
-**File:** `databasise/seam/rest.py:341-350`, `databasise/mcp/server.py:209-220`, `databasise/seam/engine.py:673-677`, `databasise/seam/compare.py:48-54`
-**Issue:**
-- `COMPARE_RESPONSE_SHAPE_RULE` exists as a constant, but the REST description is retyped as a literal string and the other two places are docstrings. A test keeps them equal, but the REST literal could simply be `description=COMPARE_RESPONSE_SHAPE_RULE`.
-- `Databasise.compare` says a collision refuses "before any arm runs", but only selector-derived refusals are pre-checked. If arm 2 fails at execution (for example `UnbudgetableParticipantError` or a node fault), arm 1 has already spent tokens and persisted a trace in `trace.db`. The `compare_arms` docstring claims "the whole comparison refuses", which is true for the response but not for side effects.
+### IN-05: `UnknownDocumentError` can never be raised and stays in `__all__`; `MalformedSelectorPayloadError` has a stale docstring
 
-**Fix:** Import the constant in `rest.py`. Add one sentence to the compare docstring that execution-time failures can leave earlier arms' traces persisted.
+**File:** `databasise/seam/refusals.py`
+**Issue:** Carried over from iteration-2 IN-03.
+**Fix:** Remove from `__all__` or wire a raise site; update the docstring.
+
+### IN-06: Refusals echo unbounded caller input
+
+**File:** `databasise/seam/refusals.py` (`EmptyQueryObjectError`, `InvalidDocumentIdError`, `DuplicateDocumentIdError`)
+**Issue:** Carried over from iteration-2 IN-04. `DuplicateDocumentIdError` also echoes the caller's id, which is bounded only by the token regex and not by length.
+**Fix:** Cap echoed values (for example `repr()[:200]`).
+
+### IN-07: The compare envelope-rule text is copied in three places, and a mid-run arm failure leaves earlier arms' traces
+
+**File:** `databasise/seam/rest.py`, `databasise/mcp/server.py`, `databasise/seam/engine.py`
+**Issue:** Carried over from iteration-2 IN-05.
+**Fix:** Use `description=COMPARE_RESPONSE_SHAPE_RULE` in `rest.py`, and add one sentence to the `compare` docstring about persisted earlier-arm traces.
+
+### IN-08: Accepted design limits, listed for the record
+
+**File:** `databasise/seam/engine.py:755-757`, `engine.py:862-865`; `databasise/seam/corpus.py:189-221`
+**Issue:** Not defects, per your instruction:
+
+- A staged id is unique per store, not per workspace. Another workspace's upload of the same id is refused until the owner deletes it.
+- Files orphaned by post-run faults stay on disk. There is no reaper, and the path is logged once at WARNING.
+- The error-message scrub is a best-effort heuristic.
+
+**Fix:** None required this phase.
 
 ---
 
