@@ -19,6 +19,7 @@ import dataclasses
 import re
 import sys
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any
 
 import pytest
@@ -75,9 +76,15 @@ def _make_stub_ingest_body(*, timeout: float = 5.0):
     return _body
 
 
-def _make_stub_delete_body(*, timeout: float = 5.0, stub_status: str = "success"):
+def _make_stub_delete_body(
+    *,
+    timeout: float = 5.0,
+    stub_status: str = "success",
+    on_success: Callable[[], None] | None = None,
+):
     """Same shape as ``full_delete_body``, pointed at the stub driver — mirrors
-    ``test_delete_document.py``'s own ``_make_stub_full_delete_body``."""
+    ``test_delete_document.py``'s own ``_make_stub_full_delete_body``. ``on_success`` runs once
+    when the driver reports a successful delete, so a test can make a status fake observe it."""
 
     async def _body(ctx: NodeContext) -> dict[str, Any]:
         config = ctx.config or {}
@@ -98,12 +105,16 @@ def _make_stub_delete_body(*, timeout: float = 5.0, stub_status: str = "success"
             ctx.record_store_touch("graph")
             ctx.record_store_touch("vector")
             ctx.record_store_touch("kv")
+            if on_success is not None:
+                on_success()
         return {**result, "tokens": TokenAccounting(counted_by="unbudgetable")}
 
     return _body
 
 
-def _make_registry(*, delete_status: str = "success") -> PartRegistry:
+def _make_registry(
+    *, delete_status: str = "success", on_delete: Callable[[], None] | None = None
+) -> PartRegistry:
     """A full ``default_registry()`` with both ``lightrag/full-ingest@0.1.0`` and
     ``lightrag/full-delete@0.1.0`` swapped for their stub-driver variants (06-10-PLAN.md
     deviation) — ``Databasise.ingest()``/``delete_document()`` now resolve a §18.4 selector before
@@ -112,7 +123,8 @@ def _make_registry(*, delete_status: str = "success") -> PartRegistry:
     registry holding only the two parts under test can no longer satisfy that."""
     ingest_part = dataclasses.replace(LIGHTRAG_FULL_INGEST_PART, body=_make_stub_ingest_body())
     delete_part = dataclasses.replace(
-        LIGHTRAG_FULL_DELETE_PART, body=_make_stub_delete_body(stub_status=delete_status)
+        LIGHTRAG_FULL_DELETE_PART,
+        body=_make_stub_delete_body(stub_status=delete_status, on_success=on_delete),
     )
     swapped = {ingest_part.name_at_version: ingest_part, delete_part.name_at_version: delete_part}
 
@@ -380,9 +392,10 @@ def _patch_status_sequence(monkeypatch):
     ``GET /corpus/counts`` in the middle of a polling sequence observes whatever status the last
     poll settled on rather than silently advancing the sequence itself. Reuses the real stub
     driver's own ``_run_status``/``_run_health`` — never a second, independently-maintained fake.
-    Returns the mutable state dict so a test can inspect ``state["poll_index"]`` if needed.
+    Returns the mutable state dict: ``state["poll_index"]`` for inspection, and ``state["deleted"]``,
+    which a successful stub delete sets so later reads report an empty corpus.
     """
-    state = {"poll_index": 0}
+    state = {"poll_index": 0, "deleted": False}
 
     def _fake(op: str, payload: dict[str, Any], *, timeout: float | None = None, **kwargs: Any):
         if op == "status":
@@ -398,7 +411,10 @@ def _patch_status_sequence(monkeypatch):
                     "error_message": None,
                 }
             ]
-            job = {**payload, "_stub_documents": documents, "_stub_counts": {current_status: 1}}
+            counts = {current_status: 1}
+            if state["deleted"]:  # the stub delete body's on_success hook fired: the corpus is empty
+                documents, counts = [], {}
+            job = {**payload, "_stub_documents": documents, "_stub_counts": counts}
             result = _run_status(job)
             if track_id:
                 state["poll_index"] = min(state["poll_index"] + 1, len(_ROUND_TRIP_STATUSES) - 1)
@@ -417,9 +433,13 @@ def test_upload_poll_delete_round_trip(store_root, monkeypatch):
     """Over the REST transport, in one test: upload, poll a job to completion (observing the full
     status sequence, not only the terminal state), read counts, delete, read counts again, and
     confirm a second delete of the same id reports ``not_found``."""
-    _patch_status_sequence(monkeypatch)
+    state = _patch_status_sequence(monkeypatch)
     success_client = TestClient(
-        create_app(store_root=store_root, workspace="round-trip-success", registry=_make_registry())
+        create_app(
+            store_root=store_root,
+            workspace="round-trip-success",
+            registry=_make_registry(on_delete=lambda: state.update(deleted=True)),
+        )
     )
 
     upload_response = success_client.post(
@@ -441,7 +461,8 @@ def test_upload_poll_delete_round_trip(store_root, monkeypatch):
 
     counts_response = success_client.get("/corpus/counts")
     assert counts_response.status_code == 200
-    assert counts_response.json()["by_status"].get("processed") == 1
+    assert counts_response.json()["by_status"]["processed"] == 1
+    assert counts_response.json()["total"] == 1
 
     delete_response = success_client.delete("/documents/round-trip-doc")
     assert delete_response.status_code == 200
@@ -449,6 +470,8 @@ def test_upload_poll_delete_round_trip(store_root, monkeypatch):
 
     second_counts_response = success_client.get("/corpus/counts")
     assert second_counts_response.status_code == 200
+    assert second_counts_response.json()["by_status"].get("processed", 0) == 0
+    assert second_counts_response.json()["total"] == 0
 
     not_found_client = TestClient(
         create_app(
@@ -461,6 +484,10 @@ def test_upload_poll_delete_round_trip(store_root, monkeypatch):
     assert second_delete_response.status_code == 200
     assert second_delete_response.json()["status"] == "not_found"
 
+    third_counts_response = not_found_client.get("/corpus/counts")
+    assert third_counts_response.json()["by_status"].get("processed", 0) == 0
+    assert third_counts_response.json()["total"] == 0
+
 
 async def test_upload_poll_delete_round_trip_in_process_matches_the_rest_status_sequence(
     store_root, monkeypatch
@@ -468,8 +495,12 @@ async def test_upload_poll_delete_round_trip_in_process_matches_the_rest_status_
     """The dual-transport rule applied to a multi-step flow, not just to single calls — the
     identical sequence driven entirely in-process against ``Databasise`` methods produces the
     same observed status sequence the REST round trip above does."""
-    _patch_status_sequence(monkeypatch)
-    engine = Databasise(store_root=store_root, workspace="round-trip-in-process", registry=_make_registry())
+    state = _patch_status_sequence(monkeypatch)
+    engine = Databasise(
+        store_root=store_root,
+        workspace="round-trip-in-process",
+        registry=_make_registry(on_delete=lambda: state.update(deleted=True)),
+    )
 
     job = await engine.ingest(IngestDocument(text="hello world", document_id="round-trip-doc-2"))
 
@@ -481,13 +512,15 @@ async def test_upload_poll_delete_round_trip_in_process_matches_the_rest_status_
     assert observed_statuses == _ROUND_TRIP_STATUSES
 
     counts = await engine.document_counts()
-    assert counts.by_status.get("processed") == 1
+    assert counts.by_status["processed"] == 1
+    assert counts.total == 1
 
     outcome = await engine.delete_document("round-trip-doc-2")
     assert outcome.status == "success"
 
     second_counts = await engine.document_counts()
-    assert second_counts.total >= 0  # a fixed-size record either way — never a partial dump
+    assert second_counts.by_status.get("processed", 0) == 0
+    assert second_counts.total == 0
 
     not_found_engine = Databasise(
         store_root=store_root,
@@ -496,6 +529,10 @@ async def test_upload_poll_delete_round_trip_in_process_matches_the_rest_status_
     )
     second_outcome = await not_found_engine.delete_document("round-trip-doc-2")
     assert second_outcome.status == "not_found"
+
+    third_counts = await not_found_engine.document_counts()
+    assert third_counts.by_status.get("processed", 0) == 0
+    assert third_counts.total == 0
 
 
 async def test_the_rest_and_in_process_round_trips_observe_the_identical_status_sequence(
