@@ -92,14 +92,14 @@
   - Test: tests/seam/test_empty_inputs.py: POST /query with {query:{text:''}} and with {text:'   '} each return 422 EmptyQueryObjectError; the stub LLM and embedder record zero calls, and trace.db gains no row. POST /documents {document:{text:''}} with the default selector and with the HippoRAG selector capability ['reads_graph','reads_kv'] returns 422, an upload of b'' returns 422, and corpus-inbox stays empty. MCP ingest with {raw_base64:''}, {raw_base64:'!!!!'} and {raw_base64:'YW*Jj'} each raise a ToolError with refusal_type. Fails today: the queries return 200, and the ingests return 200 with enqueued:1.
   - Defects: rest-live/REST-10, rest-live/REST-11, mcp-live/MCP-06, doc-audit-5/D5, mcp-clients/D5
   - Owner decision first: Whether whitespace-only text counts as empty for query and text ingest (proposed: yes; raw bytes are checked only for length 0).
-- [ ] **SEAM-10**: Selector(capability=[]) is refused with a named refusal on every route that accepts a selector (/query, /compare, /documents, /documents/upload, DELETE /documents, and the MCP tools). It never resolves to the bypass wiring, never renders an empty compare key, and no node runs.
+- [x] **SEAM-10**: Selector(capability=[]) is refused with a named refusal on every route that accepts a selector (/query, /compare, /documents, /documents/upload, DELETE /documents, and the MCP tools). It never resolves to the bypass wiring, never renders an empty compare key, and no node runs.
   - Test: tests/seam/test_empty_capability_selector.py: resolve_selector(Selector(capability=[])) raises the refusal. POST /query {selector:{capability:[]}} returns 422 with refusal_type, and the stub LLM records zero calls. POST /compare with selectors [{capability:[]}, {}] returns 422 before any arm runs. Fails today: the query returns 200 from bypass.
   - Defects: seam-rest/SEAM-04, contract/D-10, doc-audit-2/D2
 - [ ] **SEAM-11**: POST /compare detects every comparison-key collision before any arm executes, and each arm executes exactly the wiring that the pre-check resolved. The selector pairs [{},{}], [{alias:'default'},{}], [{alias:'x'},{harness:'x'}] and [{alias:'a+b'},{capability:['a','b']}] each either produce distinct keys or return 422 DuplicateComparisonKeyError with zero arms run, zero LLM/embedding calls and zero traces persisted. ([{},{}] is always a duplicate.) Selectors are resolved once and the resolved wirings are passed to execution; _execute does not call resolve_selector a second time. An alias named 'answer' cannot make a keyed compare map indistinguishable from a single envelope.
   - Test: tests/seam/test_compare_keys.py is parametrised over the four colliding selector pairs. POST /compare returns the chosen outcome; on refusal, the stub LLM and embedder record zero calls and the trace.db row count is unchanged. A test that repoints an alias through a hook between the pre-check and execution shows that the pre-checked wiring is the one executed. POST /compare with an alias 'answer' plus another selector returns a response that a client can classify by the documented rule. Fails today: [{},{}] runs the first arm and persists its trace before refusing.
   - Defects: seam-engine/ENG-07, seam-rest/SEAM-05, rest-live/REST-17, tests/T-09, doc-audit-2/D7
   - Owner decision first: Compare key format (§18 compatibility): add a kind prefix to rendered keys (alias:x, capability:a+b, default), which changes the response keys consumers see, or keep unprefixed keys and only move the collision check ahead of execution. Also decide how a consumer tells a single envelope from a keyed map: by the number of selectors sent, or by a wrapper field.
-- [ ] **SEAM-12**: POST /promote refuses, with a named refusal, an alias that is empty or that no Selector could carry (one that matches the hash shape ^(sha256:)?[0-9a-f]{64}$), and writes no ledger row. Every alias that can be promoted is therefore selectable afterwards.
+- [x] **SEAM-12**: POST /promote refuses, with a named refusal, an alias that is empty or that no Selector could carry (one that matches the hash shape ^(sha256:)?[0-9a-f]{64}$), and writes no ledger row. Every alias that can be promoted is therefore selectable afterwards.
   - Test: tests/seam/test_promote_alias_validation.py: POST /promote with alias '' and with alias 'sha256:'+'b'*64 each return 422 with refusal_type (ForbiddenSelectorInputError or a promotion-specific refusal), and the alias ledger row count is unchanged. A valid alias promotes and can then be used in POST /query. Fails today: both invalid aliases return 200 and write a row.
   - Defects: rest-live/REST-09
 - [x] **SEAM-13**: On POST /documents/upload, a selector form field that holds the JSON literal 'null' or an empty string means 'no selector' (the default wiring). This is the same as omitting the field and the same as selector null on the JSON routes.
@@ -837,9 +837,9 @@ These fail today.
 | SEAM-07 | Phase 9 | Complete |
 | SEAM-08 | Phase 9 | Complete |
 | SEAM-09 | Phase 9 | Complete |
-| SEAM-10 | Phase 9 | Pending |
+| SEAM-10 | Phase 9 | Complete |
 | SEAM-11 | Phase 9 | Pending |
-| SEAM-12 | Phase 9 | Pending |
+| SEAM-12 | Phase 9 | Complete |
 | SEAM-13 | Phase 9 | Complete |
 | SEAM-14 | Phase 9 | Complete |
 | SEAM-15 | Phase 9 | Pending |
