@@ -30,6 +30,7 @@ changes (the plan's own prohibition).
 from __future__ import annotations
 
 import math
+import numbers
 import re
 from typing import Any
 
@@ -111,7 +112,7 @@ def mint_evidence_refs(
         if item_id is None:
             raise MalformedEvidenceItemError(namespace=namespace, index=index)
         score = item.get("score")
-        if isinstance(score, float) and not math.isfinite(score):
+        if isinstance(score, numbers.Real) and not math.isfinite(float(score)):
             raise MalformedEvidenceItemError(namespace=namespace, index=index, reason="carries a non-finite score")
         refs.append(EvidenceRef(ref=str(item_id), namespace=namespace, kind=kind, score=score))
     return refs

@@ -119,7 +119,9 @@ def test_mint_evidence_refs_raises_the_named_refusal_for_an_item_missing_its_id_
     assert exc_info.value.index == 1
 
 
-@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+@pytest.mark.parametrize(
+    "bad", [float("nan"), float("inf"), float("-inf"), np.float32("nan"), np.float64("inf")]
+)
 def test_mint_evidence_refs_treats_a_non_finite_store_score_as_a_malformed_item_not_a_caller_refusal(bad):
     """09 REVIEW WR-01: a bad score minted by a store is a machine fault, never a pydantic
     ValidationError that the transports would report as a caller's NonFiniteNumberError."""
