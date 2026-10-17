@@ -210,7 +210,14 @@ def create_server(
         comparison is not expressible as a §18.4 selector (a selector picks one arm; this call
         fans out over N of them in one request), and the roster grows by one for this one
         genuinely new operation, not by one name per modality — registering HippoRAG as a second
-        modality added zero tools (see ``databasise.mcp.tools``'s own module docstring)."""
+        modality added zero tools (see ``databasise.mcp.tools``'s own module docstring).
+
+        One selector returns a single envelope; two or more return a map keyed by each selector's
+        rendered value (alias or harness string, capabilities joined with '+', or 'default'). A
+        consumer tells them apart by the number of selectors it sent, never by inspecting keys, so
+        a key named 'answer' cannot make a map look like an envelope. Keys are not prefixed. A key
+        collision is refused before any arm runs.
+        """
         result = await engine.compare(args.query, args.selectors)
         if isinstance(result, dict):
             return {key: envelope.model_dump() for key, envelope in result.items()}

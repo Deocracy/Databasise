@@ -13,7 +13,9 @@ import pytest
 pytest.importorskip("fastapi")
 
 from databasise.seam import engine as engine_module
-from databasise.seam.compare import comparison_keys
+from databasise.ledger.ledger import Ledger
+from databasise.mcp.server import create_server
+from databasise.seam.compare import COMPARE_RESPONSE_SHAPE_RULE, comparison_keys
 from databasise.seam.engine import Databasise
 from databasise.seam.refusals import DuplicateComparisonKeyError, EmptyComparisonRequestError
 from databasise.seam.rest import create_app
@@ -115,3 +117,73 @@ async def test_a_two_selector_compare_resolves_each_selector_exactly_once(compar
 
 def test_resolved_execution_never_resolves_a_selector_itself():
     assert "resolve_selector" not in inspect.getsource(Databasise._execute_resolved)
+
+
+# ---------------------------------------------------------------------------------------------- #
+# The pre-checked wiring is the executed one (T-09-15)
+# ---------------------------------------------------------------------------------------------- #
+
+
+async def test_a_repoint_between_the_pre_check_and_execution_does_not_change_what_runs(compare_setup):
+    client, _clients, root = compare_setup
+    await promote_alias(root, "x", "naive")
+    engine = client.app.state.engine
+    real_execute = engine._execute_resolved
+    executed_node_ids: list[set[str]] = []
+
+    async def repointing_execute(query_object, resolved):
+        executed_node_ids.append(set(resolved["nodes"]))
+        if len(executed_node_ids) == 1:
+            await promote_alias(root, "x", "bypass")
+        return await real_execute(query_object, resolved)
+
+    engine._execute_resolved = repointing_execute
+
+    response = client.post(
+        "/compare",
+        json={"query": _QUERY, "selectors": [{"alias": "x"}, {"capability": ["reads_vector"]}]},
+    )
+
+    assert response.status_code == 200, response.text
+    naive_nodes = set(resolve_arm("naive")["nodes"])
+    assert executed_node_ids[0] == naive_nodes
+    assert executed_node_ids[0] != set(resolve_arm("bypass")["nodes"])
+    assert Ledger(root).by_alias("x").mutation_id == "bypass"
+
+
+# ---------------------------------------------------------------------------------------------- #
+# Envelope versus keyed map (D-10)
+# ---------------------------------------------------------------------------------------------- #
+
+
+async def test_two_selectors_return_a_keyed_map_even_when_a_key_is_named_answer(compare_setup):
+    client, _clients, root = compare_setup
+    await promote_alias(root, "answer")
+
+    keyed = client.post("/compare", json={"query": _QUERY, "selectors": [{"alias": "answer"}, {}]})
+    single = client.post("/compare", json={"query": _QUERY, "selectors": [{"alias": "answer"}]})
+
+    assert keyed.status_code == 200, keyed.text
+    assert list(keyed.json()) == ["answer", "default"]
+    assert all("trace_token" in envelope for envelope in keyed.json().values())
+    assert single.status_code == 200, single.text
+    assert "trace_token" in single.json() and "answer" in single.json()
+    assert isinstance(single.json()["answer"], str)
+
+
+def _normalised(text: str) -> str:
+    return " ".join(text.split())
+
+
+async def test_the_rule_is_stated_in_the_docstring_the_openapi_description_and_the_mcp_tool(
+    compare_setup, tmp_path
+):
+    client, _clients, _root = compare_setup
+    rule = _normalised(COMPARE_RESPONSE_SHAPE_RULE)
+    assert "number of selectors" in rule
+
+    assert rule in _normalised(inspect.getdoc(Databasise.compare))
+    assert _normalised(client.app.openapi()["paths"]["/compare"]["post"]["description"]) == rule
+    tools = await create_server(store_root=tmp_path, workspace="compare-rule").list_tools()
+    compare_tool = next(tool for tool in tools if tool.name == "compare")
+    assert rule in _normalised(compare_tool.description)

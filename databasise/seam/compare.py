@@ -43,6 +43,16 @@ from databasise.seam.selectors import Selector
 # change is one edit.
 CAPABILITY_KEY_SEPARATOR = "+"
 
+# D-10 (09-08-PLAN.md): the response-shape rule, stated word for word in the compare docstring, the REST
+# route description and the MCP tool docstring (a test keeps the three equal to this).
+COMPARE_RESPONSE_SHAPE_RULE = (
+    "One selector returns a single envelope; two or more return a map keyed by each selector's "
+    "rendered value (alias or harness string, capabilities joined with '+', or 'default'). A "
+    "consumer tells them apart by the number of selectors it sent, never by inspecting keys, so "
+    "a key named 'answer' cannot make a map look like an envelope. Keys are not prefixed. A key "
+    "collision is refused before any arm runs."
+)
+
 
 def render_selector_key(selector: Selector) -> str:
     """The caller's own selector value, rendered deterministically from the ``Selector`` model —
@@ -107,4 +117,4 @@ async def compare_arms(
     return {key: await execute(query_object, selector) for key, selector in zip(keys, selectors)}
 
 
-__all__ = ["CAPABILITY_KEY_SEPARATOR", "compare_arms", "comparison_keys", "render_selector_key"]
+__all__ = ["CAPABILITY_KEY_SEPARATOR", "COMPARE_RESPONSE_SHAPE_RULE", "compare_arms", "comparison_keys", "render_selector_key"]

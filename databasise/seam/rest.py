@@ -341,7 +341,16 @@ def create_app(
     async def post_query(body: QueryRequest) -> ResponseEnvelope:
         return await engine.query(body.query, body.selector)
 
-    @app.post("/compare")
+    @app.post(
+        "/compare",
+        description=(
+            "One selector returns a single envelope; two or more return a map keyed by each selector's "
+            "rendered value (alias or harness string, capabilities joined with '+', or 'default'). A "
+            "consumer tells them apart by the number of selectors it sent, never by inspecting keys, so "
+            "a key named 'answer' cannot make a map look like an envelope. Keys are not prefixed. A key "
+            "collision is refused before any arm runs."
+        ),
+    )
     async def post_compare(body: CompareRequest) -> Any:
         return await engine.compare(body.query, body.selectors)
 

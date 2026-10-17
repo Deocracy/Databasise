@@ -670,6 +670,12 @@ class Databasise:
         §18.2 closed-envelope rule apply to every arm by construction. A key collision refuses
         before any selector is resolved and before any arm runs (SEAM-11).
 
+        One selector returns a single envelope; two or more return a map keyed by each selector's
+        rendered value (alias or harness string, capabilities joined with '+', or 'default'). A
+        consumer tells them apart by the number of selectors it sent, never by inspecting keys, so
+        a key named 'answer' cannot make a map look like an envelope. Keys are not prefixed. A key
+        collision is refused before any arm runs.
+
         ``debug`` is accepted and discarded for signature stability with ``query``/``query_stream``,
         exactly as those two methods already do. Arms run sequentially, in the caller's own
         supplied order — matching this engine's own declared ``_CONCURRENCY_SETTING``; this method
