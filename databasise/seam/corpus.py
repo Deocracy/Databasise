@@ -194,7 +194,7 @@ _PATH_START = r"(?:[A-Za-z]:[\\/]|\\\\|~[\w.-]*/|\.{1,2}/|/)"
 _PATH_RE = re.compile(rf"""(?<![\w.~-]){_PATH_START}[^\s'"`<>()\[\],;]*""")
 # The same path inside matching quotes, which may hold spaces (``'/home/u/my docs/a b.bin'``).
 _QUOTED_PATH_RE = re.compile(rf"""(?P<q>['"])(?P<p>{_PATH_START}[^'"\n]*)(?P=q)""")
-_URL_RE = re.compile(r"""\b[a-z][a-z0-9+.-]*://[^\s'"`<>()\[\],;]*""", re.IGNORECASE)
+_URL_RE = re.compile(r"""\b[a-z][a-z0-9+.-]{0,31}://[^\s'"`<>()\[\],;]*""", re.IGNORECASE)
 
 
 def _basename(path: str) -> str:
@@ -212,6 +212,7 @@ def scrub_error_message(text: str | None) -> str | None:
     if text is None:
         return None
     first = next((ln.strip() for ln in text.split("Traceback (most recent call last)")[0].splitlines() if ln.strip()), "")
+    first = first[:1024]  # bound regex work on uncapped v1 text; the output is capped far lower
     scrubbed = _URL_RE.sub("<url>", first)
     scrubbed = _QUOTED_PATH_RE.sub(lambda m: f"{m['q']}{_basename(m['p'])}{m['q']}", scrubbed)
     scrubbed = _PATH_RE.sub(lambda m: _basename(m.group(0)), scrubbed)

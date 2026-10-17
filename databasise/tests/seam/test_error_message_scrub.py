@@ -119,3 +119,11 @@ async def test_mcp_status_returns_the_scrubbed_message(tmp_path, monkeypatch):
 
     assert "/home/" not in json.dumps(result, default=str)
     assert "Failed parsing a.bin: bad header" in json.dumps(result, default=str)
+
+
+def test_scrub_stays_fast_on_a_long_line_without_a_url():
+    import time
+
+    start = time.perf_counter()
+    scrub_error_message("a." * 50_000)
+    assert time.perf_counter() - start < 1.0

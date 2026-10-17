@@ -830,7 +830,7 @@ class Databasise:
                     # sits outside corpus-inbox and names the uploading workspace (09 REVIEW CR-01).
                     owner.parent.mkdir(parents=True, exist_ok=True)
                     # Atomic (temp file, then replace) so a crash never leaves a partial record.
-                    pending = owner.with_name(f".{owner.name}.{uuid.uuid4().hex}.tmp")
+                    pending = owner.with_name(f".{uuid.uuid4().hex}.tmp")  # short: id + suffix must fit NAME_MAX
                     try:
                         pending.write_bytes(self.workspace.encode("utf-8"))
                         os.replace(pending, owner)

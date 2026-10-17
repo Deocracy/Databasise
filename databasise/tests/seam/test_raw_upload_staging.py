@@ -228,3 +228,14 @@ async def test_a_fault_after_the_run_started_logs_the_staged_path_once(tmp_path,
     [staged] = inbox_files(tmp_path)
     logged = [r for r in caplog.records if "staged upload left in place" in r.getMessage()]
     assert len(logged) == 1 and str(staged) in logged[0].getMessage()
+
+
+async def test_a_document_id_that_fits_as_a_file_name_also_fits_its_owner_record_temp_file(tmp_path, monkeypatch):
+    # 251 chars + ".bin" is NAME_MAX; the owner record's temp name must not add the id again.
+    monkeypatch.setattr(full_ingest, "run_corpus_op", _ok)
+    engine = Databasise(store_root=tmp_path, workspace="staging-long-id")
+
+    await engine.ingest(IngestDocument(raw=b"x", document_id="d" * 251))
+
+    [staged] = inbox_files(tmp_path)
+    assert staged.name == generated_on_disk_name("d" * 251)
