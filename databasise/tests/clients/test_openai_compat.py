@@ -61,12 +61,12 @@ def _chat_response(*, model: str | None, cached_tokens: int = 0, tokenizer_id: s
     )
 
 
-def _embedding_response(*, model: str | None) -> Any:
+def _embedding_response(*, model: str | None, count: int = 1) -> Any:
     usage = SimpleNamespace(prompt_tokens=6, completion_tokens=0, prompt_tokens_details=None)
     return SimpleNamespace(
         model=model,
         usage=usage,
-        data=[SimpleNamespace(embedding=[0.1, 0.2, 0.3])],
+        data=[SimpleNamespace(index=i, embedding=[0.1, 0.2, 0.3]) for i in range(count)],
     )
 
 
@@ -242,12 +242,12 @@ async def test_14_the_raised_error_names_the_offending_batch_index_as_a_reachabl
 
 
 async def test_15_embed_handed_ordinary_non_empty_strings_still_reaches_the_provider_unchanged():
-    stub = _StubOpenAIClient(embedding_response=_embedding_response(model="embed-model"))
+    stub = _StubOpenAIClient(embedding_response=_embedding_response(model="embed-model", count=2))
     client = OpenAICompatibleClient(base_url="http://ignored", model="requested-embed", client=stub)
 
     result = await client.embed(["one text", "another text"])
 
-    assert result.vectors == [[0.1, 0.2, 0.3]]
+    assert result.vectors == [[0.1, 0.2, 0.3], [0.1, 0.2, 0.3]]
     assert result.resolved_model_identity == "embed-model"
     assert stub.embeddings.captured_kwargs is not None
     assert stub.embeddings.captured_kwargs["input"] == ["one text", "another text"]
@@ -313,3 +313,104 @@ async def test_19_a_usage_with_none_prompt_tokens_reports_zero_and_one_call():
     assert result.tokens.prompt_tokens == 0
     assert result.tokens.completion_tokens == 3
     assert result.tokens.call_count == 1
+
+
+# --------------------------------------------------------------------------------------------- #
+# 08-02-PLAN.md Task 2 (RUN-03, D-06): malformed responses raise named errors or are returned in
+# input order, never passed on silently. The error classes are reached as ``openai_compat.<Name>``
+# in the bodies so this file still collects on a tree that predates them.
+# --------------------------------------------------------------------------------------------- #
+
+
+def _chat_with_choices(choices: list[Any]) -> Any:
+    response = _chat_response(model="served-model")
+    response.choices = choices
+    return response
+
+
+async def test_20_empty_choices_raise_empty_choices_error():
+    from databasise.clients import openai_compat
+
+    stub = _StubOpenAIClient(chat_response=_chat_with_choices([]))
+    client = OpenAICompatibleClient(base_url="http://ignored", model="requested-model", client=stub)
+
+    with pytest.raises(openai_compat.EmptyChoicesError) as exc_info:
+        await client.chat([{"role": "user", "content": "hi"}])
+
+    assert exc_info.value.resolved_model_identity == "served-model"
+
+
+async def test_21_none_content_raises_missing_completion_content_error():
+    from databasise.clients import openai_compat
+
+    choice = SimpleNamespace(message=SimpleNamespace(content=None), finish_reason="tool_calls")
+    stub = _StubOpenAIClient(chat_response=_chat_with_choices([choice]))
+    client = OpenAICompatibleClient(base_url="http://ignored", model="requested-model", client=stub)
+
+    with pytest.raises(openai_compat.MissingCompletionContentError) as exc_info:
+        await client.chat([{"role": "user", "content": "hi"}])
+
+    assert exc_info.value.finish_reason == "tool_calls"
+    assert exc_info.value.resolved_model_identity == "served-model"
+    assert "tool_calls" in str(exc_info.value)
+
+
+async def test_22_empty_string_content_is_returned_unchanged():
+    choice = SimpleNamespace(message=SimpleNamespace(content=""), finish_reason="stop")
+    stub = _StubOpenAIClient(chat_response=_chat_with_choices([choice]))
+    client = OpenAICompatibleClient(base_url="http://ignored", model="requested-model", client=stub)
+
+    result = await client.chat([{"role": "user", "content": "hi"}])
+
+    assert result.text == ""
+
+
+async def test_23_two_vectors_for_three_inputs_raise_embedding_batch_mismatch_error():
+    from databasise.clients import openai_compat
+
+    stub = _StubOpenAIClient(embedding_response=_embedding_response(model="embed-model", count=2))
+    client = OpenAICompatibleClient(base_url="http://ignored", model="requested-embed", client=stub)
+
+    with pytest.raises(openai_compat.EmbeddingBatchMismatchError) as exc_info:
+        await client.embed(["a", "b", "c"])
+
+    assert (exc_info.value.expected, exc_info.value.received) == (3, 2)
+
+
+async def test_24_out_of_order_items_return_vectors_in_input_order():
+    response = _embedding_response(model="embed-model", count=2)
+    response.data = [
+        SimpleNamespace(index=1, embedding=[2.0]),
+        SimpleNamespace(index=0, embedding=[1.0]),
+    ]
+    stub = _StubOpenAIClient(embedding_response=response)
+    client = OpenAICompatibleClient(base_url="http://ignored", model="requested-embed", client=stub)
+
+    result = await client.embed(["first", "second"])
+
+    assert result.vectors == [[1.0], [2.0]]
+
+
+@pytest.mark.parametrize(
+    "indices",
+    [[0, 0], [0, None]],
+    ids=["duplicate-index", "missing-index"],
+)
+async def test_25_duplicate_or_missing_indices_raise_embedding_batch_mismatch_error(indices):
+    from databasise.clients import openai_compat
+
+    items = []
+    for position, index in enumerate(indices):
+        item = SimpleNamespace(embedding=[float(position)])
+        if index is not None:
+            item.index = index
+        items.append(item)
+    response = _embedding_response(model="embed-model", count=2)
+    response.data = items
+    stub = _StubOpenAIClient(embedding_response=response)
+    client = OpenAICompatibleClient(base_url="http://ignored", model="requested-embed", client=stub)
+
+    with pytest.raises(openai_compat.EmbeddingBatchMismatchError) as exc_info:
+        await client.embed(["first", "second"])
+
+    assert exc_info.value.indices == indices
