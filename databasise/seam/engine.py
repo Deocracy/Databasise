@@ -752,8 +752,9 @@ class Databasise:
         re-upload it; ``delete_document`` removes the staged file). The staged file is removed again
         only when the write itself fails, before the v1 subprocess starts. After that it stays, on
         success and on timeout, cancellation or malformed output alike, because v1 may hold its path.
-        The inbox is per store, not per workspace: an id with a staged upload in one workspace is
-        refused in another until it is deleted there.
+        Limit: a staged id is unique per store, not per workspace. An owner record at
+        ``store_root/corpus-inbox-owners/`` names the uploading workspace, so another workspace's
+        ``delete_document`` never removes this file.
         """
         # D-12: only None is absent; a caller-supplied '' reaches the token check and is refused.
         document_id = document.document_id if document.document_id is not None else uuid.uuid4().hex
@@ -813,19 +814,30 @@ class Databasise:
         wrote_staged = False
         try:
             if staged is not None:
-                # shortcut: inbox is per store not per workspace, upgrade when the protected corpus-endpoint test may change
                 staged.parent.mkdir(parents=True, exist_ok=True)
+                owner = self._staged_owner_path(document_id)
                 try:
                     # Exclusive create: an earlier upload with this id may still be parsed by v1.
                     with open(staged, "xb") as handle:
                         wrote_staged = True
                         handle.write(document.raw)
+                    # The create above won, so any owner record already here is stale. The record
+                    # sits outside corpus-inbox and names the uploading workspace (09 REVIEW CR-01).
+                    owner.parent.mkdir(parents=True, exist_ok=True)
+                    owner.unlink(missing_ok=True)
+                    with open(owner, "xb") as owner_handle:
+                        owner_handle.write(self.workspace.encode("utf-8"))
                 except FileExistsError:
-                    raise DuplicateDocumentIdError(document_id=document_id) from None
+                    if not wrote_staged:
+                        raise DuplicateDocumentIdError(document_id=document_id) from None
+                    staged.unlink(missing_ok=True)
+                    wrote_staged = False
+                    raise
                 except Exception:
-                    # Pre-run only: nothing has started v1 yet, so the partial file is ours to remove.
+                    # Pre-run only: nothing has started v1 yet, so both files are ours to remove.
                     if wrote_staged:
                         staged.unlink(missing_ok=True)
+                        owner.unlink(missing_ok=True)
                         wrote_staged = False
                     raise
             scheduled = await _scheduler.run_wiring(
@@ -881,6 +893,31 @@ class Databasise:
                 _log_staged_left(staged)
             raise _foreign_fault("ingest", exc, failure_class="MalformedDriverOutput") from exc
 
+    def _staged_owner_path(self, document_id: str) -> Path:
+        return self.store_root / "corpus-inbox-owners" / generated_on_disk_name(document_id)
+
+    def _release_staged_upload(self, document_id: str, *, v1_status: Any) -> None:
+        """09 REVIEW CR-01: remove this id's staged upload and owner record when they belong to this
+        workspace. A removal error never turns a delete v1 already performed into a failure."""
+        staged = self.store_root / "corpus-inbox" / generated_on_disk_name(document_id)
+        owner = self._staged_owner_path(document_id)
+        try:
+            if not staged.exists() and not owner.exists():
+                return
+            recorded = owner.read_text(encoding="utf-8") if owner.exists() else None
+            if recorded == self.workspace or (recorded is None and v1_status == "success"):
+                staged.unlink(missing_ok=True)
+                owner.unlink(missing_ok=True)
+            else:
+                logger.warning(
+                    "staged upload for document id %r left in place (owner %r, v1 status %r)",
+                    document_id,
+                    recorded,
+                    v1_status,
+                )
+        except OSError:
+            logger.exception("could not remove the staged upload for document id %r", document_id)
+
     async def delete_document(
         self, document_id: str, selector: Selector | None = None
     ) -> DeletionOutcome:
@@ -892,9 +929,10 @@ class Databasise:
         which fitted modality's index the delete reaches, the same thing it already names for
         ``ingest``/``query``/``compare``.
 
-        After v1 has answered (any status), the raw upload's staged inbox file for this id is removed
-        if present, so delete followed by re-upload always works, including after a crash orphan or
-        a failed asynchronous parse.
+        After v1 has answered, the raw upload's staged inbox file for this id is removed if the
+        owner record names this workspace, or if there is no record (a legacy or orphaned file) and
+        v1 reported ``success``; otherwise it is left and logged. So delete followed by re-upload
+        works after a failed asynchronous parse, and another workspace's delete never removes it.
 
         A document v1 itself reports ``not_found`` (already deleted, or never ingested) is a
         normal outcome carried in ``DeletionOutcome.status`` — never a refusal. Only a
@@ -954,13 +992,7 @@ class Databasise:
         # Called before the MACH-11 correlation below so a refused run mints no seam events for a
         # node that did not run.
         result = _node_result_or_refuse(scheduled, delete_node_id, "delete")
-        # 09 REVIEW CR-01: whatever v1 reported (including not_found), a raw upload's staged file
-        # for this id is released so the id can be uploaded again. A removal error never turns a
-        # delete v1 already performed into a failure.
-        try:
-            (self.store_root / "corpus-inbox" / generated_on_disk_name(document_id)).unlink(missing_ok=True)
-        except OSError:
-            logger.exception("could not remove the staged upload for document id %r", document_id)
+        self._release_staged_upload(document_id, v1_status=result.get("status"))
         node_by_id = {node.node_id: node for node in scheduled["nodes"]}
         seam_events = _mach11_events(parsed, touches, node_by_id)
 

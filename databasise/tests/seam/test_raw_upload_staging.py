@@ -59,17 +59,55 @@ async def test_upload_delete_then_reupload_of_the_same_id_is_accepted(tmp_path, 
     assert staged.read_bytes() == b"second"
 
 
-async def test_deleting_an_unknown_id_removes_an_orphaned_staged_file(tmp_path, monkeypatch):
-    monkeypatch.setattr(full_delete, "run_corpus_op", _delete("not_found"))
+async def test_an_orphan_without_an_owner_record_is_removed_only_when_v1_deleted_successfully(
+    tmp_path, monkeypatch
+):
     engine = Databasise(store_root=tmp_path, workspace="staging-orphan")
     orphan = tmp_path / "corpus-inbox" / generated_on_disk_name("doc-1")
     orphan.parent.mkdir(parents=True)
     orphan.write_bytes(b"left by a crashed upload")
 
-    outcome = await engine.delete_document("doc-1")
+    monkeypatch.setattr(full_delete, "run_corpus_op", _delete("not_found"))
+    assert (await engine.delete_document("doc-1")).status == "not_found"
+    assert orphan.exists()
 
-    assert outcome.status == "not_found"
+    monkeypatch.setattr(full_delete, "run_corpus_op", _delete("success"))
+    assert (await engine.delete_document("doc-1")).status == "success"
     assert not orphan.exists()
+
+
+async def test_another_workspaces_delete_leaves_the_staged_file_and_owner_record(tmp_path, monkeypatch):
+    monkeypatch.setattr(full_ingest, "run_corpus_op", _ok)
+    monkeypatch.setattr(full_delete, "run_corpus_op", _delete("success"))
+    w1 = Databasise(store_root=tmp_path, workspace="ws-one")
+    w2 = Databasise(store_root=tmp_path, workspace="ws-two")
+    owner = tmp_path / "corpus-inbox-owners" / generated_on_disk_name("doc-1")
+
+    await w1.ingest(_doc(b"w1 bytes"))
+    [staged] = inbox_files(tmp_path)
+    assert owner.read_text() == "ws-one"
+
+    await w2.delete_document("doc-1")
+    assert staged.read_bytes() == b"w1 bytes" and owner.exists()
+    with pytest.raises(DuplicateDocumentIdError):
+        await w2.ingest(_doc(b"w2 bytes"))
+
+    await w1.delete_document("doc-1")
+    assert inbox_files(tmp_path) == [] and not owner.exists()
+    await w2.ingest(_doc(b"w2 bytes"))
+    [staged] = inbox_files(tmp_path)
+    assert staged.read_bytes() == b"w2 bytes" and owner.read_text() == "ws-two"
+
+
+async def test_a_failed_owner_record_write_removes_the_staged_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(full_ingest, "run_corpus_op", _ok)
+    (tmp_path / "corpus-inbox-owners").write_text("a file where the directory should be")
+    engine = Databasise(store_root=tmp_path, workspace="staging-owner-fail")
+
+    with pytest.raises(OSError):
+        await engine.ingest(_doc(b"bytes"))
+
+    assert inbox_files(tmp_path) == []
 
 
 async def test_a_failure_removing_the_staged_file_does_not_fail_a_delete(tmp_path, monkeypatch):
