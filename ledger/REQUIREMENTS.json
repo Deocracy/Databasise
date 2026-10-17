@@ -1,5 +1,5 @@
 {
-  "ledger_version": 353,
+  "ledger_version": 354,
   "frozen_at": null,
   "items": [
     {
@@ -2390,6 +2390,10 @@
     "databasise/tests/seam/test_rest_corpus_endpoints.py": {
       "reason": "09-02 Task 3 (SEAM-04, D-03): unknown job id now returns 404; rename the 422 test and change one status assertion",
       "granted_at": 353
+    },
+    "databasise/tests/mcp/test_tool_growth_invariant.py": {
+      "reason": "09-10 Task 3 (SEAM-16): import _ARM_NAMES from databasise.wirings.resolve after selectors._ARM_NAMES is removed; one import line",
+      "granted_at": 354
     }
   },
   "notify_cmd": null
