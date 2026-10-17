@@ -20,13 +20,25 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="databasise-rest", description=__doc__)
     add_engine_arguments(parser, default_port=8000)
     parser.add_argument("--workers", type=int, default=1)
+    parser.add_argument(
+        "--cors-origin",
+        action="append",
+        dest="cors_origin",
+        default=None,
+        help="allow browser calls from this exact scheme://host:port origin (repeatable, never '*'; D-12)",
+    )
     return parser
 
 
 def build_app(args: argparse.Namespace, clients: dict[str, Any] | None):
     from databasise.seam.rest import create_app
 
-    return create_app(store_root=args.store_root, workspace=args.workspace, clients=clients)
+    return create_app(
+        store_root=args.store_root,
+        workspace=args.workspace,
+        clients=clients,
+        cors_origins=args.cors_origin or (),
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -37,6 +49,13 @@ def main(argv: list[str] | None = None) -> int:
             "--workers must be 1: one engine process per store root holds the store lock "
             "<store_root>/.engine.lock (G-36)"
         )
+    from databasise.seam.rest import InvalidCorsOriginError, validate_cors_origin
+
+    try:
+        for origin in args.cors_origin or ():
+            validate_cors_origin(origin)
+    except InvalidCorsOriginError as exc:
+        parser.error(str(exc))
     check_engine_arguments(parser, args)
     try:
         fd, clients = open_engine(args)
