@@ -1,20 +1,20 @@
 ---
-gsd_state_version: "1.0"
+gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Engine Fixes + Operator Console
 current_phase: 08
 current_phase_name: Run the Engine
-status: planning
-stopped_at: Phase 8 context gathered
-last_updated: "2026-10-16T23:54:58.443Z"
-last_activity: 2026-10-14
-last_activity_desc: v1.1 roadmap created (Phases 8-18, 169/169 requirements mapped)
-state_head: c73b8a5bffa27caaa34614b67c1bd065fcef78a6
+status: executing
+stopped_at: Completed 08-01-PLAN.md
+last_updated: "2026-10-17T00:14:51.007Z"
+last_activity: 2026-10-16
+last_activity_desc: Phase 08 execution started
+state_head: 318170559287885e53a57e742583ce3847fd2872
 progress:
   total_phases: 11
   completed_phases: 0
   total_plans: 10
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -25,14 +25,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-14 at v1.1 milestone start)
 
 **Core value:** Modalities are swappable without consumers noticing — LightRAG and HippoRAG 2 both live behind one unchanging §18 envelope, comparable side-by-side on the rig.
-**Current focus:** Phase 8: Run the Engine — launchers, model clients, one engine process per store root, CORS decision, green offline suite.
+**Current focus:** Phase 08 — Run the Engine
 
 ## Current Position
 
-Phase: 08 (Run the Engine) — READY TO EXECUTE
-Plan: Not started
-Status: Ready to discuss
-Last activity: 2026-10-14 — v1.1 roadmap created (Phases 8-18, 169/169 requirements mapped)
+Phase: 08 (Run the Engine) — EXECUTING
+Plan: 2 of 10
+Status: Ready to execute
+Last activity: 2026-10-16 — Phase 08 execution started
 
 Progress: [░░░░░░░░░░] 0% (0/11 phases)
 
@@ -56,6 +56,11 @@ Progress: [░░░░░░░░░░] 0% (0/11 phases)
 - Trend: —
 
 *Updated after each plan completion. v1.0 metrics (64 plans) are in git history at tag `v1.0`.*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 08 P01 | 35 min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -67,6 +72,7 @@ Recent decisions affecting current work:
 - Roadmap v1.1: 11 phases (8-18), one per requirement category, in the owner-approved order — engine defects F1-F8 (Phases 8-15), then GUI connectors (16), GUI mockup (17), GUI live (18)
 - Roadmap v1.1: every phase holds at most 20 requirements (BAK size gate); every defect requirement needs a regression test that fails before the fix
 - Roadmap v1.1: owner design decisions ("Owner decision first" lines) are listed per phase in ROADMAP.md and settle in discuss-phase before planning; decisions consumed across phases are listed under "Cross-phase decisions" in ROADMAP.md
+- [Phase 08]: 08-01: UnparseableProviderRoutingError message withholds the env value (raw_value attribute only); launcher has no default env file (D-11); DEFAULT_WORKSPACE is the literal RUN-06 workspace so snapshot drift cannot stop serving
 
 ### Pending Todos
 
@@ -106,9 +112,9 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-16T20:48:59.700Z
-Stopped at: Phase 8 context gathered
-Resume file: .planning/phases/08-run-the-engine/08-CONTEXT.md
+Last session: 2026-10-17T00:14:50.987Z
+Stopped at: Completed 08-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 
