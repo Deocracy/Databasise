@@ -93,7 +93,7 @@ Some owner decisions are taken in one phase and consumed by later ones. Settle e
 - RUN-08: CORS allow-list or same-origin serving (default: explicit allow-list, empty by default, never '*')
 - RUN-11: parity similarity threshold (lower it, pin a deterministic endpoint, or retry and report flakiness)
 
-**Plans**: 8/10 plans executed
+**Plans**: 9/10 plans executed
 
 Plans:
 **Wave 1**
@@ -112,7 +112,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 08-09-PLAN.md — Dual-invocation offline gate script and non-loopback socket guard (RUN-12; wave 3)
+- [x] 08-09-PLAN.md — Dual-invocation offline gate script and non-loopback socket guard (RUN-12; wave 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -400,7 +400,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 8. Run the Engine | 8/10 | In Progress|  |
+| 8. Run the Engine | 9/10 | In Progress|  |
 | 9. Inputs, Errors & Security | 0/TBD | Not started | - |
 | 10. Stores, Locking & Data Integrity | 0/TBD | Not started | - |
 | 11. LightRAG Corpus Path | 0/TBD | Not started | - |
