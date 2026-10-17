@@ -194,9 +194,10 @@ _PATH_START = r"(?:[A-Za-z]:[\\/]|\\\\|~[\w.-]*/|\.{1,2}/|/)"
 _PATH_RE = re.compile(rf"""(?<![\w.~-]){_PATH_START}[^\s'"`<>()\[\],;]*""")
 # The same path inside matching quotes, which may hold spaces (``'/home/u/my docs/a b.bin'``).
 _QUOTED_PATH_RE = re.compile(rf"""(?P<q>['"])(?P<p>{_PATH_START}[^'"\n]*)(?P=q)""")
+# Any ``<scheme chars>://...`` token, scheme validity not required (``1http://u:p@h`` must go too).
 # The lookbehind starts a match only at the head of a scheme-character run, so each run is scanned
 # once (linear); a bare ``\b`` retried at every ``.``/``-`` boundary and went quadratic.
-_URL_RE = re.compile(r"""(?<![a-z0-9+.-])[a-z][a-z0-9+.-]*://[^\s'"`<>()\[\],;]*""", re.IGNORECASE)
+_URL_RE = re.compile(r"""(?<![a-z0-9+.-])[a-z0-9+.-]*://[^\s'"`<>()\[\],;]*""", re.IGNORECASE)
 
 
 def _basename(path: str) -> str:
