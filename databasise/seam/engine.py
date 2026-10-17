@@ -824,9 +824,8 @@ class Databasise:
                     # The create above won, so any owner record already here is stale. The record
                     # sits outside corpus-inbox and names the uploading workspace (09 REVIEW CR-01).
                     owner.parent.mkdir(parents=True, exist_ok=True)
-                    owner.unlink(missing_ok=True)
-                    with open(owner, "xb") as owner_handle:
-                        owner_handle.write(self.workspace.encode("utf-8"))
+                    # The staged file's exclusive create already serialises this id, so a plain write is safe.
+                    owner.write_bytes(self.workspace.encode("utf-8"))
                 except FileExistsError:
                     if not wrote_staged:
                         raise DuplicateDocumentIdError(document_id=document_id) from None
