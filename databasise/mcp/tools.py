@@ -177,8 +177,8 @@ class PromoteToolArgs(_ToolArgs):
     ``alias``, ``trace_ids``, ``change_origin`` and ``verb`` (defaulting to
     ``"operator-asserted"``), the identical shape ``databasise.seam.rest.PromoteRequest``
     deserializes into. ``verb`` stays ``str`` (07-04-PLAN.md) so an out-of-enum value reaches the
-    engine and surfaces through ``mcp/server.py``'s ``_refusal_mapped`` wrapper as a ``ToolError``
-    carrying the same ``refusal_type`` name REST reports (D-09); no validator here either."""
+    engine and surfaces through ``mcp/server.py``'s ``_DatabasiseServer.call_tool`` as a
+    ``RefusalToolError`` carrying the same ``refusal_type`` name REST reports (D-09); no validator here either."""
 
     alias: str
     trace_ids: list[str]

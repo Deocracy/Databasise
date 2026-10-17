@@ -20,14 +20,28 @@ directly rather than ever swallowing it into a ``CallToolResult`` — that wrapp
 ``is_error=True`` happens one layer up, inside the wire-protocol handler this factory never calls
 directly).
 
-**The refusal mapper (action E).** Every tool body below is wrapped with :func:`_refusal_mapped`,
-which catches ``SeamRefusalError`` — the single base class, not an enumerated subclass list, the
-same generic catch ``databasise.seam.rest``'s single ``app.add_exception_handler(SeamRefusalError,
-...)`` registration relies on — and re-raises it as a ``ToolError`` whose message is the JSON-
-encoded refusal detail :func:`_refusal_detail` builds the same generic way ``rest.py``'s own
-``_refusal_response`` does: every public (non-underscore-prefixed) attribute off ``vars(exc)``,
-mirroring CR-03's private-attribute exclusion (``UnbudgetableParticipantError``'s own
-``_internal_node_id`` is exactly why that rule exists).
+**The refusal mapper (09-04-PLAN.md, SEAM-03, D-02).** One place maps every refusal:
+:class:`_DatabasiseServer` overrides ``MCPServer.call_tool``. The SDK wraps whatever a tool call
+raises -- an argument-validation ``ValidationError`` or a body ``ToolError`` becomes
+``ToolError("Error executing tool <name>: ...")``, any other body exception becomes
+``UnexpectedToolError("Error executing tool <name>")`` -- so a refusal never reaches the caller
+unwrapped. The override walks the ``__cause__`` chain (first refusal wins; a pydantic
+``ValidationError`` is unwrapped through ``refusal_from_errors``, which finds a refusal a model
+validator raised, e.g. ``IngestDocument``'s ``AmbiguousIngestPayloadError``) and re-raises it as
+:class:`RefusalToolError` whose ``str()`` is exactly ``json.dumps(refusal_body(refusal))`` -- the
+same body REST returns (``databasise.seam.refusals.refusal_body``). The SDK's wire handler turns
+that into ``CallToolResult(is_error=True, content=[TextContent(text=str(exc))])``.
+
+**What an MCP client receives (09-04-PLAN.md, D-02).**
+
+- A refusal arrives as a ``CallToolResult`` with ``isError`` true and one text content whose text is
+  the bare JSON object ``{"refusal_type": "<ClassName>", "message": "...", <public attributes>}``,
+  the same body REST returns, with no ``Error executing tool <name>: `` prefix.
+- An in-process ``server.call_tool`` raises :class:`RefusalToolError` (a ``ToolError``) carrying
+  that same text.
+- An argument schema error that carries no refusal keeps the SDK text
+  ``Error executing tool <name>: <pydantic message>``.
+- An unexpected crash keeps ``Error executing tool <name>`` with no reason.
 
 **Status/resolve dispatch (action E).** ``status``'s four scopes and ``resolve``'s two scopes each
 dispatch through an explicit ``dict[str, Callable]`` keyed by the scope literal — a mapping from a
@@ -43,9 +57,10 @@ from __future__ import annotations
 
 import json
 from collections.abc import Awaitable, Callable
-from functools import wraps
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any
+
+from pydantic import ValidationError
 
 from databasise.mcp._sdk import import_sdk
 from databasise.mcp.tools import (
@@ -62,7 +77,7 @@ from databasise.mcp.tools import (
 from databasise.parts.registry import PartRegistry
 from databasise.seam.corpus import checked_page
 from databasise.seam.engine import Databasise
-from databasise.seam.refusals import SeamRefusalError
+from databasise.seam.refusals import SeamRefusalError, refusal_body, refusal_from_errors
 
 # Resolved through _sdk.import_sdk (module docstring) — never a bare `from mcp... import ...`,
 # which reproduces a CWD-shadow circular import under `cd databasise && python -c ...` (the exact
@@ -72,40 +87,38 @@ ToolError = import_sdk("mcp.server.mcpserver.exceptions").ToolError
 
 _ServerName = "databasise"
 
-_T = TypeVar("_T")
-_AsyncToolFn = Callable[[_T], Awaitable[dict[str, Any]]]
+
+class RefusalToolError(ToolError):
+    """A refusal on the MCP wire: ``str()`` is exactly the bare refusal JSON, no SDK prefix. It
+    deliberately does not subclass ``UnexpectedToolError`` -- the SDK logs that one as a crash."""
 
 
-def _refusal_detail(exc: SeamRefusalError) -> dict[str, Any]:
-    """Mirrors ``databasise.seam.rest._refusal_response``'s own generic ``vars(exc)`` dump — the
-    refusal's own type name, message, and every public attribute; a leading-underscore attribute
-    (CR-03) is skipped, never exposed."""
-    detail: dict[str, Any] = {"refusal_type": type(exc).__name__, "message": str(exc)}
-    for key, value in vars(exc).items():
-        if key.startswith("_"):
-            continue
-        if hasattr(value, "model_dump"):
-            value = value.model_dump()
-        elif isinstance(value, BaseException):
-            value = str(value)
-        detail[key] = value
-    return detail
+def _find_refusal(exc: BaseException) -> SeamRefusalError | None:
+    """The first ``SeamRefusalError`` on ``exc`` or its ``__cause__`` chain; a pydantic
+    ``ValidationError`` on the chain is unwrapped through ``refusal_from_errors``."""
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if isinstance(current, SeamRefusalError):
+            return current
+        if isinstance(current, ValidationError):
+            found = refusal_from_errors(current.errors())
+            if found is not None:
+                return found
+        current = current.__cause__
+    return None
 
 
-def _refusal_mapped(fn: _AsyncToolFn) -> _AsyncToolFn:
-    """The one shared mapper every tool body below is wrapped in (action E) — a
-    ``SeamRefusalError`` raised anywhere inside ``fn`` surfaces as a ``ToolError`` carrying the
-    refusal's own type name and public attributes as its JSON-encoded message, never as a
-    successful result and never as an unnamed crash."""
-
-    @wraps(fn)
-    async def wrapper(*args: Any, **kwargs: Any) -> dict[str, Any]:
+class _DatabasiseServer(MCPServer):
+    async def call_tool(self, name: str, arguments: dict[str, Any], context: Any = None) -> Any:
         try:
-            return await fn(*args, **kwargs)
-        except SeamRefusalError as exc:
-            raise ToolError(json.dumps(_refusal_detail(exc))) from exc
-
-    return wrapper
+            return await super().call_tool(name, arguments, context)
+        except ToolError as exc:
+            refusal = _find_refusal(exc)
+            if refusal is None:
+                raise
+            raise RefusalToolError(json.dumps(refusal_body(refusal))) from exc
 
 
 async def _status_job(engine: Databasise, args: StatusToolArgs) -> Any:
@@ -173,23 +186,20 @@ def create_server(
     own identity assertion.
     """
     engine = Databasise(store_root=store_root, workspace=workspace, registry=registry, clients=clients)
-    server = MCPServer(_ServerName)
+    server = _DatabasiseServer(_ServerName)
     server.engine = engine
 
     @server.tool(name="ingest")
-    @_refusal_mapped
     async def ingest_tool(args: IngestToolArgs) -> dict[str, Any]:
         job = await engine.ingest(args.to_ingest_document(), args.selector)
         return job.model_dump()
 
     @server.tool(name="query")
-    @_refusal_mapped
     async def query_tool(args: QueryToolArgs) -> dict[str, Any]:
         envelope = await engine.query(args.query, args.selector)
         return envelope.model_dump()
 
     @server.tool(name="compare")
-    @_refusal_mapped
     async def compare_tool(args: CompareToolArgs) -> dict[str, Any]:
         """API-08's comparison operation (06-03-PLAN.md) — a legitimate sixth tool under §18.5:
         comparison is not expressible as a §18.4 selector (a selector picks one arm; this call
@@ -202,42 +212,36 @@ def create_server(
         return result.model_dump()
 
     @server.tool(name="delete")
-    @_refusal_mapped
     async def delete_tool(args: DeleteToolArgs) -> dict[str, Any]:
         outcome = await engine.delete_document(args.document_id, args.selector)
         return outcome.model_dump()
 
     @server.tool(name="status")
-    @_refusal_mapped
     async def status_tool(args: StatusToolArgs) -> dict[str, Any]:
         handler = _STATUS_HANDLERS[args.scope]
         result = await handler(engine, args)
         return result.model_dump()
 
     @server.tool(name="resolve")
-    @_refusal_mapped
     async def resolve_tool(args: ResolveToolArgs) -> dict[str, Any]:
         handler = _RESOLVE_HANDLERS[args.scope]
         result = await handler(engine, args)
         return result
 
     @server.tool(name="promote")
-    @_refusal_mapped
     async def promote_tool(args: PromoteToolArgs) -> dict[str, Any]:
         """07-03-PLAN.md: reaches the identical ``Databasise.promote()`` REST's ``POST /promote``
-        reaches — no per-tool try/except, ``_refusal_mapped`` already catches every Phase 7
+        reaches — no per-tool try/except, ``_DatabasiseServer.call_tool`` already maps every Phase 7
         refusal generically via the ``SeamRefusalError`` base class."""
         outcome = await engine.promote(args.alias, args.trace_ids, args.change_origin, verb=args.verb)
         return outcome.model_dump()
 
     @server.tool(name="rollback")
-    @_refusal_mapped
     async def rollback_tool(args: RollbackToolArgs) -> dict[str, Any]:
         outcome = await engine.rollback(args.alias, args.version, args.trace_ids, args.change_origin)
         return outcome.model_dump()
 
     @server.tool(name="retire")
-    @_refusal_mapped
     async def retire_tool(args: RetireToolArgs) -> dict[str, Any]:
         outcome = await engine.retire(args.alias, args.version, args.trace_ids, args.change_origin)
         return outcome.model_dump()
