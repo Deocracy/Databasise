@@ -19,8 +19,8 @@ the enlarged module.
 **06-03-PLAN.md: ``POST /compare`` — API-08's comparison operation.** One awaited call to
 ``engine.compare(body.query, body.selectors)`` and a return, mirroring ``POST /query``'s own shape
 exactly. The registered application-level ``SeamRefusalError`` handler already maps
-``EmptyComparisonRequestError``/``UnsatisfiableSelectorError`` to the documented 422 with no
-per-route handling — see ``databasise/tests/seam/test_rest_transport.py``'s own
+``EmptyComparisonRequestError``/``UnsatisfiableSelectorError`` to the status ``_status_for``
+assigns (422) with no per-route handling — see ``databasise/tests/seam/test_rest_transport.py``'s own
 ``_REFUSAL_FACTORIES``.
 
 **Thin adapter, provably (D-17).** Every endpoint body below is exactly: deserialize the request
@@ -105,16 +105,31 @@ from databasise.seam.refusals import (
     MalformedSelectorPayloadError,
     PageSizeExceededError,
     SeamRefusalError,
+    UnknownGenerationVersionError,
+    UnknownJobError,
+    UnknownTraceReferenceError,
+    UnresolvableEvidenceReferenceError,
     refusal_body,
     refusal_from_errors,
 )
 from databasise.seam.selectors import Selector
 
-# Non-success, never a 2xx — the one property T-04-27's mitigation depends on. 422 (Unprocessable
-# Content) is used uniformly for every refusal kind: the four §18.4/§18.1 refusal families below
-# are all "the request, as given, cannot be satisfied," never a malformed-request 400 or a
-# machine-fault 500.
-_REFUSAL_STATUS_CODE = 422
+# The HTTP status of every refusal comes from `_status_for` alone (09-02-PLAN.md, SEAM-04, D-03).
+# 404 is for the four lookups of a caller-supplied reference that names nothing: a trace reference,
+# a job id, an evidence reference and a generation version. Every other refusal is a caller refusal
+# ("the request, as given, cannot be satisfied") and returns 422. A 2xx is never possible, the one
+# property T-04-27's mitigation depends on. 404 never discloses whether an internal identity
+# (wiring, arm, node) exists: all four lookups are of the caller's own references.
+_NOT_FOUND_REFUSALS: tuple[type[SeamRefusalError], ...] = (
+    UnknownTraceReferenceError,
+    UnknownJobError,
+    UnresolvableEvidenceReferenceError,
+    UnknownGenerationVersionError,
+)
+
+
+def _status_for(exc: SeamRefusalError) -> int:
+    return 404 if isinstance(exc, _NOT_FOUND_REFUSALS) else 422
 
 
 class _RequestModel(BaseModel):
@@ -176,8 +191,8 @@ class PromoteRequest(_RequestModel):
     identical rule stated above for ``change_origin`` (07-04-PLAN.md): an out-of-enum value is
     allowed to reach ``Databasise.promote()``, which raises the named
     ``UnrecognisedPromotionVerbError`` refusal itself (D-09) — so this endpoint's out-of-enum
-    response is the same 422 carrying the same ``refusal_type`` as every other seam refusal,
-    rather than a request-validation body that carries no refusal name."""
+    response is the status ``_status_for`` assigns, carrying the same ``refusal_type`` as every
+    other seam refusal, rather than a request-validation body that carries no refusal name."""
 
     alias: str
     trace_ids: list[str]
@@ -239,7 +254,7 @@ def _refusal_response(_request: Request, exc: SeamRefusalError) -> JSONResponse:
     specifically so a generic ``vars(exc)`` dump like this one cannot leak it — the same convention
     any future refusal with an internal-only value should follow.
     """
-    return JSONResponse(status_code=_REFUSAL_STATUS_CODE, content=refusal_body(exc))
+    return JSONResponse(status_code=_status_for(exc), content=refusal_body(exc))
 
 
 async def _validation_response(request: Request, exc: RequestValidationError) -> Response:
@@ -347,7 +362,7 @@ def create_app(
         ``stream_envelope_events`` -- the identical function ``Databasise.query_stream()`` shapes
         its own events with (see ``engine.py``'s module docstring, "CR-01 gap closure"). This
         endpoint never re-implements the shaping itself: resolution happens eagerly above (via
-        ``_resolve_streamed_envelope``, so a refusal maps to the documented 422 before the first
+        ``_resolve_streamed_envelope``, so a refusal maps to the status ``_status_for`` assigns before the first
         SSE byte is written), and shaping is the one function both transports iterate.
         """
         for event in stream_envelope_events(envelope):
