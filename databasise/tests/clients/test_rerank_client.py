@@ -228,6 +228,7 @@ async def test_http_500_raises_rerank_response_error_with_the_status():
         {"output": {"no": "results"}},
         b'{"results": [{"index": 0, "relevance_score": NaN}, {"index": 1, "relevance_score": 0.5}, {"index": 2, "relevance_score": 0.1}]}',
         b'{"results": [{"index": 0, "relevance_score": Infinity}, {"index": 1, "relevance_score": 0.5}, {"index": 2, "relevance_score": 0.1}]}',
+        b'{"results": [{"index": 0, "relevance_score": ' + b"9" * 400 + b'}, {"index": 1, "relevance_score": 0.5}, {"index": 2, "relevance_score": 0.1}]}',
     ],
 )
 async def test_malformed_or_incomplete_responses_are_refused_by_name(payload):

@@ -74,7 +74,12 @@ class UnsupportedRerankBindingError(ValueError):
 
 def _is_number(value: Any) -> bool:
     # math.isfinite: json accepts NaN/Infinity literals, and a NaN score has no defined sort position.
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:  # an int beyond float range (json accepts arbitrarily long integers)
+        return False
 
 
 class HttpRerankClient:
