@@ -202,12 +202,10 @@ def test_5_the_declared_runtime_dependency_set_is_exactly_ten_and_none_is_a_db_c
 
 async def test_6_all_three_store_engines_are_reachable_with_no_network_constructor_params(store_root):
     """Test 6: a graph write, a vector upsert and a KV write all succeed inside one process, and
-    none of the five store adapter constructors accepts a host/port/connection-string parameter.
+    none of the three store adapter constructors accepts a host/port/connection-string parameter.
     """
-    from databasise.stores.blob import FilesystemBlobStore
     from databasise.stores.graph import CozoGraphStore
     from databasise.stores.kv import SqliteKVStore
-    from databasise.stores.lexical import SqliteLexicalStore
     from databasise.stores.vector import FaissVectorStore
 
     graph = CozoGraphStore(namespace="ns", workspace="ws", store_root=store_root)
@@ -232,7 +230,7 @@ async def test_6_all_three_store_engines_are_reachable_with_no_network_construct
     await kv.finalize()
 
     forbidden_params = {"host", "port", "connection_string", "dsn", "uri", "url"}
-    for cls in (CozoGraphStore, FaissVectorStore, SqliteKVStore, SqliteLexicalStore, FilesystemBlobStore):
+    for cls in (CozoGraphStore, FaissVectorStore, SqliteKVStore):
         params = set(inspect.signature(cls.__init__).parameters)
         overlap = params & forbidden_params
         assert not overlap, f"{cls.__name__}.__init__ accepts network parameter(s): {overlap}"

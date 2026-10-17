@@ -39,9 +39,6 @@ from databasise.parts.registry import PartRegistry
 from databasise.parts.schema import NodeContext, Part
 from databasise.parts_core.fake_llm_caller import FAKE_LLM_CALLER_PART
 from databasise.parts_core.fake_retriever import FAKE_RETRIEVER_PART
-from databasise.registry_artifact.index import ArtifactRegistry, Pin
-from databasise.registry_artifact.write_path import BlastRadiusRefusal, write_artifact
-from databasise.stores.blob import FilesystemBlobStore
 from databasise.stores.graph import CozoGraphStore
 from databasise.stores.kv import SqliteKVStore
 from databasise.stores.vector import FaissVectorStore
@@ -342,33 +339,14 @@ _SA2_STAMPS = {"sa2_chunker": "t-chunker@1", "sa2_extraction": "t-extraction@1",
 
 
 async def _arm_writer_body(ctx: NodeContext) -> dict[str, Any]:
-    """Writes one artifact at this arm's declared scope, plus its own graph and vector namespace
-    directories directly under ``store_root`` (``workspace=""`` collapses the store adapters'
-    ``store_root/workspace/namespace`` layout onto ``namespaces.namespace_dir``'s
-    ``store_root/namespace`` layout, so the directory this body creates is exactly the one
-    ``namespaces.gc_namespace`` would later remove).
+    """Writes this arm's own graph and vector namespace directories directly under ``store_root``
+    (``workspace=""`` collapses the store adapters' ``store_root/workspace/namespace`` layout onto
+    ``namespaces.namespace_dir``'s ``store_root/namespace`` layout, so the directory this body
+    creates is exactly the one ``namespaces.gc_namespace`` would later remove). Both stores are
+    finalized before returning, so no open database handle remains on a directory GC removes.
     """
-    config = ctx.config
-    store_root = Path(config["store_root"])
-    namespace = config["namespace"]
-    scope = config["scope"]
-    effective_depth = config["effective_depth"]
-
-    blob_store = FilesystemBlobStore(namespace=namespace, workspace="", store_root=store_root)
-    registry = ArtifactRegistry(store_root=store_root)
-    record = write_artifact(
-        content=f"{ctx.node_id}-content".encode(),
-        scope=scope,
-        effective_depth=effective_depth,
-        namespace=namespace,
-        producer_instance_hash=config["producer_instance_hash"],
-        recipe_hash=f"recipe-{ctx.node_id}",
-        blob_store=blob_store,
-        registry=registry,
-        **_SA2_STAMPS,
-        corpus_id="corpus-1",
-        space_id=None,
-    )
+    store_root = Path(ctx.config["store_root"])
+    namespace = ctx.config["namespace"]
 
     graph = CozoGraphStore(namespace=namespace, workspace="", store_root=store_root)
     await graph.upsert_node(ctx.node_id, {})
@@ -378,8 +356,9 @@ async def _arm_writer_body(ctx: NodeContext) -> dict[str, Any]:
     vector = FaissVectorStore(namespace=namespace, workspace="", store_root=store_root)
     await vector.upsert([f"{ctx.node_id}-v"], [[1.0, 0.0]])
     await vector.index_done_callback()
+    await vector.finalize()
 
-    return {"content_hash": record.content_hash, "namespace": namespace}
+    return {"namespace": namespace}
 
 
 _OPAQUE_ARM_PART = Part(
@@ -424,9 +403,6 @@ def _arms_wiring(store_root: Path, *, opaque_namespace: str, shared_namespace: s
                 "config": {
                     "store_root": str(store_root),
                     "namespace": opaque_namespace,
-                    "scope": "quarantined",
-                    "effective_depth": "opaque",
-                    "producer_instance_hash": _OPAQUE_PRODUCER_INSTANCE_HASH,
                 },
                 "deps": [],
             },
@@ -437,9 +413,6 @@ def _arms_wiring(store_root: Path, *, opaque_namespace: str, shared_namespace: s
                 "config": {
                     "store_root": str(store_root),
                     "namespace": shared_namespace,
-                    "scope": "shared",
-                    "effective_depth": "stage",
-                    "producer_instance_hash": _TRANSPARENT_PRODUCER_INSTANCE_HASH,
                 },
                 "deps": [],
             },
@@ -448,9 +421,15 @@ def _arms_wiring(store_root: Path, *, opaque_namespace: str, shared_namespace: s
 
 
 async def test_criterion_4_quarantined_isolation_and_visible_namespace_separation(store_root):
-    """ROADMAP.md Phase 1 criterion 4: a wiring arm containing an ``opaque`` node writes
-    ``quarantined`` and cannot reach ``shared``; per-part graph and vector namespaces are visibly
-    separate after a run.
+    """ROADMAP.md Phase 1 criterion 4: a wiring arm containing an ``opaque`` node runs in a
+    ``quarantined`` namespace beside a ``shared`` one; per-part graph and vector namespaces are
+    visibly separate after a run, and GC of the quarantined namespace removes exactly its
+    directory.
+
+    Phase 10 D-15 removed the unwired artifact registry, its write path and the blob store, so the
+    artifact-row, ``Pin`` and write-path ``BlastRadiusRefusal`` assertions this criterion used to
+    make went with them. The rule that an opaque node cannot write ``shared`` stays covered by
+    ``tests/validator/test_blast_radius.py``.
     """
     opaque_namespace = derive_namespace(
         sa1_instance_hash=_OPAQUE_PRODUCER_INSTANCE_HASH,
@@ -485,75 +464,7 @@ async def test_criterion_4_quarantined_isolation_and_visible_namespace_separatio
     nodes = _nodes_by_id(record)
     assert nodes["opaque-arm"]["node_id"] == "opaque-arm"  # sanity: node ran (present in the trace)
 
-    # ``_arm_writer_body``'s content is deterministic (``f"{node_id}-content"``), so the content
-    # hash is computable here directly rather than threaded back through the run record (the
-    # composer's RunRecord carries no per-node "results" field — see 01-08-SUMMARY.md's own
-    # "Known Gaps" note that ``databasise/__init__.py`` does not expose ``scheduler.run_wiring``'s
-    # ``results`` dict).
-    import hashlib
-
-    opaque_content_hash = hashlib.sha256(b"opaque-arm-content").hexdigest()
-
-    # --- The opaque arm's write landed at scope quarantined; the registry row proves it. -----
-    registry = ArtifactRegistry(store_root=store_root)
-    opaque_pin = Pin(
-        content_hash=opaque_content_hash,
-        namespace=opaque_namespace,
-        producer_instance_hash=_OPAQUE_PRODUCER_INSTANCE_HASH,
-    )
-    opaque_rows = registry.discover(
-        caller_instance_hash=_OPAQUE_PRODUCER_INSTANCE_HASH, namespace=opaque_namespace, pins=[opaque_pin]
-    )
-    assert len(opaque_rows) == 1
-    assert opaque_rows[0].scope == "quarantined"
-    assert opaque_rows[0].pin_required is True
-
-    # --- A discovery query issued without a pin does not return the quarantined artifact. -----
-    unpinned = registry.discover(caller_instance_hash="some-other-caller", namespace=opaque_namespace)
-    assert unpinned == []
-
-    # --- The same arm's attempt to write scope shared is refused, and no row is created. ------
-    # A raw row count (not discover(), whose scope filter would hide the very quarantined row
-    # this assertion needs to see) — total rows for this namespace, any scope, read directly.
-    def _row_count_for_namespace() -> int:
-        import sqlite3
-
-        conn = sqlite3.connect(store_root / "artifact_registry.db")
-        try:
-            cur = conn.execute(
-                "SELECT COUNT(*) FROM artifacts WHERE namespace = ?", (opaque_namespace,)
-            )
-            return cur.fetchone()[0]
-        finally:
-            conn.close()
-
-    before_row_count = _row_count_for_namespace()
-    blob_store = FilesystemBlobStore(namespace=opaque_namespace, workspace="", store_root=store_root)
-    try:
-        write_artifact(
-            content=b"opaque-arm-attempted-shared-write",
-            scope="shared",
-            effective_depth="opaque",  # this arm's own effective depth — never "stage"
-            namespace=opaque_namespace,
-            producer_instance_hash=_OPAQUE_PRODUCER_INSTANCE_HASH,
-            recipe_hash="recipe-opaque-arm-shared-attempt",
-            blob_store=blob_store,
-            registry=registry,
-            **_SA2_STAMPS,
-            corpus_id="corpus-1",
-            space_id=None,
-        )
-        raised = False
-    except BlastRadiusRefusal as exc:
-        raised = True
-        # write_path.py's own write-path call site names itself in every refusal it raises
-        # (databasise/registry_artifact/write_path.py's _WRITE_PATH_NODE_ID) — the identifiable
-        # id of the write attempt this rule refused, regardless of which wiring node called it.
-        assert "artifact_write" in str(exc)
-    assert raised is True
-
-    after_row_count = _row_count_for_namespace()
-    assert after_row_count == before_row_count  # the refused write created no registry row
+    assert nodes["transparent-arm"]["node_id"] == "transparent-arm"
 
     # --- After the run, the store root shows one directory per namespace, scope readable in the
     # --- name, and the opaque arm's graph/vector directories are visibly separate from the
