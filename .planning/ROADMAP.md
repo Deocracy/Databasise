@@ -188,7 +188,7 @@ Plans (one plan per wave; every plan edits the shared refusal, engine or transpo
 **Plans**: 12 plans
 
 Plans (nine waves; the shared engine and store modules force most plans into sequence, and wave 1 and wave 6 each hold plans with no shared file):
-- [ ] 10-01-PLAN.md — Shared refcounted Cozo client, StoreBusyError 409, a failed store open finalizes every opened store (STOR-01, STOR-02; wave 1)
+- [ ] 10-01-PLAN.md — Shared refcounted Cozo client, StoreBusyError 409, a failed store open finalizes every opened store (STOR-01, STOR-02; wave 1, owner grant checkpoint for one protected test line)
 - [ ] 10-02-PLAN.md — Remove the lexical store, blob store and artifact registry; grep test; admission text (STOR-12, STOR-13, STOR-14; wave 1)
 - [ ] 10-03-PLAN.md — Operator GC CLI under the store lock; NamespaceGCError; layout docstring (STOR-15; wave 1)
 - [ ] 10-04-PLAN.md — A failed or early-stopped ingest commits nothing; StoreFault and RunIncomplete; no in-node flush (STOR-06; wave 2)
