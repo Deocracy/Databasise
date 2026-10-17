@@ -35,6 +35,10 @@ own ``edge_types`` attrs list, so the collapse is auditable rather than lossy.
 ``ctx.stores["graph"]`` is a single, already-namespaced ``CozoGraphStore`` per run — never a
 ``.select()`` handle — the same architecture 06-01-PLAN.md's own key-decision already established
 for ``reset-vector-join``/``ppr``.
+
+**No commit here (10-04, D-07, D-09).** The body only stages its writes in the store's pending
+buffer. The engine commits the graph together with the kv and vector stores once the whole run
+succeeded, and drops all of them when any node fails, so a part never calls a lifecycle method.
 """
 
 from __future__ import annotations
@@ -80,8 +84,6 @@ async def _graph_augment_persist_body(ctx: NodeContext) -> dict[str, Any]:
         await graph_store.upsert_edge(
             src, tgt, {"weight": weight, "edge_types": types_by_pair[pair]}
         )
-
-    await graph_store.index_done_callback()
 
     return {
         "artifact": {"node_count": len(vertex_refs), "edge_count": len(weight_by_pair)},

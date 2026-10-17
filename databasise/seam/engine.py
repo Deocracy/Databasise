@@ -445,29 +445,49 @@ async def _corpus_op_or_refuse(op: str, payload: dict[str, Any], operation: str)
         ) from exc
 
 
+async def _drop_pending(stores: dict[str, Any]) -> None:
+    """D-06 (STOR-06): abort every store's staged writes. One store's failure is logged and the
+    rest are still dropped, so no store is left holding a refused run's writes."""
+    for name, store in stores.items():
+        try:
+            await store.drop_pending_index_ops()
+        except Exception:  # noqa: BLE001 - keep dropping the other stores
+            logger.exception("drop_pending_index_ops failed for store %s", name)
+
+
 def _node_result_or_refuse(scheduled: dict[str, Any], node_id: str, operation: str) -> dict[str, Any]:
     """G-05-1 / 05-REVIEW.md CR-02: the one shared refusal decision both ``ingest()`` and
-    ``delete_document()`` route through, so a node failure the scheduler could not resolve refuses
-    identically at both write call sites instead of being enumerated per exception type at each
-    one separately (which is how this defect reached two call sites in the first place).
+    ``delete_document()`` route through, so a failed run refuses identically at both write call
+    sites. It reads the run's own maps (``databasise/runner/scheduler.py``), never a type test
+    against whichever exception class the failure happened to raise.
 
-    Reads the run's own ``node_exceptions``/``results`` maps (``databasise/runner/scheduler.py``)
-    directly — never a type test against whichever exception class the failure happened to raise.
-    Any recorded node exception refuses, whatever its type, because the scheduler has already
-    unwrapped it down to the real cause before storing it; a node with neither a recorded
-    exception nor a recorded result also refuses, since that condition (a cancelled sibling, a
-    silently-dropped dispatch) is itself evidence that nothing ran. A synthesized ``RuntimeError``
-    cause is used only in that second branch, where no real exception object exists to carry
-    forward — never substituted for one that does exist.
-
-    The narrowing this replaces enumerated a fixed list of known-refusal exception types and let
-    anything else fall through to a fabricated success (``ingest()``) or an undifferentiated,
-    causeless failure (``delete_document()``, WR-01) — exactly the "no result was produced"
-    condition this helper closes over instead.
+    D-06 (STOR-06): the whole run counts, not only ``node_id``. In order:
+    1. a cyclic wiring (``"cycle"``) refuses as ``RunIncomplete``;
+    2. ``node_id``'s recorded exception, else the first recorded exception of any other node;
+    3. ``partial`` or ``stop_reason`` (an early stop with no exception) refuses as ``RunIncomplete``;
+    4. no result for ``node_id`` refuses with a synthesized cause (a cancelled sibling, a dropped
+       dispatch). The synthesized ``RuntimeError`` is used only where no real exception exists.
+    The caller drops every store's pending writes before the refusal propagates (``_drop_pending``).
     """
-    node_exception = scheduled.get("node_exceptions", {}).get(node_id)
+    if "cycle" in scheduled:
+        raise _foreign_fault(
+            operation,
+            RuntimeError(f"the {operation!r} wiring has a cycle: {scheduled['cycle']}"),
+            failure_class="RunIncomplete",
+        )
+    node_exceptions = scheduled.get("node_exceptions") or {}
+    node_exception = node_exceptions.get(node_id)
+    if node_exception is None and node_exceptions:
+        node_exception = next(iter(node_exceptions.values()))
     if node_exception is not None:
         raise _foreign_fault(operation, node_exception) from node_exception
+    stop_reason = scheduled.get("stop_reason")
+    if scheduled.get("partial") or stop_reason:
+        raise _foreign_fault(
+            operation,
+            RuntimeError(f"the {operation!r} run stopped early: {stop_reason}"),
+            failure_class="RunIncomplete",
+        )
     result = scheduled["results"].get(node_id)
     if result is None:
         raise _foreign_fault(
@@ -879,6 +899,13 @@ class Databasise:
                 concurrency_setting=_CONCURRENCY_SETTING,
                 clients=self.clients,
             )
+            # D-06 (STOR-06): any node failure or early stop commits nothing. Every store's
+            # staged writes are dropped before the refusal propagates.
+            try:
+                result = _node_result_or_refuse(scheduled, result_node_id, "ingest")
+            except ForeignEngineRefusalError:
+                await _drop_pending(stores)
+                raise
             # 06-10-PLAN.md (Rule 2 deviation): a real write-path run, for the first time, has a
             # store-writing node (hipporag/chunker-embedder, hipporag/entity-fact-embedder) hold a
             # store handle before this method returns. Those bodies only stage writes in each
@@ -899,17 +926,6 @@ class Databasise:
             for store in stores.values():
                 await store.finalize()
 
-        # G-05-1 / CR-02: a node failure, or no result at all, never propagates raw out of
-        # run_wiring (CONTRACT §9's "partial outcomes are never discarded" rule) — it is recorded
-        # in the run's own node_exceptions/results maps instead, and this module's own shared
-        # _node_result_or_refuse re-raises it here as the seam-facing ForeignEngineRefusalError,
-        # whatever the underlying failure actually was.
-        try:
-            result = _node_result_or_refuse(scheduled, result_node_id, "ingest")
-        except ForeignEngineRefusalError:
-            if wrote_staged:
-                _log_staged_left(staged)
-            raise
         # 06-10-PLAN.md: a terminal node reporting its own "enqueued" count wins (LightRAG's own
         # full-ingest); otherwise this call submitted exactly one document, so that is what is
         # reported — never a fabricated literal 0 for a node that simply does not report the field
