@@ -360,7 +360,11 @@ def _inject_token_allowance(resolved: dict[str, Any], allowance: int) -> dict[st
 
 
 def _build_stores(
-    store_root: Path, workspace: str, resolved: dict[str, Any] | None = None
+    store_root: Path,
+    workspace: str,
+    resolved: dict[str, Any] | None = None,
+    *,
+    into: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """kv/vector/graph, all three, at the engine's own namespace/workspace — mirrors
     ``run_arm.py``'s own ``_build_stores`` (see that module's docstring for why every wiring gets
@@ -378,14 +382,18 @@ def _build_stores(
     selecting its own namespace by name (``hipporag-facts``/``hipporag-chunks`` vs.
     ``entities``/``relationships``/``chunks``), so the multi-namespace handle needs no wiring-level
     declaration of its own.
+
+    Phase 10 D-04 (STOR-02): the stores are added to ``into`` (or a new dict) one at a time, kv,
+    then vector, then graph, and that dict is returned. A caller passes its own dict, declared
+    before its ``try``, so when a later open raises, its ``finally`` still finalizes every store
+    already opened.
     """
     store_namespaces = (resolved or {}).get("store_namespaces") or {}
     kv_namespace = store_namespaces.get("kv", _TEXT_CHUNKS_KIND)
     graph_namespace = store_namespaces.get("graph", _GRAPH_KIND)
-    stores = {
-        "kv": SqliteKVStore(namespace=kv_namespace, workspace=workspace, store_root=store_root),
-        "vector": MultiNamespaceVectorStore(workspace=workspace, store_root=store_root),
-    }
+    stores = into if into is not None else {}
+    stores["kv"] = SqliteKVStore(namespace=kv_namespace, workspace=workspace, store_root=store_root)
+    stores["vector"] = MultiNamespaceVectorStore(workspace=workspace, store_root=store_root)
     try:
         stores["graph"] = CozoGraphStore(
             namespace=graph_namespace, workspace=workspace, store_root=store_root
@@ -825,9 +833,12 @@ class Databasise:
         # (identical _TEXT_CHUNKS_KIND/_GRAPH_KIND fallback); HippoRAG's declares
         # {"kv": "hipporag-text-chunks", "graph": "hipporag-graph"}, landing an ingest in the same
         # directories base.json's query side reads.
-        stores = _build_stores(self.store_root, self.workspace, resolved)
+        stores: dict[str, Any] = {}
         wrote_staged = False
         try:
+            # D-04: built inside the try so a failed open finalizes what opened; still before the
+            # staging block, so a failed open leaves no staged file (WR-04).
+            stores = _build_stores(self.store_root, self.workspace, resolved, into=stores)
             if staged is not None:
                 staged.parent.mkdir(parents=True, exist_ok=True)
                 owner = self._staged_owner_path(document_id)
@@ -998,8 +1009,9 @@ class Databasise:
         def _recorder(node_id: str, kind: str, key: str) -> None:
             touches.append((node_id, kind, key))
 
-        stores = _build_stores(self.store_root, self.workspace)
+        stores: dict[str, Any] = {}
         try:
+            stores = _build_stores(self.store_root, self.workspace, into=stores)
             scheduled = await _scheduler.run_wiring(
                 parsed,
                 self.registry,
@@ -1181,8 +1193,9 @@ class Databasise:
         def _recorder(node_id: str, kind: str, key: str) -> None:
             touches.append((node_id, kind, key))
 
-        stores = _build_stores(self.store_root, self.workspace, resolved)
+        stores: dict[str, Any] = {}
         try:
+            stores = _build_stores(self.store_root, self.workspace, resolved, into=stores)
             scheduled = await _scheduler.run_wiring(
                 parsed,
                 self.registry,
@@ -1291,11 +1304,13 @@ class Databasise:
         validate_evidence_namespace(ref.namespace)
         if not (self.store_root / self.workspace / ref.namespace).is_dir():
             raise UnresolvableEvidenceReferenceError(ref)
-        vector = MultiNamespaceVectorStore(workspace=self.workspace, store_root=self.store_root)
+        vector = None
         try:
+            vector = MultiNamespaceVectorStore(workspace=self.workspace, store_root=self.store_root)
             return resolve_evidence_ref(ref, vector)
         finally:
-            await vector.finalize()
+            if vector is not None:
+                await vector.finalize()
 
     async def resolve_trace(self, trace_reference: str, *, debug: bool = False) -> dict[str, Any]:
         """The third §18 operation the seam exposes (API-10, D-06), per part kind and not per

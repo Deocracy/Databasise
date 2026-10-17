@@ -75,7 +75,11 @@ _CONCURRENCY_SETTING = "sequential"
 
 
 def _build_stores(
-    store_root: Path, workspace: str, resolved: dict[str, Any] | None = None
+    store_root: Path,
+    workspace: str,
+    resolved: dict[str, Any] | None = None,
+    *,
+    into: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """kv/vector/graph, all three, at the namespace plan 03-02 imported into — even an arm that
     touches only a subset (``naive`` never reaches ``graph``) gets every store wired, since
@@ -94,15 +98,20 @@ def _build_stores(
     ``databasise.seam.engine._build_stores`` reads, so this harness and the seam cannot drift
     apart. Falls back to ``_TEXT_CHUNKS_KIND``/``_GRAPH_KIND`` (the values LightRAG's own base now
     declares under ``store_namespaces`` too) when ``resolved`` is absent.
+
+    Phase 10 D-04: stores are added to ``into`` (or a new dict) one at a time, so a caller's
+    ``finally`` finalizes every store opened before a later open raised.
     """
     store_namespaces = (resolved or {}).get("store_namespaces") or {}
     kv_namespace = store_namespaces.get("kv", _TEXT_CHUNKS_KIND)
     graph_namespace = store_namespaces.get("graph", _GRAPH_KIND)
-    return {
-        "kv": SqliteKVStore(namespace=kv_namespace, workspace=workspace, store_root=store_root),
-        "vector": MultiNamespaceVectorStore(workspace=workspace, store_root=store_root),
-        "graph": CozoGraphStore(namespace=graph_namespace, workspace=workspace, store_root=store_root),
-    }
+    stores = into if into is not None else {}
+    stores["kv"] = SqliteKVStore(namespace=kv_namespace, workspace=workspace, store_root=store_root)
+    stores["vector"] = MultiNamespaceVectorStore(workspace=workspace, store_root=store_root)
+    stores["graph"] = CozoGraphStore(
+        namespace=graph_namespace, workspace=workspace, store_root=store_root
+    )
+    return stores
 
 
 def _inject_query(resolved: dict[str, Any], query: str) -> dict[str, Any]:
@@ -182,14 +191,16 @@ async def run_arm(
 
     resolved_workspace = workspace if workspace is not None else _parity_workspace()
     resolved_store_root = store_root if store_root is not None else DEFAULT_STORE_ROOT
-    stores = _build_stores(resolved_store_root, resolved_workspace, resolved)
-
     resolved_clients = clients
     if resolved_clients is None:
         env = _load_env_file(env_path or DEFAULT_V1_ENV_PARITY)
         resolved_clients = _build_clients(env)
 
+    stores: dict[str, Any] = {}
     try:
+        # D-04: clients resolve first and stores build inside the try, so neither a clients
+        # failure nor a failed store open leaves an opened store unfinalized.
+        stores = _build_stores(resolved_store_root, resolved_workspace, resolved, into=stores)
         scheduled = await _scheduler.run_wiring(
             parsed,
             registry,
