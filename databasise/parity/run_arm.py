@@ -12,9 +12,9 @@ imported into, and stamps its own ``RunRecord`` the same way the composer does b
 ``arm_id=arm_name`` (the composer always stamps ``arm_id="base"``).
 
 Client construction reads ``v1/.env.parity`` (D-07's pinned run configuration, the same file
-``v1/scripts/run_parity_ingest.py`` reads) with a small stdlib ``KEY=VALUE`` parser — no
-``python-dotenv`` dependency, since it is not one of ``databasise/pyproject.toml``'s approved
-runtime deps and this file's format is a flat, already-established shape. Both ``store_root``/
+``v1/scripts/run_parity_ingest.py`` reads) through ``databasise.clients.builder`` (the one shipped
+builder, shared with the ``databasise-rest`` launcher; its stdlib ``KEY=VALUE`` parser needs no
+``python-dotenv`` dependency). The old underscore names are re-exported below. Both ``store_root``/
 ``workspace`` and ``clients`` accept an explicit override so a test can drive this module against
 a synthetic store and a stub client double with no real index and no network reachable — the
 stub-client path is the one every machine must be able to run (see
@@ -26,13 +26,26 @@ from __future__ import annotations
 import argparse
 import asyncio
 import hashlib
-import json
 import sys
 import uuid
 from pathlib import Path
 from typing import Any
 
-from databasise.clients.openai_compat import OpenAICompatibleClient
+# Re-exports (08-01, RUN-05): the builder moved to databasise.clients.builder; the old names stay
+# bound here so every importer and monkeypatch seam keeps working, and the exception classes keep
+# their identity.
+# isort: off
+from databasise.clients.builder import (  # noqa: F401
+    PROVIDER_ROUTING_ENV_KEY as _PROVIDER_ROUTING_ENV_KEY,
+    REQUIRED_ENV_KEYS as _REQUIRED_ENV_KEYS,
+    MissingParityEnvError,
+    MissingParityEnvKeyError,
+    UnparseableProviderRoutingError,
+    build_clients as _build_clients,
+    load_env_file as _load_env_file,
+    parse_provider_routing_body as _parse_provider_routing_body,
+)
+# isort: on
 from databasise.identity.canon import canonicalise
 from databasise.parity.import_index import DEFAULT_STORE_ROOT
 from databasise.parity.import_index import _import_workspace as _parity_workspace
@@ -55,132 +68,6 @@ _GRAPH_KIND = "chunk_entity_relation"
 _EXECUTOR_VERSION = "databasise@0.1.0"
 _DETERMINISM_SETTING = "cache-bypassed"
 _CONCURRENCY_SETTING = "sequential"
-
-
-class MissingParityEnvError(RuntimeError):
-    """Raised when the pinned run-config file (``v1/.env.parity`` by default) does not exist —
-    named rather than a bare ``FileNotFoundError``, per this codebase's refusals-over-silent-
-    fallbacks house style.
-    """
-
-    def __init__(self, path: Path):
-        self.path = path
-        super().__init__(
-            f"v1/.env.parity not found at {path} — see v1/README-PARITY.md to recreate it, or "
-            "pass an explicit clients= mapping to run_arm() to bypass real-client construction"
-        )
-
-
-class MissingParityEnvKeyError(RuntimeError):
-    """Raised when ``.env.parity`` exists but is missing (or misspells) one of the keys
-    ``_build_clients`` requires — named rather than a bare ``KeyError``, per this module's own
-    "refusals over silent fallbacks" house style (WR-01).
-    """
-
-    def __init__(self, missing_keys: list[str]):
-        self.missing_keys = missing_keys
-        super().__init__(
-            f"v1/.env.parity is missing required key(s): {', '.join(missing_keys)} — "
-            "see v1/README-PARITY.md to recreate it, or pass an explicit clients= mapping to "
-            "run_arm() to bypass real-client construction"
-        )
-
-
-def _load_env_file(path: Path) -> dict[str, str]:
-    """A minimal ``KEY=VALUE`` parser for the flat, already-established ``.env.parity`` shape
-    (blank lines and ``#``-prefixed comments skipped, optional matching quote pair stripped) —
-    intentionally not ``python-dotenv``: that package is not one of
-    ``databasise/pyproject.toml``'s approved runtime dependencies, and this format needs nothing
-    more than stdlib string splitting.
-
-    IN-01: deliberately duplicated in ``databasise/parity/v1_arm.py``'s own ``_load_env_file``
-    rather than imported — see that copy's docstring for why — but this copy raises on an absent
-    file while the sibling copy returns ``{}``; that asymmetry is deliberate (this copy is always
-    called first in the normal ``compare_arm_on_query`` flow, so it is the one whose refusal a
-    caller actually sees).
-    """
-    if not path.exists():
-        raise MissingParityEnvError(path)
-    env: dict[str, str] = {}
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        value = value.strip()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-            value = value[1:-1]
-        env[key.strip()] = value
-    return env
-
-
-_REQUIRED_ENV_KEYS = (
-    "LLM_BINDING_HOST",
-    "LLM_MODEL",
-    "LLM_BINDING_API_KEY",
-    "EMBEDDING_BINDING_HOST",
-    "EMBEDDING_MODEL",
-    "EMBEDDING_BINDING_API_KEY",
-)
-
-# Optional by design (D-07 pin has no meaning for a local Ollama configuration with no provider to
-# route) — deliberately NOT added to _REQUIRED_ENV_KEYS, which would break the existing WR-01
-# missing-key tests that assert exactly which keys are required.
-_PROVIDER_ROUTING_ENV_KEY = "OPENAI_LLM_EXTRA_BODY"
-
-
-class UnparseableProviderRoutingError(RuntimeError):
-    """Raised when ``OPENAI_LLM_EXTRA_BODY`` is present in the parity env but is not valid JSON —
-    a named refusal, matching ``MissingParityEnvKeyError``'s "refusals over silent fallbacks"
-    house style, rather than silently dropping the pin and running the decomposed arm with
-    unpinned provider routing while the original arm's ``v1/scripts/run_parity_ingest.py`` refuses
-    the same malformed value outright.
-    """
-
-    def __init__(self, env_var: str, raw_value: str):
-        self.env_var = env_var
-        self.raw_value = raw_value
-        super().__init__(f"{env_var} is set but is not valid JSON: {raw_value!r}")
-
-
-def _parse_provider_routing_body(env: dict[str, str]) -> dict[str, Any] | None:
-    """Source D-07's pinned provider-routing body from the same parity env mapping the six
-    required keys come from. Absent -> ``None`` (no pin — correct for a local Ollama configuration
-    that has no provider to route). Present-but-unparseable -> a named refusal, never a silently
-    dropped pin.
-    """
-    raw = env.get(_PROVIDER_ROUTING_ENV_KEY)
-    if not raw:
-        return None
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise UnparseableProviderRoutingError(_PROVIDER_ROUTING_ENV_KEY, raw) from exc
-
-
-def _build_clients(env: dict[str, str]) -> dict[str, Any]:
-    """One ``OpenAICompatibleClient`` construction shape (D-07) reaches both the LLM and the
-    embedding endpoint the pinned config names — real network calls, never a cache, never a stub.
-
-    WR-01: refuses with a named ``MissingParityEnvKeyError`` naming every absent key, rather than
-    a bare ``KeyError`` on whichever key happens to be read first.
-    """
-    missing = [key for key in _REQUIRED_ENV_KEYS if key not in env]
-    if missing:
-        raise MissingParityEnvKeyError(missing)
-    provider_routing_body = _parse_provider_routing_body(env)
-    llm = OpenAICompatibleClient(
-        base_url=env["LLM_BINDING_HOST"],
-        model=env["LLM_MODEL"],
-        api_key=env["LLM_BINDING_API_KEY"],
-        provider_routing_body=provider_routing_body,
-    )
-    embedding = OpenAICompatibleClient(
-        base_url=env["EMBEDDING_BINDING_HOST"],
-        model=env["EMBEDDING_MODEL"],
-        api_key=env["EMBEDDING_BINDING_API_KEY"],
-    )
-    return {"llm": llm, "embedding": embedding}
 
 
 def _build_stores(

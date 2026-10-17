@@ -1,0 +1,160 @@
+"""The one shipped client builder: env-file parsing plus ``OpenAICompatibleClient`` construction.
+
+Moved out of ``databasise.parity.run_arm`` (08-01-PLAN.md, RUN-05) so the parity CLIs and the
+``databasise-rest`` / ``databasise-mcp`` launchers share one builder. ``run_arm`` re-exports these
+names under their old underscore spellings, so every existing importer and monkeypatch seam keeps
+working.
+
+Privacy (RUN-05): no error message here contains an env-file value. Refusals name keys only.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+from databasise.clients.openai_compat import OpenAICompatibleClient
+
+__all__ = [
+    "PROVIDER_ROUTING_ENV_KEY",
+    "REQUIRED_ENV_KEYS",
+    "MissingParityEnvError",
+    "MissingParityEnvKeyError",
+    "UnparseableProviderRoutingError",
+    "build_clients",
+    "load_env_file",
+    "parse_provider_routing_body",
+]
+
+
+class MissingParityEnvError(RuntimeError):
+    """Raised when the env file does not exist — named rather than a bare ``FileNotFoundError``,
+    per this codebase's refusals-over-silent-fallbacks house style.
+    """
+
+    def __init__(self, path: Path):
+        self.path = path
+        super().__init__(
+            f"the env file was not found at {path} — see v1/README-PARITY.md to recreate it, or "
+            "pass an explicit clients= mapping to run_arm() to bypass real-client construction"
+        )
+
+
+class MissingParityEnvKeyError(RuntimeError):
+    """Raised when the env file exists but is missing (or misspells) one of the keys
+    ``build_clients`` requires — named rather than a bare ``KeyError``, per this module's own
+    "refusals over silent fallbacks" house style (WR-01).
+    """
+
+    def __init__(self, missing_keys: list[str]):
+        self.missing_keys = missing_keys
+        super().__init__(
+            f"the env file is missing required key(s): {', '.join(missing_keys)} — "
+            "see v1/README-PARITY.md to recreate it, or pass an explicit clients= mapping to "
+            "run_arm() to bypass real-client construction"
+        )
+
+
+def load_env_file(path: Path) -> dict[str, str]:
+    """A minimal ``KEY=VALUE`` parser for the flat, already-established ``.env.parity`` shape
+    (blank lines and ``#``-prefixed comments skipped, optional matching quote pair stripped) —
+    intentionally not ``python-dotenv``: that package is not one of
+    ``databasise/pyproject.toml``'s approved runtime dependencies, and this format needs nothing
+    more than stdlib string splitting.
+
+    IN-01: deliberately duplicated in ``databasise/parity/v1_arm.py``'s own ``_load_env_file``
+    rather than imported — see that copy's docstring for why — but this copy raises on an absent
+    file while the sibling copy returns ``{}``; that asymmetry is deliberate (this copy is always
+    called first in the normal ``compare_arm_on_query`` flow, so it is the one whose refusal a
+    caller actually sees).
+    """
+    if not path.exists():
+        raise MissingParityEnvError(path)
+    env: dict[str, str] = {}
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        env[key.strip()] = value
+    return env
+
+
+REQUIRED_ENV_KEYS = (
+    "LLM_BINDING_HOST",
+    "LLM_MODEL",
+    "LLM_BINDING_API_KEY",
+    "EMBEDDING_BINDING_HOST",
+    "EMBEDDING_MODEL",
+    "EMBEDDING_BINDING_API_KEY",
+)
+
+# Optional by design (D-07 pin has no meaning for a local Ollama configuration with no provider to
+# route) — deliberately NOT added to REQUIRED_ENV_KEYS, which would break the existing WR-01
+# missing-key tests that assert exactly which keys are required.
+PROVIDER_ROUTING_ENV_KEY = "OPENAI_LLM_EXTRA_BODY"
+
+
+class UnparseableProviderRoutingError(RuntimeError):
+    """Raised when ``OPENAI_LLM_EXTRA_BODY`` is present in the env file but is not valid JSON —
+    a named refusal, matching ``MissingParityEnvKeyError``'s "refusals over silent fallbacks"
+    house style, rather than silently dropping the pin and running the decomposed arm with
+    unpinned provider routing while the original arm's ``v1/scripts/run_parity_ingest.py`` refuses
+    the same malformed value outright.
+
+    The value is kept only as the ``raw_value`` attribute; the message withholds it (RUN-05).
+    """
+
+    def __init__(self, env_var: str, raw_value: str, problem: str = "not valid JSON"):
+        self.env_var = env_var
+        self.raw_value = raw_value
+        self.problem = problem
+        super().__init__(f"{env_var} is set in the env file but {problem}; value withheld")
+
+
+def parse_provider_routing_body(env: dict[str, str]) -> dict[str, Any] | None:
+    """Source D-07's pinned provider-routing body from the same env mapping the six required keys
+    come from. Absent -> ``None`` (no pin — correct for a local Ollama configuration that has no
+    provider to route). Present-but-unparseable -> a named refusal, never a silently dropped pin.
+    """
+    raw = env.get(PROVIDER_ROUTING_ENV_KEY)
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as exc:
+        # exc.msg is the decoder's fixed text and never contains document text.
+        raise UnparseableProviderRoutingError(
+            PROVIDER_ROUTING_ENV_KEY,
+            raw,
+            problem=f"is not valid JSON ({exc.msg} at line {exc.lineno} column {exc.colno})",
+        ) from exc
+
+
+def build_clients(env: dict[str, str]) -> dict[str, Any]:
+    """One ``OpenAICompatibleClient`` construction shape (D-07) reaches both the LLM and the
+    embedding endpoint the pinned config names — real network calls, never a cache, never a stub.
+
+    WR-01: refuses with a named ``MissingParityEnvKeyError`` naming every absent key, rather than
+    a bare ``KeyError`` on whichever key happens to be read first.
+    """
+    missing = [key for key in REQUIRED_ENV_KEYS if key not in env]
+    if missing:
+        raise MissingParityEnvKeyError(missing)
+    provider_routing_body = parse_provider_routing_body(env)
+    llm = OpenAICompatibleClient(
+        base_url=env["LLM_BINDING_HOST"],
+        model=env["LLM_MODEL"],
+        api_key=env["LLM_BINDING_API_KEY"],
+        provider_routing_body=provider_routing_body,
+    )
+    embedding = OpenAICompatibleClient(
+        base_url=env["EMBEDDING_BINDING_HOST"],
+        model=env["EMBEDDING_MODEL"],
+        api_key=env["EMBEDDING_BINDING_API_KEY"],
+    )
+    return {"llm": llm, "embedding": embedding}

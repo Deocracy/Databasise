@@ -98,6 +98,10 @@ mcp = [
     "mcp>=2.2.0",
 ]
 
+# 08-01-PLAN.md (RUN-06): the operator-facing REST launcher; the MCP launcher joins in a later plan.
+[project.scripts]
+databasise-rest = "databasise.launcher.serve_rest:main"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
@@ -140,6 +144,8 @@ packages = [
     # 06-04-PLAN.md: the eval bundle (MACH-02), named in the same commit that creates it (05-04's
     # own recorded rule — never name a package directory that does not yet exist).
     "databasise.eval",
+    # 08-01-PLAN.md: the installed launchers (databasise-rest), named in the same commit that creates it.
+    "databasise.launcher",
 ]
 
 # The wiring documents ship with the package rather than existing only in a source checkout
