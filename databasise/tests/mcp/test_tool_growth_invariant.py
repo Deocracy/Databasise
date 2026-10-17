@@ -46,7 +46,7 @@ from databasise.parts.registry import default_registry
 from databasise.parts.schema import Part
 from databasise.seam import redact as redact_module
 from databasise.seam import selectors as selectors_module
-from databasise.seam.selectors import _ARM_NAMES as _PRODUCTION_ARM_NAMES
+from databasise.wirings.resolve import _ARM_NAMES as _PRODUCTION_ARM_NAMES
 from databasise.tests._ast_helpers import called_names
 from databasise.wirings.resolve import resolve_arm
 

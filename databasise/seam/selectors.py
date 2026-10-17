@@ -9,20 +9,23 @@ vocabulary". This module matches a requested capability set against the frozen 1
 vocabulary that exists in code — inventing a parallel taxonomy the contract does not name would be
 worse than using a thin one it does. **This is thin**: a consumer asking for "graph retrieval"
 must name ``reads_graph``, a machine-facing word, not a consumer-facing one. It is sufficient to
-distinguish the five Phase 3 arms (they differ from each other exactly in which effects their
-nodes declare) and therefore sufficient for the §18.5 falsifier, but it is not asserted to be the
-right long-term ergonomics.
+distinguish the candidate wirings (they differ from each other in which effects their nodes
+declare) and therefore sufficient for the §18.5 falsifier, but it is not asserted to be the right
+long-term ergonomics.
+
+**The candidate pool** for the capability, harness and default branches is
+``databasise.wirings.resolve.all_wirings()``: every LightRAG arm plus the HippoRAG base wiring,
+in that function's own order.
 
 A wiring satisfies a requested capability set when the union of its registered parts' own declared
 ``effects`` (never the wiring node's own, possibly-narrower, declared ``effects`` — CR-01 lets a
-wiring under-declare relative to its part) is a superset of the request. When more than one of the
-five arms satisfies, the **smallest resolved wiring wins** — fewest nodes, ties broken by
-``_ARM_NAMES``'s own declared order (``naive``, ``bypass``, ``hybrid``, ``local``, ``global``).
-This is a deliberate choice, not an arbitrary one: since every arm's effect set is not disjoint
-from its neighbours' (``bypass``'s single ``calls_llm`` effect is a subset of every other arm's own
-effect set), a "first candidate in ``_ARM_NAMES`` order" tie-break would make every arm but
-``naive`` unreachable by capability alone — the smallest-wiring rule instead resolves to the most
-specific (least-footprint) wiring that still satisfies the request.
+wiring under-declare relative to its part) is a superset of the request. When more than one
+candidate satisfies, the **smallest resolved wiring wins** — fewest nodes, ties broken by the
+pool's own order (a stable sort). This is a deliberate choice, not an arbitrary one: the
+candidates' effect sets overlap (``bypass``'s single ``calls_llm`` effect is a subset of every
+other arm's own effect set), so a "first candidate in pool order" rule would make every wiring
+after the first unreachable by capability alone — the smallest-wiring rule instead resolves to
+the most specific (least-footprint) wiring that still satisfies the request.
 
 Every candidate wiring's ``provides``/``harnesses``/``recipe`` fields are read off the raw resolved
 dict returned by ``resolve_arm`` — never through ``ParsedWiring``, which drops all three entirely
@@ -31,21 +34,20 @@ dict returned by ``resolve_arm`` — never through ``ParsedWiring``, which drops
 
 **The alias selector (Task 2; D-12, FA-06).** Reads the promotion ledger's own ``alias`` column
 (the 04-03 checkpoint's ``dedicated-alias-column`` answer — see ``_resolve_alias``'s own
-docstring for the exact lookup call and the field read to identify the active wiring). The
-registry is empty in this phase and every alias lookup refuses — the expected end state, not a
-defect; Phase 7's promote path is what appends the first real row.
+docstring for the exact lookup call and the field read to identify the active wiring). Phase 7's
+promote path writes the rows this branch reads; an alias with no row refuses.
 
 **The harness selector (Task 3; D-13, FA-05).** Reads the ordered ``harnesses`` array off the raw
 resolved dict, preserving declared order verbatim. No production wiring in this repository
-declares a harness (every one of the five arms' own ``harnesses`` array is empty) — this path is
-built and tested against ``databasise/tests/fixtures/wiring-harness.json`` alone; a production
-wiring exercising it is a later phase's concern.
+declares a harness (every candidate's own ``harnesses`` array is empty), so the production
+harness branch refuses — this path is built and tested against
+``databasise/tests/fixtures/wiring-harness.json`` alone.
 
 **The default selector's opaque exclusion (Task 3; D-13, §8 condition 7).** A candidate is
 excluded from the *default* candidate set only when one of its own ``provides`` positions
 (the node whose output becomes the answer) resolves to ``opaque`` effective depth — not merely for
 containing an unrelated opaque node elsewhere in the graph. This distinction is load-bearing:
-every one of the five arms except ``bypass`` also contains ``embedder-index``, itself declared at
+every LightRAG arm except ``bypass`` also contains ``embedder-index``, itself declared at
 ``opaque`` structural depth (an isolated, dep-free ingest node, per
 ``databasise/tests/parity/test_arm_conformance.py``'s own conformance proof) — excluding a whole
 wiring merely for *containing* an opaque node anywhere would make the default selector unable to
@@ -81,8 +83,6 @@ from databasise.validator.depth import effective_depth
 from databasise.validator.parse import parse_wiring
 from databasise.wirings.resolve import all_wirings, resolve_arm
 
-_DEFAULT_ARM = "naive"
-_ARM_NAMES: tuple[str, ...] = ("naive", "bypass", "hybrid", "local", "global")
 _SELECTOR_MEMBERS: tuple[str, ...] = ("alias", "capability", "harness")
 
 # A bare 64-hex-char string, optionally "sha256:"-prefixed — the shape every instance hash this
@@ -186,7 +186,7 @@ def _is_default_eligible(resolved: dict[str, Any], registry: PartRegistry) -> bo
     """§8 condition 7: excluded from the *default* candidate set only when one of the wiring's
     own ``provides`` positions — the node whose output becomes the answer — resolves to
     ``opaque`` effective depth. See the module docstring for why this is scoped to the provides
-    node rather than to "contains an opaque node anywhere": every one of the five arms except
+    node rather than to "contains an opaque node anywhere": every LightRAG arm except
     ``bypass`` also contains the unrelated, dep-free ``embedder-index`` node at opaque structural
     depth, and excluding on that alone would make the default selector unable to resolve
     ``naive`` at all.
@@ -210,8 +210,8 @@ def _resolve_default(
 ) -> dict[str, Any]:
     """The default branch's own resolution path — a separate, spy-able function so a test can
     prove a non-default selector never falls through to it (Task 1's own acceptance criterion).
-    Iterates the candidate pool in order (``_ARM_NAMES`` order in production) and returns the
-    first candidate whose ``provides`` position is not opaque-depth (§8 condition 7); ``naive`` is
+    Iterates the candidate pool (``all_wirings()`` in production) in order and returns the first
+    candidate whose ``provides`` position is not opaque-depth (§8 condition 7); ``naive`` is
     first and its own ``provides`` node (``generate``) is always ``stage``, so this is
     behaviourally identical to 04-01/04-02's hardcoded ``naive`` default for every wiring this
     repository actually publishes.
@@ -257,9 +257,8 @@ def _resolve_alias(alias: str, *, store_root: str | Path) -> dict[str, Any]:
     ``mutation_id`` — resolved as an arm name via ``resolve_arm`` exactly like every other
     selector branch. For this read to succeed, Phase 7's promote path must append a
     ``LedgerRecord`` whose ``alias`` column holds the promoted alias string and whose
-    ``mutation_id`` holds the arm name identifying the promoted wiring. The registry is empty in
-    this phase, so every lookup here raises :class:`UnsatisfiableSelectorError` — the expected,
-    correct end state, not a defect (D-12/FA-06).
+    ``mutation_id`` holds the arm name identifying the promoted wiring. An alias with no such row
+    raises :class:`UnsatisfiableSelectorError` (D-12/FA-06).
 
     An empty registry and a registry holding other, non-matching rows raise the identical
     refusal, naming only the consumer's own ``alias`` value — never a mutation_id or wiring id the
@@ -296,7 +295,7 @@ def _resolve_harness(
     candidates: Sequence[_Candidate] | None = None,
 ) -> dict[str, Any]:
     """The §18.4 harness branch (D-13, FA-05). No production wiring in this repository declares a
-    harness — every one of the five arms' own ``harnesses`` array is empty — so in production this
+    harness — every candidate's own ``harnesses`` array is empty — so in production this
     branch always raises :class:`UnsatisfiableSelectorError`; it is proven against
     ``databasise/tests/fixtures/wiring-harness.json`` alone (see that fixture's own ``title``).
     """

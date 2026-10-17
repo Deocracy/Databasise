@@ -19,6 +19,7 @@ import databasise.seam.corpus as corpus_module
 import databasise.seam.redact as redact_module
 import databasise.seam.refusals as refusals_module
 import databasise.seam.rest as rest_module
+import databasise.seam.selectors as selectors_module
 import databasise.seam.tokens as tokens_module
 from databasise.seam.rest import PromoteRequest, create_app
 from databasise.tests.seam.test_rest_transport import _seed_trace
@@ -147,3 +148,24 @@ def test_clean_envelope_with_an_empty_forbidden_set_passes_both_checks_under_pyt
 
 def test_redact_docstring_says_it_is_a_test_time_gate():
     assert "test-time gate" in _doc(redact_module)
+
+
+# --------------------------------------------------------------------------------------------- #
+# 09-10 (SEAM-16): the dead selector constants and the docstrings describing them are gone.
+# --------------------------------------------------------------------------------------------- #
+
+
+def test_selectors_module_has_no_dead_arm_constants():
+    assert not hasattr(selectors_module, "_DEFAULT_ARM")
+    assert not hasattr(selectors_module, "_ARM_NAMES")
+
+
+@pytest.mark.parametrize(
+    "stale", ["registry is empty", "five arms", "five Phase 3 arms", "_ARM_NAMES"]
+)
+def test_selectors_source_has_no_stale_phrase(stale):
+    assert stale not in _source(selectors_module)
+
+
+def test_selectors_module_docstring_names_all_wirings_as_the_candidate_pool():
+    assert "all_wirings()" in _doc(selectors_module)
