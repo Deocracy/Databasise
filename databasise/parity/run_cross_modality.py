@@ -61,6 +61,7 @@ from databasise.seam import Databasise, QueryObject
 from databasise.seam.engine import _build_stores
 from databasise.seam.envelope import ResponseEnvelope
 from databasise.seam.selectors import Selector
+from databasise.store_lock import StoreLockedError, store_lock
 from databasise.stores.vector import FaissVectorStore
 from databasise.wirings.resolve import load_wiring, resolve_arm
 
@@ -391,8 +392,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.parse_args(argv)
 
     try:
-        record = asyncio.run(run_cross_modality())
+        with store_lock(import_index.DEFAULT_STORE_ROOT):  # D-03
+            record = asyncio.run(run_cross_modality())
     except (
+        StoreLockedError,
         MissingParityEnvError,
         MissingParityEnvKeyError,
         MissingArmIndexError,

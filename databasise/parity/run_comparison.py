@@ -79,6 +79,7 @@ from databasise.parts.registry import PartRegistry, default_registry
 from databasise.parts.schema import NodeContext
 from databasise.runner import scheduler as _scheduler
 from databasise.runner.trace import RunRecord
+from databasise.store_lock import StoreLockedError, store_lock
 from databasise.validator.parse import parse_wiring
 from databasise.wirings.resolve import resolve_arm
 
@@ -717,7 +718,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--query", action="append", dest="query_ids", default=None)
     args = parser.parse_args(argv)
 
-    records, had_error = asyncio.run(_run_cli(args.arm, args.query_ids))
+    try:
+        with store_lock(import_index.DEFAULT_STORE_ROOT):  # D-03
+            records, had_error = asyncio.run(_run_cli(args.arm, args.query_ids))
+    except StoreLockedError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
 
     print(_render_human_summary(records))
 

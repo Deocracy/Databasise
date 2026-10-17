@@ -39,11 +39,13 @@ from dataclasses import dataclass
 from typing import Any
 
 from databasise.clients import CLIENT_EFFECT_TO_KEY
+from databasise.parity import import_index
 from databasise.parity import run_arm as _run_arm
 from databasise.parity.import_index import DEFAULT_STORE_ROOT
 from databasise.parts.registry import PartRegistry, default_registry
 from databasise.runner import scheduler as _scheduler
 from databasise.runner.scheduler import TouchRecorder
+from databasise.store_lock import StoreLockedError, store_lock
 from databasise.validator.parse import ParsedWiring, parse_wiring
 from databasise.wirings.resolve import resolve_arm
 
@@ -239,8 +241,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        result = asyncio.run(run_audit(args.arm, args.query))
-    except _run_arm.MissingParityEnvError as exc:
+        with store_lock(import_index.DEFAULT_STORE_ROOT):  # D-03
+            result = asyncio.run(run_audit(args.arm, args.query))
+    except (StoreLockedError, _run_arm.MissingParityEnvError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
 
