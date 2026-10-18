@@ -117,6 +117,18 @@ class ReservedMetadataKeyError(ValueError):
         )
 
 
+class InvalidTopKError(ValueError):
+    """Raised by :meth:`FaissVectorStore.query` and :meth:`FaissVectorStore.self_knn` (STOR-09)
+    when ``top_k <= 0``, checked before any empty-index shortcut so the refusal does not depend on
+    store contents. Faiss would otherwise fail with a bare ``AssertionError``. ``top_k`` is the
+    value refused.
+    """
+
+    def __init__(self, top_k: int):
+        self.top_k = top_k
+        super().__init__(f"top_k must be a positive integer, got {top_k!r}")
+
+
 def _sha256_of(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as f:
@@ -328,6 +340,8 @@ class FaissVectorStore(StorageNameSpace):
     # ------------------------------------------------------------------ #
 
     async def query(self, vector: Any, top_k: int = 10) -> list[dict[str, Any]]:
+        if top_k <= 0:
+            raise InvalidTopKError(top_k)
         if self._index is None or self._index.ntotal == 0:
             return []
 
@@ -397,7 +411,10 @@ class FaissVectorStore(StorageNameSpace):
         tie-break, matching :meth:`query`/:meth:`score_all`'s own sort key so all three
         retrieval-shaped methods agree on ordering. An empty store returns an empty mapping,
         following this class's own established empty-state behaviour rather than raising.
+        ``top_k <= 0`` raises :class:`InvalidTopKError` (STOR-09).
         """
+        if top_k <= 0:
+            raise InvalidTopKError(top_k)
         if self._index is None or self._index.ntotal == 0:
             return {}
 
@@ -595,8 +612,8 @@ class VectorNamespaceNotSelectedError(RuntimeError):
     """Raised by :class:`MultiNamespaceVectorStore`'s ``query``/``upsert``/``delete_by_ids`` when
     no namespace has been selected via :meth:`MultiNamespaceVectorStore.select` first — the whole
     point of that handle: a node that forgets to select its own namespace can no longer be silently
-    served a default one. Names the workspace and lists whatever namespace directories already
-    exist on disk under it (this handle never enumerates a fixed namespace set up front, so the
+    served a default one. Names the workspace and lists the namespace directories under it that
+    hold a ``vector.faiss`` (STOR-09) (this handle never enumerates a fixed namespace set up front, so the
     honest answer to "available" is what is actually there), following
     :class:`VectorStoreCorruptedError`'s and ``StoreNotWiredError``'s own house style — a named
     exception carrying the specifics, never a bare ``None`` and never a silent fallback.
@@ -628,9 +645,11 @@ class MultiNamespaceVectorStore(StorageNameSpace):
     out only over namespaces this handle has actually selected so far — an unselected namespace is
     never constructed just to be torn down.
 
-    ``query``/``upsert``/``delete_by_ids`` called on this handle itself (rather than on a namespace
-    returned by ``select``) refuse by name via :class:`VectorNamespaceNotSelectedError`: a caller
-    that forgot to select can no longer be handed a default index.
+    ``query``/``upsert``/``delete_by_ids``/``score_all``/``self_knn``/``get_by_id``/``iter_vectors``
+    called on this handle itself (rather than on a namespace returned by ``select``) refuse by name
+    via :class:`VectorNamespaceNotSelectedError` (STOR-09): a caller that forgot to select can no
+    longer be handed a default index. These are store-level refusals, outside the seam catalogue
+    (D-12).
     """
 
     def __init__(self, workspace: str, store_root: str | Path) -> None:
@@ -651,7 +670,7 @@ class MultiNamespaceVectorStore(StorageNameSpace):
         base = Path(self._store_root) / self.workspace
         if base.exists():
             try:
-                return sorted(p.name for p in base.iterdir() if p.is_dir())
+                return sorted(p.name for p in base.iterdir() if (p / "vector.faiss").is_file())
             except OSError:
                 pass
         return sorted(self._children.keys())
@@ -668,6 +687,19 @@ class MultiNamespaceVectorStore(StorageNameSpace):
         raise VectorNamespaceNotSelectedError(self.workspace, self._available_namespaces())
 
     async def delete_by_ids(self, ids: list[str]) -> None:
+        raise VectorNamespaceNotSelectedError(self.workspace, self._available_namespaces())
+
+    async def score_all(self, vector: Any) -> list[dict[str, Any]]:
+        raise VectorNamespaceNotSelectedError(self.workspace, self._available_namespaces())
+
+    async def self_knn(self, *, top_k: int) -> dict[str, list[dict[str, Any]]]:
+        raise VectorNamespaceNotSelectedError(self.workspace, self._available_namespaces())
+
+    def get_by_id(self, doc_id: str) -> dict[str, Any] | None:
+        raise VectorNamespaceNotSelectedError(self.workspace, self._available_namespaces())
+
+    def iter_vectors(self) -> Iterator[tuple[str, np.ndarray]]:
+        # a plain method, not a generator, so the refusal fires at call time (research Pitfall 12)
         raise VectorNamespaceNotSelectedError(self.workspace, self._available_namespaces())
 
     async def initialize(self) -> None:
