@@ -54,6 +54,7 @@ objects: writers build their own ``FaissVectorStore`` and clone the index before
 from __future__ import annotations
 
 import asyncio
+import copy
 import hashlib
 import json
 import os
@@ -167,32 +168,49 @@ def _stat_signature(path: Path) -> tuple[int, int, int] | None:
 
 
 def _read_snapshot(index_path: Path, meta_path: Path, signature: _Signature) -> _Committed:
-    with meta_path.open("r", encoding="utf-8") as f:
-        meta = json.load(f)
-    expected_checksum = meta.get("index_checksum")
-    actual_checksum = _sha256_of(index_path)
-    if expected_checksum != actual_checksum:
-        raise VectorStoreCorruptedError(index_path, expected_checksum, actual_checksum)
-    index = faiss.read_index(str(index_path))
-    return _Committed(
-        index=index,
-        entries=MappingProxyType(meta["entries"]),
-        next_int_id=meta["next_int_id"],
-        dim=index.d,
-        signature=signature,
-    )
+    try:
+        with meta_path.open("r", encoding="utf-8") as f:
+            meta = json.load(f)
+        expected_checksum = meta.get("index_checksum")
+        actual_checksum = _sha256_of(index_path)
+        if expected_checksum != actual_checksum:
+            raise VectorStoreCorruptedError(index_path, expected_checksum, actual_checksum)
+        index = faiss.read_index(str(index_path))
+        return _Committed(
+            index=index,
+            entries=MappingProxyType(meta["entries"]),
+            next_int_id=meta["next_int_id"],
+            dim=index.d,
+            signature=signature,
+        )
+    except (VectorStoreCorruptedError, FileNotFoundError):
+        raise  # a vanished file is the caller's retry trigger, not corruption
+    except (OSError, ValueError, KeyError, TypeError, AttributeError, RuntimeError) as exc:
+        # Phase 10 review WR-05: an unreadable sidecar or index (garbage JSON, a missing key, a
+        # faiss read error) is a corrupted store, which the seam maps to StoreCorrupted, never a 500.
+        raise VectorStoreCorruptedError(index_path, None, f"<unreadable: {type(exc).__name__}>") from exc
+
+
+# Attempts at one consistent read before giving up on a store that another writer keeps changing.
+_SNAPSHOT_ATTEMPTS = 3
 
 
 def load_committed(dir_path: Path) -> _Committed | None:
     """The committed snapshot of the namespace directory ``dir_path``, or ``None`` when neither file
-    exists; exactly one file is ``VectorStoreCorruptedError`` (STOR-08). Never creates a directory. A hit costs two ``stat`` calls; a miss reads the sidecar,
-    hashes and reads the index, then stats again: a signature that changed during the read (a reader
-    inside another writer's two-rename window, research Pitfall 4) is retried once, then refused as
-    ``VectorStoreCorruptedError``."""
+    exists; exactly one file is ``VectorStoreCorruptedError`` (STOR-08). Never creates a directory. A
+    hit costs two ``stat`` calls; a miss reads the sidecar, hashes and reads the index, then stats
+    again. A signature that changed during the read (a reader inside another writer's two-rename
+    window, research Pitfall 4) or a file that vanished mid-read is retried, up to
+    ``_SNAPSHOT_ATTEMPTS`` times. If the last read passed validation it is returned uncached (the
+    store is merely busy, not corrupt); if it failed validation, or the pair stays half-present, it
+    is refused as ``VectorStoreCorruptedError``; if the files keep vanishing the namespace is
+    absent (Phase 10 review WR-05)."""
     dir_path = Path(dir_path).resolve()
     index_path, meta_path = dir_path / "vector.faiss", dir_path / "vector.meta.json"
+    snapshot: _Committed | None = None
     error: VectorStoreCorruptedError | None = None
-    for _attempt in range(2):
+    for _attempt in range(_SNAPSHOT_ATTEMPTS):
+        snapshot = error = None
         index_sig, meta_sig = _stat_signature(index_path), _stat_signature(meta_path)
         if index_sig is None and meta_sig is None:
             return None
@@ -210,9 +228,11 @@ def load_committed(dir_path: Path) -> _Committed | None:
                 _SNAPSHOT_CACHE.move_to_end(key)
                 return hit
         try:
-            snapshot, error = _read_snapshot(index_path, meta_path, signature), None
+            snapshot = _read_snapshot(index_path, meta_path, signature)
+        except FileNotFoundError:
+            continue  # counts as a changed stat
         except VectorStoreCorruptedError as exc:
-            snapshot, error = None, exc
+            error = exc
         if (_stat_signature(index_path), _stat_signature(meta_path)) != signature:
             continue
         if snapshot is None:
@@ -224,7 +244,11 @@ def load_committed(dir_path: Path) -> _Committed | None:
             while len(_SNAPSHOT_CACHE) > _SNAPSHOT_CACHE_SIZE:
                 _SNAPSHOT_CACHE.popitem(last=False)
         return snapshot
-    raise error or VectorStoreCorruptedError(index_path, None, "<changed while being read>")
+    if snapshot is not None:
+        return snapshot
+    if error is not None:
+        raise error
+    return None
 
 
 @dataclass
@@ -362,7 +386,7 @@ class FaissVectorStore(StorageNameSpace):
             if doc_id is None:
                 continue
             entry = self._entries[doc_id]
-            results.append({"id": doc_id, "score": float(score), **entry["metadata"]})
+            results.append({"id": doc_id, "score": float(score), **copy.deepcopy(entry["metadata"])})
 
         results.sort(key=lambda r: (-r["score"], r["id"]))
         return results
@@ -394,7 +418,7 @@ class FaissVectorStore(StorageNameSpace):
             if doc_id is None:
                 continue
             entry = self._entries[doc_id]
-            results.append({"id": doc_id, "score": float(score), **entry["metadata"]})
+            results.append({"id": doc_id, "score": float(score), **copy.deepcopy(entry["metadata"])})
 
         results.sort(key=lambda r: (-r["score"], r["id"]))
         return results
@@ -442,7 +466,9 @@ class FaissVectorStore(StorageNameSpace):
                 if neighbour_id is None or neighbour_id == self_doc_id:
                     continue
                 entry = self._entries[neighbour_id]
-                neighbours.append({"id": neighbour_id, "score": float(score), **entry["metadata"]})
+                neighbours.append(
+                    {"id": neighbour_id, "score": float(score), **copy.deepcopy(entry["metadata"])}
+                )
             neighbours.sort(key=lambda r: (-r["score"], r["id"]))
             results[self_doc_id] = neighbours[:top_k]
         return results
@@ -468,7 +494,7 @@ class FaissVectorStore(StorageNameSpace):
         entry = self._entries.get(doc_id)
         if entry is None:
             return None
-        return {"id": doc_id, **entry["metadata"]}
+        return {"id": doc_id, **copy.deepcopy(entry["metadata"])}
 
     # ------------------------------------------------------------------ #
     # Lifecycle                                                            #
