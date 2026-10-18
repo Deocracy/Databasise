@@ -1,6 +1,6 @@
 """``databasise.mcp.server`` — the MCP server factory (05-07-PLAN.md Task 1, action A/E). Copies
 ``databasise.seam.rest``'s "thin adapter, provably" architecture to a second protocol: one
-``Databasise`` instance, nine tool bodies that are each exactly deserialize-then-await-then-return,
+``Databasise`` instance, ten tool bodies that are each exactly deserialize-then-await-then-return,
 and one shared refusal-to-tool-error mapper instead of one shared app-level exception handler.
 
 **Resolved server API (`mcp` 2.2.0, read from the installed package this session — action A).**
@@ -71,6 +71,7 @@ from databasise.mcp.tools import (
     QueryToolArgs,
     ResolveToolArgs,
     RetireToolArgs,
+    RetryToolArgs,
     RollbackToolArgs,
     StatusToolArgs,
 )
@@ -227,6 +228,12 @@ def create_server(
     async def delete_tool(args: DeleteToolArgs) -> dict[str, Any]:
         outcome = await engine.delete_document(args.document_id, args.selector)
         return outcome.model_dump()
+
+    @server.tool(name="retry")
+    async def retry_tool(args: RetryToolArgs) -> dict[str, Any]:
+        """11-08 (D-08): the identical ``Databasise.retry_document()`` REST's retry route reaches."""
+        job = await engine.retry_document(args.document_id, args.selector)
+        return job.model_dump()
 
     @server.tool(name="status")
     async def status_tool(args: StatusToolArgs) -> dict[str, Any]:

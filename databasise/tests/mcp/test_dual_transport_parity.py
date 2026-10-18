@@ -155,13 +155,13 @@ async def test_create_server_holds_exactly_one_databasise_instance_reachable_for
     assert isinstance(server.engine, Databasise)
 
 
-async def test_the_registered_tool_set_equals_tool_names_and_has_nine_members(tmp_path):
+async def test_the_registered_tool_set_equals_tool_names_and_has_ten_members(tmp_path):
     server = create_server(store_root=tmp_path, workspace="mcp-tool-set")
     tools = await server.list_tools()
     assert sorted(tool.name for tool in tools) == sorted(TOOL_NAMES)
     # 07-03-PLAN.md: grew from six to nine — `promote`/`rollback`/`retire` are three genuinely
-    # new §18 operations.
-    assert len(TOOL_NAMES) == 9
+    # new §18 operations. 11-08-PLAN.md (D-08): `retry` makes ten.
+    assert len(TOOL_NAMES) == 10
 
 
 async def test_ingest_tool_accepts_structured_text_and_base64_raw_shapes(tmp_path):
@@ -554,6 +554,15 @@ async def _retire_scenario(engine, rest_client, server):
     return mcp_dict, rest_dict, in_process_dict, {"alias", "generation_ordinal"}
 
 
+async def _retry_scenario(engine, rest_client, server):
+    """11-08-PLAN.md (D-08): the status fake reports ``stuck`` mid-pipeline with no write in
+    flight, so all three transports retry it. Each run mints its own track id (excluded)."""
+    mcp_dict = _tool_json(await server.call_tool("retry", {"args": {"document_id": "stuck"}}))
+    rest_dict = rest_client.post("/documents/stuck/retry").json()
+    in_process_dict = _model_or_dict(await engine.retry_document("stuck"))
+    return mcp_dict, rest_dict, in_process_dict, {"job_id"}
+
+
 _SCENARIOS = {
     "ingest": _ingest_scenario,
     "query": _query_scenario,
@@ -564,6 +573,7 @@ _SCENARIOS = {
     "promote": _promote_scenario,
     "rollback": _rollback_scenario,
     "retire": _retire_scenario,
+    "retry": _retry_scenario,
 }
 
 
@@ -588,6 +598,10 @@ async def test_mcp_rest_and_in_process_agree_for_every_tool(
         workspace = dual_arm_store["workspace"]
         clients = _stub_clients(_COMPARE_QUERY_VECTOR)
         registry = None
+    elif tool_name == "retry":
+        store_root, workspace, clients, registry = tmp_path, "parity-retry", None, _make_registry()
+        stuck = {"document_id": "stuck", "status": "processing", "updated_at": "t", "error_message": None}
+        _patch_status_and_health(monkeypatch, documents=[stuck], counts={"processing": 1})
     else:
         store_root, workspace, clients, registry = tmp_path, f"parity-{tool_name}", None, _make_registry()
 

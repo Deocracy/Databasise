@@ -45,6 +45,10 @@ truth REST and MCP both defer to.
   modality answers a query. Three separate operations under Phase 4 D-03's one-entry-per-operation
   rule, never one lifecycle tool with a scope field: rollback and retire are distinguishable
   effects (repoint vs. tombstone), not two shapes of one intention.
+- ``retry`` (11-08-PLAN.md, D-08, LRAG-07): reprocesses one interrupted document, named by its id.
+  No selector can express "resume this stuck document": it is a write on a named document id, like
+  ``delete``. It reuses the ingest port, so it adds no Part, and ``selector`` names which fitted
+  modality's index it reaches, exactly as for ``ingest``/``delete``.
 """
 
 from __future__ import annotations
@@ -70,6 +74,8 @@ from databasise.seam.selectors import Selector
 # ``retire`` are three genuinely new §18 operations (MACH-07/API-09) — Phase 4 D-03's one-entry-
 # per-operation rule, never one tool per modality, and never folded into one scope-dispatched tool
 # (RESEARCH.md Open Question 3's own recommendation against the ``status``/``resolve`` precedent).
+# Grew from nine to ten in 11-08-PLAN.md: ``retry`` is a genuinely new §18 operation (D-08), a
+# write on a named interrupted document, not one tool per modality.
 TOOL_NAMES: tuple[str, ...] = (
     "ingest",
     "query",
@@ -80,6 +86,7 @@ TOOL_NAMES: tuple[str, ...] = (
     "promote",
     "rollback",
     "retire",
+    "retry",
 )
 
 StatusScope = Literal["job", "corpus", "counts", "health"]
@@ -157,6 +164,16 @@ class DeleteToolArgs(_ToolArgs):
     selector: Selector | None = None
 
 
+class RetryToolArgs(_ToolArgs):
+    """11-08-PLAN.md (D-08): the id of an interrupted document plus an optional §18.4 selector,
+    the identical shape ``databasise.seam.rest.RetryRequest``/path-parameter pair carries."""
+
+    document_id: str = Field(description="The id of a document left interrupted by a timed-out ingest.")
+    selector: Selector | None = Field(
+        default=None, description="Which fitted modality's index the retry reaches; absent means the default."
+    )
+
+
 class StatusToolArgs(_ToolArgs):
     """``scope`` selects which of ``Databasise``'s four bounded read methods this call reaches;
     ``job_id`` is required only for ``scope="job"`` and ``limit``/``offset`` are read only for
@@ -228,6 +245,7 @@ __all__ = [
     "ResolveScope",
     "ResolveToolArgs",
     "RetireToolArgs",
+    "RetryToolArgs",
     "RollbackToolArgs",
     "StatusScope",
     "StatusToolArgs",

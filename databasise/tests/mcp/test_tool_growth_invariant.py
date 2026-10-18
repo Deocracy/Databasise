@@ -39,6 +39,7 @@ from databasise.mcp.tools import (
     QueryToolArgs,
     ResolveToolArgs,
     RetireToolArgs,
+    RetryToolArgs,
     RollbackToolArgs,
     StatusToolArgs,
 )
@@ -73,6 +74,7 @@ _TOOL_ARG_MODELS = (
     PromoteToolArgs,
     RollbackToolArgs,
     RetireToolArgs,
+    RetryToolArgs,
 )
 _MCP_MODULES = (mcp_package_module, mcp_tools_module, mcp_server_module)
 
@@ -88,8 +90,8 @@ async def test_the_registered_tool_set_equals_tool_names_as_a_set_and_by_count(t
     assert set(names) == set(TOOL_NAMES)
     # 07-03-PLAN.md: grew from six to nine — `promote`/`rollback`/`retire` are three genuinely
     # new §18 operations, not one tool per modality (see databasise/mcp/tools.py's own module
-    # docstring).
-    assert len(names) == len(TOOL_NAMES) == 9
+    # docstring). 11-08-PLAN.md (D-08): grew to ten — `retry` is a genuinely new §18 operation.
+    assert len(names) == len(TOOL_NAMES) == 10
 
 
 # --------------------------------------------------------------------------------------------- #
@@ -267,6 +269,7 @@ _OPERATION_TO_TOOLS: dict[str, tuple[str, ...]] = {
     "promote": ("promote",),
     "rollback": ("rollback",),
     "retire": ("retire",),
+    "retry interrupted document": ("retry",),
 }
 
 
