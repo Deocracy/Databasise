@@ -13,16 +13,18 @@ from __future__ import annotations
 import json
 from typing import Any
 
-import pytest
-from fastapi.testclient import TestClient
-
 import databasise.seam.engine as engine_module
+import pytest
 from databasise.clients.builder import build_clients
 from databasise.parts_core.lightrag import full_ingest
 from databasise.seam.engine import Databasise
 from databasise.seam.refusals import StoreBusyError
 from databasise.seam.rest import create_app
-from databasise.tests.fixtures.v1_stub_server import real_v1, requires_v1  # noqa: F401 - fixture
+from databasise.tests.fixtures.v1_stub_server import (  # noqa: F401 - fixture
+    real_v1,
+    requires_v1,
+)
+from fastapi.testclient import TestClient
 
 _WS = "interrupted"
 
