@@ -147,7 +147,7 @@
 - [x] **STOR-08**: Opening a FaissVectorStore whose directory holds vector.faiss without vector.meta.json, or vector.meta.json without vector.faiss, raises VectorStoreCorruptedError, as the module docstring states. It does not open an empty store that the next flush overwrites. Evidence resolve against such a namespace returns the corruption refusal, not 'record no longer present'.
   - Test: tests/stores/test_vector_crash_window.py: upsert and flush, delete vector.meta.json, reopen, and assert VectorStoreCorruptedError. Repeat with vector.faiss deleted instead. Then call engine.resolve_evidence on a ref into the damaged namespace and assert the corruption refusal. Before the fix, the first reopen gives _index None with no error and resolve returns the not-present refusal.
   - Defects: stores/ST-06
-- [ ] **STOR-09**: FaissVectorStore and MultiNamespaceVectorStore report named refusals for invalid input. query with top_k <= 0 raises a named ValueError subclass instead of a bare AssertionError. The 'available vector namespaces' list in VectorNamespaceNotSelectedError contains only directories that hold vector.faiss. Calling score_all, self_knn, get_by_id or iter_vectors on an unselected MultiNamespaceVectorStore raises VectorNamespaceNotSelectedError, not AttributeError.
+- [x] **STOR-09**: FaissVectorStore and MultiNamespaceVectorStore report named refusals for invalid input. query with top_k <= 0 raises a named ValueError subclass instead of a bare AssertionError. The 'available vector namespaces' list in VectorNamespaceNotSelectedError contains only directories that hold vector.faiss. Calling score_all, self_knn, get_by_id or iter_vectors on an unselected MultiNamespaceVectorStore raises VectorNamespaceNotSelectedError, not AttributeError.
   - Test: tests/stores/test_vector_validation.py has three checks. (1) query(vec, top_k=0) raises the named error. (2) With text_chunks/ and chunk_entity_relation/ directories present, the refusal's namespace list excludes them. (3) MultiNamespaceVectorStore(...).score_all(...) and .get_by_id('a') raise VectorNamespaceNotSelectedError. Each assertion fails on the current code.
   - Defects: stores/ST-12, stores/ST-16
 - [x] **STOR-10**: CozoGraphStore keeps edges consistent with nodes. After a flushed delete_node('x'), get_node_edges('x') returns [], node_degree of every former neighbour excludes edges to x, and export_to_igraph contains no dangling edge. upsert_edge with an endpoint that does not exist (committed or pending) is refused or creates the node, depending on the owner decision, and never leaves a dangling edge.
@@ -175,7 +175,7 @@
   - Test: tests/test_namespaces_gc.py has two parts. (a) gc_namespace on a namespace directory that contains a read-only subdirectory holding a file raises the named GC error (before the fix it returns silently, and the test must run as a non-root user). gc_namespace on a missing directory does nothing. (b) Run the chosen trigger (e.g. engine retire of a generation that wrote a quarantined namespace) and assert the namespace directory is gone. Before the fix it remains.
   - Defects: mcp-clients/D12
   - Owner decision first: What triggers quarantined-namespace GC: generation retire, instance teardown, or an explicit operator GC route. Also whether the seam stores move to derive_namespace-derived directories or the D-07 docstring is corrected to describe the fixed-name layout.
-- [ ] **STOR-16**: FaissVectorStore.upsert refuses metadata containing the keys 'id' or 'score' with a named refusal. Results from get_by_id, query, score_all and self_knn always carry the real id and score.
+- [x] **STOR-16**: FaissVectorStore.upsert refuses metadata containing the keys 'id' or 'score' with a named refusal. Results from get_by_id, query, score_all and self_knn always carry the real id and score.
   - Test: tests/stores/test_vector_reserved_keys.py: upsert(['a'], vecs, [{'id':'SHADOW','score':99}]) raises the named refusal. Before the fix, get_by_id('a') returns {'id':'SHADOW','score':99} and query() returns ('SHADOW', 99) ranked first.
   - Defects: stores/ST-07
   - Owner decision first: Reserved metadata keys: reject them at upsert (refusal), or place metadata under a sub-key in results. Either way, v1 import_index must strip or rename 'id'/'score'.
@@ -854,14 +854,14 @@ These fail today.
 | STOR-06 | Phase 10 | Complete |
 | STOR-07 | Phase 10 | Complete |
 | STOR-08 | Phase 10 | Complete |
-| STOR-09 | Phase 10 | Pending |
+| STOR-09 | Phase 10 | Complete |
 | STOR-10 | Phase 10 | Complete |
 | STOR-11 | Phase 10 | Complete |
 | STOR-12 | Phase 10 | Complete |
 | STOR-13 | Phase 10 | Complete |
 | STOR-14 | Phase 10 | Complete |
 | STOR-15 | Phase 10 | Complete |
-| STOR-16 | Phase 10 | Pending |
+| STOR-16 | Phase 10 | Complete |
 | LRAG-01 | Phase 11 | Pending |
 | LRAG-02 | Phase 11 | Pending |
 | LRAG-03 | Phase 11 | Pending |
