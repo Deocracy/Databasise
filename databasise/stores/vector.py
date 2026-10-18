@@ -164,6 +164,8 @@ def _stat_signature(path: Path) -> tuple[int, int, int] | None:
         st = path.stat()
     except FileNotFoundError:
         return None
+    except OSError as exc:  # PermissionError, NotADirectoryError: the pair exists but cannot be read
+        raise VectorStoreCorruptedError(path, None, f"<unreadable: {type(exc).__name__}>") from exc
     return (st.st_ino, st.st_mtime_ns, st.st_size)
 
 
@@ -203,22 +205,22 @@ def load_committed(dir_path: Path) -> _Committed | None:
     window, research Pitfall 4) or a file that vanished mid-read is retried, up to
     ``_SNAPSHOT_ATTEMPTS`` times. If the last read passed validation it is returned uncached (the
     store is merely busy, not corrupt); if it failed validation, or the pair stays half-present, it
-    is refused as ``VectorStoreCorruptedError``; if the files keep vanishing the namespace is
-    absent (Phase 10 review WR-05)."""
+    is refused as ``VectorStoreCorruptedError``; if the files keep vanishing it is refused too, since
+    absent means both stats showed both files missing (Phase 10 review WR-05, iteration-2 WR-01). A
+    corruption seen on an earlier attempt is kept: the most severe error seen is the one raised."""
     dir_path = Path(dir_path).resolve()
     index_path, meta_path = dir_path / "vector.faiss", dir_path / "vector.meta.json"
-    snapshot: _Committed | None = None
     error: VectorStoreCorruptedError | None = None
     for _attempt in range(_SNAPSHOT_ATTEMPTS):
-        snapshot = error = None
+        snapshot: _Committed | None = None
         index_sig, meta_sig = _stat_signature(index_path), _stat_signature(meta_path)
         if index_sig is None and meta_sig is None:
             return None
         if index_sig is None:
-            error = VectorStoreCorruptedError(meta_path, None, "<missing vector.faiss>")
+            error = error or VectorStoreCorruptedError(meta_path, None, "<missing vector.faiss>")
             continue
         if meta_sig is None:
-            error = VectorStoreCorruptedError(index_path, None, "<missing vector.meta.json>")
+            error = error or VectorStoreCorruptedError(index_path, None, "<missing vector.meta.json>")
             continue
         signature: _Signature = (index_sig, meta_sig)
         key = (str(dir_path), signature)
@@ -230,6 +232,7 @@ def load_committed(dir_path: Path) -> _Committed | None:
         try:
             snapshot = _read_snapshot(index_path, meta_path, signature)
         except FileNotFoundError:
+            error = error or VectorStoreCorruptedError(index_path, None, "<vanished while being read>")
             continue  # counts as a changed stat
         except VectorStoreCorruptedError as exc:
             error = exc
@@ -246,9 +249,7 @@ def load_committed(dir_path: Path) -> _Committed | None:
         return snapshot
     if snapshot is not None:
         return snapshot
-    if error is not None:
-        raise error
-    return None
+    raise error  # type: ignore[misc]  # every path out of the loop without a return set it
 
 
 @dataclass

@@ -102,7 +102,9 @@ async def test_a_file_that_vanishes_between_stat_and_read_is_retried(store_root,
     assert len(calls) == 2
 
 
-async def test_a_file_that_keeps_vanishing_means_the_namespace_is_absent(store_root, monkeypatch):
+async def test_a_file_that_keeps_vanishing_is_refused_as_corruption_not_absent(store_root, monkeypatch):
+    # Iteration-2 WR-01: absent means BOTH stats showed both files missing. Returning None here made
+    # prepare() rebuild the index from the pending buffer and replace the existing pair.
     directory = await _commit(store_root)
 
     def _always_vanish(index_path, meta_path, signature):
@@ -110,7 +112,48 @@ async def test_a_file_that_keeps_vanishing_means_the_namespace_is_absent(store_r
 
     monkeypatch.setattr(vector_module, "_read_snapshot", _always_vanish)
 
-    assert vector_module.load_committed(directory) is None
+    with pytest.raises(VectorStoreCorruptedError):
+        vector_module.load_committed(directory)
+
+
+async def test_a_corruption_seen_on_an_earlier_attempt_survives_later_vanishes(store_root, monkeypatch):
+    directory = await _commit(store_root)
+    meta = directory / "vector.meta.json"
+    meta.write_text(meta.read_text().replace('"index_checksum": "', '"index_checksum": "0'))
+    real, calls = vector_module._read_snapshot, []
+
+    def _corrupt_then_vanish(index_path, meta_path, signature):
+        calls.append(1)
+        if len(calls) > 1:
+            raise FileNotFoundError(str(meta_path))
+        try:
+            return real(index_path, meta_path, signature)
+        finally:
+            _bump_mtime(index_path, 3_000_000)
+
+    monkeypatch.setattr(vector_module, "_read_snapshot", _corrupt_then_vanish)
+
+    with pytest.raises(VectorStoreCorruptedError) as exc_info:
+        vector_module.load_committed(directory)
+
+    assert len(calls) == 3
+    assert not exc_info.value.actual.startswith("<"), "the checksum failure was replaced by a vanish"
+
+
+@pytest.mark.parametrize("error", [PermissionError, NotADirectoryError])
+async def test_an_unstatable_file_is_a_corrupted_store_not_a_raw_oserror(store_root, monkeypatch, error):
+    directory = await _commit(store_root)
+    real_stat = Path.stat
+
+    def _deny(self, *args, **kwargs):
+        if self.name == "vector.faiss":
+            raise error(13, "denied")
+        return real_stat(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "stat", _deny)
+
+    with pytest.raises(VectorStoreCorruptedError):
+        vector_module.load_committed(directory)
 
 
 @pytest.mark.parametrize("garbage", ["not json at all", "{}", "[1, 2]"])
