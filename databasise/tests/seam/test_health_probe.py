@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import importlib
 import json
+import os
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 import databasise.seam.engine as engine_module
 from databasise.seam.engine import Databasise
@@ -91,6 +93,23 @@ async def test_a_lone_faiss_file_reports_corrupted(store_root, monkeypatch):
     report = await _engine(store_root, monkeypatch).health()
 
     assert report.stores["vector:chunks"] == "corrupted"
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root ignores directory permissions")
+async def test_unreadable_namespace_directories_report_corrupted_instead_of_raising(store_root, monkeypatch):
+    # Review iteration 3 WR-01: Path.is_file()/exists() let EACCES through on a mode-000 directory.
+    locked = [store_root / _WS / name for name in ("text_chunks", "chunk_entity_relation")]
+    for directory in locked:
+        directory.mkdir(parents=True)
+        directory.chmod(0)
+    try:
+        report = await _engine(store_root, monkeypatch).health()
+    finally:
+        for directory in locked:
+            directory.chmod(0o700)
+
+    assert report.stores["kv:text_chunks"] == "corrupted"
+    assert report.stores["graph:chunk_entity_relation"] == "corrupted"
 
 
 async def test_populated_stores_report_ok_and_the_probe_leaves_no_sidecar_or_relation(store_root, monkeypatch):

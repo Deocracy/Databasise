@@ -41,8 +41,11 @@ def _is_store_error(exc: Exception) -> bool:
 def probe_kv(dir_path: Path) -> ProbeState:
     # resolve(): as_uri() raises ValueError for a relative path (iteration-2 WR-02)
     db_path = (Path(dir_path) / "kv.sqlite3").resolve()
-    if not db_path.is_file():
-        return "absent"
+    try:
+        if not db_path.is_file():
+            return "absent"
+    except OSError:  # an unreadable namespace directory (mode 000): is_file() lets EACCES through
+        return "corrupted"
     try:
         if db_path.stat().st_size == 0:
             return "absent"  # a valid empty database: SqliteKVStore creates its table on first open
@@ -85,8 +88,11 @@ def _rocksdb_marker_present(db_path: Path) -> bool:
 
 def probe_graph(dir_path: Path) -> ProbeState:
     db_path = Path(dir_path) / "graph.cozo"
-    if not db_path.exists():
-        return "absent"
+    try:
+        if not db_path.exists():
+            return "absent"
+    except OSError:  # an unreadable namespace directory (mode 000)
+        return "corrupted"
     key = str(db_path.resolve())
     # Phase 10 review WR-07: never open a client on a directory that is not a RocksDB database (an
     # empty one, or one a first open died in): RocksDB would create its files there and the probe
