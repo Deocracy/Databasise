@@ -79,6 +79,27 @@ def tokens_from_usage(usage: Any) -> TokenAccounting:
     )
 
 
+async def to_thread_until_done(func: Any, /, *args: Any, **kwargs: Any) -> Any:
+    """``asyncio.to_thread`` that a cancellation cannot unwind past (11 REVIEW A-CR-01). A thread
+    cannot be stopped, so on cancel this waits for the worker to return, then re-raises the
+    ``CancelledError``. The engine's write gate is therefore released only after the v1 subprocess
+    (or the sync's read of v1's files) has stopped touching the working dir."""
+    future = asyncio.ensure_future(asyncio.to_thread(func, *args, **kwargs))
+    cancelled: asyncio.CancelledError | None = None
+    while not future.done():
+        try:
+            await asyncio.shield(future)
+        except asyncio.CancelledError as exc:
+            cancelled = cancelled or exc
+        except Exception:  # noqa: BLE001 - the worker's outcome is read from the future below
+            break
+    if cancelled is not None:
+        if not future.cancelled():
+            future.exception()  # retrieved, so asyncio never logs it as unhandled
+        raise cancelled
+    return future.result()
+
+
 def _compute_environment_hash() -> str:
     """§8 condition 2's whole-resolved-runtime-closure rule: a digest over v1's own closure
     inputs — the resolved interpreter path, the text of ``v1/uv.lock``, and the text of
@@ -231,8 +252,9 @@ LIGHTRAG_FULL_INGEST_ADMISSION = AdmissionRecord(
 async def full_ingest_body(ctx: NodeContext) -> dict[str, Any]:
     """Reads ``documents``/``track_id`` (and, for a staged upload, ``file_paths``/``docs_format``/
     ``input_dir``; for a retry, ``retry_doc_ids``) from ``ctx.config``, launches the v1 corpus
-    driver via ``run_corpus_op`` (blocking — wrapped in ``asyncio.to_thread``) and returns the job
-    handle plus this node's own metered token spend (:func:`tokens_from_usage`).
+    driver via ``run_corpus_op`` (blocking — run by :func:`to_thread_until_done`, so a cancel
+    waits for the subprocess) and returns the job handle plus this node's own metered token spend
+    (:func:`tokens_from_usage`).
     """
     config = ctx.config or {}
     payload: dict[str, Any] = {
@@ -243,7 +265,7 @@ async def full_ingest_body(ctx: NodeContext) -> dict[str, Any]:
         if config.get(key) is not None:
             payload[key] = config[key]
 
-    result = await asyncio.to_thread(
+    result = await to_thread_until_done(
         run_corpus_op,
         "ingest",
         payload,
@@ -264,5 +286,6 @@ __all__ = [
     "INGEST_WALL_CLOCK_CEILING_SECONDS",
     "LIGHTRAG_FULL_INGEST_ADMISSION",
     "full_ingest_body",
+    "to_thread_until_done",
     "tokens_from_usage",
 ]

@@ -16,7 +16,6 @@ ingest record's tuple, per §19.6's "two ports, two records" reading.
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 from pathlib import Path
 from typing import Any
@@ -30,7 +29,10 @@ from databasise.parts.admission import (
     ConditionVerdict,
 )
 from databasise.parts.schema import NodeContext
-from databasise.parts_core.lightrag.full_ingest import tokens_from_usage
+from databasise.parts_core.lightrag.full_ingest import (
+    to_thread_until_done,
+    tokens_from_usage,
+)
 
 # v1's own deletion path performs graph and vector surgery plus a bounded rebuild over surviving
 # sources for a partially-affected entity/relation — the machine declares this ceiling, v1 never
@@ -196,8 +198,8 @@ LIGHTRAG_FULL_DELETE_ADMISSION = AdmissionRecord(
 
 async def full_delete_body(ctx: NodeContext) -> dict[str, Any]:
     """Reads ``doc_id``/``delete_llm_cache`` from ``ctx.config``, launches the v1 corpus driver's
-    ``delete`` branch via ``run_corpus_op`` (blocking — wrapped in ``asyncio.to_thread`` per that
-    function's own docstring note), and returns the driver's payload with the spend metered from
+    ``delete`` branch via ``run_corpus_op`` (blocking — run by ``to_thread_until_done``, so a
+    cancel waits for the subprocess, A-CR-01), and returns the driver's payload with the spend metered from
     its ``usage`` (``tokens_from_usage``, the same rule as ingest; condition 3's verdict above).
 
     11-01-PLAN.md (LRAG-02): this body reports no store touches. v1's subprocess changes v1's own
@@ -211,7 +213,7 @@ async def full_delete_body(ctx: NodeContext) -> dict[str, Any]:
         "delete_llm_cache": bool(config.get("delete_llm_cache", False)),
     }
 
-    result = await asyncio.to_thread(
+    result = await to_thread_until_done(
         run_corpus_op,
         "delete",
         payload,

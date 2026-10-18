@@ -71,7 +71,9 @@ class _FakeV1:
 
     def delete(self, _op, payload, **_kwargs):
         start = time.monotonic()
+        self.events.append("driver-start")
         time.sleep(self.delay)
+        self.events.append("driver-end")
         self.intervals.append((start, time.monotonic()))
         return {"status": "success", "doc_id": payload.get("doc_id"), "message": ""}
 
@@ -218,6 +220,44 @@ async def test_a_hipporag_ingest_beside_a_lightrag_ingest_is_not_gated(store_roo
     )
 
     assert all(isinstance(r, IngestJob) for r in results), results
+
+
+@pytest.mark.parametrize(
+    ("operation", "phase", "end"),
+    [("ingest", "driver-start", "driver-end"), ("ingest", "sync-start", "sync-end"), ("delete", "driver-start", "driver-end")],
+)
+async def test_a_cancelled_write_holds_the_gate_until_the_v1_thread_returns(
+    store_root, fake_v1, monkeypatch, operation, phase, end
+):
+    """11 REVIEW A-CR-01: a thread cannot be cancelled, so a cancelled write must keep the gate
+    until v1 (or the sync's read of v1's files) has returned, and a second write meanwhile is 409."""
+    events = fake_v1.events
+    real_read = v1_index_sync.read_v1_snapshot
+
+    def _slow_read(working_dir, **kwargs):
+        events.append("sync-start")
+        time.sleep(1.0)
+        events.append("sync-end")
+        return real_read(working_dir, **kwargs)
+
+    monkeypatch.setattr(v1_index_sync, "read_v1_snapshot", _slow_read)
+    engine = Databasise(store_root=store_root, workspace="ws")
+    first = asyncio.create_task(engine.ingest(_doc("a")) if operation == "ingest" else engine.delete_document("a"))
+    await _until(lambda: phase in events)
+
+    first.cancel()
+    await asyncio.sleep(0.2)
+    assert end not in events, "the fake v1 thread returned before the check; raise its delay"
+    assert not first.done() and engine._write_gate_held()
+    with pytest.raises(StoreBusyError) as refused:
+        await engine.ingest(_doc("b"))
+    assert refused.value.store_kind == "corpus"
+
+    with pytest.raises(asyncio.CancelledError):
+        await first
+    assert end in events
+    assert not engine._write_gate_held()
+    assert len(fake_v1.intervals) == 1  # the refused write never reached v1
 
 
 async def test_a_failed_write_releases_the_gate(store_root, fake_v1):

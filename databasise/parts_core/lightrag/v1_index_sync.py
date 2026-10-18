@@ -40,6 +40,7 @@ from databasise.parts.admission import (
     AdmissionRecord,
     ConditionVerdict,
 )
+from databasise.parts_core.lightrag.full_ingest import to_thread_until_done
 from databasise.runner.trace import TokenAccounting
 
 # A local read of v1's index files plus in-memory staging; no model call.
@@ -70,7 +71,8 @@ async def v1_index_sync_body(ctx: Any) -> dict[str, Any]:
     working_dir = Path((ctx.config or {})["working_dir"])
 
     async def _sync() -> dict[str, Any]:
-        snapshot = await asyncio.to_thread(read_v1_snapshot, working_dir)
+        # A-CR-01: a timeout or cancel waits for the read, which holds v1's RocksDB open.
+        snapshot = await to_thread_until_done(read_v1_snapshot, working_dir)
         if snapshot is None:
             return {"synced": False, "counts": {}, "tokens": TokenAccounting(counted_by="none")}
         kv, vector, graph = ctx.stores["kv"], ctx.stores["vector"], ctx.stores["graph"]

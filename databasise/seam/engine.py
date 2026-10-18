@@ -165,6 +165,7 @@ one engine process per store root, so an in-process ``threading.Lock`` per resol
 manifest read and staging, the commit or drop, and the inbox cleanup, so two writes can never read
 the same prune manifest. A second write is refused with ``StoreBusyError(store_kind="corpus")``
 (409), not queued. Reads take no gate, and HippoRAG writes, which have no v1 dir, are not gated.
+A cancelled write keeps the gate until the v1 worker thread returns (11 REVIEW A-CR-01).
 """
 
 from __future__ import annotations
@@ -660,7 +661,10 @@ def _gate_for(working_dir: Path) -> threading.Lock:
 def _write_gate(working_dir: Path) -> Iterator[None]:
     """Hold ``working_dir``'s write gate, or refuse at once with ``StoreBusyError(store_kind=
     "corpus")`` (409) when another write holds it. Never waits. Released in ``finally``, so a failed
-    or cancelled write never leaves it held. The path is never named in the refusal."""
+    or cancelled write never leaves it held. A cancelled write reaches that ``finally`` only after
+    the v1 worker thread has returned: the corpus parts run v1 and the sync's read through
+    ``to_thread_until_done``, which waits for the thread before re-raising the cancel (A-CR-01).
+    The path is never named in the refusal."""
     gate = _gate_for(working_dir)
     if not gate.acquire(blocking=False):
         raise StoreBusyError(store_kind="corpus")
