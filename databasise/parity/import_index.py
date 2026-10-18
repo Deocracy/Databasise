@@ -55,7 +55,7 @@ import numpy as np
 from databasise.namespaces import derive_namespace
 from databasise.parity.corpus import load_snapshot
 from databasise.store_lock import StoreLockedError, store_lock
-from databasise.stores.graph import CozoGraphStore
+from databasise.stores.graph import CozoGraphStore, _ClientRegistry
 from databasise.stores.kv import SqliteKVStore
 from databasise.stores.vector import FaissVectorStore
 
@@ -206,8 +206,11 @@ async def _import_text_chunks(v1_working_dir: Path, store_root: Path, workspace:
     if not data:
         return
     store = SqliteKVStore(namespace=_TEXT_CHUNKS_KIND, workspace=workspace, store_root=store_root)
-    await store.upsert(data)
-    await store.index_done_callback()
+    try:
+        await store.upsert(data)
+        await store.index_done_callback()
+    finally:
+        await store.finalize()
 
 
 async def _import_graph(v1_working_dir: Path, store_root: Path, workspace: str) -> None:
@@ -226,12 +229,14 @@ async def _import_graph(v1_working_dir: Path, store_root: Path, workspace: str) 
         return
 
     store = CozoGraphStore(namespace=_GRAPH_KIND, workspace=workspace, store_root=store_root)
-    for node_id, attrs_raw in node_rows:
-        await store.upsert_node(node_id, _attrs_to_dict(attrs_raw))
-    for src, tgt, attrs_raw in edge_rows:
-        await store.upsert_edge(src, tgt, _attrs_to_dict(attrs_raw))
-    await store.index_done_callback()
-    await store.finalize()
+    try:
+        for node_id, attrs_raw in node_rows:
+            await store.upsert_node(node_id, _attrs_to_dict(attrs_raw))
+        for src, tgt, attrs_raw in edge_rows:
+            await store.upsert_edge(src, tgt, _attrs_to_dict(attrs_raw))
+        await store.index_done_callback()
+    finally:
+        await store.finalize()
 
 
 async def import_v1_index(
@@ -389,12 +394,14 @@ def _v2_graph(store_root: Path, workspace: str) -> tuple[set[str], set[tuple[str
     db_path = Path(store_root) / workspace / _GRAPH_KIND / "graph.cozo"
     if not db_path.exists():
         return None
-    client = CozoClient("rocksdb", str(db_path))
+    # Phase 10 review WR-09: through the registry's shared client, never a raw Client, so a store
+    # open elsewhere in this process does not make RocksDB refuse the path as locked.
+    key, shared = _ClientRegistry.acquire(db_path)
     try:
-        node_rows = _cozo_rows(client.run("?[id] := *nodes{id}", {}))
-        edge_rows = _cozo_rows(client.run("?[src, tgt] := *edges{src, tgt}", {}))
+        node_rows = _cozo_rows(shared.client.run("?[id] := *nodes{id}", {}))
+        edge_rows = _cozo_rows(shared.client.run("?[src, tgt] := *edges{src, tgt}", {}))
     finally:
-        client.close()
+        _ClientRegistry.release(key)
     node_ids = {r[0] for r in node_rows}
     edges = {_canonical_edge_key(r[0], r[1]) for r in edge_rows}
     return node_ids, edges
@@ -431,25 +438,28 @@ async def verify_import(
     # (a) chunk text byte-identical, v1 KV vs v2 KV, per chunk id.
     v1_chunks = _v1_text_chunks(v1_working_dir)
     v2_store = SqliteKVStore(namespace=_TEXT_CHUNKS_KIND, workspace=workspace, store_root=store_root)
-    for chunk_id, v1_record in sorted(v1_chunks.items()):
-        v2_record = await v2_store.get_by_id(chunk_id)
-        if v2_record is None:
-            violations.append(
-                Violation(
-                    assertion="chunk-text",
-                    detail=f"chunk id {chunk_id!r} present in v1's KV but missing from v2's KV",
-                    offending_id=chunk_id,
+    try:
+        for chunk_id, v1_record in sorted(v1_chunks.items()):
+            v2_record = await v2_store.get_by_id(chunk_id)
+            if v2_record is None:
+                violations.append(
+                    Violation(
+                        assertion="chunk-text",
+                        detail=f"chunk id {chunk_id!r} present in v1's KV but missing from v2's KV",
+                        offending_id=chunk_id,
+                    )
                 )
-            )
-            continue
-        if v2_record.get("content") != v1_record.get("content"):
-            violations.append(
-                Violation(
-                    assertion="chunk-text",
-                    detail=f"chunk id {chunk_id!r} content differs between v1's KV and v2's KV",
-                    offending_id=chunk_id,
+                continue
+            if v2_record.get("content") != v1_record.get("content"):
+                violations.append(
+                    Violation(
+                        assertion="chunk-text",
+                        detail=f"chunk id {chunk_id!r} content differs between v1's KV and v2's KV",
+                        offending_id=chunk_id,
+                    )
                 )
-            )
+    finally:
+        await v2_store.finalize()
 
     # (b) vector sets equal within tolerance, per vector kind, naming the offending id.
     for kind in _VECTOR_KINDS:

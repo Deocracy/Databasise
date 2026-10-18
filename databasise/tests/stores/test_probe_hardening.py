@@ -24,7 +24,7 @@ def test_an_empty_graph_directory_is_corrupted_and_nothing_is_created(tmp_path):
     assert probe_graph(tmp_path) == "corrupted"
 
     assert _tree(tmp_path) == before
-    assert not _ClientRegistry._entries
+    assert [key for key in _ClientRegistry._entries if key.startswith(str(tmp_path))] == []
 
 
 def test_a_data_directory_without_current_is_corrupted_and_nothing_is_created(tmp_path):

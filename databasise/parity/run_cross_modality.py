@@ -57,7 +57,7 @@ from databasise.parity.run_arm import (
 )
 from databasise.parts.registry import default_registry
 from databasise.seam import Databasise, QueryObject
-from databasise.seam.engine import _build_stores
+from databasise.seam.engine import _GRAPH_KIND, _TEXT_CHUNKS_KIND
 from databasise.seam.envelope import ResponseEnvelope
 from databasise.seam.selectors import Selector
 from databasise.store_lock import StoreLockedError, store_lock
@@ -193,12 +193,13 @@ def _resolved_store_dirs(
     each of its own vector namespaces — computed the same way ``test_store_isolation.py`` already
     proves disjoint for the synthetic case, extended here to the real declared namespace lists.
     """
-    stores = _build_stores(store_root, workspace, resolved)
-    dirs = {stores["graph"]._dir, stores["kv"]._dir}
-    for namespace in vector_namespaces:
-        dirs.add(
-            FaissVectorStore(namespace=namespace, workspace=workspace, store_root=store_root)._dir
-        )
+    # Phase 10 review WR-09: computed from the declared namespaces, never by opening stores, so no
+    # graph client or kv connection is left held by a path-only question. The defaults are the same
+    # ones ``seam.engine._build_stores`` falls back to.
+    namespaces = resolved.get("store_namespaces") or {}
+    root = Path(store_root) / workspace
+    dirs = {root / namespaces.get("graph", _GRAPH_KIND), root / namespaces.get("kv", _TEXT_CHUNKS_KIND)}
+    dirs.update(root / namespace for namespace in vector_namespaces)
     return dirs
 
 

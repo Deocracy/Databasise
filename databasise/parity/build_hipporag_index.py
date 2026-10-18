@@ -217,10 +217,11 @@ async def build_index(
     resolved = _inject_token_allowance(resolved, token_allowance)
     parsed = parse_wiring(resolved, registry)
 
-    stores = _build_stores(resolved_store_root, resolved_workspace, resolved)
-
-    start = time.monotonic()
+    stores: dict[str, Any] = {}
     try:
+        # Phase 10 review WR-09 (D-04): built inside the try, so a failed open finalizes what opened.
+        stores = _build_stores(resolved_store_root, resolved_workspace, resolved, into=stores)
+        start = time.monotonic()
         scheduled = await _scheduler.run_wiring(
             parsed,
             registry,

@@ -182,8 +182,6 @@ async def run_audit(
 
     resolved_workspace = workspace if workspace is not None else _run_arm._parity_workspace()
     resolved_store_root = store_root if store_root is not None else DEFAULT_STORE_ROOT
-    stores = _run_arm._build_stores(resolved_store_root, resolved_workspace)
-
     resolved_clients = clients
     if resolved_clients is None:
         env = _run_arm._load_env_file(env_path or _run_arm.DEFAULT_V1_ENV_PARITY)
@@ -194,7 +192,11 @@ async def run_audit(
     def recorder(node_id: str, kind: str, key: str) -> None:
         touches.append((node_id, kind, key))
 
+    stores: dict[str, Any] = {}
     try:
+        # Phase 10 review WR-09 (D-04): clients resolve first and stores build inside the try, so
+        # neither a clients failure nor a failed open leaves an opened store unfinalized.
+        stores = _run_arm._build_stores(resolved_store_root, resolved_workspace, into=stores)
         scheduled = await _scheduler.run_wiring(
             parsed,
             registry,

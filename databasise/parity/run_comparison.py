@@ -353,8 +353,10 @@ async def _run_decomposed_arm(
     resolved = _inject_pinned_keywords(resolved, pinned_hl_keywords, pinned_ll_keywords)
     parsed = parse_wiring(resolved, registry)
 
-    stores = _build_stores(store_root, workspace)
+    stores: dict[str, Any] = {}
     try:
+        # Phase 10 review WR-09 (D-04): built inside the try, so a failed open finalizes what opened.
+        stores = _build_stores(store_root, workspace, into=stores)
         scheduled = await _scheduler.run_wiring(
             parsed,
             registry,
