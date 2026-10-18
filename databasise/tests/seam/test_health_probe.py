@@ -6,6 +6,8 @@ and part modules (research Pitfall 19).
 
 from __future__ import annotations
 
+import importlib
+import json
 from pathlib import Path
 
 import numpy as np
@@ -136,3 +138,45 @@ async def test_a_graph_held_in_this_process_reports_ok(store_root, monkeypatch):
         await held.finalize()
 
     assert report.stores["graph:chunk_entity_relation"] == "ok"
+
+
+_VECTOR_PART_MODULES = (
+    "databasise.parts_core.lightrag.chunk_vector",
+    "databasise.parts_core.lightrag.entity_lookup",
+    "databasise.parts_core.lightrag.relation_lookup",
+    "databasise.parts_core.hipporag.chunk_embed",
+    "databasise.parts_core.hipporag.entity_fact_embed",
+    "databasise.parts_core.hipporag.fact_score",
+)
+
+
+def test_the_kv_and_graph_probes_match_the_shipped_wirings_store_namespaces():
+    shipped = set()
+    for family in ("lightrag", "hipporag"):
+        namespaces = json.loads((_PACKAGE / "wirings" / family / "base.json").read_text())["store_namespaces"]
+        shipped |= {(kind, namespaces[kind]) for kind in ("kv", "graph")}
+
+    assert {(k, ns) for k, ns in engine_module._HEALTH_PROBES if k in ("kv", "graph")} == shipped
+
+
+def test_the_vector_probes_match_the_part_modules_namespace_constants():
+    shipped = {
+        value
+        for name in _VECTOR_PART_MODULES
+        for attr, value in vars(importlib.import_module(name)).items()
+        if attr.endswith("_NAMESPACE") and isinstance(value, str)
+    }
+
+    assert {ns for k, ns in engine_module._HEALTH_PROBES if k == "vector"} == shipped
+
+
+def test_rest_health_serves_the_state_map(store_root, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from databasise.seam.rest import create_app
+
+    monkeypatch.setattr(engine_module, "run_corpus_op", _make_fake_run_corpus_op())
+    body = TestClient(create_app(store_root=store_root, workspace=_WS)).get("/health").json()
+
+    assert set(body["stores"]) == _KEYS
+    assert set(body["stores"].values()) <= _STATES
