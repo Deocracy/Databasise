@@ -210,14 +210,14 @@
   - Test: Test with a driver stub that leaves a document in PROCESSING then times out (CorpusOpTimeoutError); assert GET /corpus reports it as stuck/interrupted, a subsequent ingest of a different document does not reprocess it (its job rows contain only the new document), and the retry action moves it back to processing. Fails today: no stuck status, no retry route, recovery runs as a side effect of the next ingest.
   - Defects: foreign/FOR-06
   - Owner decision first: G-33: stuck-state semantics and retry surface (new route vs reuse ingest), and whether the next ingest should keep v1's auto-recovery side effect.
-- [ ] **LRAG-08**: POST /documents/upload (and POST /documents with raw) on the LightRAG path indexes the uploaded file's content: the stored chunks contain text from the uploaded bytes, the file extension is taken from a validated suffix of file_name, and a second upload with different content under a new document_id is processed normally instead of being rejected as a content-hash duplicate (dup-<md5> FAILED row). An upload of an unsupported type returns a named refusal, not 200.
+- [x] **LRAG-08**: POST /documents/upload (and POST /documents with raw) on the LightRAG path indexes the uploaded file's content: the stored chunks contain text from the uploaded bytes, the file extension is taken from a validated suffix of file_name, and a second upload with different content under a new document_id is processed normally instead of being rejected as a content-hash duplicate (dup-<md5> FAILED row). An upload of an unsupported type returns a named refusal, not 200.
   - Test: Test through the real driver and v1 enqueue/pipeline code (not the driver stub), with stub LLM and embedding functions: upload two different .txt files under two ids; assert each document reaches processed status with chunk text containing a token from its own bytes, and /jobs shows no dup- row. Upload a .xyz file and assert a named refusal. Fails today: v1 enqueues the empty text as RAW because the driver passes ids=, and the second upload becomes a dup- FAILED row.
   - Defects: seam-engine/ENG-01, doc-audit-3/D1, doc-audit-3/D2
   - Owner decision first: Accepted upload types and suffix validation from file_name; whether POST /documents with text "" is rejected at validation (same empty-hash collision).
-- [ ] **LRAG-09**: Raw upload inbox files are scoped per workspace (<store_root>/<workspace>/corpus-inbox or equivalent) and removed once v1 has read them or the ingest has been refused, and DELETE /documents/{id} removes any remaining inbox file for that id; no corpus-inbox file outlives its job.
+- [x] **LRAG-09**: Raw upload inbox files are scoped per workspace (<store_root>/<workspace>/corpus-inbox or equivalent) and removed once v1 has read them or the ingest has been refused, and DELETE /documents/{id} removes any remaining inbox file for that id; no corpus-inbox file outlives its job.
   - Test: Test uploads a document in workspace A and the same document_id in workspace B, asserts two distinct inbox paths, then after job completion, after a refused ingest, and after DELETE asserts the inbox directory contains no file for that id. Fails today: files are written to store_root/corpus-inbox/<id>.bin and never unlinked.
   - Defects: seam-engine/ENG-18, doc-audit-3/D10
-- [ ] **LRAG-10**: IngestJob.enqueued reports the number of documents v1 actually enqueued: when v1 drops the document (existing document_id, same basename, same content hash) the response reports enqueued 0 (or a named duplicate refusal) instead of 200 enqueued 1, and IngestJob.job_id is the track_id v1 recorded for the run.
+- [x] **LRAG-10**: IngestJob.enqueued reports the number of documents v1 actually enqueued: when v1 drops the document (existing document_id, same basename, same content hash) the response reports enqueued 0 (or a named duplicate refusal) instead of 200 enqueued 1, and IngestJob.job_id is the track_id v1 recorded for the run.
   - Test: Real-v1 or pipeline-faithful stub test: ingest document X, then ingest X again; assert the second response is enqueued 0 or the named duplicate refusal, not enqueued 1. Fails today: driver line 198 returns enqueued=len(documents).
   - Defects: doc-audit-3/D3
   - Owner decision first: Re-ingest semantics for an existing document_id: refuse, report enqueued 0, or replace (delete then ingest).
@@ -870,9 +870,9 @@ These fail today.
 | LRAG-05 | Phase 11 | Pending |
 | LRAG-06 | Phase 11 | Pending |
 | LRAG-07 | Phase 11 | Pending |
-| LRAG-08 | Phase 11 | Pending |
-| LRAG-09 | Phase 11 | Pending |
-| LRAG-10 | Phase 11 | Pending |
+| LRAG-08 | Phase 11 | Complete |
+| LRAG-09 | Phase 11 | Complete |
+| LRAG-10 | Phase 11 | Complete |
 | LRAG-11 | Phase 11 | Complete |
 | LRAG-12 | Phase 11 | Complete |
 | LRAG-13 | Phase 11 | Pending |

@@ -25,3 +25,15 @@ Out-of-scope findings logged during execution. Not fixed by the plan that found 
 - Historical narration still names `@0.1.0` corpus ports: the `seam/engine.py` module docstring
   (Phase 5 paragraphs), `wirings/lightrag/README.md` and `evidence/DR-04-DECISION.md`. Left as
   history; no test reads them.
+
+## From 11-05
+
+- One caller id, two suffixes. v1 names a file-ingested row `doc-<md5(basename)>`, so re-uploading
+  id `x` as `x.pdf` after `x.txt` was processed gives v1 a new basename: it enqueues a second row,
+  and both rows map back to `x` by the stem rule. The engine's exclusive-create guard only covers a
+  file still in the inbox. Fixing it needs the driver to look the id up by stem before the
+  enqueue, and D-06 closed driver changes after 11-03. LRAG-10's tested cases (same id and same
+  name, same bytes under a new id, text re-ingest) all report `enqueued 0`.
+- A legacy flat `<store_root>/corpus-inbox/` left by Phase 9 or 10 is no longer read or cleaned
+  by the engine. `_probes.inbox_files` still lists it, so the protected "writes nothing" checks
+  keep their meaning. TOOL-02 (Phase 15) migration can remove it.
