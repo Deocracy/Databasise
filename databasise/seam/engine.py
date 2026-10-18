@@ -1329,6 +1329,16 @@ class Databasise:
             # occurrence is out of this plan's scope, not silently swallowed.
             raise RuntimeError("the seam does not yet support a cyclic resolved wiring")
 
+        # Phase 10 review CR-01 (D-13 on the query path): a store error inside a node is a named
+        # fault, never a 200 envelope. Every other node exception keeps the degraded envelope, whose
+        # stop_reason carries the exception class name only (runner/scheduler.py).
+        for node_exception in scheduled.get("node_exceptions", {}).values():
+            if _is_store_fault(node_exception):
+                corrupted = isinstance(node_exception, VectorStoreCorruptedError)
+                raise _foreign_fault(
+                    "query", node_exception, failure_class="StoreCorrupted" if corrupted else "StoreFault"
+                ) from node_exception
+
         wiring_bytes = canonicalise(resolved)
         wiring_instance_hash = f"sha256:{hashlib.sha256(wiring_bytes).hexdigest()}"
         wiring_id = resolved.get("wiring_id") or (

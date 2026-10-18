@@ -619,7 +619,15 @@ async def run_wiring(
                     )
                 )
                 partial = True
-                stop_reason = stop_reason or f"node {node_id!r}: {cause}"
+                # Phase 10 review CR-01: stop_reason reaches consumers (envelope, non-debug trace), so
+                # it names the exception class only, never its message (paths, checksums). The full
+                # text stays in the debug-only node trace above.
+                reason = (
+                    cause
+                    if placement is not None
+                    else f"NodeExecutionError: {type(exc.cause).__name__}"
+                )
+                stop_reason = stop_reason or f"node {node_id!r}: {reason}"
                 # WR-03: deliberately skips ts.done(node_id) — a failed node never calls it. Safe
                 # only because node_failures being non-empty forces the unconditional `break`
                 # below, so the sorter's now-inconsistent state (this node still "pending" from
