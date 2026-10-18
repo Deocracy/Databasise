@@ -97,6 +97,12 @@ async def test_a_successful_hipporag_ingest_still_commits(store_root):
         assert list(chunks.iter_vectors())
     finally:
         await chunks.finalize()
+    # Phase 10 review WR-10: the graph committed too, not only kv and the chunks vector.
+    graph = CozoGraphStore(namespace="hipporag-graph", workspace=_WORKSPACE, store_root=store_root)
+    try:
+        assert await graph.get_all_labels()
+    finally:
+        await graph.finalize()
 
 
 # --------------------------------------------------------------------------------------------- #
