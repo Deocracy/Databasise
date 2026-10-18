@@ -3,7 +3,11 @@
 
 **Exact invocation:**
 
-    uv run python -m databasise.eval.aa_run --split dev [--family gold_passage] [--spend]
+    uv run python -m databasise.eval.aa_run --split dev [--family gold_passage] [--arm lightrag|hipporag] [--spend]
+
+``--arm`` names the arm every query uses, mapped through ``corpus_ingest._ARM_SELECTORS``, the
+same selectors ``corpus_ingest --arm`` ingests with; without it the engine's default selector
+answers (11-02-PLAN.md, D-03 as corrected by 11-RESEARCH.md Q6).
 
 **Nothing here makes a live call by default.** Without ``--spend``, :func:`main` prints
 :func:`estimate_calls`' real, computed call-count projection and returns, having constructed no
@@ -71,7 +75,12 @@ from databasise.eval.calibration import (
     calibrate_aa_floor,
     paired_differences,
 )
-from databasise.eval.corpus_ingest import _EVAL_INGEST_STORE_ROOT, _EVAL_INGEST_WORKSPACE
+from databasise.eval.corpus_ingest import (
+    _ARM_CHOICES,
+    _ARM_SELECTORS,
+    _EVAL_INGEST_STORE_ROOT,
+    _EVAL_INGEST_WORKSPACE,
+)
 from databasise.eval.remint import _COMMITTED_BUNDLE_ROOT
 from databasise.eval.remint import _JUDGE_PROMPT_PATH as JUDGE_PROMPT_PATH
 from databasise.parity.run_arm import (
@@ -83,6 +92,7 @@ from databasise.seam import Databasise
 from databasise.seam.evidence import resolve_evidence_ref
 from databasise.seam.query import QueryObject
 from databasise.seam.refusals import SeamRefusalError
+from databasise.seam.selectors import Selector
 from databasise.seam.trace_store import TraceStore
 from databasise.stores.vector import MultiNamespaceVectorStore
 
@@ -331,6 +341,7 @@ async def run_one_pass(
     family_name: str,
     llm_client: Any = None,
     vector_store: Any = None,
+    selector: Selector | None = None,
 ) -> PassResult:
     """Run ``engine`` once over ``question_ids`` (in sorted order), scoring each returned envelope
     with whichever of the two per-question scorers matches ``family_name``. Refuses (``ValueError``,
@@ -343,6 +354,9 @@ async def run_one_pass(
     each envelope, resolves its ``trace_token`` through a fresh :class:`TraceStore` opened on
     ``engine``'s own ``store_root`` and accumulates that run record's ``nodes`` into
     ``PassResult.node_traces`` — the §AA.2 precondition input.
+
+    ``selector`` (11-02-PLAN.md, D-03/Q6) goes to every ``engine.query`` call; ``None`` keeps the
+    engine's default selector.
     """
     _check_family_covers_questions(bundle, family_name, question_ids)
 
@@ -362,7 +376,7 @@ async def run_one_pass(
                 f"{bundle.version!r}'s own questions"
             )
 
-        envelope = await engine.query(QueryObject(text=question.text))
+        envelope = await engine.query(QueryObject(text=question.text), selector)
 
         if envelope.partial or envelope.degraded:
             raise ConfoundedPassError(question_id, partial=envelope.partial, degraded=envelope.degraded)
@@ -404,6 +418,7 @@ async def calibrate_family(
     vector_store: Any = None,
     n_resamples: int | None = None,
     seed: int | None = None,
+    selector: Selector | None = None,
 ) -> CalibrationResult:
     """Run ``family_name`` twice over ``split_name``'s question ids, feed the two score mappings
     to ``paired_differences``, and hand the diffs plus both passes' node traces to
@@ -423,6 +438,7 @@ async def calibrate_family(
         family_name=family_name,
         llm_client=llm_client,
         vector_store=vector_store,
+        selector=selector,
     )
     run_b = await run_one_pass(
         engine=engine,
@@ -431,6 +447,7 @@ async def calibrate_family(
         family_name=family_name,
         llm_client=llm_client,
         vector_store=vector_store,
+        selector=selector,
     )
 
     metric = _METRIC_BY_FAMILY[family_name]
@@ -525,9 +542,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--n-resamples", type=int, default=None)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--spend", action="store_true", default=False)
+    # D-03/Q6: no --arm keeps the default selector; an arm maps exactly as corpus_ingest's does.
+    parser.add_argument("--arm", choices=list(_ARM_CHOICES), default=None)
     args = parser.parse_args(argv)
 
     families = tuple(args.family) if args.family else _DEFAULT_FAMILIES
+    selector = _ARM_SELECTORS[args.arm] if args.arm else None
 
     try:
         bundle_version = args.bundle_version or _default_bundle_version(_COMMITTED_BUNDLE_ROOT)
@@ -537,7 +557,7 @@ def main(argv: list[str] | None = None) -> int:
         print(str(exc), file=sys.stderr)
         return 1
 
-    print(json.dumps(projection, indent=2))
+    print(json.dumps({**projection, "arm": args.arm}, indent=2))
 
     if not args.spend:
         print("mode: estimate-only")
@@ -572,6 +592,7 @@ def main(argv: list[str] | None = None) -> int:
                     vector_store=vector_store,
                     n_resamples=args.n_resamples,
                     seed=args.seed,
+                    selector=selector,
                 )
             )
     except (
