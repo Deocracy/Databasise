@@ -237,11 +237,11 @@ Plans (nine waves; `seam/engine.py` is touched by nine plans, so those run one p
 
 - [ ] 11-01-PLAN.md — Tracer: per-workspace v1 working dir and the v1-index-sync mirror; ingest and delete reach the query stores; ingest seam events (LRAG-01, LRAG-02, LRAG-03; wave 1)
 - [ ] 11-02-PLAN.md — Two store roots never share a v1 dir; eval ingest stays in the eval store; aa_run --arm (LRAG-01, LRAG-15; wave 2)
-- [ ] 11-03-PLAN.md — The one @0.2.0 opaque-boundary bump: driver file ingest, targets filter, usage, config check, facade-free health, entity ops removed; owner grant checkpoint for the phase (LRAG-03, 06, 07, 08, 10, 11, 12, 20; wave 2)
+- [ ] 11-03-PLAN.md — The one @0.2.0 opaque-boundary bump holding every driver change of the phase: file ingest, targets filter, usage, config check (exit 3), facade-free status and health, page refusal and exit 4, entity ops removed; owner grant checkpoint for the phase (LRAG-03, 05, 06, 07, 08, 10, 11, 12, 20; wave 2)
 - [ ] 11-04-PLAN.md — v1 retrieval ordering and selection for the KG arms (LRAG-18; wave 1)
 - [ ] 11-05-PLAN.md — Uploads index their real content; suffix allowlist; per-workspace inbox emptied after each job; honest enqueued (LRAG-08, LRAG-09, LRAG-10; wave 3)
 - [ ] 11-06-PLAN.md — Per-working-dir write gate (409) and job-family dispatch for GET /jobs (LRAG-04, LRAG-01; wave 4)
-- [ ] 11-07-PLAN.md — v1 not configured names its keys (503); stderr tail, named malformed output, facade-free status op (LRAG-06, LRAG-05; wave 5)
+- [ ] 11-07-PLAN.md — v1 not configured names its keys (503); stderr tail, named malformed output, torn status read is a 409; adapter and engine only (LRAG-06, LRAG-05; wave 5)
 - [ ] 11-08-PLAN.md — Interrupted documents and the retry route and MCP tool (LRAG-07; wave 6)
 - [ ] 11-09-PLAN.md — Health writes nothing, needs model clients for ok, carries engine_reason (LRAG-13, LRAG-14, LRAG-06; wave 7)
 - [ ] 11-10-PLAN.md — EmptyNamespaceError before any model call; recipe-only embedder-index skipped in query runs (LRAG-16, LRAG-19; wave 8)
