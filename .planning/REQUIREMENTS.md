@@ -182,7 +182,7 @@
 
 ### LightRAG corpus path and parts (F4)
 
-- [ ] **LRAG-01**: Every LightRAG corpus operation (ingest, delete, and the status ops behind GET /corpus, /corpus/counts, /jobs/{job_id} and the /health engine probe) passes run_corpus_op a v1 working_dir derived from the app's store_root and workspace, never the repo-global DEFAULT_V1_WORKING_DIR (v1/.corpus_working_dir). Two apps built with different store_root values do not see each other's documents on GET /corpus.
+- [x] **LRAG-01**: Every LightRAG corpus operation (ingest, delete, and the status ops behind GET /corpus, /corpus/counts, /jobs/{job_id} and the /health engine probe) passes run_corpus_op a v1 working_dir derived from the app's store_root and workspace, never the repo-global DEFAULT_V1_WORKING_DIR (v1/.corpus_working_dir). Two apps built with different store_root values do not see each other's documents on GET /corpus.
   - Test: Test builds two apps on two temp store_roots with a substituted corpus op that records payloads; ingest a document via app A and assert every captured ingest/status/health payload carries working_dir under A's store_root/workspace, and GET /corpus on app B does not list the document. Fails today because the status payloads carry only track_id/limit/offset and ingest uses v1/.corpus_working_dir.
   - Defects: rest-live/REST-16
   - Owner decision first: M-04 LightRAG write path (where the per-workspace v1 working dir lives). M-12 HippoRAG corpus surface: whether GET /jobs/{job_id} for a HippoRAG ingest job returns a final status or a named refusal instead of asking v1.
@@ -194,7 +194,7 @@
   - Test: Test runs engine.ingest with a stubbed driver and asserts the returned job/trace carries seam events for the touched stores and that the full-ingest declaration in declared_only.py lists mutates_store. Fails today: no recorder is passed (engine.py:731-738) and effects are ['calls_llm','writes_artifact','reads_kv','reads_graph'].
   - Defects: parts-lightrag/PC-10
   - Owner decision first: Depends on M-04: the storage value and store keys depend on whether ingest writes v2 stores or v1's working dir.
-- [ ] **LRAG-04**: Concurrent LightRAG writes to one working dir are serialized: while a LightRAG ingest or delete subprocess is running against a working dir, a second ingest or delete for the same working dir either waits for it to finish or is refused with a named error (not run in parallel), so no run's doc-status/KV/graph writes overwrite another's.
+- [x] **LRAG-04**: Concurrent LightRAG writes to one working dir are serialized: while a LightRAG ingest or delete subprocess is running against a working dir, a second ingest or delete for the same working dir either waits for it to finish or is refused with a named error (not run in parallel), so no run's doc-status/KV/graph writes overwrite another's.
   - Test: Test fires two ingests (or ingest plus delete) concurrently with a driver stub that sleeps and records start/end times per working_dir; assert the intervals do not overlap (or the second returns the named busy refusal), and with JSON backends both documents are present in doc status afterwards. Fails today: run_corpus_op spawns independent subprocesses with no lock.
   - Defects: foreign/FOR-05
   - Owner decision first: Wait (queue behind a per-working-dir lock, cross-process file lock if several server processes may share a dir) versus immediate 409/422 'write in progress' refusal.
@@ -863,10 +863,10 @@ These fail today.
 | STOR-14 | Phase 10 | Complete |
 | STOR-15 | Phase 10 | Complete |
 | STOR-16 | Phase 10 | Complete |
-| LRAG-01 | Phase 11 | Pending |
+| LRAG-01 | Phase 11 | Complete |
 | LRAG-02 | Phase 11 | Complete |
 | LRAG-03 | Phase 11 | Complete |
-| LRAG-04 | Phase 11 | Pending |
+| LRAG-04 | Phase 11 | Complete |
 | LRAG-05 | Phase 11 | Pending |
 | LRAG-06 | Phase 11 | Pending |
 | LRAG-07 | Phase 11 | Pending |
