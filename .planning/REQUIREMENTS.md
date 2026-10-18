@@ -141,7 +141,7 @@
   - Test: tests/seam/test_ingest_abort.py: run a HippoRAG ingest with stub clients where a node after chunk-embed (e.g. graph-augment-persist) raises. Assert that the call raises ForeignEngineRefusalError, and that after reopening, SqliteKVStore('hipporag-text-chunks') and the hipporag-chunks vector namespace are empty. Before the fix, the chunk records are committed.
   - Defects: stores/ST-03
   - Owner decision first: Cross-store atomicity: whether a flush failure in a later store (graph after kv/vector committed) needs compensation or a two-phase commit, or is accepted and documented as non-atomic.
-- [ ] **STOR-07**: delete_document builds its stores with the resolved wiring's store_namespaces. It flushes every store (index_done_callback) when the delete run succeeds and drops pending ops when it fails. FaissVectorStore.delete_by_ids buffers deletions until index_done_callback, as kv, graph and lexical do, so drop_pending_index_ops reverts a vector delete. After a successful delete, the kv, graph and vector records for the document are all gone. After a failed one, none are removed.
+- [x] **STOR-07**: delete_document builds its stores with the resolved wiring's store_namespaces. It flushes every store (index_done_callback) when the delete run succeeds and drops pending ops when it fails. FaissVectorStore.delete_by_ids buffers deletions until index_done_callback, as kv, graph and lexical do, so drop_pending_index_ops reverts a vector delete. After a successful delete, the kv, graph and vector records for the document are all gone. After a failed one, none are removed.
   - Test: tests/stores/test_delete_commit_contract.py. (a) FaissVectorStore: upsert and flush ids a and b, call delete_by_ids(['a']), call drop_pending_index_ops(), reopen, and assert get_by_id('a') is present. Before the fix it is gone. (b) Call engine.delete_document with a fixture delete wiring that declares non-default store_namespaces (kv/graph) and deletes from kv, vector and graph. On success, assert all three are empty after reopening, and that the deletes landed in the declared namespaces. When the delete node raises after staging its deletes, assert all three are unchanged. Before the fix, the kv/graph deletes are discarded at finalize, go to the default namespaces, and the vector delete persists.
   - Defects: stores/ST-04, stores/ST-05
 - [x] **STOR-08**: Opening a FaissVectorStore whose directory holds vector.faiss without vector.meta.json, or vector.meta.json without vector.faiss, raises VectorStoreCorruptedError, as the module docstring states. It does not open an empty store that the next flush overwrites. Evidence resolve against such a namespace returns the corruption refusal, not 'record no longer present'.
@@ -852,7 +852,7 @@ These fail today.
 | STOR-04 | Phase 10 | Complete |
 | STOR-05 | Phase 10 | Complete |
 | STOR-06 | Phase 10 | Complete |
-| STOR-07 | Phase 10 | Pending |
+| STOR-07 | Phase 10 | Complete |
 | STOR-08 | Phase 10 | Complete |
 | STOR-09 | Phase 10 | Pending |
 | STOR-10 | Phase 10 | Complete |
