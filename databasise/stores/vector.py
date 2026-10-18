@@ -270,8 +270,9 @@ class FaissVectorStore(StorageNameSpace):
 
     def __init__(self, namespace: str, workspace: str, store_root: str | Path) -> None:
         super().__init__(namespace=namespace, workspace=workspace)
+        # 11-10 (D-15): not created here; reads treat a missing directory as empty, and the first
+        # staged write (_write_staged) creates it.
         self._dir = Path(store_root) / workspace / namespace
-        self._dir.mkdir(parents=True, exist_ok=True)
         self._index_path = self._dir / "vector.faiss"
         self._meta_path = self._dir / "vector.meta.json"
 
@@ -603,6 +604,7 @@ class FaissVectorStore(StorageNameSpace):
         carries a SHA-256 ``index_checksum`` of the index it accompanies, checked at the next open
         (WR-02)."""
         tmp_index, tmp_meta = self._tmp_paths()
+        self._dir.mkdir(parents=True, exist_ok=True)
         self._staged = True
         try:
             faiss.write_index(index, str(tmp_index))

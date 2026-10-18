@@ -93,10 +93,17 @@ async def test_dereferencing_an_unknown_evidence_reference_raises_the_named_refu
 
 
 async def test_zero_item_retrieval_yields_an_empty_but_present_evidence_list(store_root):
-    # No vector upsert at all: FaissVectorStore.query() on a never-flushed namespace returns [].
+    # 11-10 (D-15): a never-populated namespace is now refused (test_empty_namespace.py), so the
+    # namespace is populated and then emptied by a delete; query() on its zero-row index returns [].
+    workspace = "seam-test-empty-retrieval"
+    store = FaissVectorStore(namespace=CHUNKS_NAMESPACE, workspace=workspace, store_root=store_root)
+    await store.upsert(["gone"], np.array([[1.0, 0.0, 0.0]]), [{"content": "gone"}])
+    await store.index_done_callback()
+    await store.delete_by_ids(["gone"])
+    await store.index_done_callback()
     engine = Databasise(
         store_root=store_root,
-        workspace="seam-test-empty-retrieval",
+        workspace=workspace,
         clients={"embedding": _StubEmbeddingClient(vector=[1.0, 0.0, 0.0]), "llm": _StubLLMClient()},
     )
 

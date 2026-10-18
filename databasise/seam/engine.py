@@ -192,6 +192,9 @@ from databasise.identity.canon import canonicalise
 from databasise.ledger.ledger import Ledger, LedgerRecord
 from databasise.parts.registry import PartRegistry, default_registry
 from databasise.parts_core import EFFECT_TO_STORE
+from databasise.parts_core.lightrag import chunk_vector as _chunk_vector
+from databasise.parts_core.lightrag import entity_lookup as _entity_lookup
+from databasise.parts_core.lightrag import relation_lookup as _relation_lookup
 from databasise.runner import scheduler as _scheduler
 from databasise.runner.trace import NodeTrace, RunRecord
 from databasise.seam.corpus import (
@@ -241,6 +244,7 @@ from databasise.seam.refusals import (
     DocumentNotInterruptedError,
     DuplicateDocumentIdError,
     EmptyComparisonRequestError,
+    EmptyNamespaceError,
     ForeignEngineRefusalError,
     GateVerbNotBuiltError,
     InvalidChangeOriginError,
@@ -352,6 +356,25 @@ _HEALTH_PROBES: tuple[tuple[str, str], ...] = (
     ("vector", "hipporag-facts"),
 )
 _PROBES = {"kv": probe_kv, "graph": probe_graph, "vector": probe_vector}
+
+# 11-10 (D-15, LRAG-16): the vector namespace each retrieval component reads, keyed by component
+# name without version. The values are the part modules' own constants; test_empty_namespace.py
+# fails if this table drifts from them.
+_RETRIEVAL_NAMESPACES: dict[str, str] = {
+    "lightrag/retriever-chunk-topk": _chunk_vector._CHUNKS_NAMESPACE,
+    "lightrag/entity-lookup": _entity_lookup._ENTITIES_NAMESPACE,
+    "lightrag/relation-lookup": _relation_lookup._RELATIONSHIPS_NAMESPACE,
+}
+
+
+def _refuse_empty_namespaces(store_root: Path, workspace: str, resolved: dict[str, Any]) -> None:
+    """D-15: ``EmptyNamespaceError`` when a retrieval node of ``resolved`` reads a vector namespace
+    with no committed index, i.e. one never populated. A namespace emptied by a delete keeps its
+    (zero-row) index and is answered as no match. Reads only; creates nothing."""
+    for node in (resolved.get("nodes") or {}).values():
+        namespace = _RETRIEVAL_NAMESPACES.get(str(node.get("component", "")).split("@")[0])
+        if namespace and not (store_root / workspace / namespace / "vector.faiss").is_file():
+            raise EmptyNamespaceError(store_kind="vector")
 
 # 06-01-PLAN.md: the retrieval position and its namespace are now read off each resolved wiring's
 # own declared evidence_position ({"node": ..., "namespace": ...}) rather than hardcoded here —
@@ -1616,6 +1639,8 @@ class Databasise:
         stores: dict[str, Any] = {}
         try:
             stores = _build_stores(self.store_root, self.workspace, resolved, into=stores, operation="query")
+            # After _build_stores, so its open errors keep precedence (STOR-02).
+            _refuse_empty_namespaces(self.store_root, self.workspace, resolved)
             scheduled = await _scheduler.run_wiring(
                 parsed,
                 self.registry,

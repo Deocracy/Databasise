@@ -812,6 +812,21 @@ class StoreBusyError(SeamRefusalError):
         )
 
 
+class EmptyNamespaceError(SeamRefusalError):
+    """Raised by ``Databasise.query`` (and ``compare``) after the stores open and before any node
+    runs, when a retrieval node of the arm reads a vector namespace that has never been populated
+    (11-10, D-15, LRAG-16), so no keyword or embedding call is spent on an empty store. REST answers
+    422. Only ``store_kind`` is public; the namespace and the store path are never named. A namespace
+    that was populated and then emptied by a delete is not refused: it answers as no match."""
+
+    def __init__(self, *, store_kind: str):
+        self.store_kind = store_kind
+        super().__init__(
+            f"EmptyNamespaceError: the {store_kind} store this query reads has never been "
+            "populated; ingest documents before querying"
+        )
+
+
 class UnsupportedUploadTypeError(SeamRefusalError):
     """Raised by ``Databasise.ingest`` for a raw upload whose ``file_name`` has no suffix, or one
     v1's default parser does not handle, before anything is written (11-05, D-09). REST answers 422.
@@ -869,6 +884,7 @@ __all__ = [
     "MutableStoreComparisonExcludedError",
     "ForeignEngineRefusalError",
     "StoreBusyError",
+    "EmptyNamespaceError",
     "UnsupportedUploadTypeError",
     "UnparseableWiringError",
     "EmptyPromotionTraceIdsError",
