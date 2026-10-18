@@ -67,6 +67,23 @@ class CorpusOpSubprocessError(RuntimeError):
         )
 
 
+class V1NotConfiguredError(CorpusOpSubprocessError):
+    """The driver's exit 3 (11-03, D-12): v1's configuration lacks a key or names an unsupported
+    backend. ``missing_keys`` and ``unsupported_keys`` are key names only; no value is ever kept. A
+    subclass of :class:`CorpusOpSubprocessError` because it is a non-zero driver exit."""
+
+    def __init__(self, *, missing_keys: list[str], unsupported_keys: list[str], stderr: str = ""):
+        self.returncode = 3
+        self.stderr = stderr
+        self.missing_keys = sorted(str(key) for key in missing_keys)
+        self.unsupported_keys = sorted(str(key) for key in unsupported_keys)
+        RuntimeError.__init__(
+            self,
+            f"v1 is not configured: missing {self.missing_keys or 'none'}, "
+            f"unsupported {self.unsupported_keys or 'none'}",
+        )
+
+
 class CorpusOpTimeoutError(RuntimeError):
     """§8 condition 4's wall-clock-ceiling refusal: the corpus driver subprocess did not complete
     within ``timeout`` seconds — carries both the attempted ``op`` and the declared ``timeout``
@@ -98,6 +115,15 @@ def _load_env_file(path: Path) -> dict[str, str]:
             value = value[1:-1]
         env[key.strip()] = value
     return env
+
+
+def _refusal_json(stdout: str) -> dict[str, Any]:
+    """The driver's refusal object on a non-zero exit, or ``{}`` when stdout holds none."""
+    try:
+        refusal = json.loads(stdout)
+    except ValueError:
+        return {}
+    return refusal if isinstance(refusal, dict) else {}
 
 
 def run_corpus_op(
@@ -148,6 +174,14 @@ def run_corpus_op(
     except subprocess.TimeoutExpired as exc:
         raise CorpusOpTimeoutError(op, timeout) from exc
 
+    if proc.returncode == 3:
+        refusal = _refusal_json(proc.stdout)
+        if refusal.get("error") == "v1_not_configured":
+            raise V1NotConfiguredError(
+                missing_keys=list(refusal.get("missing_keys") or []),
+                unsupported_keys=list(refusal.get("unsupported_keys") or []),
+                stderr=proc.stderr,
+            )
     if proc.returncode != 0:
         raise CorpusOpSubprocessError(proc.returncode, proc.stderr)
 
@@ -158,6 +192,7 @@ __all__ = [
     "run_corpus_op",
     "CorpusOpTimeoutError",
     "CorpusOpSubprocessError",
+    "V1NotConfiguredError",
     "MissingV1InterpreterError",
     "DEFAULT_V1_INTERPRETER",
     "DEFAULT_V1_DRIVER_SCRIPT",

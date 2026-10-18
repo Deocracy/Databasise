@@ -737,6 +737,7 @@ _FOREIGN_FAILURE_CLASSES: dict[str, str] = {
     "MissingV1InterpreterError": "MissingV1InterpreterError",
     "CorpusOpSubprocessError": "CorpusOpSubprocessError",
     "CorpusOpTimeoutError": "CorpusOpTimeoutError",
+    "V1NotConfiguredError": "V1NotConfigured",
     "JSONDecodeError": "MalformedDriverOutput",
     "UnicodeDecodeError": "MalformedDriverOutput",
 }
@@ -757,6 +758,10 @@ class ForeignEngineRefusalError(SeamRefusalError):
     (``databasise.seam.engine._foreign_fault``). The message names only the operation and the failure
     class, never stderr, a traceback, a server path or an env-var name; no flag exposes the cause
     while seam authentication is undecided.
+
+    Phase 11 D-12 is the single place a refusal may name configuration keys: only the
+    ``V1NotConfigured`` class adds public ``missing_keys`` and ``unsupported_keys`` (key names,
+    never values). Every other class keeps exactly ``operation`` and ``failure_class``.
     """
 
     def __init__(self, *, operation: str, cause: BaseException, failure_class: str | None = None):
@@ -764,6 +769,9 @@ class ForeignEngineRefusalError(SeamRefusalError):
         self.failure_class = failure_class or _FOREIGN_FAILURE_CLASSES.get(
             type(cause).__name__, "UnclassifiedEngineFailure"
         )
+        if self.failure_class == "V1NotConfigured":
+            self.missing_keys = sorted(str(key) for key in getattr(cause, "missing_keys", ()))
+            self.unsupported_keys = sorted(str(key) for key in getattr(cause, "unsupported_keys", ()))
         self._cause = cause
         super().__init__(
             f"ForeignEngineRefusalError: operation {operation!r} failed ({self.failure_class})"

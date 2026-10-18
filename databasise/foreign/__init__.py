@@ -12,6 +12,7 @@ from databasise.foreign.v1_corpus_adapter import (
     CorpusOpSubprocessError,
     CorpusOpTimeoutError,
     MissingV1InterpreterError,
+    V1NotConfiguredError,
     run_corpus_op,
 )
 
@@ -20,4 +21,5 @@ __all__ = [
     "CorpusOpTimeoutError",
     "CorpusOpSubprocessError",
     "MissingV1InterpreterError",
+    "V1NotConfiguredError",
 ]
