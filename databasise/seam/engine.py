@@ -165,7 +165,6 @@ import asyncio
 import hashlib
 import json
 import logging
-import os
 import sqlite3
 import uuid
 import weakref
@@ -295,6 +294,11 @@ def _log_staged_left(staged: Path) -> None:
     """09 REVIEW WR-04: a fault after the v1 run started leaves the staged upload in place (v1 may
     hold its path). Logged once, server-side, so an operator can reap it."""
     logger.warning("staged upload left in place after an ingest fault: %s", staged)
+
+
+# 11-05 (D-09): the ingest faults after which v1 may still list the document, so its staged
+# source is kept (and logged) for a delete or an 11-08 retry.
+_KEEP_STAGED = frozenset({"CorpusOpTimeoutError", "CorpusOpSubprocessError", "MalformedDriverOutput"})
 
 
 def _remove_staged(staged: Path) -> None:
@@ -1023,34 +1027,17 @@ class Databasise:
             stores = _build_stores(self.store_root, self.workspace, resolved, into=stores, operation="ingest")
             if staged is not None:
                 staged.parent.mkdir(parents=True, exist_ok=True)
-                owner = self._staged_owner_path(document_id)
                 try:
-                    # Exclusive create: an earlier upload with this id may still be parsed by v1.
+                    # Exclusive create: a run with this id may be in flight, or a fault kept its file.
                     with open(staged, "xb") as handle:
                         wrote_staged = True
                         handle.write(document.raw)
-                    # The create above won, so any owner record already here is stale. The record
-                    # sits outside corpus-inbox and names the uploading workspace (09 REVIEW CR-01).
-                    owner.parent.mkdir(parents=True, exist_ok=True)
-                    # Atomic (temp file, then replace) so a crash never leaves a partial record.
-                    pending = owner.with_name(f".{uuid.uuid4().hex}.tmp")  # short: id + suffix must fit NAME_MAX
-                    try:
-                        pending.write_bytes(self.workspace.encode("utf-8"))
-                        os.replace(pending, owner)
-                    except BaseException:
-                        pending.unlink(missing_ok=True)
-                        raise
                 except FileExistsError:
-                    if not wrote_staged:
-                        raise DuplicateDocumentIdError(document_id=document_id) from None
-                    staged.unlink(missing_ok=True)
-                    wrote_staged = False
-                    raise
+                    raise DuplicateDocumentIdError(document_id=document_id) from None
                 except Exception:
-                    # Pre-run only: nothing has started v1 yet, so both files are ours to remove.
+                    # Pre-run only: nothing has started v1 yet, so the file is ours to remove.
                     if wrote_staged:
                         staged.unlink(missing_ok=True)
-                        owner.unlink(missing_ok=True)
                         wrote_staged = False
                     raise
             scheduled = await _scheduler.run_wiring(
@@ -1081,9 +1068,14 @@ class Databasise:
             # index_done_callback all early-return when nothing is pending).
             # 10-05 (D-07): all stores prepare, then all commit, or none does.
             await _commit_all(stores, "ingest", self.store_root)
-        except BaseException:
+        except BaseException as exc:
             if wrote_staged:
-                _log_staged_left(staged)
+                # 11-05 (D-09): a refusal v1 cannot still be working on removes the file; a v1
+                # fault or a cancellation keeps it for the delete or retry that follows.
+                if isinstance(exc, SeamRefusalError) and getattr(exc, "failure_class", None) not in _KEEP_STAGED:
+                    _remove_staged(staged)
+                else:
+                    _log_staged_left(staged)
             raise
         finally:
             for store in stores.values():
@@ -1111,36 +1103,18 @@ class Databasise:
             _remove_staged(staged)  # 11-05 (D-09): v1 has read it; the driver waits for the pipeline
         return job
 
-    def _staged_owner_path(self, document_id: str) -> Path:
-        return self.store_root / "corpus-inbox-owners" / generated_on_disk_name(document_id)
-
-    def _release_staged_upload(self, document_id: str, *, v1_status: Any) -> None:
-        """09 REVIEW CR-01: remove this id's staged upload and owner record when they belong to this
-        workspace. A removal error never turns a delete v1 already performed into a failure."""
-        staged = self.store_root / "corpus-inbox" / generated_on_disk_name(document_id)
-        owner = self._staged_owner_path(document_id)
-        try:
-            if not staged.exists() and not owner.exists():
-                return
+    def _remove_inbox_files(self, document_id: str) -> None:
+        """11-05 (D-09): remove every file for ``document_id`` (already a validated bare token) from
+        this workspace's inbox and its ``__parsed__/``, by exact ``<id>.`` prefix, never a glob. A
+        removal error never turns a delete v1 already performed into a failure."""
+        prefix = f"{document_id}."
+        for directory in (self._inbox(), self._inbox() / "__parsed__"):
             try:
-                text = owner.read_text(encoding="utf-8")
-            except (OSError, UnicodeDecodeError):  # unreadable counts as no record
-                text = ""
-            recorded = text if text.strip() else None  # empty counts as no record
-            # Only after v1 released the document: on not_allowed or fail it may still be parsing this file.
-            released = v1_status in ("success", "not_found")
-            if released and (recorded == self.workspace or (recorded is None and v1_status == "success")):
-                staged.unlink(missing_ok=True)
-                owner.unlink(missing_ok=True)
-            else:
-                logger.warning(
-                    "staged upload for document id %r left in place (owner %r, v1 status %r)",
-                    document_id,
-                    recorded,
-                    v1_status,
-                )
-        except OSError:
-            logger.exception("could not remove the staged upload for document id %r", document_id)
+                for path in directory.iterdir() if directory.is_dir() else ():
+                    if path.name.startswith(prefix) and path.is_file():
+                        path.unlink(missing_ok=True)
+            except OSError:
+                logger.exception("could not remove the staged upload for document id %r", document_id)
 
     async def delete_document(
         self, document_id: str, selector: Selector | None = None
@@ -1153,11 +1127,10 @@ class Databasise:
         which fitted modality's index the delete reaches, the same thing it already names for
         ``ingest``/``query``/``compare``.
 
-        After v1 has answered, the raw upload's staged inbox file for this id is removed if the
-        owner record names this workspace and v1 reported ``success`` or ``not_found``, or if there
-        is no record (a legacy file) and v1 reported ``success``; otherwise (including v1
-        ``not_allowed`` or ``fail``, when v1 may still read the file) it is left and logged. So delete followed by re-upload
-        works after a failed asynchronous parse, and another workspace's delete never removes it.
+        After v1 answers ``success`` or ``not_found``, every file left for this id in this
+        workspace's inbox and its ``__parsed__/`` (one kept after an ingest fault) is removed
+        (11-05, D-09). On ``not_allowed`` or ``fail`` v1 may still read the file, so it stays. The
+        inbox is per workspace, so another workspace's delete never reaches it.
 
         Phase 10 D-08 (STOR-07): the kv and graph stores come from the resolved delete wiring's
         ``store_namespaces``. The delete's staged store writes commit, all stores or none, only when
@@ -1236,7 +1209,8 @@ class Databasise:
             for store in stores.values():
                 await store.finalize()
 
-        self._release_staged_upload(document_id, v1_status=result.get("status"))
+        if result.get("status") in ("success", "not_found"):
+            self._remove_inbox_files(document_id)
         node_by_id = {node.node_id: node for node in scheduled["nodes"]}
         seam_events = _mach11_events(parsed, touches, node_by_id)
 

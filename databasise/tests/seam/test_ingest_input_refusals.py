@@ -35,8 +35,9 @@ def client(store_root):
 
 
 def _inbox_files(store_root):
-    inbox = store_root / "corpus-inbox"
-    return sorted(inbox.iterdir()) if inbox.exists() else []
+    # 11-05 (D-09): the legacy flat inbox and every per-workspace inbox tree.
+    inboxes = [store_root / "corpus-inbox", *store_root.glob("*/corpus-inbox")]
+    return sorted(p for inbox in inboxes for p in inbox.rglob("*") if p.is_file())
 
 
 def _upload(client, **data):
@@ -92,16 +93,20 @@ def test_upload_refuses_a_malformed_id_and_writes_nothing(client, store_root, ba
     assert _inbox_files(store_root) == []
 
 
-def test_a_blank_upload_form_field_is_absent_and_gets_a_minted_id(client, store_root):
+def test_a_blank_upload_form_field_is_absent_and_gets_a_minted_id(store_root):
+    # 11-05 (D-09): each staged name is seen while its ingest node runs; none outlives its job.
+    names: list[str] = []
+    registry = _make_registry(on_ingest=lambda ctx: names.extend(p.name for p in _inbox_files(store_root)))
+    client = TestClient(create_app(store_root=store_root, workspace="ingest-input-refusals", registry=registry))
     omitted = _upload(client)
     blank = _upload(client, document_id="")
 
     assert omitted.status_code == 200, omitted.text
     assert blank.status_code == 200, blank.text
     assert blank.json()["enqueued"] == omitted.json()["enqueued"] == 1
-    names = [path.name for path in _inbox_files(store_root)]
     assert len(names) == 2
-    assert all(_HEX32.fullmatch(name.removesuffix(".bin")) for name in names), names
+    assert all(_HEX32.fullmatch(name.removesuffix(".txt")) for name in names), names
+    assert _inbox_files(store_root) == []
 
 
 def test_a_whitespace_upload_form_field_is_a_caller_id_and_refused(client, store_root):

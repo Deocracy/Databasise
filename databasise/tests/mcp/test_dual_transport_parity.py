@@ -177,6 +177,7 @@ async def test_ingest_tool_accepts_structured_text_and_base64_raw_shapes(tmp_pat
             {
                 "args": {
                     "raw_base64": base64.b64encode(b"raw doc bytes").decode("ascii"),
+                    "file_name": "doc.txt",  # 11-05 (D-09): a raw upload needs an accepted suffix
                     "content_type": "text/plain",
                 }
             },
@@ -211,7 +212,7 @@ async def test_a_malformed_raw_base64_refuses_by_name_rather_than_crashing_the_t
     well_formed_job = _tool_json(
         await server.call_tool(
             "ingest",
-            {"args": {"raw_base64": base64.b64encode(b"well formed bytes").decode("ascii")}},
+            {"args": {"raw_base64": base64.b64encode(b"well formed bytes").decode("ascii"), "file_name": "x.txt"}},
         )
     )
     assert well_formed_job["job_id"]

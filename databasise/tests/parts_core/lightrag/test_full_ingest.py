@@ -280,24 +280,31 @@ async def test_a_raw_upload_ingest_reaches_the_driver_via_a_server_side_path_nev
 
     def _capturing_body_factory(*, timeout: float):
         async def _body(ctx: NodeContext) -> dict[str, Any]:
-            captured_configs.append(dict(ctx.config or {}))
+            config = dict(ctx.config or {})
+            # 11-05 (D-09): read while the node runs; the staged file is removed after the job.
+            config["_staged_bytes"] = Path(config["file_paths"][0]).read_bytes()
+            captured_configs.append(config)
             return await _make_stub_full_ingest_body(timeout=timeout)(ctx)
 
         return _body
 
     engine = _make_engine(store_root, body=_capturing_body_factory(timeout=5.0))
 
-    job = await engine.ingest(IngestDocument(raw=b"raw pdf bytes", content_type="application/pdf"))
+    job = await engine.ingest(
+        IngestDocument(raw=b"raw pdf bytes", file_name="report.pdf", content_type="application/pdf")
+    )
 
     assert job.enqueued == 1
     [config] = captured_configs
     assert config["docs_format"] == "pending_parse"
     [file_path] = config["file_paths"]
     resolved_path = Path(file_path)
-    assert resolved_path.parent == engine.store_root / "corpus-inbox"
+    assert resolved_path.parent == engine.store_root / "test-ingest" / "corpus-inbox"
+    assert config["input_dir"] == str(resolved_path.parent)
     document_id = config["documents"][0]["id"]
-    assert resolved_path.name == generated_on_disk_name(document_id)
-    assert resolved_path.read_bytes() == b"raw pdf bytes"
+    assert resolved_path.name == generated_on_disk_name(document_id, ".pdf")
+    assert config["_staged_bytes"] == b"raw pdf bytes"
+    assert not resolved_path.exists()
 
 
 def test_ingest_document_with_both_text_and_raw_or_neither_raises_ambiguous_payload():

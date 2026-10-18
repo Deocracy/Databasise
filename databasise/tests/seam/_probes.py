@@ -57,9 +57,11 @@ def trace_row_count(store_root: str | Path) -> int:
 
 
 def inbox_files(store_root: str | Path) -> list[Path]:
-    """Every file under ``store_root/corpus-inbox``; empty when the directory does not exist."""
-    inbox = Path(store_root) / "corpus-inbox"
-    return sorted(inbox.rglob("*")) if inbox.exists() else []
+    """Every file under the legacy ``store_root/corpus-inbox`` and every per-workspace
+    ``store_root/<workspace>/corpus-inbox`` tree (11-05, D-09), ``__parsed__/`` included."""
+    root = Path(store_root)
+    inboxes = [root / "corpus-inbox", *root.glob("*/corpus-inbox")]
+    return sorted(p for inbox in inboxes for p in inbox.rglob("*") if p.is_file())
 
 
 async def promote_alias(store_root: str | Path, alias: str, arm_name: str = "naive") -> None:

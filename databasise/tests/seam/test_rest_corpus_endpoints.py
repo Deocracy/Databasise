@@ -43,11 +43,14 @@ from fastapi.testclient import TestClient
 _STUB_DRIVER = Path(__file__).resolve().parents[1] / "fixtures" / "v1_corpus_driver_stub.py"
 
 
-def _make_stub_ingest_body(*, timeout: float = 5.0):
+def _make_stub_ingest_body(*, timeout: float = 5.0, on_ingest: Callable[[NodeContext], None] | None = None):
     """Same shape as ``full_ingest_body``, pointed at the stub driver — mirrors
-    ``test_full_ingest.py``'s own ``_make_stub_full_ingest_body``."""
+    ``test_full_ingest.py``'s own ``_make_stub_full_ingest_body``. ``on_ingest`` runs first, while
+    the staged upload is on disk (11-05, D-09)."""
 
     async def _body(ctx: NodeContext) -> dict[str, Any]:
+        if on_ingest is not None:
+            on_ingest(ctx)
         config = ctx.config or {}
         payload: dict[str, Any] = {
             "documents": config.get("documents") or [],
@@ -113,7 +116,10 @@ def _make_stub_delete_body(
 
 
 def _make_registry(
-    *, delete_status: str = "success", on_delete: Callable[[], None] | None = None
+    *,
+    delete_status: str = "success",
+    on_delete: Callable[[], None] | None = None,
+    on_ingest: Callable[[NodeContext], None] | None = None,
 ) -> PartRegistry:
     """A full ``default_registry()`` with both ``lightrag/full-ingest@0.1.0`` and
     ``lightrag/full-delete@0.1.0`` swapped for their stub-driver variants (06-10-PLAN.md
@@ -121,7 +127,7 @@ def _make_registry(
     dispatching, which (for the no-selector default path) requires every candidate wiring
     ``databasise.wirings.resolve.all_wirings()`` enumerates to parse against the registry; a
     registry holding only the two parts under test can no longer satisfy that."""
-    ingest_part = dataclasses.replace(LIGHTRAG_FULL_INGEST_PART, body=_make_stub_ingest_body())
+    ingest_part = dataclasses.replace(LIGHTRAG_FULL_INGEST_PART, body=_make_stub_ingest_body(on_ingest=on_ingest))
     delete_part = dataclasses.replace(
         LIGHTRAG_FULL_DELETE_PART,
         body=_make_stub_delete_body(stub_status=delete_status, on_success=on_delete),
@@ -355,22 +361,32 @@ def test_rest_module_still_calls_no_selector_resolution_redaction_or_envelope_as
     assert not overlap, f"databasise/seam/rest.py calls forbidden seam-logic function(s): {overlap}"
 
 
-def test_generated_on_disk_name_is_reachable_for_a_multipart_uploaded_document(client, store_root):
+def test_generated_on_disk_name_is_reachable_for_a_multipart_uploaded_document(store_root):
     """The multipart upload path writes the bytes under a server-generated on-disk name, never the
-    caller's own filename. Reads the disk: the inbox holds exactly one file whose stem is a
-    uuid4 hex id and whose name is ``generated_on_disk_name(stem)``, and nothing named
+    caller's own filename. Reads the disk while the ingest node runs (11-05, D-09): the workspace
+    inbox holds exactly one file whose stem is a uuid4 hex id and whose name is
+    ``generated_on_disk_name(stem, ".pdf")``; after the response it holds no file; and nothing named
     ``escape.pdf`` exists in the store root, the inbox, or the store root's parent."""
+    inbox = store_root / "rest-corpus-test" / "corpus-inbox"
+    written: list[Path] = []
+    client = TestClient(
+        create_app(
+            store_root=store_root,
+            workspace="rest-corpus-test",
+            registry=_make_registry(on_ingest=lambda ctx: written.extend(sorted(inbox.iterdir()))),
+        )
+    )
     response = client.post(
         "/documents/upload",
         files={"file": ("../escape.pdf", b"raw pdf bytes", "application/pdf")},
     )
     assert response.status_code == 200
 
-    written = sorted((store_root / "corpus-inbox").iterdir())
     assert len(written) == 1
     stem = written[0].stem
     assert re.fullmatch(r"[0-9a-f]{32}", stem)
-    assert written[0].name == generated_on_disk_name(stem)
+    assert written[0].name == generated_on_disk_name(stem, ".pdf")
+    assert [p for p in inbox.rglob("*") if p.is_file()] == []
 
     assert not (store_root / "escape.pdf").exists()
     assert not (store_root / "corpus-inbox" / "escape.pdf").exists()

@@ -57,13 +57,16 @@ def test_empty_file_name_and_content_type_are_accepted(store_root):
 
 
 def test_non_ascii_upload_filename_is_never_stored(store_root, tmp_path):
-    client = TestClient(create_app(store_root=store_root, workspace="file-name-utf8", registry=_make_registry()))
+    # 11-05 (D-09): the staged name, seen while the ingest node runs, keeps only the validated suffix.
+    written: list[Path] = []
+    registry = _make_registry(on_ingest=lambda ctx: written.extend(inbox_files(store_root)))
+    client = TestClient(create_app(store_root=store_root, workspace="file-name-utf8", registry=registry))
     response = client.post(
         "/documents/upload",
         files={"file": ("résumé.pdf", b"raw pdf bytes", "application/pdf")},
     )
     assert response.status_code == 200
-    written = inbox_files(store_root)
     assert len(written) == 1
-    assert re.fullmatch(r"[0-9a-f]{32}\.bin", written[0].name)
+    assert re.fullmatch(r"[0-9a-f]{32}\.pdf", written[0].name)
+    assert inbox_files(store_root) == []
     assert not [p for p in tmp_path.rglob("*") if p.name == "résumé.pdf"]

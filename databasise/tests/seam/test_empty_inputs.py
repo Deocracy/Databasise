@@ -214,6 +214,6 @@ async def test_mcp_ingest_refuses_empty_and_invalid_base64_and_accepts_valid(sto
         assert _tool_error_detail(exc_info.value)["refusal_type"] == refusal_type, raw_base64
     assert inbox_files(store_root) == []
 
-    ok = await server.call_tool("ingest", {"args": {"raw_base64": "YWJj"}})
+    ok = await server.call_tool("ingest", {"args": {"raw_base64": "YWJj", "file_name": "abc.txt"}})
     assert "enqueued" in "".join(getattr(item, "text", "") or "" for item in ok.content)
     assert base64.b64decode("YWJj") == b"abc"
