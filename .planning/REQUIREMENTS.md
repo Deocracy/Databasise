@@ -239,7 +239,7 @@
   - Test: Test runs corpus_ingest --arm lightrag against a driver stub and asserts every captured working_dir is under the eval store and the operator working dir is untouched; then runs aa_run over the same store and asserts non-empty evidence for at least one question. Fails today: full_ingest passes no working_dir and aa_run queries empty v2 namespaces.
   - Defects: other-surfaces/OS-02
   - Owner decision first: Depends on M-04 (LRAG-01/02); which wiring aa_run queries (lightrag-base default vs naive) is an owner choice.
-- [ ] **LRAG-16**: Querying a LightRAG arm whose vector namespace (chunks, entities, relationships) has never been populated returns a named refusal or an explicit 'namespace empty' signal in the envelope, distinguishable from a populated namespace with no matches; MultiNamespaceVectorStore.select() on an unknown namespace in a read path does not silently create an empty store.
+- [x] **LRAG-16**: Querying a LightRAG arm whose vector namespace (chunks, entities, relationships) has never been populated returns a named refusal or an explicit 'namespace empty' signal in the envelope, distinguishable from a populated namespace with no matches; MultiNamespaceVectorStore.select() on an unknown namespace in a read path does not silently create an empty store.
   - Test: Test queries hybrid/naive on a fresh store_root and asserts the named refusal or empty-namespace flag, and a second query on a populated namespace with a non-matching question asserts the plain no-match result. Fails today: both return [] and the answer comes from the bare query.
   - Defects: parts-lightrag/PC-20
   - Owner decision first: Refusal vs envelope flag for an unpopulated namespace.
@@ -251,7 +251,7 @@
   - Test: One parity test module over a fixture graph/vector store: assert the vectors sent to entity/relation lookup equal embeddings of ll/hl keyword strings; relation order after expand equals v1's sorted order; chunk-sel-kg output equals v1 _find_related_text_unit_from_entities/_relations plus round-robin merge; base-wiring join has no duplicate chunk ids; VECTOR run reports pick_method_used 'VECTOR'; rerank receives a non-empty query; a counting graph stub sees one node_degree call per distinct node. Fails today on each assertion.
   - Defects: parts-lightrag/PC-03, parts-lightrag/PC-07, parts-lightrag/PC-08, parts-lightrag/PC-09, parts-lightrag/PC-15, parts-lightrag/PC-18, parts-lightrag/PC-19
   - Owner decision first: G-27 v1 answer fidelity (same decision as LRAG-17); whether live rerank gets an API toggle at all.
-- [ ] **LRAG-19**: Query traces for the naive/hybrid/local/global LightRAG arms contain no no-op embedder-index node: the node is removed from query wirings (kept only in a recipe/index wiring) or is skipped and marked recipe-only, and it declares no calls_embedding/writes_artifact on a run where it did nothing.
+- [x] **LRAG-19**: Query traces for the naive/hybrid/local/global LightRAG arms contain no no-op embedder-index node: the node is removed from query wirings (kept only in a recipe/index wiring) or is skipped and marked recipe-only, and it declares no calls_embedding/writes_artifact on a run where it did nothing.
   - Test: Test runs each LightRAG query arm and asserts no trace node id embedder-index with an empty quarantined artifact appears. Fails today: embedder-index is dispatched on every query with no sample.
   - Defects: parts-lightrag/PC-16
 - [x] **LRAG-20**: The v1 driver ops 'entities' (entity map for a document_id) and 'entity_info' (entity details by name) are either reachable through an engine method plus REST route and MCP tool (e.g. a delete-impact preview listing entities a document contributes and which survive deletion), or deleted from the driver and test stub.
@@ -878,10 +878,10 @@ These fail today.
 | LRAG-13 | Phase 11 | Complete |
 | LRAG-14 | Phase 11 | Complete |
 | LRAG-15 | Phase 11 | Complete |
-| LRAG-16 | Phase 11 | Pending |
+| LRAG-16 | Phase 11 | Complete |
 | LRAG-17 | Phase 11 | Pending |
 | LRAG-18 | Phase 11 | Complete |
-| LRAG-19 | Phase 11 | Pending |
+| LRAG-19 | Phase 11 | Complete |
 | LRAG-20 | Phase 11 | Complete |
 | HIPP-01 | Phase 12 | Pending |
 | HIPP-02 | Phase 12 | Pending |
