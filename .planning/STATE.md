@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 10
 current_phase_name: Stores, Locking & Data Integrity
 status: executing
-stopped_at: Completed 10-11-PLAN.md
-last_updated: "2026-10-18T01:50:18.694Z"
+stopped_at: Completed 10-12-PLAN.md
+last_updated: "2026-10-18T02:11:12.105Z"
 last_activity: 2026-10-17
 last_activity_desc: Phase 9 complete, transitioned to Phase 10
-state_head: 56fd1442a45efe9d44aff287a859535f30db216a
+state_head: b7d6ee89d74c5498c4a291fb97c44ccfc90da362
 progress:
   total_phases: 11
   completed_phases: 2
   total_plans: 32
-  completed_plans: 31
+  completed_plans: 32
   percent: 18
 ---
 
@@ -92,6 +92,7 @@ Progress: [██░░░░░░░░] 18% (2/11 phases)
 | Phase 10 P09 | 16min | 2 tasks | 4 files |
 | Phase 10 P10 | 25min | 2 tasks | 4 files |
 | Phase 10 P11 | 20min | 2 tasks | 4 files |
+| Phase 10 P12 | 15min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -148,6 +149,7 @@ Recent decisions affecting current work:
 - [Phase 10]: 10-09: delete_node marks the node's committed edges removed at delete time, so re-creating the node does not bring old edges back; the flush cascade still runs
 - [Phase 10]: 10-10: delete_document commits for every non-fail status and drops on a refusal or fail (Q4); a vector delete of a never-committed id writes nothing
 - [Phase 10]: 10-11: vector store refuses metadata keys id/score (ReservedMetadataKeyError) and top_k<=0 (InvalidTopKError); unselected MultiNamespaceVectorStore refuses every read, listing only dirs with vector.faiss
+- [Phase 10]: 10-12: any non-ok parse report on a seam path is UnparseableWiringError (422, codes only), raised before stores are built; writes_artifact stays a declaration-only marker
 
 ### Pending Todos
 
@@ -192,8 +194,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-18T01:50:18.595Z
-Stopped at: Completed 10-11-PLAN.md
+Last session: 2026-10-18T02:11:11.998Z
+Stopped at: Completed 10-12-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

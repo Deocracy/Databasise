@@ -185,7 +185,7 @@ Plans (one plan per wave; every plan edits the shared refusal, engine or transpo
 - STOR-15: what triggers quarantined-namespace GC (generation retire, instance teardown, operator route), and derive_namespace layout vs docstring fix
 - STOR-16: reserved metadata keys rejected at upsert or moved under a sub-key
 
-**Plans**: 11/12 plans executed
+**Plans**: 12/12 plans executed
 
 Plans (nine waves; the shared engine and store modules force most plans into sequence, and wave 1 and wave 6 each hold plans with no shared file):
 
@@ -200,7 +200,7 @@ Plans (nine waves; the shared engine and store modules force most plans into seq
 - [x] 10-09-PLAN.md — Graph delete cascades and auto-creates endpoints; KV buffer isolation (STOR-10, STOR-11; wave 6)
 - [x] 10-10-PLAN.md — Delete uses the wiring's namespaces and commits all or nothing; buffered vector delete (STOR-07; wave 7)
 - [x] 10-11-PLAN.md — Reserved metadata keys refused; named vector input refusals (STOR-09, STOR-16; wave 8)
-- [ ] 10-12-PLAN.md — unwired-store-effect parse refusal and UnparseableWiringError; writes_artifact marker; phase offline gate (STOR-12; wave 9)
+- [x] 10-12-PLAN.md — unwired-store-effect parse refusal and UnparseableWiringError; writes_artifact marker; phase offline gate (STOR-12; wave 9)
 
 ### Phase 11: LightRAG Corpus Path
 
@@ -430,7 +430,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 |-------|----------------|--------|-----------|
 | 8. Run the Engine | 10/10 | Complete    | 2026-10-16 |
 | 9. Inputs, Errors & Security | 10/10 | Complete    | 2026-10-17 |
-| 10. Stores, Locking & Data Integrity | 11/12 | In Progress|  |
+| 10. Stores, Locking & Data Integrity | 12/12 | In Progress|  |
 | 11. LightRAG Corpus Path | 0/TBD | Not started | - |
 | 12. HippoRAG Fixes | 0/TBD | Not started | - |
 | 13. Selectors, Wiring & Runner | 0/TBD | Not started | - |
