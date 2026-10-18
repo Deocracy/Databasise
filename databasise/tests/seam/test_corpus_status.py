@@ -162,7 +162,7 @@ async def test_health_returns_the_fixed_field_set(store_root, monkeypatch):
     report = await engine.health()
 
     assert isinstance(report, HealthReport)
-    assert set(report.stores) == {"kv", "vector", "graph"}
+    assert set(report.stores) == {f"{kind}:{ns}" for kind, ns in engine_module._HEALTH_PROBES}
     assert set(report.engine) == {"interpreter_present", "working_dir_present", "storages_initialized"}
     assert set(report.clients) == {"llm", "embedding", "rerank"}
     assert report.status in ("ok", "degraded")

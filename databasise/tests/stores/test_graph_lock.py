@@ -99,7 +99,7 @@ async def test_overlapping_engine_calls_complete_while_the_graph_is_held_in_proc
         )
         assert envelope is not None
         assert record is not None
-        assert report.stores["graph"] is True
+        assert report.stores["graph:chunk_entity_relation"] == "ok"
     finally:
         await held.finalize()
 

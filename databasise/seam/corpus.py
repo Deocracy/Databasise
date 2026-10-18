@@ -284,19 +284,25 @@ class DocumentCounts(BaseModel):
 
 class HealthReport(BaseModel):
     """The result ``Databasise.health()`` returns (05-04-PLAN.md Task 1, API-06) — a fixed-size
-    record: an overall ``status``, a per-store reachability map (``stores``, keyed by ``"kv"``/
-    ``"vector"``/``"graph"``) and the foreign engine's own liveness fields (``engine``, keyed by
-    ``"interpreter_present"``/``"working_dir_present"``/``"storages_initialized"``) and a client
-    presence map (``clients``, keyed by ``"llm"``/``"embedding"``/``"rerank"``, 08-05 D-08): whether
-    a client is wired under each key — never a URL, model name or key, never a live probe, and it
-    never affects ``status``. Never raises for an unreachable store or an unreachable foreign
-    engine — an unreachable participant is reported as unreachable, which is what a health check is
-    for."""
+    record: an overall ``status``, a per-store state map (``stores``), the foreign engine's own
+    liveness fields (``engine``, keyed by ``"interpreter_present"``/``"working_dir_present"``/
+    ``"storages_initialized"``) and a client presence map (``clients``, keyed by ``"llm"``/
+    ``"embedding"``/``"rerank"``, 08-05 D-08): whether a client is wired under each key — never a
+    URL, model name or key, never a live probe, and it never affects ``status``.
+
+    ``stores`` (Phase 10 D-14, Q3) is keyed ``"<kind>:<namespace>"`` over every namespace of every
+    shipped wiring, e.g. ``"kv:text_chunks"``, ``"graph:chunk_entity_relation"``,
+    ``"vector:chunks"``. Each value is ``ok``, ``absent`` (nothing on disk yet), ``corrupted`` or
+    ``busy`` (held by another process). The probes are read-only and create nothing. Any store that
+    is not ``ok`` makes ``status`` ``degraded``, so a fresh install is all ``absent`` and
+    ``degraded``; there is no separate not-initialized state. Never raises for an unreachable store
+    or an unreachable foreign engine — an unreachable participant is reported as unreachable, which
+    is what a health check is for."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     status: Literal["ok", "degraded"]
-    stores: dict[str, bool]
+    stores: dict[str, Literal["ok", "absent", "corrupted", "busy"]]
     engine: dict[str, bool]
     clients: dict[str, bool]
 

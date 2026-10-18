@@ -244,6 +244,7 @@ from databasise.seam.tokens import TokenBreakdownEntry, assemble_token_breakdown
 from databasise.seam.trace_store import TraceStore
 from databasise.stores.graph import CozoGraphStore, GraphStoreBusyError
 from databasise.stores.kv import SqliteKVStore
+from databasise.stores.probes import probe_graph, probe_kv, probe_vector
 from databasise.stores.vector import MultiNamespaceVectorStore, VectorStoreCorruptedError
 from databasise.validator.parse import ParsedWiring, parse_wiring
 from databasise.wirings.resolve import wiring_family
@@ -301,6 +302,23 @@ _ACCOUNTABLE_STORE_EFFECT_PREFIXES = ("reads_", "writes_")
 # databasise/parity/run_arm.py's own _TEXT_CHUNKS_KIND/_GRAPH_KIND constants exactly.
 _TEXT_CHUNKS_KIND = "text_chunks"
 _GRAPH_KIND = "chunk_entity_relation"
+
+# Every namespace of every shipped wiring, probed by health() (Phase 10 D-14). kv/graph come from the
+# wirings' store_namespaces, vector from the part modules' *_NAMESPACE constants; test_health_probe.py
+# fails if either drifts (research Pitfall 19).
+_HEALTH_PROBES: tuple[tuple[str, str], ...] = (
+    ("kv", _TEXT_CHUNKS_KIND),
+    ("graph", _GRAPH_KIND),
+    ("vector", "chunks"),
+    ("vector", "entities"),
+    ("vector", "relationships"),
+    ("kv", "hipporag-text-chunks"),
+    ("graph", "hipporag-graph"),
+    ("vector", "hipporag-chunks"),
+    ("vector", "hipporag-entities"),
+    ("vector", "hipporag-facts"),
+)
+_PROBES = {"kv": probe_kv, "graph": probe_graph, "vector": probe_vector}
 
 # 06-01-PLAN.md: the retrieval position and its namespace are now read off each resolved wiring's
 # own declared evidence_position ({"node": ..., "namespace": ...}) rather than hardcoded here —
@@ -1200,34 +1218,21 @@ class Databasise:
 
     async def health(self) -> HealthReport:
         """The ninth §18 operation (05-04-PLAN.md Task 1, API-06) — a fixed-size liveness record.
-        Probes the machine's own kv/vector/graph stores directly (never through the scheduler),
-        catching each store's own construction exception into ``stores`` rather than propagating
-        it, then calls the foreign engine's own ``"health"`` op, catching any failure of that call
-        into ``engine`` the same way. Never raises for an unreachable store or an unreachable
+        Probes every ``(kind, namespace)`` in ``_HEALTH_PROBES`` read-only (Phase 10 D-14, STOR-04):
+        no store is constructed and nothing is created, and each store reports ``ok``, ``absent``,
+        ``corrupted`` or ``busy``. Then calls the foreign engine's own ``"health"`` op, catching any
+        failure of that call into ``engine``. ``status`` is ``ok`` only when every store is ``ok``
+        and every engine field is true. Never raises for an unreachable store or an unreachable
         foreign engine — an unreachable participant is reported as unreachable, which is what a
         health check is for.
         """
-        store_factories: dict[str, Any] = {
-            "kv": lambda: SqliteKVStore(
-                namespace=_TEXT_CHUNKS_KIND, workspace=self.workspace, store_root=self.store_root
-            ),
-            "vector": lambda: MultiNamespaceVectorStore(
-                workspace=self.workspace, store_root=self.store_root
-            ),
-            "graph": lambda: CozoGraphStore(
-                namespace=_GRAPH_KIND, workspace=self.workspace, store_root=self.store_root
-            ),
-        }
-        opened_stores: dict[str, Any] = {}
-        store_reachability: dict[str, bool] = {}
-        for name, factory in store_factories.items():
-            try:
-                opened_stores[name] = factory()
-                store_reachability[name] = True
-            except Exception:
-                store_reachability[name] = False
-        for store in opened_stores.values():
-            await store.finalize()
+        root = Path(self.store_root) / self.workspace
+        stores = await asyncio.to_thread(
+            lambda: {
+                f"{kind}:{namespace}": _PROBES[kind](root / namespace)
+                for kind, namespace in _HEALTH_PROBES
+            }
+        )
 
         engine_report: dict[str, bool] = {"interpreter_present": DEFAULT_V1_INTERPRETER.exists()}
         try:
@@ -1240,10 +1245,10 @@ class Databasise:
             engine_report["working_dir_present"] = False
             engine_report["storages_initialized"] = False
 
-        overall_ok = all(store_reachability.values()) and all(engine_report.values())
+        overall_ok = all(v == "ok" for v in stores.values()) and all(engine_report.values())
         return HealthReport(
             status="ok" if overall_ok else "degraded",
-            stores=store_reachability,
+            stores=stores,
             engine=engine_report,
             clients={key: key in (self.clients or {}) for key in CLIENT_EFFECT_TO_KEY.values()},
         )
