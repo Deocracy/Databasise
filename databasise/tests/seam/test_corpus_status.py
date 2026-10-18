@@ -26,9 +26,11 @@ def _make_fake_run_corpus_op(
     *,
     documents: list[dict[str, Any]] = (),
     counts: dict[str, int] | None = None,
-    working_dir_present: bool = True,
-    storages_initialized: bool = True,
+    configured: bool = True,
+    missing_keys: tuple[str, ...] = (),
+    unsupported_keys: tuple[str, ...] = (),
 ):
+    # Callable with no arguments: the protected test_health_probe.py calls it that way.
     counts = counts if counts is not None else {}
     documents = list(documents)
 
@@ -37,8 +39,9 @@ def _make_fake_run_corpus_op(
             **payload,
             "_stub_documents": documents,
             "_stub_counts": counts,
-            "_stub_working_dir_present": working_dir_present,
-            "_stub_storages_initialized": storages_initialized,
+            "_stub_configured": configured,
+            "_stub_missing_keys": list(missing_keys),
+            "_stub_unsupported_keys": list(unsupported_keys),
         }
         if op == "status":
             return _run_status(job)
@@ -163,7 +166,8 @@ async def test_health_returns_the_fixed_field_set(store_root, monkeypatch):
 
     assert isinstance(report, HealthReport)
     assert set(report.stores) == {f"{kind}:{ns}" for kind, ns in engine_module._HEALTH_PROBES}
-    assert set(report.engine) == {"interpreter_present", "working_dir_present", "storages_initialized"}
+    # 11-09 D-14: storages_initialized is merged into the one v1_reachable fact.
+    assert set(report.engine) == {"interpreter_present", "working_dir_present", "v1_reachable"}
     assert set(report.clients) == {"llm", "embedding", "rerank"}
     assert report.status in ("ok", "degraded")
 
@@ -188,8 +192,10 @@ async def test_health_reports_which_clients_are_wired(store_root, monkeypatch):
 
     assert wired_report.clients == {"llm": True, "embedding": True, "rerank": False}
     assert bare_report.clients == {"llm": False, "embedding": False, "rerank": False}
-    # presence only: the clients map never changes status
-    assert wired_report.status == bare_report.status
+    # 11-09 D-14 amends Phase 8 D-08: a missing model client keeps status degraded and is named.
+    assert bare_report.status == "degraded"
+    assert "model clients not configured" in bare_report.engine_reason
+    assert "model clients not configured" not in (wired_report.engine_reason or "")
 
 
 async def test_health_reports_rerank_unavailable_when_the_binding_is_null(store_root, monkeypatch):
@@ -237,8 +243,10 @@ async def test_health_reports_degraded_and_never_raises_when_the_foreign_engine_
     report = await engine.health()
 
     assert report.status == "degraded"
-    assert report.engine["working_dir_present"] is False
-    assert report.engine["storages_initialized"] is False
+    # 11-09 D-14: working_dir_present is the dir's own existence, not forced false by the failure.
+    assert report.engine["working_dir_present"] is False  # the fresh root has no v1 working dir
+    assert report.engine["v1_reachable"] is False
+    assert "v1 unreachable" in report.engine_reason
 
 
 # ------------------------------------------------------------------------------------------- #

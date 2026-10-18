@@ -1513,17 +1513,24 @@ class Databasise:
         no store is constructed and nothing is created, and each store reports ``ok``, ``absent``,
         ``corrupted`` or ``busy``. Then checks the v1 working dir's existence itself and calls the
         driver's facade-free ``"health"`` op for ``v1_reachable``, catching any failure of that call
-        into ``engine`` and ``engine_reason`` (11-09 D-14, Q5). ``status`` is ``ok`` only when every
-        store is ``ok`` and every engine field is true. Never raises for an unreachable store or an unreachable
+        into ``engine`` and ``engine_reason`` (11-09 D-14, Q5). A probe that raises reports its
+        store ``corrupted``. ``status`` is ``ok`` only when every store is ``ok``, every engine
+        field is true and both the ``llm`` and ``embedding`` clients are wired (D-14 amends Phase 8
+        D-08). Never raises for an unreachable store or an unreachable
         foreign engine — an unreachable participant is reported as unreachable, which is what a
         health check is for.
         """
         root = Path(self.store_root) / self.workspace
+
+        def _probe(kind: str, namespace: str) -> str:
+            try:
+                return _PROBES[kind](root / namespace)
+            except Exception as exc:  # noqa: BLE001 - a failing store is reported, never a 500 (D-14)
+                logger.warning("health: the %s:%s probe failed: %s", kind, namespace, type(exc).__name__)
+                return "corrupted"
+
         stores = await asyncio.to_thread(
-            lambda: {
-                f"{kind}:{namespace}": _PROBES[kind](root / namespace)
-                for kind, namespace in _HEALTH_PROBES
-            }
+            lambda: {f"{kind}:{namespace}": _probe(kind, namespace) for kind, namespace in _HEALTH_PROBES}
         )
 
         # D-14: every engine fact is checked here; the driver's health op builds no facade (11-03).
@@ -1557,10 +1564,13 @@ class Databasise:
         if not engine_report["interpreter_present"]:
             reasons.append("v1 interpreter missing")
         clients = self.clients or {}
-        if "llm" not in clients or "embedding" not in clients:
+        clients_wired = "llm" in clients and "embedding" in clients  # rerank stays optional (D-09)
+        if not clients_wired:
             reasons.append("model clients not configured")
 
-        overall_ok = all(v == "ok" for v in stores.values()) and all(engine_report.values())
+        overall_ok = (
+            all(v == "ok" for v in stores.values()) and all(engine_report.values()) and clients_wired
+        )
         return HealthReport(
             status="ok" if overall_ok else "degraded",
             stores=stores,
