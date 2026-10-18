@@ -163,3 +163,55 @@ def test_an_unsupported_upload_type_is_refused_before_anything_is_written(tmp_pa
     assert not (tmp_path / _UP_WS).exists()
     assert not (tmp_path / "corpus-inbox").exists()
     assert calls == []
+
+
+# --------------------------------------------------------------------------------------------- #
+# 11-05 (LRAG-10, D-10): a re-ingest v1 drops reports enqueued 0 under the track id v1 recorded.
+# --------------------------------------------------------------------------------------------- #
+
+
+def _statuses(client: TestClient) -> dict[str, str]:
+    return {d["document_id"]: d["status"] for d in client.get("/corpus").json()["documents"]}
+
+
+@requires_v1
+def test_redo_a_text_ingest_of_the_same_id_reports_zero_under_v1s_track_id(real_v1):  # noqa: F811
+    client = _client(real_v1)
+    body = {"document": {"document_id": "redo1", "text": "UNIQredo Corp mends sails."}}
+    first = client.post("/documents", json=body)
+    second = client.post("/documents", json=body)
+    assert (first.status_code, second.status_code) == (200, 200), (first.text, second.text)
+
+    assert (first.json()["enqueued"], second.json()["enqueued"]) == (1, 0)
+    job_id = second.json()["job_id"]
+    assert job_id != first.json()["job_id"]
+    rows = client.get(f"/jobs/{job_id}").json()["documents"]
+    # v1 records the drop as a dup- row (or a failed row) under the second call's track id.
+    assert rows and all(r["document_id"].startswith("dup-") or r["status"] == "failed" for r in rows), rows
+    assert _statuses(client)["redo1"] == "processed"
+
+
+@requires_v1
+def test_the_same_bytes_under_a_new_id_report_zero_and_leave_the_first_processed(real_v1):  # noqa: F811
+    client = _client(real_v1)
+    data = b"UNIQsame Corp brews tea."
+    first = _upload(client, "same.txt", data, "u1")
+    second = _upload(client, "same.txt", data, "u2")
+    assert (first.status_code, second.status_code) == (200, 200), (first.text, second.text)
+
+    assert (first.json()["enqueued"], second.json()["enqueued"]) == (1, 0)
+    assert _statuses(client)["u1"] == "processed"
+
+
+@requires_v1
+def test_u3_uploaded_again_after_its_job_finished_reports_zero(real_v1):  # noqa: F811
+    client = _client(real_v1)
+    first = _upload(client, "u3.txt", b"UNIQthree Corp sells ink.", "u3")
+    assert first.status_code == 200, first.text
+    assert _statuses(client)["u3"] == "processed"
+
+    second = _upload(client, "u3.txt", b"UNIQthree Corp sells ink.", "u3")
+
+    assert second.status_code == 200, second.text
+    assert second.json()["enqueued"] == 0
+    assert _statuses(client)["u3"] == "processed"
