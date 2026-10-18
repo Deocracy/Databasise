@@ -21,6 +21,7 @@ from databasise.parts_core.lightrag.full_ingest import full_ingest_body
 from databasise.runner import scheduler as _scheduler
 from databasise.seam.corpus import IngestDocument
 from databasise.seam.engine import Databasise
+from databasise.stores.kv import SqliteKVStore
 from databasise.tests.fixtures.v1_stub_server import (  # noqa: F401 - fixture
     real_v1,
     requires_v1,
@@ -91,6 +92,51 @@ async def test_a_real_ingest_is_metered_unbudgetable_without_usage_and_none_with
     assert duplicate["enqueued"] == 0
     assert duplicate["tokens"].counted_by == "none"
     assert duplicate["tokens"].call_count == 0
+
+
+def _fake_v1_over_budget(_op: str, payload: dict[str, Any], *, working_dir: Any = None, **_: Any) -> dict[str, Any]:
+    """v1 commits the document, then reports more LLM spend than the default 1,000,000 allowance."""
+    working_dir = Path(working_dir)
+    working_dir.mkdir(parents=True, exist_ok=True)
+    doc_id = payload["documents"][0]["id"]
+    status = {doc_id: {"status": "processed", "chunks_list": [f"{doc_id}-c"], "track_id": payload["track_id"]}}
+    (working_dir / "kv_store_doc_status.json").write_text(json.dumps(status), encoding="utf-8")
+    chunks = {f"{doc_id}-c": {"content": "big", "full_doc_id": doc_id}}
+    (working_dir / "kv_store_text_chunks.json").write_text(json.dumps(chunks), encoding="utf-8")
+    return {"track_id": payload["track_id"], "enqueued": 1, "usage": _usage(3, 1_200_000, 50_000)}
+
+
+async def test_spend_over_the_allowance_still_syncs_and_commits_a_committed_v1_write(tmp_path, monkeypatch, caplog):
+    """11 REVIEW A-WR-02: a budget stop after v1 committed (and billed) used to skip the sync and
+    refuse the ingest as RunIncomplete. The spend is logged and the write syncs and commits."""
+    monkeypatch.setattr(full_ingest, "run_corpus_op", _fake_v1_over_budget)
+    monkeypatch.setattr(
+        full_delete, "run_corpus_op", lambda *_a, **_k: {"status": "success", "message": "", "usage": _usage(2, 1_100_000, 0)}
+    )
+    engine = Databasise(store_root=tmp_path, workspace="over")
+
+    with caplog.at_level("WARNING", logger="databasise.seam.engine"):
+        job = await engine.ingest(IngestDocument(document_id="big", text="big"))
+        outcome = await engine.delete_document("big")
+
+    assert job.enqueued == 1
+    assert outcome.status == "success"
+    overruns = [r.getMessage() for r in caplog.records if "over the default allowance" in r.getMessage()]
+    assert overruns == [
+        "corpus ingest: node full-ingest spent 1250000 tokens, 250000 over the default allowance of 1000000",
+        "corpus delete: node full-delete spent 1100000 tokens, 100000 over the default allowance of 1000000",
+    ]
+
+
+async def test_the_synced_chunk_of_an_over_budget_ingest_is_in_the_v2_store(tmp_path, monkeypatch):
+    monkeypatch.setattr(full_ingest, "run_corpus_op", _fake_v1_over_budget)
+    await Databasise(store_root=tmp_path, workspace="over").ingest(IngestDocument(document_id="big", text="big"))
+
+    kv = SqliteKVStore(namespace="text_chunks", workspace="over", store_root=tmp_path)
+    try:
+        assert (await kv.get_by_id("big-c"))["full_doc_id"] == "big"
+    finally:
+        await kv.finalize()
 
 
 # --------------------------------------------------------------------------------------------- #

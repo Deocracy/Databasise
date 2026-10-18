@@ -178,6 +178,7 @@ import hashlib
 import json
 import logging
 import sqlite3
+import sys
 import threading
 import uuid
 import weakref
@@ -470,6 +471,37 @@ def _inject_token_allowance(resolved: dict[str, Any], allowance: int) -> dict[st
         config.setdefault("token_allowance", allowance)
         node["config"] = config
     return resolved
+
+
+# 11 REVIEW A-WR-02: an opaque corpus op is metered after its subprocess has spent and v1 has
+# committed, so a budget halt there could only skip the index sync and the v2 commit. Its
+# allowance cannot be hit; the spend stays in its node trace and an overrun is logged.
+_UNHALTABLE_TOKEN_ALLOWANCE = sys.maxsize
+
+
+def _inject_corpus_token_allowance(resolved: dict[str, Any]) -> dict[str, Any]:
+    """The corpus write wirings' allowances: every opaque node gets one no spend reaches, every
+    other node the default (a HippoRAG node still halts before its own v2 commit)."""
+    for node in resolved.get("nodes", {}).values():
+        if node.get("kind") == "opaque":
+            node["config"] = {**(node.get("config") or {}), "token_allowance": _UNHALTABLE_TOKEN_ALLOWANCE}
+    return _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
+
+
+def _log_corpus_overrun(scheduled: dict[str, Any], operation: str) -> None:
+    """A-WR-02: log each node that spent more than the default allowance. The write still syncs
+    and commits, because the spend already happened."""
+    for trace in scheduled.get("nodes") or []:
+        spent = trace.tokens.prompt_tokens + trace.tokens.completion_tokens
+        if spent > _DEFAULT_TOKEN_ALLOWANCE:
+            logger.warning(
+                "corpus %s: node %s spent %d tokens, %d over the default allowance of %d",
+                operation,
+                trace.node_id,
+                spent,
+                spent - _DEFAULT_TOKEN_ALLOWANCE,
+                _DEFAULT_TOKEN_ALLOWANCE,
+            )
 
 
 def _inject_max_total_tokens(resolved: dict[str, Any], max_total_tokens: int) -> dict[str, Any]:
@@ -1174,7 +1206,7 @@ class Databasise:
         resolved["nodes"][target_node_id]["config"] = node_config
         _stamp_v1_working_dir(resolved, self._v1_working_dir())
 
-        resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
+        resolved = _inject_corpus_token_allowance(resolved)
         parsed = parse_wiring(resolved, self.registry)
         _refuse_unparseable(parsed)
         family = wiring_family(query_wiring)
@@ -1284,6 +1316,7 @@ class Databasise:
                     clients=self.clients,
                     recorder=_recorder,
                 )
+                _log_corpus_overrun(scheduled, "ingest")
                 # D-06 (STOR-06): any node failure or early stop commits nothing. Every store's
                 # staged writes are dropped before the refusal propagates.
                 try:
@@ -1382,7 +1415,7 @@ class Databasise:
             "input_dir": str(self._inbox()),  # v1 resolves a kept upload's basename here (D-09)
         }
         _stamp_v1_working_dir(resolved, self._v1_working_dir())
-        resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
+        resolved = _inject_corpus_token_allowance(resolved)
         parsed = parse_wiring(resolved, self.registry)
         _refuse_unparseable(parsed)
 
@@ -1463,7 +1496,7 @@ class Databasise:
         resolved["nodes"][delete_node_id]["config"] = node_config
         _stamp_v1_working_dir(resolved, self._v1_working_dir())
 
-        resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
+        resolved = _inject_corpus_token_allowance(resolved)
         parsed = parse_wiring(resolved, self.registry)
         _refuse_unparseable(parsed)
 
@@ -1491,6 +1524,7 @@ class Databasise:
                     clients=self.clients,
                     recorder=_recorder,
                 )
+                _log_corpus_overrun(scheduled, "delete")
                 # G-05-1 / WR-01: the same shared _node_result_or_refuse helper ingest() routes
                 # through, called before the MACH-11 correlation below so a refused run mints no seam
                 # events. D-06/D-08: a refusal, or a delete reporting "fail" (Q4), drops every store's
