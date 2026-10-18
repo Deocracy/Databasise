@@ -78,26 +78,28 @@ async def run_wiring(
         ),
     }
 
-    scheduled = await _scheduler.run_wiring(
-        parsed,
-        registry,
-        stores,
-        determinism_setting=determinism_setting,
-        concurrency_setting=concurrency_setting,
-        clients=clients,
-    )
+    try:
+        scheduled = await _scheduler.run_wiring(
+            parsed,
+            registry,
+            stores,
+            determinism_setting=determinism_setting,
+            concurrency_setting=concurrency_setting,
+            clients=clients,
+        )
 
-    if "cycle" in scheduled:
-        # Cyclic wirings are legal content (CONTRACT §1) — reported as data, never raised.
-        # Falsifier 2's cycle-safe (Tarjan SCC) depth pass is plan 01-03's deliverable; this
-        # tracer's acyclic path returns the cycle rather than attempting to run it.
+        if "cycle" in scheduled:
+            # Cyclic wirings are legal content (CONTRACT §1) — reported as data, never raised.
+            # Falsifier 2's cycle-safe (Tarjan SCC) depth pass is plan 01-03's deliverable; this
+            # tracer's acyclic path returns the cycle rather than attempting to run it.
+            return {"cycle": scheduled["cycle"]}
+
+        for store in stores.values():
+            await store.index_done_callback()
+    finally:
+        # Iteration-2 IN-03: every exit, a refused or cancelled run included, closes the connection.
         for store in stores.values():
             await store.finalize()
-        return {"cycle": scheduled["cycle"]}
-
-    for store in stores.values():
-        await store.index_done_callback()
-        await store.finalize()
 
     wiring_bytes = canonicalise(wiring_doc)
     wiring_instance_hash = f"sha256:{hashlib.sha256(wiring_bytes).hexdigest()}"
