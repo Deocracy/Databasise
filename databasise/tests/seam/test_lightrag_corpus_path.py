@@ -10,6 +10,7 @@ node mirrors it into the v2 stores the naive arm reads. Skips only when the v1 v
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -28,6 +29,7 @@ from databasise.stores.kv import SqliteKVStore
 from databasise.stores.vector import FaissVectorStore
 from databasise.tests.fixtures.v1_stub_server import real_v1, requires_v1  # noqa: F401 - fixture
 from databasise.tests.parts_core.lightrag.test_v1_index_sync import mixed_v1_dir  # noqa: F401 - fixture
+from databasise.tests.seam._probes import inbox_files
 
 _WS = "lrag-path"
 _TEXT = "UNIQalpha Corp builds bridges in UNIQalpha City."
@@ -183,12 +185,61 @@ def test_redo_a_text_ingest_of_the_same_id_reports_zero_under_v1s_track_id(real_
     assert (first.status_code, second.status_code) == (200, 200), (first.text, second.text)
 
     assert (first.json()["enqueued"], second.json()["enqueued"]) == (1, 0)
+    # A-CR-02: v1 already holds the id, so it is not called again; the job is the existing row's.
     job_id = second.json()["job_id"]
-    assert job_id != first.json()["job_id"]
+    assert job_id == first.json()["job_id"]
     rows = client.get(f"/jobs/{job_id}").json()["documents"]
-    # v1 records the drop as a dup- row (or a failed row) under the second call's track id.
-    assert rows and all(r["document_id"].startswith("dup-") or r["status"] == "failed" for r in rows), rows
+    assert [(r["document_id"], r["status"]) for r in rows] == [("redo1", "processed")], rows
     assert _statuses(client)["redo1"] == "processed"
+
+
+@requires_v1
+def test_one_id_with_two_suffixes_keeps_one_row_and_a_delete_removes_it_everywhere(real_v1):  # noqa: F811
+    """11 REVIEW A-CR-02: ``x.txt`` then ``x.md`` under one id used to leave two v1 rows, and a
+    delete removed only one, so the document stayed queryable after a ``success``."""
+    client = _client(real_v1, workspace="lrag-suffix")
+    first = _upload(client, "x.txt", b"UNIQsuffix Corp grinds flour.", "sfx")
+    second = _upload(client, "x.md", b"UNIQsuffix Corp grinds flour, again.", "sfx")
+    assert (first.status_code, second.status_code) == (200, 200), (first.text, second.text)
+    assert (first.json()["enqueued"], second.json()["enqueued"]) == (1, 0)
+    assert second.json()["job_id"] == first.json()["job_id"]
+    assert [d["document_id"] for d in client.get("/corpus").json()["documents"]] == ["sfx"]
+    assert client.post("/query", json={"query": {"text": "UNIQsuffix flour"}}).json()["evidence"]
+
+    deleted = client.delete("/documents/sfx")
+    assert (deleted.status_code, deleted.json()["status"]) == (200, "success"), deleted.text
+
+    assert client.get("/corpus").json()["documents"] == []
+    assert read_v1_snapshot(real_v1.store_root / "lrag-suffix" / "lightrag-v1").text_chunks == {}
+    after = client.post("/query", json={"query": {"text": "UNIQsuffix flour"}})
+    assert (after.status_code, after.json()["evidence"]) == (200, []), after.text
+
+
+async def test_an_id_v1_already_holds_is_not_sent_to_v1_again(tmp_path, monkeypatch):
+    """A-CR-02 without a v1 venv: the status probe finds a row, so the v1 ingest is never called,
+    nothing is staged and the job is the existing row's track id."""
+    v1_dir = tmp_path / "ws" / "lightrag-v1"
+    v1_dir.mkdir(parents=True)
+    rows = {"doc-abc": {"status": "processed", "file_path": "held.txt", "track_id": "old-track"}}
+    (v1_dir / "kv_store_doc_status.json").write_text(json.dumps(rows), encoding="utf-8")
+    probes: list[dict] = []
+    ingests: list[dict] = []
+
+    def _status(op, payload, **_kwargs):
+        probes.append({"op": op, **payload})
+        return {"counts": {"processed": 1}, "documents": [{"document_id": "held", "status": "processed"}], "total": 1}
+
+    monkeypatch.setattr(engine_module, "run_corpus_op", _status)
+    monkeypatch.setattr(full_ingest, "run_corpus_op", lambda _op, payload, **_k: ingests.append(payload))
+    engine = Databasise(store_root=tmp_path, workspace="ws")
+
+    job = await engine.ingest(IngestDocument(raw=b"new bytes", document_id="held", file_name="held.md"))
+
+    assert (job.job_id, job.enqueued) == ("old-track", 0)
+    assert ingests == []
+    assert [(p["op"], p["document_id"]) for p in probes] == [("status", "held")]
+    assert inbox_files(tmp_path) == []
+    assert not engine._write_gate_held()
 
 
 @requires_v1

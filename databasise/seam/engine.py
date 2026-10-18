@@ -585,6 +585,24 @@ def _interrupted_counts(counts: dict[str, int]) -> dict[str, int]:
     return out
 
 
+_V1_DOC_STATUS_FILE = "kv_store_doc_status.json"
+
+
+def _v1_row_track_id(status_path: Path, document_id: str) -> str | None:
+    """A-CR-02: the track id of v1's row for ``document_id`` by the driver's id stem rule (a text
+    row keeps our id; a ``doc-*`` file row maps back through its basename's stem). Read only under
+    the write gate, when no v1 process writes the file; ``None`` when it cannot be read."""
+    try:
+        rows = json.loads(status_path.read_text(encoding="utf-8"))
+        for v1_id, row in sorted(rows.items()):
+            stem = Path(str(row.get("file_path") or "")).stem
+            if (v1_id == document_id or (v1_id.startswith("doc-") and stem == document_id)) and row.get("track_id"):
+                return str(row["track_id"])
+    except (OSError, ValueError, AttributeError):
+        logger.warning("v1 doc-status file unreadable while looking up a track id")
+    return None
+
+
 def _stamp_v1_working_dir(resolved: dict[str, Any], working_dir: Path) -> None:
     """11-01 (D-01, LRAG-01): every LightRAG corpus node (the v1 port and the index sync) reads the
     per-workspace v1 dir from its config; no node falls back to a repo-global dir."""
@@ -1077,6 +1095,12 @@ class Databasise:
         staged file and v1's ``__parsed__/`` copy are removed. On those three faults, or a
         cancellation, the file stays and is logged once: v1 may still list the document, and a
         retry needs the source. ``delete_document`` removes whatever is left for the id.
+
+        **An id v1 already holds (11 REVIEW A-CR-02).** Inside the D-07 gate, before anything is
+        staged or recorded, a LightRAG ingest probes v1 with the status op ``retry_document`` uses.
+        If v1 holds any row for the id (any status, text or file, any suffix), v1 is not called:
+        the job is ``enqueued: 0`` under that row's track id (D-10). v1 would otherwise keep a
+        second row for ``x.md`` beside ``x.txt``, and a delete removes only one of them.
         """
         # D-12: only None is absent; a caller-supplied '' reaches the token check and is refused.
         document_id = document.document_id if document.document_id is not None else uuid.uuid4().hex
@@ -1131,16 +1155,40 @@ class Databasise:
         resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
         parsed = parse_wiring(resolved, self.registry)
         _refuse_unparseable(parsed)
+        family = wiring_family(query_wiring)
         return await self._run_corpus_ingest(
             resolved,
             parsed,
-            wiring_family(query_wiring),
+            family,
             document_id=document_id,
             track_id=track_id,
             result_node_id=result_node_id,
             staged=staged,
             raw=document.raw,
+            precheck=(lambda: self._held_by_v1(document_id, track_id)) if family == "lightrag" else None,
         )
+
+    async def _held_by_v1(self, document_id: str, track_id: str) -> IngestJob | None:
+        """A-CR-02: ``enqueued: 0`` under the existing row's track id when v1 already holds a row
+        for ``document_id``, else ``None``. Without a doc-status file v1 holds no row (the status
+        op answers an empty corpus), so no probe is started. The status op lists no track id, so
+        it is read from the file, under the gate, with the driver's id stem rule."""
+        status_path = self._v1_working_dir() / _V1_DOC_STATUS_FILE
+        if not status_path.is_file():
+            return None
+        result = await _corpus_op_or_refuse(
+            "status",
+            {"track_id": None, "document_id": document_id, "limit": 1, "offset": 0},
+            "ingest",
+            self._v1_working_dir(),
+        )
+        try:
+            held = int(result["total"]) > 0
+        except _MALFORMED_RESULT as exc:
+            raise _foreign_fault("ingest", exc, failure_class="MalformedDriverOutput") from exc
+        if not held:
+            return None
+        return IngestJob(job_id=_v1_row_track_id(status_path, document_id) or track_id, enqueued=0)
 
     async def _run_corpus_ingest(
         self,
@@ -1153,11 +1201,12 @@ class Databasise:
         result_node_id: str,
         staged: Path | None = None,
         raw: bytes | None = None,
-        precheck: Callable[[], Awaitable[None]] | None = None,
+        precheck: Callable[[], Awaitable[IngestJob | None]] | None = None,
         remove_inbox_files: bool = False,
     ) -> IngestJob:
         """The run, commit and cleanup ``ingest`` and ``retry_document`` share (11-08): stores
-        opened, the D-07 gate entered (LightRAG only), ``precheck`` awaited inside the gate, the
+        opened, the D-07 gate entered (LightRAG only), ``precheck`` awaited inside the gate (a job
+        it returns is the answer, and nothing is staged or run), the
         upload staged, the corpus-ingest wiring run, every store committed or every pending write
         dropped, and the inbox cleaned after a committed run (``staged``, or with
         ``remove_inbox_files`` every inbox file for ``document_id``)."""
@@ -1184,8 +1233,8 @@ class Databasise:
                 # D-07 (LRAG-04): after the open (STOR-02), held through the run, commit and cleanup.
                 if gated:
                     gate.enter_context(_write_gate(self._v1_working_dir()))
-                if precheck is not None:
-                    await precheck()
+                if precheck is not None and (existing := await precheck()) is not None:
+                    return existing
                 if gated:
                     # D-02: before the run, so a job v1 records but that times out here is known.
                     self._record_job(track_id, family, document_id)
