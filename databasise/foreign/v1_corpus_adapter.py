@@ -1,14 +1,17 @@
 """``databasise.foreign`` — CONTRACT §17's foreign-part adapter layer: process lifecycle, the RPC
 channel (JSON over stdin/stdout), health (a non-zero exit is a refusal). This is not
 ``databasise/parity/``: parity is Phase 3's read-only comparison harness between the decomposed and
-original LightRAG arms; ``databasise/foreign/`` is the machine-side launcher for v1's own corpus-
-side write operations (ingest today, delete/status in 05-03/05-04), and is shared by whichever
-opaque Part needs to reach a foreign interpreter — a second engine (05-06) reuses this same launch
-shape rather than a copy under ``parity/``.
+original LightRAG arms; ``databasise/foreign/`` is the machine-side launcher for v1's own corpus
+operations (ingest, delete, status and health), and is shared by whichever opaque Part needs to
+reach a foreign interpreter — a second engine (05-06) reuses this same launch shape rather than a
+copy under ``parity/``.
 
 ``run_corpus_op`` mirrors ``databasise/parity/v1_arm.py``'s ``run_v1_arm`` launch shape exactly:
 resolve the interpreter, build the job dict, ``subprocess.run(..., timeout=timeout)``, non-zero
-exit is a hard refusal (never a partial/empty success), parse stdout JSON on success. All
+exit is a hard refusal (never a partial/empty success), parse stdout JSON on success. Exit 3 is
+:class:`V1NotConfiguredError` (key names only), exit 4 is :class:`CorpusOpBusyError`, any other
+non-zero exit is :class:`CorpusOpSubprocessError`, and non-JSON stdout on exit 0 is
+:class:`CorpusOpMalformedOutputError` (11-07, LRAG-05/06). All
 caller-controlled data travels in the JSON job on stdin — nothing caller-controlled is ever
 interpolated into argv or into a shell string.
 
@@ -32,12 +35,10 @@ DEFAULT_V1_ENV_PARITY = _REPO_ROOT / "v1" / ".env.parity"
 # per-workspace dir (<store_root>/<workspace>/lightrag-v1); a job without one is refused by the real
 # driver, so no call reaches the operator corpus in v1/.corpus_working_dir by default.
 
-# 05-04-PLAN.md Task 1: a status read builds v1's facade and reads its doc-status store — it
-# performs no extraction and calls no model, unlike an ingest (which may reach the LLM/embedder)
-# or a delete (which may reach the LLM on a partial-rebuild path). This is why the seam's status
-# methods (get_job_status/health/corpus_status/document_counts) are per-call, never polled in a
-# tight loop: each call still pays a full facade construction against v1's own doc-status/graph
-# storage backends, which is not free even though it makes no network call.
+# The wall-clock ceiling for the status and health ops. Since 11-03 both are facade-free: status
+# reads v1's kv_store_doc_status.json directly and health checks configuration only, so neither
+# extracts or calls a model, unlike an ingest or a delete. Each call still starts a v1 interpreter,
+# so the seam's status methods are per-call, never polled in a tight loop.
 STATUS_WALL_CLOCK_CEILING_SECONDS = 60.0
 
 
@@ -57,13 +58,15 @@ class MissingV1InterpreterError(RuntimeError):
 
 class CorpusOpSubprocessError(RuntimeError):
     """A non-zero exit from the v1 corpus driver subprocess — carries the captured stderr rather
-    than returning an empty result (this module's own refusal-over-silent-empty-result rule)."""
+    than returning an empty result (this module's own refusal-over-silent-empty-result rule). The
+    message keeps the last 2000 characters, where a traceback's exception line is (LRAG-05). It
+    reaches the server log only, never a caller body (D-11)."""
 
     def __init__(self, returncode: int, stderr: str):
         self.returncode = returncode
         self.stderr = stderr
         super().__init__(
-            f"v1 corpus driver subprocess exited {returncode}: {stderr.strip()[:2000] or '(no stderr)'}"
+            f"v1 corpus driver subprocess exited {returncode}: {stderr.strip()[-2000:] or '(no stderr)'}"
         )
 
 
@@ -82,6 +85,21 @@ class V1NotConfiguredError(CorpusOpSubprocessError):
             f"v1 is not configured: missing {self.missing_keys or 'none'}, "
             f"unsupported {self.unsupported_keys or 'none'}",
         )
+
+
+class CorpusOpBusyError(CorpusOpSubprocessError):
+    """The driver's exit 4 (11-03, Q2): ``kv_store_doc_status.json`` did not parse twice in a row,
+    usually v1 rewriting it during a write. The engine answers it as a 409 corpus-busy refusal."""
+
+    def __init__(self, stderr: str = ""):
+        self.returncode = 4
+        self.stderr = stderr
+        RuntimeError.__init__(self, "v1's doc-status file was unreadable (a write is rewriting it)")
+
+
+class CorpusOpMalformedOutputError(RuntimeError):
+    """The driver exited 0 but its stdout is not one JSON value (LRAG-05). Raised from the decode
+    error, so the server log keeps the cause; callers see only ``MalformedDriverOutput``."""
 
 
 class CorpusOpTimeoutError(RuntimeError):
@@ -182,16 +200,23 @@ def run_corpus_op(
                 unsupported_keys=list(refusal.get("unsupported_keys") or []),
                 stderr=proc.stderr,
             )
+    if proc.returncode == 4 and _refusal_json(proc.stdout).get("error") == "doc_status_unreadable":
+        raise CorpusOpBusyError(proc.stderr)
     if proc.returncode != 0:
         raise CorpusOpSubprocessError(proc.returncode, proc.stderr)
 
-    return json.loads(proc.stdout)
+    try:
+        return json.loads(proc.stdout)
+    except ValueError as exc:
+        raise CorpusOpMalformedOutputError(f"v1 corpus driver op {op!r} wrote non-JSON stdout") from exc
 
 
 __all__ = [
     "run_corpus_op",
     "CorpusOpTimeoutError",
     "CorpusOpSubprocessError",
+    "CorpusOpBusyError",
+    "CorpusOpMalformedOutputError",
     "V1NotConfiguredError",
     "MissingV1InterpreterError",
     "DEFAULT_V1_INTERPRETER",

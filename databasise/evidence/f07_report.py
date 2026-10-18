@@ -45,8 +45,9 @@ _CODEBASE_MEMORY_MCP_REASON = (
     "for manage_adr/delete_project's own behaviour to be A/B-testable. Reversal condition: a "
     "future requirement asking for that A/B-testability, at which point the snapshot/reset "
     "protocol is a file-copy-and-restore of the engine's own SQLite database plus its WAL and "
-    "SHM siblings, in databasise/foreign/codebase_memory_mcp_adapter.py -- the same file-unlink "
-    "shape that adapter already owns for delete_project."
+    "SHM siblings, in databasise/foreign/codebase_memory_mcp_adapter.py. No adapter owns a "
+    "file-unlink shape for delete_project today: it is admitted but not driven (COVERAGE.md's "
+    "OPT-OUT row)."
 )
 
 _LIGHTRAG_FULL_DELETE_REASON = (

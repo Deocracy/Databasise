@@ -738,6 +738,7 @@ _FOREIGN_FAILURE_CLASSES: dict[str, str] = {
     "CorpusOpSubprocessError": "CorpusOpSubprocessError",
     "CorpusOpTimeoutError": "CorpusOpTimeoutError",
     "V1NotConfiguredError": "V1NotConfigured",
+    "CorpusOpMalformedOutputError": "MalformedDriverOutput",
     "JSONDecodeError": "MalformedDriverOutput",
     "UnicodeDecodeError": "MalformedDriverOutput",
 }

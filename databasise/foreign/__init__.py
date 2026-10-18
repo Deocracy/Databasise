@@ -9,6 +9,8 @@ rather than a copy under ``parity/``.
 from __future__ import annotations
 
 from databasise.foreign.v1_corpus_adapter import (
+    CorpusOpBusyError,
+    CorpusOpMalformedOutputError,
     CorpusOpSubprocessError,
     CorpusOpTimeoutError,
     MissingV1InterpreterError,
@@ -20,6 +22,8 @@ __all__ = [
     "run_corpus_op",
     "CorpusOpTimeoutError",
     "CorpusOpSubprocessError",
+    "CorpusOpBusyError",
+    "CorpusOpMalformedOutputError",
     "MissingV1InterpreterError",
     "V1NotConfiguredError",
 ]

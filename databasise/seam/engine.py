@@ -183,7 +183,7 @@ from pathlib import Path
 from typing import Any
 
 from databasise.clients import CLIENT_EFFECT_TO_KEY
-from databasise.foreign import run_corpus_op
+from databasise.foreign import CorpusOpBusyError, run_corpus_op
 from databasise.foreign.v1_corpus_adapter import (
     DEFAULT_V1_INTERPRETER,
     STATUS_WALL_CLOCK_CEILING_SECONDS,
@@ -537,6 +537,10 @@ async def _corpus_op_or_refuse(op: str, payload: dict[str, Any], operation: str,
         )
     except SeamRefusalError:
         raise
+    except CorpusOpBusyError as exc:
+        # 11-07 (Q2): a torn doc-status read is a write in progress, so a 409, never a partial list.
+        logger.warning("v1 doc-status file unreadable during %s", operation, exc_info=exc)
+        raise StoreBusyError(store_kind="corpus") from None
     except Exception as exc:
         # An OSError (PermissionError, FileNotFoundError) means the v1 interpreter or cwd is unusable.
         raise _foreign_fault(
