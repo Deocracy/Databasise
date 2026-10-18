@@ -1511,9 +1511,10 @@ class Databasise:
         """The ninth §18 operation (05-04-PLAN.md Task 1, API-06) — a fixed-size liveness record.
         Probes every ``(kind, namespace)`` in ``_HEALTH_PROBES`` read-only (Phase 10 D-14, STOR-04):
         no store is constructed and nothing is created, and each store reports ``ok``, ``absent``,
-        ``corrupted`` or ``busy``. Then calls the foreign engine's own ``"health"`` op, catching any
-        failure of that call into ``engine``. ``status`` is ``ok`` only when every store is ``ok``
-        and every engine field is true. Never raises for an unreachable store or an unreachable
+        ``corrupted`` or ``busy``. Then checks the v1 working dir's existence itself and calls the
+        driver's facade-free ``"health"`` op for ``v1_reachable``, catching any failure of that call
+        into ``engine`` and ``engine_reason`` (11-09 D-14, Q5). ``status`` is ``ok`` only when every
+        store is ``ok`` and every engine field is true. Never raises for an unreachable store or an unreachable
         foreign engine — an unreachable participant is reported as unreachable, which is what a
         health check is for.
         """
@@ -1525,7 +1526,17 @@ class Databasise:
             }
         )
 
-        engine_report: dict[str, bool] = {"interpreter_present": DEFAULT_V1_INTERPRETER.exists()}
+        # D-14: every engine fact is checked here; the driver's health op builds no facade (11-03).
+        try:
+            working_dir_present = self._v1_working_dir().exists()
+        except OSError:
+            working_dir_present = False
+        engine_report: dict[str, bool] = {
+            "interpreter_present": DEFAULT_V1_INTERPRETER.exists(),
+            "working_dir_present": working_dir_present,
+            "v1_reachable": False,
+        }
+        reasons: list[str] = []  # fixed text and key names only, never values (D-12, Q5)
         try:
             result = await asyncio.to_thread(
                 run_corpus_op,
@@ -1534,20 +1545,28 @@ class Databasise:
                 timeout=STATUS_WALL_CLOCK_CEILING_SECONDS,
                 working_dir=self._v1_working_dir(),
             )
-            # 11-03: the driver's health op builds no facade and reports only configuration, so the
-            # dir is checked here; 11-09 renames storages_initialized to v1_reachable (D-14).
-            engine_report["working_dir_present"] = self._v1_working_dir().exists()
-            engine_report["storages_initialized"] = bool(result.get("configured", False))
-        except Exception:
-            engine_report["working_dir_present"] = False
-            engine_report["storages_initialized"] = False
+            engine_report["v1_reachable"] = bool(result["configured"])
+            if result.get("missing_keys"):
+                reasons.append(f"v1 not configured: missing {', '.join(result['missing_keys'])}")
+            if result.get("unsupported_keys"):
+                reasons.append(f"v1 backend unsupported: {', '.join(result['unsupported_keys'])}")
+        except Exception as exc:  # noqa: BLE001 - health reports an unreachable engine, never raises
+            # The type name only: a subprocess error's text can carry driver stderr.
+            logger.warning("health: the v1 driver health op failed: %s", type(exc).__name__)
+            reasons.append("v1 unreachable")
+        if not engine_report["interpreter_present"]:
+            reasons.append("v1 interpreter missing")
+        clients = self.clients or {}
+        if "llm" not in clients or "embedding" not in clients:
+            reasons.append("model clients not configured")
 
         overall_ok = all(v == "ok" for v in stores.values()) and all(engine_report.values())
         return HealthReport(
             status="ok" if overall_ok else "degraded",
             stores=stores,
             engine=engine_report,
-            clients={key: key in (self.clients or {}) for key in CLIENT_EFFECT_TO_KEY.values()},
+            clients={key: key in clients for key in CLIENT_EFFECT_TO_KEY.values()},
+            engine_reason="; ".join(reasons) or None,
         )
 
     async def _execute(

@@ -308,16 +308,23 @@ class HealthReport(BaseModel):
     """The result ``Databasise.health()`` returns (05-04-PLAN.md Task 1, API-06) — a fixed-size
     record: an overall ``status``, a per-store state map (``stores``), the foreign engine's own
     liveness fields (``engine``, keyed by ``"interpreter_present"``/``"working_dir_present"``/
-    ``"storages_initialized"``) and a client presence map (``clients``, keyed by ``"llm"``/
+    ``"v1_reachable"``, 11-09 D-14) and a client presence map (``clients``, keyed by ``"llm"``/
     ``"embedding"``/``"rerank"``, 08-05 D-08): whether a client is wired under each key — never a
-    URL, model name or key, never a live probe, and it never affects ``status``.
+    URL, model name or key, never a live probe. ``status`` is ``ok`` only when both the ``llm`` and
+    ``embedding`` clients are wired (11-09 D-14 amends Phase 8 D-08); ``rerank`` stays optional.
+
+    ``engine_reason`` (11-09, research Q5, D-12) is ``None`` when nothing is wrong, else short fixed
+    text joined by ``"; "``, e.g. ``"v1 not configured: missing EMBEDDING_DIM"`` or ``"model
+    clients not configured"``. It names configuration keys only, never their values.
 
     ``stores`` (Phase 10 D-14, Q3) is keyed ``"<kind>:<namespace>"`` over every namespace of every
     shipped wiring, e.g. ``"kv:text_chunks"``, ``"graph:chunk_entity_relation"``,
     ``"vector:chunks"``. Each value is ``ok``, ``absent`` (nothing on disk yet), ``corrupted`` or
     ``busy`` (held by another process). The probes are read-only and create nothing. Any store that
     is not ``ok`` makes ``status`` ``degraded``, so a fresh install is all ``absent`` and
-    ``degraded``; there is no separate not-initialized state. Never raises for an unreachable store
+    ``degraded``; there is no separate not-initialized state. A single-modality install reads
+    ``degraded`` while the other modality's stores are ``absent`` (11-09 D-14: health reports every
+    shipped namespace). Never raises for an unreachable store
     or an unreachable foreign engine — an unreachable participant is reported as unreachable, which
     is what a health check is for."""
 
@@ -327,6 +334,7 @@ class HealthReport(BaseModel):
     stores: dict[str, Literal["ok", "absent", "corrupted", "busy"]]
     engine: dict[str, bool]
     clients: dict[str, bool]
+    engine_reason: str | None = None
 
 
 def generated_on_disk_name(document_id: str, suffix: str = _ON_DISK_SUFFIX) -> str:
