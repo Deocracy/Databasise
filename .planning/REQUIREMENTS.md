@@ -206,7 +206,7 @@
   - Test: Test runs the adapter with an empty env overlay and a scrubbed environment; assert GET /corpus and /corpus/counts return the named refusal naming the missing keys, POST /documents returns it (not ForeignEngineRefusalError with a KeyError traceback), and GET /health includes the reason. Fails today with a 500 and a reasonless 'degraded'.
   - Defects: foreign/FOR-10, doc-audit-4/D5
   - Phase 11 D-12 exception (owner-delegated 2026-10-17): this refusal may name the missing configuration keys, never their values; it narrowly amends Phase 9 D-04 (no env-var names in refusal bodies) for configuration refusals only.
-- [ ] **LRAG-07**: A LightRAG ingest that exceeds its wall-clock ceiling (900 s ingest, 300 s delete, 60 s status) marks its document as stuck/interrupted: GET /corpus reports any document left in PARSING/ANALYZING/PROCESSING with no job in flight under a distinguishable stuck/interrupted status, an explicit retry/reprocess action exists for it, and the next unrelated ingest does not reprocess it inside its own request.
+- [x] **LRAG-07**: A LightRAG ingest that exceeds its wall-clock ceiling (900 s ingest, 300 s delete, 60 s status) marks its document as stuck/interrupted: GET /corpus reports any document left in PARSING/ANALYZING/PROCESSING with no job in flight under a distinguishable stuck/interrupted status, an explicit retry/reprocess action exists for it, and the next unrelated ingest does not reprocess it inside its own request.
   - Test: Test with a driver stub that leaves a document in PROCESSING then times out (CorpusOpTimeoutError); assert GET /corpus reports it as stuck/interrupted, a subsequent ingest of a different document does not reprocess it (its job rows contain only the new document), and the retry action moves it back to processing. Fails today: no stuck status, no retry route, recovery runs as a side effect of the next ingest.
   - Defects: foreign/FOR-06
   - Owner decision first: G-33: stuck-state semantics and retry surface (new route vs reuse ingest), and whether the next ingest should keep v1's auto-recovery side effect.
@@ -869,7 +869,7 @@ These fail today.
 | LRAG-04 | Phase 11 | Complete |
 | LRAG-05 | Phase 11 | Complete |
 | LRAG-06 | Phase 11 | Pending |
-| LRAG-07 | Phase 11 | Pending |
+| LRAG-07 | Phase 11 | Complete |
 | LRAG-08 | Phase 11 | Complete |
 | LRAG-09 | Phase 11 | Complete |
 | LRAG-10 | Phase 11 | Complete |

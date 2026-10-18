@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 11
 current_phase_name: LightRAG Corpus Path
 status: executing
-stopped_at: Completed 11-07-PLAN.md
-last_updated: "2026-10-18T18:13:30.923Z"
+stopped_at: Completed 11-08-PLAN.md
+last_updated: "2026-10-18T18:50:50.433Z"
 last_activity: 2026-10-17
 last_activity_desc: Phase 10 complete, transitioned to Phase 11
-state_head: 9f7205604bb9799d6127ee1911c92e3d3210f1ec
+state_head: ef036fa9c5c1820ff420e3e4940017d24f89c1aa
 progress:
   total_phases: 11
   completed_phases: 3
   total_plans: 43
-  completed_plans: 39
+  completed_plans: 40
   percent: 27
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-17 after Phase 10)
 ## Current Position
 
 Phase: 11 (LightRAG Corpus Path) — EXECUTING
-Plan: 8 of 11
+Plan: 9 of 11
 Status: Ready to execute
 Last activity: 2026-10-17 — Phase 10 complete, transitioned to Phase 11
 
@@ -101,6 +101,7 @@ Progress: [███░░░░░░░] 27% (3/11 phases)
 | Phase 11 P05 | 50 min | 3 tasks | 16 files |
 | Phase 11 P06 | 35min | 2 tasks | 5 files |
 | Phase 11 P07 | 40min | 2 tasks | 9 files |
+| Phase 11 P08 | 35min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -172,6 +173,8 @@ Recent decisions affecting current work:
 - [Phase 11]: 11-06: jobs.db (job_families) records LightRAG jobs before the run and HippoRAG jobs after commit; GET /jobs answers HippoRAG from the record, everything else from v1
 - [Phase 11]: V1NotConfiguredError and CorpusOpBusyError subclass CorpusOpSubprocessError so 11-03 exit-code pins hold; failure_class resolves by exact type name
 - [Phase 11]: Only failure_class V1NotConfigured adds public missing_keys/unsupported_keys to ForeignEngineRefusalError (D-12 single exception)
+- [Phase 11]: 11-08: the interrupted remap applies only when no write holds the D-07 gate before and after the status read; /jobs keeps v1's raw status
+- [Phase 11]: 11-08: retry_document is LightRAG only and runs its interrupted pre-check inside the write gate; no D-08 fallback amendment is needed
 
 ### Pending Todos
 
@@ -219,8 +222,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-18T18:13:30.784Z
-Stopped at: Completed 11-07-PLAN.md
+Last session: 2026-10-18T18:50:50.286Z
+Stopped at: Completed 11-08-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
