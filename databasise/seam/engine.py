@@ -156,7 +156,8 @@ passed to every status/health ``run_corpus_op`` call; there is no repo-global de
 wirings run v1's own ingest or delete subprocess, then ``lightrag/v1-index-sync``, which mirrors
 v1's committed index into the staged v2 stores the query arms read. Residual window: v1 has
 already committed by the time the v2 commit runs. If the v2 commit fails, v1 and v2 diverge until
-the next sync, which re-mirrors the whole index and so heals them.
+the next sync, which re-mirrors the whole index and so heals them. Deletes heal too: the sync's
+prune manifest keeps the ids it pruned until every store committed (11 REVIEW A-WR-01).
 
 **11-06-PLAN.md (D-07, LRAG-04): one LightRAG write per working dir at a time.** Phase 8 guarantees
 one engine process per store root, so an in-process ``threading.Lock`` per resolved v1 working dir
@@ -197,6 +198,7 @@ from databasise.parts_core import EFFECT_TO_STORE
 from databasise.parts_core.lightrag import chunk_vector as _chunk_vector
 from databasise.parts_core.lightrag import entity_lookup as _entity_lookup
 from databasise.parts_core.lightrag import relation_lookup as _relation_lookup
+from databasise.parts_core.lightrag.v1_index_sync import V1_INDEX_SYNC_MANIFEST_KEY
 from databasise.runner import scheduler as _scheduler
 from databasise.runner.trace import NodeTrace, RunRecord
 from databasise.seam.corpus import (
@@ -723,6 +725,26 @@ async def _commit_all(stores: dict[str, Any], operation: str, store_root: Path) 
             if not isinstance(exc, Exception):
                 raise
             raise _foreign_fault(operation, exc, failure_class="StoreFault") from exc
+
+
+async def _narrow_sync_manifest(stores: dict[str, Any], scheduled: dict[str, Any], store_root: Path) -> None:
+    """11 REVIEW A-WR-01: after every store committed, narrow the v1 index-sync manifest to the
+    snapshot's ids (the sync committed it with the pruned ids still listed). A failure keeps the
+    wider manifest, which is safe: the next sync prunes those ids again."""
+    manifest = next(
+        (r["manifest"] for r in scheduled["results"].values() if isinstance(r, dict) and "manifest" in r), None
+    )
+    kv = stores.get("kv")
+    if manifest is None or kv is None:
+        return
+    try:
+        await kv.upsert({V1_INDEX_SYNC_MANIFEST_KEY: manifest})
+        async with _flush_lock(store_root):
+            await kv.prepare()
+            await kv.commit_prepared()
+    except Exception:
+        await kv.abort_prepared()
+        logger.warning("could not narrow the v1 index-sync manifest; the next sync prunes again", exc_info=True)
 
 
 def _node_result_or_refuse(scheduled: dict[str, Any], node_id: str, operation: str) -> dict[str, Any]:
@@ -1281,6 +1303,7 @@ class Databasise:
                 # index_done_callback all early-return when nothing is pending).
                 # 10-05 (D-07): all stores prepare, then all commit, or none does.
                 await _commit_all(stores, "ingest", self.store_root)
+                await _narrow_sync_manifest(stores, scheduled, self.store_root)
             except BaseException as exc:
                 if wrote_staged:
                     # 11-05 (D-09): a refusal v1 cannot still be working on removes the file; a v1
@@ -1481,6 +1504,7 @@ class Databasise:
                 # and any other status is a refusal that must not persist the staged deletes.
                 if result.get("status") in ("success", "not_found"):
                     await _commit_all(stores, "delete", self.store_root)
+                    await _narrow_sync_manifest(stores, scheduled, self.store_root)
                 else:
                     await _drop_pending(stores, self.store_root)
             finally:

@@ -15,8 +15,9 @@ writes.
 
 Pruning (D-01, stale detection by set difference): the kv record ``V1_INDEX_SYNC_MANIFEST_KEY``
 lists, per namespace, the ids the last sync wrote. Each sync upserts the current snapshot, deletes
-``previous manifest ids - current ids``, then writes the new manifest, all staged in the same
-commit. A row the sync never wrote (a parity ``import_v1_index`` corpus in the same store root) is
+``previous manifest ids - current ids``, then stages a manifest of ``current ids`` plus those
+pruned ids, all in the same commit. The pruned ids leave the manifest only when the engine narrows
+it after every store committed (11 REVIEW A-WR-01), so a partial commit is pruned again. A row the sync never wrote (a parity ``import_v1_index`` corpus in the same store root) is
 never deleted, and with no previous manifest nothing is deleted. Limit: an id that the sync and a
 parity import both hold is overwritten by the sync's upsert (and pruned once v1 drops it); merging
 the two is TOOL-02's job. The manifest record lives in the ``text_chunks`` kv namespace, so a future
@@ -62,6 +63,19 @@ def _compute_environment_hash() -> str:
     return "sha256:" + hashlib.sha256(canonicalise(payload)).hexdigest()
 
 
+def _with_pruned(previous: dict[str, list[Any]] | None, current: dict[str, list[Any]]) -> dict[str, list[Any]]:
+    """``current`` plus every id of ``previous``, per namespace (an edge id is a ``[src, tgt]``
+    list)."""
+    if not previous:
+        return current
+    merged: dict[str, list[Any]] = {}
+    for namespace in sorted(set(previous) | set(current)):
+        listed = [*current.get(namespace, []), *(previous.get(namespace) or [])]
+        ids = {tuple(i) if isinstance(i, list) else i: i for i in listed}
+        merged[namespace] = [ids[key] for key in sorted(ids)]
+    return merged
+
+
 async def v1_index_sync_body(ctx: Any) -> dict[str, Any]:
     """Mirror the PROCESSED rows of v1's index at ``config["working_dir"]`` into ``ctx.stores``.
 
@@ -78,8 +92,12 @@ async def v1_index_sync_body(ctx: Any) -> dict[str, Any]:
         kv, vector, graph = ctx.stores["kv"], ctx.stores["vector"], ctx.stores["graph"]
         previous = await kv.get_by_id(V1_INDEX_SYNC_MANIFEST_KEY)
         counts = await mirror_snapshot(snapshot, kv=kv, vector=vector, graph=graph, manifest=previous)
-        await kv.upsert({V1_INDEX_SYNC_MANIFEST_KEY: snapshot.ids()})
-        return {"synced": True, "counts": counts, "tokens": TokenAccounting(counted_by="none")}
+        current = snapshot.ids()
+        # A-WR-01: the committed manifest still lists the ids pruned now. kv commits before vector
+        # and graph, so after a partial commit the next sync prunes them again. The engine narrows
+        # the manifest to ``current`` only after every store committed.
+        await kv.upsert({V1_INDEX_SYNC_MANIFEST_KEY: _with_pruned(previous, current)})
+        return {"synced": True, "counts": counts, "manifest": current, "tokens": TokenAccounting(counted_by="none")}
 
     return await asyncio.wait_for(_sync(), timeout=V1_INDEX_SYNC_WALL_CLOCK_CEILING_SECONDS)
 

@@ -17,7 +17,9 @@ import numpy as np
 import pytest
 from pycozo.client import Client as CozoClient
 
+import databasise.parts_core.lightrag.full_delete as full_delete_module
 import databasise.parts_core.lightrag.full_ingest as full_ingest_module
+import databasise.seam.engine as engine_module
 from databasise.parity.import_index import mirror_snapshot, read_v1_snapshot
 from databasise.parts_core.lightrag.v1_index_sync import v1_index_sync_body
 from databasise.seam.corpus import IngestDocument
@@ -25,7 +27,7 @@ from databasise.seam.engine import Databasise
 from databasise.seam.refusals import ForeignEngineRefusalError
 from databasise.stores.graph import CozoGraphStore
 from databasise.stores.kv import SqliteKVStore
-from databasise.stores.vector import MultiNamespaceVectorStore
+from databasise.stores.vector import FaissVectorStore, MultiNamespaceVectorStore
 
 _DIM = 8
 
@@ -152,6 +154,81 @@ async def test_the_sync_touches_no_store_when_the_v1_dir_is_absent(tmp_path):
     assert result["synced"] is False
     assert result["tokens"].counted_by == "none"
     assert not (tmp_path / "lightrag-v1").exists()
+
+
+class _FakeV1Index:
+    """A v1 stand-in that keeps doc status, text chunks and the chunk vectors of every live
+    document in its working dir, as v1 commits them."""
+
+    def __init__(self) -> None:
+        self.docs: list[str] = []
+
+    def _write(self, working_dir: Path) -> None:
+        working_dir.mkdir(parents=True, exist_ok=True)
+        status = {d: {"status": "processed", "chunks_list": [f"{d}-c"], "track_id": f"t-{d}"} for d in self.docs}
+        chunks = {f"{d}-c": {"content": f"text {d}", "full_doc_id": d} for d in self.docs}
+        (working_dir / "kv_store_doc_status.json").write_text(json.dumps(status), encoding="utf-8")
+        (working_dir / "kv_store_text_chunks.json").write_text(json.dumps(chunks), encoding="utf-8")
+        _write_faiss(working_dir, "chunks", {cid: {"full_doc_id": rec["full_doc_id"]} for cid, rec in chunks.items()})
+
+    def ingest(self, _op: str, payload: dict[str, Any], *, working_dir: Any = None, **_: Any) -> dict[str, Any]:
+        self.docs += [doc["id"] for doc in payload["documents"]]
+        self._write(Path(working_dir))
+        return {"track_id": payload["track_id"], "enqueued": 1, "usage": None}
+
+    def delete(self, _op: str, payload: dict[str, Any], *, working_dir: Any = None, **_: Any) -> dict[str, Any]:
+        self.docs.remove(payload["doc_id"])
+        self._write(Path(working_dir))
+        return {"status": "success", "doc_id": payload["doc_id"], "message": ""}
+
+
+async def test_a_vector_commit_failure_on_a_delete_is_pruned_by_the_next_sync(tmp_path, monkeypatch):
+    """11 REVIEW A-WR-01: kv commits before vector, so a vector commit failure during a delete used
+    to leave a manifest without the deleted ids, and their vector rows stayed for good."""
+    fake = _FakeV1Index()
+    monkeypatch.setattr(full_ingest_module, "run_corpus_op", fake.ingest)
+    monkeypatch.setattr(full_delete_module, "run_corpus_op", fake.delete)
+    monkeypatch.setattr(engine_module, "run_corpus_op", lambda *_a, **_k: {"counts": {}, "documents": [], "total": 0})
+    engine = Databasise(store_root=tmp_path, workspace="heal")
+    for doc_id in ("a", "b"):
+        await engine.ingest(IngestDocument(document_id=doc_id, text=f"text {doc_id}"))
+
+    real_commit = MultiNamespaceVectorStore.commit_prepared
+    failures = [OSError("disk full")]
+
+    async def _commit_once_fails(self):
+        if failures:
+            raise failures.pop()
+        await real_commit(self)
+
+    monkeypatch.setattr(MultiNamespaceVectorStore, "commit_prepared", _commit_once_fails)
+    with pytest.raises(ForeignEngineRefusalError) as refused:
+        await engine.delete_document("a")
+    assert refused.value.failure_class == "StoreFault"
+
+    assert await _kv_ids(tmp_path) == {"b-c"}  # kv committed the delete
+    assert await _vector_ids_of(tmp_path) == {"a-c", "b-c"}  # vector did not
+
+    await engine.ingest(IngestDocument(document_id="c", text="text c"))
+
+    assert await _kv_ids(tmp_path) == {"b-c", "c-c"}
+    assert await _vector_ids_of(tmp_path) == {"b-c", "c-c"}
+
+
+async def _kv_ids(store_root: Path) -> set[str]:
+    kv = SqliteKVStore(namespace="text_chunks", workspace="heal", store_root=store_root)
+    try:
+        return {cid for cid in ("a-c", "b-c", "c-c") if await kv.get_by_id(cid) is not None}
+    finally:
+        await kv.finalize()
+
+
+async def _vector_ids_of(store_root: Path) -> set[str]:
+    store = FaissVectorStore(namespace="chunks", workspace="heal", store_root=store_root)
+    try:
+        return {cid for cid in ("a-c", "b-c", "c-c") if store.get_by_id(cid) is not None}
+    finally:
+        await store.finalize()
 
 
 async def test_a_corrupt_v1_index_refuses_the_ingest_and_commits_nothing(tmp_path, monkeypatch):
