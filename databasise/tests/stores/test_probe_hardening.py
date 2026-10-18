@@ -4,12 +4,15 @@ and lets programming errors surface."""
 
 from __future__ import annotations
 
+import shutil
+import sqlite3
 from pathlib import Path
 
 import pytest
 
 from databasise.stores import probes
 from databasise.stores.graph import CozoGraphStore, _ClientRegistry
+from databasise.stores.kv import SqliteKVStore
 from databasise.stores.probes import probe_graph, probe_kv, probe_vector
 
 
@@ -102,6 +105,103 @@ def test_a_programming_error_in_a_probe_surfaces(tmp_path, monkeypatch):
 
     with pytest.raises(AttributeError):
         probe_vector(tmp_path)
+
+
+# --------------------------------------------------------------------------------------------- #
+# Iteration-2 WR-02 and WR-03
+# --------------------------------------------------------------------------------------------- #
+
+
+async def _closed_kv(store_root: Path, workspace: str, namespace: str) -> Path:
+    store = SqliteKVStore(namespace, workspace, store_root)
+    await store.upsert({"a": {"x": 1}})
+    await store.index_done_callback()
+    await store.finalize()
+    return next(Path(store_root).rglob("kv.sqlite3")).parent
+
+
+async def test_a_relative_store_root_probes_a_real_kv_store_as_ok(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    directory = await _closed_kv(Path("rel_root"), "ws", "t")
+
+    assert not directory.is_absolute()
+    assert probe_kv(directory) == "ok"
+
+
+async def test_health_with_a_relative_store_root_does_not_raise(tmp_path, monkeypatch):
+    from databasise.tests.seam.test_health_probe import _WS, _engine
+
+    monkeypatch.chdir(tmp_path)
+    await _closed_kv(Path("rel_root"), _WS, "text_chunks")
+    engine = _engine(Path("rel_root"), monkeypatch)
+
+    report = await engine.health()
+
+    assert report.stores["kv:text_chunks"] == "ok"
+
+
+async def test_a_kv_wal_without_its_shm_is_probed_and_no_file_is_created(tmp_path):
+    live = tmp_path / "live"
+    live.mkdir()
+    conn = sqlite3.connect(live / "kv.sqlite3")
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("CREATE TABLE kv (id TEXT PRIMARY KEY, value TEXT NOT NULL)")
+    conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+    conn.execute("INSERT INTO kv VALUES ('a', '1')")
+    conn.commit()
+    restored = tmp_path / "restored"
+    restored.mkdir()
+    try:  # a backup or crash leftover: the database and its -wal, but no -shm
+        shutil.copy(live / "kv.sqlite3", restored / "kv.sqlite3")
+        shutil.copy(live / "kv.sqlite3-wal", restored / "kv.sqlite3-wal")
+    finally:
+        conn.close()
+    before = _tree(restored)
+    assert "kv.sqlite3-shm" not in before and "kv.sqlite3-wal" in before
+
+    assert probe_kv(restored) == "ok"
+
+    assert _tree(restored) == before
+
+
+async def test_a_live_kv_store_whose_schema_is_still_in_the_wal_is_ok(tmp_path):
+    store = SqliteKVStore("t", "ws", tmp_path)  # the table exists only in the unreplayed -wal
+    try:
+        assert probe_kv(next(tmp_path.rglob("kv.sqlite3")).parent) == "ok"
+    finally:
+        await store.finalize()
+
+
+async def test_a_graph_without_its_manifest_file_is_corrupted_and_nothing_is_created(tmp_path):
+    store = CozoGraphStore("g", "ws", tmp_path)
+    await store.upsert_node("n1", {"a": 1})
+    await store.index_done_callback()
+    await store.finalize()
+    directory = tmp_path / "ws" / "g"
+    (directory / "graph.cozo" / "manifest").unlink()
+    before = _tree(directory)
+
+    assert probe_graph(directory) == "corrupted"
+
+    assert _tree(directory) == before
+
+
+async def test_health_on_a_graph_without_its_manifest_file_creates_no_file(store_root, monkeypatch):
+    from databasise.tests.seam.test_health_probe import _WS, _engine
+
+    graph_dir = store_root / _WS / "chunk_entity_relation"
+    store = CozoGraphStore("chunk_entity_relation", _WS, store_root)
+    await store.upsert_node("n1", {"a": 1})
+    await store.index_done_callback()
+    await store.finalize()
+    (graph_dir / "graph.cozo" / "manifest").unlink()
+    engine = _engine(store_root, monkeypatch)
+    before = _tree(store_root)
+
+    report = await engine.health()
+
+    assert report.stores["graph:chunk_entity_relation"] == "corrupted"
+    assert _tree(store_root) == before
 
 
 async def test_health_on_an_empty_graph_directory_creates_no_file(store_root, monkeypatch):

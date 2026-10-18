@@ -1,15 +1,16 @@
 """Read-only store probes for ``Databasise.health()`` (Phase 10 D-14, STOR-04). Each probe takes one
 namespace directory and returns ``"ok"``, ``"absent"``, ``"corrupted"`` or ``"busy"``. A probe
 creates nothing and never raises for a store state (a programming error still surfaces). A
-``graph.cozo`` that is not a RocksDB database (no ``data/CURRENT`` naming an existing manifest) is
-``corrupted`` and is never opened.
+``graph.cozo`` that is not a Cozo RocksDB database (no ``manifest`` file, or no ``data/CURRENT``
+naming an existing manifest) is ``corrupted`` and is never opened.
 
-Two measurements (10-07 planning) shape the probes:
-- sqlite: on a WAL ``kv.sqlite3`` with no open writer, ``?mode=ro`` leaves ``kv.sqlite3-wal`` and
-  ``kv.sqlite3-shm`` behind, and ``?mode=ro&immutable=1`` creates nothing. When a writer is open the
-  ``-wal`` file already exists, and ``?mode=ro`` reads committed rows without blocking.
-- Cozo: opening a missing ``graph.cozo`` creates it, so the probe checks existence first. Opening an
-  existing one rotates RocksDB's own files inside ``graph.cozo/data/`` and nothing outside it.
+Two measurements (10-07 planning, 10-review iteration 2) shape the probes:
+- sqlite: on a WAL ``kv.sqlite3``, ``?mode=ro`` leaves ``kv.sqlite3-wal`` and ``kv.sqlite3-shm``
+  behind (and creates a missing ``-shm``), and ``?mode=ro&immutable=1`` creates nothing, so the kv
+  probe is always immutable.
+- Cozo: opening a missing ``graph.cozo`` creates it, so the probe checks existence first. Opening a
+  complete one rotates RocksDB's own files inside ``graph.cozo/data/`` and nothing outside it; the
+  one file Cozo keeps outside ``data/`` is ``manifest``, which the marker check requires.
   ``::relations`` run immutable adds no relation, and ``_ensure_relations`` is never called.
 """
 
@@ -38,7 +39,8 @@ def _is_store_error(exc: Exception) -> bool:
 
 
 def probe_kv(dir_path: Path) -> ProbeState:
-    db_path = Path(dir_path) / "kv.sqlite3"
+    # resolve(): as_uri() raises ValueError for a relative path (iteration-2 WR-02)
+    db_path = (Path(dir_path) / "kv.sqlite3").resolve()
     if not db_path.is_file():
         return "absent"
     try:
@@ -46,15 +48,20 @@ def probe_kv(dir_path: Path) -> ProbeState:
             return "absent"  # a valid empty database: SqliteKVStore creates its table on first open
     except OSError:
         return "corrupted"
-    wal_open = db_path.with_name("kv.sqlite3-wal").exists()
-    uri = db_path.as_uri() + ("?mode=ro" if wal_open else "?mode=ro&immutable=1")
+    # Always immutable (iteration-2 WR-03): plain ``mode=ro`` on a WAL database creates ``-shm`` when
+    # it is missing (a backup, or a crash leftover with a ``-wal`` but no ``-shm``). The probe only
+    # checks that the file opens and the schema reads, so stale WAL content is acceptable.
+    uri = db_path.as_uri() + "?mode=ro&immutable=1"
     conn = None
     try:
         conn = sqlite3.connect(uri, uri=True, timeout=0.1)
         conn.execute("SELECT 1 FROM kv LIMIT 1").fetchall()
         return "ok"
     except sqlite3.OperationalError as exc:
-        return "busy" if "locked" in str(exc).lower() else "corrupted"
+        message = str(exc).lower()
+        if "no such table" in message and db_path.with_name("kv.sqlite3-wal").exists():
+            return "ok"  # a live writer's CREATE TABLE is still in the WAL, which immutable ignores
+        return "busy" if "locked" in message else "corrupted"
     except (sqlite3.Error, OSError):
         return "corrupted"
     finally:
@@ -63,9 +70,13 @@ def probe_kv(dir_path: Path) -> ProbeState:
 
 
 def _rocksdb_marker_present(db_path: Path) -> bool:
-    """True when ``db_path`` is a directory holding a RocksDB database: ``data/CURRENT`` names a
-    ``MANIFEST-*`` file that exists. Opening anything else would create files inside it."""
+    """True when ``db_path`` is a directory holding a Cozo RocksDB database: Cozo's own ``manifest``
+    file (the one marker it writes outside ``data/``) exists and ``data/CURRENT`` names a
+    ``MANIFEST-*`` file that exists. Opening anything else would create files, ``manifest`` included
+    (iteration-2 WR-03)."""
     try:
+        if not (db_path / "manifest").is_file():
+            return False
         name = (db_path / "data" / "CURRENT").read_text(encoding="utf-8").strip()
         return name.startswith("MANIFEST-") and (db_path / "data" / name).is_file()
     except (OSError, ValueError):
