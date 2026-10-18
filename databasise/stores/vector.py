@@ -99,6 +99,24 @@ class VectorStoreCorruptedError(RuntimeError):
         )
 
 
+_RESERVED_METADATA_KEYS = frozenset({"id", "score"})
+
+
+class ReservedMetadataKeyError(ValueError):
+    """Raised by :meth:`FaissVectorStore.upsert` (STOR-16, D-11) when a metadata dict carries
+    ``id`` or ``score``. Results are built as ``{"id": ..., "score": ..., **metadata}``, so such a
+    key would overwrite the real id or score every reader sees; the store refuses it by name before
+    the pending buffer changes. ``keys`` is the sorted list of reserved keys found.
+    """
+
+    def __init__(self, keys: list[str]):
+        self.keys = sorted(keys)
+        super().__init__(
+            f"vector metadata may not use the reserved key(s) {self.keys!r}: results carry the "
+            "real id and score under those names, so metadata cannot set them."
+        )
+
+
 def _sha256_of(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as f:
@@ -262,7 +280,8 @@ class FaissVectorStore(StorageNameSpace):
         metadatas: list[dict[str, Any]] | None = None,
     ) -> None:
         """Buffer precomputed embeddings for later flush. Raises before touching the pending
-        buffer if ``ids``/``embeddings``/``metadatas`` lengths disagree — a mis-paired vector is
+        buffer if ``ids``/``embeddings``/``metadatas`` lengths disagree, or if a metadata dict uses a
+        reserved key (``ReservedMetadataKeyError``, STOR-16) — a mis-paired vector is
         made impossible rather than merely unlikely.
         """
         ids = list(ids)
@@ -278,6 +297,10 @@ class FaissVectorStore(StorageNameSpace):
             raise ValueError(
                 f"metadata count ({len(metadatas)}) does not match document count ({len(ids)})"
             )
+        for meta in metadatas or ():
+            reserved = _RESERVED_METADATA_KEYS.intersection(meta)
+            if reserved:
+                raise ReservedMetadataKeyError(list(reserved))
         if self._dim is not None and embeddings_arr.shape[1] != self._dim:
             raise ValueError(
                 f"embedding dimension ({embeddings_arr.shape[1]}) does not match "

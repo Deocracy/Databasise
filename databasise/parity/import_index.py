@@ -184,8 +184,13 @@ async def _import_vector_kind(
         fid = int(fid_str)
         vectors.append(index.reconstruct(fid))
         ids.append(record["__id__"])
+        # D-11: "id" and "score" are reserved by FaissVectorStore and stripped from v1 metadata
         metadatas.append(
-            {k: v for k, v in record.items() if k not in ("__id__", "__vector__", "__created_at__")}
+            {
+                k: v
+                for k, v in record.items()
+                if k not in ("__id__", "__vector__", "__created_at__", "id", "score")
+            }
         )
 
     store = FaissVectorStore(namespace=kind, workspace=workspace, store_root=store_root)
