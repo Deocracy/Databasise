@@ -101,6 +101,15 @@ _ENGINE_ONLY: frozenset[str] = frozenset(
 )
 
 
+_PROXY_SLOTS: frozenset[str] = frozenset({"_target", "_kind", "_mode", "_declared"})
+
+# Mutators of any store kind. A read proxy refuses them with UndeclaredEffectError even where its own
+# kind lacks the method (a part asking a graph for ``upsert`` is writing, not misspelling).
+_WRITE_VOCABULARY: frozenset[str] = frozenset(
+    {"upsert", "delete", "delete_by_ids", "upsert_node", "upsert_edge", "delete_node", "delete_edge"}
+)
+
+
 class _StoreProxy:
     """A part's view of one store (D-09). Mode ``"r"`` exposes only the kind's read allowlist;
     mode ``"w"`` exposes everything except the engine-only lifecycle methods. ``select`` returns
@@ -120,15 +129,20 @@ class _StoreProxy:
         declared = get(self, "_declared")
         if name.startswith("__"):
             return get(self, name)
-        if name.startswith("_"):
-            raise UndeclaredEffectError(
-                name, declared, reason=f"store attribute {name!r} is not exposed"
-            )
         kind, mode, target = get(self, "_kind"), get(self, "_mode"), get(self, "_target")
-        if name in _ENGINE_ONLY:
-            raise UndeclaredEffectError(name, declared, reason=f"store method {name!r} is engine-only")
-        if mode == "r" and name not in _READ_ALLOWLIST[kind]:
-            raise UndeclaredEffectError(f"writes_{kind}", declared)
+        refusal = None
+        if name.startswith("_"):
+            refusal = UndeclaredEffectError(name, declared, reason=f"store attribute {name!r} is not exposed")
+        elif name in _ENGINE_ONLY:
+            refusal = UndeclaredEffectError(name, declared, reason=f"store method {name!r} is engine-only")
+        elif mode == "r" and name not in _READ_ALLOWLIST[kind]:
+            refusal = UndeclaredEffectError(f"writes_{kind}", declared)
+        if refusal is not None:
+            # Iteration-2 IN-02: a name the target does not have is an AttributeError, so hasattr and
+            # getattr-with-default work; a real but withheld attribute stays an UndeclaredEffectError.
+            if name not in _PROXY_SLOTS | _WRITE_VOCABULARY and not hasattr(target, name):
+                raise AttributeError(f"{type(target).__name__!r} object has no attribute {name!r}")
+            raise refusal
         attr = getattr(target, name)
         if name == "select":
             return lambda *a, **kw: _StoreProxy(attr(*a, **kw), kind, mode, declared)
