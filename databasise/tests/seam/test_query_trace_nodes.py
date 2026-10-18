@@ -33,6 +33,8 @@ _QUESTION = "What does UNIQalpha Corp build in UNIQalpha City?"
 def _expected_instance_hash(arm: str, question: str) -> str:
     resolved = engine_module._inject_query(resolve_arm(arm), question)
     resolved = engine_module._inject_token_allowance(resolved, engine_module._DEFAULT_TOKEN_ALLOWANCE)
+    # 11-11 (LRAG-17): the engine also stamps max_total_tokens on assemble before hashing.
+    resolved = engine_module._inject_max_total_tokens(resolved, engine_module._DEFAULT_MAX_TOTAL_TOKENS)
     return f"sha256:{hashlib.sha256(canonicalise(resolved)).hexdigest()}"
 
 

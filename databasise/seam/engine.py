@@ -405,6 +405,7 @@ _CONCURRENCY_SETTING = "sequential"
 # one caller that needs a real run to complete, so it sets a real, generous per-node allowance —
 # never the published wiring itself.
 _DEFAULT_TOKEN_ALLOWANCE = 1_000_000
+_DEFAULT_MAX_TOTAL_TOKENS = 30000  # v1 constants.py DEFAULT_MAX_TOTAL_TOKENS (LRAG-17)
 
 # CR-02: the RunRecord fields `resolve_trace(debug=False)` returns — an explicit allow-list, not a
 # deny-list of one key (`nodes`). §18.2 forbids a consumer receiving `run_id`, `wiring_id`,
@@ -465,6 +466,18 @@ def _inject_token_allowance(resolved: dict[str, Any], allowance: int) -> dict[st
         config = dict(node.get("config") or {})
         config.setdefault("token_allowance", allowance)
         node["config"] = config
+    return resolved
+
+
+def _inject_max_total_tokens(resolved: dict[str, Any], max_total_tokens: int) -> dict[str, Any]:
+    """11-11 (LRAG-17, T-11-24): every LightRAG context assembler gets ``config.max_total_tokens``
+    (v1's ``DEFAULT_MAX_TOTAL_TOKENS``) unless the wiring sets its own, so no assembled context is
+    unbounded."""
+    for node in resolved.get("nodes", {}).values():
+        if str(node.get("component", "")).startswith("lightrag/assembler-kg-context"):
+            config = dict(node.get("config") or {})
+            config.setdefault("max_total_tokens", max_total_tokens)
+            node["config"] = config
     return resolved
 
 
@@ -1646,6 +1659,7 @@ class Databasise:
         ``evidence_position`` still come from the full ``resolved``."""
         resolved = _inject_query(resolved, query_object.text or "")
         resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
+        resolved = _inject_max_total_tokens(resolved, _DEFAULT_MAX_TOTAL_TOKENS)
         run_resolved = _without_recipe_only_nodes(resolved)
         parsed = parse_wiring(run_resolved, self.registry)
         _refuse_unparseable(parsed)

@@ -11,8 +11,11 @@ lines ``{"reference_id", "content"[, "content_headings"]}`` whose reference ids 
 appearance. With no entity, relation or chunk the context is empty, so ``generate`` answers with
 v1's ``fail_response`` and makes no call.
 
+Chunks are capped at ``config["chunk_top_k"]`` (v1 default 20), then cut from the end, whole chunks
+only, to v1's available budget: ``max_total_tokens`` (the engine always sets it, v1 default 30000)
+minus the system template, the KG sections, the query and a 200-token buffer (``_build_context_str``).
+
 No store or client access (no declared effects) — a pure transform over its inputs.
-``config["max_total_tokens"]`` truncates whole chunks only, never a chunk's text mid-string.
 """
 
 from __future__ import annotations
@@ -27,7 +30,20 @@ from databasise.parts_core.lightrag.prompts import PROMPTS
 _NAME_AT_VERSION = "lightrag/assembler-kg-context@0.1.0"
 _DEFAULT_ORDER_POLICY = "naive-template"
 _TEMPLATE_BY_ORDER_POLICY = {"kg-template": "kg_query_context", "naive-template": "naive_query_context"}
+# The system template each policy's context is sent in, for the token budget (generate.py).
+_SYSTEM_TEMPLATE_BY_ORDER_POLICY = {
+    "kg-template": ("rag_response", "context_data"),
+    "naive-template": ("naive_rag_response", "content_data"),
+}
+_DEFAULT_MAX_TOTAL_TOKENS = 30000  # v1 constants.py DEFAULT_MAX_TOTAL_TOKENS
+_DEFAULT_CHUNK_TOP_K = 20  # v1 constants.py DEFAULT_CHUNK_TOP_K
+_BUFFER_TOKENS = 200  # v1: reserved for the reference list and a safety margin
 _CHARS_PER_TOKEN = 4
+
+
+def _tokens(text: str) -> int:
+    # shortcut: len // 4 stands in for v1's tokenizer (no offline encoding); upgrade when an offline-safe tokenizer ships (D-16)
+    return len(text) // _CHARS_PER_TOKEN
 
 
 class UnknownOrderPolicyError(ValueError):
@@ -77,16 +93,36 @@ async def _assemble_body(ctx: NodeContext) -> dict[str, Any]:
     entities = _budget_rows(ctx.inputs.get("budget-entities"), "entities_context") if is_kg else []
     relations = _budget_rows(ctx.inputs.get("budget-relations"), "relations_context") if is_kg else []
 
-    max_total_tokens = config.get("max_total_tokens")
-    char_budget = int(max_total_tokens) * _CHARS_PER_TOKEN if max_total_tokens else None
+    chunk_top_k = int(config.get("chunk_top_k", _DEFAULT_CHUNK_TOP_K))
+    candidates = list(ctx.inputs["rerank"]["items"])[:chunk_top_k]
+
+    # v1 _build_context_str / naive_query: available = max_total_tokens - (sys_prompt_tokens +
+    # kg_context_tokens + query_tokens + 200); naive subtracts no context-template overhead.
+    max_total_tokens = int(config.get("max_total_tokens", _DEFAULT_MAX_TOTAL_TOKENS))
+    prompt_key, placeholder = _SYSTEM_TEMPLATE_BY_ORDER_POLICY[order_policy]
+    sys_prompt = PROMPTS[prompt_key].format(
+        response_type="Multiple Paragraphs", user_prompt="n/a", **{placeholder: ""}
+    )
+    kg_overhead = (
+        PROMPTS["kg_query_context"].format(
+            entities_str=_json_lines(entities),
+            relations_str=_json_lines(relations),
+            text_chunks_str="",
+            reference_list_str="",
+        )
+        if is_kg
+        else ""
+    )
+    available = max_total_tokens - (
+        _tokens(sys_prompt) + _tokens(kg_overhead) + _tokens(str(config.get("query", ""))) + _BUFFER_TOKENS
+    )
     chunks: list[dict[str, Any]] = []
-    total_chars = 0
-    for item in ctx.inputs["rerank"]["items"]:
-        content = str(item.get("content", ""))
-        if char_budget is not None and chunks and total_chars + len(content) > char_budget:
+    running = 0
+    for item in candidates:  # v1 truncate_list_by_token_size: stop at the first chunk that overflows
+        running += _tokens(json.dumps(item, ensure_ascii=False, default=str))
+        if running > available:
             break
         chunks.append(item)
-        total_chars += len(content)
 
     context = ""
     if entities or relations or chunks:

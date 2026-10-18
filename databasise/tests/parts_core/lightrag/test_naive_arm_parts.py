@@ -6,6 +6,7 @@ same call shape ``databasise.parts.registry.dispatch`` uses.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import pytest
@@ -20,6 +21,7 @@ from databasise.parts_core.lightrag.generate import LIGHTRAG_GENERATOR_LLM_PART
 from databasise.parts_core.lightrag.heading_backfill import (
     LIGHTRAG_CHUNK_HEADING_BACKFILLER_PART,
 )
+from databasise.parts_core.lightrag.prompts import PROMPTS
 from databasise.parts_core.lightrag.rerank import LIGHTRAG_RERANKER_CROSS_ENCODER_PART
 from databasise.runner.trace import TokenAccounting
 from databasise.stores.kv import SqliteKVStore
@@ -358,9 +360,14 @@ async def test_assemble_joins_ordered_item_content_into_one_context_string_with_
 
 async def test_assemble_respects_a_configured_max_total_tokens_budget_by_dropping_whole_chunks():
     items = [{"content": "a" * 40}, {"content": "b" * 40}, {"content": "c" * 40}]
-    # ~4 chars/token heuristic (assemble.py's own documented ratio): a tiny budget keeps only the
-    # first chunk, never a partial chunk.
-    ctx = _ctx("assemble", config={"max_total_tokens": 10}, inputs={"rerank": {"items": items}})
+    # ~4 chars/token heuristic (assemble.py's own documented ratio): a budget with room for one
+    # chunk keeps only the first chunk, never a partial chunk. 11-11 (D-16): v1's formula first
+    # reserves the system template and a 200-token buffer, so the budget includes them.
+    system = PROMPTS["naive_rag_response"].format(
+        response_type="Multiple Paragraphs", user_prompt="n/a", content_data=""
+    )
+    budget = len(system) // 4 + 200 + len(json.dumps(items[0])) // 4
+    ctx = _ctx("assemble", config={"max_total_tokens": budget}, inputs={"rerank": {"items": items}})
 
     result = await LIGHTRAG_ASSEMBLER_KG_CONTEXT_PART.body(ctx)
 

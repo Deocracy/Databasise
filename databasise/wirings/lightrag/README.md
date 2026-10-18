@@ -15,9 +15,9 @@ specified-but-absent path is resolved here rather than left dangling.
 `base.json` and the five `arm-*.json-patch.json` files are copied **verbatim** from
 `docs/system-model/wirings/` for every node, dep, config, recipe, harnesses, provides, operation,
 and `resulting_node_id_set` field — the published set was already mechanically checked (03-RESEARCH.md),
-and re-deriving it risks silently diverging from a verdict already run. Exactly six edits turn
-the illustrative JSON into this registered set (edits 4-6 are Phase 11's v1-fidelity fixes,
-D-16 and LRAG-18):
+and re-deriving it risks silently diverging from a verdict already run. Exactly nine edits turn
+the illustrative JSON into this registered set (edits 4-9 are Phase 11's v1-fidelity fixes:
+4-6 for D-16 and LRAG-18, 7-9 for D-16 and LRAG-17):
 
 1. **Drop `status`/`status_note`, add `wiring_id`/`title` (base.json only).** The published files
    carry `"status": "illustrative-only-not-a-registered-wiring"` and an explanatory `status_note`
@@ -47,6 +47,16 @@ D-16 and LRAG-18):
 6. **`consumes_query` gains `rerank` (base.json only; D-16, LRAG-18).** `rerank` reads
    `config["query"]`, which no node received before, so a live rerank scored documents against an
    empty query. Rerank stays off in shipped wirings (Phase 8 D-09); this fixes only the empty query.
+7. **`assemble` deps become `["rerank", "budget-entities", "budget-relations"]` (base.json only;
+   D-16, LRAG-17).** v1's `kg_query_context` carries the budgeted entity and relation rows beside
+   the chunks, so assemble reads the two budget nodes' `entities_context` / `relations_context`.
+   The hybrid, local and global patches keep both budget nodes; bypass removes assemble.
+8. **`consumes_query` gains `assemble` (base.json only; D-16, LRAG-17).** v1's chunk budget
+   subtracts the query's tokens, so assemble reads `config["query"]`.
+9. **`arm-naive.json-patch.json` gains `{"op": "replace", "path": "/nodes/assemble/deps",
+   "value": ["rerank"]}` (D-16, LRAG-17).** The naive patch removes both budget nodes, so without
+   this reset edit 7 leaves assemble with dangling deps and the arm fails to parse. Its
+   `resulting_node_id_set` is unchanged.
 
 ## Recipe-only nodes (LRAG-19)
 

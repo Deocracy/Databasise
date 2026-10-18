@@ -316,3 +316,64 @@ async def test_budget_relations_costs_and_emits_v1s_relation_rows():
     ]
     assert result["allowance"] == 8000
     assert result["consumed"] == sum(_cost(r) for r in result["relations_context"])
+
+
+# --------------------------------------------------------------------------------------------- #
+# The context cap: chunk_top_k, v1's available-token formula, and the engine-set max_total_tokens
+# --------------------------------------------------------------------------------------------- #
+
+
+async def test_an_oversized_chunk_set_is_cut_so_the_system_prompt_fits_max_total_tokens():
+    chunks = [{"id": f"c{i}", "content": chr(97 + i) * 2000, "file_path": f"{i}.txt"} for i in range(10)]
+    ctx = _ctx("assemble", config={"order_policy": "kg-template", "max_total_tokens": 2000, "query": "q"},
+               inputs=_kg_inputs(chunks))
+    result = await LIGHTRAG_ASSEMBLER_KG_CONTEXT_PART.body(ctx)
+
+    system = PROMPTS["rag_response"].format(
+        response_type="Multiple Paragraphs", user_prompt="n/a", context_data=result["context"]
+    )
+    assert len(system) // 4 <= 2000
+    assert 0 < result["chunk_count"] < 10
+    assert "a" * 2000 in result["context"]  # whole chunks are dropped from the end
+
+
+async def test_assemble_keeps_at_most_chunk_top_k_chunks():
+    chunks = [{"id": f"c{i}", "content": f"chunk {i}"} for i in range(30)]
+    default = await LIGHTRAG_ASSEMBLER_KG_CONTEXT_PART.body(
+        _ctx("assemble", config={"order_policy": "naive-template"}, inputs={"rerank": {"items": chunks}})
+    )
+    capped = await LIGHTRAG_ASSEMBLER_KG_CONTEXT_PART.body(
+        _ctx("assemble", config={"order_policy": "naive-template", "chunk_top_k": 5}, inputs={"rerank": {"items": chunks}})
+    )
+    assert default["chunk_count"] == 20
+    assert capped["chunk_count"] == 5
+
+
+class _StopAtParse(Exception):
+    pass
+
+
+async def _parsed_assemble_config(monkeypatch: pytest.MonkeyPatch, store_root: Any, resolved: dict[str, Any]) -> dict:
+    from databasise.seam import engine as engine_module
+
+    captured: dict[str, Any] = {}
+
+    def _spy(run_resolved: dict[str, Any], registry: Any) -> None:
+        captured["resolved"] = run_resolved
+        raise _StopAtParse
+
+    monkeypatch.setattr(engine_module, "parse_wiring", _spy)
+    engine = Databasise(store_root=store_root, workspace="lrag17-cap", clients={})
+    with pytest.raises(_StopAtParse):
+        await engine._execute_resolved(QueryObject(text="q"), resolved)
+    return captured["resolved"]["nodes"]["assemble"]["config"]
+
+
+async def test_the_engine_sets_max_total_tokens_on_assemble_and_keeps_a_wiring_value(monkeypatch, store_root):
+    config = await _parsed_assemble_config(monkeypatch, store_root, resolve_arm("hybrid"))
+    assert config["max_total_tokens"] == 30000
+
+    own = resolve_arm("hybrid")
+    own["nodes"]["assemble"]["config"]["max_total_tokens"] = 1234
+    config = await _parsed_assemble_config(monkeypatch, store_root, own)
+    assert config["max_total_tokens"] == 1234
