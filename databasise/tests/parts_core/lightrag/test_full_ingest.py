@@ -4,7 +4,7 @@ placement, against a stub driver (never a real v1 venv or a real LLM call) for t
 suite, plus one real-interpreter smoke test guarded by ``pytest.mark.skipif``.
 
 Every test drives ``Databasise.ingest()`` against a registry holding a *test-local variant* of the
-production ``lightrag/full-ingest@0.1.0`` Part — same name, effects, structural_depth,
+production ``lightrag/full-ingest@0.2.0`` Part — same name, effects, structural_depth,
 artifact_scope and (a copy of) the admission record, but with its ``body`` pointed at
 ``databasise/tests/fixtures/v1_corpus_driver_stub.py`` via ``run_corpus_op``'s own
 ``driver_script=``/``interpreter=`` override points, so the suite proves the real wiring/scheduler/
@@ -29,7 +29,7 @@ from databasise.parts.admission import MissingWallClockCeilingError
 from databasise.parts.registry import PartRegistry, default_registry
 from databasise.parts.schema import NodeContext
 from databasise.parts_core.declared_only import LIGHTRAG_FULL_INGEST_PART
-from databasise.runner.trace import TokenAccounting
+from databasise.parts_core.lightrag.full_ingest import tokens_from_usage
 from databasise.seam.corpus import IngestDocument, IngestJob
 from databasise.seam.engine import Databasise
 from databasise.seam.refusals import ForeignEngineRefusalError
@@ -73,20 +73,11 @@ def _make_stub_full_ingest_body(
         )
 
         usage = result.get("usage")
-        if usage:
-            tokens = TokenAccounting(
-                prompt_tokens=int(usage.get("prompt_tokens", 0)),
-                completion_tokens=int(usage.get("completion_tokens", 0)),
-                counted_by=str(usage.get("model") or "v1-subprocess"),
-            )
-        else:
-            tokens = TokenAccounting(counted_by="unbudgetable")
-
         return {
             "track_id": result.get("track_id"),
             "enqueued": result.get("enqueued", 0),
             "usage": usage,
-            "tokens": tokens,
+            "tokens": tokens_from_usage(usage),
         }
 
     return _body
@@ -109,7 +100,7 @@ def _registry_with(part: Any) -> PartRegistry:
 
 
 def _make_engine(store_root, *, body, ceiling: float = 5.0) -> Databasise:
-    """A ``Databasise`` whose registry holds the test-local ``lightrag/full-ingest@0.1.0`` variant
+    """A ``Databasise`` whose registry holds the test-local ``lightrag/full-ingest@0.2.0`` variant
     swapped into a full default registry (see :func:`_registry_with`)."""
     admission = dataclasses.replace(LIGHTRAG_FULL_INGEST_PART.admission, wall_clock_ceiling_seconds=ceiling)
     test_part = dataclasses.replace(LIGHTRAG_FULL_INGEST_PART, body=body, admission=admission)

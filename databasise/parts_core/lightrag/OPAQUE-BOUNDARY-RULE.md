@@ -1,12 +1,13 @@
 # The inside-vs-across-boundary change rule for LightRAG's opaque corpus-side parts
 
 This document is addressed to a future contributor who has not read any GSD plan. If you are
-about to touch `databasise/parts_core/lightrag/full_ingest.py`, `full_delete.py`, or anything
-under `databasise/foreign/` that those two parts launch, read this first.
+about to touch `databasise/parts_core/lightrag/full_ingest.py`, `full_delete.py`,
+`v1_index_sync.py`, or anything under `databasise/foreign/` that those parts launch, read this
+first.
 
 ## 1. What this rule is for
 
-`lightrag/full-ingest@0.1.0` and `lightrag/full-delete@0.1.0` admit LightRAG's ~1,786-line ingest
+`lightrag/full-ingest@0.2.0` and `lightrag/full-delete@0.1.0` admit LightRAG's ~1,786-line ingest
 core as an **opaque node** (CONTRACT §8) precisely because it is too entangled to decompose
 cleanly today. Under schedule pressure, an opaque node like this one is exactly the place where new
 capability gets added the fast way: by editing inside the already-opaque core instead of authoring
@@ -17,7 +18,13 @@ before it starts, not to audit it after the fact.
 This rule is **build-added discipline, not a CONTRACT clause**. CONTRACT §8 states what an opaque
 node must satisfy to be admitted in the first place; it says nothing about what may change inside
 that node afterward without re-running admission. This document is that missing "afterward" rule,
-scoped to these two parts.
+scoped to these two parts and to `lightrag/v1-index-sync@0.1.0`, the opaque mirror that follows
+either of them (it reads v1's committed index and writes the v2 stores through `ctx.stores`).
+
+**Version history.** Phase 11 batched every change to these ports' effects, verdicts and driver
+protocol into **one** bump to `@0.2.0` (11-03-PLAN.md, D-06), with a fresh eleven-verdict record
+per port; the sync part is new at `@0.1.0` and is pinned the same way. No later Phase 11 plan
+edits the driver script or this document.
 
 ## 2. Across the boundary — a change here requires a version bump and re-admission
 
@@ -27,22 +34,27 @@ eleven-`ConditionVerdict` `AdmissionRecord`, re-validated by `PartRegistry.regis
 same-version edit, no matter how small the diff looks.
 
 **The `Part` declaration itself** (`databasise/parts_core/declared_only.py`), for each of
-`LIGHTRAG_FULL_INGEST_PART` and `LIGHTRAG_FULL_DELETE_PART`:
+`LIGHTRAG_FULL_INGEST_PART`, `LIGHTRAG_FULL_DELETE_PART` and `LIGHTRAG_V1_INDEX_SYNC_PART`:
 
-- `name_at_version` — today `lightrag/full-ingest@0.1.0` and `lightrag/full-delete@0.1.0`.
-- `kind` — today `"opaque"` for both; this is the literal value `PartRegistry.register`'s
+- `name_at_version` — today `lightrag/full-ingest@0.2.0`, `lightrag/full-delete@0.1.0` and
+  `lightrag/v1-index-sync@0.1.0`.
+- `kind` — today `"opaque"` for all three; this is the literal value `PartRegistry.register`'s
   admission gate and `databasise.validator.execution_mode.derive_execution_mode`'s subprocess
   placement decision both key on.
-- `structural_depth` — today `"opaque"` for both.
-- `effects[]` — today `["calls_llm", "writes_artifact", "reads_kv", "reads_graph"]` for ingest and
-  `["mutates_store", "reads_kv", "reads_graph"]` for delete. These two lists differ on purpose
-  (§19.6, see §4 below) — widening or narrowing either list is a boundary change regardless of
-  which direction it moves.
-- `upstream_ref` — today `v1/lightrag/pipeline.py` (ingest) and `v1/lightrag/lightrag.py` (delete).
-- `artifact_scope` — today `"quarantined"` (ingest) and `None` (delete).
+- `structural_depth` — today `"opaque"` for all three.
+- `effects` (the `effects[]` list) — today `["calls_llm", "mutates_store", "reads_kv",
+  "reads_graph"]` for ingest, `["mutates_store", "reads_kv", "reads_graph"]` for delete and
+  `["mutates_store", "writes_kv", "writes_vector", "writes_graph"]` for the sync. Ingest and delete
+  are separate ports on purpose (§19.6, see §4 below) — widening or narrowing any list is a
+  boundary change regardless of which direction it moves. `@0.2.0` dropped ingest's
+  `writes_artifact`: v1 writes no artifact, it mutates its own working dir (LRAG-03).
+- `upstream_ref` — today `v1/lightrag/pipeline.py` (ingest), `v1/lightrag/lightrag.py` (delete)
+  and `v1/lightrag/kg/faiss_impl.py` (sync).
+- `artifact_scope` — today `None` for all three (`@0.2.0` dropped ingest's `"quarantined"`).
 
 **Every field of the part's `AdmissionRecord`** (`databasise/parts/admission.py`), for each part's
-own record (`LIGHTRAG_FULL_INGEST_ADMISSION` / `LIGHTRAG_FULL_DELETE_ADMISSION`):
+own record (`LIGHTRAG_FULL_INGEST_ADMISSION` / `LIGHTRAG_FULL_DELETE_ADMISSION` /
+`LIGHTRAG_V1_INDEX_SYNC_ADMISSION`):
 
 - `part_name_at_version` and `entry_path` — the record's own identity fields.
 - `storage`, `wall_clock_ceiling_seconds`, `wall_clock_ceiling_basis`, `feed_tier`, `ttl_days`,
@@ -57,14 +69,40 @@ own record (`LIGHTRAG_FULL_INGEST_ADMISSION` / `LIGHTRAG_FULL_DELETE_ADMISSION`)
   the test does check is that both ports' `environment_hash` values are present, share the
   `sha256:` prefix, and agree with each other.
 
+**How the records number CONTRACT §8** (LRAG-12). Each record's verdicts follow CONTRACT's own
+numbering: condition 3 carries network denial by construction (the machine injects the only model
+endpoints) and the spend rule — the driver hands `TokenTracker` to both model functions and the
+part reports `counted_by` `v1-subprocess` from real usage, `none` for no model call, and
+`unbudgetable` when the provider reports no usage; condition 5 states `storage` `self-contained`
+(v1 writes only `<store_root>/<workspace>/lightrag-v1`) and no artifact scope; condition 8 is
+`ttl_days` 90 with each renewal recorded in the ledger (`machine-side-obligation`); condition 9 is
+explicit `part_ref` invocations counted as data, not a promotion trigger
+(`machine-side-obligation`).
+
 **The driver script's protocol** (`databasise/foreign/v1_corpus_driver_script.py`):
 
-- The stdin key set for each operation the driver dispatches on (`ingest`, `delete`, `status`,
-  `health`, and the two proof-only ops `entities`/`entity_info`).
+- The stdin key set for each operation the driver dispatches on.
 - The stdout key set for each of those same operations.
 - The set of operation names the driver's `_run()` dispatch recognizes at all — adding, removing,
   or renaming an operation is a boundary change even if every existing operation's own key sets
   stay untouched.
+
+| op | stdin keys | stdout keys |
+| --- | --- | --- |
+| `ingest` | `documents`, `track_id`, `working_dir`, `file_paths`, `docs_format`, `input_dir`, `retry_doc_ids` | `track_id`, `enqueued`, `usage` |
+| `delete` | `doc_id`, `delete_llm_cache`, `working_dir` | `status`, `doc_id`, `message`, `status_code`, `file_path` |
+| `status` | `track_id`, `limit`, `offset`, `working_dir` | `counts`, `documents`, `total` |
+| `health` | `working_dir` | `working_dir_present`, `storages_initialized` |
+| `entities` | `doc_id`, `working_dir` | `chunk_ids`, `entities` |
+| `entity_info` | `entity_names`, `working_dir` | `entities` |
+
+`ingest` (`@0.2.0`): a `pending_parse` job sets `INPUT_DIR` to `input_dir` and enqueues the staged
+file with no `ids=`, so v1 parses the file's own bytes; v1 mints `doc-<md5(basename)>` and the id
+stem rule maps it back (the staged name is `<document_id><suffix>`, so `Path(file_path).stem` is
+our id; a text-ingested row keeps our id). Processing is restricted to this run's targets by an
+instance-level wrapper around `doc_status.get_docs_by_statuses`; `retry_doc_ids` names the targets
+of a retry. `enqueued` excludes the duplicates v1 recorded under the caller's track id. `usage` is
+`{"llm": ..., "embedding": ...}` from two `TokenTracker`s, never summed.
 
 State the obligation plainly: changing any identifier or key set named above means minting a new
 `name@version` per CONTRACT §0 and re-running admission for that part. It is never landed as a
@@ -104,7 +142,7 @@ moved to say so.
 The required response: author a fitted node for the new capability, or make it a genuinely new
 declared operation on a new port with its own effects and its own admission record — never a quiet
 widening of an existing port's undeclared behaviour. This is the same §19.6 rule that already
-separates `lightrag/full-ingest@0.1.0` from `lightrag/full-delete@0.1.0`: two invocations that
+separates `lightrag/full-ingest` from `lightrag/full-delete`: two invocations that
 differ in declared effects MUST be two separate ports, never one node quietly doing more than its
 own declaration says.
 

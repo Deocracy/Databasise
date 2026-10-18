@@ -27,12 +27,14 @@ _DATABASISE_ROOT = _HERE.parents[3]
 _RULE_DOCUMENT_PATH = _DATABASISE_ROOT / "parts_core" / "lightrag" / "OPAQUE-BOUNDARY-RULE.md"
 _DRIVER_SCRIPT_PATH = _DATABASISE_ROOT / "foreign" / "v1_corpus_driver_script.py"
 
-_INGEST_NAME_AT_VERSION = "lightrag/full-ingest@0.1.0"
+_INGEST_NAME_AT_VERSION = "lightrag/full-ingest@0.2.0"
 _DELETE_NAME_AT_VERSION = "lightrag/full-delete@0.1.0"
+_SYNC_NAME_AT_VERSION = "lightrag/v1-index-sync@0.1.0"
 
 _registry = default_registry()
 _INGEST_PART = _registry.get(_INGEST_NAME_AT_VERSION)
 _DELETE_PART = _registry.get(_DELETE_NAME_AT_VERSION)
+_SYNC_PART = _registry.get(_SYNC_NAME_AT_VERSION)
 
 # Every field databasise.parts.admission.AdmissionRecord declares today. A field added to (or
 # removed from) that dataclass changes this set and fails _assert_admission_field_set_unchanged
@@ -113,15 +115,15 @@ def _full_boundary(part: Any) -> dict[str, Any]:
 # corresponding name_at_version bump and fresh admission record is exactly what this test exists
 # to catch.
 PINNED_INGEST_BOUNDARY = {
-    "name_at_version": "lightrag/full-ingest@0.1.0",
+    "name_at_version": "lightrag/full-ingest@0.2.0",
     "kind": "opaque",
     "structural_depth": "opaque",
-    "effects": ("calls_llm", "writes_artifact", "reads_kv", "reads_graph"),
+    "effects": ("calls_llm", "mutates_store", "reads_kv", "reads_graph"),
     "upstream_ref": "v1/lightrag/pipeline.py",
-    "artifact_scope": "quarantined",
-    "part_name_at_version": "lightrag/full-ingest@0.1.0",
+    "artifact_scope": None,
+    "part_name_at_version": "lightrag/full-ingest@0.2.0",
     "entry_path": "in-process opaque core, hosted as a subprocess under v1's pinned interpreter",
-    "storage": "machine",
+    "storage": "self-contained",
     "wall_clock_ceiling_seconds": 900.0,
     "wall_clock_ceiling_basis": (
         "one document at a time through v1's own extraction pipeline over the 20-document "
@@ -144,8 +146,8 @@ PINNED_INGEST_BOUNDARY = {
         (5, "satisfied"),
         (6, "satisfied"),
         (7, "satisfied (machine-side obligation)"),
-        (8, "open — accepted as a scope boundary, not a clean yes"),
-        (9, "partially satisfied — spend reported as unbudgetable, never estimated"),
+        (8, "machine-side-obligation"),
+        (9, "machine-side-obligation"),
         (10, "satisfied (machine-side obligation)"),
         (11, "satisfied by construction"),
     ),
@@ -191,12 +193,54 @@ PINNED_DELETE_BOUNDARY = {
     ),
 }
 
+# 11-03-PLAN.md (research Q8): the sync part is new at @0.1.0, not bumped; pinned so a later change
+# to it owes a version too.
+PINNED_SYNC_BOUNDARY = {
+    "name_at_version": "lightrag/v1-index-sync@0.1.0",
+    "kind": "opaque",
+    "structural_depth": "opaque",
+    "effects": ("mutates_store", "writes_kv", "writes_vector", "writes_graph"),
+    "upstream_ref": "v1/lightrag/kg/faiss_impl.py",
+    "artifact_scope": None,
+    "part_name_at_version": "lightrag/v1-index-sync@0.1.0",
+    "entry_path": "in-process opaque mirror, run in the machine's own interpreter at the subprocess placement",
+    "storage": "machine",
+    "wall_clock_ceiling_seconds": 300.0,
+    "wall_clock_ceiling_basis": (
+        "a local read of v1's index files (doc_status and text_chunks JSON, three Faiss pairs, one "
+        "Cozo db) plus in-memory staging; no model call. Enforced by the body's own "
+        "asyncio.wait_for, since nothing else can stop an in-process body"
+    ),
+    "feed_tier": (
+        "v1-committed-index: reads the index v1 committed to its own working dir, never a "
+        "machine-produced chunk or document feed"
+    ),
+    "ttl_days": 90,
+    "network_namespace": "denied-by-construction: the body opens no socket and calls no client",
+    "manifest_source": "code-inspected",
+    "verdicts": (
+        (1, "satisfied"),
+        (2, "satisfied"),
+        (3, "satisfied by construction"),
+        (4, "satisfied"),
+        (5, "satisfied"),
+        (6, "satisfied"),
+        (7, "satisfied (machine-side obligation)"),
+        (8, "machine-side-obligation"),
+        (9, "machine-side-obligation"),
+        (10, "satisfied"),
+        (11, "satisfied by construction"),
+    ),
+}
+
 # The driver script's protocol (05-05-PLAN.md Task 2.C): one entry per operation the driver
 # dispatches on, each carrying the exact stdin key set it reads off `job` and the exact stdout key
 # set the dict it returns carries — derived live via AST walk below and asserted equal to this pin.
 PINNED_DRIVER_PROTOCOL = {
     "ingest": {
-        "stdin": frozenset({"documents", "track_id", "working_dir", "file_paths", "docs_format"}),
+        "stdin": frozenset(
+            {"documents", "track_id", "working_dir", "file_paths", "docs_format", "input_dir", "retry_doc_ids"}
+        ),
         "stdout": frozenset({"track_id", "enqueued", "usage"}),
     },
     "delete": {
@@ -341,6 +385,29 @@ def test_delete_part_boundary_matches_the_pin():
     assert _full_boundary(_DELETE_PART) == PINNED_DELETE_BOUNDARY
 
 
+def test_sync_part_boundary_matches_the_pin():
+    assert _full_boundary(_SYNC_PART) == PINNED_SYNC_BOUNDARY
+
+
+def test_no_corpus_port_is_registered_at_its_old_version():
+    names = set(_registry.keys())
+    assert "lightrag/full-ingest@0.1.0" not in names
+    assert {_INGEST_NAME_AT_VERSION, _DELETE_NAME_AT_VERSION, _SYNC_NAME_AT_VERSION} <= names
+
+
+def test_the_ingest_record_numbers_contract_section_8_as_contract_does():
+    """LRAG-12: 3 carries network denial and the spend rule, 8 the TTL, 9 the part_ref counting."""
+    verdicts = dict(PINNED_INGEST_BOUNDARY["verdicts"])
+    assert verdicts[3] == "satisfied by construction"
+    assert verdicts[8] == verdicts[9] == "machine-side-obligation"
+    assert PINNED_INGEST_BOUNDARY["ttl_days"] == 90
+    evidence = {v.condition: v.evidence for v in _INGEST_PART.admission.verdicts}
+    assert "TokenTracker" in evidence[3] and "unbudgetable" in evidence[3]
+    assert "ttl_days=90" in evidence[8] and "ledger" in evidence[8]
+    assert "part_ref" in evidence[9]
+    assert "quarantined" not in evidence[5] + evidence[10]
+
+
 def test_environment_hash_is_present_shaped_and_shared_between_both_ports():
     # Deliberately structural, not a literal-value pin — see the module docstring and
     # OPAQUE-BOUNDARY-RULE.md §2 for why the computed digest itself is not pinned.
@@ -373,10 +440,16 @@ def test_rule_document_and_check_agree():
 
     assert _INGEST_NAME_AT_VERSION in text
     assert _DELETE_NAME_AT_VERSION in text
+    assert _SYNC_NAME_AT_VERSION in text
     assert Path(__file__).name in text
 
-    for identifier in PINNED_INGEST_BOUNDARY:
-        assert identifier in text, (
+    protocol_names = {
+        name
+        for op, keys in PINNED_DRIVER_PROTOCOL.items()
+        for name in (op, *keys["stdin"], *keys["stdout"])
+    }
+    for identifier in sorted(set(PINNED_INGEST_BOUNDARY) | protocol_names):
+        assert f"`{identifier}`" in text, (
             f"{identifier!r} is pinned by this check but does not appear anywhere in "
             f"{_RULE_DOCUMENT_PATH.name} — the prose and the check have drifted apart"
         )
@@ -391,7 +464,7 @@ def test_the_comparison_has_teeth_a_mutated_part_copy_differs_from_the_pin():
     mutated = dataclasses.replace(_INGEST_PART, effects=[*_INGEST_PART.effects, "net"])
 
     assert mutated is not _INGEST_PART
-    assert _INGEST_PART.effects == ["calls_llm", "writes_artifact", "reads_kv", "reads_graph"], (
+    assert _INGEST_PART.effects == ["calls_llm", "mutates_store", "reads_kv", "reads_graph"], (
         "dataclasses.replace must not have mutated the live registry entry"
     )
     assert _full_boundary(mutated) != PINNED_INGEST_BOUNDARY

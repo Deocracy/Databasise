@@ -190,7 +190,6 @@ def test_unparseable_wiring_maps_to_422():
 # --------------------------------------------------------------------------------------------- #
 
 _ARTIFACT_PARTS = (
-    "lightrag/full-ingest@0.1.0",
     "lightrag/embedder-index@0.1.0",
     "hipporag/graph-materializer@0.1.0",
 )
@@ -203,8 +202,15 @@ def test_writes_artifact_is_a_marker_and_the_vocabulary_keeps_17_members():
 
 
 @pytest.mark.parametrize("name", _ARTIFACT_PARTS)
-def test_the_three_artifact_parts_still_declare_writes_artifact(name):
+def test_the_two_artifact_parts_still_declare_writes_artifact(name):
     assert "writes_artifact" in default_registry().get(name).effects
+
+
+def test_full_ingest_at_0_2_0_declares_mutates_store_not_writes_artifact():
+    # 11-03 (LRAG-03, D-06): v1 mutates its own working dir and writes no artifact.
+    effects = default_registry().get("lightrag/full-ingest@0.2.0").effects
+    assert "mutates_store" in effects
+    assert "writes_artifact" not in effects
 
 
 async def _touch_artifact_body(ctx):

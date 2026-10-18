@@ -30,6 +30,9 @@ any entry still carries.
 11-01-PLAN.md (D-01): ``LIGHTRAG_V1_INDEX_SYNC_PART`` joins ``LIGHTRAG_CORPUS_PARTS`` as the third
 corpus-side part: the second node of both corpus wirings, mirroring v1's committed index into the
 v2 stores (``databasise.parts_core.lightrag.v1_index_sync``).
+
+11-03-PLAN.md (D-06): both corpus ports move to ``@0.2.0`` in one bump with fresh admission
+records (``parts_core/lightrag/OPAQUE-BOUNDARY-RULE.md`` §2).
 """
 
 from __future__ import annotations
@@ -73,18 +76,18 @@ CODEBASE_MEMORY_MCP_PART = Part(
     admission=CODEBASE_MEMORY_MCP_ADMISSION,
 )
 
-# The full LightRAG ingest core (MACH-01's third named wiring): opaque structural depth, declaring
-# calls_llm and writes_artifact with artifact_scope="quarantined", because an opaque node MAY
-# write quarantined and MUST NOT write shared (CONTRACT §3). Real, executable body + real §8
-# admission record as of 05-01-PLAN.md Task 1 — no longer a declaration-only stub.
+# The full LightRAG ingest core (MACH-01's third named wiring): opaque structural depth. @0.2.0
+# (11-03, LRAG-03): v1 mutates its own per-workspace working dir (mutates_store) and writes no
+# artifact, so writes_artifact and the quarantined scope are gone; the v2 rows are the
+# lightrag/v1-index-sync node's.
 LIGHTRAG_FULL_INGEST_PART = Part(
-    name_at_version="lightrag/full-ingest@0.1.0",
+    name_at_version="lightrag/full-ingest@0.2.0",
     kind="opaque",
     structural_depth="opaque",
-    effects=["calls_llm", "writes_artifact", "reads_kv", "reads_graph"],
+    effects=["calls_llm", "mutates_store", "reads_kv", "reads_graph"],
     upstream_ref="v1/lightrag/pipeline.py",
     body=full_ingest_body,
-    artifact_scope="quarantined",
+    artifact_scope=None,
     admission=LIGHTRAG_FULL_INGEST_ADMISSION,
 )
 

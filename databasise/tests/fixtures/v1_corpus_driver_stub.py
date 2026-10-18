@@ -4,7 +4,8 @@
 needs a real v1 venv or a real LLM call to prove the ingest wiring end to end.
 
 Honours the same stdin/stdout JSON protocol the real driver does: for ``op == "ingest"`` echoes
-back ``{"track_id": <job's track_id>, "enqueued": len(documents), "usage": None}``. For
+back ``{"track_id": <job's track_id>, "enqueued": len(documents), "usage": None}`` (``input_dir``
+and ``retry_doc_ids`` are accepted and ignored: the stub stores nothing). For
 ``op == "delete"`` (05-03-PLAN.md Task 1) echoes a configurable status (``_stub_status``,
 defaulting to ``"success"``) back as ``{"status": ..., "doc_id": ..., "message": ..., "status_code":
 ..., "file_path": None}``. Both ``ingest`` and ``delete`` optionally sleep first

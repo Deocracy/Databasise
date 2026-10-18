@@ -72,8 +72,18 @@ _LIGHTRAG_V1_INDEX_SYNC_REASON = (
     "this milestone asks for corpus-write behaviour to be A/B-testable."
 )
 
+_LIGHTRAG_FULL_INGEST_REASON = (
+    "Added by 11-03-PLAN.md (LRAG-03, D-06): at @0.2.0 the ingest port declares mutates_store, "
+    "because v1 mutates its own per-workspace working dir. Same structural exclusion as "
+    "lightrag/full-delete: dispatched only by Databasise.ingest() through the corpus-ingest "
+    "wiring, never through resolve_selector()'s candidate pool (all_wirings()), so no comparison "
+    "call can reach it. No requirement in this milestone asks for corpus-write behaviour to be "
+    "A/B-testable."
+)
+
 _KNOWN_REASONS: dict[str, str] = {
     "codebase-memory-mcp@0.1.0": _CODEBASE_MEMORY_MCP_REASON,
+    "lightrag/full-ingest@0.2.0": _LIGHTRAG_FULL_INGEST_REASON,
     "lightrag/full-delete@0.1.0": _LIGHTRAG_FULL_DELETE_REASON,
     "lightrag/v1-index-sync@0.1.0": _LIGHTRAG_V1_INDEX_SYNC_REASON,
 }

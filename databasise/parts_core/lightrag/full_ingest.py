@@ -1,20 +1,25 @@
-"""``lightrag/full-ingest`` — the real, executable opaque `Part` body for LightRAG's ~1,786-line
-ingest core (05-01-PLAN.md Task 1), replacing the ``body=None`` stub
-``databasise/parts_core/declared_only.py`` carried since Phase 1. Dispatched by the real scheduler
-at the ``subprocess`` placement (``databasise.validator.execution_mode``): the body itself never
-imports ``lightrag`` — it launches ``databasise/foreign/v1_corpus_driver_script.py`` under v1's own
-pinned interpreter via ``databasise.foreign.run_corpus_op``, exactly like the query side's Phase 3
-subprocess precedent (``databasise/parity/v1_arm.py``/``v1_driver_script.py``).
+"""``lightrag/full-ingest@0.2.0`` — the real, executable opaque `Part` body for LightRAG's ~1,786-line
+ingest core. Dispatched by the real scheduler at the ``subprocess`` placement
+(``databasise.validator.execution_mode``): the body itself never imports ``lightrag`` — it launches
+``databasise/foreign/v1_corpus_driver_script.py`` under v1's own pinned interpreter via
+``databasise.foreign.run_corpus_op``, exactly like the query side's Phase 3 subprocess precedent
+(``databasise/parity/v1_arm.py``/``v1_driver_script.py``).
 
-``LIGHTRAG_FULL_INGEST_ADMISSION`` is the §8 admission record naming eleven ``ConditionVerdict``
-entries, one per condition — see each verdict's own ``evidence`` string for the concrete source it
-rests on. Conditions 7, 8 and the counting half of 9 are machine-side obligations this record
-cannot itself prove; their verdicts say so plainly (condition 7's own machine-side half is enforced
-by ``databasise.parts.admission.cross_check_conditions`` at registration; condition 8 — a real
-network-namespace-isolation mechanism — is out of this milestone's scope per 05-RESEARCH.md's Open
-Question 3; condition 9's counting half is honestly ``"unbudgetable"`` today because
-``apipeline_process_enqueue_documents`` exposes no per-run token count back to this caller — see
-``full_ingest_body``'s own ``tokens`` construction below).
+11-03-PLAN.md (D-06) is this port's one ``@0.2.0`` bump: the effects become ``calls_llm``,
+``mutates_store``, ``reads_kv``, ``reads_graph`` (v1 mutates its own per-workspace working dir;
+nothing is written as an artifact), the storage is ``self-contained``, and the driver protocol
+gains file ingest, a targets filter, duplicate-aware ``enqueued`` and real token usage.
+
+``LIGHTRAG_FULL_INGEST_ADMISSION`` names eleven ``ConditionVerdict`` entries, one per CONTRACT §8
+condition, numbered as CONTRACT numbers them (LRAG-12):
+
+- 3: the network namespace is denied by construction (the machine injects the only model
+  endpoints), and spend is metered from v1's own ``TokenTracker`` usage when the provider reports
+  it and ``unbudgetable`` when it does not — never estimated;
+- 5: ``storage='self-contained'`` and no artifact scope;
+- 8: ``ttl_days=90``, each renewal recorded in the ledger — a machine-side obligation;
+- 9: explicit ``part_ref`` invocations are counted as data, not a promotion trigger — a
+  machine-side obligation.
 """
 
 from __future__ import annotations
@@ -46,7 +51,32 @@ INGEST_WALL_CLOCK_CEILING_SECONDS = 900.0
 # string constant.
 _UNBUDGETABLE_TOKENS_SENTINEL = "unbudgetable"
 
+# A stable label for v1's TokenTracker counts: the tracker carries no tokenizer identity.
+_V1_COUNTED_BY = "v1-subprocess"
+
 _V1_ROOT = Path(__file__).resolve().parents[3] / "v1"
+
+
+def tokens_from_usage(usage: Any) -> TokenAccounting:
+    """The node's accounting from the driver's ``usage["llm"]`` (D-13). No model call is a real
+    zero (``none``). Calls with zero tokens mean the provider sent no usage, so the spend is
+    ``unbudgetable`` with that call count. A missing usage (a stub driver) is ``unbudgetable`` too.
+    Embedding usage stays in the returned ``usage`` dict: a different tokenizer, never summed in.
+    """
+    llm = usage.get("llm") if isinstance(usage, dict) else None
+    if not isinstance(llm, dict):
+        return TokenAccounting(counted_by=_UNBUDGETABLE_TOKENS_SENTINEL)
+    call_count = int(llm.get("call_count", 0))
+    if call_count == 0:
+        return TokenAccounting(counted_by="none")
+    if int(llm.get("total_tokens", 0)) == 0:
+        return TokenAccounting(call_count=call_count, counted_by=_UNBUDGETABLE_TOKENS_SENTINEL)
+    return TokenAccounting(
+        prompt_tokens=int(llm.get("prompt_tokens", 0)),
+        completion_tokens=int(llm.get("completion_tokens", 0)),
+        call_count=call_count,
+        counted_by=_V1_COUNTED_BY,
+    )
 
 
 def _compute_environment_hash() -> str:
@@ -71,9 +101,9 @@ def _compute_environment_hash() -> str:
 
 
 LIGHTRAG_FULL_INGEST_ADMISSION = AdmissionRecord(
-    part_name_at_version="lightrag/full-ingest@0.1.0",
+    part_name_at_version="lightrag/full-ingest@0.2.0",
     entry_path="in-process opaque core, hosted as a subprocess under v1's pinned interpreter",
-    storage="machine",
+    storage="self-contained",
     wall_clock_ceiling_seconds=INGEST_WALL_CLOCK_CEILING_SECONDS,
     wall_clock_ceiling_basis=(
         "one document at a time through v1's own extraction pipeline over the 20-document "
@@ -111,10 +141,13 @@ LIGHTRAG_FULL_INGEST_ADMISSION = AdmissionRecord(
             condition=3,
             verdict="satisfied by construction",
             evidence=(
-                "the subprocess never makes an independent outbound LLM/embedding call — it "
-                "calls the machine's own injected LLM_BINDING_HOST/EMBEDDING_BINDING_HOST "
-                "(databasise/foreign/v1_corpus_driver_script.py's _build_rag), mirroring "
-                "Phase 3's parity harness technique"
+                "network denial by construction: the subprocess calls only the machine's injected "
+                "LLM_BINDING_HOST/EMBEDDING_BINDING_HOST (v1_corpus_driver_script.py's _build_rag) "
+                "and configures no endpoint of its own; no OS-level namespace sandbox exists under "
+                "the no-Docker constraint. Spend: the driver hands lightrag.utils.TokenTracker to "
+                "both model functions (token_tracker=) and returns its usage; full_ingest_body "
+                "reports the LLM half with counted_by='v1-subprocess', 'none' for no model call, "
+                "and 'unbudgetable' when the provider reports no usage — never an estimate"
             ),
         ),
         ConditionVerdict(
@@ -131,9 +164,10 @@ LIGHTRAG_FULL_INGEST_ADMISSION = AdmissionRecord(
             condition=5,
             verdict="satisfied",
             evidence=(
-                "LIGHTRAG_FULL_INGEST_PART.artifact_scope='quarantined', never 'shared' — "
-                "enforced by validate_admission's ForbiddenSharedScopeError for any opaque part "
-                "declaring the shared scope"
+                "storage='self-contained': v1 writes only its per-workspace working dir "
+                "<store_root>/<workspace>/lightrag-v1; the v2 rows are written by the "
+                "lightrag/v1-index-sync node through ctx.stores. LIGHTRAG_FULL_INGEST_PART."
+                "artifact_scope=None, so no artifact scope exists to be 'shared'"
             ),
         ),
         ConditionVerdict(
@@ -155,36 +189,29 @@ LIGHTRAG_FULL_INGEST_ADMISSION = AdmissionRecord(
         ),
         ConditionVerdict(
             condition=8,
-            verdict="open — accepted as a scope boundary, not a clean yes",
+            verdict="machine-side-obligation",
             evidence=(
-                "no OS-level network-namespace isolation mechanism exists in databasise/ "
-                "(05-RESEARCH.md Open Question 3); denial is achieved by construction (condition "
-                "3) rather than by a sandbox, consistent with the project's no-Docker, local-"
-                "NixOS constraint — recorded here as the same open finding PARTS.md's own §X row "
-                "N12 records for codebase-memory-mcp, not silently claimed solved"
+                "ttl_days=90 is declared on this record; renewal only with a recorded reason, each "
+                "renewal recorded in the ledger, is a machine-side ledger mechanic with no source "
+                "evidence in this part"
             ),
         ),
         ConditionVerdict(
             condition=9,
-            verdict="partially satisfied — spend reported as unbudgetable, never estimated",
+            verdict="machine-side-obligation",
             evidence=(
-                "full_ingest_body reports tokens.counted_by='unbudgetable' when the subprocess's "
-                "own usage field is null (v1's apipeline_process_enqueue_documents exposes no "
-                "per-run token count today) — the counting half of this condition is an open "
-                "machine-side obligation; the seam refuses to substitute a rounded or zero number "
-                "in its place (databasise.seam.tokens.assemble_token_breakdown's existing "
-                "UnbudgetableParticipantError mechanism, exercised here for the first time "
-                "against a real, non-fixture part)"
+                "this port is reached only by an explicit Databasise.ingest() call through the "
+                "corpus-ingest wiring; counting explicit part_ref invocations as data and never as "
+                "a promotion trigger is a machine-side ledger mechanic, not rounded up to a yes"
             ),
         ),
         ConditionVerdict(
             condition=10,
             verdict="satisfied (machine-side obligation)",
             evidence=(
-                "enforced by databasise.parts.admission.cross_check_conditions: this part's "
-                "artifact_scope is quarantined, and the machine keeps no artifact registry "
-                "(removed in Phase 10, D-15), so nothing enumerates this part's output as an "
-                "SA-1-shareable artifact"
+                "enforced by databasise.parts.admission.cross_check_conditions: this part declares "
+                "no artifact scope, and the machine keeps no artifact registry (removed in Phase "
+                "10, D-15), so nothing enumerates this part's inputs as SA-1-shareable artifacts"
             ),
         ),
         ConditionVerdict(
@@ -202,20 +229,19 @@ LIGHTRAG_FULL_INGEST_ADMISSION = AdmissionRecord(
 
 
 async def full_ingest_body(ctx: NodeContext) -> dict[str, Any]:
-    """Reads ``documents``/``track_id`` (and, for a raw-payload ingest, ``file_paths``/
-    ``docs_format``, 05-01-PLAN.md Task 3) from ``ctx.config``, launches the v1 corpus driver via
-    ``run_corpus_op`` (blocking — wrapped in ``asyncio.to_thread`` per that function's own
-    docstring note) and returns the job handle plus this node's own reported token spend.
+    """Reads ``documents``/``track_id`` (and, for a staged upload, ``file_paths``/``docs_format``/
+    ``input_dir``; for a retry, ``retry_doc_ids``) from ``ctx.config``, launches the v1 corpus
+    driver via ``run_corpus_op`` (blocking — wrapped in ``asyncio.to_thread``) and returns the job
+    handle plus this node's own metered token spend (:func:`tokens_from_usage`).
     """
     config = ctx.config or {}
     payload: dict[str, Any] = {
         "documents": config.get("documents") or [],
         "track_id": config.get("track_id"),
     }
-    if config.get("file_paths") is not None:
-        payload["file_paths"] = config["file_paths"]
-    if config.get("docs_format") is not None:
-        payload["docs_format"] = config["docs_format"]
+    for key in ("file_paths", "docs_format", "input_dir", "retry_doc_ids"):
+        if config.get(key) is not None:
+            payload[key] = config[key]
 
     result = await asyncio.to_thread(
         run_corpus_op,
@@ -226,24 +252,11 @@ async def full_ingest_body(ctx: NodeContext) -> dict[str, Any]:
     )
 
     usage = result.get("usage")
-    if usage:
-        tokens = TokenAccounting(
-            prompt_tokens=int(usage.get("prompt_tokens", 0)),
-            completion_tokens=int(usage.get("completion_tokens", 0)),
-            call_count=int(usage.get("call_count", 1)),
-            counted_by=str(usage.get("model") or "v1-subprocess"),
-        )
-    else:
-        # §9/D-08: v1 reported no usage at all — the node reports the existing unbudgetable
-        # sentinel rather than substituting an estimated, rounded, or zero number. A real,
-        # honestly-reported zero (counted_by="none") is a different fact this branch never claims.
-        tokens = TokenAccounting(counted_by=_UNBUDGETABLE_TOKENS_SENTINEL)
-
     return {
         "track_id": result.get("track_id"),
         "enqueued": result.get("enqueued", 0),
         "usage": usage,
-        "tokens": tokens,
+        "tokens": tokens_from_usage(usage),
     }
 
 
@@ -251,4 +264,5 @@ __all__ = [
     "INGEST_WALL_CLOCK_CEILING_SECONDS",
     "LIGHTRAG_FULL_INGEST_ADMISSION",
     "full_ingest_body",
+    "tokens_from_usage",
 ]

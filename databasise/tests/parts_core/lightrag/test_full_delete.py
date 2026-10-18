@@ -27,11 +27,11 @@ _V1_CORPUS_DRIVER_SCRIPT = (
 _V1_ENV_PARITY = Path(__file__).resolve().parents[4] / "v1" / ".env.parity"
 
 
-def test_the_delete_part_declares_mutates_store_and_the_ingest_part_declares_writes_artifact():
-    assert "mutates_store" in LIGHTRAG_FULL_DELETE_PART.effects
-    assert "writes_artifact" not in LIGHTRAG_FULL_DELETE_PART.effects
-    assert "writes_artifact" in LIGHTRAG_FULL_INGEST_PART.effects
-    assert "mutates_store" not in LIGHTRAG_FULL_INGEST_PART.effects
+def test_both_corpus_ports_mutate_v1s_store_and_write_no_artifact():
+    # 11-03 (LRAG-03, D-06): at @0.2.0 ingest mutates v1's working dir too; still two ports.
+    for part in (LIGHTRAG_FULL_DELETE_PART, LIGHTRAG_FULL_INGEST_PART):
+        assert "mutates_store" in part.effects
+        assert "writes_artifact" not in part.effects
     assert LIGHTRAG_FULL_DELETE_PART.name_at_version != LIGHTRAG_FULL_INGEST_PART.name_at_version
 
 

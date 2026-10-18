@@ -971,6 +971,7 @@ class Databasise:
             staged = on_disk_path
             node_config["documents"] = [{"id": document_id, "document_id": document_id, "text": ""}]
             node_config["file_paths"] = [str(on_disk_path)]
+            node_config["input_dir"] = str(on_disk_path.parent)  # v1 resolves the basename here (D-09)
             node_config["docs_format"] = _DOCS_FORMAT_PENDING_PARSE
         else:
             node_config["documents"] = [

@@ -23,16 +23,32 @@ implements ``op == "ingest"`` (05-01-PLAN.md Task 1), ``op == "delete"`` and ``o
 rather than a silent no-op.
 
 ``op == "ingest"``'s job carries ``{"documents": [{"id": str, "text": str}, ...], "track_id": str |
-None, "file_paths": [str, ...] | None, "docs_format": str | None}`` (``file_paths``/``docs_format``
-are the raw-upload extension, 05-01-PLAN.md Task 3). Builds v1's ``LightRAG`` facade against
-``working_dir`` using the same env-var-driven configuration
-``v1/scripts/run_parity_ingest.py``/``databasise/parity/v1_driver_script.py`` already use, runs the
+None, "file_paths": [str, ...] | None, "docs_format": str | None, "input_dir": str | None,
+"retry_doc_ids": [str, ...] | None}``. Builds v1's ``LightRAG`` facade against ``working_dir`` using
+the same env-var-driven configuration ``databasise/parity/v1_driver_script.py`` uses, runs the
 ingest via ``apipeline_enqueue_documents`` + ``apipeline_process_enqueue_documents`` — never
-``ainsert`` — because the two-call form is the path that accepts an explicit ``track_id`` the seam
-hands back to the caller as its job id, and writes one JSON object to stdout:
-``{"track_id": str, "enqueued": int, "usage": {...} | None}``. ``usage`` carries whatever token
-accounting v1 exposes for the run, or ``None`` when v1 reports none (which is every call today —
-``apipeline_process_enqueue_documents`` returns no per-run token count) — never a fabricated zero.
+``ainsert`` — because the two-call form accepts the explicit ``track_id`` the seam hands back as
+its job id, and writes ``{"track_id": str, "enqueued": int, "usage": {"llm": {...}, "embedding":
+{...}}}`` to stdout (11-03-PLAN.md, D-06):
+
+- ``docs_format == "pending_parse"`` (a staged upload, D-09) sets ``INPUT_DIR`` to ``input_dir`` and
+  enqueues the file path with no ``ids=`` (``ids=`` forces RAW mode, which indexed empty text), so
+  v1's own parser reads the file's bytes. v1 stores the basename as ``file_path``, mints
+  ``doc-<md5(basename)>`` as its id and moves the source to ``<INPUT_DIR>/__parsed__/``. The id stem
+  rule maps that row back to our id: the staged name is ``<document_id><suffix>``, so
+  ``Path(file_path).stem`` is our document id. A text ingest keeps ``ids=`` (RAW) and v1's id is ours.
+- Processing is restricted to this run's targets (D-08): v1's
+  ``apipeline_process_enqueue_documents()`` otherwise reprocesses every PENDING, PROCESSING,
+  PARSING, ANALYZING and FAILED document, billing for old failures. The driver wraps
+  ``rag.doc_status.get_docs_by_statuses`` on this instance only. The targets are this track's rows
+  that v1 did not mark ``metadata.is_duplicate``; with ``retry_doc_ids`` they are those ids resolved
+  by the stem rule, and the returned ``track_id`` is the first target's own track id.
+- ``enqueued`` is the requested count minus the duplicate rows v1 recorded under the caller's track
+  id, read after processing (a content-hash duplicate on the file path appears only after parse);
+  ``track_id`` is the caller's even when v1 returned ``None`` for a dropped duplicate (D-10).
+- ``usage`` holds ``lightrag.utils.TokenTracker.get_usage()`` for the LLM and for embeddings, two
+  trackers handed to the model functions with ``token_tracker=`` (D-13). They are never summed:
+  the two figures come from different tokenizers.
 
 ``op == "delete"``'s job carries ``{"doc_id": str, "delete_llm_cache": bool}``. Calls v1's own
 ``rag.adelete_by_doc_id(doc_id, delete_llm_cache=...)`` — never reimplementing or wrapping its
@@ -101,9 +117,9 @@ from typing import Any
 
 from lightrag import LightRAG
 from lightrag.base import DocStatus
-from lightrag.constants import FULL_DOCS_FORMAT_RAW, GRAPH_FIELD_SEP
+from lightrag.constants import FULL_DOCS_FORMAT_PENDING_PARSE, FULL_DOCS_FORMAT_RAW, GRAPH_FIELD_SEP
 from lightrag.llm.openai import openai_complete_if_cache, openai_embed
-from lightrag.utils import EmbeddingFunc
+from lightrag.utils import EmbeddingFunc, TokenTracker
 
 _KNOWN_OPS = ("ingest", "delete", "entities", "entity_info", "status", "health")
 
@@ -117,6 +133,14 @@ class UnknownOpError(ValueError):
         super().__init__(f"unknown op {op!r}; this driver implements {_KNOWN_OPS!r}")
 
 
+class MissingInputDirError(ValueError):
+    """A ``pending_parse`` ingest named no ``input_dir``: v1 resolves the staged file's basename
+    under ``INPUT_DIR``, so without it v1 would look in ``<cwd>/inputs`` and fail the document."""
+
+    def __init__(self) -> None:
+        super().__init__("a pending_parse ingest needs input_dir (the directory holding the staged files)")
+
+
 def _extra_body(env_var: str) -> dict[str, Any]:
     raw = os.getenv(env_var)
     return json.loads(raw) if raw else {}
@@ -127,6 +151,7 @@ async def _llm_model_func(
     system_prompt: str | None = None,
     history_messages: list | None = None,
     keyword_extraction: bool = False,
+    token_tracker: TokenTracker | None = None,
     **kwargs: Any,
 ) -> str:
     del keyword_extraction  # unused — this script never lets v1 extract its own keywords
@@ -138,18 +163,25 @@ async def _llm_model_func(
         api_key=os.environ["LLM_BINDING_API_KEY"],
         base_url=os.environ["LLM_BINDING_HOST"],
         extra_body=_extra_body("OPENAI_LLM_EXTRA_BODY"),
+        token_tracker=token_tracker,
         **kwargs,
     )
 
 
-async def _build_rag(working_dir: str) -> LightRAG:
-    """Mirrors ``databasise/parity/v1_driver_script.py``'s own ``_build_rag`` exactly — the same
+async def _build_rag(
+    working_dir: str,
+    *,
+    llm_tracker: TokenTracker | None = None,
+    embed_tracker: TokenTracker | None = None,
+) -> LightRAG:
+    """Mirrors ``databasise/parity/v1_driver_script.py``'s own ``_build_rag`` — the same
     env-var-driven pinned configuration, against the corpus's own persistent ``working_dir``
-    (accumulating across ingest calls) rather than a fresh one per call.
+    (accumulating across ingest calls) rather than a fresh one per call. The trackers, when given,
+    count every model call this process makes (D-13).
     """
     rag = LightRAG(
         working_dir=working_dir,
-        llm_model_func=_llm_model_func,
+        llm_model_func=partial(_llm_model_func, token_tracker=llm_tracker),
         embedding_func=EmbeddingFunc(
             embedding_dim=int(os.environ["EMBEDDING_DIM"]),
             max_token_size=8192,
@@ -158,6 +190,7 @@ async def _build_rag(working_dir: str) -> LightRAG:
                 model=os.environ["EMBEDDING_MODEL"],
                 base_url=os.environ["EMBEDDING_BINDING_HOST"],
                 api_key=os.environ["EMBEDDING_BINDING_API_KEY"],
+                token_tracker=embed_tracker,
             ),
         ),
         kv_storage=os.environ["LIGHTRAG_KV_STORAGE"],
@@ -170,32 +203,97 @@ async def _build_rag(working_dir: str) -> LightRAG:
     return rag
 
 
+def _is_duplicate(row: Any) -> bool:
+    return bool((getattr(row, "metadata", None) or {}).get("is_duplicate"))
+
+
+def _our_id_matches(v1_id: str, file_path: str | None, our_id: str) -> bool:
+    """The id stem rule: a text-ingested row keeps our id; a file-ingested ``doc-<md5>`` row maps
+    back through its staged basename ``<document_id><suffix>``."""
+    return v1_id == our_id or (v1_id.startswith("doc-") and Path(file_path or "").stem == our_id)
+
+
+async def _resolve_v1_ids(rag: LightRAG, ids: list[str]) -> dict[str, Any]:
+    """Our document ids -> ``{v1_id: row}`` for every v1 row the stem rule matches."""
+    rows = await rag.doc_status.get_docs_by_statuses(list(DocStatus))
+    wanted = [str(our_id) for our_id in ids]
+    return {
+        v1_id: row
+        for v1_id, row in rows.items()
+        if any(_our_id_matches(v1_id, row.file_path, our_id) for our_id in wanted)
+    }
+
+
+def _restrict_processing(rag: LightRAG, targets: set[str]) -> None:
+    """Make this instance's pipeline see only ``targets`` (D-08): v1 reprocesses every in-flight
+    or failed document on each ``apipeline_process_enqueue_documents()`` call otherwise."""
+    original = rag.doc_status.get_docs_by_statuses
+
+    async def only_targets(statuses: list[DocStatus]) -> dict[str, Any]:
+        return {k: v for k, v in (await original(statuses)).items() if k in targets}
+
+    rag.doc_status.get_docs_by_statuses = only_targets
+
+
 async def _run_ingest(job: dict[str, Any]) -> dict[str, Any]:
     documents = job.get("documents") or []
     track_id = job.get("track_id")
     working_dir = str(job["working_dir"])
     file_paths = job.get("file_paths")
     docs_format = job.get("docs_format") or FULL_DOCS_FORMAT_RAW
+    input_dir = job.get("input_dir")
+    retry_doc_ids = job.get("retry_doc_ids") or []
 
-    ids = [str(doc["id"]) for doc in documents]
-    texts = [str(doc.get("text") or "") for doc in documents]
+    if docs_format == FULL_DOCS_FORMAT_PENDING_PARSE and not input_dir:
+        raise MissingInputDirError()
+    if input_dir:
+        os.environ["INPUT_DIR"] = str(input_dir)  # v1 resolves staged basenames under this dir
 
-    rag = await _build_rag(working_dir)
+    llm_tracker, embed_tracker = TokenTracker(), TokenTracker()
+    rag = await _build_rag(working_dir, llm_tracker=llm_tracker, embed_tracker=embed_tracker)
     try:
-        result_track_id = await rag.apipeline_enqueue_documents(
-            input=texts,
-            ids=ids,
-            file_paths=file_paths,
-            track_id=track_id,
-            docs_format=docs_format,
-        )
+        if retry_doc_ids:
+            retry_rows = await _resolve_v1_ids(rag, retry_doc_ids)
+            targets = set(retry_rows)
+            requested = len(targets)
+            track_id = next((row.track_id for row in retry_rows.values() if row.track_id), track_id)
+        else:
+            if docs_format == FULL_DOCS_FORMAT_PENDING_PARSE:
+                requested = len(file_paths or [])
+                result_track_id = await rag.apipeline_enqueue_documents(
+                    input=[""] * requested,
+                    file_paths=file_paths,
+                    track_id=track_id,
+                    docs_format=FULL_DOCS_FORMAT_PENDING_PARSE,
+                )
+            else:
+                requested = len(documents)
+                result_track_id = await rag.apipeline_enqueue_documents(
+                    input=[str(doc.get("text") or "") for doc in documents],
+                    ids=[str(doc["id"]) for doc in documents],
+                    file_paths=file_paths,
+                    track_id=track_id,
+                    docs_format=docs_format,
+                )
+            track_id = track_id or result_track_id
+            rows = await rag.aget_docs_by_track_id(track_id) if track_id else {}
+            targets = {k for k, row in rows.items() if not _is_duplicate(row)}
+
+        _restrict_processing(rag, targets)
         await rag.apipeline_process_enqueue_documents()
+
+        dropped = 0
+        if not retry_doc_ids and track_id:
+            rows = await rag.aget_docs_by_track_id(track_id)
+            dropped = sum(1 for row in rows.values() if _is_duplicate(row))
     finally:
         await rag.finalize_storages()
 
-    # v1's apipeline_process_enqueue_documents() exposes no per-run token count — usage is always
-    # None here, never a fabricated zero (see module docstring).
-    return {"track_id": result_track_id, "enqueued": len(documents), "usage": None}
+    return {
+        "track_id": track_id,
+        "enqueued": max(requested - dropped, 0),
+        "usage": {"llm": llm_tracker.get_usage(), "embedding": embed_tracker.get_usage()},
+    }
 
 
 async def _run_delete(job: dict[str, Any]) -> dict[str, Any]:
