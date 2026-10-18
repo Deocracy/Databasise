@@ -231,13 +231,13 @@ Plans (nine waves; the shared engine and store modules force most plans into seq
 - LRAG-17/18: G-27 v1 answer fidelity — match v1 kg_query prompts exactly or relabel the arms; whether live rerank gets an API toggle
 - LRAG-20: expose a delete-impact/per-document entity view or remove the ops
 
-**Plans**: 3/11 plans executed
+**Plans**: 4/11 plans executed
 
 Plans (nine waves; `seam/engine.py` is touched by nine plans, so those run one per wave. Wave 1 and wave 2 each hold two plans that share no file):
 
 - [x] 11-01-PLAN.md — Tracer: per-workspace v1 working dir and the v1-index-sync mirror; ingest and delete reach the query stores; ingest seam events (LRAG-01, LRAG-02, LRAG-03; wave 1)
 - [x] 11-02-PLAN.md — Two store roots never share a v1 dir; eval ingest stays in the eval store; aa_run --arm (LRAG-01, LRAG-15; wave 2)
-- [ ] 11-03-PLAN.md — The one @0.2.0 opaque-boundary bump holding every driver change of the phase: file ingest, targets filter, usage, config check (exit 3), facade-free status and health, page refusal and exit 4, entity ops removed; owner grant checkpoint for the phase (LRAG-03, 05, 06, 07, 08, 10, 11, 12, 20; wave 2)
+- [x] 11-03-PLAN.md — The one @0.2.0 opaque-boundary bump holding every driver change of the phase: file ingest, targets filter, usage, config check (exit 3), facade-free status and health, page refusal and exit 4, entity ops removed; owner grant checkpoint for the phase (LRAG-03, 05, 06, 07, 08, 10, 11, 12, 20; wave 2)
 - [x] 11-04-PLAN.md — v1 retrieval ordering and selection for the KG arms (LRAG-18; wave 1)
 - [ ] 11-05-PLAN.md — Uploads index their real content; suffix allowlist; per-workspace inbox emptied after each job; honest enqueued (LRAG-08, LRAG-09, LRAG-10; wave 3)
 - [ ] 11-06-PLAN.md — Per-working-dir write gate (409) and job-family dispatch for GET /jobs (LRAG-04, LRAG-01; wave 4)
@@ -445,7 +445,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 8. Run the Engine | 10/10 | Complete    | 2026-10-16 |
 | 9. Inputs, Errors & Security | 10/10 | Complete    | 2026-10-17 |
 | 10. Stores, Locking & Data Integrity | 12/12 | Complete    | 2026-10-17 |
-| 11. LightRAG Corpus Path | 3/11 | In Progress | - |
+| 11. LightRAG Corpus Path | 4/11 | In Progress | - |
 | 12. HippoRAG Fixes | 0/TBD | Not started | - |
 | 13. Selectors, Wiring & Runner | 0/TBD | Not started | - |
 | 14. Promotion & Ledger | 0/TBD | Not started | - |

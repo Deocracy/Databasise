@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 11
 current_phase_name: LightRAG Corpus Path
 status: executing
-stopped_at: Completed 11-02-PLAN.md
-last_updated: "2026-10-18T08:20:41.172Z"
+stopped_at: Completed 11-03-PLAN.md
+last_updated: "2026-10-18T16:18:57.076Z"
 last_activity: 2026-10-17
 last_activity_desc: Phase 10 complete, transitioned to Phase 11
-state_head: 6ff345c01e79173fc7339fde7f5138e6a9bfc0f8
+state_head: d80a70a458cf1c5426fdd2de054065437a52011c
 progress:
   total_phases: 11
   completed_phases: 3
   total_plans: 43
-  completed_plans: 35
+  completed_plans: 36
   percent: 27
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-17 after Phase 10)
 ## Current Position
 
 Phase: 11 (LightRAG Corpus Path) — EXECUTING
-Plan: 4 of 11
+Plan: 5 of 11
 Status: Ready to execute
 Last activity: 2026-10-17 — Phase 10 complete, transitioned to Phase 11
 
@@ -97,6 +97,7 @@ Progress: [███░░░░░░░] 27% (3/11 phases)
 | Phase 11 P01 | 29min | 2 tasks | 15 files |
 | Phase 11 P04 | 45min | 3 tasks | 15 files |
 | Phase 11 P02 | 12min | 2 tasks | 3 files |
+| Phase 11 P03 | 155min | 4 tasks | 24 files |
 
 ## Accumulated Context
 
@@ -160,6 +161,9 @@ Recent decisions affecting current work:
 - [Phase 11]: 11-04: relation chunks exclude only the entity side's selected chunk ids, and a zero VECTOR count falls back to WEIGHT (v1 fidelity over plan wording)
 - [Phase 11]: 11-04: chunk-sel-kg pick_method_used is the shared per-side method, MIXED when sides differ; pick_method_used_by_side gives detail
 - [Phase 11]: 11-02: aa_run --arm defaults to None (default selector); arms map through corpus_ingest._ARM_SELECTORS (D-03 as corrected by Q6)
+- [Phase 11]: 11-03: corpus ports bumped once to @0.2.0 (D-06); full-ingest declares calls_llm, mutates_store, reads_kv, reads_graph with no artifact scope, full-delete adds calls_llm; both records storage self-contained with CONTRACT §8 numbering
+- [Phase 11]: 11-03: tokens_from_usage meters both corpus ports: no call = none, calls with zero tokens = unbudgetable, else v1-subprocess; embedding usage never summed into the LLM figure
+- [Phase 11]: 11-03: driver status and health ops are facade-free; exit 3 = v1_not_configured (key names only), exit 4 = doc_status_unreadable; engine health carries configured under storages_initialized until 11-09
 
 ### Pending Todos
 
@@ -207,8 +211,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-18T08:20:41.038Z
-Stopped at: Completed 11-02-PLAN.md
+Last session: 2026-10-18T16:18:45.368Z
+Stopped at: Completed 11-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

@@ -190,7 +190,7 @@
   - Test: Integration test (real v1 subprocess or a driver stub that writes a v1 working dir, plus the chosen bridge): ingest a document with a unique token, query a LightRAG arm and assert an evidence ref from that document_id resolves; delete it, then assert the query returns no evidence from it and /evidence/resolve on the old ref refuses. Fails today because the query arms read v2 stores under store_root/workspace that only parity/import_index.py writes.
   - Defects: doc-audit-1/D1, doc-audit-3/D5, parts-lightrag/PC-11
   - Owner decision first: M-04 LightRAG write path: (a) machine-native ingest writing v2 stores, (b) run import_v1_index(working_dir, store_root, workspace) after every v1 ingest/delete, or (c) keep the split and label LightRAG query data as 'last parity import'.
-- [ ] **LRAG-03**: The lightrag full-ingest part declares mutates_store (not writes_artifact with scope quarantined), its admission record names the storage it actually writes, and engine.ingest runs the wiring with a seam-event recorder so a successful LightRAG ingest emits MACH-11 seam events for the stores it touched, as full-delete does.
+- [x] **LRAG-03**: The lightrag full-ingest part declares mutates_store (not writes_artifact with scope quarantined), its admission record names the storage it actually writes, and engine.ingest runs the wiring with a seam-event recorder so a successful LightRAG ingest emits MACH-11 seam events for the stores it touched, as full-delete does.
   - Test: Test runs engine.ingest with a stubbed driver and asserts the returned job/trace carries seam events for the touched stores and that the full-ingest declaration in declared_only.py lists mutates_store. Fails today: no recorder is passed (engine.py:731-738) and effects are ['calls_llm','writes_artifact','reads_kv','reads_graph'].
   - Defects: parts-lightrag/PC-10
   - Owner decision first: Depends on M-04: the storage value and store keys depend on whether ingest writes v2 stores or v1's working dir.
@@ -221,11 +221,11 @@
   - Test: Real-v1 or pipeline-faithful stub test: ingest document X, then ingest X again; assert the second response is enqueued 0 or the named duplicate refusal, not enqueued 1. Fails today: driver line 198 returns enqueued=len(documents).
   - Defects: doc-audit-3/D3
   - Owner decision first: Re-ingest semantics for an existing document_id: refuse, report enqueued 0, or replace (delete then ingest).
-- [ ] **LRAG-11**: LightRAG write-side LLM spend is metered: corpus-delete.json and the full-delete part declare calls_llm, the v1 driver returns token usage for ingest and delete when v1 records it, and full-ingest/full-delete report counted_by other than 'unbudgetable' when usage is present (the usage-present branch in full_ingest.py:226-233 is reachable or removed).
+- [x] **LRAG-11**: LightRAG write-side LLM spend is metered: corpus-delete.json and the full-delete part declare calls_llm, the v1 driver returns token usage for ingest and delete when v1 records it, and full-ingest/full-delete report counted_by other than 'unbudgetable' when usage is present (the usage-present branch in full_ingest.py:226-233 is reachable or removed).
   - Test: Test asserts corpus-delete.json effects include calls_llm and that the scheduler meters the delete node; with a driver stub returning usage {prompt_tokens, completion_tokens}, assert ingest and delete results carry those tokens and counted_by != 'unbudgetable'. Fails today: effects lack calls_llm and the driver always returns usage None.
   - Defects: doc-audit-3/D14, parts-lightrag/PC-12
   - Owner decision first: Whether v1's token tracker can be captured inside the driver subprocess, or the owner accepts 'unbudgetable' and the dead branch is deleted.
-- [ ] **LRAG-12**: The full-ingest and full-delete admission records number CONTRACT §8 conditions correctly: network-namespace isolation and token unbudgetability are recorded under condition 3, condition 8 records the ~90-day TTL with ledger renewal, and condition 9 records part_ref invocation counting, matching codebase_memory_mcp.py:241-263; the full_ingest.py module docstring states the same mapping.
+- [x] **LRAG-12**: The full-ingest and full-delete admission records number CONTRACT §8 conditions correctly: network-namespace isolation and token unbudgetability are recorded under condition 3, condition 8 records the ~90-day TTL with ledger renewal, and condition 9 records part_ref invocation counting, matching codebase_memory_mcp.py:241-263; the full_ingest.py module docstring states the same mapping.
   - Test: test_full_ingest_compat (and a delete equivalent) asserts the (condition, subject) pairs: condition 8 subject is TTL, condition 9 is part_ref counting, condition 3 carries network isolation/unbudgetable. Fails today: those tests pin the wrong pairs.
   - Defects: parts-lightrag/PC-01
 - [ ] **LRAG-13**: GET /health performs no writes: on a fresh, empty store_root it creates no files or directories (no <workspace>/text_chunks/kv.sqlite3, no <workspace>/chunk_entity_relation/graph.cozo, no v1/.corpus_working_dir or per-workspace v1 working dir).
@@ -254,7 +254,7 @@
 - [ ] **LRAG-19**: Query traces for the naive/hybrid/local/global LightRAG arms contain no no-op embedder-index node: the node is removed from query wirings (kept only in a recipe/index wiring) or is skipped and marked recipe-only, and it declares no calls_embedding/writes_artifact on a run where it did nothing.
   - Test: Test runs each LightRAG query arm and asserts no trace node id embedder-index with an empty quarantined artifact appears. Fails today: embedder-index is dispatched on every query with no sample.
   - Defects: parts-lightrag/PC-16
-- [ ] **LRAG-20**: The v1 driver ops 'entities' (entity map for a document_id) and 'entity_info' (entity details by name) are either reachable through an engine method plus REST route and MCP tool (e.g. a delete-impact preview listing entities a document contributes and which survive deletion), or deleted from the driver and test stub.
+- [x] **LRAG-20**: The v1 driver ops 'entities' (entity map for a document_id) and 'entity_info' (entity details by name) are either reachable through an engine method plus REST route and MCP tool (e.g. a delete-impact preview listing entities a document contributes and which survive deletion), or deleted from the driver and test stub.
   - Test: If exposed: REST test calls the new route for an ingested document and asserts the entity list from the driver stub is returned. If removed: test asserts the driver rejects 'entities'/'entity_info' as unknown ops and no test fixture references them. Fails today: ops exist but no production caller.
   - Defects: foreign/FOR-14, other-surfaces/OS-11
   - Owner decision first: Expose delete-impact/per-document entity view in v1.1, or remove the half-wired ops (YAGNI).
@@ -865,7 +865,7 @@ These fail today.
 | STOR-16 | Phase 10 | Complete |
 | LRAG-01 | Phase 11 | Pending |
 | LRAG-02 | Phase 11 | Complete |
-| LRAG-03 | Phase 11 | Pending |
+| LRAG-03 | Phase 11 | Complete |
 | LRAG-04 | Phase 11 | Pending |
 | LRAG-05 | Phase 11 | Pending |
 | LRAG-06 | Phase 11 | Pending |
@@ -873,8 +873,8 @@ These fail today.
 | LRAG-08 | Phase 11 | Pending |
 | LRAG-09 | Phase 11 | Pending |
 | LRAG-10 | Phase 11 | Pending |
-| LRAG-11 | Phase 11 | Pending |
-| LRAG-12 | Phase 11 | Pending |
+| LRAG-11 | Phase 11 | Complete |
+| LRAG-12 | Phase 11 | Complete |
 | LRAG-13 | Phase 11 | Pending |
 | LRAG-14 | Phase 11 | Pending |
 | LRAG-15 | Phase 11 | Complete |
@@ -882,7 +882,7 @@ These fail today.
 | LRAG-17 | Phase 11 | Pending |
 | LRAG-18 | Phase 11 | Complete |
 | LRAG-19 | Phase 11 | Pending |
-| LRAG-20 | Phase 11 | Pending |
+| LRAG-20 | Phase 11 | Complete |
 | HIPP-01 | Phase 12 | Pending |
 | HIPP-02 | Phase 12 | Pending |
 | HIPP-03 | Phase 12 | Pending |
