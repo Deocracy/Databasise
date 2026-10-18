@@ -1,6 +1,6 @@
 {
   "wiring_id": "lightrag-corpus-delete",
-  "title": "LightRAG corpus-side delete — the one-node opaque wiring Databasise.delete_document() runs",
+  "title": "LightRAG corpus-side delete — v1's opaque delete, then the v1-to-v2 index mirror, the wiring Databasise.delete_document() runs",
   "wiring_version": "1",
   "nodes": {
     "full-delete": {
@@ -12,6 +12,19 @@
         "reads_graph"
       ],
       "deps": []
+    },
+    "v1-index-sync": {
+      "component": "lightrag/v1-index-sync@0.1.0",
+      "kind": "opaque",
+      "effects": [
+        "mutates_store",
+        "writes_kv",
+        "writes_vector",
+        "writes_graph"
+      ],
+      "deps": [
+        "full-delete"
+      ]
     }
   },
   "harnesses": [],

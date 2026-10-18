@@ -111,12 +111,15 @@ class IngestDocument(BaseModel):
 
 class IngestJob(BaseModel):
     """The job handle ``Databasise.ingest()`` returns — ``job_id`` is v1's own ``track_id``, never
-    a machine-internal wiring/node identity."""
+    a machine-internal wiring/node identity. ``seam_events`` (11-01-PLAN.md, LRAG-03) carries the
+    MACH-11 events the committed run produced, exactly as ``DeletionOutcome.seam_events`` does for
+    a delete; ingest persists no trace, so the returned job is where they are reported."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     job_id: str
     enqueued: int
+    seam_events: list[SeamEvent] = []
 
 
 class DeletionOutcome(BaseModel):

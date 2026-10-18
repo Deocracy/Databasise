@@ -11,7 +11,16 @@ re-embeds, so it spends nothing (``counted_by="none"``).
 
 Safety rules: an absent working dir or doc-status file is a no-op that touches no store (stub-body
 corpus runs never create one); an unreadable file raises, so the engine drops the run's staged
-writes. ``kind="opaque"`` because ``mutates_store`` on a non-opaque part derives the unhosted
+writes.
+
+Pruning (D-01, stale detection by set difference): the kv record ``V1_INDEX_SYNC_MANIFEST_KEY``
+lists, per namespace, the ids the last sync wrote. Each sync upserts the current snapshot, deletes
+``previous manifest ids - current ids``, then writes the new manifest, all staged in the same
+commit. A row the sync never wrote (a parity ``import_v1_index`` corpus in the same store root) is
+never deleted, and with no previous manifest nothing is deleted. Limit: an id that the sync and a
+parity import both hold is overwritten by the sync's upsert (and pruned once v1 drops it); merging
+the two is TOOL-02's job. The manifest record lives in the ``text_chunks`` kv namespace, so a future
+reader that enumerates kv keys must skip it. ``kind="opaque"`` because ``mutates_store`` on a non-opaque part derives the unhosted
 ``confined-unit`` placement (research Finding 6); the body still runs in the engine process, so it
 bounds itself with ``asyncio.wait_for``.
 """
@@ -36,7 +45,7 @@ from databasise.runner.trace import TokenAccounting
 # A local read of v1's index files plus in-memory staging; no model call.
 V1_INDEX_SYNC_WALL_CLOCK_CEILING_SECONDS = 300.0
 
-# One kv record listing, per namespace, the ids the last sync wrote (Task 2 prunes against it).
+# One kv record listing, per namespace, the ids the last sync wrote; the next sync prunes against it.
 V1_INDEX_SYNC_MANIFEST_KEY = "lightrag-v1-index-sync-manifest"
 
 
@@ -65,7 +74,8 @@ async def v1_index_sync_body(ctx: Any) -> dict[str, Any]:
         if snapshot is None:
             return {"synced": False, "counts": {}, "tokens": TokenAccounting(counted_by="none")}
         kv, vector, graph = ctx.stores["kv"], ctx.stores["vector"], ctx.stores["graph"]
-        counts = await mirror_snapshot(snapshot, kv=kv, vector=vector, graph=graph)
+        previous = await kv.get_by_id(V1_INDEX_SYNC_MANIFEST_KEY)
+        counts = await mirror_snapshot(snapshot, kv=kv, vector=vector, graph=graph, manifest=previous)
         await kv.upsert({V1_INDEX_SYNC_MANIFEST_KEY: snapshot.ids()})
         return {"synced": True, "counts": counts, "tokens": TokenAccounting(counted_by="none")}
 

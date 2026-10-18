@@ -18,13 +18,14 @@ import pytest
 from pycozo.client import Client as CozoClient
 
 import databasise.parts_core.lightrag.full_ingest as full_ingest_module
-from databasise.parity.import_index import read_v1_snapshot
+from databasise.parity.import_index import mirror_snapshot, read_v1_snapshot
 from databasise.parts_core.lightrag.v1_index_sync import v1_index_sync_body
 from databasise.seam.corpus import IngestDocument
 from databasise.seam.engine import Databasise
 from databasise.seam.refusals import ForeignEngineRefusalError
 from databasise.stores.graph import CozoGraphStore
 from databasise.stores.kv import SqliteKVStore
+from databasise.stores.vector import MultiNamespaceVectorStore
 
 _DIM = 8
 
@@ -110,6 +111,32 @@ def test_an_unreadable_doc_status_file_raises(tmp_path):
 
     with pytest.raises(json.JSONDecodeError):
         read_v1_snapshot(tmp_path)
+
+
+async def test_the_mirror_prunes_only_ids_its_previous_manifest_lists(mixed_v1_dir, tmp_path):
+    full = read_v1_snapshot(mixed_v1_dir, processed_only=False)
+    kept = read_v1_snapshot(mixed_v1_dir)
+    kv = SqliteKVStore(namespace="text_chunks", workspace="ws", store_root=tmp_path)
+    vector = MultiNamespaceVectorStore(workspace="ws", store_root=tmp_path)
+    graph = CozoGraphStore(namespace="chunk_entity_relation", workspace="ws", store_root=tmp_path)
+    try:
+        await kv.upsert({"foreign": {"content": "a parity row"}})
+        await mirror_snapshot(full, kv=kv, vector=vector, graph=graph)
+        for store in (kv, vector, graph):
+            await store.index_done_callback()
+
+        await mirror_snapshot(kept, kv=kv, vector=vector, graph=graph, manifest=full.ids())
+        for store in (kv, vector, graph):
+            await store.index_done_callback()
+
+        assert await kv.get_by_id("c1") is not None and await kv.get_by_id("c2") is None
+        assert await kv.get_by_id("foreign") is not None
+        assert vector.select("chunks").get_by_id("c3") is None
+        assert sorted(await graph.get_all_labels()) == ["A", "B"]
+        assert await graph.has_edge("A", "B") and not await graph.has_edge("A", "C")
+    finally:
+        for store in (kv, vector, graph):
+            await store.finalize()
 
 
 class _NoStores:

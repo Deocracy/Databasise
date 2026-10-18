@@ -10,11 +10,19 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from fastapi.testclient import TestClient
+
 from databasise.clients.builder import build_clients
+from databasise.parity.import_index import import_v1_index, read_v1_snapshot
 from databasise.seam.corpus import IngestDocument
 from databasise.seam.engine import Databasise
 from databasise.seam.query import QueryObject
+from databasise.seam.rest import create_app
+from databasise.stores.graph import CozoGraphStore
+from databasise.stores.kv import SqliteKVStore
+from databasise.stores.vector import FaissVectorStore
 from databasise.tests.fixtures.v1_stub_server import real_v1, requires_v1  # noqa: F401 - fixture
+from databasise.tests.parts_core.lightrag.test_v1_index_sync import mixed_v1_dir  # noqa: F401 - fixture
 
 _WS = "lrag-path"
 _TEXT = "UNIQalpha Corp builds bridges in UNIQalpha City."
@@ -47,3 +55,53 @@ async def test_an_ingested_document_is_what_the_naive_arm_retrieves_and_resolves
     record = await engine.resolve_evidence(envelope.evidence[0])
     assert record["full_doc_id"] == "lragdoc1"
     assert "UNIQalpha" in record["content"]
+
+
+@requires_v1
+def test_a_deleted_document_leaves_the_query_stores_and_its_ref_is_refused(real_v1):  # noqa: F811
+    client = TestClient(
+        create_app(store_root=real_v1.store_root, workspace=_WS, clients=build_clients(real_v1.client_env))
+    )
+    assert client.post("/documents", json={"document": {"document_id": "lragdoc1", "text": _TEXT}}).status_code == 200
+    before = client.post("/query", json={"query": {"text": "UNIQalpha bridges"}}).json()["evidence"]
+    assert before
+
+    deleted = client.delete("/documents/lragdoc1")
+    assert deleted.status_code == 200, deleted.text
+    assert deleted.json()["status"] == "success"
+
+    after = client.post("/query", json={"query": {"text": "UNIQalpha bridges"}})
+    assert after.status_code == 200, after.text
+    assert {ref["ref"] for ref in after.json()["evidence"]}.isdisjoint({ref["ref"] for ref in before})
+    resolved = client.post("/evidence/resolve", json=before[0])
+    # A lookup refusal: SEAM-04 maps UnresolvableEvidenceReferenceError to 404.
+    assert (resolved.status_code, resolved.json()["refusal_type"]) == (404, "UnresolvableEvidenceReferenceError")
+
+
+async def _seeded_rows(store_root: Path) -> tuple[set[str], set[str], set[str]]:
+    kv = SqliteKVStore(namespace="text_chunks", workspace=_WS, store_root=store_root)
+    chunks = FaissVectorStore(namespace="chunks", workspace=_WS, store_root=store_root)
+    graph = CozoGraphStore(namespace="chunk_entity_relation", workspace=_WS, store_root=store_root)
+    try:
+        return (
+            {cid for cid in ("c1", "c2", "c3") if await kv.get_by_id(cid) is not None},
+            {cid for cid in ("c1", "c2", "c3") if chunks.get_by_id(cid) is not None},
+            {nid for nid in ("A", "B", "C", "R") if await graph.has_node(nid)},
+        )
+    finally:
+        for store in (kv, chunks, graph):
+            await store.finalize()
+
+
+@requires_v1
+async def test_parity_imported_rows_survive_seam_writes_in_the_same_workspace(real_v1, mixed_v1_dir):  # noqa: F811
+    await import_v1_index(mixed_v1_dir, real_v1.store_root, workspace=_WS)
+    seeded = await _seeded_rows(real_v1.store_root)
+    assert seeded == ({"c1", "c2", "c3"}, {"c1", "c2", "c3"}, {"A", "B", "C", "R"})
+    engine = _engine(real_v1)
+
+    await engine.ingest(IngestDocument(document_id="lragdoc1", text=_TEXT))
+    assert (await engine.delete_document("lragdoc1")).status == "success"
+
+    assert await _seeded_rows(real_v1.store_root) == seeded
+    assert read_v1_snapshot(real_v1.store_root / _WS / "lightrag-v1").text_chunks == {}

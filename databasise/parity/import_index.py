@@ -317,11 +317,14 @@ async def mirror_snapshot(
     manifest: dict[str, list[Any]] | None = None,
 ) -> dict[str, int]:
     """Upsert every row of ``snapshot`` through the given handles (raw stores or a part's staged
-    ``ctx.stores`` proxies) and return per-namespace row counts. A handle is only touched when the
-    snapshot has rows for it, so a ``None`` handle is fine for an empty namespace. Nothing is
-    flushed here: the caller owns commit. ``manifest`` is the previous mirror manifest; no
-    pruning happens yet (11-01 Task 2)."""
-    del manifest
+    ``ctx.stores`` proxies) and return per-namespace row counts. A handle is only touched when
+    there is work for it, so a ``None`` handle is fine for an empty namespace. Nothing is flushed
+    here: the caller owns commit.
+
+    ``manifest`` is the previous mirror manifest (:meth:`V1Snapshot.ids` of the last sync). After
+    the upserts, every id it lists that ``snapshot`` no longer holds is deleted, per namespace; ids
+    it never listed (a parity import, another writer) are never touched. ``None`` deletes nothing.
+    Upserts run first, so a failure leaves only staged writes for the caller to drop."""
     counts: dict[str, int] = {}
     if snapshot.text_chunks:
         await kv.upsert(snapshot.text_chunks)
@@ -337,6 +340,24 @@ async def mirror_snapshot(
         await graph.upsert_edge(src, tgt, attrs)
     counts["nodes"] = len(snapshot.nodes)
     counts["edges"] = len(snapshot.edges)
+    if manifest is None:
+        return counts
+
+    current = snapshot.ids()
+
+    def _stale(namespace: str) -> list[Any]:
+        keep = {tuple(i) if isinstance(i, list) else i for i in current[namespace]}
+        return [i for i in manifest.get(namespace) or [] if (tuple(i) if isinstance(i, list) else i) not in keep]
+
+    if stale := _stale(_TEXT_CHUNKS_KIND):
+        await kv.delete(stale)
+    for kind in _VECTOR_KINDS:
+        if stale := _stale(kind):
+            await vector.select(kind).delete_by_ids(stale)
+    for src, tgt in _stale("edges"):
+        await graph.delete_edge(src, tgt)
+    for node_id in _stale("nodes"):
+        await graph.delete_node(node_id)
     return counts
 
 

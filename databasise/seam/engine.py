@@ -990,6 +990,13 @@ class Databasise:
         # (identical _TEXT_CHUNKS_KIND/_GRAPH_KIND fallback); HippoRAG's declares
         # {"kv": "hipporag-text-chunks", "graph": "hipporag-graph"}, landing an ingest in the same
         # directories base.json's query side reads.
+        # 11-01 (LRAG-03): the same recorder shape delete_document passes, so the sync node's
+        # observed store touches become MACH-11 events on the returned job.
+        touches: list[tuple[str, str, str]] = []
+
+        def _recorder(node_id: str, kind: str, key: str) -> None:
+            touches.append((node_id, kind, key))
+
         stores: dict[str, Any] = {}
         wrote_staged = False
         try:
@@ -1035,6 +1042,7 @@ class Databasise:
                 determinism_setting=_DETERMINISM_SETTING,
                 concurrency_setting=_CONCURRENCY_SETTING,
                 clients=self.clients,
+                recorder=_recorder,
             )
             # D-06 (STOR-06): any node failure or early stop commits nothing. Every store's
             # staged writes are dropped before the refusal propagates.
@@ -1067,11 +1075,16 @@ class Databasise:
         # full-ingest); otherwise this call submitted exactly one document, so that is what is
         # reported — never a fabricated literal 0 for a node that simply does not report the field
         # (HippoRAG's graph-augment-persist), per this codebase's no-fabricated-zero discipline.
+        # Only a committed run reaches here, so a refused run mints no events (as in delete).
+        node_by_id = {node.node_id: node for node in scheduled["nodes"]}
+        seam_events = _mach11_events(parsed, touches, node_by_id)
         try:
             enqueued = result.get("enqueued")
             if enqueued is None:
                 enqueued = 1
-            return IngestJob(job_id=str(result.get("track_id") or track_id), enqueued=int(enqueued))
+            return IngestJob(
+                job_id=str(result.get("track_id") or track_id), enqueued=int(enqueued), seam_events=seam_events
+            )
         except _MALFORMED_RESULT as exc:  # 09 REVIEW WR-02: malformed driver output is a 502, as on the read routes
             if wrote_staged:
                 _log_staged_left(staged)
