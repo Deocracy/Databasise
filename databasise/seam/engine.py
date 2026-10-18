@@ -148,6 +148,15 @@ RocksDB's one-second key-lock timeout. Residual window: commits run kv, then vec
 and are not one transaction. A crash between two stores' commits, or between the vector store's two
 ``os.replace`` calls, leaves a partial commit; the vector sidecar checksum detects a torn index pair
 at the next open (``VectorStoreCorruptedError``).
+
+**11-01-PLAN.md (D-01, M-04 option b, LRAG-01): the LightRAG write path is v1 then a mirror.** Every
+LightRAG corpus op uses one v1 working dir per engine, ``<store_root>/<workspace>/lightrag-v1``
+(:meth:`Databasise._v1_working_dir`), stamped onto every ``lightrag/*`` corpus node's config and
+passed to every status/health ``run_corpus_op`` call; there is no repo-global default. The corpus
+wirings run v1's own ingest or delete subprocess, then ``lightrag/v1-index-sync``, which mirrors
+v1's committed index into the staged v2 stores the query arms read. Residual window: v1 has
+already committed by the time the v2 commit runs. If the v2 commit fails, v1 and v2 diverge until
+the next sync, which re-mirrors the whole index and so heals them.
 """
 
 from __future__ import annotations
@@ -481,7 +490,15 @@ def _corpus_wiring(query_wiring: dict[str, Any], operation: str) -> dict[str, An
 _MALFORMED_RESULT = (TypeError, ValueError, AttributeError, KeyError)
 
 
-async def _corpus_op_or_refuse(op: str, payload: dict[str, Any], operation: str) -> Any:
+def _stamp_v1_working_dir(resolved: dict[str, Any], working_dir: Path) -> None:
+    """11-01 (D-01, LRAG-01): every LightRAG corpus node (the v1 port and the index sync) reads the
+    per-workspace v1 dir from its config; no node falls back to a repo-global dir."""
+    for node in resolved.get("nodes", {}).values():
+        if str(node.get("component", "")).startswith("lightrag/"):
+            node["config"] = {**(node.get("config") or {}), "working_dir": str(working_dir)}
+
+
+async def _corpus_op_or_refuse(op: str, payload: dict[str, Any], operation: str, working_dir: Path) -> Any:
     """09-05-PLAN.md (SEAM-06, D-04): the read routes' call into the v1 corpus driver. Any
     non-refusal exception from the adapter (its four named failure modes, but also undecodable
     driver bytes and ``OSError`` from a missing or unrunnable interpreter or cwd) becomes the same
@@ -489,7 +506,9 @@ async def _corpus_op_or_refuse(op: str, payload: dict[str, Any], operation: str)
     bare 500 (09 REVIEW WR-01). A ``SeamRefusalError`` passes through. ``run_corpus_op`` is looked up
     as a module global at call time so tests can monkeypatch ``databasise.seam.engine.run_corpus_op``."""
     try:
-        return await asyncio.to_thread(run_corpus_op, op, payload, timeout=STATUS_WALL_CLOCK_CEILING_SECONDS)
+        return await asyncio.to_thread(
+            run_corpus_op, op, payload, timeout=STATUS_WALL_CLOCK_CEILING_SECONDS, working_dir=working_dir
+        )
     except SeamRefusalError:
         raise
     except Exception as exc:
@@ -772,6 +791,11 @@ class Databasise:
         # the process that minted it.
         self._trace_store = TraceStore(self.store_root)
 
+    def _v1_working_dir(self) -> Path:
+        """11-01 (D-01, LRAG-01): the one v1 working dir this engine's LightRAG corpus ops use.
+        Not created here; v1 creates it on its first write."""
+        return self.store_root / self.workspace / "lightrag-v1"
+
     async def query(
         self,
         query_object: QueryObject,
@@ -955,6 +979,7 @@ class Databasise:
             node_config["docs_format"] = _DOCS_FORMAT_RAW
         node_config["track_id"] = track_id
         resolved["nodes"][target_node_id]["config"] = node_config
+        _stamp_v1_working_dir(resolved, self._v1_working_dir())
 
         resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
         parsed = parse_wiring(resolved, self.registry)
@@ -1131,6 +1156,7 @@ class Databasise:
         node_config = dict(resolved["nodes"][delete_node_id].get("config") or {})
         node_config["doc_id"] = document_id
         resolved["nodes"][delete_node_id]["config"] = node_config
+        _stamp_v1_working_dir(resolved, self._v1_working_dir())
 
         resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
         parsed = parse_wiring(resolved, self.registry)
@@ -1200,7 +1226,10 @@ class Databasise:
         """
         page = page or Page()
         result = await _corpus_op_or_refuse(
-            "status", {"track_id": job_id, "limit": page.limit, "offset": page.offset}, "job_status"
+            "status",
+            {"track_id": job_id, "limit": page.limit, "offset": page.offset},
+            "job_status",
+            self._v1_working_dir(),
         )
         try:
             total = int(result.get("total", 0))
@@ -1228,7 +1257,10 @@ class Databasise:
         ever reached."""
         page = page or Page()
         result = await _corpus_op_or_refuse(
-            "status", {"track_id": None, "limit": page.limit, "offset": page.offset}, "corpus_status"
+            "status",
+            {"track_id": None, "limit": page.limit, "offset": page.offset},
+            "corpus_status",
+            self._v1_working_dir(),
         )
         try:
             total = int(result.get("total", 0))
@@ -1247,7 +1279,7 @@ class Databasise:
         per-document list. Calls the same ``"status"`` op ``corpus_status`` calls, with a
         zero-length page, and reads only its ``counts`` field."""
         result = await _corpus_op_or_refuse(
-            "status", {"track_id": None, "limit": 0, "offset": 0}, "document_counts"
+            "status", {"track_id": None, "limit": 0, "offset": 0}, "document_counts", self._v1_working_dir()
         )
         try:
             by_status = dict(result.get("counts") or {})
@@ -1276,7 +1308,11 @@ class Databasise:
         engine_report: dict[str, bool] = {"interpreter_present": DEFAULT_V1_INTERPRETER.exists()}
         try:
             result = await asyncio.to_thread(
-                run_corpus_op, "health", {}, timeout=STATUS_WALL_CLOCK_CEILING_SECONDS
+                run_corpus_op,
+                "health",
+                {},
+                timeout=STATUS_WALL_CLOCK_CEILING_SECONDS,
+                working_dir=self._v1_working_dir(),
             )
             engine_report["working_dir_present"] = bool(result.get("working_dir_present", False))
             engine_report["storages_initialized"] = bool(result.get("storages_initialized", False))

@@ -221,6 +221,7 @@ async def full_delete_body(ctx: NodeContext) -> dict[str, Any]:
         "delete",
         payload,
         timeout=DELETE_WALL_CLOCK_CEILING_SECONDS,
+        working_dir=config.get("working_dir"),  # 11-01 (LRAG-01): stamped by the engine
     )
 
     if result.get("status") == "success":

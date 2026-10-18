@@ -1,6 +1,6 @@
 {
   "wiring_id": "lightrag-corpus-ingest",
-  "title": "LightRAG corpus-side ingest — the one-node opaque wiring Databasise.ingest() runs",
+  "title": "LightRAG corpus-side ingest — v1's opaque ingest, then the v1-to-v2 index mirror, the wiring Databasise.ingest() runs",
   "wiring_version": "1",
   "nodes": {
     "full-ingest": {
@@ -13,6 +13,19 @@
         "reads_graph"
       ],
       "deps": []
+    },
+    "v1-index-sync": {
+      "component": "lightrag/v1-index-sync@0.1.0",
+      "kind": "opaque",
+      "effects": [
+        "mutates_store",
+        "writes_kv",
+        "writes_vector",
+        "writes_graph"
+      ],
+      "deps": [
+        "full-ingest"
+      ]
     }
   },
   "harnesses": [],

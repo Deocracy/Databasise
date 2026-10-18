@@ -57,7 +57,7 @@ from databasise.parity.corpus import load_snapshot
 from databasise.store_lock import StoreLockedError, store_lock
 from databasise.stores.graph import CozoGraphStore, _ClientRegistry
 from databasise.stores.kv import SqliteKVStore
-from databasise.stores.vector import FaissVectorStore
+from databasise.stores.vector import FaissVectorStore, MultiNamespaceVectorStore
 
 try:
     import faiss  # type: ignore[import-untyped]
@@ -161,28 +161,55 @@ def _canonical_edge_key(src: str, tgt: str) -> tuple[str, str]:
 # --------------------------------------------------------------------------------------------- #
 
 
-async def _import_vector_kind(
-    kind: str, v1_working_dir: Path, store_root: Path, workspace: str
-) -> None:
+# 11-01-PLAN.md (D-01): the readers below are pure (no v2 store touched) so the same code serves the
+# one-time parity import and the seam's lightrag/v1-index-sync part, which writes through staged
+# ctx.stores handles instead of raw stores.
+
+_DOC_STATUS_FILE = "kv_store_doc_status.json"
+_GRAPH_FIELD_SEP = "<SEP>"  # v1's lightrag.constants.GRAPH_FIELD_SEP, duplicated (import boundary)
+_PROCESSED = "processed"
+
+VectorRows = tuple[list[str], np.ndarray, list[dict[str, Any]]]
+
+
+@dataclass(frozen=True)
+class V1Snapshot:
+    """One read of v1's committed index: text chunks, per-kind vectors (ids, matrix, metadata),
+    graph nodes, and graph edges keyed by their canonical ``(src, tgt)`` pair."""
+
+    text_chunks: dict[str, dict[str, Any]]
+    vectors: dict[str, VectorRows]
+    nodes: dict[str, dict[str, Any]]
+    edges: dict[tuple[str, str], dict[str, Any]]
+
+    def ids(self) -> dict[str, list[Any]]:
+        """The ids this snapshot holds per namespace (the sync's mirror manifest shape)."""
+        out: dict[str, list[Any]] = {_TEXT_CHUNKS_KIND: sorted(self.text_chunks)}
+        for kind in _VECTOR_KINDS:
+            out[kind] = sorted(self.vectors[kind][0]) if kind in self.vectors else []
+        out["nodes"] = sorted(self.nodes)
+        out["edges"] = [list(key) for key in sorted(self.edges)]
+        return out
+
+
+def _read_vector_kind(kind: str, v1_working_dir: Path) -> VectorRows | None:
     index_path = v1_working_dir / f"faiss_index_{kind}.index"
     meta_path = Path(str(index_path) + ".meta.json")
     if not index_path.exists() or not meta_path.exists():
         # A legitimately empty extraction result (e.g. no relationships found) — not the
-        # "v1 index directory missing entirely" case, which is checked by the caller before
-        # any per-kind import is attempted.
-        return
+        # "v1 index directory missing entirely" case, which the callers check first.
+        return None
 
     index = faiss.read_index(str(index_path))
     meta: dict[str, dict[str, Any]] = json.loads(meta_path.read_text(encoding="utf-8"))
     if not meta:
-        return
+        return None
 
     ids: list[str] = []
     vectors: list[np.ndarray] = []
     metadatas: list[dict[str, Any]] = []
     for fid_str, record in meta.items():
-        fid = int(fid_str)
-        vectors.append(index.reconstruct(fid))
+        vectors.append(index.reconstruct(int(fid_str)))
         ids.append(record["__id__"])
         # D-11: "id" and "score" are reserved by FaissVectorStore and stripped from v1 metadata
         metadatas.append(
@@ -192,48 +219,162 @@ async def _import_vector_kind(
                 if k not in ("__id__", "__vector__", "__created_at__", "id", "score")
             }
         )
+    return ids, np.vstack(vectors), metadatas
 
-    store = FaissVectorStore(namespace=kind, workspace=workspace, store_root=store_root)
-    await store.upsert(ids=ids, embeddings=np.vstack(vectors), metadatas=metadatas)
-    await store.index_done_callback()
+
+def _read_text_chunks(v1_working_dir: Path) -> dict[str, dict[str, Any]]:
+    kv_path = v1_working_dir / f"kv_store_{_TEXT_CHUNKS_KIND}.json"
+    if not kv_path.exists():
+        return {}
+    return json.loads(kv_path.read_text(encoding="utf-8"))
+
+
+def _read_graph(
+    v1_working_dir: Path,
+) -> tuple[dict[str, dict[str, Any]], dict[tuple[str, str], dict[str, Any]]]:
+    db_path = v1_working_dir / f"cozo_graph_{_GRAPH_KIND}.db"
+    if not db_path.exists():
+        return {}, {}
+    # Closed in finally: a client left open holds the RocksDB lock and the next v1 driver
+    # subprocess on this dir would fail to open it.
+    v1_client = CozoClient("rocksdb", str(db_path), dataframe=False)
+    try:
+        node_rows = _cozo_rows(v1_client.run("?[id, attrs] := *nodes{id, attrs}", {}))
+        edge_rows = _cozo_rows(v1_client.run("?[src, tgt, attrs] := *edges{src, tgt, attrs}", {}))
+    finally:
+        v1_client.close()
+    nodes = {node_id: _attrs_to_dict(attrs) for node_id, attrs in node_rows}
+    edges = {_canonical_edge_key(src, tgt): _attrs_to_dict(attrs) for src, tgt, attrs in edge_rows}
+    return nodes, edges
+
+
+def _sources(record: dict[str, Any]) -> set[str]:
+    return set(str(record.get("source_id") or "").split(_GRAPH_FIELD_SEP)) - {""}
+
+
+def read_v1_snapshot(v1_working_dir: Path, *, processed_only: bool = True) -> V1Snapshot | None:
+    """Read v1's committed index (text chunks, the three Faiss kinds, the Cozo graph) as data.
+
+    Returns ``None`` when ``v1_working_dir`` is absent, or when ``processed_only`` is set and the
+    dir holds no ``kv_store_doc_status.json`` (nothing committed yet: the sync is a no-op). Raises
+    on any unreadable or corrupt file (fail closed). Blocking: async callers use ``to_thread``.
+
+    ``processed_only`` keeps rows of PROCESSED documents only (research Pattern B): a text chunk or
+    chunk vector whose id is a chunk of a ``processed`` doc_status row; an entity, relationship or
+    node whose ``source_id`` names such a chunk; an edge that does and whose endpoints are kept.
+    Failed, ``dup-*`` and still-processing rows therefore contribute nothing.
+    """
+    if not v1_working_dir.exists():
+        return None
+    doc_status_path = v1_working_dir / _DOC_STATUS_FILE
+    if processed_only and not doc_status_path.exists():
+        return None
+
+    text_chunks = _read_text_chunks(v1_working_dir)
+    vectors = {
+        kind: rows for kind in _VECTOR_KINDS if (rows := _read_vector_kind(kind, v1_working_dir)) is not None
+    }
+    nodes, edges = _read_graph(v1_working_dir)
+    if not processed_only:
+        return V1Snapshot(text_chunks, vectors, nodes, edges)
+
+    doc_status: dict[str, dict[str, Any]] = json.loads(doc_status_path.read_text(encoding="utf-8"))
+    keep_chunks: set[str] = set()
+    for row in doc_status.values():
+        if row.get("status") == _PROCESSED:
+            keep_chunks.update(row.get("chunks_list") or [])
+
+    def _keep_vector(kind: str, metadata: dict[str, Any], vector_id: str) -> bool:
+        if kind == "chunks":
+            return vector_id in keep_chunks
+        return bool(_sources(metadata) & keep_chunks)
+
+    kept_vectors: dict[str, VectorRows] = {}
+    for kind, (ids, matrix, metadatas) in vectors.items():
+        rows = [i for i, (vid, meta) in enumerate(zip(ids, metadatas)) if _keep_vector(kind, meta, vid)]
+        if rows:
+            kept_vectors[kind] = ([ids[i] for i in rows], matrix[rows], [metadatas[i] for i in rows])
+    kept_nodes = {nid: attrs for nid, attrs in nodes.items() if _sources(attrs) & keep_chunks}
+    kept_edges = {
+        key: attrs
+        for key, attrs in edges.items()
+        if _sources(attrs) & keep_chunks and key[0] in kept_nodes and key[1] in kept_nodes
+    }
+    return V1Snapshot(
+        text_chunks={cid: rec for cid, rec in text_chunks.items() if cid in keep_chunks},
+        vectors=kept_vectors,
+        nodes=kept_nodes,
+        edges=kept_edges,
+    )
+
+
+async def mirror_snapshot(
+    snapshot: V1Snapshot,
+    *,
+    kv: Any,
+    vector: Any,
+    graph: Any,
+    manifest: dict[str, list[Any]] | None = None,
+) -> dict[str, int]:
+    """Upsert every row of ``snapshot`` through the given handles (raw stores or a part's staged
+    ``ctx.stores`` proxies) and return per-namespace row counts. A handle is only touched when the
+    snapshot has rows for it, so a ``None`` handle is fine for an empty namespace. Nothing is
+    flushed here: the caller owns commit. ``manifest`` is the previous mirror manifest; no
+    pruning happens yet (11-01 Task 2)."""
+    del manifest
+    counts: dict[str, int] = {}
+    if snapshot.text_chunks:
+        await kv.upsert(snapshot.text_chunks)
+    counts[_TEXT_CHUNKS_KIND] = len(snapshot.text_chunks)
+    for kind in _VECTOR_KINDS:
+        ids, matrix, metadatas = snapshot.vectors.get(kind, ([], None, []))
+        if ids:
+            await vector.select(kind).upsert(ids=ids, embeddings=matrix, metadatas=metadatas)
+        counts[kind] = len(ids)
+    for node_id, attrs in snapshot.nodes.items():
+        await graph.upsert_node(node_id, attrs)
+    for (src, tgt), attrs in snapshot.edges.items():
+        await graph.upsert_edge(src, tgt, attrs)
+    counts["nodes"] = len(snapshot.nodes)
+    counts["edges"] = len(snapshot.edges)
+    return counts
+
+
+# The one-time importer's per-store writers: each reads one part of v1's index with the readers
+# above, mirrors it into a raw v2 store, and flushes that store on its own.
+
+
+async def _import_vector_kind(kind: str, v1_working_dir: Path, store_root: Path, workspace: str) -> None:
+    rows = _read_vector_kind(kind, v1_working_dir)
+    if rows is None:
+        return
+    vector = MultiNamespaceVectorStore(workspace=workspace, store_root=store_root)
+    try:
+        await mirror_snapshot(V1Snapshot({}, {kind: rows}, {}, {}), kv=None, vector=vector, graph=None)
+        await vector.index_done_callback()
+    finally:
+        await vector.finalize()
 
 
 async def _import_text_chunks(v1_working_dir: Path, store_root: Path, workspace: str) -> None:
-    kv_path = v1_working_dir / f"kv_store_{_TEXT_CHUNKS_KIND}.json"
-    if not kv_path.exists():
-        return
-    data: dict[str, dict[str, Any]] = json.loads(kv_path.read_text(encoding="utf-8"))
+    data = _read_text_chunks(v1_working_dir)
     if not data:
         return
     store = SqliteKVStore(namespace=_TEXT_CHUNKS_KIND, workspace=workspace, store_root=store_root)
     try:
-        await store.upsert(data)
+        await mirror_snapshot(V1Snapshot(data, {}, {}, {}), kv=store, vector=None, graph=None)
         await store.index_done_callback()
     finally:
         await store.finalize()
 
 
 async def _import_graph(v1_working_dir: Path, store_root: Path, workspace: str) -> None:
-    db_path = v1_working_dir / f"cozo_graph_{_GRAPH_KIND}.db"
-    if not db_path.exists():
+    nodes, edges = _read_graph(v1_working_dir)
+    if not nodes and not edges:
         return
-
-    v1_client = CozoClient("rocksdb", str(db_path))
-    try:
-        node_rows = _cozo_rows(v1_client.run("?[id, attrs] := *nodes{id, attrs}", {}))
-        edge_rows = _cozo_rows(v1_client.run("?[src, tgt, attrs] := *edges{src, tgt, attrs}", {}))
-    finally:
-        v1_client.close()
-
-    if not node_rows and not edge_rows:
-        return
-
     store = CozoGraphStore(namespace=_GRAPH_KIND, workspace=workspace, store_root=store_root)
     try:
-        for node_id, attrs_raw in node_rows:
-            await store.upsert_node(node_id, _attrs_to_dict(attrs_raw))
-        for src, tgt, attrs_raw in edge_rows:
-            await store.upsert_edge(src, tgt, _attrs_to_dict(attrs_raw))
+        await mirror_snapshot(V1Snapshot({}, {}, nodes, edges), kv=None, vector=None, graph=store)
         await store.index_done_callback()
     finally:
         await store.finalize()
@@ -258,6 +399,8 @@ async def import_v1_index(
 
     if workspace is None:
         workspace = _import_workspace()
+    # Unfiltered (every row, as read_v1_snapshot(processed_only=False) sees it); an empty kind opens
+    # no store and leaves no directory.
     for kind in _VECTOR_KINDS:
         await _import_vector_kind(kind, v1_working_dir, store_root, workspace)
     await _import_text_chunks(v1_working_dir, store_root, workspace)

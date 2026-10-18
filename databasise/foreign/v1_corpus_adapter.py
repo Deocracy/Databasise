@@ -28,7 +28,9 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 DEFAULT_V1_INTERPRETER = _REPO_ROOT / "v1" / ".venv" / "bin" / "python"
 DEFAULT_V1_DRIVER_SCRIPT = Path(__file__).resolve().parent / "v1_corpus_driver_script.py"
 DEFAULT_V1_ENV_PARITY = _REPO_ROOT / "v1" / ".env.parity"
-DEFAULT_V1_WORKING_DIR = _REPO_ROOT / "v1" / ".corpus_working_dir"
+# 11-01-PLAN.md (LRAG-01): there is deliberately no default v1 working dir. Every caller passes the
+# per-workspace dir (<store_root>/<workspace>/lightrag-v1); a job without one is refused by the real
+# driver, so no call reaches the operator corpus in v1/.corpus_working_dir by default.
 
 # 05-04-PLAN.md Task 1: a status read builds v1's facade and reads its doc-status store — it
 # performs no extraction and calls no model, unlike an ingest (which may reach the LLM/embedder)
@@ -113,7 +115,12 @@ def run_corpus_op(
     JSON result. ``timeout`` is required, not optional — every call site declares §8 condition 4's
     wall-clock ceiling explicitly.
 
-    ``interpreter``/``driver_script``/``env_path``/``working_dir`` are override points for tests.
+    ``working_dir`` is the per-workspace v1 dir (LRAG-01). It enters the job only when passed:
+    there is no default, and the real driver reads ``job["working_dir"]``, so a job without one
+    fails (exit 1) rather than falling back to the operator corpus. It stays a keyword with a
+    ``None`` default only because stub-driver test bodies call this without it.
+
+    ``interpreter``/``driver_script``/``env_path`` are override points for tests.
     """
     interpreter = interpreter or DEFAULT_V1_INTERPRETER
     if not interpreter.exists():
@@ -124,11 +131,9 @@ def run_corpus_op(
     env.update(_load_env_file(env_path or DEFAULT_V1_ENV_PARITY))
     env.setdefault("ENABLE_LLM_CACHE", "false")
 
-    job: dict[str, Any] = {
-        "op": op,
-        "working_dir": str(working_dir or DEFAULT_V1_WORKING_DIR),
-        **payload,
-    }
+    job: dict[str, Any] = {"op": op, **payload}
+    if working_dir is not None:
+        job["working_dir"] = str(working_dir)
 
     try:
         proc = subprocess.run(
@@ -157,6 +162,5 @@ __all__ = [
     "DEFAULT_V1_INTERPRETER",
     "DEFAULT_V1_DRIVER_SCRIPT",
     "DEFAULT_V1_ENV_PARITY",
-    "DEFAULT_V1_WORKING_DIR",
     "STATUS_WALL_CLOCK_CEILING_SECONDS",
 ]

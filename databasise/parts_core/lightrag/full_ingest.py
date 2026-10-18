@@ -222,6 +222,7 @@ async def full_ingest_body(ctx: NodeContext) -> dict[str, Any]:
         "ingest",
         payload,
         timeout=INGEST_WALL_CLOCK_CEILING_SECONDS,
+        working_dir=config.get("working_dir"),  # 11-01 (LRAG-01): stamped by the engine
     )
 
     usage = result.get("usage")

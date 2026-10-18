@@ -26,6 +26,10 @@ differently-shaped foreign engine — gaining a real ``body``
 carries a real body and admission record — ``DECLARED_ONLY_PARTS``'s own name is now purely
 historical (D-04's original three Falsifier-2 wiring placeholders), not a live description of what
 any entry still carries.
+
+11-01-PLAN.md (D-01): ``LIGHTRAG_V1_INDEX_SYNC_PART`` joins ``LIGHTRAG_CORPUS_PARTS`` as the third
+corpus-side part: the second node of both corpus wirings, mirroring v1's committed index into the
+v2 stores (``databasise.parts_core.lightrag.v1_index_sync``).
 """
 
 from __future__ import annotations
@@ -42,6 +46,10 @@ from databasise.parts_core.lightrag.full_delete import (
 from databasise.parts_core.lightrag.full_ingest import (
     LIGHTRAG_FULL_INGEST_ADMISSION,
     full_ingest_body,
+)
+from databasise.parts_core.lightrag.v1_index_sync import (
+    LIGHTRAG_V1_INDEX_SYNC_ADMISSION,
+    v1_index_sync_body,
 )
 
 # The opaque codebase-memory-mcp part (MACH-01's second named wiring): opaque structural depth.
@@ -95,10 +103,28 @@ LIGHTRAG_FULL_DELETE_PART = Part(
     admission=LIGHTRAG_FULL_DELETE_ADMISSION,
 )
 
-# The two real, executable LightRAG corpus-side ports, factored out as their own tuple so a
-# reader can see at a glance which entries here are "two ports of one engine" (05-03-SUMMARY.md)
-# without that grouping being implicit in DECLARED_ONLY_PARTS's own flat member order.
-LIGHTRAG_CORPUS_PARTS: tuple[Part, ...] = (LIGHTRAG_FULL_INGEST_PART, LIGHTRAG_FULL_DELETE_PART)
+# 11-01-PLAN.md (D-01): the v1-to-v2 mirror, second node of both corpus wirings. Opaque because
+# mutates_store on a non-opaque part derives the unhosted confined-unit placement; its body runs in
+# the engine process and writes only through ctx.stores.
+LIGHTRAG_V1_INDEX_SYNC_PART = Part(
+    name_at_version="lightrag/v1-index-sync@0.1.0",
+    kind="opaque",
+    structural_depth="opaque",
+    effects=["mutates_store", "writes_kv", "writes_vector", "writes_graph"],
+    upstream_ref="v1/lightrag/kg/faiss_impl.py",
+    body=v1_index_sync_body,
+    artifact_scope=None,
+    admission=LIGHTRAG_V1_INDEX_SYNC_ADMISSION,
+)
+
+# The real, executable LightRAG corpus-side parts: the two ports of one v1 engine
+# (05-03-SUMMARY.md) plus the mirror that follows either of them, factored out as their own tuple
+# so that grouping is not implicit in DECLARED_ONLY_PARTS's own flat member order.
+LIGHTRAG_CORPUS_PARTS: tuple[Part, ...] = (
+    LIGHTRAG_FULL_INGEST_PART,
+    LIGHTRAG_FULL_DELETE_PART,
+    LIGHTRAG_V1_INDEX_SYNC_PART,
+)
 
 DECLARED_ONLY_PARTS: tuple[Part, ...] = (
     CODEBASE_MEMORY_MCP_PART,
