@@ -167,7 +167,10 @@ class _ClientRegistry:
             if entry.refcount > 0:
                 return
             del cls._entries[key]
-        entry.client.close()
+            # Phase 10 review WR-01: closed under the lock, so a concurrent acquire of this path waits
+            # for RocksDB to drop its LOCK file instead of opening a second client and reading the
+            # still-held lock as "busy".
+            entry.client.close()
 
 
 class CozoGraphStore(StorageNameSpace):
