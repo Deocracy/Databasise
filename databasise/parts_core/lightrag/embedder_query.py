@@ -33,13 +33,34 @@ def _query_text(ctx: NodeContext) -> str:
 async def _embedder_query_body(ctx: NodeContext) -> dict[str, Any]:
     query = _query_text(ctx)
     client = ctx.clients["embedding"]
-    result = await client.embed([query])
-    return {
-        "query": query,
-        "vector": result.vectors[0],
-        "tokens": result.tokens,
-        "resolved_model_identity": result.resolved_model_identity,
+    keywords_output = ctx.inputs.get("keywords")
+    if not isinstance(keywords_output, dict):
+        result = await client.embed([query])
+        return {
+            "query": query,
+            "vector": result.vectors[0],
+            "tokens": result.tokens,
+            "resolved_model_identity": result.resolved_model_identity,
+        }
+
+    # KG arms (D-16, LRAG-18): v1 embeds the query and the two ", "-joined keyword strings in one
+    # batched call (operate.py:4350-4403); entity-lookup searches with ll_vector, relation-lookup
+    # with hl_vector. An empty string is not embedded and its vector is None.
+    texts = {
+        "vector": query,
+        "ll_vector": str(keywords_output.get("ll_keywords_str") or ""),
+        "hl_vector": str(keywords_output.get("hl_keywords_str") or ""),
     }
+    wanted = [(key, text) for key, text in texts.items() if text]
+    out: dict[str, Any] = {"query": query, "vector": None, "ll_vector": None, "hl_vector": None}
+    if not wanted:
+        return out
+    result = await client.embed([text for _, text in wanted])
+    for (key, _), vector in zip(wanted, result.vectors, strict=True):
+        out[key] = vector
+    out["tokens"] = result.tokens
+    out["resolved_model_identity"] = result.resolved_model_identity
+    return out
 
 
 LIGHTRAG_EMBEDDER_QUERY_PART = Part(

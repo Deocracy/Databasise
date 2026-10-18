@@ -102,6 +102,22 @@ def _parse_keywords_payload(text: str) -> tuple[list[str], list[str]]:
     )
 
 
+def _keyword_fields(query: str, hl_keywords: list[str], ll_keywords: list[str]) -> dict[str, Any]:
+    """v1 kg_query's post-extraction step (operate.py:3850-3862): both lists empty and a query under
+    50 characters forces ``ll = [query]``; then each list is ", "-joined into the string v1 embeds
+    for the entity (ll) and relation (hl) vector searches. v1 returns ``fail_response`` for a long
+    query with no keywords; here both lists stay empty and the downstream lookups skip the store.
+    """
+    if not hl_keywords and not ll_keywords and len(query) < 50:
+        ll_keywords = [query]
+    return {
+        "high_level_keywords": hl_keywords,
+        "low_level_keywords": ll_keywords,
+        "hl_keywords_str": ", ".join(hl_keywords),
+        "ll_keywords_str": ", ".join(ll_keywords),
+    }
+
+
 async def _keywords_body(ctx: NodeContext) -> dict[str, Any]:
     config = ctx.config or {}
     query = str(config.get("query", ""))
@@ -109,8 +125,11 @@ async def _keywords_body(ctx: NodeContext) -> dict[str, Any]:
     if config.get("pinned"):
         pinned_output = config.get("pinned_output") or {}
         return {
-            "high_level_keywords": _normalize_keyword_list(pinned_output.get("high_level_keywords")),
-            "low_level_keywords": _normalize_keyword_list(pinned_output.get("low_level_keywords")),
+            **_keyword_fields(
+                query,
+                _normalize_keyword_list(pinned_output.get("high_level_keywords")),
+                _normalize_keyword_list(pinned_output.get("low_level_keywords")),
+            ),
             # CR-01: embedder-query's own _query_text reads this node's "query" key when
             # `keywords` is one of its deps (hybrid/local/global) — never emitted before this
             # fix, so embedder-query silently embedded "" for those three arms. Emit the raw
@@ -129,8 +148,7 @@ async def _keywords_body(ctx: NodeContext) -> dict[str, Any]:
     )
     hl_keywords, ll_keywords = _parse_keywords_payload(result.text)
     return {
-        "high_level_keywords": hl_keywords,
-        "low_level_keywords": ll_keywords,
+        **_keyword_fields(query, hl_keywords, ll_keywords),
         "query": query,  # CR-01: same reasoning as the pinned-replay branch above.
         "tokens": result.tokens,
         "resolved_model_identity": result.resolved_model_identity,

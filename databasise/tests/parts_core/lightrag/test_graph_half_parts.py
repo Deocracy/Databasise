@@ -166,7 +166,8 @@ async def test_entity_lookup_returns_items_ordered_by_descending_score_with_enti
     ctx = _ctx(
         "entity-lookup",
         config={"top_k": 10},
-        inputs={"embedder-query": {"vector": [1.0, 0.0, 0.0]}},
+        # LRAG-18: entity-lookup searches with the ll keyword string's vector, as v1 does.
+        inputs={"embedder-query": {"ll_vector": [1.0, 0.0, 0.0]}},
         stores={"vector": fake_vector},
     )
 
@@ -191,7 +192,8 @@ async def test_relation_lookup_returns_items_ordered_by_descending_score_with_en
     ctx = _ctx(
         "relation-lookup",
         config={"top_k": 10},
-        inputs={"embedder-query": {"vector": [1.0, 0.0, 0.0]}},
+        # LRAG-18: relation-lookup searches with the hl keyword string's vector, as v1 does.
+        inputs={"embedder-query": {"hl_vector": [1.0, 0.0, 0.0]}},
         stores={"vector": fake_vector},
     )
 

@@ -314,7 +314,8 @@ async def test_hybrid_arm_embedder_query_embeds_the_real_query_text_via_run_wiri
     embedder_query_output = result["results"]["embedder-query"]
     assert embedder_query_output["query"] == query
     assert embedder_query_output["query"] != ""
-    assert spy.calls == [[query]]
+    # LRAG-18: the KG arms batch the query with v1's ", "-joined ll and hl keyword strings.
+    assert spy.calls == [[query, "Ed Wood", "film direction"]]
 
 
 # --------------------------------------------------------------------------------------------- #

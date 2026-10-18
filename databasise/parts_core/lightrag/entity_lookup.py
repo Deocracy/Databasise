@@ -31,7 +31,11 @@ _ENTITIES_NAMESPACE = "entities"
 async def _entity_lookup_body(ctx: NodeContext) -> dict[str, Any]:
     config = ctx.config or {}
     top_k = int(config.get("top_k", _DEFAULT_TOP_K))
-    vector = ctx.inputs["embedder-query"]["vector"]
+    # v1 searches entities with the low-level keyword string's embedding (D-16, LRAG-18); no ll
+    # keywords means no entity search.
+    vector = ctx.inputs["embedder-query"].get("ll_vector")
+    if vector is None:
+        return {"items": []}
     store = ctx.stores["vector"].select(_ENTITIES_NAMESPACE)
     raw_items = await store.query(vector, top_k=top_k)
     # The store's own contract already returns descending-score order; re-sorted here too so this

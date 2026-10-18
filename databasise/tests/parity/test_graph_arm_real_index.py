@@ -54,7 +54,7 @@ async def test_entity_lookup_and_hydrate_expand_against_the_real_imported_index(
         lookup_ctx = _ctx(
             "entity-lookup",
             config={"top_k": 40},
-            inputs={"embedder-query": {"vector": first_vector.tolist()}},
+            inputs={"embedder-query": {"ll_vector": first_vector.tolist()}},  # LRAG-18
             stores={"vector": vector_handle},
         )
         lookup_result = await LIGHTRAG_ENTITY_LOOKUP_PART.body(lookup_ctx)
@@ -102,7 +102,7 @@ async def test_relation_lookup_and_hydrate_expand_against_the_real_imported_inde
         lookup_ctx = _ctx(
             "relation-lookup",
             config={"top_k": 40},
-            inputs={"embedder-query": {"vector": first_vector.tolist()}},
+            inputs={"embedder-query": {"hl_vector": first_vector.tolist()}},  # LRAG-18
             stores={"vector": vector_handle},
         )
         lookup_result = await LIGHTRAG_RELATION_LOOKUP_PART.body(lookup_ctx)
