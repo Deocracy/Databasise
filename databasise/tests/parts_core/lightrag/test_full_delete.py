@@ -1,7 +1,7 @@
 """05-03-PLAN.md Task 1: the delete port — a second registration, not a second operation on the
-first. Proves ``lightrag/full-delete@0.1.0`` is a real, separately-admitted opaque Part
-(CONTRACT §19.6's separate-port rule) and that the driver script's ``delete``/``entities``
-branches speak the protocol Task 1's own action text specifies — against the stub driver for the
+first. Proves ``lightrag/full-delete@0.2.0`` is a real, separately-admitted opaque Part
+(CONTRACT §19.6's separate-port rule) and that the driver script's ``delete``
+branch speaks the protocol Task 1's own action text specifies — against the stub driver for the
 bulk of the suite, plus one real-interpreter smoke test guarded by ``pytest.mark.skipif``,
 mirroring ``test_full_ingest.py``'s own shape exactly.
 """
@@ -58,7 +58,7 @@ def test_registering_the_delete_part_with_no_admission_record_raises_unadmitted_
 def test_the_delete_admission_record_carries_its_own_eleven_verdicts_not_the_ingest_records():
     assert len(LIGHTRAG_FULL_DELETE_PART.admission.verdicts) == 11
     assert LIGHTRAG_FULL_DELETE_PART.admission is not LIGHTRAG_FULL_INGEST_PART.admission
-    assert LIGHTRAG_FULL_DELETE_PART.admission.part_name_at_version == "lightrag/full-delete@0.1.0"
+    assert LIGHTRAG_FULL_DELETE_PART.admission.part_name_at_version == "lightrag/full-delete@0.2.0"
 
 
 def test_the_stub_drivers_delete_branch_echoes_the_configured_status(tmp_path):
@@ -84,19 +84,6 @@ def test_the_stub_drivers_delete_branch_defaults_to_success(tmp_path):
         working_dir=tmp_path,
     )
     assert result["status"] == "success"
-
-
-def test_the_stub_drivers_entities_branch_echoes_the_configured_entity_map(tmp_path):
-    entity_map = {"Ed Wood": ["chunk-1", "chunk-2"]}
-    result = run_corpus_op(
-        "entities",
-        {"doc_id": "ed_wood", "_stub_entities": entity_map},
-        timeout=5.0,
-        interpreter=Path(sys.executable),
-        driver_script=_STUB_DRIVER,
-        working_dir=tmp_path,
-    )
-    assert result["entities"] == entity_map
 
 
 @pytest.mark.skipif(not _V1_VENV_PYTHON.exists(), reason="v1/.venv/bin/python not built")

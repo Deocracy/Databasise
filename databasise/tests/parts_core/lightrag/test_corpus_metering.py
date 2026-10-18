@@ -7,13 +7,21 @@ zero tokens means the provider sent no usage, which is ``unbudgetable``, never a
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
 
+from databasise.clients.builder import build_clients
 from databasise.parts.schema import NodeContext
-from databasise.parts_core.lightrag import full_ingest
+from databasise.parts_core.declared_only import LIGHTRAG_FULL_DELETE_PART
+from databasise.parts_core.lightrag import full_delete, full_ingest
+from databasise.parts_core.lightrag.full_delete import full_delete_body
 from databasise.parts_core.lightrag.full_ingest import full_ingest_body
+from databasise.runner import scheduler as _scheduler
+from databasise.seam.corpus import IngestDocument
+from databasise.seam.engine import Databasise
 from databasise.tests.fixtures.v1_stub_server import real_v1, requires_v1  # noqa: F401 - fixture
 
 # The stub server's per-call chat usage (tests/fixtures/v1_stub_server.py StubModelServer._chat).
@@ -81,3 +89,42 @@ async def test_a_real_ingest_is_metered_unbudgetable_without_usage_and_none_with
     assert duplicate["enqueued"] == 0
     assert duplicate["tokens"].counted_by == "none"
     assert duplicate["tokens"].call_count == 0
+
+
+# --------------------------------------------------------------------------------------------- #
+# Task 3: the delete half
+# --------------------------------------------------------------------------------------------- #
+
+
+def test_the_delete_wiring_and_part_declare_calls_llm():
+    wiring = json.loads((Path(__file__).resolve().parents[3] / "wirings" / "lightrag" / "corpus-delete.json").read_text())
+    assert "calls_llm" in wiring["nodes"]["full-delete"]["effects"]
+    assert "calls_llm" in LIGHTRAG_FULL_DELETE_PART.effects
+
+
+async def test_the_delete_part_builds_its_accounting_from_the_llm_usage(monkeypatch):
+    result = {"status": "success", "doc_id": "d", "message": "", "status_code": 200, "file_path": None}
+    monkeypatch.setattr(full_delete, "run_corpus_op", lambda *a, **k: {**result, "usage": _usage(2, 22, 14)})
+    tokens = (await full_delete_body(NodeContext(node_id="full-delete", config={"doc_id": "d"}, inputs={}, stores={})))["tokens"]
+    assert (tokens.counted_by, tokens.prompt_tokens, tokens.completion_tokens, tokens.call_count) == ("v1-subprocess", 22, 14, 2)
+
+
+@requires_v1
+async def test_the_scheduler_meters_a_real_delete_with_the_drivers_usage(real_v1, monkeypatch):  # noqa: F811
+    engine = Databasise(store_root=real_v1.store_root, workspace="meter", clients=build_clients(real_v1.client_env))
+    await engine.ingest(IngestDocument(document_id="deldoc", text="UNIQdel Corp sells lamps in UNIQdel City."))
+
+    traces: list[Any] = []
+    original = _scheduler.run_wiring
+
+    async def spy(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        scheduled = await original(*args, **kwargs)
+        traces.extend(scheduled["nodes"])
+        return scheduled
+
+    monkeypatch.setattr(_scheduler, "run_wiring", spy)
+    outcome = await engine.delete_document("deldoc")
+
+    assert outcome.status == "success"
+    [delete_trace] = [trace for trace in traces if trace.node_id == "full-delete"]
+    assert delete_trace.tokens.counted_by in ("v1-subprocess", "none")

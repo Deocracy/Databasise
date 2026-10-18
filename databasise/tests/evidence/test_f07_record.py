@@ -187,4 +187,4 @@ def test_verdict_names_the_enforcing_refusal_and_the_unqualified_component():
     text = _text()
     verdict = _section(text, r"^## Verdict")
     assert "MutableStoreComparisonExcludedError" in verdict
-    assert "lightrag/full-delete@0.1.0" in verdict
+    assert "lightrag/full-delete@0.2.0" in verdict  # 11-03 D-06 bump

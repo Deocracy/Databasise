@@ -65,7 +65,7 @@ _LIGHTRAG_FULL_DELETE_REASON = (
 _LIGHTRAG_V1_INDEX_SYNC_REASON = (
     "Added by 11-01-PLAN.md (D-01): the v1-to-v2 index mirror, the second node of LightRAG's "
     "corpus-ingest and corpus-delete wirings. Same structural exclusion as "
-    "lightrag/full-delete@0.1.0: dispatched only by Databasise.ingest()/delete_document() through "
+    "lightrag/full-delete@0.2.0: dispatched only by Databasise.ingest()/delete_document() through "
     "those corpus wirings, never through resolve_selector()'s candidate pool (all_wirings()), so "
     "no comparison call can reach it. It declares mutates_store only to derive the hosted opaque "
     "placement; its writes go through the engine's staged ctx.stores handles. No requirement in "
@@ -84,7 +84,7 @@ _LIGHTRAG_FULL_INGEST_REASON = (
 _KNOWN_REASONS: dict[str, str] = {
     "codebase-memory-mcp@0.1.0": _CODEBASE_MEMORY_MCP_REASON,
     "lightrag/full-ingest@0.2.0": _LIGHTRAG_FULL_INGEST_REASON,
-    "lightrag/full-delete@0.1.0": _LIGHTRAG_FULL_DELETE_REASON,
+    "lightrag/full-delete@0.2.0": _LIGHTRAG_FULL_DELETE_REASON,
     "lightrag/v1-index-sync@0.1.0": _LIGHTRAG_V1_INDEX_SYNC_REASON,
 }
 
@@ -238,14 +238,14 @@ re-verifying the node against it, per §14.4 point 3's own escape clause.
 ## Verdict
 
 F-07 is discharged for both real, registered mutable-store components this project has built:
-`codebase-memory-mcp@0.1.0` and `lightrag/full-delete@0.1.0` each carry exactly one recorded
+`codebase-memory-mcp@0.1.0` and `lightrag/full-delete@0.2.0` each carry exactly one recorded
 disposition (`{DISPOSITION_PERMANENT_EXCLUSION}`), enforced as an explicit refusal in the
 comparison path for the component actually reachable there
 (`databasise.seam.refusals.MutableStoreComparisonExcludedError`, 06-09-PLAN.md Task 2). The two
 catalogued-not-built roster entries (`MC-1`, `CA-7`) carry the same disposition, scoped
 explicitly to what they are — inherited, not a fresh decision, since neither is built.
 
-**A qualification stated plainly, not left implicit.** `lightrag/full-delete@0.1.0`'s exclusion
+**A qualification stated plainly, not left implicit.** `lightrag/full-delete@0.2.0`'s exclusion
 is a *structural* fact of how it is dispatched (directly, by `Databasise.delete_document()`,
 never through `resolve_selector()`'s candidate pool) rather than an *enforced* refusal the way
 `codebase-memory-mcp@0.1.0`'s is — no selector-based comparison call can resolve to it in the
@@ -257,7 +257,7 @@ computed from the registry rather than from what happens to be reachable.
 (`MutableStoreComparisonExcludedError`) governs exactly one live candidate pool today: the
 capability/default/harness selectors' shared `all_wirings()` set, which names only LightRAG's
 five arms and HippoRAG's base wiring — neither `codebase-memory-mcp@0.1.0` nor
-`lightrag/full-delete@0.1.0` is a member of that set, so this exclusion does not narrow
+`lightrag/full-delete@0.2.0` is a member of that set, so this exclusion does not narrow
 `Databasise.compare()`'s own reachable A/B surface for the LightRAG-vs-HippoRAG comparison
 `MODAL-05` names. `MODAL-05` itself stays unproven for the separate, unrelated reason recorded in
 `databasise/evidence/CROSS-MODALITY-EVIDENCE.md` (the owner-deferred real cross-modality run) —

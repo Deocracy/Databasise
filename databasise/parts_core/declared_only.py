@@ -92,14 +92,14 @@ LIGHTRAG_FULL_INGEST_PART = Part(
 )
 
 # The deleting sibling port (05-03-PLAN.md Task 1): same underlying v1 subprocess engine as
-# LIGHTRAG_FULL_INGEST_PART, a different name_at_version and a different declared effect
-# (mutates_store, not writes_artifact) — §19.6's separate-port rule. artifact_scope=None: this
-# port registers no artifact at all, it mutates the corpus's existing store in place.
+# LIGHTRAG_FULL_INGEST_PART, its own name_at_version and admission record — §19.6's separate-port
+# rule. artifact_scope=None: it mutates v1's existing store in place. @0.2.0 (11-03, LRAG-11):
+# calls_llm, because a partial-rebuild delete reaches the LLM and is metered.
 LIGHTRAG_FULL_DELETE_PART = Part(
-    name_at_version="lightrag/full-delete@0.1.0",
+    name_at_version="lightrag/full-delete@0.2.0",
     kind="opaque",
     structural_depth="opaque",
-    effects=["mutates_store", "reads_kv", "reads_graph"],
+    effects=["calls_llm", "mutates_store", "reads_kv", "reads_graph"],
     upstream_ref="v1/lightrag/lightrag.py",
     body=full_delete_body,
     artifact_scope=None,

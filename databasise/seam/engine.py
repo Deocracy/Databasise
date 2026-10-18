@@ -1328,8 +1328,10 @@ class Databasise:
                 timeout=STATUS_WALL_CLOCK_CEILING_SECONDS,
                 working_dir=self._v1_working_dir(),
             )
-            engine_report["working_dir_present"] = bool(result.get("working_dir_present", False))
-            engine_report["storages_initialized"] = bool(result.get("storages_initialized", False))
+            # 11-03: the driver's health op builds no facade and reports only configuration, so the
+            # dir is checked here; 11-09 renames storages_initialized to v1_reachable (D-14).
+            engine_report["working_dir_present"] = self._v1_working_dir().exists()
+            engine_report["storages_initialized"] = bool(result.get("configured", False))
         except Exception:
             engine_report["working_dir_present"] = False
             engine_report["storages_initialized"] = False

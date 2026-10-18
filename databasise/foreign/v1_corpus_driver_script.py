@@ -1,5 +1,6 @@
-"""Subprocess entry point for LightRAG's corpus-side operations — ingest (05-01-PLAN.md Task 1),
-delete and status (05-03/05-04, added by name in later plans' driver-script extensions).
+"""Subprocess entry point for LightRAG's corpus-side operations: ``ingest``, ``delete``, ``status``
+and ``health`` — the protocol of ``lightrag/full-ingest@0.2.0`` and ``lightrag/full-delete@0.2.0``
+(11-03-PLAN.md, D-06; pinned by ``tests/parts_core/lightrag/test_full_ingest_compat.py``).
 
 Lives under ``databasise/foreign/`` (a directory owned by the decomposed side) but is executed
 **by v1's own interpreter** (``v1/.venv/bin/python``), never by the interpreter running
@@ -17,10 +18,18 @@ job JSON on stdin, mirroring ``databasise/parity/v1_driver_script.py``'s own pre
 query side exactly.
 
 Protocol: read one JSON object ``{"op": str, "working_dir": str, ...}`` from stdin. This module
-implements ``op == "ingest"`` (05-01-PLAN.md Task 1), ``op == "delete"`` and ``op == "entities"``
-(05-03-PLAN.md Task 1), ``op == "entity_info"`` (05-03-PLAN.md Task 3), and ``op == "status"``/
-``op == "health"`` (05-04-PLAN.md Task 1) — any other ``op`` value exits 1 with a named message
-rather than a silent no-op.
+implements exactly ``ingest``, ``delete``, ``status`` and ``health``; any other ``op`` (the removed
+``entities``/``entity_info`` included, D-05) exits 1 with a named ``UnknownOpError``.
+
+**Configuration check (exit 3, D-12).** Before any op but ``health`` runs, ``main`` checks the
+environment v1 sees (the adapter's overlay plus ``v1/.env``). Every op needs ``EMBEDDING_DIM``,
+``EMBEDDING_MODEL``, ``EMBEDDING_BINDING_HOST``, ``EMBEDDING_BINDING_API_KEY`` and the four
+``LIGHTRAG_*_STORAGE`` keys; ``ingest`` and ``delete`` also need ``LLM_MODEL``,
+``LLM_BINDING_API_KEY`` and ``LLM_BINDING_HOST``. A blank value counts as missing. The storage keys
+must name ``JsonKVStorage``, ``CozoGraphStorage``, ``FaissVectorDBStorage`` and
+``JsonDocStatusStorage``, the backends the ``lightrag/v1-index-sync`` mirror reads (D-01). On any
+problem it writes ``{"error": "v1_not_configured", "missing_keys": [...], "unsupported_keys":
+[...]}`` and exits 3 — key names only, never values.
 
 ``op == "ingest"``'s job carries ``{"documents": [{"id": str, "text": str}, ...], "track_id": str |
 None, "file_paths": [str, ...] | None, "docs_format": str | None, "input_dir": str | None,
@@ -50,37 +59,19 @@ its job id, and writes ``{"track_id": str, "enqueued": int, "usage": {"llm": {..
   trackers handed to the model functions with ``token_tracker=`` (D-13). They are never summed:
   the two figures come from different tokenizers.
 
-``op == "delete"``'s job carries ``{"doc_id": str, "delete_llm_cache": bool}``. Calls v1's own
-``rag.adelete_by_doc_id(doc_id, delete_llm_cache=...)`` — never reimplementing or wrapping its
+``op == "delete"``'s job carries ``{"doc_id": str, "delete_llm_cache": bool}``. ``doc_id`` is our
+document id, resolved to v1's id by the stem rule. Calls v1's own
+``rag.adelete_by_doc_id(v1_id, delete_llm_cache=...)`` — never reimplementing or wrapping its
 reference-counting logic, which already subtracts the deleted document's chunk ids from each
 affected entity's/relation's ``source_id`` set and deletes the entity/edge only when the remaining
 set is empty, rebuilding it from surviving sources otherwise (a helper in ``v1/lightrag/utils.py``,
 called only on the v1 side, never copied onto the machine side). Writes one JSON object built from
 the returned ``DeletionResult``:
-``{"status": str, "doc_id": str, "message": str, "status_code": int, "file_path": str | None}``. A
-v1-side status of ``"not_found"`` or ``"not_allowed"`` is a *successful* driver run reporting that
-status — exit 0, letting the machine map it; only an exception exits 1.
-
-``op == "entities"``'s job carries ``{"doc_id": str}`` — used only by 05-03-PLAN.md Task 3's real
-graph-aware-cleanup proof. Reads the named document's own chunk ids from v1's doc-status store
-(the same ``chunks_list`` field ``adelete_by_doc_id`` itself reads), then walks every entity label
-in the graph (``chunk_entity_relation_graph.get_all_labels()``) via v1's own public
-``rag.get_entity_info()`` accessor — never reaching into a storage implementation directly — and
-returns ``{"chunk_ids": [...], "entities": {<entity_name>: [<source_id>, ...]}}`` for exactly the
-entity names whose own ``source_id`` set names at least one of the document's chunk ids.
-``chunk_ids`` is the same document's own chunk id list, returned alongside the entity map so the
-caller can partition it into "shared" (an entity's ``source_id`` set names a chunk outside
-``chunk_ids``) versus "orphan-only" (every chunk id in the set is one of ``chunk_ids``) without a
-second round trip. An absent document (no doc-status record) returns
-``{"chunk_ids": None, "entities": {}}`` rather than raising.
-
-``op == "entity_info"``'s job carries ``{"entity_names": [str, ...]}`` — used only by
-05-03-PLAN.md Task 3's real graph-aware-cleanup proof, for its post-deletion re-check: a completed
-deletion removes the document's own doc-status record, so ``op == "entities"`` can no longer look
-entities up by ``doc_id`` for that document. This op instead looks each named entity up directly
-via v1's own ``get_entity_info`` accessor and returns
-``{"entities": {<entity_name>: [<source_id>, ...] | None}}`` — ``None`` for a name whose graph
-node no longer exists, never omitted from the map.
+``{"status": str, "doc_id": str, "message": str, "status_code": int, "file_path": str | None,
+"usage": {"llm": {...}, "embedding": {...}}}`` — ``usage`` from the same two trackers as ingest,
+because a partial-rebuild delete can reach the LLM (D-13). A v1-side status of ``"not_found"`` or
+``"not_allowed"`` is a *successful* driver run reporting that status — exit 0, letting the machine
+map it; only an exception exits 1.
 
 ``op == "status"``'s job carries ``{"track_id": str | None, "limit": int, "offset": int}``
 (05-04-PLAN.md Task 1). Counts are always whole-corpus, read via ``rag.get_processing_status()``
@@ -95,9 +86,10 @@ given ``track_id`` filter (or the whole corpus when ``track_id`` is ``None``), a
 ``error_message`` is only ever a real value for a document whose status is ``"failed"``, ``None``
 otherwise.
 
-``op == "health"``'s job carries no extra fields beyond ``working_dir``. Builds v1's facade for
-real (a genuine liveness probe, not merely a check that ``working_dir`` exists on disk) and writes
-``{"working_dir_present": bool, "storages_initialized": bool}``.
+``op == "health"`` reads no job key and builds no facade, so it creates no working dir (D-14). It
+writes ``{"configured": bool, "missing_keys": [...], "unsupported_keys": [...]}`` from the same
+configuration check (with the model keys included) and never exits 3; the engine checks the
+working dir's existence itself.
 
 A malformed job, a v1-side failure, or any other exception prints a traceback to stderr and exits
 1 — the caller (``v1_corpus_adapter.py``) treats any non-zero exit as a refusal carrying that
@@ -117,20 +109,55 @@ from typing import Any
 
 from lightrag import LightRAG
 from lightrag.base import DocStatus
-from lightrag.constants import FULL_DOCS_FORMAT_PENDING_PARSE, FULL_DOCS_FORMAT_RAW, GRAPH_FIELD_SEP
+from lightrag.constants import FULL_DOCS_FORMAT_PENDING_PARSE, FULL_DOCS_FORMAT_RAW
 from lightrag.llm.openai import openai_complete_if_cache, openai_embed
 from lightrag.utils import EmbeddingFunc, TokenTracker
 
-_KNOWN_OPS = ("ingest", "delete", "entities", "entity_info", "status", "health")
+_KNOWN_OPS = ("ingest", "delete", "status", "health")
+
+# D-12/D-14: the keys v1 needs, checked by name before any op but health runs. The model keys
+# matter only to ops that can call the model; health reports the full set.
+_STORE_KEYS = (
+    "EMBEDDING_DIM",
+    "EMBEDDING_MODEL",
+    "EMBEDDING_BINDING_HOST",
+    "EMBEDDING_BINDING_API_KEY",
+    "LIGHTRAG_KV_STORAGE",
+    "LIGHTRAG_GRAPH_STORAGE",
+    "LIGHTRAG_VECTOR_STORAGE",
+    "LIGHTRAG_DOC_STATUS_STORAGE",
+)
+_MODEL_KEYS = ("LLM_MODEL", "LLM_BINDING_API_KEY", "LLM_BINDING_HOST")
+_MODEL_OPS = ("ingest", "delete", "health")
+# D-01: the lightrag/v1-index-sync mirror reads only these backends, so any other is refused.
+_SUPPORTED_BACKENDS = {
+    "LIGHTRAG_KV_STORAGE": "JsonKVStorage",
+    "LIGHTRAG_GRAPH_STORAGE": "CozoGraphStorage",
+    "LIGHTRAG_VECTOR_STORAGE": "FaissVectorDBStorage",
+    "LIGHTRAG_DOC_STATUS_STORAGE": "JsonDocStatusStorage",
+}
 
 
 class UnknownOpError(ValueError):
     """A job named an ``op`` this driver does not implement — refused by name, never a silent
-    no-op (plans 05-03/05-04 add the missing branches)."""
+    no-op."""
 
     def __init__(self, op: str):
         self.op = op
         super().__init__(f"unknown op {op!r}; this driver implements {_KNOWN_OPS!r}")
+
+
+def _config_problems(op: str) -> tuple[list[str], list[str]]:
+    """``(missing_keys, unsupported_keys)`` for ``op``: key names only, never values (D-12). A
+    blank value counts as missing, so an empty overlay value refuses whatever ``v1/.env`` holds."""
+    required = _STORE_KEYS + (_MODEL_KEYS if op in _MODEL_OPS else ())
+    missing = [key for key in required if not os.environ.get(key, "").strip()]
+    unsupported = [
+        key
+        for key, backend in _SUPPORTED_BACKENDS.items()
+        if key not in missing and os.environ[key].strip() != backend
+    ]
+    return missing, unsupported
 
 
 class MissingInputDirError(ValueError):
@@ -301,9 +328,12 @@ async def _run_delete(job: dict[str, Any]) -> dict[str, Any]:
     delete_llm_cache = bool(job.get("delete_llm_cache", False))
     working_dir = str(job["working_dir"])
 
-    rag = await _build_rag(working_dir)
+    llm_tracker, embed_tracker = TokenTracker(), TokenTracker()
+    rag = await _build_rag(working_dir, llm_tracker=llm_tracker, embed_tracker=embed_tracker)
     try:
-        result = await rag.adelete_by_doc_id(doc_id, delete_llm_cache=delete_llm_cache)
+        # The stem rule: our id names a file-ingested doc-<md5> row by its staged basename.
+        v1_doc_id = next(iter(await _resolve_v1_ids(rag, [doc_id])), doc_id)
+        result = await rag.adelete_by_doc_id(v1_doc_id, delete_llm_cache=delete_llm_cache)
     finally:
         await rag.finalize_storages()
 
@@ -313,63 +343,8 @@ async def _run_delete(job: dict[str, Any]) -> dict[str, Any]:
         "message": result.message,
         "status_code": result.status_code,
         "file_path": result.file_path,
+        "usage": {"llm": llm_tracker.get_usage(), "embedding": embed_tracker.get_usage()},
     }
-
-
-async def _run_entities(job: dict[str, Any]) -> dict[str, Any]:
-    doc_id = str(job["doc_id"])
-    working_dir = str(job["working_dir"])
-
-    rag = await _build_rag(working_dir)
-    try:
-        doc_status_data = await rag.doc_status.get_by_id(doc_id)
-        if not doc_status_data:
-            return {"chunk_ids": None, "entities": {}}
-        doc_chunk_ids = list(doc_status_data.get("chunks_list") or [])
-        chunk_ids_set = set(doc_chunk_ids)
-
-        labels = await rag.chunk_entity_relation_graph.get_all_labels()
-        entities: dict[str, list[str]] = {}
-        for label in labels:
-            info = await rag.get_entity_info(label)
-            source_id = info.get("source_id")
-            if not source_id:
-                continue
-            source_ids = [chunk for chunk in source_id.split(GRAPH_FIELD_SEP) if chunk]
-            if chunk_ids_set & set(source_ids):
-                entities[label] = source_ids
-    finally:
-        await rag.finalize_storages()
-
-    return {"chunk_ids": doc_chunk_ids, "entities": entities}
-
-
-async def _run_entity_info(job: dict[str, Any]) -> dict[str, Any]:
-    """05-03-PLAN.md Task 3's "after" leg: ``op == "entities"`` keys off a document's own
-    doc-status record, which a completed deletion has already removed — there is no longer a
-    ``doc_id`` to look entities up by. This op instead looks up a caller-supplied list of entity
-    *names* (captured from an earlier ``entities`` call, before deletion) directly via v1's own
-    ``get_entity_info`` accessor, so post-deletion state can be re-checked by name regardless of
-    whether the originating document's doc-status record still exists. Returns
-    ``{"entities": {<entity_name>: [<source_id>, ...] | None}}`` — ``None`` for a name whose graph
-    node no longer exists (or carries no ``source_id``), never omitted from the map.
-    """
-    entity_names = job.get("entity_names") or []
-    working_dir = str(job["working_dir"])
-
-    rag = await _build_rag(working_dir)
-    try:
-        entities: dict[str, list[str] | None] = {}
-        for name in entity_names:
-            info = await rag.get_entity_info(name)
-            source_id = info.get("source_id")
-            entities[name] = (
-                [chunk for chunk in source_id.split(GRAPH_FIELD_SEP) if chunk] if source_id else None
-            )
-    finally:
-        await rag.finalize_storages()
-
-    return {"entities": entities}
 
 
 async def _run_status(job: dict[str, Any]) -> dict[str, Any]:
@@ -415,16 +390,11 @@ async def _run_status(job: dict[str, Any]) -> dict[str, Any]:
 
 
 async def _run_health(job: dict[str, Any]) -> dict[str, Any]:
-    working_dir = str(job["working_dir"])
-    working_dir_present = Path(working_dir).exists()
-
-    rag = await _build_rag(working_dir)
-    try:
-        storages_initialized = True
-    finally:
-        await rag.finalize_storages()
-
-    return {"working_dir_present": working_dir_present, "storages_initialized": storages_initialized}
+    """Facade-free (D-14): builds no ``LightRAG``, so it creates no working dir and opens no
+    store. It reports only whether v1's configuration is usable; the engine checks the dir."""
+    del job  # reads no job key
+    missing, unsupported = _config_problems("health")
+    return {"configured": not (missing or unsupported), "missing_keys": missing, "unsupported_keys": unsupported}
 
 
 async def _run(job: dict[str, Any]) -> dict[str, Any]:
@@ -433,10 +403,6 @@ async def _run(job: dict[str, Any]) -> dict[str, Any]:
         return await _run_ingest(job)
     if op == "delete":
         return await _run_delete(job)
-    if op == "entities":
-        return await _run_entities(job)
-    if op == "entity_info":
-        return await _run_entity_info(job)
     if op == "status":
         return await _run_status(job)
     if op == "health":
@@ -447,6 +413,14 @@ async def _run(job: dict[str, Any]) -> dict[str, Any]:
 def main() -> int:
     try:
         job = json.loads(sys.stdin.read())
+        if job.get("op") != "health":
+            missing, unsupported = _config_problems(str(job.get("op")))
+            if missing or unsupported:
+                # D-12: key names only, never values; exit 3 is the configuration channel.
+                sys.stdout.write(
+                    json.dumps({"error": "v1_not_configured", "missing_keys": missing, "unsupported_keys": unsupported})
+                )
+                return 3
         result = asyncio.run(_run(job))
     except Exception:
         traceback.print_exc()

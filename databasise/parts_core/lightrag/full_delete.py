@@ -1,18 +1,17 @@
-"""``lightrag/full-delete`` — the second registered port of the LightRAG corpus-side engine
-(05-03-PLAN.md Task 1): the deleting sibling of ``lightrag/full-ingest@0.1.0``, backed by the same
-subprocess-hosted v1 engine but declaring a different §8 admission record and a different
-``name_at_version``, per CONTRACT §19.6's separate-port rule ("two invocations MUST be separate
-ports where they differ in ... declared effects"). Ingest declares ``writes_artifact``; delete
-declares ``mutates_store`` — neither part exposes the other's operation.
+"""``lightrag/full-delete@0.2.0`` — the second registered port of the LightRAG corpus-side engine
+(05-03-PLAN.md Task 1): the deleting sibling of ``lightrag/full-ingest@0.2.0``, backed by the same
+subprocess-hosted v1 engine but with its own §8 admission record and its own ``name_at_version``,
+per CONTRACT §19.6's separate-port rule. Neither part exposes the other's operation.
 
-``LIGHTRAG_FULL_DELETE_ADMISSION`` is this port's own eleven-``ConditionVerdict`` §8 admission
-record. Where a verdict states the same underlying fact as
-``databasise.parts_core.lightrag.full_ingest.LIGHTRAG_FULL_INGEST_ADMISSION``'s own verdict (both
-ports share the same v1 subprocess closure, the same network-denial-by-construction technique, the
-same open condition-8 scope boundary), it is stated here in this record's own words with its own
-evidence — never imported from the ingest record's tuple, per §19.6's "two ports, two records"
-reading. Conditions 7, 8 and the counting half of 9 are machine-side/open obligations this record
-alone cannot prove; see each verdict's own ``evidence`` string.
+11-03-PLAN.md (D-06) is this port's one ``@0.2.0`` bump: it declares ``calls_llm`` (a
+partial-rebuild delete can reach the LLM), its storage is ``self-contained``, and the driver
+returns token usage, which the body meters (D-13).
+
+``LIGHTRAG_FULL_DELETE_ADMISSION`` is this port's own eleven-``ConditionVerdict`` record, numbered
+as CONTRACT §8 numbers it (LRAG-12): 3 carries network denial by construction and the spend rule,
+8 the 90-day TTL with ledger renewal, 9 the ``part_ref`` counting. Where a verdict states the same
+fact as the ingest record, it is stated here in this record's own words — never imported from the
+ingest record's tuple, per §19.6's "two ports, two records" reading.
 """
 
 from __future__ import annotations
@@ -31,18 +30,13 @@ from databasise.parts.admission import (
     ConditionVerdict,
 )
 from databasise.parts.schema import NodeContext
-from databasise.runner.trace import TokenAccounting
+from databasise.parts_core.lightrag.full_ingest import tokens_from_usage
 
 # v1's own deletion path performs graph and vector surgery plus a bounded rebuild over surviving
 # sources for a partially-affected entity/relation — the machine declares this ceiling, v1 never
 # self-reports one (§8 condition 4). See 05-03-SUMMARY.md for the measured real-run duration this
 # value is grounded against.
 DELETE_WALL_CLOCK_CEILING_SECONDS = 300.0
-
-# Mirrors full_ingest.py's own sentinel exactly (databasise.seam.tokens.UNBUDGETABLE_SENTINEL,
-# duplicated as a bare literal for the same one-way parts_core -> seam layering reason that
-# module's own comment states).
-_UNBUDGETABLE_TOKENS_SENTINEL = "unbudgetable"
 
 _V1_ROOT = Path(__file__).resolve().parents[3] / "v1"
 
@@ -68,9 +62,9 @@ def _compute_environment_hash() -> str:
 
 
 LIGHTRAG_FULL_DELETE_ADMISSION = AdmissionRecord(
-    part_name_at_version="lightrag/full-delete@0.1.0",
+    part_name_at_version="lightrag/full-delete@0.2.0",
     entry_path="in-process opaque core, hosted as a subprocess under v1's pinned interpreter",
-    storage="machine",
+    storage="self-contained",
     wall_clock_ceiling_seconds=DELETE_WALL_CLOCK_CEILING_SECONDS,
     wall_clock_ceiling_basis=(
         "v1's own deletion path (adelete_by_doc_id) performs graph and vector surgery plus a "
@@ -110,10 +104,14 @@ LIGHTRAG_FULL_DELETE_ADMISSION = AdmissionRecord(
             condition=3,
             verdict="satisfied by construction",
             evidence=(
-                "the delete subprocess never makes an independent outbound LLM/embedding call, "
-                "including on the partial-rebuild path — it reaches the machine's own injected "
+                "network denial by construction: the delete subprocess, including its "
+                "partial-rebuild path, reaches only the machine's injected "
                 "LLM_BINDING_HOST/EMBEDDING_BINDING_HOST via the same _build_rag/_llm_model_func "
-                "the ingest driver already uses (one shared _build_rag, both ops)"
+                "the ingest op uses; no OS-level namespace sandbox exists under the no-Docker "
+                "constraint. Spend: the driver hands lightrag.utils.TokenTracker to both model "
+                "functions and returns its usage; full_delete_body reports the LLM half with "
+                "counted_by='v1-subprocess', 'none' for no model call, and 'unbudgetable' when "
+                "the provider reports no usage — never an estimate"
             ),
         ),
         ConditionVerdict(
@@ -130,9 +128,10 @@ LIGHTRAG_FULL_DELETE_ADMISSION = AdmissionRecord(
             condition=5,
             verdict="satisfied",
             evidence=(
-                "LIGHTRAG_FULL_DELETE_PART.artifact_scope=None — this port registers no artifact "
-                "at all, so §8 condition 5's shared-scope prohibition (restating §3) is "
-                "vacuously satisfied, never merely narrowly avoided"
+                "storage='self-contained': v1 deletes only inside its per-workspace working dir "
+                "<store_root>/<workspace>/lightrag-v1; the v2 rows are pruned by the "
+                "lightrag/v1-index-sync node through ctx.stores. LIGHTRAG_FULL_DELETE_PART."
+                "artifact_scope=None, so the shared-scope prohibition is vacuously satisfied"
             ),
         ),
         ConditionVerdict(
@@ -155,26 +154,20 @@ LIGHTRAG_FULL_DELETE_ADMISSION = AdmissionRecord(
         ),
         ConditionVerdict(
             condition=8,
-            verdict="open — accepted as a scope boundary, not a clean yes",
+            verdict="machine-side-obligation",
             evidence=(
-                "no OS-level network-namespace isolation mechanism exists in databasise/ "
-                "(05-RESEARCH.md Open Question 3, restated here for this port); denial is "
-                "achieved by construction (condition 3) rather than by a sandbox, consistent "
-                "with the project's no-Docker, local-NixOS constraint — the same open finding "
-                "LIGHTRAG_FULL_INGEST_ADMISSION records for the sibling port, not silently "
-                "claimed solved here either"
+                "ttl_days=90 is declared on this record; renewal only with a recorded reason, each "
+                "renewal recorded in the ledger, is a machine-side ledger mechanic this port "
+                "cannot itself prove"
             ),
         ),
         ConditionVerdict(
             condition=9,
-            verdict="partially satisfied — spend always reported as unbudgetable, never estimated",
+            verdict="machine-side-obligation",
             evidence=(
-                "full_delete_body reports tokens.counted_by='unbudgetable' unconditionally — "
-                "v1's DeletionResult (v1/lightrag/base.py) carries no usage field at all, unlike "
-                "ingest's occasionally-present usage; a partial-rebuild delete may reach the LLM "
-                "yet v1 exposes no per-run token count for it back to this caller — the counting "
-                "half of this condition is an open machine-side obligation, and the seam never "
-                "substitutes a rounded or zero number in its place"
+                "this port is reached only by an explicit Databasise.delete_document() call "
+                "through the corpus-delete wiring; counting explicit part_ref invocations as data "
+                "and never as a promotion trigger is a machine-side ledger mechanic"
             ),
         ),
         ConditionVerdict(
@@ -204,8 +197,8 @@ LIGHTRAG_FULL_DELETE_ADMISSION = AdmissionRecord(
 async def full_delete_body(ctx: NodeContext) -> dict[str, Any]:
     """Reads ``doc_id``/``delete_llm_cache`` from ``ctx.config``, launches the v1 corpus driver's
     ``delete`` branch via ``run_corpus_op`` (blocking — wrapped in ``asyncio.to_thread`` per that
-    function's own docstring note), and returns the driver's payload with an always-unbudgetable
-    token report (see condition 9's verdict above for why this is never a fabricated zero).
+    function's own docstring note), and returns the driver's payload with the spend metered from
+    its ``usage`` (``tokens_from_usage``, the same rule as ingest; condition 3's verdict above).
 
     11-01-PLAN.md (LRAG-02): this body reports no store touches. v1's subprocess changes v1's own
     working dir, not the v2 stores; the v2 change is made by the ``lightrag/v1-index-sync`` node
@@ -226,13 +219,7 @@ async def full_delete_body(ctx: NodeContext) -> dict[str, Any]:
         working_dir=config.get("working_dir"),  # 11-01 (LRAG-01): stamped by the engine
     )
 
-    return {
-        **result,
-        # §9/D-08, restated for this port: v1's DeletionResult carries no usage field at all —
-        # the node reports the existing unbudgetable sentinel rather than substituting an
-        # estimated, rounded, or zero number.
-        "tokens": TokenAccounting(counted_by=_UNBUDGETABLE_TOKENS_SENTINEL),
-    }
+    return {**result, "tokens": tokens_from_usage(result.get("usage"))}
 
 
 __all__ = [

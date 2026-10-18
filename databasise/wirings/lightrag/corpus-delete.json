@@ -4,9 +4,10 @@
   "wiring_version": "1",
   "nodes": {
     "full-delete": {
-      "component": "lightrag/full-delete@0.1.0",
+      "component": "lightrag/full-delete@0.2.0",
       "kind": "opaque",
       "effects": [
+        "calls_llm",
         "mutates_store",
         "reads_kv",
         "reads_graph"

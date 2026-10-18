@@ -15,8 +15,8 @@ own group.
 vocabulary marks a participant ``unbudgetable`` when its own token spend cannot be counted
 (CONTRACT.md §4/§8) — no dedicated field exists on ``TokenAccounting`` for this label. The
 registry holds three opaque parts, ``lightrag/full-ingest``, ``lightrag/full-delete`` and
-``codebase-memory-mcp``; ``full_delete`` always reports ``counted_by='unbudgetable'`` and
-``full_ingest`` reports it only when v1 returns no usage. This module detects it
+``codebase-memory-mcp``; ``full_ingest`` and ``full_delete`` meter v1's own usage and report it
+only when the provider returns no usage (11-03, D-13). This module detects it
 through the same ``counted_by`` string field every node already uses to report its own tokenizer
 identity, reserving the literal value ``"unbudgetable"`` as a sentinel a node's own body sets to
 mean "this participant's tokens cannot be counted" — distinct from ``"none"`` (a real, honestly

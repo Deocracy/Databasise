@@ -3,28 +3,25 @@
 ``run_corpus_op``'s ``driver_script=``/``interpreter=`` override points, so the test suite never
 needs a real v1 venv or a real LLM call to prove the ingest wiring end to end.
 
-Honours the same stdin/stdout JSON protocol the real driver does: for ``op == "ingest"`` echoes
-back ``{"track_id": <job's track_id>, "enqueued": len(documents), "usage": None}`` (``input_dir``
-and ``retry_doc_ids`` are accepted and ignored: the stub stores nothing). For
-``op == "delete"`` (05-03-PLAN.md Task 1) echoes a configurable status (``_stub_status``,
-defaulting to ``"success"``) back as ``{"status": ..., "doc_id": ..., "message": ..., "status_code":
-..., "file_path": None}``. Both ``ingest`` and ``delete`` optionally sleep first
-(``_stub_sleep_seconds`` on the job) so a timeout can be provoked deliberately. For
-``op == "entities"`` echoes a configurable entity map (``_stub_entities``, defaulting to ``{}``)
-and a configurable chunk-id list (``_stub_chunk_ids``, defaulting to ``None``) back as
-``{"chunk_ids": ..., "entities": ...}``. For ``op == "entity_info"`` echoes a configurable
-name-keyed map (``_stub_entity_info``, defaulting to ``{}``) back as ``{"entities": ...}``.
+Honours the same stdin/stdout JSON protocol the real driver does (the ``@0.2.0`` protocol,
+11-03-PLAN.md): for ``op == "ingest"`` echoes back ``{"track_id": <job's track_id>, "enqueued":
+len(documents), "usage": None}`` (``input_dir`` and ``retry_doc_ids`` are accepted and ignored:
+the stub stores nothing). For ``op == "delete"`` echoes a configurable status (``_stub_status``,
+defaulting to ``"success"``) back as ``{"status": ..., "doc_id": ..., "message": ...,
+"status_code": ..., "file_path": None, "usage": None}``. Both ``ingest`` and ``delete`` optionally
+sleep first (``_stub_sleep_seconds`` on the job) so a timeout can be provoked deliberately. A
+``None`` usage is what a body meters as ``unbudgetable``.
 
 For ``op == "status"`` (05-04-PLAN.md Task 1), the job carries a caller-configured
 ``_stub_documents`` (a list of ``{"document_id", "status", "updated_at", "error_message",
 "_track_id"}`` dicts — ``_track_id`` is stub-only bookkeeping, stripped before the page is
-returned) and ``_stub_counts``. Filters by the job's own ``track_id`` when given (matching each
-document's ``_track_id``), slices the result by ``offset``/``limit`` exactly as the real driver
-does, and returns ``{"counts": ..., "documents": ..., "total": <the unsliced, filtered count>}`` —
-letting a test build an arbitrarily large ``_stub_documents`` list to exercise pagination across
-several pages without a real v1 venv. For ``op == "health"`` echoes configurable
-``_stub_working_dir_present``/``_stub_storages_initialized`` booleans (both defaulting to
-``True``) back as ``{"working_dir_present": ..., "storages_initialized": ...}``.
+returned) and ``_stub_counts``. Filters by the job's own ``track_id`` and ``document_id`` when
+given, slices the result by ``offset``/``limit`` as the real driver does, and returns
+``{"counts": ..., "documents": ..., "total": <the unsliced, filtered count>}`` — letting a test
+build an arbitrarily large ``_stub_documents`` list to exercise pagination without a real v1 venv.
+For ``op == "health"`` echoes ``_stub_configured`` (default ``True``), ``_stub_missing_keys`` and
+``_stub_unsupported_keys`` (default empty) back as ``{"configured": ..., "missing_keys": ...,
+"unsupported_keys": ...}``.
 
 Any other ``op`` exits 1 with a traceback on stderr. Imports nothing from ``lightrag`` and nothing
 from ``databasise`` — a genuine leaf, run under whatever interpreter the test process itself uses
@@ -60,27 +57,20 @@ def _run_delete(job: dict) -> dict:
         "message": f"stub delete status={status}",
         "status_code": _STATUS_CODES.get(status, 500),
         "file_path": None,
+        "usage": None,
     }
-
-
-def _run_entities(job: dict) -> dict:
-    return {
-        "chunk_ids": job.get("_stub_chunk_ids"),
-        "entities": job.get("_stub_entities") or {},
-    }
-
-
-def _run_entity_info(job: dict) -> dict:
-    return {"entities": job.get("_stub_entity_info") or {}}
 
 
 def _run_status(job: dict) -> dict:
     track_id = job.get("track_id")
+    document_id = job.get("document_id")
     limit = int(job.get("limit", 50))
     offset = int(job.get("offset", 0))
     documents = list(job.get("_stub_documents") or [])
     if track_id:
         documents = [doc for doc in documents if doc.get("_track_id") == track_id]
+    if document_id:
+        documents = [doc for doc in documents if doc.get("document_id") == document_id]
 
     total = len(documents)
     page = documents[offset : offset + limit]
@@ -91,8 +81,9 @@ def _run_status(job: dict) -> dict:
 
 def _run_health(job: dict) -> dict:
     return {
-        "working_dir_present": job.get("_stub_working_dir_present", True),
-        "storages_initialized": job.get("_stub_storages_initialized", True),
+        "configured": job.get("_stub_configured", True),
+        "missing_keys": list(job.get("_stub_missing_keys") or []),
+        "unsupported_keys": list(job.get("_stub_unsupported_keys") or []),
     }
 
 
@@ -104,10 +95,6 @@ def main() -> int:
             result = _run_ingest(job)
         elif op == "delete":
             result = _run_delete(job)
-        elif op == "entities":
-            result = _run_entities(job)
-        elif op == "entity_info":
-            result = _run_entity_info(job)
         elif op == "status":
             result = _run_status(job)
         elif op == "health":

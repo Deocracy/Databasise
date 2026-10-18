@@ -7,7 +7,7 @@ first.
 
 ## 1. What this rule is for
 
-`lightrag/full-ingest@0.2.0` and `lightrag/full-delete@0.1.0` admit LightRAG's ~1,786-line ingest
+`lightrag/full-ingest@0.2.0` and `lightrag/full-delete@0.2.0` admit LightRAG's ~1,786-line ingest
 core as an **opaque node** (CONTRACT §8) precisely because it is too entangled to decompose
 cleanly today. Under schedule pressure, an opaque node like this one is exactly the place where new
 capability gets added the fast way: by editing inside the already-opaque core instead of authoring
@@ -36,18 +36,19 @@ same-version edit, no matter how small the diff looks.
 **The `Part` declaration itself** (`databasise/parts_core/declared_only.py`), for each of
 `LIGHTRAG_FULL_INGEST_PART`, `LIGHTRAG_FULL_DELETE_PART` and `LIGHTRAG_V1_INDEX_SYNC_PART`:
 
-- `name_at_version` — today `lightrag/full-ingest@0.2.0`, `lightrag/full-delete@0.1.0` and
+- `name_at_version` — today `lightrag/full-ingest@0.2.0`, `lightrag/full-delete@0.2.0` and
   `lightrag/v1-index-sync@0.1.0`.
 - `kind` — today `"opaque"` for all three; this is the literal value `PartRegistry.register`'s
   admission gate and `databasise.validator.execution_mode.derive_execution_mode`'s subprocess
   placement decision both key on.
 - `structural_depth` — today `"opaque"` for all three.
 - `effects` (the `effects[]` list) — today `["calls_llm", "mutates_store", "reads_kv",
-  "reads_graph"]` for ingest, `["mutates_store", "reads_kv", "reads_graph"]` for delete and
-  `["mutates_store", "writes_kv", "writes_vector", "writes_graph"]` for the sync. Ingest and delete
-  are separate ports on purpose (§19.6, see §4 below) — widening or narrowing any list is a
-  boundary change regardless of which direction it moves. `@0.2.0` dropped ingest's
-  `writes_artifact`: v1 writes no artifact, it mutates its own working dir (LRAG-03).
+  "reads_graph"]` for both ingest and delete, and `["mutates_store", "writes_kv", "writes_vector",
+  "writes_graph"]` for the sync. Ingest and delete are separate ports on purpose (§19.6, see §4
+  below) — widening or narrowing any list is a boundary change regardless of which direction it
+  moves. `@0.2.0` dropped ingest's `writes_artifact` (v1 writes no artifact, it mutates its own
+  working dir, LRAG-03) and added delete's `calls_llm` (a partial-rebuild delete reaches the LLM
+  and is metered, LRAG-11).
 - `upstream_ref` — today `v1/lightrag/pipeline.py` (ingest), `v1/lightrag/lightrag.py` (delete)
   and `v1/lightrag/kg/faiss_impl.py` (sync).
 - `artifact_scope` — today `None` for all three (`@0.2.0` dropped ingest's `"quarantined"`).
@@ -90,11 +91,20 @@ explicit `part_ref` invocations counted as data, not a promotion trigger
 | op | stdin keys | stdout keys |
 | --- | --- | --- |
 | `ingest` | `documents`, `track_id`, `working_dir`, `file_paths`, `docs_format`, `input_dir`, `retry_doc_ids` | `track_id`, `enqueued`, `usage` |
-| `delete` | `doc_id`, `delete_llm_cache`, `working_dir` | `status`, `doc_id`, `message`, `status_code`, `file_path` |
+| `delete` | `doc_id`, `delete_llm_cache`, `working_dir` | `status`, `doc_id`, `message`, `status_code`, `file_path`, `usage` |
 | `status` | `track_id`, `limit`, `offset`, `working_dir` | `counts`, `documents`, `total` |
-| `health` | `working_dir` | `working_dir_present`, `storages_initialized` |
-| `entities` | `doc_id`, `working_dir` | `chunk_ids`, `entities` |
-| `entity_info` | `entity_names`, `working_dir` | `entities` |
+| `health` | (none) | `configured`, `missing_keys`, `unsupported_keys` |
+
+`@0.2.0` removed the two proof-only ops `entities` and `entity_info` (D-05): the driver refuses
+them as unknown ops.
+
+**Exit channels.** Exit 0 with the stdout keys above is success; exit 1 is any failure (a
+traceback on stderr). **Exit 3** is the configuration refusal (D-12): before any op but `health`
+runs, `main` checks the environment v1 sees and, when a required key is missing or blank or a
+storage key names a backend the sync cannot read, writes
+`{"error": "v1_not_configured", "missing_keys": [...], "unsupported_keys": [...]}` — key names
+only, never values. `health` builds no facade and creates no working dir (D-14); it reports the
+same check as `configured`, `missing_keys` and `unsupported_keys`.
 
 `ingest` (`@0.2.0`): a `pending_parse` job sets `INPUT_DIR` to `input_dir` and enqueues the staged
 file with no `ids=`, so v1 parses the file's own bytes; v1 mints `doc-<md5(basename)>` and the id
@@ -102,7 +112,8 @@ stem rule maps it back (the staged name is `<document_id><suffix>`, so `Path(fil
 our id; a text-ingested row keeps our id). Processing is restricted to this run's targets by an
 instance-level wrapper around `doc_status.get_docs_by_statuses`; `retry_doc_ids` names the targets
 of a retry. `enqueued` excludes the duplicates v1 recorded under the caller's track id. `usage` is
-`{"llm": ..., "embedding": ...}` from two `TokenTracker`s, never summed.
+`{"llm": ..., "embedding": ...}` from two `TokenTracker`s, never summed. `delete` resolves
+`doc_id` by the same stem rule and returns `usage` the same way (D-13).
 
 State the obligation plainly: changing any identifier or key set named above means minting a new
 `name@version` per CONTRACT §0 and re-running admission for that part. It is never landed as a

@@ -20,6 +20,8 @@ import dataclasses
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from databasise.parts.registry import default_registry
 
 _HERE = Path(__file__).resolve()
@@ -28,7 +30,7 @@ _RULE_DOCUMENT_PATH = _DATABASISE_ROOT / "parts_core" / "lightrag" / "OPAQUE-BOU
 _DRIVER_SCRIPT_PATH = _DATABASISE_ROOT / "foreign" / "v1_corpus_driver_script.py"
 
 _INGEST_NAME_AT_VERSION = "lightrag/full-ingest@0.2.0"
-_DELETE_NAME_AT_VERSION = "lightrag/full-delete@0.1.0"
+_DELETE_NAME_AT_VERSION = "lightrag/full-delete@0.2.0"
 _SYNC_NAME_AT_VERSION = "lightrag/v1-index-sync@0.1.0"
 
 _registry = default_registry()
@@ -154,15 +156,15 @@ PINNED_INGEST_BOUNDARY = {
 }
 
 PINNED_DELETE_BOUNDARY = {
-    "name_at_version": "lightrag/full-delete@0.1.0",
+    "name_at_version": "lightrag/full-delete@0.2.0",
     "kind": "opaque",
     "structural_depth": "opaque",
-    "effects": ("mutates_store", "reads_kv", "reads_graph"),
+    "effects": ("calls_llm", "mutates_store", "reads_kv", "reads_graph"),
     "upstream_ref": "v1/lightrag/lightrag.py",
     "artifact_scope": None,
-    "part_name_at_version": "lightrag/full-delete@0.1.0",
+    "part_name_at_version": "lightrag/full-delete@0.2.0",
     "entry_path": "in-process opaque core, hosted as a subprocess under v1's pinned interpreter",
-    "storage": "machine",
+    "storage": "self-contained",
     "wall_clock_ceiling_seconds": 300.0,
     "wall_clock_ceiling_basis": (
         "v1's own deletion path (adelete_by_doc_id) performs graph and vector surgery plus a "
@@ -186,8 +188,8 @@ PINNED_DELETE_BOUNDARY = {
         (5, "satisfied"),
         (6, "satisfied"),
         (7, "satisfied (machine-side obligation)"),
-        (8, "open — accepted as a scope boundary, not a clean yes"),
-        (9, "partially satisfied — spend always reported as unbudgetable, never estimated"),
+        (8, "machine-side-obligation"),
+        (9, "machine-side-obligation"),
         (10, "satisfied (machine-side obligation)"),
         (11, "satisfied by construction"),
     ),
@@ -245,23 +247,15 @@ PINNED_DRIVER_PROTOCOL = {
     },
     "delete": {
         "stdin": frozenset({"doc_id", "delete_llm_cache", "working_dir"}),
-        "stdout": frozenset({"status", "doc_id", "message", "status_code", "file_path"}),
-    },
-    "entities": {
-        "stdin": frozenset({"doc_id", "working_dir"}),
-        "stdout": frozenset({"chunk_ids", "entities"}),
-    },
-    "entity_info": {
-        "stdin": frozenset({"entity_names", "working_dir"}),
-        "stdout": frozenset({"entities"}),
+        "stdout": frozenset({"status", "doc_id", "message", "status_code", "file_path", "usage"}),
     },
     "status": {
         "stdin": frozenset({"track_id", "limit", "offset", "working_dir"}),
         "stdout": frozenset({"counts", "documents", "total"}),
     },
     "health": {
-        "stdin": frozenset({"working_dir"}),
-        "stdout": frozenset({"working_dir_present", "storages_initialized"}),
+        "stdin": frozenset(),
+        "stdout": frozenset({"configured", "missing_keys", "unsupported_keys"}),
     },
 }
 
@@ -391,17 +385,18 @@ def test_sync_part_boundary_matches_the_pin():
 
 def test_no_corpus_port_is_registered_at_its_old_version():
     names = set(_registry.keys())
-    assert "lightrag/full-ingest@0.1.0" not in names
+    assert not {"lightrag/full-ingest@0.1.0", "lightrag/full-delete@0.1.0"} & names
     assert {_INGEST_NAME_AT_VERSION, _DELETE_NAME_AT_VERSION, _SYNC_NAME_AT_VERSION} <= names
 
 
-def test_the_ingest_record_numbers_contract_section_8_as_contract_does():
+@pytest.mark.parametrize(("pin", "part"), [(PINNED_INGEST_BOUNDARY, _INGEST_PART), (PINNED_DELETE_BOUNDARY, _DELETE_PART)])
+def test_both_port_records_number_contract_section_8_as_contract_does(pin, part):
     """LRAG-12: 3 carries network denial and the spend rule, 8 the TTL, 9 the part_ref counting."""
-    verdicts = dict(PINNED_INGEST_BOUNDARY["verdicts"])
+    verdicts = dict(pin["verdicts"])
     assert verdicts[3] == "satisfied by construction"
     assert verdicts[8] == verdicts[9] == "machine-side-obligation"
-    assert PINNED_INGEST_BOUNDARY["ttl_days"] == 90
-    evidence = {v.condition: v.evidence for v in _INGEST_PART.admission.verdicts}
+    assert pin["ttl_days"] == 90
+    evidence = {v.condition: v.evidence for v in part.admission.verdicts}
     assert "TokenTracker" in evidence[3] and "unbudgetable" in evidence[3]
     assert "ttl_days=90" in evidence[8] and "ledger" in evidence[8]
     assert "part_ref" in evidence[9]
