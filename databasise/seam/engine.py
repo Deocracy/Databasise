@@ -171,6 +171,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import copy
 import hashlib
 import json
 import logging
@@ -365,6 +366,20 @@ _RETRIEVAL_NAMESPACES: dict[str, str] = {
     "lightrag/entity-lookup": _entity_lookup._ENTITIES_NAMESPACE,
     "lightrag/relation-lookup": _relation_lookup._RELATIONSHIPS_NAMESPACE,
 }
+
+
+def _without_recipe_only_nodes(resolved: dict[str, Any]) -> dict[str, Any]:
+    """D-04 / research Q4 (LRAG-19): a deep copy of ``resolved`` without its recipe-only nodes, the
+    nodes named as a value of ``recipe`` that no remaining node depends on. Such a node (LightRAG's
+    ``embedder-index``) is index-side: it stays in the wiring for recipe identity, promotion classing
+    and RUN-11, and is skipped in query runs. ``resolved`` itself is not changed."""
+    run_copy = copy.deepcopy(resolved)
+    nodes = run_copy.get("nodes") or {}
+    recipe_ids = set((run_copy.get("recipe") or {}).values())
+    for node_id in recipe_ids & set(nodes):
+        if not any(node_id in (node.get("deps") or []) for node in nodes.values()):
+            del nodes[node_id]
+    return run_copy
 
 
 def _refuse_empty_namespaces(store_root: Path, workspace: str, resolved: dict[str, Any]) -> None:
@@ -1623,10 +1638,16 @@ class Databasise:
         ``compare`` resolves each selector once and hands that wiring here, so the arm that runs
         is the wiring the pre-check inspected even if an alias is repointed in between. Never
         resolves a selector. ``resolved`` is mutated by the query/token-allowance injection, so
-        pass each resolved wiring to exactly one call."""
+        pass each resolved wiring to exactly one call.
+
+        D-04 / research Q4 (LRAG-19): the run parses, opens stores for and runs
+        :func:`_without_recipe_only_nodes`'s copy, so the index-recipe node is never dispatched on
+        a query; the wiring identities (instance hash, wiring id) and ``provides`` and
+        ``evidence_position`` still come from the full ``resolved``."""
         resolved = _inject_query(resolved, query_object.text or "")
         resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
-        parsed = parse_wiring(resolved, self.registry)
+        run_resolved = _without_recipe_only_nodes(resolved)
+        parsed = parse_wiring(run_resolved, self.registry)
         _refuse_unparseable(parsed)
 
         # 04-04 Task 2 (MACH-11): records every (node_id, "store", store_key) touch the scheduler's
@@ -1638,9 +1659,9 @@ class Databasise:
 
         stores: dict[str, Any] = {}
         try:
-            stores = _build_stores(self.store_root, self.workspace, resolved, into=stores, operation="query")
+            stores = _build_stores(self.store_root, self.workspace, run_resolved, into=stores, operation="query")
             # After _build_stores, so its open errors keep precedence (STOR-02).
-            _refuse_empty_namespaces(self.store_root, self.workspace, resolved)
+            _refuse_empty_namespaces(self.store_root, self.workspace, run_resolved)
             scheduled = await _scheduler.run_wiring(
                 parsed,
                 self.registry,

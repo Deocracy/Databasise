@@ -98,8 +98,7 @@ async def test_exchanging_the_reference_with_debug_returns_the_runs_own_node_ent
         "rerank",
         "assemble",
         "generate",
-        "embedder-index",
-    }
+    }  # no embedder-index: the recipe-only node is skipped in query runs (11-10, LRAG-19)
 
 
 async def test_exchanging_the_reference_without_debug_carries_no_node_level_entry(

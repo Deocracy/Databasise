@@ -1,7 +1,9 @@
 """``lightrag/embedder-index`` (naive arm position 7 of 7) — the port's one index-recipe node
-(criterion 1, D-03; named by ``base.json``'s own ``recipe.embedding`` field). Has no ``deps``, so
-it dispatches on every arm run that keeps it (every resolved arm except ``bypass``, which removes
-it and sets ``recipe: {}``).
+(criterion 1, D-03; named by ``base.json``'s own ``recipe.embedding`` field). Has no ``deps`` and
+nothing depends on it, so it is recipe-only: it stays in every resolved arm except ``bypass`` (which
+removes it and sets ``recipe: {}``), but seam query runs skip it (11-10, D-04, LRAG-19,
+``seam/engine.py`` ``_without_recipe_only_nodes``). Parity runs that execute the wiring directly
+still dispatch it.
 
 D-03: authored and registered with a real body, but does **not** re-index the corpus in this
 phase — its config names an explicit sample of ``(chunk_id, text)`` pairs to embed (never a store

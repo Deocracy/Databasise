@@ -48,6 +48,16 @@ D-16 and LRAG-18):
    `config["query"]`, which no node received before, so a live rerank scored documents against an
    empty query. Rerank stays off in shipped wirings (Phase 8 D-09); this fixes only the empty query.
 
+## Recipe-only nodes (LRAG-19)
+
+A node named as a value of a wiring's `recipe` map, with no other node depending on it, is
+recipe-only: it describes how the index is built, not how a query runs. `embedder-index`
+(`recipe.embedding`) is the one such node here. It stays in `base.json` and in every arm patch
+that keeps it, so recipe identity, promotion classing (`derive_mutation_class`) and RUN-11's
+reproduction test read the same wiring. The seam engine does not dispatch it on queries
+(`seam/engine.py` `_without_recipe_only_nodes`, D-04 / research Q4), so no query trace carries
+the node or any spend from it. The wiring's instance hash is still computed over the full wiring.
+
 ## Naming convention (Task 1 checkpoint)
 
 `docs/system-model/wirings/lightrag-base.json` publishes every component name with **no**
