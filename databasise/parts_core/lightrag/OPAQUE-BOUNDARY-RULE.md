@@ -92,7 +92,7 @@ explicit `part_ref` invocations counted as data, not a promotion trigger
 | --- | --- | --- |
 | `ingest` | `documents`, `track_id`, `working_dir`, `file_paths`, `docs_format`, `input_dir`, `retry_doc_ids` | `track_id`, `enqueued`, `usage` |
 | `delete` | `doc_id`, `delete_llm_cache`, `working_dir` | `status`, `doc_id`, `message`, `status_code`, `file_path`, `usage` |
-| `status` | `track_id`, `limit`, `offset`, `working_dir` | `counts`, `documents`, `total` |
+| `status` | `track_id`, `limit`, `offset`, `working_dir`, `document_id` | `counts`, `documents`, `total` |
 | `health` | (none) | `configured`, `missing_keys`, `unsupported_keys` |
 
 `@0.2.0` removed the two proof-only ops `entities` and `entity_info` (D-05): the driver refuses
@@ -104,7 +104,16 @@ runs, `main` checks the environment v1 sees and, when a required key is missing 
 storage key names a backend the sync cannot read, writes
 `{"error": "v1_not_configured", "missing_keys": [...], "unsupported_keys": [...]}` — key names
 only, never values. `health` builds no facade and creates no working dir (D-14); it reports the
-same check as `configured`, `missing_keys` and `unsupported_keys`.
+same check as `configured`, `missing_keys` and `unsupported_keys`. The status op's torn-read
+refusal is exit 4: when `kv_store_doc_status.json` still does not parse after one retry, it writes
+`{"error": "doc_status_unreadable"}` rather than a partial list.
+
+`status` is facade-free (research Q2): it reads `kv_store_doc_status.json` directly and builds no
+`LightRAG`, so it answers while an ingest holds the working dir. It refuses `limit < 1` or
+`offset < 0` with `InvalidPageRequestError` (exit 1) before any read, filters by `document_id`
+with the id stem rule, and lists each row under our id. This plan's single re-admission covers
+every driver change of the phase: exits 3 and 4, the facade-free `status` and `health`, the page
+refusal, file ingest, the targets filter and the usage report.
 
 `ingest` (`@0.2.0`): a `pending_parse` job sets `INPUT_DIR` to `input_dir` and enqueues the staged
 file with no `ids=`, so v1 parses the file's own bytes; v1 mints `doc-<md5(basename)>` and the id

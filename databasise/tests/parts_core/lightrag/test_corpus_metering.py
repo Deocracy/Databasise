@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from databasise.clients.builder import build_clients
 from databasise.parts.schema import NodeContext
 from databasise.parts_core.declared_only import LIGHTRAG_FULL_DELETE_PART
@@ -22,7 +21,10 @@ from databasise.parts_core.lightrag.full_ingest import full_ingest_body
 from databasise.runner import scheduler as _scheduler
 from databasise.seam.corpus import IngestDocument
 from databasise.seam.engine import Databasise
-from databasise.tests.fixtures.v1_stub_server import real_v1, requires_v1  # noqa: F401 - fixture
+from databasise.tests.fixtures.v1_stub_server import (  # noqa: F401 - fixture
+    real_v1,
+    requires_v1,
+)
 
 # The stub server's per-call chat usage (tests/fixtures/v1_stub_server.py StubModelServer._chat).
 _STUB_PROMPT, _STUB_COMPLETION = 11, 7

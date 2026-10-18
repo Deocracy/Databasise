@@ -21,7 +21,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from databasise.parts.registry import default_registry
 
 _HERE = Path(__file__).resolve()
@@ -250,7 +249,7 @@ PINNED_DRIVER_PROTOCOL = {
         "stdout": frozenset({"status", "doc_id", "message", "status_code", "file_path", "usage"}),
     },
     "status": {
-        "stdin": frozenset({"track_id", "limit", "offset", "working_dir"}),
+        "stdin": frozenset({"track_id", "limit", "offset", "working_dir", "document_id"}),
         "stdout": frozenset({"counts", "documents", "total"}),
     },
     "health": {

@@ -18,12 +18,23 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
-from databasise.foreign import CorpusOpSubprocessError, CorpusOpTimeoutError, run_corpus_op, v1_corpus_adapter
-from databasise.foreign.v1_corpus_adapter import DEFAULT_V1_DRIVER_SCRIPT, DEFAULT_V1_INTERPRETER
+from databasise.foreign import (
+    CorpusOpSubprocessError,
+    CorpusOpTimeoutError,
+    run_corpus_op,
+    v1_corpus_adapter,
+)
+from databasise.foreign.v1_corpus_adapter import (
+    DEFAULT_V1_DRIVER_SCRIPT,
+    DEFAULT_V1_INTERPRETER,
+)
 from databasise.parts.schema import NodeContext
 from databasise.parts_core.lightrag.full_ingest import full_ingest_body
-from databasise.tests.fixtures.v1_stub_server import real_v1, requires_v1, write_env_overlay  # noqa: F401
+from databasise.tests.fixtures.v1_stub_server import (  # noqa: F401
+    real_v1,
+    requires_v1,
+    write_env_overlay,
+)
 
 _OP_TIMEOUT = 120.0
 
@@ -139,6 +150,7 @@ def _raw_driver(job: dict[str, Any], env_path: Path) -> subprocess.CompletedProc
         cwd=str(DEFAULT_V1_INTERPRETER.parents[2]),
         env=env,
         timeout=_OP_TIMEOUT,
+        check=False,  # the exit code is what the tests read
     )
 
 

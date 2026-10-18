@@ -1291,9 +1291,9 @@ class Databasise:
     async def document_counts(self) -> DocumentCounts:
         """The eighth §18 operation (05-04-PLAN.md Task 1, API-06) — a fixed-size record, never a
         per-document list. Calls the same ``"status"`` op ``corpus_status`` calls, with a
-        zero-length page, and reads only its ``counts`` field."""
+        one-row page (the driver refuses ``limit < 1``), and reads only its ``counts`` field."""
         result = await _corpus_op_or_refuse(
-            "status", {"track_id": None, "limit": 0, "offset": 0}, "document_counts", self._v1_working_dir()
+            "status", {"track_id": None, "limit": 1, "offset": 0}, "document_counts", self._v1_working_dir()
         )
         try:
             by_status = dict(result.get("counts") or {})

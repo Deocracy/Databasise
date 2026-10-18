@@ -73,18 +73,20 @@ because a partial-rebuild delete can reach the LLM (D-13). A v1-side status of `
 ``"not_allowed"`` is a *successful* driver run reporting that status — exit 0, letting the machine
 map it; only an exception exits 1.
 
-``op == "status"``'s job carries ``{"track_id": str | None, "limit": int, "offset": int}``
-(05-04-PLAN.md Task 1). Counts are always whole-corpus, read via ``rag.get_processing_status()``
-(never filtered by ``track_id`` — v1 exposes no track-scoped counts). The document list is read
-via ``rag.aget_docs_by_track_id(track_id)`` when a ``track_id`` is given, and otherwise via v1's
-own doc-status store, listing every status via ``rag.doc_status.get_docs_by_statuses(list(DocStatus))``
-— sorted by document id for a deterministic page, then sliced by ``offset``/``limit`` on this
-(the v1) side, so an unbounded list never crosses the pipe. Writes
+``op == "status"``'s job carries ``{"track_id": str | None, "document_id": str | None, "limit": int,
+"offset": int}``. It is **facade-free** (research Q2): it reads ``kv_store_doc_status.json`` with
+``json.loads`` and builds no ``LightRAG`` and opens no Cozo store, so it answers while an ingest
+subprocess holds the working dir (a facade build there fails on the RocksDB lock). It refuses
+``limit < 1`` or ``offset < 0`` with ``InvalidPageRequestError`` (exit 1) before any read. A missing
+dir or file is an empty corpus. A file that does not parse is retried once after 0.2 s, then
+reported on stdout as ``{"error": "doc_status_unreadable"}`` with **exit 4** — never a partial
+list. Counts are whole-corpus by status, never filtered. ``track_id`` keeps the rows recorded under
+it; ``document_id`` keeps the row the id stem rule matches. Each listed ``document_id`` is our id
+(the stem for a file-ingested ``doc-*`` row, else v1's id; ``dup-*`` rows keep theirs). The list is
+sorted by that id and sliced on this side, so an unbounded list never crosses the pipe. Writes
 ``{"counts": {<status>: <int>}, "documents": [{"document_id", "status", "updated_at",
-"error_message"}, ...], "total": int}`` — ``total`` is the full (unsliced) match count for the
-given ``track_id`` filter (or the whole corpus when ``track_id`` is ``None``), and
-``error_message`` is only ever a real value for a document whose status is ``"failed"``, ``None``
-otherwise.
+"error_message"}, ...], "total": int}`` — ``total`` is the unsliced match count, and
+``error_message`` is a real value only for a ``"failed"`` row.
 
 ``op == "health"`` reads no job key and builds no facade, so it creates no working dir (D-14). It
 writes ``{"configured": bool, "missing_keys": [...], "unsupported_keys": [...]}`` from the same
@@ -93,7 +95,8 @@ working dir's existence itself.
 
 A malformed job, a v1-side failure, or any other exception prints a traceback to stderr and exits
 1 — the caller (``v1_corpus_adapter.py``) treats any non-zero exit as a refusal carrying that
-stderr, never as an empty success.
+stderr, never as an empty success. Exits 3 (configuration) and 4 (unreadable doc status) also
+write their JSON reason to stdout, for the adapter to map (11-07).
 """
 
 from __future__ import annotations
@@ -103,6 +106,7 @@ import json
 import os
 import sys
 import traceback
+from collections import Counter
 from functools import partial
 from pathlib import Path
 from typing import Any
@@ -347,46 +351,74 @@ async def _run_delete(job: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+class InvalidPageRequestError(ValueError):
+    """A status page with ``limit < 1`` or ``offset < 0``: a negative slice would silently return
+    the wrong rows, so the driver checks its own limits (LRAG-05)."""
+
+    def __init__(self, limit: int, offset: int) -> None:
+        super().__init__(f"a status page needs limit >= 1 and offset >= 0, got limit={limit} offset={offset}")
+
+
+class DocStatusUnreadableError(RuntimeError):
+    """``kv_store_doc_status.json`` did not parse twice in a row — usually v1 rewriting it during a
+    write. ``main`` maps it to exit 4 with ``{"error": "doc_status_unreadable"}``."""
+
+
+async def _read_doc_status(path: Path) -> dict[str, Any]:
+    """The doc-status rows straight from v1's JSON file: no facade, no Cozo open, so it answers
+    while an ingest holds the working dir. A missing file is an empty corpus; a decode error is
+    retried once after 0.2 s (a torn read), then refused."""
+    for attempt in range(2):
+        try:
+            rows = json.loads(path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return {}
+        except ValueError:
+            rows = None
+        if isinstance(rows, dict):
+            return rows
+        if attempt == 0:
+            await asyncio.sleep(0.2)
+    raise DocStatusUnreadableError(f"{path.name} is unreadable")
+
+
+def _listed_id(v1_id: str, file_path: str | None) -> str:
+    """The id stem rule for listing: a file-ingested ``doc-<md5>`` row shows our id (its staged
+    basename's stem); text rows and ``dup-*`` rows keep v1's id."""
+    if v1_id.startswith("doc-") and file_path and file_path != "unknown_source":
+        return Path(file_path).stem
+    return v1_id
+
+
 async def _run_status(job: dict[str, Any]) -> dict[str, Any]:
-    """A bounded, read-only status probe (05-04-PLAN.md Task 1). Calls only
-    ``rag.get_processing_status``/``rag.aget_docs_by_track_id``/``rag.doc_status.get_docs_by_statuses``
-    — v1's own public read accessors. This branch calls no mutating v1 API — never the write
-    entry points ``_run_ingest``/``_run_delete`` above call — a later edit that adds one here is
-    visibly wrong against this docstring's own stated scope: read-only, always.
-    """
+    """A bounded, read-only, facade-free status probe (Q2): it reads ``kv_store_doc_status.json``
+    and calls no v1 API at all, so it never collides with a write holding the working dir."""
     track_id = job.get("track_id")
+    document_id = job.get("document_id")
     limit = int(job.get("limit", 50))
     offset = int(job.get("offset", 0))
     working_dir = str(job["working_dir"])
+    if limit < 1 or offset < 0:
+        raise InvalidPageRequestError(limit, offset)
 
-    rag = await _build_rag(working_dir)
-    try:
-        counts = await rag.get_processing_status()
-        if track_id:
-            docs_by_id = await rag.aget_docs_by_track_id(track_id)
-        else:
-            docs_by_id = await rag.doc_status.get_docs_by_statuses(list(DocStatus))
-    finally:
-        await rag.finalize_storages()
+    rows = await _read_doc_status(Path(working_dir) / "kv_store_doc_status.json")
+    counts = dict(Counter(str(row.get("status")) for row in rows.values()))
+    if track_id:
+        rows = {k: row for k, row in rows.items() if row.get("track_id") == track_id}
+    if document_id:
+        rows = {k: row for k, row in rows.items() if _our_id_matches(k, row.get("file_path"), str(document_id))}
 
-    document_ids = sorted(docs_by_id.keys())
-    total = len(document_ids)
-    page_ids = document_ids[offset : offset + limit]
-
-    documents: list[dict[str, Any]] = []
-    for document_id in page_ids:
-        doc_status = docs_by_id[document_id]
-        status_value = getattr(doc_status.status, "value", str(doc_status.status))
-        documents.append(
-            {
-                "document_id": document_id,
-                "status": status_value,
-                "updated_at": doc_status.updated_at,
-                "error_message": doc_status.error_msg if status_value == DocStatus.FAILED.value else None,
-            }
-        )
-
-    return {"counts": counts, "documents": documents, "total": total}
+    listed = sorted(rows.items(), key=lambda item: _listed_id(item[0], item[1].get("file_path")))
+    documents = [
+        {
+            "document_id": _listed_id(v1_id, row.get("file_path")),
+            "status": row.get("status"),
+            "updated_at": row.get("updated_at"),
+            "error_message": row.get("error_msg") if row.get("status") == DocStatus.FAILED.value else None,
+        }
+        for v1_id, row in listed[offset : offset + limit]
+    ]
+    return {"counts": counts, "documents": documents, "total": len(listed)}
 
 
 async def _run_health(job: dict[str, Any]) -> dict[str, Any]:
@@ -422,6 +454,10 @@ def main() -> int:
                 )
                 return 3
         result = asyncio.run(_run(job))
+    except DocStatusUnreadableError:
+        traceback.print_exc()
+        sys.stdout.write(json.dumps({"error": "doc_status_unreadable"}))
+        return 4
     except Exception:
         traceback.print_exc()
         return 1
