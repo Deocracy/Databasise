@@ -107,8 +107,9 @@ def test_w2_taint_rule_overrides_stage_nodes_downstream_of_the_opaque_cbm():
 
 
 def test_w3_taint_rule_overrides_stage_nodes_downstream_of_the_opaque_ingest():
-    """``ingest`` writes a `quarantined`-scope artifact at `opaque` depth, which the blast-radius
-    rule permits (only a `shared`-scope write requires `stage`); every real query-side node
+    """``ingest`` (``lightrag/full-ingest@0.2.0`` since 11-03, D-06) writes no artifact — it mutates
+    v1's own working dir — so the blast-radius rule has nothing to judge (`n/a`; before the bump it
+    wrote a `quarantined` artifact, which the rule permitted); every real query-side node
     downstream of ``ingest`` — the entire chain, transitively, from ``keywords`` through
     ``generate`` — taints to `opaque` despite each part's own `stage` structural_depth.
     ``embedder-index`` is the one exception: its own registered Part already declares
@@ -124,7 +125,7 @@ def test_w3_taint_rule_overrides_stage_nodes_downstream_of_the_opaque_ingest():
     expected_modes["ingest"] = "subprocess"
     assert modes == expected_modes
     ingest_row = next(row for row in evidence.rows if row.node_id == "ingest")
-    assert ingest_row.blast_radius == "permitted"
+    assert ingest_row.blast_radius == "n/a"
 
 
 def test_distinct_execution_mode_set_across_all_three_wirings_is_exactly_two_values():
