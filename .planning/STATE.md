@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 11
 current_phase_name: LightRAG Corpus Path
 status: executing
-stopped_at: Completed 11-06-PLAN.md
-last_updated: "2026-10-18T17:40:34.134Z"
+stopped_at: Completed 11-07-PLAN.md
+last_updated: "2026-10-18T18:13:30.923Z"
 last_activity: 2026-10-17
 last_activity_desc: Phase 10 complete, transitioned to Phase 11
-state_head: 438166a91a976fece059d3b15fa504ea79de09fd
+state_head: 9f7205604bb9799d6127ee1911c92e3d3210f1ec
 progress:
   total_phases: 11
   completed_phases: 3
   total_plans: 43
-  completed_plans: 38
+  completed_plans: 39
   percent: 27
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-17 after Phase 10)
 ## Current Position
 
 Phase: 11 (LightRAG Corpus Path) — EXECUTING
-Plan: 7 of 11
+Plan: 8 of 11
 Status: Ready to execute
 Last activity: 2026-10-17 — Phase 10 complete, transitioned to Phase 11
 
@@ -100,6 +100,7 @@ Progress: [███░░░░░░░] 27% (3/11 phases)
 | Phase 11 P03 | 155min | 4 tasks | 24 files |
 | Phase 11 P05 | 50 min | 3 tasks | 16 files |
 | Phase 11 P06 | 35min | 2 tasks | 5 files |
+| Phase 11 P07 | 40min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -169,6 +170,8 @@ Recent decisions affecting current work:
 - [Phase 11]: 11-05: an upload keeps only a v1-pinned suffix (refusal names it only when it is a plain token); the per-workspace inbox file and its __parsed__ copy are removed after a committed run, a non-fault refusal and a delete, and kept and logged after a v1 timeout, subprocess failure, malformed output or cancellation
 - [Phase 11]: 11-06: the D-07 write gate is a threading.Lock per resolved v1 working dir, entered after _build_stores and held through the v1 call, index sync, commit or drop, and inbox cleanup; a second LightRAG write is refused with StoreBusyError(corpus), 409
 - [Phase 11]: 11-06: jobs.db (job_families) records LightRAG jobs before the run and HippoRAG jobs after commit; GET /jobs answers HippoRAG from the record, everything else from v1
+- [Phase 11]: V1NotConfiguredError and CorpusOpBusyError subclass CorpusOpSubprocessError so 11-03 exit-code pins hold; failure_class resolves by exact type name
+- [Phase 11]: Only failure_class V1NotConfigured adds public missing_keys/unsupported_keys to ForeignEngineRefusalError (D-12 single exception)
 
 ### Pending Todos
 
@@ -216,8 +219,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-18T17:40:33.996Z
-Stopped at: Completed 11-06-PLAN.md
+Last session: 2026-10-18T18:13:30.784Z
+Stopped at: Completed 11-07-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

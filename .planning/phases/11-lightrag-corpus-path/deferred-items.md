@@ -16,9 +16,9 @@ Out-of-scope findings logged during execution. Not fixed by the plan that found 
 
 ## From 11-03
 
-- `foreign/v1_corpus_adapter.py`'s comment above `STATUS_WALL_CLOCK_CEILING_SECONDS` still says a
-  status read builds v1's facade. Since 11-03 the status and health ops are facade-free. 11-07
-  edits the adapter; reword it there.
+- RESOLVED in 11-07 (9f72056): `foreign/v1_corpus_adapter.py`'s comment above
+  `STATUS_WALL_CLOCK_CEILING_SECONDS` said a status read builds v1's facade. It now describes the
+  facade-free status and health ops.
 - `seam/engine.py` health keeps the engine key `storages_initialized`, now carrying the driver's
   `configured` fact, and checks `working_dir_present` engine-side. 11-09 renames it to
   `v1_reachable` and adds `engine_reason` (D-14).
