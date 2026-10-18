@@ -1,20 +1,20 @@
 ---
-gsd_state_version: "1.0"
+gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Engine Fixes + Operator Console
 current_phase: 10
 current_phase_name: Stores, Locking & Data Integrity
 status: executing
-stopped_at: Completed 10-06-PLAN.md
-last_updated: "2026-10-18T00:10:41.466Z"
+stopped_at: Completed 10-07-PLAN.md
+last_updated: "2026-10-18T00:30:12.300Z"
 last_activity: 2026-10-17
 last_activity_desc: Phase 9 complete, transitioned to Phase 10
-state_head: f3111fb8b65a6de20d07419dd8c71735afaadf85
+state_head: 782134d8aac08cd0a9508d2e7fcc808d792e7f5d
 progress:
   total_phases: 11
   completed_phases: 2
   total_plans: 32
-  completed_plans: 26
+  completed_plans: 27
   percent: 18
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-17 after Phase 9)
 ## Current Position
 
 Phase: 10 (Stores, Locking & Data Integrity) — EXECUTING
-Plan: 7 of 12
+Plan: 8 of 12
 Status: Executing (10-02 complete)
 Last activity: 2026-10-17 — 10-02 complete (lexical, blob, artifact registry removed, D-15)
 
@@ -87,6 +87,7 @@ Progress: [██░░░░░░░░] 18% (2/11 phases)
 | Phase 10 P04 | 22min | 2 tasks | 5 files |
 | Phase 10 P05 | 35min | 2 tasks | 7 files |
 | Phase 10 P06 | 25min | 2 tasks | 4 files |
+| Phase 10 P07 | 20min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -138,6 +139,7 @@ Recent decisions affecting current work:
 - [Phase 10]: 10-05: vector and graph drop_pending_index_ops delegate to abort_prepared; CozoGraphStore.finalize aborts an open prepared transaction before releasing the shared client
 - [Phase 10]: load_committed caches read-only Faiss snapshots keyed on the stat triples of both files, LRU 32 with per-directory stale-key eviction; a half-written directory gets the same one retry before VectorStoreCorruptedError
 - [Phase 10]: resolve_evidence maps VectorStoreCorruptedError to ForeignEngineRefusalError(failure_class=StoreCorrupted), 502 over REST
+- [Phase 10]: 10-07: health probes are read-only; sqlite uses mode=ro plus immutable=1 when no -wal exists so no sidecar is left behind
 
 ### Pending Todos
 
@@ -182,8 +184,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-18T00:10:41.358Z
-Stopped at: Completed 10-06-PLAN.md
+Last session: 2026-10-18T00:30:12.237Z
+Stopped at: Completed 10-07-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

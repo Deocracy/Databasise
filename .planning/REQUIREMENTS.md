@@ -129,7 +129,7 @@
   - Test: tests/seam/test_evidence_resolve_stores.py: use a store_root that contains only a populated chunks vector namespace. Resolve an EvidenceRef, then assert that no kv.sqlite3 or graph.cozo exists and that the call succeeds while a CozoGraphStore on chunk_entity_relation is held open. Patch faiss.read_index with a counter, make 5 resolve calls, and assert the counter is 1. Rewrite the index, resolve again, and assert the counter is 2. Before the fix, the directories are created, the held lock causes a failure, and the counter is 5 after five calls.
   - Defects: doc-audit-3/D12
   - Owner decision first: Cache key and invalidation for opened FaissVectorStore instances: keyed on namespace path plus file mtime/size, or invalidated explicitly by import_index and ingest flushes.
-- [ ] **STOR-04**: GET /health is read-only and reports store state accurately. On an empty store_root it creates no directories or files (no text_chunks/kv.sqlite3, no chunk_entity_relation/graph.cozo, no Cozo relations) and reports missing stores as absent, not ok. The vector entry opens the modality's vector namespaces and reports false when a Faiss index is corrupted (VectorStoreCorruptedError), instead of always reporting true.
+- [x] **STOR-04**: GET /health is read-only and reports store state accurately. On an empty store_root it creates no directories or files (no text_chunks/kv.sqlite3, no chunk_entity_relation/graph.cozo, no Cozo relations) and reports missing stores as absent, not ok. The vector entry opens the modality's vector namespaces and reports false when a Faiss index is corrupted (VectorStoreCorruptedError), instead of always reporting true.
   - Test: tests/seam/test_health_probe.py. (a) Call engine.health() on a fresh tmp store_root, then assert the tree under store_root is still empty and stores.kv and stores.graph are not reported as true. (b) Build a chunks vector namespace, overwrite vector.faiss with garbage bytes, and assert stores.vector is false. Before the fix, (a) creates both files and reports ok, and (b) reports vector true.
   - Defects: stores/ST-02, stores/ST-17
   - Owner decision first: Which namespaces health probes: LightRAG defaults only, or every namespace of every shipped wiring including hipporag-*. Also whether an absent store on a fresh install counts as 'degraded' or as a separate 'not initialized' state (G-20).
@@ -849,7 +849,7 @@ These fail today.
 | STOR-01 | Phase 10 | Complete |
 | STOR-02 | Phase 10 | Complete |
 | STOR-03 | Phase 10 | Complete |
-| STOR-04 | Phase 10 | Pending |
+| STOR-04 | Phase 10 | Complete |
 | STOR-05 | Phase 10 | Pending |
 | STOR-06 | Phase 10 | Complete |
 | STOR-07 | Phase 10 | Pending |
