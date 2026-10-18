@@ -30,6 +30,11 @@ buffers:
 Reads consult these buffers FIRST (read-your-writes before flush). All four are cleared on
 ``index_done_callback`` (commit) or ``drop_pending_index_ops`` (abort).
 
+Edges stay consistent with nodes (Phase 10 D-10, matching v1's cascade and networkx): ``delete_node``
+drops the node's buffered edges at once, marks its disk edges removed, and the flush cascades
+``:rm edges`` before ``:rm nodes`` in the same transaction; ``upsert_edge`` creates a missing
+endpoint with ``{}`` attributes. No path leaves a dangling edge.
+
 ``pycozo``'s ``Client.run()`` is synchronous; every call is dispatched via
 ``asyncio.get_running_loop().run_in_executor(None, ...)`` so it never blocks the runner's event
 loop — plan 01-08's structured-concurrency plan depends on this.
@@ -221,6 +226,14 @@ class CozoGraphStore(StorageNameSpace):
     # Reads — buffer consulted first (read-your-writes before flush)      #
     # ------------------------------------------------------------------ #
 
+    def _edge_hidden(self, key: tuple[str, str]) -> bool:
+        """A disk edge is hidden once removed, or once either endpoint is pending removal (D-10)."""
+        return (
+            key in self._pending_edge_rms
+            or key[0] in self._pending_node_rms
+            or key[1] in self._pending_node_rms
+        )
+
     async def has_node(self, node_id: str) -> bool:
         if node_id in self._pending_node_rms:
             return False
@@ -241,7 +254,7 @@ class CozoGraphStore(StorageNameSpace):
 
     async def has_edge(self, source_node_id: str, target_node_id: str) -> bool:
         key = _canonical_edge_key(source_node_id, target_node_id)
-        if key in self._pending_edge_rms:
+        if self._edge_hidden(key):
             return False
         if key in self._pending_edge_puts:
             return True
@@ -253,7 +266,7 @@ class CozoGraphStore(StorageNameSpace):
 
     async def get_edge(self, source_node_id: str, target_node_id: str) -> dict[str, Any] | None:
         key = _canonical_edge_key(source_node_id, target_node_id)
-        if key in self._pending_edge_rms:
+        if self._edge_hidden(key):
             return None
         if key in self._pending_edge_puts:
             return dict(self._pending_edge_puts[key])
@@ -273,7 +286,7 @@ class CozoGraphStore(StorageNameSpace):
             "?[src, tgt] := *edges{src, tgt}, src = $id or tgt = $id", {"id": node_id}
         )
         db_keys = {_canonical_edge_key(r[0], r[1]) for r in db_rows}
-        effective = (db_keys - self._pending_edge_rms) | {
+        effective = {k for k in db_keys if not self._edge_hidden(k)} | {
             k for k in self._pending_edge_puts if node_id in k
         }
         return len(effective)
@@ -292,10 +305,10 @@ class CozoGraphStore(StorageNameSpace):
             "?[src, tgt, attrs] := *edges{src, tgt, attrs}, src = $id or tgt = $id", {"id": node_id}
         )
         effective: dict[tuple[str, str], dict[str, Any]] = {
-            (r[0], r[1]): _attrs_to_dict(r[2]) for r in db_rows
+            (r[0], r[1]): _attrs_to_dict(r[2])
+            for r in db_rows
+            if not self._edge_hidden((r[0], r[1]))
         }
-        for key in self._pending_edge_rms:
-            effective.pop(key, None)
         for key, attrs in self._pending_edge_puts.items():
             if node_id in key:
                 effective[key] = dict(attrs)
@@ -325,10 +338,10 @@ class CozoGraphStore(StorageNameSpace):
 
         edge_rows = await self._run("?[src, tgt, attrs] := *edges{src, tgt, attrs}", {})
         effective_edges: dict[tuple[str, str], dict[str, Any]] = {
-            (r[0], r[1]): _attrs_to_dict(r[2]) for r in edge_rows
+            (r[0], r[1]): _attrs_to_dict(r[2])
+            for r in edge_rows
+            if not self._edge_hidden((r[0], r[1]))
         }
-        for key in self._pending_edge_rms:
-            effective_edges.pop(key, None)
         for key, attrs in self._pending_edge_puts.items():
             effective_edges[key] = dict(attrs)
 
@@ -369,6 +382,9 @@ class CozoGraphStore(StorageNameSpace):
     async def upsert_edge(
         self, source_node_id: str, target_node_id: str, edge_data: dict[str, Any]
     ) -> None:
+        for endpoint in (source_node_id, target_node_id):
+            if not await self.has_node(endpoint):  # a pending put answers without a query
+                await self.upsert_node(endpoint, {})
         key = _canonical_edge_key(source_node_id, target_node_id)
         self._pending_edge_rms.discard(key)
         self._pending_edge_puts[key] = dict(edge_data)
@@ -376,6 +392,13 @@ class CozoGraphStore(StorageNameSpace):
     async def delete_node(self, node_id: str) -> None:
         self._pending_node_puts.pop(node_id, None)
         self._pending_node_rms.add(node_id)
+        for key in [k for k in self._pending_edge_puts if node_id in k]:
+            del self._pending_edge_puts[key]
+        # Mark the disk edges removed too, so re-creating the node does not bring them back.
+        db_rows = await self._run(
+            "?[src, tgt] := *edges{src, tgt}, src = $id or tgt = $id", {"id": node_id}
+        )
+        self._pending_edge_rms.update((r[0], r[1]) for r in db_rows)
 
     async def delete_edge(self, source_node_id: str, target_node_id: str) -> None:
         key = _canonical_edge_key(source_node_id, target_node_id)
@@ -419,6 +442,10 @@ class CozoGraphStore(StorageNameSpace):
                     {"rows": rows},
                 )
             for node_id in node_rms:
+                mt.run(  # D-10 cascade (research R9): incident edges go in the same transaction
+                    "?[src, tgt] := *edges{src, tgt}, src = $id or tgt = $id :rm edges {src, tgt}",
+                    {"id": node_id},
+                )
                 mt.run("?[id] <- [[$id]] :rm nodes {id}", {"id": node_id})
             for src, tgt in edge_rms:
                 mt.run("?[src, tgt] <- [[$s, $t]] :rm edges {src, tgt}", {"s": src, "t": tgt})
