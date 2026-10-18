@@ -1086,7 +1086,8 @@ class Databasise:
 
         Phase 10 D-08 (STOR-07): the kv and graph stores come from the resolved delete wiring's
         ``store_namespaces``. The delete's staged store writes commit, all stores or none, only when
-        the run is not refused and its status is not ``fail``; otherwise they are dropped.
+        the run is not refused and its status is ``success`` or ``not_found``; otherwise they are
+        dropped.
 
         A document v1 itself reports ``not_found`` (already deleted, or never ingested) is a
         normal outcome carried in ``DeletionOutcome.status`` — never a refusal. Only a
@@ -1149,10 +1150,12 @@ class Databasise:
             except ForeignEngineRefusalError:
                 await _drop_pending(stores)
                 raise
-            if result.get("status") == "fail":
-                await _drop_pending(stores)
-            else:
+            # Phase 10 review WR-03: only an explicit success or not_found commits; not_allowed, fail
+            # and any other status is a refusal that must not persist the staged deletes.
+            if result.get("status") in ("success", "not_found"):
                 await _commit_all(stores, "delete", self.store_root)
+            else:
+                await _drop_pending(stores)
         finally:
             for store in stores.values():
                 await store.finalize()
