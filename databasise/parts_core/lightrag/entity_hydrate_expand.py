@@ -41,6 +41,14 @@ _NAME_AT_VERSION = "lightrag/entity-hydrate-expand@0.1.0"
 async def _entity_hydrate_expand_body(ctx: NodeContext) -> dict[str, Any]:
     seeds = list(ctx.inputs["entity-lookup"]["items"])
     graph = ctx.stores["graph"]
+    # One node_degree lookup per distinct node per query (LRAG-18, T-11-08), shared by seed
+    # hydration and edge ranking.
+    degrees: dict[str, int] = {}
+
+    async def degree_of(name: str) -> int:
+        if name not in degrees:
+            degrees[name] = await graph.node_degree(name)
+        return degrees[name]
 
     hydrated: list[dict[str, Any]] = []
     missing: list[dict[str, Any]] = []
@@ -64,7 +72,7 @@ async def _entity_hydrate_expand_body(ctx: NodeContext) -> dict[str, Any]:
                 {"entity_name": entity_name, "missing": True, "derived_from": [seed.get("id")]}
             )
             continue
-        degree = await graph.node_degree(entity_name)
+        degree = await degree_of(entity_name)
         hydrated.append(
             {**node, "entity_name": entity_name, "rank": degree, "derived_from": [seed.get("id")]}
         )
@@ -80,7 +88,7 @@ async def _entity_hydrate_expand_body(ctx: NodeContext) -> dict[str, Any]:
             seen_edges.add(key)
             attrs = dict(edge["attrs"])
             attrs.setdefault("weight", 1.0)
-            edge_degree = await graph.node_degree(key[0]) + await graph.node_degree(key[1])
+            edge_degree = await degree_of(key[0]) + await degree_of(key[1])
             relations.append(
                 {
                     "src_tgt": list(key),
@@ -90,7 +98,17 @@ async def _entity_hydrate_expand_body(ctx: NodeContext) -> dict[str, Any]:
                 }
             )
 
+    # v1 sorts one-hop relations by (rank, weight) descending (operate.py:5259-5261); the stable
+    # sort keeps edge order on ties. Cozo returns weights as strings, so compare them as floats.
+    relations.sort(key=lambda r: (r["rank"], _as_float(r.get("weight"))), reverse=True)
     return {"entities": hydrated, "relations": relations, "missing_seeds": missing}
+
+
+def _as_float(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 LIGHTRAG_ENTITY_HYDRATE_EXPAND_PART = Part(

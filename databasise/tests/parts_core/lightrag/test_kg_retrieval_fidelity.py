@@ -190,3 +190,49 @@ async def test_empty_ll_list_gives_no_ll_vector_and_entity_lookup_skips_the_stor
     )
     assert result["items"] == []
     assert vectors.queries == []
+
+
+# --------------------------------------------------------------------------------------------- #
+# entity-hydrate-expand: v1's (rank, weight) order and one degree lookup per node
+# --------------------------------------------------------------------------------------------- #
+
+
+class _CountingGraph:
+    """A graph stub counting node_degree calls per node. Edge endpoints are canonically ordered,
+    as the real store returns them; weights are strings, as Cozo returns them."""
+
+    _DEGREES = {"A": 3, "B": 2, "C": 2, "D": 4}
+    _EDGES = [("A", "B", "1.0"), ("A", "C", "5.0"), ("A", "D", "1.0")]
+
+    def __init__(self) -> None:
+        self.degree_calls: dict[str, int] = {}
+
+    async def get_node(self, name: str) -> dict[str, Any] | None:
+        return {"entity_type": "thing"} if name in self._DEGREES else None
+
+    async def node_degree(self, name: str) -> int:
+        self.degree_calls[name] = self.degree_calls.get(name, 0) + 1
+        return self._DEGREES[name]
+
+    async def get_node_edges(self, name: str) -> list[dict[str, Any]]:
+        return [
+            {"src": src, "tgt": tgt, "attrs": {"weight": weight}}
+            for src, tgt, weight in self._EDGES
+            if name in (src, tgt)
+        ]
+
+
+async def test_one_hop_relations_sort_by_rank_then_weight_descending_with_one_degree_per_node():
+    from databasise.parts_core.lightrag.entity_hydrate_expand import (
+        LIGHTRAG_ENTITY_HYDRATE_EXPAND_PART,
+    )
+
+    graph = _CountingGraph()
+    seeds = [{"id": "e-a", "entity_name": "A"}, {"id": "e-b", "entity_name": "B"}]
+    result = await LIGHTRAG_ENTITY_HYDRATE_EXPAND_PART.body(
+        _ctx("entity-hydrate-expand", inputs={"entity-lookup": {"items": seeds}}, stores={"graph": graph})
+    )
+
+    # v1 operate.py:5259-5261: A-D (rank 7), A-C (rank 5, weight 5), A-B (rank 5, weight 1).
+    assert [tuple(r["src_tgt"]) for r in result["relations"]] == [("A", "D"), ("A", "C"), ("A", "B")]
+    assert graph.degree_calls == {"A": 1, "B": 1, "C": 1, "D": 1}
