@@ -114,6 +114,13 @@ class _StoreProxy:
     """A part's view of one store (D-09). Mode ``"r"`` exposes only the kind's read allowlist;
     mode ``"w"`` exposes everything except the engine-only lifecycle methods. ``select`` returns
     the selected namespace wrapped in a proxy of the same kind and mode.
+
+    **Threat model (iteration-2 WR-04, D-09 intent: misuse prevention).** The proxy stops accidental
+    misuse by admitted, in-process parts: a part cannot reach a lifecycle method, a private store
+    attribute or a write on a read handle by the ordinary route. It is not a sandbox against hostile
+    code. Python offers no seal against code that tries (``proxy.<method>.__self__``,
+    ``__globals__``, ``object.__setattr__``, the public ``unwrap_store_handle``), and those routes are
+    deliberately not chased. Untrusted part code needs a process boundary, not this class.
     """
 
     __slots__ = ("_target", "_kind", "_mode", "_declared")
@@ -162,7 +169,8 @@ class _StoreProxy:
 def unwrap_store_handle(proxy: Any) -> Any:
     """Return the raw store behind a capability proxy. For tests and engine only: a part body must
     never call this, because the raw store carries the lifecycle and writer methods the proxy
-    withholds."""
+    withholds. Nothing enforces that: the proxy guards against accidental misuse by admitted,
+    in-process parts, not against hostile code (see :class:`_StoreProxy`, iteration-2 WR-04)."""
     return object.__getattribute__(proxy, "_target")
 
 

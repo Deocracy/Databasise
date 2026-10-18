@@ -254,6 +254,10 @@ class _ScopedStoresView:
     node the writable one. A store key with no matching declared effect raises
     :class:`UndeclaredEffectError`, exactly as calling ``.require()`` directly with an
     undeclared effect would.
+
+    Threat model (iteration-2 WR-04): the view and the proxies it hands out guard against accidental
+    misuse by admitted, in-process parts. The raw stores stay in ordinary attributes
+    (``_scoped``, ``_raw_stores``) that hostile code could read; this is not a sandbox.
     """
 
     def __init__(
