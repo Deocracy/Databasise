@@ -787,6 +787,20 @@ class StoreBusyError(SeamRefusalError):
         )
 
 
+class UnsupportedUploadTypeError(SeamRefusalError):
+    """Raised by ``Databasise.ingest`` for a raw upload whose ``file_name`` has no suffix, or one
+    v1's default parser does not handle, before anything is written (11-05, D-09). REST answers 422.
+    ``suffix`` is the lower-cased suffix, or ``""`` when there is none or it is not a plain token;
+    no path or file name is ever named."""
+
+    def __init__(self, *, suffix: str):
+        self.suffix = suffix
+        super().__init__(
+            f"UnsupportedUploadTypeError: upload type {suffix or '(no suffix)'!r} is not accepted; "
+            "upload a text, markup, source-code, PDF or office document with its usual suffix"
+        )
+
+
 class UnparseableWiringError(SeamRefusalError):
     """Raised by ``Databasise.query``/``ingest``/``delete_document`` (and every path through
     ``_execute_resolved``) when the resolved wiring's parse report is not ok, before any store is
@@ -829,6 +843,7 @@ __all__ = [
     "MutableStoreComparisonExcludedError",
     "ForeignEngineRefusalError",
     "StoreBusyError",
+    "UnsupportedUploadTypeError",
     "UnparseableWiringError",
     "EmptyPromotionTraceIdsError",
     "DisagreeingPromotionTraceIdsError",

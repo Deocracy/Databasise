@@ -71,6 +71,7 @@ from databasise.seam.refusals import (
     PageSizeExceededError,
     SeamRefusalError,
     StoreBusyError,
+    UnsupportedUploadTypeError,
     ActiveGenerationRetirementError,
     TombstonedGenerationError,
     UncalibratedFloorRefusalError,
@@ -435,6 +436,7 @@ _REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
         EvidenceRef(ref="missing", namespace="chunks", kind="text_chunk")
     ),
     StoreBusyError: lambda: StoreBusyError(store_kind="graph"),
+    UnsupportedUploadTypeError: lambda: UnsupportedUploadTypeError(suffix=".xyz"),
     UnparseableWiringError: lambda: UnparseableWiringError(violations=["unwired-store-effect"]),
     ForeignEngineRefusalError: lambda: ForeignEngineRefusalError(
         operation="ingest", cause=RuntimeError("stub subprocess failure")

@@ -196,6 +196,7 @@ from databasise.seam.corpus import (
     JobStatus,
     Page,
     generated_on_disk_name,
+    upload_suffix,
 )
 from databasise.seam.envelope import PromotionResult, ResponseEnvelope, SeamEvent
 from databasise.seam.evidence import (
@@ -294,6 +295,16 @@ def _log_staged_left(staged: Path) -> None:
     """09 REVIEW WR-04: a fault after the v1 run started leaves the staged upload in place (v1 may
     hold its path). Logged once, server-side, so an operator can reap it."""
     logger.warning("staged upload left in place after an ingest fault: %s", staged)
+
+
+def _remove_staged(staged: Path) -> None:
+    """11-05 (D-09, LRAG-09): remove a staged upload and the copy v1 moved to ``__parsed__/`` after
+    parsing it. A removal error is logged and never fails the operation that already ran."""
+    try:
+        for path in (staged, staged.parent / "__parsed__" / staged.name):
+            path.unlink(missing_ok=True)
+    except OSError:
+        logger.exception("could not remove the staged upload %s", staged)
 
 
 # v1's own docs_format vocabulary (lightrag.constants.FULL_DOCS_FORMAT_RAW/_PENDING_PARSE),
@@ -796,6 +807,11 @@ class Databasise:
         Not created here; v1 creates it on its first write."""
         return self.store_root / self.workspace / "lightrag-v1"
 
+    def _inbox(self) -> Path:
+        """11-05 (D-09, LRAG-09): this workspace's raw-upload inbox, v1's ``INPUT_DIR``. v1 moves a
+        parsed source into ``<inbox>/__parsed__/``. Not created here."""
+        return self.store_root / self.workspace / "corpus-inbox"
+
     async def query(
         self,
         query_object: QueryObject,
@@ -918,21 +934,20 @@ class Databasise:
         always has.
 
         Both of ``IngestDocument``'s two input shapes (structured text, raw bytes) take this
-        identical path (Task 3) — one operation, two input shapes, never two execution paths. A
-        raw payload's bytes are written server-side under ``store_root/corpus-inbox/`` using
-        ``generated_on_disk_name`` (never the caller's own ``document_id`` string joined directly,
-        and never ``file_name`` at all) immediately before the run, by exclusive create: an existing
-        file for that id is refused as ``DuplicateDocumentIdError`` (delete the document first to
-        re-upload it; ``delete_document`` removes the staged file). The staged file is removed again
-        only when the write itself fails, before the v1 subprocess starts. After that it stays, on
-        success and on timeout, cancellation or malformed output alike, because v1 may hold its path.
-        Limit: a staged id is unique per store, not per workspace. An owner record at
-        ``store_root/corpus-inbox-owners/`` names the uploading workspace, so another workspace's
-        ``delete_document`` never removes this file.
-        Accepted limit (09 REVIEW WR-02): a crash between the exclusive create and the record write
-        leaves a staged file with no record. v1 never saw it, so a delete answers ``not_found`` and
-        does not release it; an operator removes the file by hand. Writing the record first would let
-        a losing duplicate overwrite the live upload's record, which is worse.
+        identical path (Task 3) — one operation, two input shapes, never two execution paths.
+
+        **Staging (11-05, D-09, LRAG-08/09).** A raw upload's ``file_name`` must carry a suffix
+        ``upload_suffix`` accepts, else ``UnsupportedUploadTypeError`` before anything is written.
+        The bytes are staged immediately before the run, by exclusive create, in this workspace's
+        inbox ``<store_root>/<workspace>/corpus-inbox/`` as
+        ``generated_on_disk_name(document_id, suffix)``: never the caller's name, so no ``../`` and
+        no v1 ``[hint]`` reaches disk. The inbox is v1's ``INPUT_DIR``, and v1 maps the row back to
+        ``document_id`` through the file stem. A file already staged for that id (a run in flight,
+        or one kept after a fault) is refused as ``DuplicateDocumentIdError``. After a committed run,
+        and after a refusal other than a v1 timeout, subprocess failure or malformed output, the
+        staged file and v1's ``__parsed__/`` copy are removed. On those three faults, or a
+        cancellation, the file stays and is logged once: v1 may still list the document, and a
+        retry needs the source. ``delete_document`` removes whatever is left for the id.
         """
         # D-12: only None is absent; a caller-supplied '' reaches the token check and is refused.
         document_id = document.document_id if document.document_id is not None else uuid.uuid4().hex
@@ -956,6 +971,8 @@ class Databasise:
             # while still reporting a normal-looking success. Refuse by name before any node
             # config is stamped, rather than let that silent data loss through.
             raise NoRawUploadPathForModalityError(operation="ingest")
+        # 11-05 (D-09): before parse and _build_stores, which writes, so a refusal writes nothing.
+        suffix = upload_suffix(document.file_name) if document.raw is not None else None
 
         node_config = dict(resolved["nodes"][target_node_id].get("config") or {})
         # 06-10-PLAN.md (Rule 3 deviation): stamped under both "id" (lightrag/full-ingest's own
@@ -967,7 +984,7 @@ class Databasise:
         # parse_wiring and _build_stores can no longer fail, so a pre-run failure leaves no file.
         staged: Path | None = None
         if document.raw is not None:
-            on_disk_path = self.store_root / "corpus-inbox" / generated_on_disk_name(document_id)
+            on_disk_path = self._inbox() / generated_on_disk_name(document_id, suffix)
             staged = on_disk_path
             node_config["documents"] = [{"id": document_id, "document_id": document_id, "text": ""}]
             node_config["file_paths"] = [str(on_disk_path)]
@@ -1083,13 +1100,16 @@ class Databasise:
             enqueued = result.get("enqueued")
             if enqueued is None:
                 enqueued = 1
-            return IngestJob(
+            job = IngestJob(
                 job_id=str(result.get("track_id") or track_id), enqueued=int(enqueued), seam_events=seam_events
             )
         except _MALFORMED_RESULT as exc:  # 09 REVIEW WR-02: malformed driver output is a 502, as on the read routes
             if wrote_staged:
                 _log_staged_left(staged)
             raise _foreign_fault("ingest", exc, failure_class="MalformedDriverOutput") from exc
+        if wrote_staged:
+            _remove_staged(staged)  # 11-05 (D-09): v1 has read it; the driver waits for the pipeline
+        return job
 
     def _staged_owner_path(self, document_id: str) -> Path:
         return self.store_root / "corpus-inbox-owners" / generated_on_disk_name(document_id)

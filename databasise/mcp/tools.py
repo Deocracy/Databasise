@@ -105,7 +105,10 @@ class IngestToolArgs(_ToolArgs):
     document_id: str | None = None
     file_name: str | None = Field(
         default=None,
-        description="Advisory only and not stored: discarded at ingest, never used as a path or a citation name.",
+        description=(
+            "Advisory only and not stored: for a raw upload only its validated suffix is kept, to choose "
+            "v1's parser; the name is never used as a path or a citation name."
+        ),
     )
     raw_base64: str | None = None
     content_type: str | None = Field(

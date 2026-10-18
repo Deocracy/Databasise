@@ -5,11 +5,11 @@
 
 ``IngestDocument`` accepts exactly one of two input shapes — ``text`` (a structured, already-
 extracted payload) or ``raw``+``content_type`` (an opaque byte blob v1's own parser handles) —
-never both, never neither. ``file_name`` and ``content_type`` are not stored: they are discarded at
-ingest and neither is ever used to build a filesystem path or a citation name (carrying them into v1
-citation metadata is deferred to the LightRAG write-path work, M-04, Phase 11).
+never both, never neither. ``file_name`` and ``content_type`` are not stored: of ``file_name`` only
+the suffix validated by ``upload_suffix`` is kept, to choose v1's parser (11-05, D-09), and neither
+is ever used to build a filesystem path or a citation name.
 ``generated_on_disk_name`` is what makes that true structurally: the on-disk name is derived only
-from a ``document_id`` (server-minted or caller-supplied), refusing any id that is not a non-empty
+from a ``document_id`` (server-minted or caller-supplied) plus that validated suffix, refusing any id that is not a non-empty
 token of letters, digits, ``_`` or ``-`` (``InvalidDocumentIdError``) -- the same bare-token
 discipline ``databasise/namespaces.py``'s ``_NAMESPACE_TOKEN_RE`` enforces for a namespace
 directory name, matched with ``fullmatch`` so a trailing newline is not accepted.
@@ -28,6 +28,7 @@ or a graph node payload.
 from __future__ import annotations
 
 import re
+from pathlib import PurePosixPath
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -40,6 +41,7 @@ from databasise.seam.refusals import (
     OversizedDocumentError,
     PageBoundsError,
     PageSizeExceededError,
+    UnsupportedUploadTypeError,
 )
 
 # API-06: the hard cap on any single page this seam will ever return — a caller requesting more
@@ -63,6 +65,19 @@ _DOCUMENT_ID_TOKEN_RE = re.compile(r"[A-Za-z0-9_-]+")
 
 _ON_DISK_SUFFIX = ".bin"
 
+# 11-05 (D-09): the upload types v1's default (legacy) parser handles, copied from
+# v1/lightrag/parser/registry.py's _LEGACY_SUFFIXES (lightrag cannot be imported here);
+# tests/seam/test_upload_suffixes.py pins the copy to that literal with ast.
+ACCEPTED_UPLOAD_SUFFIXES: frozenset[str] = frozenset(
+    {
+        ".bat", ".c", ".conf", ".cpp", ".css", ".csv", ".docx", ".epub", ".go", ".h", ".hpp", ".htm",
+        ".html", ".ini", ".java", ".js", ".json", ".less", ".log", ".md", ".mdx", ".odt", ".pdf",
+        ".php", ".pptx", ".properties", ".py", ".rb", ".rtf", ".scss", ".sh", ".sql", ".swift",
+        ".tex", ".ts", ".txt", ".xlsx", ".xml", ".yaml", ".yml",
+    }
+)  # fmt: skip
+_SUFFIX_RE = re.compile(r"\.[a-z0-9]{1,8}")
+
 
 class IngestDocument(BaseModel):
     """The caller's ingest input. Exactly one of ``text``/``raw`` must be set — never both, never
@@ -72,8 +87,9 @@ class IngestDocument(BaseModel):
     subprocess is launched. An empty payload is refused as ``EmptyIngestDocumentError`` (SEAM-09,
     D-08): whitespace-only ``text`` counts as empty; ``raw`` bytes are checked only for length 0.
 
-    ``file_name`` and ``content_type`` are not stored: both are discarded at ingest (D-11). Carrying
-    them into v1 citation metadata is deferred to the LightRAG write-path work (M-04, Phase 11).
+    ``file_name`` and ``content_type`` are not stored (D-11). For a ``raw`` payload only the suffix
+    of ``file_name`` that ``upload_suffix`` validates is kept, to choose v1's parser (11-05, D-09);
+    the name itself is never used as a path or a citation name.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -82,7 +98,10 @@ class IngestDocument(BaseModel):
     document_id: str | None = None
     file_name: str | None = Field(
         default=None,
-        description="Advisory only and not stored: discarded at ingest, never used as a path or a citation name.",
+        description=(
+            "Advisory only and not stored: for a raw upload only its validated suffix is kept, to choose "
+            "v1's parser; the name is never used as a path or a citation name."
+        ),
     )
     raw: bytes | None = None
     content_type: str | None = Field(
@@ -310,16 +329,30 @@ class HealthReport(BaseModel):
     clients: dict[str, bool]
 
 
-def generated_on_disk_name(document_id: str) -> str:
+def generated_on_disk_name(document_id: str, suffix: str = _ON_DISK_SUFFIX) -> str:
     """The on-disk file name for a raw-upload document, built only from ``document_id`` (server-
-    minted or caller-supplied) and a fixed suffix. Raises :class:`InvalidDocumentIdError` for any
-    ``document_id`` that is not a non-empty token of letters, digits, ``_`` or ``-`` -- no path
-    separator, no dot, no newline, so the returned name can never resolve outside the directory it
-    is joined under.
+    minted or caller-supplied) and ``suffix`` (``.bin`` by default; the engine passes the value
+    ``upload_suffix`` returned). Raises :class:`InvalidDocumentIdError` for any ``document_id`` that
+    is not a non-empty token of letters, digits, ``_`` or ``-`` -- no path separator, no dot, no
+    newline, so the returned name can never resolve outside the directory it is joined under.
     """
     if not _DOCUMENT_ID_TOKEN_RE.fullmatch(document_id):
         raise InvalidDocumentIdError(document_id=document_id)
-    return f"{document_id}{_ON_DISK_SUFFIX}"
+    return f"{document_id}{suffix}"
+
+
+def upload_suffix(file_name: str | None) -> str:
+    """11-05 (D-09, T-11-09): the lower-cased suffix of ``file_name``'s basename (backslashes read
+    as separators, so ``..\\a.PDF`` gives ``.pdf`` and ``a.[mineru].pdf`` gives ``.pdf``, dropping
+    v1's parser hint). Raises :class:`UnsupportedUploadTypeError` unless it is a plain
+    ``\\.[a-z0-9]{1,8}`` token in :data:`ACCEPTED_UPLOAD_SUFFIXES`; the refusal names the suffix
+    only when it is such a token, otherwise ``""``, so no caller text is echoed."""
+    suffix = PurePosixPath((file_name or "").replace("\\", "/")).suffix.lower()
+    if not _SUFFIX_RE.fullmatch(suffix):
+        raise UnsupportedUploadTypeError(suffix="")
+    if suffix not in ACCEPTED_UPLOAD_SUFFIXES:
+        raise UnsupportedUploadTypeError(suffix=suffix)
+    return suffix
 
 
 __all__ = [
@@ -338,4 +371,6 @@ __all__ = [
     "DocumentCounts",
     "HealthReport",
     "generated_on_disk_name",
+    "ACCEPTED_UPLOAD_SUFFIXES",
+    "upload_suffix",
 ]
