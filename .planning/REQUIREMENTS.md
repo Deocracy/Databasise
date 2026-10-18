@@ -202,7 +202,7 @@
   - Test: One test module for v1_corpus_adapter: a fake driver writing >2000 chars of log then a final 'ValueError: boom' asserts 'ValueError: boom' is in the error; a fake driver printing non-JSON asserts the named refusal; GET /corpus with a failing driver asserts a structured refusal body; POST /documents with a failing driver asserts the non-operator 422 body does not contain the stderr path/URL string; GET /corpus?limit=-1 asserts 422, and the driver status op called directly with limit=-1 asserts a refusal, not total-1 entries. Fails today on head-slicing (line 64), unguarded json.loads (line 149), raw cause passthrough and the limit-only-upper-bound Page validator (corpus.py:133-138).
   - Defects: foreign/FOR-03, foreign/FOR-04, foreign/FOR-07, foreign/FOR-09, foreign/FOR-15
   - Owner decision first: Auth/operator scope: who may see the full v1 stderr cause (operator-only field, debug flag, or server log only).
-- [ ] **LRAG-06**: When the v1 configuration keys required by the driver (EMBEDDING_DIM, EMBEDDING_MODEL, EMBEDDING_BINDING_HOST, EMBEDDING_BINDING_API_KEY, LIGHTRAG_KV_STORAGE/GRAPH_STORAGE/VECTOR_STORAGE/DOC_STATUS_STORAGE) are missing from the process environment, v1/.env.parity and v1/.env, ingest/delete/status/counts/jobs return a named 'v1 not configured' refusal listing the missing key names (never values), and /health reports degraded with that reason, instead of a KeyError traceback, a bare 500 or reasonless degraded.
+- [x] **LRAG-06**: When the v1 configuration keys required by the driver (EMBEDDING_DIM, EMBEDDING_MODEL, EMBEDDING_BINDING_HOST, EMBEDDING_BINDING_API_KEY, LIGHTRAG_KV_STORAGE/GRAPH_STORAGE/VECTOR_STORAGE/DOC_STATUS_STORAGE) are missing from the process environment, v1/.env.parity and v1/.env, ingest/delete/status/counts/jobs return a named 'v1 not configured' refusal listing the missing key names (never values), and /health reports degraded with that reason, instead of a KeyError traceback, a bare 500 or reasonless degraded.
   - Test: Test runs the adapter with an empty env overlay and a scrubbed environment; assert GET /corpus and /corpus/counts return the named refusal naming the missing keys, POST /documents returns it (not ForeignEngineRefusalError with a KeyError traceback), and GET /health includes the reason. Fails today with a 500 and a reasonless 'degraded'.
   - Defects: foreign/FOR-10, doc-audit-4/D5
   - Phase 11 D-12 exception (owner-delegated 2026-10-17): this refusal may name the missing configuration keys, never their values; it narrowly amends Phase 9 D-04 (no env-var names in refusal bodies) for configuration refusals only.
@@ -228,10 +228,10 @@
 - [x] **LRAG-12**: The full-ingest and full-delete admission records number CONTRACT §8 conditions correctly: network-namespace isolation and token unbudgetability are recorded under condition 3, condition 8 records the ~90-day TTL with ledger renewal, and condition 9 records part_ref invocation counting, matching codebase_memory_mcp.py:241-263; the full_ingest.py module docstring states the same mapping.
   - Test: test_full_ingest_compat (and a delete equivalent) asserts the (condition, subject) pairs: condition 8 subject is TTL, condition 9 is part_ref counting, condition 3 carries network isolation/unbudgetable. Fails today: those tests pin the wrong pairs.
   - Defects: parts-lightrag/PC-01
-- [ ] **LRAG-13**: GET /health performs no writes: on a fresh, empty store_root it creates no files or directories (no <workspace>/text_chunks/kv.sqlite3, no <workspace>/chunk_entity_relation/graph.cozo, no v1/.corpus_working_dir or per-workspace v1 working dir).
+- [x] **LRAG-13**: GET /health performs no writes: on a fresh, empty store_root it creates no files or directories (no <workspace>/text_chunks/kv.sqlite3, no <workspace>/chunk_entity_relation/graph.cozo, no v1/.corpus_working_dir or per-workspace v1 working dir).
   - Test: Test snapshots the directory tree of a temp store_root and the v1 working dir, calls GET /health, and asserts both trees are unchanged. Fails today: the SqliteKVStore/CozoGraphStore constructors and the v1 LightRAG constructor create files.
   - Defects: doc-audit-4/D4
-- [ ] **LRAG-14**: GET /health reports only facts it checked: stores.vector reflects an actual Faiss index probe or is reported as not probed; an empty or unused store_root is not reported 'ok'; the namespaces probed include the HippoRAG ones (hipporag-text-chunks, hipporag-graph) as well as LightRAG's; status is not 'ok' when the app has no LLM/embedding clients; working_dir_present reports the directory's existence and is not forced false by an unrelated subprocess failure; storages_initialized is removed or merged into one 'v1 engine reachable' field; a store.finalize() failure returns a degraded report, not a 500.
+- [x] **LRAG-14**: GET /health reports only facts it checked: stores.vector reflects an actual Faiss index probe or is reported as not probed; an empty or unused store_root is not reported 'ok'; the namespaces probed include the HippoRAG ones (hipporag-text-chunks, hipporag-graph) as well as LightRAG's; status is not 'ok' when the app has no LLM/embedding clients; working_dir_present reports the directory's existence and is not forced false by an unrelated subprocess failure; storages_initialized is removed or merged into one 'v1 engine reachable' field; a store.finalize() failure returns a degraded report, not a 500.
   - Test: test_health module: create_app(clients=None) asserts status != 'ok'; fresh temp store_root asserts status != 'ok' and vector not reported true without a probe; HippoRAG namespaces appear in the report; a driver failure with the directory present asserts working_dir_present true; a store whose finalize raises asserts 200 degraded. Fails today on every case.
   - Defects: doc-audit-4/D2, doc-audit-4/D3, doc-audit-1/D5, foreign/FOR-08, rest-live/REST-15, seam-engine/ENG-11
   - Owner decision first: G-20: the meaning of 'ok' (stores openable vs populated, clients required) and whether HippoRAG namespaces belong in the same report.
@@ -868,15 +868,15 @@ These fail today.
 | LRAG-03 | Phase 11 | Complete |
 | LRAG-04 | Phase 11 | Complete |
 | LRAG-05 | Phase 11 | Complete |
-| LRAG-06 | Phase 11 | Pending |
+| LRAG-06 | Phase 11 | Complete |
 | LRAG-07 | Phase 11 | Complete |
 | LRAG-08 | Phase 11 | Complete |
 | LRAG-09 | Phase 11 | Complete |
 | LRAG-10 | Phase 11 | Complete |
 | LRAG-11 | Phase 11 | Complete |
 | LRAG-12 | Phase 11 | Complete |
-| LRAG-13 | Phase 11 | Pending |
-| LRAG-14 | Phase 11 | Pending |
+| LRAG-13 | Phase 11 | Complete |
+| LRAG-14 | Phase 11 | Complete |
 | LRAG-15 | Phase 11 | Complete |
 | LRAG-16 | Phase 11 | Pending |
 | LRAG-17 | Phase 11 | Pending |

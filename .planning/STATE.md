@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 11
 current_phase_name: LightRAG Corpus Path
 status: executing
-stopped_at: Completed 11-08-PLAN.md
-last_updated: "2026-10-18T18:50:50.433Z"
+stopped_at: Completed 11-09-PLAN.md
+last_updated: "2026-10-18T19:20:23.516Z"
 last_activity: 2026-10-17
 last_activity_desc: Phase 10 complete, transitioned to Phase 11
-state_head: ef036fa9c5c1820ff420e3e4940017d24f89c1aa
+state_head: a26e72edf1b5236696df2c83736defa2e6900be5
 progress:
   total_phases: 11
   completed_phases: 3
   total_plans: 43
-  completed_plans: 40
+  completed_plans: 41
   percent: 27
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-17 after Phase 10)
 ## Current Position
 
 Phase: 11 (LightRAG Corpus Path) — EXECUTING
-Plan: 9 of 11
+Plan: 10 of 11
 Status: Ready to execute
 Last activity: 2026-10-17 — Phase 10 complete, transitioned to Phase 11
 
@@ -102,6 +102,7 @@ Progress: [███░░░░░░░] 27% (3/11 phases)
 | Phase 11 P06 | 35min | 2 tasks | 5 files |
 | Phase 11 P07 | 40min | 2 tasks | 9 files |
 | Phase 11 P08 | 35min | 2 tasks | 11 files |
+| Phase 11 P09 | 30min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -175,6 +176,7 @@ Recent decisions affecting current work:
 - [Phase 11]: Only failure_class V1NotConfigured adds public missing_keys/unsupported_keys to ForeignEngineRefusalError (D-12 single exception)
 - [Phase 11]: 11-08: the interrupted remap applies only when no write holds the D-07 gate before and after the status read; /jobs keeps v1's raw status
 - [Phase 11]: 11-08: retry_document is LightRAG only and runs its interrupted pre-check inside the write gate; no D-08 fallback amendment is needed
+- [Phase 11]: 11-09: HealthReport.engine_reason (key names only, never values) and engine map {interpreter_present, working_dir_present, v1_reachable}; ok needs both llm and embedding clients (D-14 amends Phase 8 D-08); a raising probe reports its store corrupted
 
 ### Pending Todos
 
@@ -222,8 +224,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-18T18:50:50.286Z
-Stopped at: Completed 11-08-PLAN.md
+Last session: 2026-10-18T19:20:23.375Z
+Stopped at: Completed 11-09-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
