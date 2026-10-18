@@ -406,8 +406,8 @@ def _build_stores(
     06-01-PLAN.md: ``kv``/``graph`` are each a single namespaced store per run, resolved from the
     wiring's own declared ``store_namespaces`` (``{"kv": ..., "graph": ...}``) when ``resolved``
     is supplied — falling back to the existing ``_TEXT_CHUNKS_KIND``/``_GRAPH_KIND`` constants
-    when it is absent (``ingest``/``delete_document``/``health``/``resolve_evidence`` call this
-    with no ``resolved`` at all, so their directories are unchanged). LightRAG's own base now
+    when it is absent or declares none (``ingest``, ``delete_document`` and ``_execute_resolved``
+    pass ``resolved``; a wiring with no ``store_namespaces`` keeps the defaults). LightRAG's own base now
     declares ``{"kv": "text_chunks", "graph": "chunk_entity_relation"}`` — the exact values those
     two constants already hold — so a LightRAG run through ``_execute`` resolves to an identical
     on-disk directory either way. ``vector`` stays a :class:`MultiNamespaceVectorStore`, selected
@@ -1075,6 +1075,10 @@ class Databasise:
         ``not_allowed`` or ``fail``, when v1 may still read the file) it is left and logged. So delete followed by re-upload
         works after a failed asynchronous parse, and another workspace's delete never removes it.
 
+        Phase 10 D-08 (STOR-07): the kv and graph stores come from the resolved delete wiring's
+        ``store_namespaces``. The delete's staged store writes commit, all stores or none, only when
+        the run is not refused and its status is not ``fail``; otherwise they are dropped.
+
         A document v1 itself reports ``not_found`` (already deleted, or never ingested) is a
         normal outcome carried in ``DeletionOutcome.status`` — never a refusal. Only a
         ``document_id`` that fails the machine's own token discipline (the same bare-token rule
@@ -1114,7 +1118,9 @@ class Databasise:
 
         stores: dict[str, Any] = {}
         try:
-            stores = _build_stores(self.store_root, self.workspace, into=stores)
+            # D-08 (STOR-07): the wiring's store_namespaces pick the kv and graph namespaces, as in
+            # ingest; LightRAG's corpus-delete.json declares none, so it keeps the defaults.
+            stores = _build_stores(self.store_root, self.workspace, resolved, into=stores)
             scheduled = await _scheduler.run_wiring(
                 parsed,
                 self.registry,
@@ -1124,16 +1130,23 @@ class Databasise:
                 clients=self.clients,
                 recorder=_recorder,
             )
+            # G-05-1 / WR-01: the same shared _node_result_or_refuse helper ingest() routes
+            # through, called before the MACH-11 correlation below so a refused run mints no seam
+            # events. D-06/D-08: a refusal, or a delete reporting "fail" (Q4), drops every store's
+            # staged deletes; anything else commits all stores or none (D-07).
+            try:
+                result = _node_result_or_refuse(scheduled, delete_node_id, "delete")
+            except ForeignEngineRefusalError:
+                await _drop_pending(stores)
+                raise
+            if result.get("status") == "fail":
+                await _drop_pending(stores)
+            else:
+                await _commit_all(stores, "delete", self.store_root)
         finally:
             for store in stores.values():
                 await store.finalize()
 
-        # G-05-1 / WR-01: the same shared _node_result_or_refuse helper ingest() routes through —
-        # any node failure, or no result at all, raises ForeignEngineRefusalError with the real
-        # cause, rather than degrading to an undifferentiated, causeless DeletionOutcome(fail).
-        # Called before the MACH-11 correlation below so a refused run mints no seam events for a
-        # node that did not run.
-        result = _node_result_or_refuse(scheduled, delete_node_id, "delete")
         self._release_staged_upload(document_id, v1_status=result.get("status"))
         node_by_id = {node.node_id: node for node in scheduled["nodes"]}
         seam_events = _mach11_events(parsed, touches, node_by_id)

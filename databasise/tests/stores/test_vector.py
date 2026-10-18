@@ -204,6 +204,9 @@ async def test_delete_by_ids_removes_entries_and_stays_consistent(store_root):
     await store.index_done_callback()
 
     await store.delete_by_ids(["a"])
+    # D-08: the delete is buffered, and reads stay committed-only until the flush.
+    assert store.get_by_id("a") is not None
+    await store.index_done_callback()
 
     results = await store.query(_vec(1.0, 0.0), top_k=5)
     assert [r["id"] for r in results] == ["b"]

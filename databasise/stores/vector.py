@@ -16,7 +16,8 @@ internally via a monotonically increasing int64 id persisted in the metadata sid
 
 Deferred-write discipline, mirroring the Cozo adapter's buffer contract (D-06's house style: one
 commit/abort contract regardless of backend): ``upsert`` buffers ``_PendingVectorDoc`` entries
-in-process; nothing is queryable until ``index_done_callback`` flushes them. Buffered vectors are
+and ``delete_by_ids`` buffers ids (D-08) in-process; neither is visible to a read until
+``index_done_callback`` flushes them, and ``drop_pending_index_ops`` discards both. Buffered vectors are
 **precomputed and caller-supplied** — this adapter never calls an embedding model itself.
 
 Raise-don't-silently-drop rule (CONTEXT.md's stated house style — refusals over silent fallbacks):
@@ -220,6 +221,7 @@ class FaissVectorStore(StorageNameSpace):
         self._meta_path = self._dir / "vector.meta.json"
 
         self._pending: dict[str, _PendingVectorDoc] = {}
+        self._pending_deletes: set[str] = set()
         self._prepared: tuple[Any, dict[str, dict[str, Any]], int] | None = None
         self._dim: int | None = None
         self._index: Any = None
@@ -288,41 +290,15 @@ class FaissVectorStore(StorageNameSpace):
         for i, doc_id in enumerate(ids):
             meta = dict(metadatas[i]) if metadatas is not None else {}
             self._pending[doc_id] = _PendingVectorDoc(vector=normalised[i], metadata=meta)
+            self._pending_deletes.discard(doc_id)  # a later upsert cancels a buffered delete
 
     async def delete_by_ids(self, ids: list[str]) -> None:
-        """Remove entries immediately (not deferred): the index and sidecar are written together
-        via the same two-phase persist helper ``upsert``'s flush uses, so they stay consistent.
-        Dispatched off the event loop (WR-03): ``faiss.clone_index``/``remove_ids`` plus the
-        index+sidecar write are not obviously cheap at scale, and the runner's structured
-        concurrency (``runner/scheduler.py``) can genuinely have sibling nodes in flight in the
-        same batch — see ``stores/graph.py``'s own docstring for why this dispatch exists. The
-        actual ``self._index``/``self._entries`` reassignment happens back on the event-loop
-        thread, after the executor call returns, never inside the worker thread itself — so a
-        concurrent ``query()`` (which reads those attributes with no lock of its own) never
-        observes a mutation racing in from another OS thread.
-        """
-        self._pending = {k: v for k, v in self._pending.items() if k not in ids}
-        to_remove = [i for i in ids if i in self._entries]
-        if not to_remove or self._index is None:
-            return
-
-        base_index = self._index
-        base_entries = self._entries
-        next_int_id = self._next_int_id
-
-        def _do_delete() -> tuple[Any, dict[str, dict[str, Any]]]:
-            staging = faiss.clone_index(base_index)
-            int_ids = np.array([base_entries[i]["int_id"] for i in to_remove], dtype="int64")
-            staging.remove_ids(int_ids)
-            staging_entries = {k: v for k, v in base_entries.items() if k not in to_remove}
-            self._persist(staging, staging_entries, next_int_id)
-            return staging, staging_entries
-
-        loop = asyncio.get_running_loop()
-        new_index, new_entries = await loop.run_in_executor(None, _do_delete)
-        self._index = new_index
-        self._entries = new_entries
-        self._loaded_signature = self._committed_signature()
+        """Buffer a delete until the flush (D-08), so ``drop_pending_index_ops`` reverts it like the
+        other stores' deletes. Drops any pending upsert of the same id; an id with no committed
+        entry is a no-op at flush. Reads stay committed-only until then (research Pitfall 14)."""
+        for doc_id in ids:
+            self._pending.pop(doc_id, None)
+            self._pending_deletes.add(doc_id)
 
     # ------------------------------------------------------------------ #
     # Reads — only committed (flushed) data is queryable                  #
@@ -459,7 +435,8 @@ class FaissVectorStore(StorageNameSpace):
         """D-07: stage the pending buffer as the ``.tmp`` file pair, leaving the committed pair
         untouched. If another writer committed since this instance loaded, rebase on the on-disk
         state first, so its vectors are kept and int ids never collide (research Pitfall 3). A
-        failure leaves no ``.tmp`` and keeps ``_pending``.
+        failure leaves no ``.tmp`` and keeps ``_pending``/``_pending_deletes``. Buffered deletes are
+        applied first, to ids present in the rebased entries only.
 
         Off-loop (WR-03): ``np.vstack``, ``faiss.add_with_ids`` and ``faiss.write_index`` are not
         obviously cheap at scale, and a slow flush on the loop would stall every sibling node in the
@@ -467,12 +444,15 @@ class FaissVectorStore(StorageNameSpace):
         the event-loop thread, in ``commit_prepared``, so a concurrent ``query()`` never races a
         worker-thread mutation.
         """
-        if not self._pending:
+        if not (self._pending or self._pending_deletes):
             return
 
         signature = self._committed_signature()
         if signature != self._loaded_signature:
             self._read_committed()
+        deletes = [doc_id for doc_id in self._pending_deletes if doc_id in self._entries]
+        if not (self._pending or deletes):
+            return  # only deletes of uncommitted ids: nothing to write
 
         if self._index is None:
             dim = next(iter(self._pending.values())).vector.shape[0]
@@ -487,6 +467,9 @@ class FaissVectorStore(StorageNameSpace):
             staging = faiss.clone_index(base_index)
             staging_entries = dict(base_entries)
             next_int_id = base_next_int_id
+            if deletes:
+                doomed = [staging_entries.pop(doc_id)["int_id"] for doc_id in deletes]
+                staging.remove_ids(np.array(doomed, dtype="int64"))
 
             vectors: list[np.ndarray] = []
             int_ids: list[int] = []
@@ -518,12 +501,14 @@ class FaissVectorStore(StorageNameSpace):
             self._loaded_signature = self._committed_signature()
             self._prepared = None
         self._pending.clear()
+        self._pending_deletes.clear()
 
     async def abort_prepared(self) -> None:
         for tmp in self._tmp_paths():
             tmp.unlink(missing_ok=True)
         self._prepared = None
         self._pending.clear()
+        self._pending_deletes.clear()
 
     async def index_done_callback(self) -> None:
         """Flush the pending buffer into the index and sidecar: ``prepare`` then
@@ -536,14 +521,6 @@ class FaissVectorStore(StorageNameSpace):
             self._index_path.with_suffix(self._index_path.suffix + ".tmp"),
             self._meta_path.with_suffix(self._meta_path.suffix + ".tmp"),
         )
-
-    def _persist(
-        self, index: Any, entries: dict[str, dict[str, Any]], next_int_id: int
-    ) -> None:
-        """Write the pair to temp files, then rename both into place (``delete_by_ids`` still
-        persists immediately). Runs in a worker thread, so it never assigns instance state."""
-        self._write_staged(index, entries, next_int_id)
-        self._commit_staged()
 
     def _write_staged(
         self, index: Any, entries: dict[str, dict[str, Any]], next_int_id: int
@@ -585,6 +562,7 @@ class FaissVectorStore(StorageNameSpace):
             self._next_int_id = 0
             self._dim = None
             self._pending.clear()
+            self._pending_deletes.clear()
             return {"status": "success", "message": "data dropped"}
         except Exception as exc:  # noqa: BLE001 — drop()'s own documented contract (v1 StorageNameSpace)
             return {"status": "error", "message": str(exc)}
