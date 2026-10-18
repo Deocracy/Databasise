@@ -133,7 +133,7 @@
   - Test: tests/seam/test_health_probe.py. (a) Call engine.health() on a fresh tmp store_root, then assert the tree under store_root is still empty and stores.kv and stores.graph are not reported as true. (b) Build a chunks vector namespace, overwrite vector.faiss with garbage bytes, and assert stores.vector is false. Before the fix, (a) creates both files and reports ok, and (b) reports vector true.
   - Defects: stores/ST-02, stores/ST-17
   - Owner decision first: Which namespaces health probes: LightRAG defaults only, or every namespace of every shipped wiring including hipporag-*. Also whether an absent store on a fresh install counts as 'degraded' or as a separate 'not initialized' state (G-20).
-- [ ] **STOR-05**: Capability scoping is enforced per access mode. A node that declares only reads_kv, reads_vector or reads_graph receives a handle on which every mutating method raises UndeclaredEffectError: upsert, delete, delete_by_ids, upsert_node, upsert_edge, delete_node, delete_edge, drop and index_done_callback, including on a FaissVectorStore returned by select() from a read-only MultiNamespaceVectorStore handle. Read methods keep working, and only a writes_* declaration yields the writable handle. mutates_store and self_storage no longer map by suffix to the nonexistent store keys 'store' and 'storage'. Shipped parts that declare only reads_* (chunk_sel_kg, heading_backfill, reset_vector_join, ppr, entity/relation hydrate) keep passing their existing tests.
+- [x] **STOR-05**: Capability scoping is enforced per access mode. A node that declares only reads_kv, reads_vector or reads_graph receives a handle on which every mutating method raises UndeclaredEffectError: upsert, delete, delete_by_ids, upsert_node, upsert_edge, delete_node, delete_edge, drop and index_done_callback, including on a FaissVectorStore returned by select() from a read-only MultiNamespaceVectorStore handle. Read methods keep working, and only a writes_* declaration yields the writable handle. mutates_store and self_storage no longer map by suffix to the nonexistent store keys 'store' and 'storage'. Shipped parts that declare only reads_* (chunk_sel_kg, heading_backfill, reset_vector_join, ppr, entity/relation hydrate) keep passing their existing tests.
   - Test: tests/runner/test_capability_scoping_modes.py has four cases. (1) A fixture part declaring effects=['reads_kv'] calls ctx.stores['kv'].upsert({...}). Before the fix the upsert succeeds. After the fix the node records UndeclaredEffectError naming writes_kv. (2) The same part with ['reads_vector'] calls ctx.stores['vector'].select('chunks').delete_by_ids([...]) and is refused. (3) A part declaring ['reads_kv','writes_kv'] runs the upsert successfully. (4) CapabilityScopedStores.require('mutates_store') does not look up raw_stores['store'].
   - Defects: runner/RUN-16, parts-lightrag/PC-17
   - Owner decision first: The read/write method split per store kind, meaning which methods a read-only proxy exposes, and how mutates_store/self_storage resolve: an explicit effect-to-store table or a refusal. writes_artifact resolution is decided in STOR-12.
@@ -850,7 +850,7 @@ These fail today.
 | STOR-02 | Phase 10 | Complete |
 | STOR-03 | Phase 10 | Complete |
 | STOR-04 | Phase 10 | Complete |
-| STOR-05 | Phase 10 | Pending |
+| STOR-05 | Phase 10 | Complete |
 | STOR-06 | Phase 10 | Complete |
 | STOR-07 | Phase 10 | Pending |
 | STOR-08 | Phase 10 | Complete |

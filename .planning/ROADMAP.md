@@ -185,7 +185,7 @@ Plans (one plan per wave; every plan edits the shared refusal, engine or transpo
 - STOR-15: what triggers quarantined-namespace GC (generation retire, instance teardown, operator route), and derive_namespace layout vs docstring fix
 - STOR-16: reserved metadata keys rejected at upsert or moved under a sub-key
 
-**Plans**: 7/12 plans executed
+**Plans**: 8/12 plans executed
 
 Plans (nine waves; the shared engine and store modules force most plans into sequence, and wave 1 and wave 6 each hold plans with no shared file):
 
@@ -196,7 +196,7 @@ Plans (nine waves; the shared engine and store modules force most plans into seq
 - [x] 10-05-PLAN.md — Prepare-all then commit-all across kv, vector and graph under one lock; Faiss rebase (STOR-06; wave 3)
 - [x] 10-06-PLAN.md — Faiss committed-snapshot cache for evidence resolve; half-written directory is corruption (STOR-03, STOR-08; wave 4)
 - [x] 10-07-PLAN.md — Read-only health over every shipped namespace: ok, absent, corrupted, busy (STOR-04; wave 5)
-- [ ] 10-08-PLAN.md — EFFECT_TO_STORE table and read-only allowlist proxies; engine-only lifecycle (STOR-05; wave 6)
+- [x] 10-08-PLAN.md — EFFECT_TO_STORE table and read-only allowlist proxies; engine-only lifecycle (STOR-05; wave 6)
 - [ ] 10-09-PLAN.md — Graph delete cascades and auto-creates endpoints; KV buffer isolation (STOR-10, STOR-11; wave 6)
 - [ ] 10-10-PLAN.md — Delete uses the wiring's namespaces and commits all or nothing; buffered vector delete (STOR-07; wave 7)
 - [ ] 10-11-PLAN.md — Reserved metadata keys refused; named vector input refusals (STOR-09, STOR-16; wave 8)
@@ -430,7 +430,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 |-------|----------------|--------|-----------|
 | 8. Run the Engine | 10/10 | Complete    | 2026-10-16 |
 | 9. Inputs, Errors & Security | 10/10 | Complete    | 2026-10-17 |
-| 10. Stores, Locking & Data Integrity | 7/12 | In Progress|  |
+| 10. Stores, Locking & Data Integrity | 8/12 | In Progress|  |
 | 11. LightRAG Corpus Path | 0/TBD | Not started | - |
 | 12. HippoRAG Fixes | 0/TBD | Not started | - |
 | 13. Selectors, Wiring & Runner | 0/TBD | Not started | - |
