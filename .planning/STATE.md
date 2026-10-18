@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 11
 current_phase_name: LightRAG Corpus Path
 status: executing
-stopped_at: Completed 11-04-PLAN.md
-last_updated: "2026-10-18T07:57:35.305Z"
+stopped_at: Completed 11-02-PLAN.md
+last_updated: "2026-10-18T08:20:41.172Z"
 last_activity: 2026-10-17
 last_activity_desc: Phase 10 complete, transitioned to Phase 11
-state_head: 6fdb0b5e314be51a941ca51fbbe0c2801da60410
+state_head: 6ff345c01e79173fc7339fde7f5138e6a9bfc0f8
 progress:
   total_phases: 11
   completed_phases: 3
   total_plans: 43
-  completed_plans: 34
+  completed_plans: 35
   percent: 27
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-17 after Phase 10)
 ## Current Position
 
 Phase: 11 (LightRAG Corpus Path) — EXECUTING
-Plan: 3 of 11
+Plan: 4 of 11
 Status: Ready to execute
 Last activity: 2026-10-17 — Phase 10 complete, transitioned to Phase 11
 
@@ -96,6 +96,7 @@ Progress: [███░░░░░░░] 27% (3/11 phases)
 | Phase 10 P12 | 15min | 2 tasks | 8 files |
 | Phase 11 P01 | 29min | 2 tasks | 15 files |
 | Phase 11 P04 | 45min | 3 tasks | 15 files |
+| Phase 11 P02 | 12min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -158,6 +159,7 @@ Recent decisions affecting current work:
 - [Phase 11]: IngestJob gains seam_events (LRAG-03); ingest and delete MACH-11 events come from lightrag/v1-index-sync observed touches
 - [Phase 11]: 11-04: relation chunks exclude only the entity side's selected chunk ids, and a zero VECTOR count falls back to WEIGHT (v1 fidelity over plan wording)
 - [Phase 11]: 11-04: chunk-sel-kg pick_method_used is the shared per-side method, MIXED when sides differ; pick_method_used_by_side gives detail
+- [Phase 11]: 11-02: aa_run --arm defaults to None (default selector); arms map through corpus_ingest._ARM_SELECTORS (D-03 as corrected by Q6)
 
 ### Pending Todos
 
@@ -205,8 +207,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-18T07:57:35.175Z
-Stopped at: Completed 11-04-PLAN.md
+Last session: 2026-10-18T08:20:41.038Z
+Stopped at: Completed 11-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

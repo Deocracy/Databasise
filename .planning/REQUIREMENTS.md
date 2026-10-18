@@ -235,7 +235,7 @@
   - Test: test_health module: create_app(clients=None) asserts status != 'ok'; fresh temp store_root asserts status != 'ok' and vector not reported true without a probe; HippoRAG namespaces appear in the report; a driver failure with the directory present asserts working_dir_present true; a store whose finalize raises asserts 200 degraded. Fails today on every case.
   - Defects: doc-audit-4/D2, doc-audit-4/D3, doc-audit-1/D5, foreign/FOR-08, rest-live/REST-15, seam-engine/ENG-11
   - Owner decision first: G-20: the meaning of 'ok' (stores openable vs populated, clients required) and whether HippoRAG namespaces belong in the same report.
-- [ ] **LRAG-15**: eval corpus_ingest --spend --arm lightrag writes only to the eval store (v1/.eval_corpus_store or the configured eval working dir), never to the operator corpus v1/.corpus_working_dir, so GET /corpus does not list eval documents; and aa_run run after that ingest retrieves evidence from the ingested eval documents with the LightRAG arm it names, instead of scoring zero over empty v2 namespaces.
+- [x] **LRAG-15**: eval corpus_ingest --spend --arm lightrag writes only to the eval store (v1/.eval_corpus_store or the configured eval working dir), never to the operator corpus v1/.corpus_working_dir, so GET /corpus does not list eval documents; and aa_run run after that ingest retrieves evidence from the ingested eval documents with the LightRAG arm it names, instead of scoring zero over empty v2 namespaces.
   - Test: Test runs corpus_ingest --arm lightrag against a driver stub and asserts every captured working_dir is under the eval store and the operator working dir is untouched; then runs aa_run over the same store and asserts non-empty evidence for at least one question. Fails today: full_ingest passes no working_dir and aa_run queries empty v2 namespaces.
   - Defects: other-surfaces/OS-02
   - Owner decision first: Depends on M-04 (LRAG-01/02); which wiring aa_run queries (lightrag-base default vs naive) is an owner choice.
@@ -877,7 +877,7 @@ These fail today.
 | LRAG-12 | Phase 11 | Pending |
 | LRAG-13 | Phase 11 | Pending |
 | LRAG-14 | Phase 11 | Pending |
-| LRAG-15 | Phase 11 | Pending |
+| LRAG-15 | Phase 11 | Complete |
 | LRAG-16 | Phase 11 | Pending |
 | LRAG-17 | Phase 11 | Pending |
 | LRAG-18 | Phase 11 | Complete |
