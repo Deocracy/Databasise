@@ -173,6 +173,7 @@ from databasise.foreign.v1_corpus_adapter import (
 from databasise.identity.canon import canonicalise
 from databasise.ledger.ledger import Ledger, LedgerRecord
 from databasise.parts.registry import PartRegistry, default_registry
+from databasise.parts_core import EFFECT_TO_STORE
 from databasise.runner import scheduler as _scheduler
 from databasise.runner.trace import NodeTrace, RunRecord
 from databasise.seam.corpus import (
@@ -291,12 +292,6 @@ def _log_staged_left(staged: Path) -> None:
 # subprocess-entry-point leaf scripts, and this module is not one of them.
 _DOCS_FORMAT_RAW = "raw"
 _DOCS_FORMAT_PENDING_PARSE = "pending_parse"
-
-# 04-04 Task 2 (MACH-11): a reads_*/writes_* effect suffix names the store key it accounts for —
-# mirrors databasise/parts_core/__init__.py's own CapabilityScopedStores.require suffix rule
-# (`effect.split("_", 1)[-1]`). "mutates_store" itself is excluded: its own suffix, "store", names
-# no real store key (§2 keeps it deliberately opaque), so it never contributes to the accounted set.
-_ACCOUNTABLE_STORE_EFFECT_PREFIXES = ("reads_", "writes_")
 
 # The v1-native per-kind names the LightRAG wirings' kv/graph stores are keyed by — matching
 # databasise/parity/run_arm.py's own _TEXT_CHUNKS_KIND/_GRAPH_KIND constants exactly.
@@ -588,9 +583,10 @@ def _node_result_or_refuse(scheduled: dict[str, Any], node_id: str, operation: s
 
 def _accounted_store_keys(parsed: ParsedWiring, node_id: str) -> set[str]:
     """The store keys ``node_id``'s own declared ``deps`` account for (FA-08's correlation rule) —
-    the union, over each direct dependency's own resolved ``Part.effects``, of the store key any
-    ``reads_*``/``writes_*`` effect names. See this module's docstring for the rule's full
-    statement and provenance.
+    the union, over each direct dependency's own resolved ``Part.effects``, of the store kind
+    ``EFFECT_TO_STORE`` (D-09) maps each effect to. Effects no store backs, ``mutates_store``
+    included (§2 keeps it deliberately opaque), map to ``None`` and never contribute. See this
+    module's docstring for the rule's full statement and provenance.
     """
     accounted: set[str] = set()
     for dep_id in parsed.deps.get(node_id, ()):
@@ -598,8 +594,9 @@ def _accounted_store_keys(parsed: ParsedWiring, node_id: str) -> set[str]:
         if dep_part is None:
             continue
         for effect in dep_part.effects:
-            if effect.startswith(_ACCOUNTABLE_STORE_EFFECT_PREFIXES):
-                accounted.add(effect.split("_", 1)[-1])
+            entry = EFFECT_TO_STORE.get(effect)
+            if entry is not None:
+                accounted.add(entry[0])
     return accounted
 
 

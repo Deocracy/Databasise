@@ -202,7 +202,8 @@ async def test_no_recorder_passed_behaves_exactly_as_before():
     )
 
     assert result["partial"] is False
-    assert result["results"]["n1"]["kv"] == "the-kv-store"
+    # STOR-05 (D-09): a reads_kv node's handle is the read-only proxy over the real store.
+    assert result["results"]["n1"]["kv"]._target == "the-kv-store"
 
 
 async def test_an_undeclared_store_reach_fails_the_run_rather_than_appearing_in_the_audit():

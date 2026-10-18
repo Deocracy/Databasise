@@ -35,8 +35,8 @@ class StoreNotWiredError(RuntimeError):
     :class:`UndeclaredEffectError`: the effect itself is permitted, the backing store just is not
     wired for this run. Names both the effect and the missing store key rather than falling
     through to a silent ``None`` and a confusing downstream ``AttributeError`` — "refusals over
-    silent fallbacks" (this codebase's own stated house style, e.g. ``stores/lexical.py``'s FTS5
-    availability check, ``stores/vector.py``'s faiss-import guard).
+    silent fallbacks" (this codebase's own stated house style, e.g. ``stores/vector.py``'s
+    faiss-import guard).
     """
 
     def __init__(self, effect: str, store_key: str):

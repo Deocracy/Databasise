@@ -44,6 +44,7 @@ from databasise.parity import import_index
 from databasise.parity import run_arm as _run_arm
 from databasise.parity.import_index import DEFAULT_STORE_ROOT
 from databasise.parts.registry import PartRegistry, default_registry
+from databasise.parts_core import EFFECT_TO_STORE
 from databasise.runner import scheduler as _scheduler
 from databasise.runner.scheduler import TouchRecorder
 from databasise.store_lock import StoreLockedError, store_lock
@@ -82,17 +83,18 @@ class AuditRow:
 def _declared_handles(effects: list[str]) -> frozenset[tuple[str, str]]:
     """Every ``(kind, key)`` handle ``effects`` permits, mirroring
     ``runner/scheduler.py``'s own ``_ScopedStoresView``/``_ScopedClientsView`` mapping rules
-    exactly — a client-shaped effect maps through ``CLIENT_EFFECT_TO_KEY``, every other effect
-    maps through the store side's own ``effect.split("_", 1)[-1]`` suffix rule. Never re-derived
-    independently: this is the same computation the scheduler's own dispatch path performs on
-    every ``ctx.stores[...]``/``ctx.clients[...]`` access.
+    exactly — a client-shaped effect maps through ``CLIENT_EFFECT_TO_KEY``, a store effect maps
+    through ``EFFECT_TO_STORE`` (D-09), and an effect no store backs (``writes_artifact``,
+    ``mutates_store``, ``net``, ...) permits no handle at all. Never re-derived independently:
+    this is the same table the scheduler's own dispatch path consults on every
+    ``ctx.stores[...]``/``ctx.clients[...]`` access.
     """
     handles: set[tuple[str, str]] = set()
     for effect in effects:
         if effect in CLIENT_EFFECT_TO_KEY:
             handles.add(("client", CLIENT_EFFECT_TO_KEY[effect]))
-        else:
-            handles.add(("store", effect.split("_", 1)[-1]))
+        elif (entry := EFFECT_TO_STORE.get(effect)) is not None:
+            handles.add(("store", entry[0]))
     return frozenset(handles)
 
 
