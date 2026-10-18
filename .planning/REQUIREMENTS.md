@@ -150,11 +150,11 @@
 - [ ] **STOR-09**: FaissVectorStore and MultiNamespaceVectorStore report named refusals for invalid input. query with top_k <= 0 raises a named ValueError subclass instead of a bare AssertionError. The 'available vector namespaces' list in VectorNamespaceNotSelectedError contains only directories that hold vector.faiss. Calling score_all, self_knn, get_by_id or iter_vectors on an unselected MultiNamespaceVectorStore raises VectorNamespaceNotSelectedError, not AttributeError.
   - Test: tests/stores/test_vector_validation.py has three checks. (1) query(vec, top_k=0) raises the named error. (2) With text_chunks/ and chunk_entity_relation/ directories present, the refusal's namespace list excludes them. (3) MultiNamespaceVectorStore(...).score_all(...) and .get_by_id('a') raise VectorNamespaceNotSelectedError. Each assertion fails on the current code.
   - Defects: stores/ST-12, stores/ST-16
-- [ ] **STOR-10**: CozoGraphStore keeps edges consistent with nodes. After a flushed delete_node('x'), get_node_edges('x') returns [], node_degree of every former neighbour excludes edges to x, and export_to_igraph contains no dangling edge. upsert_edge with an endpoint that does not exist (committed or pending) is refused or creates the node, depending on the owner decision, and never leaves a dangling edge.
+- [x] **STOR-10**: CozoGraphStore keeps edges consistent with nodes. After a flushed delete_node('x'), get_node_edges('x') returns [], node_degree of every former neighbour excludes edges to x, and export_to_igraph contains no dangling edge. upsert_edge with an endpoint that does not exist (committed or pending) is refused or creates the node, depending on the owner decision, and never leaves a dangling edge.
   - Test: tests/stores/test_graph_delete_cascade.py: create nodes x and y with edge x-y and flush. Call delete_node('x') and flush. Assert has_node('x') is False, node_degree('y') == 0, get_node_edges('x') == [], and export_to_igraph has 0 edges. Then call upsert_edge('y','missing') and flush, and assert either the refusal or that has_node('missing') is True. Before the fix, node_degree('y') is 1 and the edge is still returned.
   - Defects: stores/ST-08
   - Owner decision first: delete_node semantics: cascade-delete incident edges, or refuse deletion of a node that has edges. Also whether upsert_edge requires both endpoints to exist.
-- [ ] **STOR-11**: SqliteKVStore keeps its pending buffer separate from callers. get_by_id returns a copy, so mutating it does not change the buffered record, and upsert stores a copy of the caller's dict. is_empty returns True when every committed and pending row is pending deletion.
+- [x] **STOR-11**: SqliteKVStore keeps its pending buffer separate from callers. get_by_id returns a copy, so mutating it does not change the buffered record, and upsert stores a copy of the caller's dict. is_empty returns True when every committed and pending row is pending deletion.
   - Test: tests/stores/test_kv_buffer_isolation.py has three checks. (1) upsert({'a':{'v':1}}), r=get_by_id('a'), r['v']=2, flush, reopen, then assert get_by_id('a')['v']==1. (2) Mutate the dict passed to upsert before flush and assert the stored value is unchanged. (3) upsert and flush 'a', call delete(['a']), and assert is_empty() is True. Each fails on the current code.
   - Defects: stores/ST-13
 - [x] **STOR-12**: Every store effect the effect vocabulary accepts (reads_lexical, writes_lexical, reads_blob, writes_artifact) meets one of two conditions. Either it resolves to a store wired by _build_stores at run time, or a wiring with a node that both declares it and needs its store is refused at parse_wiring with a named refusal. No wiring parses successfully and then fails at run time with StoreNotWiredError. The shipped wirings that already declare writes_artifact still parse and run: lightrag/embedder-index in wirings/lightrag/base.json and every arm patch, and hipporag/graph-augment-persist in wirings/hipporag/corpus-ingest.json. SqliteLexicalStore, FilesystemBlobStore and registry_artifact.write_artifact are either wired into the engine or removed.
@@ -855,8 +855,8 @@ These fail today.
 | STOR-07 | Phase 10 | Pending |
 | STOR-08 | Phase 10 | Complete |
 | STOR-09 | Phase 10 | Pending |
-| STOR-10 | Phase 10 | Pending |
-| STOR-11 | Phase 10 | Pending |
+| STOR-10 | Phase 10 | Complete |
+| STOR-11 | Phase 10 | Complete |
 | STOR-12 | Phase 10 | Complete |
 | STOR-13 | Phase 10 | Complete |
 | STOR-14 | Phase 10 | Complete |
