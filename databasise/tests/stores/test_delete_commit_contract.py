@@ -24,7 +24,11 @@ from databasise.seam.engine import Databasise
 from databasise.seam.refusals import ForeignEngineRefusalError
 from databasise.stores.graph import CozoGraphStore
 from databasise.stores.kv import SqliteKVStore
-from databasise.stores.vector import FaissVectorStore
+from databasise.stores.vector import (
+    FaissVectorStore,
+    MultiNamespaceVectorStore,
+    VectorNamespaceNotSelectedError,
+)
 from databasise.tests.seam.test_delete_document import (
     _make_engine,
     _make_stub_full_delete_body,
@@ -171,3 +175,84 @@ async def test_the_default_lightrag_delete_stages_no_v2_store_write(store_root, 
         await kv.finalize()
         await graph.finalize()
     assert list((store_root / _WS).rglob("vector.faiss")) == []
+
+
+# --- Store-level buffered-delete contract (D-08, research Pitfall 14) ---------------------------
+
+
+def _vector(store_root: Path) -> FaissVectorStore:
+    return FaissVectorStore(namespace="vec", workspace="ws", store_root=store_root)
+
+
+async def _flushed_a_b(store_root: Path) -> FaissVectorStore:
+    store = _vector(store_root)
+    await store.upsert(ids=["a", "b"], embeddings=[[1.0, 0.0], [0.0, 1.0]], metadatas=[{"v": 1}, {"v": 1}])
+    await store.index_done_callback()
+    return store
+
+
+async def test_a_dropped_vector_delete_is_reverted_after_reopen(store_root):
+    store = await _flushed_a_b(store_root)
+
+    await store.delete_by_ids(["a"])
+    assert store.get_by_id("a") is not None
+    await store.drop_pending_index_ops()
+
+    assert _vector(store_root).get_by_id("a") is not None
+
+
+async def test_a_flushed_vector_delete_is_gone_after_reopen_with_a_valid_checksum(store_root):
+    store = await _flushed_a_b(store_root)
+
+    await store.delete_by_ids(["a"])
+    await store.index_done_callback()
+
+    reopened = _vector(store_root)  # raises VectorStoreCorruptedError on a checksum mismatch
+    assert reopened.get_by_id("a") is None
+    assert reopened.get_by_id("b") is not None
+
+
+async def test_an_upsert_after_a_delete_cancels_the_delete(store_root):
+    store = await _flushed_a_b(store_root)
+
+    await store.delete_by_ids(["a"])
+    await store.upsert(ids=["a"], embeddings=[[1.0, 1.0]], metadatas=[{"v": 2}])
+    await store.index_done_callback()
+
+    assert _vector(store_root).get_by_id("a") == {"id": "a", "v": 2}
+
+
+async def test_a_delete_after_an_unflushed_upsert_drops_the_upsert(store_root):
+    store = await _flushed_a_b(store_root)
+
+    await store.upsert(ids=["c"], embeddings=[[1.0, 1.0]])
+    await store.delete_by_ids(["c"])
+    await store.index_done_callback()
+
+    assert _vector(store_root).get_by_id("c") is None
+
+
+async def test_deleting_an_id_that_was_never_committed_is_a_no_op_at_flush(store_root):
+    store = await _flushed_a_b(store_root)
+    before = (store._index_path.stat().st_ino, store._meta_path.stat().st_ino)
+
+    await store.delete_by_ids(["never"])
+    await store.index_done_callback()
+
+    assert (store._index_path.stat().st_ino, store._meta_path.stat().st_ino) == before
+    assert sorted(doc_id for doc_id, _ in _vector(store_root).iter_vectors()) == ["a", "b"]
+
+
+async def test_an_aborted_prepare_keeps_the_deleted_entry(store_root):
+    store = await _flushed_a_b(store_root)
+
+    await store.delete_by_ids(["a"])
+    await store.prepare()
+    await store.abort_prepared()
+
+    assert _vector(store_root).get_by_id("a") is not None
+
+
+async def test_the_multi_namespace_handle_refuses_an_unselected_delete(store_root):
+    with pytest.raises(VectorNamespaceNotSelectedError):
+        await MultiNamespaceVectorStore(workspace="ws", store_root=store_root).delete_by_ids(["x"])
