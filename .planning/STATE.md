@@ -4,17 +4,17 @@ milestone: v1.1
 milestone_name: Engine Fixes + Operator Console
 current_phase: 11
 current_phase_name: LightRAG Corpus Path
-status: executing
-stopped_at: Completed 11-10-PLAN.md
-last_updated: "2026-10-18T20:03:58.794Z"
+status: verifying
+stopped_at: Completed 11-11-PLAN.md
+last_updated: "2026-10-18T20:49:36.982Z"
 last_activity: 2026-10-17
 last_activity_desc: Phase 10 complete, transitioned to Phase 11
-state_head: d37af1306949f00768783578335291f1ffe46476
+state_head: 5466841b6c1d10dfd37b6d614dc11b8a9bfc548d
 progress:
   total_phases: 11
   completed_phases: 3
   total_plans: 43
-  completed_plans: 42
+  completed_plans: 43
   percent: 27
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-10-17 after Phase 10)
 
 Phase: 11 (LightRAG Corpus Path) — EXECUTING
 Plan: 11 of 11
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-17 — Phase 10 complete, transitioned to Phase 11
 
 Progress: [███░░░░░░░] 27% (3/11 phases)
@@ -104,6 +104,7 @@ Progress: [███░░░░░░░] 27% (3/11 phases)
 | Phase 11 P08 | 35min | 2 tasks | 11 files |
 | Phase 11 P09 | 30min | 2 tasks | 4 files |
 | Phase 11 P10 | 45min | 2 tasks | 10 files |
+| Phase 11 P11 | 40min | 3 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -180,6 +181,9 @@ Recent decisions affecting current work:
 - [Phase 11]: 11-09: HealthReport.engine_reason (key names only, never values) and engine map {interpreter_present, working_dir_present, v1_reachable}; ok needs both llm and embedding clients (D-14 amends Phase 8 D-08); a raising probe reports its store corrupted
 - [Phase 11]: 11-10: LRAG-16 is a refusal (EmptyNamespaceError, 422, store_kind only); never populated means no committed vector.faiss, so a namespace emptied by a delete answers as no match
 - [Phase 11]: 11-10: embedder-index stays in every wiring (Q4); the engine runs a copy without recipe-only nodes and hashes the full wiring
+- [Phase 11]: 11-11: LightRAG context chunk rows carry v1's file-path reference_id (generate_reference_list_from_chunks), not DC ids
+- [Phase 11]: 11-11: all six duplicated v1 prompt strings live in parts_core/lightrag/prompts.py behind one ast drift test; keywords.py reads its prompt from there
+- [Phase 11]: 11-11: the engine stamps max_total_tokens 30000 on every lightrag/assembler-kg-context node; assemble also defaults to 30000 when absent
 
 ### Pending Todos
 
@@ -227,8 +231,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-18T20:03:58.651Z
-Stopped at: Completed 11-10-PLAN.md
+Last session: 2026-10-18T20:49:36.839Z
+Stopped at: Completed 11-11-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

@@ -243,7 +243,7 @@
   - Test: Test queries hybrid/naive on a fresh store_root and asserts the named refusal or empty-namespace flag, and a second query on a populated namespace with a non-matching question asserts the plain no-match result. Fails today: both return [] and the answer comes from the bare query.
   - Defects: parts-lightrag/PC-20
   - Owner decision first: Refusal vs envelope flag for an unpopulated namespace.
-- [ ] **LRAG-17**: LightRAG hybrid/local/global answers are generated from KG context as in v1 kg_query: the assembled prompt includes the budgeted entity and relation descriptions (budget-entities/budget-relations) as well as chunks, generate uses the configured prompt_template (v1 rag_response / naive_rag_response) instead of the two-line 'Context/Question' template, the priority_class config key is read or removed, order_policy changes ordering, and the assembled context is capped by a token budget the engine always sets.
+- [x] **LRAG-17**: LightRAG hybrid/local/global answers are generated from KG context as in v1 kg_query: the assembled prompt includes the budgeted entity and relation descriptions (budget-entities/budget-relations) as well as chunks, generate uses the configured prompt_template (v1 rag_response / naive_rag_response) instead of the two-line 'Context/Question' template, the priority_class config key is read or removed, order_policy changes ordering, and the assembled context is capped by a token budget the engine always sets.
   - Test: Test runs the hybrid wiring with a recording LLM client and asserts the generate prompt contains entity and relation description text from the fixture graph, matches the v1 template's section headers, and is no longer than the configured token cap with an oversized chunk fixture; naive arm asserts the naive_rag_response template. Fails today: assemble reads only rerank items and generate uses an f-string.
   - Defects: parts-lightrag/PC-02, parts-lightrag/PC-05, parts-lightrag/PC-06
   - Owner decision first: G-27 v1 answer fidelity: match v1 kg_query prompts exactly, or keep the decomposed prompt and relabel the arms (not 'KG context', not v1-equivalent).
@@ -879,7 +879,7 @@ These fail today.
 | LRAG-14 | Phase 11 | Complete |
 | LRAG-15 | Phase 11 | Complete |
 | LRAG-16 | Phase 11 | Complete |
-| LRAG-17 | Phase 11 | Pending |
+| LRAG-17 | Phase 11 | Complete |
 | LRAG-18 | Phase 11 | Complete |
 | LRAG-19 | Phase 11 | Complete |
 | LRAG-20 | Phase 11 | Complete |

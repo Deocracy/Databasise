@@ -231,7 +231,7 @@ Plans (nine waves; the shared engine and store modules force most plans into seq
 - LRAG-17/18: G-27 v1 answer fidelity — match v1 kg_query prompts exactly or relabel the arms; whether live rerank gets an API toggle
 - LRAG-20: expose a delete-impact/per-document entity view or remove the ops
 
-**Plans**: 10/11 plans executed
+**Plans**: 11/11 plans executed
 
 Plans (nine waves; `seam/engine.py` is touched by nine plans, so those run one per wave. Wave 1 and wave 2 each hold two plans that share no file):
 
@@ -245,7 +245,7 @@ Plans (nine waves; `seam/engine.py` is touched by nine plans, so those run one p
 - [x] 11-08-PLAN.md — Interrupted documents and the retry route and MCP tool (LRAG-07; wave 6)
 - [x] 11-09-PLAN.md — Health writes nothing, needs model clients for ok, carries engine_reason (LRAG-13, LRAG-14, LRAG-06; wave 7)
 - [x] 11-10-PLAN.md — EmptyNamespaceError before any model call; recipe-only embedder-index skipped in query runs (LRAG-16, LRAG-19; wave 8)
-- [ ] 11-11-PLAN.md — v1 kg_query context and prompt templates; engine-set token cap; phase offline gate (LRAG-17; wave 9)
+- [x] 11-11-PLAN.md — v1 kg_query context and prompt templates; engine-set token cap; phase offline gate (LRAG-17; wave 9)
 
 ### Phase 12: HippoRAG Fixes
 
@@ -445,7 +445,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 8. Run the Engine | 10/10 | Complete    | 2026-10-16 |
 | 9. Inputs, Errors & Security | 10/10 | Complete    | 2026-10-17 |
 | 10. Stores, Locking & Data Integrity | 12/12 | Complete    | 2026-10-17 |
-| 11. LightRAG Corpus Path | 10/11 | In Progress | - |
+| 11. LightRAG Corpus Path | 11/11 | In Progress | - |
 | 12. HippoRAG Fixes | 0/TBD | Not started | - |
 | 13. Selectors, Wiring & Runner | 0/TBD | Not started | - |
 | 14. Promotion & Ledger | 0/TBD | Not started | - |
