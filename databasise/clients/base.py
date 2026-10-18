@@ -56,7 +56,10 @@ class RerankResult:
 class LLMClient(Protocol):
     """A part body reaches this only via ``ctx.clients["llm"]`` after
     ``CapabilityScopedClients.require("calls_llm")`` — never constructed or imported directly by
-    a part body (D-06)."""
+    a part body (D-06).
+
+    ``messages`` may begin with one ``{"role": "system"}`` message (``lightrag/generator-llm``
+    sends v1's answer template that way, D-16); providers receive the list unchanged."""
 
     async def chat(self, messages: list[dict[str, str]], **kwargs: Any) -> ChatResult: ...
 

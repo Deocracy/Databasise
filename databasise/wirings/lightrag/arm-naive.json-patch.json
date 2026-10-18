@@ -16,6 +16,7 @@
     { "op": "remove", "path": "/nodes/join-chunks" },
     { "op": "replace", "path": "/nodes/embedder-query/deps", "value": [] },
     { "op": "replace", "path": "/nodes/heading-backfill/deps", "value": ["chunk-vector"] },
+    { "op": "replace", "path": "/nodes/assemble/deps", "value": ["rerank"] },
     { "op": "replace", "path": "/nodes/assemble/config", "value": {
       "order_policy": "naive-template",
       "requires_block_kinds": [],

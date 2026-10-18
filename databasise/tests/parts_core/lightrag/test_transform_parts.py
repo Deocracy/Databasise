@@ -231,8 +231,10 @@ async def test_join_chunks_degenerate_one_ary_local_arm_config_does_not_raise():
 async def test_truncator_preserves_input_order_and_removes_from_the_tail():
     items = [{"entity_name": f"e{i}", "description": "x" * 40} for i in range(5)]
     # Each item costs the same estimated tokens; an allowance covering three items' worth keeps
-    # exactly the first three, in their original order — never re-sorted.
-    per_item_cost = len(__import__("json").dumps(items[0], sort_keys=True)) // 4
+    # exactly the first three, in their original order — never re-sorted. 11-11 (D-16): the cost
+    # is v1's projected {entity, type, description} row, not the whole item.
+    row = {"entity": "e0", "type": "UNKNOWN", "description": "x" * 40}
+    per_item_cost = len(__import__("json").dumps(row)) // 4
     allowance = per_item_cost * 3
     ctx = _ctx(
         "budget-entities",

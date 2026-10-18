@@ -392,9 +392,11 @@ async def test_generate_returns_a_completion_and_a_populated_token_accounting():
 
 
 async def test_generate_with_no_assemble_input_still_calls_the_llm_with_just_the_query():
-    """The ``bypass`` arm's own shape: ``generate`` with ``deps: []``."""
+    """The ``bypass`` arm's own shape: ``generate`` with ``deps: []``. 11-11 (D-16): it is the
+    bypass ``prompt_template`` that sends the bare query; the KG default answers fail_response."""
     client = _StubLLMClient()
-    ctx = _ctx("generate", config={"query": "direct question"}, inputs={}, clients={"llm": client})
+    config = {"query": "direct question", "prompt_template": "none - direct LLM call, no context"}
+    ctx = _ctx("generate", config=config, inputs={}, clients={"llm": client})
 
     result = await LIGHTRAG_GENERATOR_LLM_PART.body(ctx)
 

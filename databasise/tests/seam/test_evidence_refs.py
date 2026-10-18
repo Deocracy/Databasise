@@ -13,6 +13,7 @@ import numpy as np
 import pydantic
 import pytest
 from databasise.clients.base import ChatResult, EmbeddingResult
+from databasise.parts_core.lightrag.prompts import PROMPTS
 from databasise.runner.trace import TokenAccounting
 from databasise.seam import Databasise, QueryObject
 from databasise.seam import evidence as evidence_module
@@ -111,7 +112,8 @@ async def test_zero_item_retrieval_yields_an_empty_but_present_evidence_list(sto
 
     assert envelope.evidence == []
     assert isinstance(envelope.answer, str) and len(envelope.answer) > 0
-    assert envelope.answer == _STUB_COMPLETION
+    # 11-11 (D-16): no context built, so generate answers with v1's fail_response and no LLM call.
+    assert envelope.answer == PROMPTS["fail_response"]
 
 
 def test_mint_evidence_refs_raises_the_named_refusal_for_an_item_missing_its_id_key():

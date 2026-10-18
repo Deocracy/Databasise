@@ -82,7 +82,7 @@ async def test_non_ascii_text_round_trips_unchanged_through_the_seam(synthetic_n
     class _EchoLLMClient:
         async def chat(self, messages, **kwargs):
             return ChatResult(
-                text=messages[0]["content"],
+                text=messages[-1]["content"],  # 11-11 (D-16): the query is the last, user message
                 tokens=TokenAccounting(counted_by="echo"),
                 resolved_model_identity="echo-model",
             )

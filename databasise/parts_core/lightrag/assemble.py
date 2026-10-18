@@ -1,50 +1,107 @@
-"""``lightrag/assembler-kg-context`` (naive arm position 5 of 7) — joins the ordered chunk items
-into one context string, applying the arm's own ``order_policy`` and the chunk-token budget. §L.1
-absorbs the chunk-token budget into this node rather than a separate one — ported by search from
-``v1/lightrag/operate.py``'s ``naive_query``, which computes ``available_chunk_tokens`` (total
-minus system-prompt/query/buffer overhead) and passes it to ``process_chunks_unified`` as
-``chunk_token_limit``.
+"""``lightrag/assembler-kg-context`` — builds the answer context the way v1 does (D-16, LRAG-17).
 
-No store or client access (no declared effects) — this node is a pure transform over its inputs.
-``config["max_total_tokens"]`` (character-budgeted here as a documented four-chars-per-token
-heuristic, since this tracer has no tokenizer dependency of its own) truncates whole chunks only,
-never a chunk's own text mid-string, mirroring ``process_chunks_unified``'s own whole-chunk
-truncation.
+``order_policy`` picks the v1 template: ``kg-template`` fills ``PROMPTS["kg_query_context"]`` with
+the entity rows, relation rows, chunks and reference list (``operate.py`` ``_build_context_str``);
+``naive-template`` fills ``PROMPTS["naive_query_context"]`` with chunks and references only
+(``naive_query``). Any other value is refused by name. Entity and relation rows are the
+``entities_context`` / ``relations_context`` that ``budget-entities`` / ``budget-relations`` emit
+(both inputs optional, so the naive arm and the fixture wirings run without them). Chunks are JSON
+lines ``{"reference_id", "content"[, "content_headings"]}`` whose reference ids come from
+``utils.py`` ``generate_reference_list_from_chunks``: file paths numbered by frequency, then first
+appearance. With no entity, relation or chunk the context is empty, so ``generate`` answers with
+v1's ``fail_response`` and makes no call.
+
+No store or client access (no declared effects) — a pure transform over its inputs.
+``config["max_total_tokens"]`` truncates whole chunks only, never a chunk's text mid-string.
 """
 
 from __future__ import annotations
 
+import json
+from collections import Counter
 from typing import Any
 
 from databasise.parts.schema import NodeContext, Part
+from databasise.parts_core.lightrag.prompts import PROMPTS
 
 _NAME_AT_VERSION = "lightrag/assembler-kg-context@0.1.0"
 _DEFAULT_ORDER_POLICY = "naive-template"
-# Deliberately coarse: no tokenizer dependency in this tracer, so a token budget is converted to
-# a character budget at this fixed ratio. Wide enough headroom that it never truncates mid-chunk
-# for this plan's snapshot-sized corpus; a real tokenizer-backed budget is out of this plan's scope.
+_TEMPLATE_BY_ORDER_POLICY = {"kg-template": "kg_query_context", "naive-template": "naive_query_context"}
 _CHARS_PER_TOKEN = 4
+
+
+class UnknownOrderPolicyError(ValueError):
+    """``config["order_policy"]`` names no v1 context template."""
+
+    def __init__(self, order_policy: Any) -> None:
+        self.order_policy = order_policy
+        super().__init__(
+            f"unknown assemble order_policy {order_policy!r}; expected one of "
+            f"{sorted(_TEMPLATE_BY_ORDER_POLICY)}"
+        )
+
+
+def _json_lines(rows: list[dict[str, Any]]) -> str:
+    return "\n".join(json.dumps(row, ensure_ascii=False) for row in rows)
+
+
+def _chunk_rows_and_references(chunks: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], str]:
+    """v1 ``generate_reference_list_from_chunks`` plus ``_build_context_str``'s chunk rows."""
+    counts = Counter(
+        path for chunk in chunks if (path := chunk.get("file_path")) and path != "unknown_source"
+    )
+    # Counter keeps first-appearance order and sorted() is stable: frequency, then first seen.
+    paths = sorted(counts, key=lambda path: -counts[path])
+    reference_id = {path: str(i + 1) for i, path in enumerate(paths)}
+    rows = []
+    for chunk in chunks:
+        row = {"reference_id": reference_id.get(chunk.get("file_path"), ""), "content": str(chunk.get("content", ""))}
+        if chunk.get("content_headings"):
+            row["content_headings"] = chunk["content_headings"]
+        rows.append(row)
+    return rows, "\n".join(f"[{reference_id[path]}] {path}" for path in paths)
+
+
+def _budget_rows(output: dict[str, Any] | None, key: str) -> list[dict[str, Any]]:
+    return list((output or {}).get(key) or [])
 
 
 async def _assemble_body(ctx: NodeContext) -> dict[str, Any]:
     config = ctx.config or {}
-    items = list(ctx.inputs["rerank"]["items"])
     order_policy = config.get("order_policy", _DEFAULT_ORDER_POLICY)
+    template_kind = _TEMPLATE_BY_ORDER_POLICY.get(order_policy)
+    if template_kind is None:
+        raise UnknownOrderPolicyError(order_policy)
+
+    is_kg = order_policy == "kg-template"
+    entities = _budget_rows(ctx.inputs.get("budget-entities"), "entities_context") if is_kg else []
+    relations = _budget_rows(ctx.inputs.get("budget-relations"), "relations_context") if is_kg else []
 
     max_total_tokens = config.get("max_total_tokens")
     char_budget = int(max_total_tokens) * _CHARS_PER_TOKEN if max_total_tokens else None
-
-    parts: list[str] = []
+    chunks: list[dict[str, Any]] = []
     total_chars = 0
-    for item in items:
+    for item in ctx.inputs["rerank"]["items"]:
         content = str(item.get("content", ""))
-        if char_budget is not None and parts and total_chars + len(content) > char_budget:
+        if char_budget is not None and chunks and total_chars + len(content) > char_budget:
             break
-        parts.append(content)
+        chunks.append(item)
         total_chars += len(content)
 
-    context = "\n\n".join(parts)
-    return {"context": context, "order_policy": order_policy, "chunk_count": len(parts)}
+    context = ""
+    if entities or relations or chunks:
+        chunk_rows, reference_list_str = _chunk_rows_and_references(chunks)
+        sections = {"text_chunks_str": _json_lines(chunk_rows), "reference_list_str": reference_list_str}
+        if is_kg:
+            sections.update(entities_str=_json_lines(entities), relations_str=_json_lines(relations))
+        context = PROMPTS[template_kind].format(**sections)
+
+    return {
+        "context": context,
+        "order_policy": order_policy,
+        "template_kind": template_kind,
+        "chunk_count": len(chunks),
+    }
 
 
 LIGHTRAG_ASSEMBLER_KG_CONTEXT_PART = Part(

@@ -15,10 +15,12 @@ allowance (v1's own ``DEFAULT_MAX_ENTITY_TOKENS``/``DEFAULT_MAX_RELATION_TOKENS`
 overridable via ``config["max_token_allowance"]`` — CONTRACT §19.4's rule that a numeric threshold
 or cap is config, not a knob.
 
-No tokenizer dependency in this tracer (matching ``databasise/parts_core/lightrag/assemble.py``'s
-own documented choice): each item's token cost is estimated from its own JSON-serialised form at
-the same four-chars-per-token heuristic ``assemble.py`` already uses, applied per item rather than
-per assembled block.
+D-16 (LRAG-17): each item is first projected to v1's row — ``{entity, type, description}`` at
+``budget-entities``, ``{entity1, entity2, description}`` at ``budget-relations`` (``operate.py``
+``_apply_token_truncation``) — and the row's ``json.dumps`` is what is costed, at four chars per
+token (no tokenizer dependency; see ``_token_cost``). The kept rows are emitted as
+``entities_context`` / ``relations_context`` for ``assemble``, beside the kept original ``items``
+that ``chunk-sel-kg`` reads.
 
 Declares no effects (``config["apportionment_policy"]``'s own base-wiring text: "non-effectful
 join, no budget spent at this node" — reused verbatim by this node's config too): reaches no store
@@ -36,10 +38,6 @@ from databasise.parts.schema import NodeContext, Part
 
 _NAME_AT_VERSION = "lightrag/truncator-token-budget@0.1.0"
 
-# Matches assemble.py's own documented four-chars-per-token heuristic — no tokenizer dependency
-# in this tracer, applied here to each item's own JSON-serialised form (the same per-item key v1's
-# own truncate_list_by_token_size call site hashes, operate.py's entities_context/relations_context
-# truncation calls).
 _CHARS_PER_TOKEN = 4
 
 # v1's own defaults (v1/lightrag/constants.py:54-55), selected by this node's own position id.
@@ -50,9 +48,26 @@ _DEFAULT_ALLOWANCE_BY_NODE_ID: dict[str, int] = {
 _FALLBACK_DEFAULT_ALLOWANCE = 6000
 
 
-def _token_cost(item: dict[str, Any]) -> int:
-    encoded = json.dumps(item, ensure_ascii=False, sort_keys=True, default=str)
-    return max(1, len(encoded) // _CHARS_PER_TOKEN)
+def _entity_row(item: dict[str, Any]) -> dict[str, Any]:
+    """v1 ``_apply_token_truncation``'s entity row, ``file_path``/``created_at`` already removed."""
+    return {
+        "entity": item.get("entity_name"),
+        "type": item.get("entity_type", "UNKNOWN"),
+        "description": item.get("description", "UNKNOWN"),
+    }
+
+
+def _relation_row(item: dict[str, Any]) -> dict[str, Any]:
+    if "src_tgt" in item:
+        entity1, entity2 = item["src_tgt"]
+    else:
+        entity1, entity2 = item.get("src_id"), item.get("tgt_id")
+    return {"entity1": entity1, "entity2": entity2, "description": item.get("description", "UNKNOWN")}
+
+
+def _token_cost(row: dict[str, Any]) -> int:
+    # shortcut: len // 4 stands in for v1's tokenizer (no offline encoding); upgrade when an offline-safe tokenizer ships (D-16)
+    return len(json.dumps(row, ensure_ascii=False, default=str)) // _CHARS_PER_TOKEN
 
 
 async def _truncator_token_budget_body(ctx: NodeContext) -> dict[str, Any]:
@@ -62,18 +77,24 @@ async def _truncator_token_budget_body(ctx: NodeContext) -> dict[str, Any]:
 
     default_allowance = _DEFAULT_ALLOWANCE_BY_NODE_ID.get(ctx.node_id, _FALLBACK_DEFAULT_ALLOWANCE)
     allowance = int(config.get("max_token_allowance", default_allowance))
+    is_relations = ctx.node_id == "budget-relations"
+    project = _relation_row if is_relations else _entity_row
 
     kept: list[dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     consumed = 0
     running = 0
     for item in items:
-        running += _token_cost(item)
+        row = project(item)
+        running += _token_cost(row)
         if running > allowance:
             break
         kept.append(item)
+        rows.append(row)
         consumed = running
 
-    return {"items": kept, "consumed": consumed, "allowance": allowance}
+    context_key = "relations_context" if is_relations else "entities_context"
+    return {"items": kept, context_key: rows, "consumed": consumed, "allowance": allowance}
 
 
 LIGHTRAG_TRUNCATOR_TOKEN_BUDGET_PART = Part(
