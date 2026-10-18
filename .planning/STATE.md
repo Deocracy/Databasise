@@ -22,10 +22,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-17 after Phase 9)
+See: .planning/PROJECT.md (updated 2026-10-17 after Phase 10)
 
 **Core value:** Modalities are swappable without consumers noticing — LightRAG and HippoRAG 2 both live behind one unchanging §18 envelope, comparable side-by-side on the rig.
-**Current focus:** Phase 10 — Stores, Locking & Data Integrity
+**Current focus:** Phase 11 — LightRAG Corpus Path
 
 ## Current Position
 
@@ -34,7 +34,7 @@ Plan: Not started
 Status: Ready to plan
 Last activity: 2026-10-17 — Phase 10 complete, transitioned to Phase 11
 
-Progress: [███░░░░░░░] 27% (2/11 phases)
+Progress: [███░░░░░░░] 27% (3/11 phases)
 
 ## Performance Metrics
 
@@ -166,6 +166,9 @@ None yet.
 - [Phase 09] Six Info review items stay open in 09-REVIEW-DISPOSITION.md (IN-03 OpenAPI does not declare the 404/422 refusal shape; IN-04 every node exception labelled a foreign-engine fault; IN-05 unreachable `UnknownDocumentError`; IN-06 refusals echo unbounded caller input; IN-07 compare rule text copied three times; IN-08 accepted limits). WR-02 (crash orphan between staged create and owner record) is deferred.
 - [Phase 09] SEAM-01..SEAM-16 ledger rows are still open with empty test_refs; once set, the 16 SEAM test files become protected (grant-check-edit needed in later phases).
 - [Phase 09] One unexplained single failure in a `check_offline_suite.py` pytest-mode run during review fixes did not reproduce in five later full runs; watch for it.
+- [Phase 10] Six Info review items stay open in 10-REVIEW-DISPOSITION.md (accepted limits; kv no-such-table plus -wal leniency; a directory named kv.sqlite3 reads absent; drift-test comment; finalize loops stop at the first failing finalize, also in engine.py; snapshot log text). Node ids still appear in consumer stop_reason/degradation_reason; Phase 13 WIRE owns node-free consumer text.
+- [Phase 10] The 24 protected test files now include the 16 SEAM test files; Phase 10 needed one grant (test_refusal_status_codes.py). Once STOR test_refs are set, the STOR test files join the list.
+- [Phase 10] STOR-07 delete atomicity is proven on a v2 fixture wiring only; the LightRAG delete stages no v2 writes until M-04 (Phase 11).
 - Cozo 0.7.6 is architecture-frozen with four known correctness bugs and no upstream fixes expected; relevant to STOR-01 and STOR-10 (Phase 10).
 
 ### Quick Tasks Completed
@@ -201,5 +204,5 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Phase 10 (Stores, Locking & Data Integrity) is next in the autonomous run
+- Phase 11 (LightRAG Corpus Path) is next in the autonomous run
 - Owner, when ready: TESTING-PLAN.md §2 RUN-11 live runs, parity-env check, optional live rerank test

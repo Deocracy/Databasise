@@ -116,6 +116,10 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 | v1.1 Phase 9: one refusal body `{refusal_type, message, <public fields>}` on REST and MCP; 404 for the four not-found lookups, 422 for other refusals, 502/503 `ForeignEngineRefusalError` for machine faults; launcher transport guards keep their own shape | Owner delegated the grey areas ("You decide"); D-12/D-13 exception clauses owner-ratified 2026-10-16 | ✓ Good (verified 5/5, 16/16 SEAM) |
 | v1.1 Phase 9: raw uploads staged by exclusive create plus an owner record naming the workspace; a staged id is unique per store; delete releases it only on v1 success/not_found | Three review iterations: overwrite, burned ids and cross-workspace unlink were each found and closed; the protected corpus-endpoint test pins the flat inbox layout | — Pending (crash-orphan reaper is an owner decision; operator removes orphans by hand) |
 | v1.1 Phase 9: v1 free-text errors reach callers only through a best-effort regex scrub (paths to basenames, URLs to `<url>`, tracebacks cut, 200-char cap) | An allow-list of error categories would lose the diagnostic text; seam auth is still undecided | — Pending (revisit with the CONN-phase auth decision) |
+| v1.1 Phase 10: overlapping calls share one reference-counted Cozo client per graph path; another OS process holding it gets `StoreBusyError` (409) | Refusing every overlap would block queries for the length of a LightRAG ingest; the spike showed one client is thread-safe | ✓ Good (verified 5/5, 16/16 STOR) |
+| v1.1 Phase 10: ingest and delete commit through prepare-all then commit-all under one lock per (event loop, store root); a failed or stopped run commits nothing | Success criterion 3 as written; a crash or failure between two stores' commits remains a documented residual window (kv, then vector, then graph) | — Pending (closing it needs a recovery record or a single transactional backend) |
+| v1.1 Phase 10: health is read-only, keyed `"<kind>:<namespace>"` with ok/absent/corrupted/busy over all ten shipped namespaces | Settled once for LRAG-13/14 and HIPP-15; a §18 shape change made before any GUI consumer | ✓ Good |
+| v1.1 Phase 10: lexical store, blob store and artifact registry deleted; the 17 effects stay, and unwired store effects are refused at parse (`UnparseableWiringError`, 422) | No shipped part used them; CONTRACT §2 stays unamended | ✓ Good (STOR-13/14 satisfied by removal) |
 | Close the operator verbs' check-then-act races with one `BEGIN IMMEDIATE` span per verb plus a UNIQUE `(alias, minted_version)` index | A guard read and the append it gates must commit together or the guard goes stale under concurrency; the schema constraint backstops it independently of any Python read path | ✓ Held (G-07-1 closed; 40/40 concurrency runs, full suite green) |
 
 ## Evolution
@@ -136,4 +140,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-17 after Phase 9*
+*Last updated: 2026-10-17 after Phase 10*
