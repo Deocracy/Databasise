@@ -18,7 +18,7 @@ from databasise.clients.base import ChatResult, EmbeddingResult
 from databasise.parity import storage_audit
 from databasise.parts.registry import PartRegistry
 from databasise.parts.schema import NodeContext, Part, WiringNode
-from databasise.parts_core import UndeclaredEffectError
+from databasise.parts_core import UndeclaredEffectError, unwrap_store_handle
 from databasise.runner import scheduler
 from databasise.runner.trace import TokenAccounting
 from databasise.stores.kv import SqliteKVStore
@@ -203,7 +203,7 @@ async def test_no_recorder_passed_behaves_exactly_as_before():
 
     assert result["partial"] is False
     # STOR-05 (D-09): a reads_kv node's handle is the read-only proxy over the real store.
-    assert result["results"]["n1"]["kv"]._target == "the-kv-store"
+    assert unwrap_store_handle(result["results"]["n1"]["kv"]) == "the-kv-store"
 
 
 async def test_an_undeclared_store_reach_fails_the_run_rather_than_appearing_in_the_audit():

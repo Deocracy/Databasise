@@ -15,6 +15,7 @@ import asyncio
 import pytest
 from databasise.parts.registry import PartRegistry
 from databasise.parts.schema import NodeContext, Part, WiringNode
+from databasise.parts_core import unwrap_store_handle
 from databasise.runner import scheduler
 from databasise.runner.scheduler import (
     InvalidMaxConcurrencyError,
@@ -397,7 +398,7 @@ async def test_12_capability_scoped_store_view_is_sourced_from_the_parts_effects
 
     assert result["partial"] is False
     # STOR-05 (D-09): the granted handle is the writable proxy over the real store.
-    assert result["results"]["n1"]["kv"]._target == "the-real-kv-store"
+    assert unwrap_store_handle(result["results"]["n1"]["kv"]) == "the-real-kv-store"
 
     # The same substitution reaches D-13's resume boundary: the node genuinely mutated a store
     # (the Part declares writes_kv and the scoped view granted it), so it can never be stamped a

@@ -110,22 +110,46 @@ class _StoreProxy:
     __slots__ = ("_target", "_kind", "_mode", "_declared")
 
     def __init__(self, target: Any, kind: str, mode: str, declared: list[str]) -> None:
-        self._target = target
-        self._kind = kind
-        self._mode = mode
-        self._declared = declared
+        # Phase 10 review WR-02: every access goes through object.__getattribute__ / __setattr__, and
+        # the proxy exposes no private state of its own or of the target.
+        for slot, value in (("_target", target), ("_kind", kind), ("_mode", mode), ("_declared", declared)):
+            object.__setattr__(self, slot, value)
 
-    def __getattr__(self, name: str) -> Any:
-        if name in _ENGINE_ONLY:
+    def __getattribute__(self, name: str) -> Any:
+        get = object.__getattribute__
+        declared = get(self, "_declared")
+        if name.startswith("__"):
+            return get(self, name)
+        if name.startswith("_"):
             raise UndeclaredEffectError(
-                name, self._declared, reason=f"store method {name!r} is engine-only"
+                name, declared, reason=f"store attribute {name!r} is not exposed"
             )
-        if self._mode == "r" and name not in _READ_ALLOWLIST[self._kind]:
-            raise UndeclaredEffectError(f"writes_{self._kind}", self._declared)
-        attr = getattr(self._target, name)
+        kind, mode, target = get(self, "_kind"), get(self, "_mode"), get(self, "_target")
+        if name in _ENGINE_ONLY:
+            raise UndeclaredEffectError(name, declared, reason=f"store method {name!r} is engine-only")
+        if mode == "r" and name not in _READ_ALLOWLIST[kind]:
+            raise UndeclaredEffectError(f"writes_{kind}", declared)
+        attr = getattr(target, name)
         if name == "select":
-            return lambda *a, **kw: _StoreProxy(attr(*a, **kw), self._kind, self._mode, self._declared)
+            return lambda *a, **kw: _StoreProxy(attr(*a, **kw), kind, mode, declared)
         return attr
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        raise UndeclaredEffectError(
+            name, object.__getattribute__(self, "_declared"), reason="a store handle is read-only"
+        )
+
+    def __delattr__(self, name: str) -> None:
+        raise UndeclaredEffectError(
+            name, object.__getattribute__(self, "_declared"), reason="a store handle is read-only"
+        )
+
+
+def unwrap_store_handle(proxy: Any) -> Any:
+    """Return the raw store behind a capability proxy. For tests and engine only: a part body must
+    never call this, because the raw store carries the lifecycle and writer methods the proxy
+    withholds."""
+    return object.__getattribute__(proxy, "_target")
 
 
 class CapabilityScopedStores:
@@ -172,4 +196,5 @@ __all__ = [
     "CapabilityScopedStores",
     "StoreNotWiredError",
     "UndeclaredEffectError",
+    "unwrap_store_handle",
 ]
