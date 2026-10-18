@@ -63,6 +63,11 @@ MAX_DOCUMENT_BYTES = 25 * 1024 * 1024
 # Used with ``fullmatch`` (09-03-PLAN.md, SEAM-07): ``$`` would let a trailing newline through.
 _DOCUMENT_ID_TOKEN_RE = re.compile(r"[A-Za-z0-9_-]+")
 
+# 11 REVIEW A-WR-03: v1's placeholder document sources (v1/lightrag/utils_pipeline.py
+# PLACEHOLDER_DOCUMENT_SOURCES, minus "" which the token rule already refuses). A text row's
+# file_path is one of them, so the driver's id stem rule would map such an id to every text row.
+_RESERVED_V1_DOCUMENT_IDS = frozenset({"unknown_source", "no-file-path"})
+
 _ON_DISK_SUFFIX = ".bin"
 
 # 11-05 (D-09): the upload types v1's default (legacy) parser handles, copied from
@@ -343,8 +348,9 @@ def generated_on_disk_name(document_id: str, suffix: str = _ON_DISK_SUFFIX) -> s
     ``upload_suffix`` returned). Raises :class:`InvalidDocumentIdError` for any ``document_id`` that
     is not a non-empty token of letters, digits, ``_`` or ``-`` -- no path separator, no dot, no
     newline, so the returned name can never resolve outside the directory it is joined under.
+    v1's reserved source names (``unknown_source``, ``no-file-path``) are refused too (A-WR-03).
     """
-    if not _DOCUMENT_ID_TOKEN_RE.fullmatch(document_id):
+    if not _DOCUMENT_ID_TOKEN_RE.fullmatch(document_id) or document_id in _RESERVED_V1_DOCUMENT_IDS:
         raise InvalidDocumentIdError(document_id=document_id)
     return f"{document_id}{suffix}"
 
