@@ -62,9 +62,20 @@ _LIGHTRAG_FULL_DELETE_REASON = (
     "reach it."
 )
 
+_LIGHTRAG_V1_INDEX_SYNC_REASON = (
+    "Added by 11-01-PLAN.md (D-01): the v1-to-v2 index mirror, the second node of LightRAG's "
+    "corpus-ingest and corpus-delete wirings. Same structural exclusion as "
+    "lightrag/full-delete@0.1.0: dispatched only by Databasise.ingest()/delete_document() through "
+    "those corpus wirings, never through resolve_selector()'s candidate pool (all_wirings()), so "
+    "no comparison call can reach it. It declares mutates_store only to derive the hosted opaque "
+    "placement; its writes go through the engine's staged ctx.stores handles. No requirement in "
+    "this milestone asks for corpus-write behaviour to be A/B-testable."
+)
+
 _KNOWN_REASONS: dict[str, str] = {
     "codebase-memory-mcp@0.1.0": _CODEBASE_MEMORY_MCP_REASON,
     "lightrag/full-delete@0.1.0": _LIGHTRAG_FULL_DELETE_REASON,
+    "lightrag/v1-index-sync@0.1.0": _LIGHTRAG_V1_INDEX_SYNC_REASON,
 }
 
 # The two roster entries MODEL-RED-TEAM.md's F-07 finding names that are catalogued in
