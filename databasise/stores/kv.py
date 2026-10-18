@@ -53,12 +53,16 @@ class SqliteKVStore(StorageNameSpace):
         self._dir.mkdir(parents=True, exist_ok=True)
         self._db_path = self._dir / "kv.sqlite3"
         self._conn = sqlite3.connect(self._db_path)
-        self._conn.execute("PRAGMA journal_mode=WAL")
-        self._conn.execute("PRAGMA synchronous=NORMAL")
-        self._conn.execute(
-            "CREATE TABLE IF NOT EXISTS kv (id TEXT PRIMARY KEY, value TEXT NOT NULL)"
-        )
-        self._conn.commit()
+        try:
+            self._conn.execute("PRAGMA journal_mode=WAL")
+            self._conn.execute("PRAGMA synchronous=NORMAL")
+            self._conn.execute(
+                "CREATE TABLE IF NOT EXISTS kv (id TEXT PRIMARY KEY, value TEXT NOT NULL)"
+            )
+            self._conn.commit()
+        except BaseException:
+            self._conn.close()  # a corrupt file must not leave the connection open
+            raise
         self._pending_upserts: dict[str, dict[str, Any]] = {}
         self._pending_deletes: set[str] = set()
 

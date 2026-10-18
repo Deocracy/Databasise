@@ -399,6 +399,7 @@ def _build_stores(
     resolved: dict[str, Any] | None = None,
     *,
     into: dict[str, Any] | None = None,
+    operation: str = "open_stores",
 ) -> dict[str, Any]:
     """kv/vector/graph, all three, at the engine's own namespace/workspace — mirrors
     ``run_arm.py``'s own ``_build_stores`` (see that module's docstring for why every wiring gets
@@ -421,14 +422,18 @@ def _build_stores(
     then vector, then graph, and that dict is returned. A caller passes its own dict, declared
     before its ``try``, so when a later open raises, its ``finally`` still finalizes every store
     already opened.
+
+    Phase 10 review WR-08: a store that cannot be opened because its file is corrupt (a sqlite
+    error, or pycozo's bare ``Exception``) is ``ForeignEngineRefusalError(StoreCorrupted)``, an OS
+    error is ``StoreFault``, both labelled with ``operation``; no raw store error reaches a caller.
     """
     store_namespaces = (resolved or {}).get("store_namespaces") or {}
     kv_namespace = store_namespaces.get("kv", _TEXT_CHUNKS_KIND)
     graph_namespace = store_namespaces.get("graph", _GRAPH_KIND)
     stores = into if into is not None else {}
-    stores["kv"] = SqliteKVStore(namespace=kv_namespace, workspace=workspace, store_root=store_root)
-    stores["vector"] = MultiNamespaceVectorStore(workspace=workspace, store_root=store_root)
     try:
+        stores["kv"] = SqliteKVStore(namespace=kv_namespace, workspace=workspace, store_root=store_root)
+        stores["vector"] = MultiNamespaceVectorStore(workspace=workspace, store_root=store_root)
         stores["graph"] = CozoGraphStore(
             namespace=graph_namespace, workspace=workspace, store_root=store_root
         )
@@ -437,6 +442,14 @@ def _build_stores(
         # the caller sees only store_kind (research Pitfall 17).
         logger.warning("graph store busy", exc_info=exc)
         raise StoreBusyError(store_kind="graph") from None
+    except Exception as exc:
+        # pycozo's native layer raises a bare ``Exception`` at open, so it is recognised by origin
+        # (it can only come from the constructors above), not by type.
+        if isinstance(exc, (sqlite3.Error, VectorStoreCorruptedError)) or type(exc) is Exception:
+            raise _foreign_fault(operation, exc, failure_class="StoreCorrupted") from exc
+        if isinstance(exc, OSError):
+            raise _foreign_fault(operation, exc, failure_class="StoreFault") from exc
+        raise
     return stores
 
 
@@ -957,7 +970,7 @@ class Databasise:
         try:
             # D-04: built inside the try so a failed open finalizes what opened; still before the
             # staging block, so a failed open leaves no staged file (WR-04).
-            stores = _build_stores(self.store_root, self.workspace, resolved, into=stores)
+            stores = _build_stores(self.store_root, self.workspace, resolved, into=stores, operation="ingest")
             if staged is not None:
                 staged.parent.mkdir(parents=True, exist_ok=True)
                 owner = self._staged_owner_path(document_id)
@@ -1134,7 +1147,7 @@ class Databasise:
         try:
             # D-08 (STOR-07): the wiring's store_namespaces pick the kv and graph namespaces, as in
             # ingest; LightRAG's corpus-delete.json declares none, so it keeps the defaults.
-            stores = _build_stores(self.store_root, self.workspace, resolved, into=stores)
+            stores = _build_stores(self.store_root, self.workspace, resolved, into=stores, operation="delete")
             scheduled = await _scheduler.run_wiring(
                 parsed,
                 self.registry,
@@ -1315,7 +1328,7 @@ class Databasise:
 
         stores: dict[str, Any] = {}
         try:
-            stores = _build_stores(self.store_root, self.workspace, resolved, into=stores)
+            stores = _build_stores(self.store_root, self.workspace, resolved, into=stores, operation="query")
             scheduled = await _scheduler.run_wiring(
                 parsed,
                 self.registry,
