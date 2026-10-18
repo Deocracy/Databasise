@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -56,13 +57,30 @@ class MissingV1InterpreterError(RuntimeError):
         )
 
 
+_SECRET_PATTERNS = (
+    (re.compile(r"\bsk-[^\s'\",]+"), "sk-[REDACTED]"),
+    (re.compile(r"(?i)\b(bearer\s+)[^\s'\",]+"), r"\1[REDACTED]"),
+    (re.compile(r"(?i)(api[_-]?key[\"']?\s*[=:]\s*[\"']?)[^\s'\",&]+"), r"\1[REDACTED]"),
+)
+
+
+def redact_secrets(text: str) -> str:
+    """11 REVIEW A-WR-05: mask API-key-shaped tokens (``sk-...``, ``Bearer ...``, ``api_key=...``
+    values) before a text can reach the server log. D-11 keeps v1's stderr tail in that log; this
+    is its control."""
+    for pattern, replacement in _SECRET_PATTERNS:
+        text = pattern.sub(replacement, text)
+    return text
+
+
 class CorpusOpSubprocessError(RuntimeError):
     """A non-zero exit from the v1 corpus driver subprocess — carries the captured stderr rather
     than returning an empty result (this module's own refusal-over-silent-empty-result rule). The
     message keeps the last 2000 characters, where a traceback's exception line is (LRAG-05). It
-    reaches the server log only, never a caller body (D-11)."""
+    reaches the server log only, never a caller body (D-11), with key-shaped tokens redacted."""
 
     def __init__(self, returncode: int, stderr: str):
+        stderr = redact_secrets(stderr)
         self.returncode = returncode
         self.stderr = stderr
         super().__init__(
@@ -223,4 +241,5 @@ __all__ = [
     "DEFAULT_V1_DRIVER_SCRIPT",
     "DEFAULT_V1_ENV_PARITY",
     "STATUS_WALL_CLOCK_CEILING_SECONDS",
+    "redact_secrets",
 ]
