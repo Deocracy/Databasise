@@ -21,7 +21,7 @@
     {
       "number": "11",
       "name": "LightRAG Corpus Path",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "number": "12",
@@ -64,5 +64,5 @@
     "label": "Advance to the next step",
     "reason": "Phase 4 of 11 · 27% · executing"
   },
-  "updated_at": "2026-10-18T06:53:58.424Z"
+  "updated_at": "2026-10-18T07:57:34.046Z"
 }

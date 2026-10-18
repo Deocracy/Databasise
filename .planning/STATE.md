@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 11
 current_phase_name: LightRAG Corpus Path
 status: executing
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-10-18T06:53:59.689Z"
+stopped_at: Completed 11-04-PLAN.md
+last_updated: "2026-10-18T07:57:35.305Z"
 last_activity: 2026-10-17
 last_activity_desc: Phase 10 complete, transitioned to Phase 11
-state_head: f4d975312b4fcf87e8660f215c5cf92e8409d9ff
+state_head: 6fdb0b5e314be51a941ca51fbbe0c2801da60410
 progress:
   total_phases: 11
   completed_phases: 3
   total_plans: 43
-  completed_plans: 33
+  completed_plans: 34
   percent: 27
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-17 after Phase 10)
 ## Current Position
 
 Phase: 11 (LightRAG Corpus Path) — EXECUTING
-Plan: 2 of 11
+Plan: 3 of 11
 Status: Ready to execute
 Last activity: 2026-10-17 — Phase 10 complete, transitioned to Phase 11
 
@@ -95,6 +95,7 @@ Progress: [███░░░░░░░] 27% (3/11 phases)
 | Phase 10 P11 | 20min | 2 tasks | 4 files |
 | Phase 10 P12 | 15min | 2 tasks | 8 files |
 | Phase 11 P01 | 29min | 2 tasks | 15 files |
+| Phase 11 P04 | 45min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -155,6 +156,8 @@ Recent decisions affecting current work:
 - [Phase 11]: D-01 prune uses a mirror manifest (kv record lightrag-v1-index-sync-manifest in text_chunks), so parity-imported rows are never deleted
 - [Phase 11]: run_corpus_op has no default v1 working dir; the engine stamps <store_root>/<workspace>/lightrag-v1 on every lightrag corpus node and status/health call
 - [Phase 11]: IngestJob gains seam_events (LRAG-03); ingest and delete MACH-11 events come from lightrag/v1-index-sync observed touches
+- [Phase 11]: 11-04: relation chunks exclude only the entity side's selected chunk ids, and a zero VECTOR count falls back to WEIGHT (v1 fidelity over plan wording)
+- [Phase 11]: 11-04: chunk-sel-kg pick_method_used is the shared per-side method, MIXED when sides differ; pick_method_used_by_side gives detail
 
 ### Pending Todos
 
@@ -202,8 +205,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-18T06:53:59.556Z
-Stopped at: Completed 11-01-PLAN.md
+Last session: 2026-10-18T07:57:35.175Z
+Stopped at: Completed 11-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

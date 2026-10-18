@@ -247,7 +247,7 @@
   - Test: Test runs the hybrid wiring with a recording LLM client and asserts the generate prompt contains entity and relation description text from the fixture graph, matches the v1 template's section headers, and is no longer than the configured token cap with an oversized chunk fixture; naive arm asserts the naive_rag_response template. Fails today: assemble reads only rerank items and generate uses an f-string.
   - Defects: parts-lightrag/PC-02, parts-lightrag/PC-05, parts-lightrag/PC-06
   - Owner decision first: G-27 v1 answer fidelity: match v1 kg_query prompts exactly, or keep the decomposed prompt and relabel the arms (not 'KG context', not v1-equivalent).
-- [ ] **LRAG-18**: LightRAG retrieval matches v1 ordering and selection: entity-lookup searches with the low-level keyword string and relation-lookup with the high-level keyword string; expanded one-hop relations are sorted by (rank, weight) descending before budget truncation; chunk-sel-kg selects entity and relation chunks separately (relation chunks deduplicated against entity chunks) then round-robin merges them; join-chunks deduplicates by chunk_id with vector chunks first; pick_method VECTOR runs when configured (query_vector supplied, candidate-restricted search) and pick_method_used is reported; live rerank receives the query and updates scores; node_degree is computed at most once per node per query.
+- [x] **LRAG-18**: LightRAG retrieval matches v1 ordering and selection: entity-lookup searches with the low-level keyword string and relation-lookup with the high-level keyword string; expanded one-hop relations are sorted by (rank, weight) descending before budget truncation; chunk-sel-kg selects entity and relation chunks separately (relation chunks deduplicated against entity chunks) then round-robin merges them; join-chunks deduplicates by chunk_id with vector chunks first; pick_method VECTOR runs when configured (query_vector supplied, candidate-restricted search) and pick_method_used is reported; live rerank receives the query and updates scores; node_degree is computed at most once per node per query.
   - Test: One parity test module over a fixture graph/vector store: assert the vectors sent to entity/relation lookup equal embeddings of ll/hl keyword strings; relation order after expand equals v1's sorted order; chunk-sel-kg output equals v1 _find_related_text_unit_from_entities/_relations plus round-robin merge; base-wiring join has no duplicate chunk ids; VECTOR run reports pick_method_used 'VECTOR'; rerank receives a non-empty query; a counting graph stub sees one node_degree call per distinct node. Fails today on each assertion.
   - Defects: parts-lightrag/PC-03, parts-lightrag/PC-07, parts-lightrag/PC-08, parts-lightrag/PC-09, parts-lightrag/PC-15, parts-lightrag/PC-18, parts-lightrag/PC-19
   - Owner decision first: G-27 v1 answer fidelity (same decision as LRAG-17); whether live rerank gets an API toggle at all.
@@ -880,7 +880,7 @@ These fail today.
 | LRAG-15 | Phase 11 | Pending |
 | LRAG-16 | Phase 11 | Pending |
 | LRAG-17 | Phase 11 | Pending |
-| LRAG-18 | Phase 11 | Pending |
+| LRAG-18 | Phase 11 | Complete |
 | LRAG-19 | Phase 11 | Pending |
 | LRAG-20 | Phase 11 | Pending |
 | HIPP-01 | Phase 12 | Pending |
