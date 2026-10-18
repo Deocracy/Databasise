@@ -129,7 +129,7 @@ from databasise.identity.instance import instance_hash
 from databasise.parts.admission import MissingWallClockCeilingError
 from databasise.parts.registry import PartRegistry, dispatch
 from databasise.parts.schema import NodeContext
-from databasise.parts_core import CapabilityScopedStores, UndeclaredEffectError
+from databasise.parts_core import EFFECT_TO_STORE, CapabilityScopedStores, UndeclaredEffectError
 from databasise.runner.budget import meter, realised_share
 from databasise.runner.guards import GuardDeclaration, declare_guard, evaluate_guards
 from databasise.runner.trace import NodeTrace, TokenAccounting
@@ -246,12 +246,13 @@ class _ScopedStoresView:
     ``ctx.stores["kv"]``, the shape every existing reference part uses — keeps working, while the
     access is still routed through the underlying deny-by-default check.
 
-    The mapping rule: a subscript key (a store name, e.g. ``"kv"``) resolves against the node's
-    own declared ``effects`` by matching the effect's own suffix after its first underscore
-    (``"writes_kv"`` / ``"reads_kv"`` both map to store key ``"kv"``, mirroring
-    ``CapabilityScopedStores.require``'s own ``effect.split("_", 1)[-1]`` rule) — the first
-    matching declared effect is the one checked. A store key with no matching declared effect
-    raises :class:`UndeclaredEffectError`, exactly as calling ``.require()`` directly with an
+    The mapping rule (D-09): a subscript key (a store kind, e.g. ``"kv"``) resolves against the
+    node's own declared ``effects`` through the explicit ``EFFECT_TO_STORE`` table imported from
+    ``databasise.parts_core``. Of the declared effects backed by that store, a write mode wins
+    over a read mode whatever the declaration order (``["reads_kv", "writes_kv"]`` gets the
+    writable handle), so a read-only node receives the read-only allowlist proxy and a writing
+    node the writable one. A store key with no matching declared effect raises
+    :class:`UndeclaredEffectError`, exactly as calling ``.require()`` directly with an
     undeclared effect would.
     """
 
@@ -268,13 +269,18 @@ class _ScopedStoresView:
         self._recorder = recorder
 
     def __getitem__(self, store_key: str) -> Any:
+        modes: dict[str, str] = {}
         for effect in self._declared_effects:
-            if effect.split("_", 1)[-1] == store_key:
-                handle = self._scoped.require(effect)
-                if self._recorder is not None:
-                    self._recorder(self._node_id, TOUCH_KIND_OBSERVED, store_key)
-                return handle
-        raise UndeclaredEffectError(f"*_{store_key}", self._declared_effects)
+            entry = EFFECT_TO_STORE.get(effect)
+            if entry is not None and entry[0] == store_key:
+                modes.setdefault(entry[1], effect)
+        effect = modes.get("w") or modes.get("r")
+        if effect is None:
+            raise UndeclaredEffectError(f"*_{store_key}", self._declared_effects)
+        handle = self._scoped.require(effect)
+        if self._recorder is not None:
+            self._recorder(self._node_id, TOUCH_KIND_OBSERVED, store_key)
+        return handle
 
 
 class _ScopedClientsView:
@@ -283,13 +289,12 @@ class _ScopedClientsView:
     ``ctx.clients["llm"]`` — routes through the underlying deny-by-default check, mirroring
     ``_ScopedStoresView``'s shape for the clients side (D-06).
 
-    The mapping rule differs from ``_ScopedStoresView``'s own suffix-split rule: a subscript key
-    (a client name, e.g. ``"llm"``) resolves against the node's own declared ``effects`` via the
+    The mapping rule matches ``_ScopedStoresView``'s explicit-table rule: a subscript key (a
+    client name, e.g. ``"llm"``) resolves against the node's own declared ``effects`` via the
     explicit ``CLIENT_EFFECT_TO_KEY`` dict imported from ``databasise.clients`` — not restated
-    here — because the store side's ``effect.split("_", 1)[-1]`` suffix trick only works by
-    coincidence of spelling and does not transfer to ``calls_embedding``/``calls_rerank``. A
-    client key with no matching declared effect raises :class:`UndeclaredEffectError`, exactly as
-    calling ``.require()`` directly with an undeclared effect would.
+    here — just as the store side resolves through ``EFFECT_TO_STORE``. A client key with no
+    matching declared effect raises :class:`UndeclaredEffectError`, exactly as calling
+    ``.require()`` directly with an undeclared effect would.
     """
 
     def __init__(

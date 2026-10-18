@@ -396,7 +396,8 @@ async def test_12_capability_scoped_store_view_is_sourced_from_the_parts_effects
     result = await _run(parsed, stores={"kv": "the-real-kv-store"})
 
     assert result["partial"] is False
-    assert result["results"]["n1"]["kv"] == "the-real-kv-store"
+    # STOR-05 (D-09): the granted handle is the writable proxy over the real store.
+    assert result["results"]["n1"]["kv"]._target == "the-real-kv-store"
 
     # The same substitution reaches D-13's resume boundary: the node genuinely mutated a store
     # (the Part declares writes_kv and the scoped view granted it), so it can never be stamped a
