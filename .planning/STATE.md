@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 11
 current_phase_name: LightRAG Corpus Path
 status: executing
-stopped_at: Phase 10 complete, ready to plan Phase 11
-last_updated: "2026-10-18T06:22:52.344Z"
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-10-18T06:53:59.689Z"
 last_activity: 2026-10-17
 last_activity_desc: Phase 10 complete, transitioned to Phase 11
-state_head: a93736123b40d94c12a7b56e8983e09eac3f4463
+state_head: f4d975312b4fcf87e8660f215c5cf92e8409d9ff
 progress:
   total_phases: 11
   completed_phases: 3
   total_plans: 43
-  completed_plans: 32
+  completed_plans: 33
   percent: 27
 ---
 
@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-10-17 after Phase 10)
 
 ## Current Position
 
-Phase: 11 (LightRAG Corpus Path) — READY TO EXECUTE
-Plan: Not started
+Phase: 11 (LightRAG Corpus Path) — EXECUTING
+Plan: 2 of 11
 Status: Ready to execute
 Last activity: 2026-10-17 — Phase 10 complete, transitioned to Phase 11
 
@@ -94,6 +94,7 @@ Progress: [███░░░░░░░] 27% (3/11 phases)
 | Phase 10 P10 | 25min | 2 tasks | 4 files |
 | Phase 10 P11 | 20min | 2 tasks | 4 files |
 | Phase 10 P12 | 15min | 2 tasks | 8 files |
+| Phase 11 P01 | 29min | 2 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -151,6 +152,9 @@ Recent decisions affecting current work:
 - [Phase 10]: 10-10: delete_document commits for every non-fail status and drops on a refusal or fail (Q4); a vector delete of a never-committed id writes nothing
 - [Phase 10]: 10-11: vector store refuses metadata keys id/score (ReservedMetadataKeyError) and top_k<=0 (InvalidTopKError); unselected MultiNamespaceVectorStore refuses every read, listing only dirs with vector.faiss
 - [Phase 10]: 10-12: any non-ok parse report on a seam path is UnparseableWiringError (422, codes only), raised before stores are built; writes_artifact stays a declaration-only marker
+- [Phase 11]: D-01 prune uses a mirror manifest (kv record lightrag-v1-index-sync-manifest in text_chunks), so parity-imported rows are never deleted
+- [Phase 11]: run_corpus_op has no default v1 working dir; the engine stamps <store_root>/<workspace>/lightrag-v1 on every lightrag corpus node and status/health call
+- [Phase 11]: IngestJob gains seam_events (LRAG-03); ingest and delete MACH-11 events come from lightrag/v1-index-sync observed touches
 
 ### Pending Todos
 
@@ -198,8 +202,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-18T02:11:11.998Z
-Stopped at: Phase 10 complete, ready to plan Phase 11
+Last session: 2026-10-18T06:53:59.556Z
+Stopped at: Completed 11-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

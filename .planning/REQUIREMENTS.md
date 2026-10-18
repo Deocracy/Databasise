@@ -186,7 +186,7 @@
   - Test: Test builds two apps on two temp store_roots with a substituted corpus op that records payloads; ingest a document via app A and assert every captured ingest/status/health payload carries working_dir under A's store_root/workspace, and GET /corpus on app B does not list the document. Fails today because the status payloads carry only track_id/limit/offset and ingest uses v1/.corpus_working_dir.
   - Defects: rest-live/REST-16
   - Owner decision first: M-04 LightRAG write path (where the per-workspace v1 working dir lives). M-12 HippoRAG corpus surface: whether GET /jobs/{job_id} for a HippoRAG ingest job returns a final status or a named refusal instead of asking v1.
-- [ ] **LRAG-02**: A document ingested through POST /documents with the default (LightRAG) selector becomes retrievable by POST /query on the LightRAG arms and resolvable by POST /evidence/resolve, and after DELETE /documents/{id} returns success its chunks are no longer returned by /query or resolvable by /evidence/resolve. full-delete only reports graph/vector/kv store touches for stores it actually changed.
+- [x] **LRAG-02**: A document ingested through POST /documents with the default (LightRAG) selector becomes retrievable by POST /query on the LightRAG arms and resolvable by POST /evidence/resolve, and after DELETE /documents/{id} returns success its chunks are no longer returned by /query or resolvable by /evidence/resolve. full-delete only reports graph/vector/kv store touches for stores it actually changed.
   - Test: Integration test (real v1 subprocess or a driver stub that writes a v1 working dir, plus the chosen bridge): ingest a document with a unique token, query a LightRAG arm and assert an evidence ref from that document_id resolves; delete it, then assert the query returns no evidence from it and /evidence/resolve on the old ref refuses. Fails today because the query arms read v2 stores under store_root/workspace that only parity/import_index.py writes.
   - Defects: doc-audit-1/D1, doc-audit-3/D5, parts-lightrag/PC-11
   - Owner decision first: M-04 LightRAG write path: (a) machine-native ingest writing v2 stores, (b) run import_v1_index(working_dir, store_root, workspace) after every v1 ingest/delete, or (c) keep the split and label LightRAG query data as 'last parity import'.
@@ -864,7 +864,7 @@ These fail today.
 | STOR-15 | Phase 10 | Complete |
 | STOR-16 | Phase 10 | Complete |
 | LRAG-01 | Phase 11 | Pending |
-| LRAG-02 | Phase 11 | Pending |
+| LRAG-02 | Phase 11 | Complete |
 | LRAG-03 | Phase 11 | Pending |
 | LRAG-04 | Phase 11 | Pending |
 | LRAG-05 | Phase 11 | Pending |
