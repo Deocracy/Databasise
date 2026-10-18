@@ -15,8 +15,9 @@ specified-but-absent path is resolved here rather than left dangling.
 `base.json` and the five `arm-*.json-patch.json` files are copied **verbatim** from
 `docs/system-model/wirings/` for every node, dep, config, recipe, harnesses, provides, operation,
 and `resulting_node_id_set` field — the published set was already mechanically checked (03-RESEARCH.md),
-and re-deriving it risks silently diverging from a verdict already run. Exactly three edits turn
-the illustrative JSON into this registered set:
+and re-deriving it risks silently diverging from a verdict already run. Exactly six edits turn
+the illustrative JSON into this registered set (edits 4-6 are Phase 11's v1-fidelity fixes,
+D-16 and LRAG-18):
 
 1. **Drop `status`/`status_note`, add `wiring_id`/`title` (base.json only).** The published files
    carry `"status": "illustrative-only-not-a-registered-wiring"` and an explanatory `status_note`
@@ -35,6 +36,17 @@ the illustrative JSON into this registered set:
    "Naming convention" below. Applied to all eighteen `component` strings in `base.json`. No arm
    patch's `operations` list contains a `component` key, so this edit is a structural no-op for
    the five patch files (recorded here for completeness, not because any patch content changed).
+4. **`chunk-sel-kg` gains the `embedder-query` dep (base.json only; D-16, LRAG-18).** v1 ranks KG
+   chunks by similarity to the query embedding (`kg_chunk_pick_method` `VECTOR`). Without this dep
+   the node never received a query vector and its configured `VECTOR` pick always fell back to
+   `WEIGHT`. The naive and bypass patches remove `chunk-sel-kg`, so no patch changes.
+5. **`join-chunks` `arm_precedence` becomes `chunk-vector-emitted-first-then-chunk-sel-kg`
+   (base.json only; D-16, LRAG-18).** v1's `_merge_all_chunks` emits vector chunks first. The
+   string drives the merge order (`join_roundrobin.py`'s `_ordered_input_names`). The hybrid,
+   local and global patches replace this config with their own one-arm join.
+6. **`consumes_query` gains `rerank` (base.json only; D-16, LRAG-18).** `rerank` reads
+   `config["query"]`, which no node received before, so a live rerank scored documents against an
+   empty query. Rerank stays off in shipped wirings (Phase 8 D-09); this fixes only the empty query.
 
 ## Naming convention (Task 1 checkpoint)
 

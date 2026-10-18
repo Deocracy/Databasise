@@ -167,11 +167,11 @@ async def test_join_relations_unchanged_item_keeps_its_own_derived_from():
 
 
 # --------------------------------------------------------------------------------------------- #
-# join-roundrobin — join-chunks (mix/base config: arity 2, chunk-sel-kg emitted first)
+# join-roundrobin — join-chunks (mix/base config: arity 2, chunk-vector emitted first)
 # --------------------------------------------------------------------------------------------- #
 
 
-async def test_join_chunks_honours_arity_two_and_chunk_sel_kg_precedence():
+async def test_join_chunks_honours_arity_two_and_chunk_vector_precedence():
     config = _base_config("join-chunks")
     assert config["arity"] == 2
 
@@ -188,7 +188,8 @@ async def test_join_chunks_honours_arity_two_and_chunk_sel_kg_precedence():
 
     result = await LIGHTRAG_JOIN_ROUNDROBIN_PART.body(ctx)
 
-    assert [item["id"] for item in result["items"]] == ["chunk-kg", "chunk-vec"]
+    # LRAG-18: base.json now emits vector chunks first, as v1's _merge_all_chunks does.
+    assert [item["id"] for item in result["items"]] == ["chunk-vec", "chunk-kg"]
 
 
 async def test_join_chunks_arity_mismatch_raises():

@@ -16,19 +16,19 @@ gradient allocates more chunks to earlier (higher-importance) items than later o
 ``config["related_chunk_number"]`` (default v1's own ``DEFAULT_RELATED_CHUNK_NUMBER = 5``) is the
 per-position chunk budget the gradient decreases from.
 
-**VECTOR** (v1/lightrag/utils.py:4071-...): needs a query embedding to rank candidate chunks by
-similarity, which this node's own base-wiring deps (``budget-entities``/``budget-relations`` only
-— no ``embedder-query`` dependency) do not supply. This body exposes ``config["query_vector"]`` as
-the hook a caller MAY set to exercise the real path (this plan's own unit tests do); the
-**unpatched base wiring's own committed config carries no such key**, so a real run against it
-degrades straight to WEIGHT without this body ever fabricating a vector to query with — an honest,
-recorded architectural fact (03-06-SUMMARY.md), not a silently masked gap. Where a vector is
-supplied, this position first selects its own ``chunks`` namespace off the multi-namespace vector
-handle (``databasise/stores/vector.py``'s ``MultiNamespaceVectorStore``) — never touched by the
-WEIGHT fallback branch — then ranking is delegated to that namespace's ``query(...)``'s own top-k
-search, filtered to this node's own candidate chunk-id set: the store this plan wires exposes no
-by-id vector lookup (unlike v1's ``chunks_vdb.get_vectors_by_ids``), so a local cosine
-re-computation over looked-up vectors is not this store's available surface.
+**VECTOR** (v1/lightrag/utils.py:4071-4191): ranks each side's candidate chunks by similarity to
+the query embedding, read from ``ctx.inputs["embedder-query"]["vector"]`` (11-04: base.json now
+lists ``embedder-query`` in this node's deps; ``config["query_vector"]`` still overrides it for
+tests). One ``score_all(vector)`` over this position's ``chunks`` namespace is filtered to the
+candidate ids (the store's equivalent of v1's ``get_vectors_by_ids`` plus cosine) and takes the
+top ``int(related_chunk_number * len(items) / 2)``. As in v1, a side whose vector pick yields
+nothing (no vector, a count of zero, or a candidate with no stored vector) falls back to WEIGHT.
+The WEIGHT branch never selects a vector namespace.
+
+**Two sides** (v1 operate.py:4737-4790): entity chunks are selected first; relation candidates
+then drop every chunk id the entity side selected; the two lists are merged round-robin
+(entity, relation, entity, ...). ``pick_method_used`` is the method both sides used, or
+``"MIXED"`` when they differ; ``pick_method_used_by_side`` names each side's method.
 
 Declares ``reads_kv`` and ``reads_vector`` **unconditionally** — never conditional on
 ``config["pick_method"]`` — per CONTRACT §19.9's fallback-reachability rule: the declaration
@@ -52,10 +52,14 @@ _DEFAULT_MIN_RELATED_CHUNKS = 1
 _CHUNKS_NAMESPACE = "chunks"
 
 
-def _entities_with_chunks(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _entities_with_chunks(
+    items: list[dict[str, Any]], exclude: set[str] | None = None
+) -> list[dict[str, Any]]:
     """v1's own Steps 1-3: split each item's ``source_id`` on the field separator, drop a chunk id
     already claimed by an earlier item (earlier-position-wins dedup), then sort each item's own
-    remaining chunks by global occurrence count, descending.
+    remaining chunks by global occurrence count, descending. ``exclude`` (relation side only) is
+    v1's entity-chunk dedup (operate.py:5592-5626): those ids are skipped before counting, and a
+    relation left with no chunks is dropped. The entity side keeps emptied items, as v1 does.
     """
     with_chunks: list[dict[str, Any]] = []
     for item in items:
@@ -70,10 +74,14 @@ def _entities_with_chunks(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for entry in with_chunks:
         deduped: list[str] = []
         for chunk_id in entry["chunks"]:
+            if exclude is not None and chunk_id in exclude:
+                continue
             occurrence[chunk_id] = occurrence.get(chunk_id, 0) + 1
             if occurrence[chunk_id] == 1:
                 deduped.append(chunk_id)
         entry["chunks"] = deduped
+    if exclude is not None:
+        with_chunks = [entry for entry in with_chunks if entry["chunks"]]
 
     for entry in with_chunks:
         entry["sorted_chunks"] = sorted(
@@ -129,61 +137,10 @@ def _pick_by_weighted_polling(
     return selected
 
 
-async def _pick_by_vector_similarity(
-    ctx: NodeContext,
-    all_chunk_ids: list[str],
-    query_vector: Any,
-    num_of_chunks: int,
-) -> list[str]:
-    """Query ``ctx.stores["vector"]`` with the caller-supplied ``config["query_vector"]``, keeping
-    only ids already present in this node's own candidate set — the store's own top-k neighbours
-    may include ids outside that set, which this node's own inputs never licensed it to select
-    from. Adapted from v1's own ``pick_by_vector_similarity`` to this store's ``query(vector,
-    top_k)`` surface (no by-id vector lookup here — see module docstring).
-    """
-    if not all_chunk_ids or num_of_chunks <= 0:
-        return []
-    store = ctx.stores["vector"].select(_CHUNKS_NAMESPACE)
-    candidates = set(all_chunk_ids)
-    results = await store.query(query_vector, top_k=max(num_of_chunks, len(all_chunk_ids)))
-    picked = [r["id"] for r in results if r["id"] in candidates]
-    return picked[:num_of_chunks]
-
-
-async def _chunk_sel_kg_body(ctx: NodeContext) -> dict[str, Any]:
-    config = ctx.config or {}
-    entities = list(ctx.inputs.get("budget-entities", {}).get("items", []))
-    relations = list(ctx.inputs.get("budget-relations", {}).get("items", []))
-    entities_with_chunks = _entities_with_chunks(entities + relations)
-
-    max_related_chunks = int(config.get("related_chunk_number", _DEFAULT_RELATED_CHUNK_NUMBER))
-    pick_method = str(config.get("pick_method", "WEIGHT"))
-    fallback_pick_method = str(config.get("fallback_pick_method", "WEIGHT"))
-
-    selected_ids: list[str] = []
-    used_method = pick_method
-
-    if pick_method == "VECTOR":
-        query_vector = config.get("query_vector")
-        if query_vector is not None:
-            all_chunk_ids = sorted({cid for entry in entities_with_chunks for cid in entry["chunks"]})
-            num_of_chunks = int(max_related_chunks * len(entities_with_chunks) / 2) or max_related_chunks
-            selected_ids = await _pick_by_vector_similarity(
-                ctx, all_chunk_ids, query_vector, num_of_chunks
-            )
-        if not selected_ids:
-            used_method = fallback_pick_method
-
-    if used_method != "VECTOR":
-        # Only WEIGHT is implemented as a real fallback target in this tracer — every published
-        # base-wiring config's own fallback_pick_method is "WEIGHT" (see base.json).
-        selected_ids = _pick_by_weighted_polling(entities_with_chunks, max_related_chunks)
-        used_method = "WEIGHT"
-
-    unique_ids = list(dict.fromkeys(selected_ids))
+async def _hydrate(ctx: NodeContext, selected_ids: list[str]) -> list[dict[str, Any]]:
     kv_store = ctx.stores["kv"]
     items: list[dict[str, Any]] = []
-    for chunk_id in unique_ids:
+    for chunk_id in dict.fromkeys(selected_ids):
         record = await kv_store.get_by_id(chunk_id)
         if record is not None and "content" in record:
             item = dict(record)
@@ -191,8 +148,59 @@ async def _chunk_sel_kg_body(ctx: NodeContext) -> dict[str, Any]:
             item["chunk_id"] = chunk_id
             item["source_type"] = "kg"
             items.append(item)
+    return items
 
-    return {"items": items, "pick_method_used": used_method}
+
+async def _chunk_sel_kg_body(ctx: NodeContext) -> dict[str, Any]:
+    config = ctx.config or {}
+    entities = list(ctx.inputs.get("budget-entities", {}).get("items", []))
+    relations = list(ctx.inputs.get("budget-relations", {}).get("items", []))
+    max_related_chunks = int(config.get("related_chunk_number", _DEFAULT_RELATED_CHUNK_NUMBER))
+    pick_method = str(config.get("pick_method", "WEIGHT"))
+    query_vector = config.get("query_vector")
+    if query_vector is None:
+        query_vector = (ctx.inputs.get("embedder-query") or {}).get("vector")
+    scored: list[dict[str, Any]] | None = None  # one score_all per query, shared by both sides
+
+    async def select_side(with_chunks: list[dict[str, Any]]) -> tuple[list[str], str | None]:
+        """v1's per-side pick (operate.py:5349-5392, 5641-5684): VECTOR when configured and a
+        query vector exists, else (or when it yields nothing) WEIGHT. Only WEIGHT is implemented
+        as the fallback; every shipped config's fallback_pick_method is "WEIGHT"."""
+        nonlocal scored
+        if not with_chunks:
+            return [], None
+        if pick_method == "VECTOR" and query_vector is not None:
+            num_of_chunks = int(max_related_chunks * len(with_chunks) / 2)
+            candidates = {cid for entry in with_chunks for cid in entry["sorted_chunks"]}
+            if num_of_chunks > 0 and candidates:
+                if scored is None:
+                    store = ctx.stores["vector"].select(_CHUNKS_NAMESPACE)
+                    scored = await store.score_all(query_vector)
+                picked = [r["id"] for r in scored if r["id"] in candidates]
+                # v1 utils.py:4143-4152: a candidate with no stored vector voids the vector pick.
+                if len(picked) == len(candidates):
+                    return picked[:num_of_chunks], "VECTOR"
+        return _pick_by_weighted_polling(with_chunks, max_related_chunks), "WEIGHT"
+
+    entity_ids, entity_method = await select_side(_entities_with_chunks(entities))
+    entity_items = await _hydrate(ctx, entity_ids)
+    entity_chunk_ids = {item["chunk_id"] for item in entity_items}
+    relation_ids, relation_method = await select_side(
+        _entities_with_chunks(relations, exclude=entity_chunk_ids)
+    )
+    relation_items = await _hydrate(ctx, relation_ids)
+
+    items: list[dict[str, Any]] = []
+    for i in range(max(len(entity_items), len(relation_items))):
+        items.extend(side[i] for side in (entity_items, relation_items) if i < len(side))
+
+    methods = {m for m in (entity_method, relation_method) if m is not None}
+    used_method = methods.pop() if len(methods) == 1 else ("MIXED" if methods else "WEIGHT")
+    return {
+        "items": items,
+        "pick_method_used": used_method,
+        "pick_method_used_by_side": {"entity": entity_method, "relation": relation_method},
+    }
 
 
 LIGHTRAG_CHUNK_SELECTOR_KG_PART = Part(

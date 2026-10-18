@@ -112,7 +112,8 @@ def _item_key(field: str, item: dict[str, Any]) -> Any:
         return item.get("entity_name")
     if field == "relations":
         return _relation_key(item)
-    return None  # join-chunks: no dedup — v1's own chunk union never collapses by id at this node
+    # join-chunks: v1's _merge_all_chunks dedups by chunk_id or id (operate.py:4783-4830, LRAG-18).
+    return item.get("chunk_id") or item.get("id")
 
 
 async def _join_roundrobin_body(ctx: NodeContext) -> dict[str, Any]:

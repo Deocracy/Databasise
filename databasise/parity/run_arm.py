@@ -141,8 +141,8 @@ def _inject_query(resolved: dict[str, Any], query: str) -> dict[str, Any]:
 # hiding it, but a one-node "run" is not what this tracer exists to prove). This driver is the
 # one caller that actually needs the full arm to complete, so it is the one that sets a real,
 # generous per-node allowance — never the published wiring itself (which stays byte-identical to
-# the checked docs/system-model source, per databasise/wirings/lightrag/README.md's "three edits,
-# and only these three").
+# the checked docs/system-model source apart from databasise/wirings/lightrag/README.md's six
+# listed edits).
 _DEFAULT_TOKEN_ALLOWANCE = 1_000_000
 
 
