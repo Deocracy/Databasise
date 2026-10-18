@@ -208,6 +208,7 @@ from databasise.seam.corpus import (
     upload_suffix,
 )
 from databasise.seam.envelope import PromotionResult, ResponseEnvelope, SeamEvent
+from databasise.seam.jobs_store import JobFamilyStore
 from databasise.seam.evidence import (
     CHUNKS_NAMESPACE,
     EvidenceRef,
@@ -840,6 +841,8 @@ class Databasise:
         # the same on-disk database file, which is what proves a minted token's durability across
         # the process that minted it.
         self._trace_store = TraceStore(self.store_root)
+        # 11-06 (D-02): job id -> minting family; jobs.db is created by the first record, not here.
+        self._jobs = JobFamilyStore(self.store_root)
 
     def _v1_working_dir(self) -> Path:
         """11-01 (D-01, LRAG-01): the one v1 working dir this engine's LightRAG corpus ops use.
@@ -849,6 +852,13 @@ class Databasise:
     def _write_gate_held(self) -> bool:
         """D-07: whether a LightRAG write holds this workspace's v1 working dir. Never acquires."""
         return _gate_for(self._v1_working_dir()).locked()
+
+    def _record_job(self, job_id: str, family: str, document_id: str) -> None:
+        """D-02: record which family minted ``job_id``; a jobs.db error is a ``StoreFault``."""
+        try:
+            self._jobs.record(job_id, family, document_id)
+        except (sqlite3.Error, OSError) as exc:
+            raise _foreign_fault("ingest", exc, failure_class="StoreFault") from exc
 
     def _inbox(self) -> Path:
         """11-05 (D-09, LRAG-09): this workspace's raw-upload inbox, v1's ``INPUT_DIR``. v1 moves a
@@ -1060,7 +1070,8 @@ class Databasise:
 
         stores: dict[str, Any] = {}
         wrote_staged = False
-        gated = wiring_family(query_wiring) == "lightrag"  # D-07: HippoRAG writes no v1 dir
+        family = wiring_family(query_wiring)
+        gated = family == "lightrag"  # D-07: HippoRAG writes no v1 dir
         with contextlib.ExitStack() as gate:
             try:
                 # D-04: built inside the try so a failed open finalizes what opened; still before the
@@ -1069,6 +1080,8 @@ class Databasise:
                 # D-07 (LRAG-04): after the open (STOR-02), held through the run, commit and cleanup.
                 if gated:
                     gate.enter_context(_write_gate(self._v1_working_dir()))
+                    # D-02: before the run, so a job v1 records but that times out here is known.
+                    self._record_job(track_id, family, document_id)
                 if staged is not None:
                     staged.parent.mkdir(parents=True, exist_ok=True)
                     try:
@@ -1145,6 +1158,8 @@ class Databasise:
                 raise _foreign_fault("ingest", exc, failure_class="MalformedDriverOutput") from exc
             if wrote_staged:
                 _remove_staged(staged)  # 11-05 (D-09): v1 has read it; the driver waits for the pipeline
+            if not gated:
+                self._record_job(job.job_id, family, document_id)  # D-02: committed runs only
             return job
 
     def _remove_inbox_files(self, document_id: str) -> None:
@@ -1278,7 +1293,18 @@ class Databasise:
         Raises :class:`~databasise.seam.refusals.UnknownJobError` when the driver reports zero
         total matching documents for ``job_id`` — never returns an empty ``JobStatus`` for an
         unknown job, mirroring ``TraceStore.resolve``'s own raise-not-None precedent.
+
+        11-06 (D-02, M-12): the job's family is looked up first. A HippoRAG job is recorded only
+        once its run committed, so it answers ``processed`` from that record without asking v1. A
+        LightRAG job, or an id with no record, takes the v1 path below unchanged.
         """
+        try:
+            row = self._jobs.lookup(job_id)
+        except sqlite3.Error as exc:
+            raise _foreign_fault("job_status", exc, failure_class="StoreFault") from exc
+        if row is not None and row.family == "hipporag":
+            entry = DocumentStatusEntry(document_id=row.document_id, status="processed", updated_at=row.created_at)
+            return JobStatus(job_id=job_id, documents=[entry], counts={"processed": 1}, next_offset=None)
         page = page or Page()
         result = await _corpus_op_or_refuse(
             "status",
