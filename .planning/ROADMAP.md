@@ -40,7 +40,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 8: Run the Engine** - Installed launchers for REST and MCP, one shared client builder, one engine process per store root, CORS decision, and a green offline suite (F1) (completed 2026-10-16)
 - [x] **Phase 9: Inputs, Errors & Security** - One refusal shape on both transports, caller input refused before it touches disk or a node, machine faults without leaked stderr (F2) (completed 2026-10-17)
-- [ ] **Phase 10: Stores, Locking & Data Integrity** - Graph lock contention as a named outcome, all-or-nothing ingest/delete commits, read-only handles, consistent store adapters (F3)
+- [x] **Phase 10: Stores, Locking & Data Integrity** - Graph lock contention as a named outcome, all-or-nothing ingest/delete commits, read-only handles, consistent store adapters (F3) (completed 2026-10-17)
 - [ ] **Phase 11: LightRAG Corpus Path** - Ingested documents reach the queried stores, uploads index their content, honest health, and v1-faithful KG answers (F4)
 - [ ] **Phase 12: HippoRAG Fixes** - Resolvable PPR evidence, a graph that accumulates correctly across ingests, query-only runs, and a full document lifecycle (F5)
 - [ ] **Phase 13: Selectors, Wiring & Runner** - Every arm selectable, node-free consumer text, complete and truthful run records, guards that fire on what they declare (F6)
@@ -185,7 +185,7 @@ Plans (one plan per wave; every plan edits the shared refusal, engine or transpo
 - STOR-15: what triggers quarantined-namespace GC (generation retire, instance teardown, operator route), and derive_namespace layout vs docstring fix
 - STOR-16: reserved metadata keys rejected at upsert or moved under a sub-key
 
-**Plans**: 12/12 plans executed
+**Plans**: 12/12 plans complete
 
 Plans (nine waves; the shared engine and store modules force most plans into sequence, and wave 1 and wave 6 each hold plans with no shared file):
 
@@ -430,7 +430,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 |-------|----------------|--------|-----------|
 | 8. Run the Engine | 10/10 | Complete    | 2026-10-16 |
 | 9. Inputs, Errors & Security | 10/10 | Complete    | 2026-10-17 |
-| 10. Stores, Locking & Data Integrity | 12/12 | In Progress|  |
+| 10. Stores, Locking & Data Integrity | 12/12 | Complete    | 2026-10-17 |
 | 11. LightRAG Corpus Path | 0/TBD | Not started | - |
 | 12. HippoRAG Fixes | 0/TBD | Not started | - |
 | 13. Selectors, Wiring & Runner | 0/TBD | Not started | - |

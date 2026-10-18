@@ -16,7 +16,7 @@
     {
       "number": "10",
       "name": "Stores, Locking & Data Integrity",
-      "status": "in_progress"
+      "status": "complete"
     },
     {
       "number": "11",
@@ -61,8 +61,8 @@
   ],
   "next": {
     "command": "/gsd-progress --next",
-    "label": "Advance to the next step",
-    "reason": "Phase 3 of 11 · 18% · executing"
+    "label": "Advance to the next step (plan phase 11)",
+    "reason": "Phase 4 of 11 — needs a plan"
   },
-  "updated_at": "2026-10-18T01:50:17.822Z"
+  "updated_at": "2026-10-18T03:59:06.977Z"
 }
