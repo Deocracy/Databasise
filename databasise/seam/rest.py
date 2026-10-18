@@ -220,6 +220,13 @@ class DeleteRequest(_RequestModel):
     selector: Selector | None = None
 
 
+class RetryRequest(_RequestModel):
+    """11-08 (D-08): an optional body on ``POST /documents/{document_id}/retry``, carrying only
+    the §18.4 selector, as ``DeleteRequest`` does."""
+
+    selector: Selector | None = None
+
+
 class PromoteRequest(_RequestModel):
     """07-03-PLAN.md Task 1: the operator-asserted promotion request body. Field names match
     ``Databasise.promote()``'s own parameter names exactly, so a reader comparing this body to the
@@ -475,6 +482,13 @@ def create_app(
         (422) before any wiring runs."""
         return await engine.delete_document(document_id, body.selector)
 
+    @app.post("/documents/{document_id}/retry", responses=_FAULT_RESPONSES)
+    async def retry_document(document_id: str, body: RetryRequest = RetryRequest()) -> IngestJob:
+        """11-08 (D-08, LRAG-07): reprocess one interrupted document. A document that is not
+        interrupted is ``DocumentNotInterruptedError`` (422), an id v1 does not hold is
+        ``UnknownDocumentError`` (422), and a write in flight is ``StoreBusyError`` (409)."""
+        return await engine.retry_document(document_id, body.selector)
+
     @app.get("/health")
     async def get_health() -> HealthReport:
         return await engine.health()
@@ -511,6 +525,7 @@ __all__ = [
     "TraceRequest",
     "IngestRequest",
     "DeleteRequest",
+    "RetryRequest",
     "PromoteRequest",
     "RollbackRequest",
     "RetireRequest",

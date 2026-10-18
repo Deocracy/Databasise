@@ -254,15 +254,29 @@ class DuplicateDocumentIdError(SeamRefusalError):
 
 
 class UnknownDocumentError(SeamRefusalError):
-    """Reserved for a well-formed document id that does not exist in the corpus. A malformed id is
-    :class:`InvalidDocumentIdError`, never this. Nothing raises this today because v1 itself reports
-    an unknown id as a normal ``"not_found"`` status carried in
-    ``databasise.seam.corpus.DeletionOutcome.status``, not a refusal.
+    """A well-formed document id that does not exist in the corpus. A malformed id is
+    :class:`InvalidDocumentIdError`, never this. Raised by ``Databasise.retry_document()``
+    (11-08, D-08) when v1 holds no row for the id. Delete still reports an unknown id as a normal
+    ``"not_found"`` status carried in ``databasise.seam.corpus.DeletionOutcome.status``.
     """
 
     def __init__(self, *, document_id: str):
         self.document_id = document_id
         super().__init__(f"document id {document_id!r} does not exist in the corpus")
+
+
+class DocumentNotInterruptedError(SeamRefusalError):
+    """Raised by ``Databasise.retry_document()`` (11-08, D-08, LRAG-07) when the named document is
+    not interrupted: only a document v1 left mid-pipeline with no write in flight can be retried.
+    ``document_id`` is the caller's own input; ``status`` is the document's reported status."""
+
+    def __init__(self, *, document_id: str, status: str):
+        self.document_id = document_id
+        self.status = status
+        super().__init__(
+            f"DocumentNotInterruptedError: document id {document_id!r} has status {status!r}, not "
+            "'interrupted'; ingest it again or delete it instead"
+        )
 
 
 class NoWritePathForModalityError(SeamRefusalError):
@@ -841,6 +855,7 @@ __all__ = [
     "InvalidDocumentIdError",
     "DuplicateDocumentIdError",
     "UnknownDocumentError",
+    "DocumentNotInterruptedError",
     "NoWritePathForModalityError",
     "NoRawUploadPathForModalityError",
     "UnknownJobError",

@@ -43,6 +43,7 @@ from databasise.seam.redact import (
 from databasise.seam.refusals import (
     AmbiguousIngestPayloadError,
     DisagreeingPromotionTraceIdsError,
+    DocumentNotInterruptedError,
     DuplicateComparisonKeyError,
     DuplicateDocumentIdError,
     EmptyCapabilitySelectorError,
@@ -450,6 +451,7 @@ _REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
         tool="status", scope="job", argument="job_id"
     ),
     UnknownDocumentError: lambda: UnknownDocumentError(document_id="../escape"),
+    DocumentNotInterruptedError: lambda: DocumentNotInterruptedError(document_id="doc-1", status="processed"),
     NoWritePathForModalityError: lambda: NoWritePathForModalityError(operation="delete"),
     NoRawUploadPathForModalityError: lambda: NoRawUploadPathForModalityError(operation="ingest"),
     UnknownJobError: lambda: UnknownJobError(job_id="no-such-job"),

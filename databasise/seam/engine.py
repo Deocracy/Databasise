@@ -178,7 +178,7 @@ import sqlite3
 import threading
 import uuid
 import weakref
-from collections.abc import AsyncIterator, Iterator, Sequence
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -238,6 +238,7 @@ from databasise.seam.promotion import (
 from databasise.seam.query import QueryObject, check_consumable
 from databasise.seam.refusals import (
     ActiveGenerationRetirementError,
+    DocumentNotInterruptedError,
     DuplicateDocumentIdError,
     EmptyComparisonRequestError,
     ForeignEngineRefusalError,
@@ -250,6 +251,7 @@ from databasise.seam.refusals import (
     SeamRefusalError,
     StoreBusyError,
     TombstonedGenerationError,
+    UnknownDocumentError,
     UnknownGenerationVersionError,
     UnknownJobError,
     UnparseableWiringError,
@@ -514,6 +516,21 @@ def _corpus_wiring(query_wiring: dict[str, Any], operation: str) -> dict[str, An
 # What a well-formed JSON driver result of the wrong shape raises when parsed (SEAM-06). Deliberately
 # not caught around UnknownJobError, which is a ValueError and is raised outside every parse wrapper.
 _MALFORMED_RESULT = (TypeError, ValueError, AttributeError, KeyError)
+
+# D-08 (LRAG-07): v1's mid-pipeline statuses. With no write holding the D-07 gate, no run is
+# advancing such a document, so the corpus views report it as "interrupted". PENDING is not one:
+# v1 enqueues it and no run has started on it (Q9).
+_MID_PIPELINE = frozenset({"parsing", "analyzing", "processing"})
+_INTERRUPTED = "interrupted"
+
+
+def _interrupted_counts(counts: dict[str, int]) -> dict[str, int]:
+    """``counts`` with every mid-pipeline bucket folded into ``interrupted``; the total is kept."""
+    out: dict[str, int] = {}
+    for status, count in counts.items():
+        key = _INTERRUPTED if status in _MID_PIPELINE else status
+        out[key] = out.get(key, 0) + int(count)
+    return out
 
 
 def _stamp_v1_working_dir(resolved: dict[str, Any], working_dir: Path) -> None:
@@ -1059,7 +1076,36 @@ class Databasise:
         resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
         parsed = parse_wiring(resolved, self.registry)
         _refuse_unparseable(parsed)
+        return await self._run_corpus_ingest(
+            resolved,
+            parsed,
+            wiring_family(query_wiring),
+            document_id=document_id,
+            track_id=track_id,
+            result_node_id=result_node_id,
+            staged=staged,
+            raw=document.raw,
+        )
 
+    async def _run_corpus_ingest(
+        self,
+        resolved: dict[str, Any],
+        parsed: ParsedWiring,
+        family: str,
+        *,
+        document_id: str,
+        track_id: str,
+        result_node_id: str,
+        staged: Path | None = None,
+        raw: bytes | None = None,
+        precheck: Callable[[], Awaitable[None]] | None = None,
+        remove_inbox_files: bool = False,
+    ) -> IngestJob:
+        """The run, commit and cleanup ``ingest`` and ``retry_document`` share (11-08): stores
+        opened, the D-07 gate entered (LightRAG only), ``precheck`` awaited inside the gate, the
+        upload staged, the corpus-ingest wiring run, every store committed or every pending write
+        dropped, and the inbox cleaned after a committed run (``staged``, or with
+        ``remove_inbox_files`` every inbox file for ``document_id``)."""
         # 06-10-PLAN.md: the three-argument form _execute() already uses — LightRAG's own
         # corpus-ingest.json declares no store_namespaces, so this is a no-op for the default path
         # (identical _TEXT_CHUNKS_KIND/_GRAPH_KIND fallback); HippoRAG's declares
@@ -1074,7 +1120,6 @@ class Databasise:
 
         stores: dict[str, Any] = {}
         wrote_staged = False
-        family = wiring_family(query_wiring)
         gated = family == "lightrag"  # D-07: HippoRAG writes no v1 dir
         with contextlib.ExitStack() as gate:
             try:
@@ -1084,6 +1129,9 @@ class Databasise:
                 # D-07 (LRAG-04): after the open (STOR-02), held through the run, commit and cleanup.
                 if gated:
                     gate.enter_context(_write_gate(self._v1_working_dir()))
+                if precheck is not None:
+                    await precheck()
+                if gated:
                     # D-02: before the run, so a job v1 records but that times out here is known.
                     self._record_job(track_id, family, document_id)
                 if staged is not None:
@@ -1092,7 +1140,7 @@ class Databasise:
                         # Exclusive create: a run with this id may be in flight, or a fault kept its file.
                         with open(staged, "xb") as handle:
                             wrote_staged = True
-                            handle.write(document.raw)
+                            handle.write(raw)
                     except FileExistsError:
                         raise DuplicateDocumentIdError(document_id=document_id) from None
                     except Exception:
@@ -1162,6 +1210,8 @@ class Databasise:
                 raise _foreign_fault("ingest", exc, failure_class="MalformedDriverOutput") from exc
             if wrote_staged:
                 _remove_staged(staged)  # 11-05 (D-09): v1 has read it; the driver waits for the pipeline
+            if remove_inbox_files:
+                self._remove_inbox_files(document_id)  # 11-08: a retried upload's kept source
             if not gated:
                 self._record_job(job.job_id, family, document_id)  # D-02: committed runs only
             return job
@@ -1178,6 +1228,64 @@ class Databasise:
                         path.unlink(missing_ok=True)
             except OSError:
                 logger.exception("could not remove the staged upload for document id %r", document_id)
+
+    async def retry_document(self, document_id: str, selector: Selector | None = None) -> IngestJob:
+        """11-08 (D-08, LRAG-07): reprocess one interrupted document, a document v1 left in
+        ``parsing``, ``analyzing`` or ``processing`` with no write in flight (a timed-out ingest).
+        A write, like ``ingest``: the selector names the modality's index, and only LightRAG has a
+        v1 pipeline to resume, so any other family is ``NoWritePathForModalityError(operation=
+        "retry")``. Inside the D-07 gate, v1's row for the id is read first. No row is
+        ``UnknownDocumentError``, any other status is ``DocumentNotInterruptedError``. The
+        corpus-ingest wiring then runs with ``documents=[]`` and ``retry_doc_ids=[document_id]``
+        (the driver processes only that id) and commits as ``ingest`` does. A kept upload's inbox
+        files are removed after the commit. The job id is the document's original track id."""
+        generated_on_disk_name(document_id)
+        query_wiring = resolve_selector(selector, registry=self.registry, store_root=self.store_root)
+        family = wiring_family(query_wiring)
+        if family != "lightrag":
+            raise NoWritePathForModalityError(operation="retry")
+        resolved = _corpus_wiring(query_wiring, "ingest")
+        target_node_id = resolved["consumes_documents"][0]
+        track_id = uuid.uuid4().hex
+        resolved["nodes"][target_node_id]["config"] = {
+            **(resolved["nodes"][target_node_id].get("config") or {}),
+            "documents": [],
+            "retry_doc_ids": [document_id],
+            "track_id": track_id,
+            "input_dir": str(self._inbox()),  # v1 resolves a kept upload's basename here (D-09)
+        }
+        _stamp_v1_working_dir(resolved, self._v1_working_dir())
+        resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
+        parsed = parse_wiring(resolved, self.registry)
+        _refuse_unparseable(parsed)
+
+        async def _only_interrupted() -> None:
+            result = await _corpus_op_or_refuse(
+                "status",
+                {"track_id": None, "document_id": document_id, "limit": 1, "offset": 0},
+                "retry",
+                self._v1_working_dir(),
+            )
+            try:
+                rows = list(result.get("documents") or [])
+                status = str(rows[0]["status"]) if rows else None
+            except _MALFORMED_RESULT as exc:
+                raise _foreign_fault("retry", exc, failure_class="MalformedDriverOutput") from exc
+            if status is None:
+                raise UnknownDocumentError(document_id=document_id)
+            if status not in _MID_PIPELINE:
+                raise DocumentNotInterruptedError(document_id=document_id, status=status)
+
+        return await self._run_corpus_ingest(
+            resolved,
+            parsed,
+            family,
+            document_id=document_id,
+            track_id=track_id,
+            result_node_id=resolved["provides"][0],
+            precheck=_only_interrupted,
+            remove_inbox_files=True,
+        )
 
     async def delete_document(
         self, document_id: str, selector: Selector | None = None
@@ -1301,6 +1409,10 @@ class Databasise:
         11-06 (D-02, M-12): the job's family is looked up first. A HippoRAG job is recorded only
         once its run committed, so it answers ``processed`` from that record without asking v1. A
         LightRAG job, or an id with no record, takes the v1 path below unchanged.
+
+        11-08 (D-08): v1's raw status is reported, never ``"interrupted"``. A job id names one run,
+        and "interrupted" is a corpus-level view (``corpus_status``/``document_counts``) of a
+        document no run holds.
         """
         try:
             row = self._jobs.lookup(job_id)
@@ -1339,20 +1451,36 @@ class Databasise:
         """The seventh §18 operation (05-04-PLAN.md Task 1, API-06) — a bounded, paginated
         document list, never a full corpus dump. ``page`` above ``MAX_PAGE_SIZE`` is already
         refused by :class:`~databasise.seam.corpus.Page`'s own validator before this method is
-        ever reached."""
+        ever reached.
+
+        11-08 (D-08, LRAG-07): when no write holds this workspace's D-07 gate (checked before and
+        after the read), a document v1 left in ``parsing``, ``analyzing`` or ``processing`` is
+        reported as ``"interrupted"``, in its row and in ``counts``. ``pending`` is never remapped
+        (Q9). While a write holds the gate, v1's own status is reported unchanged.
+        ``get_job_status`` is not remapped: a job id names one run, and "interrupted" is a
+        corpus-level view of a document no run holds."""
         page = page or Page()
+        held = self._write_gate_held()
         result = await _corpus_op_or_refuse(
             "status",
             {"track_id": None, "limit": page.limit, "offset": page.offset},
             "corpus_status",
             self._v1_working_dir(),
         )
+        held = held or self._write_gate_held()
         try:
             total = int(result.get("total", 0))
             documents = [DocumentStatusEntry(**doc) for doc in result.get("documents", [])]
+            counts = dict(result.get("counts") or {})
+            if not held:
+                documents = [
+                    doc.model_copy(update={"status": _INTERRUPTED}) if doc.status in _MID_PIPELINE else doc
+                    for doc in documents
+                ]
+                counts = _interrupted_counts(counts)
             return CorpusStatus(
                 documents=documents,
-                counts=dict(result.get("counts") or {}),
+                counts=counts,
                 total=total,
                 next_offset=_next_offset(page, documents, total),
             )
@@ -1362,12 +1490,19 @@ class Databasise:
     async def document_counts(self) -> DocumentCounts:
         """The eighth §18 operation (05-04-PLAN.md Task 1, API-06) — a fixed-size record, never a
         per-document list. Calls the same ``"status"`` op ``corpus_status`` calls, with a
-        one-row page (the driver refuses ``limit < 1``), and reads only its ``counts`` field."""
+        one-row page (the driver refuses ``limit < 1``), and reads only its ``counts`` field.
+
+        11-08 (D-08): mid-pipeline buckets move into ``interrupted`` exactly as in
+        ``corpus_status``, and ``total`` stays the sum of ``by_status``."""
+        held = self._write_gate_held()
         result = await _corpus_op_or_refuse(
             "status", {"track_id": None, "limit": 1, "offset": 0}, "document_counts", self._v1_working_dir()
         )
+        held = held or self._write_gate_held()
         try:
             by_status = dict(result.get("counts") or {})
+            if not held:
+                by_status = _interrupted_counts(by_status)
             return DocumentCounts(by_status=by_status, total=sum(by_status.values()))
         except _MALFORMED_RESULT as exc:
             raise _foreign_fault("document_counts", exc, failure_class="MalformedDriverOutput") from exc
