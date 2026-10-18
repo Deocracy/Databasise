@@ -125,7 +125,7 @@
 - [x] **STOR-02**: When constructing any store in _build_stores fails (for example the graph open raising under the lock in STOR-01), every store already opened in that call (kv, vector) is finalized before the exception leaves the engine method. Store construction happens inside the try/finally in ingest, delete_document, _execute and resolve_evidence. Repeated failed requests open zero additional sqlite connections.
   - Test: tests/seam/test_build_stores_cleanup.py: monkeypatch CozoGraphStore.__init__ to raise, spy on SqliteKVStore.finalize, then call engine.query, ingest, delete_document and resolve_evidence. Before the fix, finalize is never called on the kv store. After the fix, it is called exactly once per request.
   - Defects: stores/ST-11
-- [ ] **STOR-03**: POST /evidence/resolve opens only the vector namespace named in the EvidenceRef. It constructs no SqliteKVStore or CozoGraphStore and creates no text_chunks or chunk_entity_relation directory. It succeeds while the graph namespace is held by another call. N successive resolve calls against an unchanged index read and SHA-256-hash the index file once, not N times. After the index files change (for example an import_index rewrite), the next call reads the new index.
+- [x] **STOR-03**: POST /evidence/resolve opens only the vector namespace named in the EvidenceRef. It constructs no SqliteKVStore or CozoGraphStore and creates no text_chunks or chunk_entity_relation directory. It succeeds while the graph namespace is held by another call. N successive resolve calls against an unchanged index read and SHA-256-hash the index file once, not N times. After the index files change (for example an import_index rewrite), the next call reads the new index.
   - Test: tests/seam/test_evidence_resolve_stores.py: use a store_root that contains only a populated chunks vector namespace. Resolve an EvidenceRef, then assert that no kv.sqlite3 or graph.cozo exists and that the call succeeds while a CozoGraphStore on chunk_entity_relation is held open. Patch faiss.read_index with a counter, make 5 resolve calls, and assert the counter is 1. Rewrite the index, resolve again, and assert the counter is 2. Before the fix, the directories are created, the held lock causes a failure, and the counter is 5 after five calls.
   - Defects: doc-audit-3/D12
   - Owner decision first: Cache key and invalidation for opened FaissVectorStore instances: keyed on namespace path plus file mtime/size, or invalidated explicitly by import_index and ingest flushes.
@@ -144,7 +144,7 @@
 - [ ] **STOR-07**: delete_document builds its stores with the resolved wiring's store_namespaces. It flushes every store (index_done_callback) when the delete run succeeds and drops pending ops when it fails. FaissVectorStore.delete_by_ids buffers deletions until index_done_callback, as kv, graph and lexical do, so drop_pending_index_ops reverts a vector delete. After a successful delete, the kv, graph and vector records for the document are all gone. After a failed one, none are removed.
   - Test: tests/stores/test_delete_commit_contract.py. (a) FaissVectorStore: upsert and flush ids a and b, call delete_by_ids(['a']), call drop_pending_index_ops(), reopen, and assert get_by_id('a') is present. Before the fix it is gone. (b) Call engine.delete_document with a fixture delete wiring that declares non-default store_namespaces (kv/graph) and deletes from kv, vector and graph. On success, assert all three are empty after reopening, and that the deletes landed in the declared namespaces. When the delete node raises after staging its deletes, assert all three are unchanged. Before the fix, the kv/graph deletes are discarded at finalize, go to the default namespaces, and the vector delete persists.
   - Defects: stores/ST-04, stores/ST-05
-- [ ] **STOR-08**: Opening a FaissVectorStore whose directory holds vector.faiss without vector.meta.json, or vector.meta.json without vector.faiss, raises VectorStoreCorruptedError, as the module docstring states. It does not open an empty store that the next flush overwrites. Evidence resolve against such a namespace returns the corruption refusal, not 'record no longer present'.
+- [x] **STOR-08**: Opening a FaissVectorStore whose directory holds vector.faiss without vector.meta.json, or vector.meta.json without vector.faiss, raises VectorStoreCorruptedError, as the module docstring states. It does not open an empty store that the next flush overwrites. Evidence resolve against such a namespace returns the corruption refusal, not 'record no longer present'.
   - Test: tests/stores/test_vector_crash_window.py: upsert and flush, delete vector.meta.json, reopen, and assert VectorStoreCorruptedError. Repeat with vector.faiss deleted instead. Then call engine.resolve_evidence on a ref into the damaged namespace and assert the corruption refusal. Before the fix, the first reopen gives _index None with no error and resolve returns the not-present refusal.
   - Defects: stores/ST-06
 - [ ] **STOR-09**: FaissVectorStore and MultiNamespaceVectorStore report named refusals for invalid input. query with top_k <= 0 raises a named ValueError subclass instead of a bare AssertionError. The 'available vector namespaces' list in VectorNamespaceNotSelectedError contains only directories that hold vector.faiss. Calling score_all, self_knn, get_by_id or iter_vectors on an unselected MultiNamespaceVectorStore raises VectorNamespaceNotSelectedError, not AttributeError.
@@ -848,12 +848,12 @@ These fail today.
 | SEAM-16 | Phase 9 | Complete |
 | STOR-01 | Phase 10 | Complete |
 | STOR-02 | Phase 10 | Complete |
-| STOR-03 | Phase 10 | Pending |
+| STOR-03 | Phase 10 | Complete |
 | STOR-04 | Phase 10 | Pending |
 | STOR-05 | Phase 10 | Pending |
 | STOR-06 | Phase 10 | Complete |
 | STOR-07 | Phase 10 | Pending |
-| STOR-08 | Phase 10 | Pending |
+| STOR-08 | Phase 10 | Complete |
 | STOR-09 | Phase 10 | Pending |
 | STOR-10 | Phase 10 | Pending |
 | STOR-11 | Phase 10 | Pending |
