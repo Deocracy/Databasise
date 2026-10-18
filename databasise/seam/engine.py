@@ -1373,7 +1373,12 @@ class Databasise:
             if remove_inbox_files:
                 self._remove_inbox_files(document_id)  # 11-08: a retried upload's kept source
             if not gated:
-                self._record_job(job.job_id, family, document_id)  # D-02: committed runs only
+                try:
+                    self._jobs.record(job.job_id, family, document_id)  # D-02: committed runs only
+                except (sqlite3.Error, OSError):
+                    # A-WR-04: the ingest is committed, so it still succeeds; /jobs for this id
+                    # then answers UnknownJobError (no record, and v1 holds no such track).
+                    logger.exception("job family record failed after a committed %s ingest", family)
             return job
 
     def _remove_inbox_files(self, document_id: str) -> None:
@@ -1570,7 +1575,9 @@ class Databasise:
 
         11-06 (D-02, M-12): the job's family is looked up first. A HippoRAG job is recorded only
         once its run committed, so it answers ``processed`` from that record without asking v1. A
-        LightRAG job, or an id with no record, takes the v1 path below unchanged.
+        LightRAG job, or an id with no record, takes the v1 path below unchanged. If that record
+        write fails after the commit, the ingest still returns its job id (the failure is logged
+        once), and this method answers ``UnknownJobError`` for it (11 REVIEW A-WR-04).
 
         11-08 (D-08): v1's raw status is reported, never ``"interrupted"``. A job id names one run,
         and "interrupted" is a corpus-level view (``corpus_status``/``document_counts``) of a

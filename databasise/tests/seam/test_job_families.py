@@ -5,6 +5,7 @@ to v1 exactly as before. Reads never create ``jobs.db`` (LRAG-13)."""
 
 from __future__ import annotations
 
+import sqlite3
 import uuid
 
 import pytest
@@ -13,6 +14,7 @@ from fastapi.testclient import TestClient
 import databasise.seam.engine as engine_module
 from databasise.parts_core.lightrag import full_ingest
 from databasise.seam.corpus import IngestDocument
+from databasise.seam.jobs_store import JobFamilyStore
 from databasise.seam.refusals import ForeignEngineRefusalError, UnknownJobError
 from databasise.seam.rest import create_app
 from databasise.seam.selectors import Selector
@@ -112,6 +114,32 @@ async def test_reads_never_create_jobs_db_and_the_first_ingest_does(store_root, 
 
     await engine.ingest(IngestDocument(document_id="h1", text=_DOCUMENT_TEXT), selector=_hipporag())
     assert jobs_db.exists()
+
+
+async def test_a_failed_job_record_after_a_committed_hipporag_ingest_still_succeeds(store_root, v1, monkeypatch, caplog):
+    """11 REVIEW A-WR-04: the record runs after the commit, so its failure is logged once and the
+    ingest still returns its job; /jobs for that id then answers UnknownJobError."""
+
+    def _broken_record(self, *_args, **_kwargs):
+        raise sqlite3.OperationalError("disk I/O error")
+
+    monkeypatch.setattr(JobFamilyStore, "record", _broken_record)
+    engine = _make_engine(store_root, workspace="ws")
+
+    with caplog.at_level("ERROR", logger="databasise.seam.engine"):
+        job = await engine.ingest(IngestDocument(document_id="h1", text=_DOCUMENT_TEXT), selector=_hipporag())
+
+    assert job.enqueued == 1
+    assert [r.getMessage() for r in caplog.records if r.levelname == "ERROR"] == [
+        "job family record failed after a committed hipporag ingest"
+    ]
+    graph = CozoGraphStore(namespace="hipporag-graph", workspace="ws", store_root=store_root)
+    try:
+        assert await graph.get_all_labels(), "the HippoRAG ingest did not commit"
+    finally:
+        await graph.finalize()
+    with pytest.raises(UnknownJobError):
+        await engine.get_job_status(job.job_id)
 
 
 async def test_a_refused_hipporag_ingest_records_nothing(store_root, v1, monkeypatch):
