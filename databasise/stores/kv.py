@@ -30,6 +30,7 @@ matter under the runner's structured concurrency, revisit alongside that connect
 
 from __future__ import annotations
 
+import copy
 import json
 import sqlite3
 from pathlib import Path
@@ -65,7 +66,7 @@ class SqliteKVStore(StorageNameSpace):
         if id in self._pending_deletes:
             return None
         if id in self._pending_upserts:
-            return self._pending_upserts[id]
+            return copy.deepcopy(self._pending_upserts[id])
         row = self._conn.execute("SELECT value FROM kv WHERE id = ?", (id,)).fetchone()
         return json.loads(row[0]) if row else None
 
@@ -83,7 +84,7 @@ class SqliteKVStore(StorageNameSpace):
 
     async def upsert(self, data: dict[str, dict[str, Any]]) -> None:
         for key, value in data.items():
-            self._pending_upserts[key] = value
+            self._pending_upserts[key] = copy.deepcopy(value)
             self._pending_deletes.discard(key)
 
     async def delete(self, ids: list[str]) -> None:
@@ -94,9 +95,8 @@ class SqliteKVStore(StorageNameSpace):
     async def is_empty(self) -> bool:
         if self._pending_upserts:
             return False
-        row = self._conn.execute("SELECT COUNT(*) FROM kv").fetchone()
-        count = row[0] if row else 0
-        return count == 0
+        # Every committed row may be pending deletion; stop at the first one that survives.
+        return all(row[0] in self._pending_deletes for row in self._conn.execute("SELECT id FROM kv"))
 
     async def prepare(self) -> None:
         """D-07: run the pending DML inside an open ``BEGIN IMMEDIATE`` transaction, uncommitted.
