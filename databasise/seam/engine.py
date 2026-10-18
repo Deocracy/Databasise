@@ -157,15 +157,25 @@ wirings run v1's own ingest or delete subprocess, then ``lightrag/v1-index-sync`
 v1's committed index into the staged v2 stores the query arms read. Residual window: v1 has
 already committed by the time the v2 commit runs. If the v2 commit fails, v1 and v2 diverge until
 the next sync, which re-mirrors the whole index and so heals them.
+
+**11-06-PLAN.md (D-07, LRAG-04): one LightRAG write per working dir at a time.** Phase 8 guarantees
+one engine process per store root, so an in-process ``threading.Lock`` per resolved v1 working dir
+(:func:`_write_gate`) serializes every LightRAG ingest and delete. It is taken right after
+``_build_stores`` (the STOR-02 first-error pin) and held through the v1 subprocess, the index sync's
+manifest read and staging, the commit or drop, and the inbox cleanup, so two writes can never read
+the same prune manifest. A second write is refused with ``StoreBusyError(store_kind="corpus")``
+(409), not queued. Reads take no gate, and HippoRAG writes, which have no v1 dir, are not gated.
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
 import json
 import logging
 import sqlite3
+import threading
 import uuid
 import weakref
 from collections.abc import AsyncIterator, Iterator, Sequence
@@ -562,6 +572,31 @@ def _flush_lock(store_root: Path) -> asyncio.Lock:
     return locks[key]
 
 
+# D-07 (LRAG-04): one write gate per resolved v1 working dir. A threading.Lock, not an asyncio.Lock:
+# one engine can be driven from several event loops (the REST TestClient), as with _FLUSH_LOCKS.
+_WRITE_GATES: dict[str, threading.Lock] = {}
+_WRITE_GATES_GUARD = threading.Lock()
+
+
+def _gate_for(working_dir: Path) -> threading.Lock:
+    with _WRITE_GATES_GUARD:
+        return _WRITE_GATES.setdefault(str(working_dir.resolve()), threading.Lock())
+
+
+@contextlib.contextmanager
+def _write_gate(working_dir: Path) -> Iterator[None]:
+    """Hold ``working_dir``'s write gate, or refuse at once with ``StoreBusyError(store_kind=
+    "corpus")`` (409) when another write holds it. Never waits. Released in ``finally``, so a failed
+    or cancelled write never leaves it held. The path is never named in the refusal."""
+    gate = _gate_for(working_dir)
+    if not gate.acquire(blocking=False):
+        raise StoreBusyError(store_kind="corpus")
+    try:
+        yield
+    finally:
+        gate.release()
+
+
 async def _abort_prepared(stores: dict[str, Any]) -> None:
     for name, store in stores.items():
         try:
@@ -811,6 +846,10 @@ class Databasise:
         Not created here; v1 creates it on its first write."""
         return self.store_root / self.workspace / "lightrag-v1"
 
+    def _write_gate_held(self) -> bool:
+        """D-07: whether a LightRAG write holds this workspace's v1 working dir. Never acquires."""
+        return _gate_for(self._v1_working_dir()).locked()
+
     def _inbox(self) -> Path:
         """11-05 (D-09, LRAG-09): this workspace's raw-upload inbox, v1's ``INPUT_DIR``. v1 moves a
         parsed source into ``<inbox>/__parsed__/``. Not created here."""
@@ -1021,87 +1060,92 @@ class Databasise:
 
         stores: dict[str, Any] = {}
         wrote_staged = False
-        try:
-            # D-04: built inside the try so a failed open finalizes what opened; still before the
-            # staging block, so a failed open leaves no staged file (WR-04).
-            stores = _build_stores(self.store_root, self.workspace, resolved, into=stores, operation="ingest")
-            if staged is not None:
-                staged.parent.mkdir(parents=True, exist_ok=True)
-                try:
-                    # Exclusive create: a run with this id may be in flight, or a fault kept its file.
-                    with open(staged, "xb") as handle:
-                        wrote_staged = True
-                        handle.write(document.raw)
-                except FileExistsError:
-                    raise DuplicateDocumentIdError(document_id=document_id) from None
-                except Exception:
-                    # Pre-run only: nothing has started v1 yet, so the file is ours to remove.
-                    if wrote_staged:
-                        staged.unlink(missing_ok=True)
-                        wrote_staged = False
-                    raise
-            scheduled = await _scheduler.run_wiring(
-                parsed,
-                self.registry,
-                stores,
-                determinism_setting=_DETERMINISM_SETTING,
-                concurrency_setting=_CONCURRENCY_SETTING,
-                clients=self.clients,
-                recorder=_recorder,
-            )
-            # D-06 (STOR-06): any node failure or early stop commits nothing. Every store's
-            # staged writes are dropped before the refusal propagates.
+        gated = wiring_family(query_wiring) == "lightrag"  # D-07: HippoRAG writes no v1 dir
+        with contextlib.ExitStack() as gate:
             try:
-                result = _node_result_or_refuse(scheduled, result_node_id, "ingest")
-            except ForeignEngineRefusalError:
-                await _drop_pending(stores, self.store_root)
+                # D-04: built inside the try so a failed open finalizes what opened; still before the
+                # staging block, so a failed open leaves no staged file (WR-04).
+                stores = _build_stores(self.store_root, self.workspace, resolved, into=stores, operation="ingest")
+                # D-07 (LRAG-04): after the open (STOR-02), held through the run, commit and cleanup.
+                if gated:
+                    gate.enter_context(_write_gate(self._v1_working_dir()))
+                if staged is not None:
+                    staged.parent.mkdir(parents=True, exist_ok=True)
+                    try:
+                        # Exclusive create: a run with this id may be in flight, or a fault kept its file.
+                        with open(staged, "xb") as handle:
+                            wrote_staged = True
+                            handle.write(document.raw)
+                    except FileExistsError:
+                        raise DuplicateDocumentIdError(document_id=document_id) from None
+                    except Exception:
+                        # Pre-run only: nothing has started v1 yet, so the file is ours to remove.
+                        if wrote_staged:
+                            staged.unlink(missing_ok=True)
+                            wrote_staged = False
+                        raise
+                scheduled = await _scheduler.run_wiring(
+                    parsed,
+                    self.registry,
+                    stores,
+                    determinism_setting=_DETERMINISM_SETTING,
+                    concurrency_setting=_CONCURRENCY_SETTING,
+                    clients=self.clients,
+                    recorder=_recorder,
+                )
+                # D-06 (STOR-06): any node failure or early stop commits nothing. Every store's
+                # staged writes are dropped before the refusal propagates.
+                try:
+                    result = _node_result_or_refuse(scheduled, result_node_id, "ingest")
+                except ForeignEngineRefusalError:
+                    await _drop_pending(stores, self.store_root)
+                    raise
+                # 06-10-PLAN.md (Rule 2 deviation): a real write-path run, for the first time, has a
+                # store-writing node (hipporag/chunker-embedder, hipporag/entity-fact-embedder) hold a
+                # store handle before this method returns. Those bodies only stage writes in each
+                # store's own pending buffer (kv.py/vector.py's own index_done_callback docstrings);
+                # finalize() alone never commits them (stores/base.py's own default no-op). Without
+                # this flush, every HippoRAG chunk/entity/fact vector and KV record ingest() writes
+                # would be silently discarded the instant this method's own stores go out of scope —
+                # LightRAG's own opaque full-ingest never touches ctx.stores at all, so this flush is a
+                # safe no-op for the default (no-selector) path (kv.py/vector.py/graph.py's own
+                # index_done_callback all early-return when nothing is pending).
+                # 10-05 (D-07): all stores prepare, then all commit, or none does.
+                await _commit_all(stores, "ingest", self.store_root)
+            except BaseException as exc:
+                if wrote_staged:
+                    # 11-05 (D-09): a refusal v1 cannot still be working on removes the file; a v1
+                    # fault or a cancellation keeps it for the delete or retry that follows.
+                    if isinstance(exc, SeamRefusalError) and getattr(exc, "failure_class", None) not in _KEEP_STAGED:
+                        _remove_staged(staged)
+                    else:
+                        _log_staged_left(staged)
                 raise
-            # 06-10-PLAN.md (Rule 2 deviation): a real write-path run, for the first time, has a
-            # store-writing node (hipporag/chunker-embedder, hipporag/entity-fact-embedder) hold a
-            # store handle before this method returns. Those bodies only stage writes in each
-            # store's own pending buffer (kv.py/vector.py's own index_done_callback docstrings);
-            # finalize() alone never commits them (stores/base.py's own default no-op). Without
-            # this flush, every HippoRAG chunk/entity/fact vector and KV record ingest() writes
-            # would be silently discarded the instant this method's own stores go out of scope —
-            # LightRAG's own opaque full-ingest never touches ctx.stores at all, so this flush is a
-            # safe no-op for the default (no-selector) path (kv.py/vector.py/graph.py's own
-            # index_done_callback all early-return when nothing is pending).
-            # 10-05 (D-07): all stores prepare, then all commit, or none does.
-            await _commit_all(stores, "ingest", self.store_root)
-        except BaseException as exc:
-            if wrote_staged:
-                # 11-05 (D-09): a refusal v1 cannot still be working on removes the file; a v1
-                # fault or a cancellation keeps it for the delete or retry that follows.
-                if isinstance(exc, SeamRefusalError) and getattr(exc, "failure_class", None) not in _KEEP_STAGED:
-                    _remove_staged(staged)
-                else:
-                    _log_staged_left(staged)
-            raise
-        finally:
-            for store in stores.values():
-                await store.finalize()
+            finally:
+                for store in stores.values():
+                    await store.finalize()
 
-        # 06-10-PLAN.md: a terminal node reporting its own "enqueued" count wins (LightRAG's own
-        # full-ingest); otherwise this call submitted exactly one document, so that is what is
-        # reported — never a fabricated literal 0 for a node that simply does not report the field
-        # (HippoRAG's graph-augment-persist), per this codebase's no-fabricated-zero discipline.
-        # Only a committed run reaches here, so a refused run mints no events (as in delete).
-        node_by_id = {node.node_id: node for node in scheduled["nodes"]}
-        seam_events = _mach11_events(parsed, touches, node_by_id)
-        try:
-            enqueued = result.get("enqueued")
-            if enqueued is None:
-                enqueued = 1
-            job = IngestJob(
-                job_id=str(result.get("track_id") or track_id), enqueued=int(enqueued), seam_events=seam_events
-            )
-        except _MALFORMED_RESULT as exc:  # 09 REVIEW WR-02: malformed driver output is a 502, as on the read routes
+            # 06-10-PLAN.md: a terminal node reporting its own "enqueued" count wins (LightRAG's own
+            # full-ingest); otherwise this call submitted exactly one document, so that is what is
+            # reported — never a fabricated literal 0 for a node that simply does not report the field
+            # (HippoRAG's graph-augment-persist), per this codebase's no-fabricated-zero discipline.
+            # Only a committed run reaches here, so a refused run mints no events (as in delete).
+            node_by_id = {node.node_id: node for node in scheduled["nodes"]}
+            seam_events = _mach11_events(parsed, touches, node_by_id)
+            try:
+                enqueued = result.get("enqueued")
+                if enqueued is None:
+                    enqueued = 1
+                job = IngestJob(
+                    job_id=str(result.get("track_id") or track_id), enqueued=int(enqueued), seam_events=seam_events
+                )
+            except _MALFORMED_RESULT as exc:  # 09 REVIEW WR-02: malformed driver output is a 502, as on the read routes
+                if wrote_staged:
+                    _log_staged_left(staged)
+                raise _foreign_fault("ingest", exc, failure_class="MalformedDriverOutput") from exc
             if wrote_staged:
-                _log_staged_left(staged)
-            raise _foreign_fault("ingest", exc, failure_class="MalformedDriverOutput") from exc
-        if wrote_staged:
-            _remove_staged(staged)  # 11-05 (D-09): v1 has read it; the driver waits for the pipeline
-        return job
+                _remove_staged(staged)  # 11-05 (D-09): v1 has read it; the driver waits for the pipeline
+            return job
 
     def _remove_inbox_files(self, document_id: str) -> None:
         """11-05 (D-09): remove every file for ``document_id`` (already a validated bare token) from
@@ -1177,40 +1221,43 @@ class Databasise:
             touches.append((node_id, kind, key))
 
         stores: dict[str, Any] = {}
-        try:
-            # D-08 (STOR-07): the wiring's store_namespaces pick the kv and graph namespaces, as in
-            # ingest; LightRAG's corpus-delete.json declares none, so it keeps the defaults.
-            stores = _build_stores(self.store_root, self.workspace, resolved, into=stores, operation="delete")
-            scheduled = await _scheduler.run_wiring(
-                parsed,
-                self.registry,
-                stores,
-                determinism_setting=_DETERMINISM_SETTING,
-                concurrency_setting=_CONCURRENCY_SETTING,
-                clients=self.clients,
-                recorder=_recorder,
-            )
-            # G-05-1 / WR-01: the same shared _node_result_or_refuse helper ingest() routes
-            # through, called before the MACH-11 correlation below so a refused run mints no seam
-            # events. D-06/D-08: a refusal, or a delete reporting "fail" (Q4), drops every store's
-            # staged deletes; anything else commits all stores or none (D-07).
+        with contextlib.ExitStack() as gate:
             try:
-                result = _node_result_or_refuse(scheduled, delete_node_id, "delete")
-            except ForeignEngineRefusalError:
-                await _drop_pending(stores, self.store_root)
-                raise
-            # Phase 10 review WR-03: only an explicit success or not_found commits; not_allowed, fail
-            # and any other status is a refusal that must not persist the staged deletes.
-            if result.get("status") in ("success", "not_found"):
-                await _commit_all(stores, "delete", self.store_root)
-            else:
-                await _drop_pending(stores, self.store_root)
-        finally:
-            for store in stores.values():
-                await store.finalize()
+                # D-08 (STOR-07): the wiring's store_namespaces pick the kv and graph namespaces, as in
+                # ingest; LightRAG's corpus-delete.json declares none, so it keeps the defaults.
+                stores = _build_stores(self.store_root, self.workspace, resolved, into=stores, operation="delete")
+                # D-07 (LRAG-04): after the open (STOR-02), held through the run, commit and cleanup.
+                gate.enter_context(_write_gate(self._v1_working_dir()))
+                scheduled = await _scheduler.run_wiring(
+                    parsed,
+                    self.registry,
+                    stores,
+                    determinism_setting=_DETERMINISM_SETTING,
+                    concurrency_setting=_CONCURRENCY_SETTING,
+                    clients=self.clients,
+                    recorder=_recorder,
+                )
+                # G-05-1 / WR-01: the same shared _node_result_or_refuse helper ingest() routes
+                # through, called before the MACH-11 correlation below so a refused run mints no seam
+                # events. D-06/D-08: a refusal, or a delete reporting "fail" (Q4), drops every store's
+                # staged deletes; anything else commits all stores or none (D-07).
+                try:
+                    result = _node_result_or_refuse(scheduled, delete_node_id, "delete")
+                except ForeignEngineRefusalError:
+                    await _drop_pending(stores, self.store_root)
+                    raise
+                # Phase 10 review WR-03: only an explicit success or not_found commits; not_allowed, fail
+                # and any other status is a refusal that must not persist the staged deletes.
+                if result.get("status") in ("success", "not_found"):
+                    await _commit_all(stores, "delete", self.store_root)
+                else:
+                    await _drop_pending(stores, self.store_root)
+            finally:
+                for store in stores.values():
+                    await store.finalize()
 
-        if result.get("status") in ("success", "not_found"):
-            self._remove_inbox_files(document_id)
+            if result.get("status") in ("success", "not_found"):
+                self._remove_inbox_files(document_id)
         node_by_id = {node.node_id: node for node in scheduled["nodes"]}
         seam_events = _mach11_events(parsed, touches, node_by_id)
 
