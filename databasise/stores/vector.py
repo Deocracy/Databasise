@@ -253,6 +253,9 @@ class FaissVectorStore(StorageNameSpace):
         self._pending: dict[str, _PendingVectorDoc] = {}
         self._pending_deletes: set[str] = set()
         self._prepared: tuple[Any, dict[str, dict[str, Any]], int] | None = None
+        # Phase 10 review WR-04: the .tmp pair is one fixed path per namespace, shared by every
+        # instance, so abort_prepared may unlink it only if THIS instance wrote it.
+        self._staged = False
         self._dim: int | None = None
         self._index: Any = None
         self._entries: Mapping[str, dict[str, Any]] = {}
@@ -536,6 +539,7 @@ class FaissVectorStore(StorageNameSpace):
         """Rename the staged pair into place, then adopt it on the event-loop thread."""
         if self._prepared is not None:
             self._commit_staged()
+            self._staged = False
             self._index, self._entries, self._next_int_id = self._prepared
             self._dim = self._index.d
             self._loaded_signature = self._committed_signature()
@@ -544,8 +548,10 @@ class FaissVectorStore(StorageNameSpace):
         self._pending_deletes.clear()
 
     async def abort_prepared(self) -> None:
-        for tmp in self._tmp_paths():
-            tmp.unlink(missing_ok=True)
+        if self._staged:
+            for tmp in self._tmp_paths():
+                tmp.unlink(missing_ok=True)
+            self._staged = False
         self._prepared = None
         self._pending.clear()
         self._pending_deletes.clear()
@@ -570,6 +576,7 @@ class FaissVectorStore(StorageNameSpace):
         carries a SHA-256 ``index_checksum`` of the index it accompanies, checked at the next open
         (WR-02)."""
         tmp_index, tmp_meta = self._tmp_paths()
+        self._staged = True
         try:
             faiss.write_index(index, str(tmp_index))
             index_checksum = _sha256_of(tmp_index)
@@ -581,6 +588,7 @@ class FaissVectorStore(StorageNameSpace):
         except Exception:
             tmp_index.unlink(missing_ok=True)
             tmp_meta.unlink(missing_ok=True)
+            self._staged = False
             raise
 
     def _commit_staged(self) -> None:

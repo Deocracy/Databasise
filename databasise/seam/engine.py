@@ -486,14 +486,17 @@ async def _corpus_op_or_refuse(op: str, payload: dict[str, Any], operation: str)
         ) from exc
 
 
-async def _drop_pending(stores: dict[str, Any]) -> None:
+async def _drop_pending(stores: dict[str, Any], store_root: Path) -> None:
     """D-06 (STOR-06): abort every store's staged writes. One store's failure is logged and the
-    rest are still dropped, so no store is left holding a refused run's writes."""
-    for name, store in stores.items():
-        try:
-            await store.drop_pending_index_ops()
-        except Exception:  # noqa: BLE001 - keep dropping the other stores
-            logger.exception("drop_pending_index_ops failed for store %s", name)
+    rest are still dropped, so no store is left holding a refused run's writes. Phase 10 review
+    WR-04: runs under the store root's flush lock, so it cannot interleave with another run's
+    prepare-to-commit window on the same namespace."""
+    async with _flush_lock(store_root):
+        for name, store in stores.items():
+            try:
+                await store.drop_pending_index_ops()
+            except Exception:  # noqa: BLE001 - keep dropping the other stores
+                logger.exception("drop_pending_index_ops failed for store %s", name)
 
 
 # Keyed by the running loop (research A7): one engine can see several loops under the REST TestClient,
@@ -1000,7 +1003,7 @@ class Databasise:
             try:
                 result = _node_result_or_refuse(scheduled, result_node_id, "ingest")
             except ForeignEngineRefusalError:
-                await _drop_pending(stores)
+                await _drop_pending(stores, self.store_root)
                 raise
             # 06-10-PLAN.md (Rule 2 deviation): a real write-path run, for the first time, has a
             # store-writing node (hipporag/chunker-embedder, hipporag/entity-fact-embedder) hold a
@@ -1148,14 +1151,14 @@ class Databasise:
             try:
                 result = _node_result_or_refuse(scheduled, delete_node_id, "delete")
             except ForeignEngineRefusalError:
-                await _drop_pending(stores)
+                await _drop_pending(stores, self.store_root)
                 raise
             # Phase 10 review WR-03: only an explicit success or not_found commits; not_allowed, fail
             # and any other status is a refusal that must not persist the staged deletes.
             if result.get("status") in ("success", "not_found"):
                 await _commit_all(stores, "delete", self.store_root)
             else:
-                await _drop_pending(stores)
+                await _drop_pending(stores, self.store_root)
         finally:
             for store in stores.values():
                 await store.finalize()
