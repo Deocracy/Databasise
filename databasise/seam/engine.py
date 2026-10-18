@@ -232,6 +232,7 @@ from databasise.seam.refusals import (
     TombstonedGenerationError,
     UnknownGenerationVersionError,
     UnknownJobError,
+    UnparseableWiringError,
     UnrecognisedPromotionVerbError,
     UnresolvableEvidenceReferenceError,
 )
@@ -437,6 +438,13 @@ def _build_stores(
         logger.warning("graph store busy", exc_info=exc)
         raise StoreBusyError(store_kind="graph") from None
     return stores
+
+
+def _refuse_unparseable(parsed: ParsedWiring) -> None:
+    """Phase 10 D-15 / Q5: a non-ok parse report is a named 422 refusal raised before any store is
+    built, never the scheduler's ``WiringRefusedError`` surfacing as a 500. Codes only."""
+    if not parsed.report.ok:
+        raise UnparseableWiringError(violations=sorted({v.code for v in parsed.report.violations}))
 
 
 def _corpus_wiring(query_wiring: dict[str, Any], operation: str) -> dict[str, Any]:
@@ -934,6 +942,7 @@ class Databasise:
 
         resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
         parsed = parse_wiring(resolved, self.registry)
+        _refuse_unparseable(parsed)
 
         # 06-10-PLAN.md: the three-argument form _execute() already uses — LightRAG's own
         # corpus-ingest.json declares no store_namespaces, so this is a no-op for the default path
@@ -1108,6 +1117,7 @@ class Databasise:
 
         resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
         parsed = parse_wiring(resolved, self.registry)
+        _refuse_unparseable(parsed)
 
         # 05-03-PLAN.md Task 2 (MACH-11): the same recorder shape _execute() passes to run_wiring
         # — records every (node_id, kind, store_key) touch, observed or node-reported alike.
@@ -1288,6 +1298,7 @@ class Databasise:
         resolved = _inject_query(resolved, query_object.text or "")
         resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
         parsed = parse_wiring(resolved, self.registry)
+        _refuse_unparseable(parsed)
 
         # 04-04 Task 2 (MACH-11): records every (node_id, "store", store_key) touch the scheduler's
         # own _ScopedStoresView reports, correlated against the wiring graph after the run.

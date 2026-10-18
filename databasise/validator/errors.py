@@ -33,6 +33,11 @@ CODE_SELF_DECLARED_DERIVATION = "self-declared-derivation"
 ``blast_radius``) rather than letting the machine derive it from wiring + registry. MACH-01's
 no-self-declaration clause: the computation governs regardless of what a wiring author writes, so
 an attempt to write one of these keys is refused rather than silently ignored."""
+CODE_UNWIRED_STORE_EFFECT = "unwired-store-effect"
+"""A node (or its resolved part) declares a store effect that is in the frozen 17-member Effect
+vocabulary but has no store behind it after Phase 10 D-15 (``reads_lexical``, ``writes_lexical``,
+``reads_blob``). Refused at parse time so no wiring parses and then fails inside a node when it
+reaches for a store the machine never builds (STOR-12)."""
 
 
 @dataclass(frozen=True)

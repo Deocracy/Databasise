@@ -59,9 +59,13 @@ from databasise.validator.errors import (
     CODE_SELF_DECLARED_DERIVATION,
     CODE_UNKNOWN_COMPONENT,
     CODE_UNKNOWN_EFFECT,
+    CODE_UNWIRED_STORE_EFFECT,
     ValidationReport,
     Violation,
 )
+
+# Phase 10 D-15 (STOR-12): store effects the vocabulary keeps but no store backs.
+_UNWIRED_STORE_EFFECTS: frozenset[str] = frozenset({"reads_lexical", "writes_lexical", "reads_blob"})
 
 # CONTRACT §3's derived fields — computed by the validator, never declared by a wiring node. A
 # node whose raw document attempts to state one of these under its own name is refused under
@@ -212,6 +216,19 @@ def parse_wiring(doc: dict[str, Any], registry: PartRegistry) -> ParsedWiring:
                             f"declared by its resolved part {part.name_at_version!r} "
                             f"(part effects: {sorted(part.effects)}); a wiring node's effects "
                             "must be a subset of its part's registered effects"
+                        ),
+                    )
+                )
+            # D-15: the scheduler scopes from part.effects (CR-01), so the union is checked.
+            unwired = (set(node.effects) | set(part.effects)) & _UNWIRED_STORE_EFFECTS
+            if unwired:
+                violations.append(
+                    Violation(
+                        code=CODE_UNWIRED_STORE_EFFECT,
+                        pointer=f"/nodes/{node_id}/effects",
+                        message=(
+                            f"node {node_id!r} declares store effects {sorted(unwired)} that no "
+                            "store backs; the machine wires only kv, vector and graph stores"
                         ),
                     )
                 )

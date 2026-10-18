@@ -787,6 +787,20 @@ class StoreBusyError(SeamRefusalError):
         )
 
 
+class UnparseableWiringError(SeamRefusalError):
+    """Raised by ``Databasise.query``/``ingest``/``delete_document`` (and every path through
+    ``_execute_resolved``) when the resolved wiring's parse report is not ok, before any store is
+    built (Phase 10 D-15, research Q5). REST answers 422. ``violations`` carries the sorted unique
+    violation codes only, never node ids, pointers or messages; WIRE-05 adds that detail later."""
+
+    def __init__(self, *, violations: list[str]):
+        self.violations = sorted(set(violations))
+        super().__init__(
+            "UnparseableWiringError: the resolved wiring was refused at parse "
+            f"({', '.join(self.violations)})"
+        )
+
+
 __all__ = [
     "SeamRefusalError",
     "EmptyQueryObjectError",
@@ -815,6 +829,7 @@ __all__ = [
     "MutableStoreComparisonExcludedError",
     "ForeignEngineRefusalError",
     "StoreBusyError",
+    "UnparseableWiringError",
     "EmptyPromotionTraceIdsError",
     "DisagreeingPromotionTraceIdsError",
     "InvalidChangeOriginError",

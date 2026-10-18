@@ -236,9 +236,11 @@ def test_case(case_id: str, wiring_nodes: dict[str, object], expected: frozenset
 
 
 def test_transient_effects_added_to_case_6_change_nothing():
-    """D-03 repair 2: adding each of writes_kv/writes_vector/writes_graph/writes_lexical to case
-    6's opaque node leaves the violation set at {"ingest"} — no additional violation appears for
-    the transient writes themselves, because they sit outside the blast-radius rule by design.
+    """D-03 repair 2: adding each of writes_kv/writes_vector/writes_graph to case 6's opaque node
+    leaves the violation set at {"ingest"} — no additional violation appears for the transient
+    writes themselves, because they sit outside the blast-radius rule by design. ``writes_lexical``
+    is no longer in the loop: Phase 10 D-15 (STOR-12) refuses it at parse as
+    ``unwired-store-effect``, so the blast-radius pass never runs on such a wiring.
 
     CR-01: the added transient effect must be declared on BOTH the wiring node and its resolved
     Part — ``parse_wiring`` now refuses (``CODE_EFFECTS_EXCEED_PART``) a wiring node whose
@@ -247,7 +249,7 @@ def test_transient_effects_added_to_case_6_change_nothing():
     entry) is built here with the same transient effect added.
     """
     base_effects = list(FIXTURE_COMPONENTS["lightrag-ingest@1.5.4"]["effects"])  # type: ignore[arg-type]
-    for transient_effect in ("writes_kv", "writes_vector", "writes_graph", "writes_lexical"):
+    for transient_effect in ("writes_kv", "writes_vector", "writes_graph"):
         effects = [*base_effects, transient_effect]
         part = Part(
             name_at_version="lightrag-ingest@1.5.4",
