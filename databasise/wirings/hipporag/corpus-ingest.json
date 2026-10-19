@@ -27,7 +27,7 @@
       "kind": "embedder",
       "effects": ["calls_embedding", "writes_vector", "writes_kv"],
       "config": { "namespaces": ["entities", "facts"] },
-      "deps": ["openie"]
+      "deps": ["openie", "document-remover"]
     },
     "fact-edges": {
       "component": "hipporag/fact-edge-builder@0.1.0",

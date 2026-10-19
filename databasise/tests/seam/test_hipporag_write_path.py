@@ -399,6 +399,74 @@ async def test_reingest_leaves_no_stale_chunk_and_delete_removes_everything(stor
     assert not evidence
 
 
+class _TextKeyedEmbeddingClient:
+    """'films' and 'movies' embed identically; every other text gets its own one-hot vector."""
+
+    def __init__(self) -> None:
+        self._index: dict[str, int] = {}
+
+    async def embed(self, texts, **kwargs):
+        vectors = []
+        for text in texts:
+            key = "films" if text.strip().lower() in ("films", "movies") else text
+            slot = self._index.setdefault(key, len(self._index))
+            vectors.append([1.0 if i == slot else 0.0 for i in range(64)])
+        return EmbeddingResult(
+            vectors=vectors,
+            tokens=TokenAccounting(prompt_tokens=len(texts), call_count=1, counted_by="stub-embed"),
+            resolved_model_identity="stub-embed-model",
+        )
+
+
+class _SynonymLLMClient:
+    """NER finds Ed Wood, films and movies; the triples tie Ed Wood to both synonyms."""
+
+    async def chat(self, messages, **kwargs):
+        content = messages[0]["content"]
+        if "---Candidate Facts---" in content:
+            text = json.dumps({"keep_ids": []})
+        elif "---Recognised Entities---" in content:
+            text = json.dumps({"triples": [["Ed Wood", "directed", "films"], ["Ed Wood", "made", "movies"]]})
+        else:
+            text = json.dumps({"entities": ["Ed Wood", "films", "movies"]})
+        return ChatResult(
+            text=text,
+            tokens=TokenAccounting(prompt_tokens=5, completion_tokens=4, call_count=1, counted_by="stub-llm"),
+            resolved_model_identity="stub-llm-model",
+        )
+
+
+async def test_reingesting_a_document_keeps_its_synonymy_edges(store_root):
+    """D-12 / D-05: the remover deletes the document's orphaned entities and the re-ingest adds them
+    back in the same run. They must count as new, or synonymy-edges never matches them again."""
+    workspace = "syn-ws"
+    engine = Databasise(
+        store_root=store_root,
+        workspace=workspace,
+        clients={"embedding": _TextKeyedEmbeddingClient(), "llm": _SynonymLLMClient()},
+    )
+    selector = Selector(capability=_HIPPORAG_CAPABILITY)
+
+    async def synonymy_edge_types() -> list[str]:
+        graph_store = CozoGraphStore(namespace="hipporag-graph", workspace=workspace, store_root=store_root)
+        try:
+            return [
+                t
+                for edge in await graph_store.get_node_edges("entity:films")
+                if {edge["src"], edge["tgt"]} == {"entity:films", "entity:movies"}
+                for t in edge["attrs"].get("edge_types", [])
+            ]
+        finally:
+            await graph_store.finalize()
+
+    document = IngestDocument(document_id="syn-doc", text=_DOCUMENT_TEXT)
+    await engine.ingest(document, selector=selector)
+    assert "synonymy" in await synonymy_edge_types()
+
+    await engine.ingest(document, selector=selector)
+    assert "synonymy" in await synonymy_edge_types()
+
+
 async def test_no_selector_delete_still_reaches_the_lightrag_delete_wiring(store_root):
     from seam.test_delete_document import _make_stub_full_delete_body, _registry_with
 

@@ -43,6 +43,11 @@ chunk KV; this node maps each finding's chunk to its document through ``openie``
 passthrough and fills that manifest's ``fact_ids`` and ``entities`` (vertex-prefixed refs), which
 ``hipporag/document-remover`` deletes by. A document with no manifest is skipped.
 
+Re-ingest (D-12): in ``corpus-ingest.json`` this node also depends on ``document-remover``. An entity
+the remover deleted and this run re-adds counts as new (``new_entities``), so its synonymy edges are
+rebuilt; the committed vector store still holds the deleted entity until the commit, so
+``get_by_id`` alone would call it old.
+
 Each surviving fact's own entity refs (its subject/object, vertex-prefixed) are carried in that
 fact's vector metadata — the same ``entities`` field ``reset-vector-join`` already reads off each
 scored fact item (``databasise/parts_core/hipporag/reset_vector_join.py``) to accumulate phrase
@@ -68,7 +73,7 @@ async def _entity_fact_embed_body(ctx: NodeContext) -> dict[str, Any]:
     openie_output = ctx.inputs["openie"]
     findings = list(openie_output.get("findings", []))
     if not findings:
-        return {"entities": [], "facts": []}
+        return {"entities": [], "facts": [], "new_entities": []}
 
     # Deduplicate entities by normalised (stripped, lower-cased) surface form, preserving the
     # first-seen display text for the vector's own metadata.
@@ -132,6 +137,8 @@ async def _entity_fact_embed_body(ctx: NodeContext) -> dict[str, Any]:
         )
 
     entity_store = ctx.stores["vector"].select(_ENTITIES_NAMESPACE)
+    removed = set(ctx.inputs.get("document-remover", {}).get("removed_entities", []))
+    new_entities = [ref for ref in entity_refs if entity_store.get_by_id(ref) is None or ref in removed]
     await entity_store.upsert(
         ids=entity_refs,
         embeddings=entity_embed_result.vectors,
@@ -201,6 +208,7 @@ async def _entity_fact_embed_body(ctx: NodeContext) -> dict[str, Any]:
             for ref, text in zip(entity_refs, entity_texts, strict=True)
         ],
         "facts": [{"fact_id": fid, **fact_records[fid]} for fid in fact_ids],
+        "new_entities": new_entities,
         "tokens": sum_token_accountings([entity_embed_result.tokens, fact_embed_result.tokens]),
         "resolved_model_identity": entity_embed_result.resolved_model_identity,
     }
