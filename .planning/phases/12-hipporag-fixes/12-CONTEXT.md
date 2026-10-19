@@ -139,7 +139,7 @@ The owner routed two more items here:
   - Without the gate, the D-04/D-06/D-12 read-merge-write steps lose updates.
   - `delete_document` picks its gate by the selector's family. The default selector keeps the LightRAG gate (STOR-07).
   - The LightRAG gate behaviour and protected `test_corpus_write_gate.py` (LRAG-04) stay unchanged.
-- **D-15 (HippoRAG empty-namespace pre-check): DEFERRED after research.**
+- **D-15 [deferred] (HippoRAG empty-namespace pre-check): DEFERRED after research.**
   - It would make protected `test_ingest_abort.py::test_a_query_after_a_refused_ingest_returns_no_evidence_from_it` (STOR-06) raise EmptyNamespaceError, which changes what that check means. No HIPP row requires the pre-check. It is moved to Deferred; the original text is kept below for the record.
   - A HippoRAG query on a never-populated `hipporag-chunks` is refused before the run with the existing `EmptyNamespaceError` (422, public `store_kind` only), the same as LightRAG.
   - Use a separate HippoRAG table: protected `test_empty_namespace.py:152-158` pins `_RETRIEVAL_NAMESPACES` to the three LightRAG entries. Do not pre-check `hipporag-facts`, which is legitimately absent when OpenIE finds no triples.
