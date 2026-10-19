@@ -78,6 +78,23 @@ def _chunk_rows_and_references(chunks: list[dict[str, Any]]) -> tuple[list[dict[
     return rows, "\n".join(f"[{reference_id[path]}] {path}" for path in paths)
 
 
+def _cost_row(item: dict[str, Any], is_kg: bool) -> dict[str, Any]:
+    """B-WR-03: the dict v1 costs per chunk, not the whole pipeline item. KG arms cost the merged
+    chunk ``{content, file_path, chunk_id}`` (operate.py:4795-4829); naive costs
+    ``_get_vector_context``'s dict (operate.py:4302-4308)."""
+    content, file_path = item.get("content"), item.get("file_path", "unknown_source")
+    chunk_id = item.get("chunk_id") or item.get("id")
+    if is_kg:
+        return {"content": content, "file_path": file_path, "chunk_id": chunk_id}
+    return {
+        "content": content,
+        "created_at": item.get("created_at"),
+        "file_path": file_path,
+        "source_type": "vector",
+        "chunk_id": chunk_id,
+    }
+
+
 def _budget_rows(output: dict[str, Any] | None, key: str) -> list[dict[str, Any]]:
     return list((output or {}).get(key) or [])
 
@@ -119,7 +136,7 @@ async def _assemble_body(ctx: NodeContext) -> dict[str, Any]:
     chunks: list[dict[str, Any]] = []
     running = 0
     for item in candidates:  # v1 truncate_list_by_token_size: stop at the first chunk that overflows
-        running += _tokens(json.dumps(item, ensure_ascii=False, default=str))
+        running += _tokens(json.dumps(_cost_row(item, is_kg), ensure_ascii=False, default=str))
         if running > available:
             break
         chunks.append(item)

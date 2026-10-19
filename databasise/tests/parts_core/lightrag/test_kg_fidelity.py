@@ -337,6 +337,22 @@ async def test_an_oversized_chunk_set_is_cut_so_the_system_prompt_fits_max_total
     assert "a" * 2000 in result["context"]  # whole chunks are dropped from the end
 
 
+@pytest.mark.parametrize("order_policy", ["kg-template", "naive-template"])
+async def test_assemble_costs_only_v1s_chunk_fields_not_the_pipeline_item(order_policy):
+    """11 REVIEW B-WR-03: v1 costs the merged chunk {content, file_path, chunk_id} (naive: the
+    _get_vector_context dict), so extra pipeline fields on an item never move the budget cut."""
+    plain = [{"id": f"c{i}", "content": "x" * 400, "file_path": f"{i}.txt"} for i in range(10)]
+    heavy = [{**chunk, "derived_from": "y" * 4000, "score": 0.9, "rank_position": i} for i, chunk in enumerate(plain)]
+    config = {"order_policy": order_policy, "max_total_tokens": 6000, "query": "q"}
+
+    async def _count(chunks: list[dict[str, Any]]) -> int:
+        inputs = _kg_inputs(chunks) if order_policy == "kg-template" else {"rerank": {"items": chunks}}
+        return (await LIGHTRAG_ASSEMBLER_KG_CONTEXT_PART.body(_ctx("assemble", config=config, inputs=inputs)))["chunk_count"]
+
+    assert await _count(plain) == 10
+    assert await _count(heavy) == 10
+
+
 async def test_assemble_keeps_at_most_chunk_top_k_chunks():
     chunks = [{"id": f"c{i}", "content": f"chunk {i}"} for i in range(30)]
     default = await LIGHTRAG_ASSEMBLER_KG_CONTEXT_PART.body(
