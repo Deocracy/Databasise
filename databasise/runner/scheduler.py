@@ -132,7 +132,12 @@ from databasise.parts.schema import NodeContext
 from databasise.parts_core import EFFECT_TO_STORE, CapabilityScopedStores, UndeclaredEffectError
 from databasise.runner.budget import meter, realised_share
 from databasise.runner.guards import GuardDeclaration, declare_guard, evaluate_guards
-from databasise.runner.trace import NodeTrace, TokenAccounting
+from databasise.runner.trace import (
+    DEGRADATION_REASON_FALLBACK_PATH,
+    STOP_REASON_DECLARED_FALLBACK,
+    NodeTrace,
+    TokenAccounting,
+)
 from databasise.validator.depth import effective_depth
 from databasise.validator.execution_mode import (
     UnimplementedPlacementError,
@@ -693,12 +698,20 @@ async def run_wiring(
             # scheduling of further batches stops here.
             break
 
+    # D-21: a completed run whose guard fired took a declared degradation path -- degraded without
+    # being partial. A partial run keeps its own stop_reason as the degradation_reason.
+    degraded = partial or any(trace.guards_fired for trace in node_traces)
+    if degraded and not partial:
+        stop_reason = STOP_REASON_DECLARED_FALLBACK
+        degradation_reason: str | None = DEGRADATION_REASON_FALLBACK_PATH
+    else:
+        degradation_reason = stop_reason
     return {
         "results": results,
         "nodes": node_traces,
         "partial": partial,
         "stop_reason": stop_reason,
-        "degraded": partial,  # required-together per RIG §TR.3 — see runner/trace.py's own note
-        "degradation_reason": stop_reason,
+        "degraded": degraded,
+        "degradation_reason": degradation_reason,
         "node_exceptions": node_exceptions,
     }

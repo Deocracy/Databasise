@@ -12,26 +12,22 @@ field (``arm_execution_order``, ``cache_hit``, ``guards_fired``, ``realised_budg
 ``determinism_setting``, ``concurrency_setting``) is a real value computed by this commit, per
 D-10 — not a placeholder.
 
-**The honesty invariant (D-10, this plan's Task 3).** RIG.md §TR.3, quoted directly: "A run that
+**The honesty invariant (D-10, relaxed by D-21).** RIG.md §TR.3, quoted directly: "A run that
 halted, ran partially, or ran degraded records ``stop_reason``, ``partial``, ``degraded`` and
 ``degradation_reason`` as a **required-together set**, never independently optional." The frozen
-schema's own ``allOf``/``if``-``then`` rule enforces exactly this: a truthy ``partial`` requires
-BOTH a non-empty ``stop_reason`` AND a non-empty ``degradation_reason``, and a truthy ``degraded``
-requires the same pair — the schema does not treat ``partial`` and ``degraded`` as two
-independently-triggerable flags with their own field requirements; a run that is partial without
-being degraded (or vice versa) has no representable shape at all under the schema's own allOf
-rule, since either flag alone already demands both reason fields. ``RunRecord.__post_init__``
-below therefore refuses to construct any record where ``partial`` and ``degraded`` disagree, or
-where either is true without both reason fields populated, or where either is false while a
-reason field is populated — resolving what would otherwise read as three independent conditions
-(the plan's own action text) into one required-together check, grounded directly in the schema's
-own allOf clause and RIG.md §TR.3's own explicit "required-together set" wording, not invented
-here. A node whose own ``budget_state`` is ``"halted"`` while the run reports ``partial=False`` is
-refused for the same reason — CONTRACT §9's own rule that a budget-halted run "MUST be traced ...
-exactly as a completed run is; it MUST NOT be discarded" presupposes the run is honestly marked
-partial when it happened, not silently absorbed into a clean-looking record. A confounded run
-serialised as clean is exactly the failure D-10 exists to prevent, and it is worse than a refusal
-because it reads as settled rather than unsettled.
+schema's ``allOf``/``if``-``then`` rule enforces it: either flag being true requires BOTH a
+non-empty ``stop_reason`` AND a non-empty ``degradation_reason``. ``RunRecord.__post_init__``
+below refuses a record where either flag is true without both reason fields, or where neither
+flag is true while a reason field is populated. It does NOT require ``partial == degraded``
+(RIG §LC.2 allows partial without degraded, and D-21 needs the converse): a completed run that
+took a declared degradation path (a fired guard, e.g. the HippoRAG DPR fallback) is ``degraded``
+without being ``partial``, carrying ``STOP_REASON_DECLARED_FALLBACK`` and
+``DEGRADATION_REASON_FALLBACK_PATH`` -- closed codes that name no node, part or guard, so the
+consumer-visible envelope stays free of them. A node whose own ``budget_state`` is ``"halted"``
+while the run reports ``partial=False`` is still refused: CONTRACT §9's rule that a budget-halted
+run "MUST be traced ... exactly as a completed run is; it MUST NOT be discarded" presupposes the
+run is honestly marked partial. A confounded run serialised as clean is exactly the failure D-10
+exists to prevent.
 """
 
 from __future__ import annotations
@@ -41,6 +37,8 @@ from typing import Any
 
 BUNDLE_REF_SENTINEL = "sentinel:no-eval-bundle-until-phase-2"
 CORPUS_SNAPSHOT_HASH_SENTINEL = "sentinel:no-corpus-snapshot-until-phase-2"
+STOP_REASON_DECLARED_FALLBACK = "declared_fallback"  # D-21: a completed run on a declared fallback path
+DEGRADATION_REASON_FALLBACK_PATH = "fallback_path_taken"  # D-21: node-free, guard-free consumer code
 TIER_PLACEHOLDER = "T3"  # documented placeholder: no scored evidence item flows through a tracer node
 
 
@@ -140,11 +138,6 @@ class RunRecord:
         """The honesty invariant — see module docstring for the schema/RIG §TR.3 grounding."""
         flagged = self.partial or self.degraded
         if flagged:
-            if self.partial != self.degraded:
-                raise ValueError(
-                    "partial and degraded are a required-together pair (RIG §TR.3 / the frozen "
-                    f"schema's allOf rule): got partial={self.partial!r} degraded={self.degraded!r}"
-                )
             if not self.stop_reason:
                 raise ValueError(
                     "a partial/degraded run must carry a non-empty stop_reason (RIG §TR.3)"

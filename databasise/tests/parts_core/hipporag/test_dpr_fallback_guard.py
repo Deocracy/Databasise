@@ -261,17 +261,29 @@ async def test_zero_facts_survive_assemble_result_uses_dpr_fallback_and_guard_fi
     assert envelope.evidence[0].namespace == "hipporag-chunks"
 
 
-async def test_guard_fired_run_reports_degraded_false_and_partial_false_on_the_envelope(
+async def test_a_fired_fallback_is_degraded_with_a_node_free_reason_and_ppr_is_not(
     seeded_hipporag_store,
 ):
-    engine = _make_engine(seeded_hipporag_store, keep_ids=[])
-
-    envelope = await engine.query(
+    """HIPP-14 (D-21): the non-debug envelope shows a taken DPR fallback as degraded, with reason
+    codes that name no node and no guard; the PPR path stays clean."""
+    node_ids = list(load_wiring("hipporag")["nodes"])
+    fallback = await _make_engine(seeded_hipporag_store, keep_ids=[]).query(
+        QueryObject(text=_QUERY_TEXT), Selector(capability=_HIPPORAG_CAPABILITY)
+    )
+    ppr = await _make_engine(seeded_hipporag_store, keep_ids=["f1", "f2"]).query(
         QueryObject(text=_QUERY_TEXT), Selector(capability=_HIPPORAG_CAPABILITY)
     )
 
-    assert envelope.degraded is False
-    assert envelope.partial is False
+    reasons = [fallback.stop_reason or "", fallback.degradation_reason or ""]
+    assert (fallback.degraded, fallback.partial) == (True, False)
+    assert all(reasons)
+    assert not [r for r in reasons for needle in node_ids + ["guard", "@"] if needle in r.lower()]
+    assert (ppr.degraded, ppr.partial, ppr.stop_reason, ppr.degradation_reason) == (
+        False,
+        False,
+        None,
+        None,
+    )
 
 
 async def test_guard_name_appears_nowhere_in_the_serialised_envelope(seeded_hipporag_store):
