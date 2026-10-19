@@ -9,6 +9,7 @@ index.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any
 
@@ -247,23 +248,106 @@ async def test_openie_emits_one_finding_per_triple_with_a_stable_fact_id():
     assert result2["findings"][0]["fact_id"] == finding["fact_id"]
 
 
-async def test_openie_malformed_triple_response_degrades_only_its_own_chunk():
-    client = _StubOpenieLLMClient(
-        ner_responses=[["cat", "mat"], ["dog", "rug"]],
-        triple_responses=["not valid json at all", [["dog", "sat_on", "rug"]]],
-    )
-    ctx = _ctx(
-        "openie",
-        inputs={"chunk-embed": {"chunks": [_CAT_CHUNK, _DOG_CHUNK]}},
-        clients={"llm": client},
+class _SleepingLLMClient:
+    """Answers by passage text (not call order), sleeps on every call and records the maximum number
+    of calls in flight. ``ner_behaviour[passage]`` is ``"ok"``, ``"garbage"`` or ``"raise"``;
+    ``triples[passage]`` is the triple list the triple call returns (default one valid triple)."""
+
+    def __init__(self, ner_behaviour: dict[str, str], triples: dict[str, Any] | None = None) -> None:
+        self._ner_behaviour = ner_behaviour
+        self._triples = triples or {}
+        self.in_flight = 0
+        self.max_in_flight = 0
+
+    async def chat(self, messages: list[dict[str, str]], **kwargs: Any) -> ChatResult:
+        content = messages[0]["content"]
+        passage = next(p for p in self._ner_behaviour if p in content)
+        self.in_flight += 1
+        self.max_in_flight = max(self.max_in_flight, self.in_flight)
+        try:
+            await asyncio.sleep(0.05)
+        finally:
+            self.in_flight -= 1
+        if "---Recognised Entities---" in content:
+            payload = self._triples.get(passage, [["a", "rel", "b"]])
+            text = payload if isinstance(payload, str) else json.dumps({"triples": payload})
+        else:
+            behaviour = self._ner_behaviour[passage]
+            if behaviour == "raise":
+                raise RuntimeError("provider down: secret-key-123")
+            text = "not json" if behaviour == "garbage" else json.dumps({"entities": ["a", "b"]})
+        return ChatResult(
+            text=text,
+            tokens=TokenAccounting(prompt_tokens=1, completion_tokens=1, call_count=1, counted_by="stub-llm"),
+            resolved_model_identity="stub-llm-model",
+        )
+
+
+def _passage_chunks(*passages: str) -> list[dict[str, Any]]:
+    return [
+        {"chunk_id": f"p{i}", "document_id": f"doc-{i}", "ordinal": 0, "text": passage}
+        for i, passage in enumerate(passages)
+    ]
+
+
+async def _run_openie_capturing(client: Any, chunks: list[dict[str, Any]], config: dict[str, Any]):
+    ctx = _ctx("openie", config=config, inputs={"chunk-embed": {"chunks": chunks}}, clients={"llm": client})
+    try:
+        return await HIPPORAG_OPENIE_EXTRACTOR_PART.body(ctx), None
+    except Exception as exc:  # noqa: BLE001 - the test asserts on the captured exception
+        return None, exc
+
+
+async def test_openie_counts_failed_chunks_refuses_and_overlaps_calls():
+    client = _SleepingLLMClient({"alpha": "garbage", "bravo": "raise", "charlie": "ok"})
+
+    result, caught = await _run_openie_capturing(
+        client, _passage_chunks("alpha", "bravo", "charlie"), {"max_concurrency": 3}
     )
 
-    result = await HIPPORAG_OPENIE_EXTRACTOR_PART.body(ctx)
+    assert result is None
+    assert type(caught).__name__ == "ExtractionFailedError", repr(caught)
+    assert getattr(caught, "failed_chunks", None) == 2
+    assert sorted(getattr(caught, "failure_reasons", [])) == [
+        "llm_call_failed:RuntimeError",
+        "unparseable_response",
+    ]
+    assert "secret-key-123" not in str(caught)
+    assert client.max_in_flight > 1
 
-    chunk1_findings = [f for f in result["findings"] if f["chunk_id"] == "c1"]
-    chunk2_findings = [f for f in result["findings"] if f["chunk_id"] == "c2"]
-    assert chunk1_findings == []
-    assert len(chunk2_findings) == 1
+
+async def test_openie_attempts_every_chunk_before_refusing():
+    client = _SleepingLLMClient({"alpha": "raise", "bravo": "raise", "charlie": "ok"})
+
+    _, caught = await _run_openie_capturing(
+        client, _passage_chunks("alpha", "bravo", "charlie"), {"max_concurrency": 1}
+    )
+
+    assert getattr(caught, "failed_chunks", None) == 2
+    assert client.max_in_flight == 1
+
+
+async def test_openie_valid_empty_triples_is_not_a_failure():
+    client = _SleepingLLMClient({"alpha": "ok"}, triples={"alpha": []})
+
+    result, caught = await _run_openie_capturing(client, _passage_chunks("alpha"), {})
+
+    assert caught is None
+    assert result["findings"] == []
+    assert len(result["chunks"]) == 1
+
+
+async def test_openie_max_concurrency_bounds_calls_in_flight():
+    chunks = _passage_chunks("alpha", "bravo", "charlie")
+    behaviour = {"alpha": "ok", "bravo": "ok", "charlie": "ok"}
+    serial = _SleepingLLMClient(behaviour)
+    parallel = _SleepingLLMClient(behaviour)
+
+    await _run_openie_capturing(serial, chunks, {"max_concurrency": 1})
+    await _run_openie_capturing(parallel, chunks, {"max_concurrency": 3})
+
+    assert serial.max_in_flight == 1
+    assert parallel.max_in_flight == 3
 
 
 async def test_openie_makes_zero_calls_with_empty_chunks_input():

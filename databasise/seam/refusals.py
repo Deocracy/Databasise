@@ -21,6 +21,7 @@ factory in ``tests/seam/test_rest_transport.py::_REFUSAL_FACTORIES``.
 from __future__ import annotations
 
 import math
+import re
 from collections.abc import Iterable
 from typing import Any
 
@@ -755,7 +756,12 @@ _FOREIGN_FAILURE_CLASSES: dict[str, str] = {
     "CorpusOpMalformedOutputError": "MalformedDriverOutput",
     "JSONDecodeError": "MalformedDriverOutput",
     "UnicodeDecodeError": "MalformedDriverOutput",
+    "ExtractionFailedError": "ExtractionFailed",
 }
+
+# Phase 12 D-08: the only text an ExtractionFailed refusal may carry is a closed reason code.
+_EXTRACTION_REASON_CODE = re.compile(r"unparseable_response|llm_call_failed:[A-Za-z_][A-Za-z0-9_]{0,63}")
+_MAX_FAILURE_REASONS = 10
 
 
 class ForeignEngineRefusalError(SeamRefusalError):
@@ -776,7 +782,9 @@ class ForeignEngineRefusalError(SeamRefusalError):
 
     Phase 11 D-12 is the single place a refusal may name configuration keys: only the
     ``V1NotConfigured`` class adds public ``missing_keys`` and ``unsupported_keys`` (key names,
-    never values). Every other class keeps exactly ``operation`` and ``failure_class``.
+    never values). Phase 12 D-08 adds the second class with public attributes: ``ExtractionFailed``
+    carries ``failed_chunks`` and ``failure_reasons`` (a count and closed codes, never text). Every
+    other class keeps exactly ``operation`` and ``failure_class``.
     """
 
     def __init__(self, *, operation: str, cause: BaseException, failure_class: str | None = None):
@@ -787,6 +795,13 @@ class ForeignEngineRefusalError(SeamRefusalError):
         if self.failure_class == "V1NotConfigured":
             self.missing_keys = sorted(str(key) for key in getattr(cause, "missing_keys", ()))
             self.unsupported_keys = sorted(str(key) for key in getattr(cause, "unsupported_keys", ()))
+        elif self.failure_class == "ExtractionFailed":
+            self.failed_chunks = int(getattr(cause, "failed_chunks", 0))
+            self.failure_reasons = [
+                reason
+                for reason in getattr(cause, "failure_reasons", ())
+                if isinstance(reason, str) and _EXTRACTION_REASON_CODE.fullmatch(reason)
+            ][:_MAX_FAILURE_REASONS]
         self._cause = cause
         super().__init__(
             f"ForeignEngineRefusalError: operation {operation!r} failed ({self.failure_class})"

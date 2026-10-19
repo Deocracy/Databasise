@@ -13,6 +13,7 @@
       "component": "hipporag/openie-extractor@0.1.0",
       "kind": "extractor",
       "effects": ["calls_llm"],
+      "config": { "max_concurrency": 4 },
       "deps": ["chunk-embed"]
     },
     "entity-fact-embed": {
