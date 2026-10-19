@@ -2,12 +2,13 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase10",
-  "ledger_version": 441,
+  "ledger_version": 482,
   "artifacts": {
     "databasise/stores/graph.py": "1554cb09ed791bea5c2dfe545d738e8bf47d26b81e5f1c6891b8a80694d5a2fa",
     "databasise/stores/kv.py": "f74974527f4d41d012dc7c525c23b735492dfbaefc9bdfc4ec3b88e14d2ecb79",
-    "databasise/stores/vector.py": "b09e4ce4da9b0e6c881668c7a957f8dcc7b942dd3753984232c6859fef8f8c2b",
-    "databasise/seam/engine.py": "65ab14d94f7a6d5e94d2f7169c1b18e5bb08478d7213009cf8adbfc1e320e396",
+    "databasise/stores/vector.py": "a7f501cd8fbc7d556b949b73ecbca9c8da92f6bc3d112a537712a245ed5f934c",
+    "databasise/stores/probes.py": "ea3a6d4d0e70dc78f55d669758f873b9eb0e6355d9c4c61650337b1db85ba137",
+    "databasise/seam/engine.py": "f0e3b086db8abd2e672d5103345ffe1aa61e9a3cd4a69f26d00ea0ff3ec98df1",
     "databasise/parts_core/__init__.py": "c7e52b729454dd13da6fdac848200baa9faf3b00239062d0976819ad819dc2e4",
     "databasise/validator/parse.py": "18ab39676c9ac5c18f6f3669fe7eb405d9ee64395e3ba1ccdf2cd20531079e08",
     "databasise/namespaces.py": "5e0e2eece8649d6c91bc788bc05dfb667b038c656626a9cf30f8847059b4e46d",
@@ -16,7 +17,7 @@
   "checker": {
     "harness": "claude-code",
     "model": "sonnet",
-    "session": "trace-2026-10-18"
+    "session": "trace-2026-10-18b"
   },
   "items": [
     {
@@ -28,20 +29,20 @@
     {
       "id": "STOR-02",
       "status": "present",
-      "where": "databasise/seam/engine.py:556",
-      "quote": "stores = into if into is not None else {}"
+      "where": "databasise/seam/engine.py:1304",
+      "quote": "stores = _build_stores(self.store_root, self.workspace, resolved, into=stores, operation=\"ingest\")"
     },
     {
       "id": "STOR-03",
       "status": "present",
-      "where": "databasise/seam/engine.py:1919",
+      "where": "databasise/seam/engine.py:1981",
       "quote": "vector = MultiNamespaceVectorStore(workspace=self.workspace, store_root=self.store_root)"
     },
     {
       "id": "STOR-04",
       "status": "present",
-      "where": "databasise/seam/engine.py:1696",
-      "quote": "return _PROBES[kind](root / namespace)"
+      "where": "databasise/seam/engine.py:1764",
+      "quote": "lambda: {f\"{kind}:{namespace}\": _probe(kind, namespace) for kind, namespace in _HEALTH_PROBES}"
     },
     {
       "id": "STOR-05",
@@ -52,32 +53,32 @@
     {
       "id": "STOR-06",
       "status": "present",
-      "where": "databasise/seam/engine.py:1324",
-      "quote": "except ForeignEngineRefusalError:"
+      "where": "databasise/seam/engine.py:1346",
+      "quote": "await _drop_pending(stores, self.store_root)"
     },
     {
       "id": "STOR-07",
       "status": "present",
-      "where": "databasise/stores/vector.py:365",
+      "where": "databasise/stores/vector.py:366",
       "quote": "self._pending_deletes.add(doc_id)"
     },
     {
       "id": "STOR-08",
       "status": "present",
-      "where": "databasise/stores/vector.py:223",
-      "quote": "error = error or VectorStoreCorruptedError(index_path, None, \"<missing vector.meta.json>\")"
+      "where": "databasise/stores/vector.py:222",
+      "quote": "if meta_sig is None:"
     },
     {
       "id": "STOR-09",
       "status": "present",
-      "where": "databasise/stores/vector.py:373",
+      "where": "databasise/stores/vector.py:381",
       "quote": "raise InvalidTopKError(top_k)"
     },
     {
       "id": "STOR-10",
       "status": "present",
-      "where": "databasise/stores/graph.py:404",
-      "quote": "self._pending_edge_rms.update((r[0], r[1]) for r in db_rows)"
+      "where": "databasise/stores/graph.py:449",
+      "quote": "\"?[src, tgt] := *edges{src, tgt}, src = $id or tgt = $id :rm edges {src, tgt}\","
     },
     {
       "id": "STOR-11",
@@ -88,20 +89,20 @@
     {
       "id": "STOR-12",
       "status": "present",
-      "where": "databasise/validator/parse.py:68",
-      "quote": "_UNWIRED_STORE_EFFECTS: frozenset[str] = frozenset({\"reads_lexical\", \"writes_lexical\", \"reads_blob\"})"
+      "where": "databasise/validator/parse.py:223",
+      "quote": "unwired = (set(node.effects) | set(part.effects)) & _UNWIRED_STORE_EFFECTS"
     },
     {
       "id": "STOR-13",
       "status": "present",
       "where": "databasise/tests/test_removed_stores_absent.py:3",
-      "quote": "STOR-13 (blob digest validation)"
+      "quote": "STOR-13 (blob digest validation) and STOR-14 (lexical AND query) are met by removal (TOOL-17's"
     },
     {
       "id": "STOR-14",
       "status": "present",
       "where": "databasise/tests/test_removed_stores_absent.py:3",
-      "quote": "STOR-14 (lexical AND query) are met by removal"
+      "quote": "STOR-13 (blob digest validation) and STOR-14 (lexical AND query) are met by removal (TOOL-17's"
     },
     {
       "id": "STOR-15",

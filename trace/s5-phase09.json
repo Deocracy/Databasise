@@ -2,21 +2,22 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase09",
-  "ledger_version": 441,
+  "ledger_version": 482,
   "artifacts": {
     "databasise/seam/refusals.py": "aee7c777e8bc41272ebaf983ffd5cfba25c9a7539f26ca577dbd00e733f3a0c2",
     "databasise/seam/rest.py": "95168569d07d4c1660e4ef4d1f695460ae8df9909635349d925da5b8fd9fd9fe",
-    "databasise/seam/evidence.py": "4b2d6caa48a467ecb5a4390d12880b34689b84354e5df1cef7385aa1961802b8",
+    "databasise/seam/engine.py": "f0e3b086db8abd2e672d5103345ffe1aa61e9a3cd4a69f26d00ea0ff3ec98df1",
     "databasise/seam/corpus.py": "b360c0dbdc02f4659079a90f81a68366d74c55ab99d13334795dfedae02226ec",
-    "databasise/seam/query.py": "359f93b58fde69d369a88054949f360358d1c12f717163c4d9537fb0ca1544a0",
+    "databasise/seam/evidence.py": "4b2d6caa48a467ecb5a4390d12880b34689b84354e5df1cef7385aa1961802b8",
     "databasise/seam/compare.py": "8f6d19a32dccbcd6cbaf605c398d2334b86f1500d8598ddb43cafe62ad880095",
-    "databasise/seam/engine.py": "65ab14d94f7a6d5e94d2f7169c1b18e5bb08478d7213009cf8adbfc1e320e396",
+    "databasise/seam/query.py": "359f93b58fde69d369a88054949f360358d1c12f717163c4d9537fb0ca1544a0",
+    "databasise/seam/selectors.py": "f5dec81075f93067bf9146fc86a635eeec3c7335fdbe084f925706796e97d7b7",
     "databasise/mcp/server.py": "563771f9791d23cdbdb36406e1b10e56f6dd10ee31563c676cfe25bd0b4a8e32"
   },
   "checker": {
     "harness": "claude-code",
     "model": "sonnet",
-    "session": "trace-2026-10-18"
+    "session": "trace-2026-10-18b"
   },
   "items": [
     {
@@ -28,8 +29,8 @@
     {
       "id": "SEAM-02",
       "status": "present",
-      "where": "databasise/seam/refusals.py:53",
-      "quote": "body: dict[str, Any] = {\"refusal_type\": type(exc).__name__, \"message\": str(exc)}"
+      "where": "databasise/seam/rest.py:291",
+      "quote": "refusal = refusal_from_errors(exc.errors())"
     },
     {
       "id": "SEAM-03",
@@ -52,8 +53,8 @@
     {
       "id": "SEAM-06",
       "status": "present",
-      "where": "databasise/seam/rest.py:496",
-      "quote": "@app.get(\"/corpus\", responses=_FAULT_RESPONSES)"
+      "where": "databasise/seam/engine.py:649",
+      "quote": "async def _corpus_op_or_refuse(op: str, payload: dict[str, Any], operation: str, working_dir: Path) -> Any:"
     },
     {
       "id": "SEAM-07",
@@ -76,20 +77,20 @@
     {
       "id": "SEAM-10",
       "status": "present",
-      "where": "databasise/seam/compare.py:75",
+      "where": "databasise/seam/selectors.py:242",
       "quote": "raise EmptyCapabilitySelectorError()"
     },
     {
       "id": "SEAM-11",
       "status": "present",
-      "where": "databasise/seam/compare.py:95",
-      "quote": "raise DuplicateComparisonKeyError(key=key)"
+      "where": "databasise/seam/engine.py:1117",
+      "quote": "keys = comparison_keys(selectors)"
     },
     {
       "id": "SEAM-12",
       "status": "present",
-      "where": "databasise/seam/engine.py:2025",
-      "quote": "raise InvalidPromotionAliasError(alias=alias)"
+      "where": "databasise/seam/engine.py:2086",
+      "quote": "if alias == \"\" or _INSTANCE_HASH_PATTERN.match(alias):"
     },
     {
       "id": "SEAM-13",
@@ -100,14 +101,14 @@
     {
       "id": "SEAM-14",
       "status": "present",
-      "where": "databasise/seam/refusals.py:900",
-      "quote": "\"UnknownTraceReferenceError\","
+      "where": "databasise/seam/refusals.py:875",
+      "quote": "\"NoRawUploadPathForModalityError\","
     },
     {
       "id": "SEAM-15",
       "status": "present",
-      "where": "databasise/seam/corpus.py:8",
-      "quote": "``file_name`` and ``content_type`` are not stored"
+      "where": "databasise/seam/corpus.py:95",
+      "quote": "``file_name`` and ``content_type`` are not stored (D-11). For a ``raw`` payload only the suffix"
     }
   ],
   "extra": []
