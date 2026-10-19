@@ -1,11 +1,11 @@
 {
-  "ledger_version": 541,
+  "ledger_version": 545,
   "frozen_at": null,
   "items": [
     {
       "id": "RUN-01",
       "text": "The MCP tool-roster versus COVERAGE.md cross-check runs again. databasise/tests/mcp/test_tool_growth_invariant.py resolves _COVERAGE_PATH to a file that exists, and test_every_tool_has_a_coverage_row_and_every_both_transport_row_has_a_tool and test_compare_is_present_in_tool_names_and_absent_from_the_deliberately_absent_table both pass. If the coverage file is missing, the module fails with an ...",
-      "status": "done",
+      "status": "disputed",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/mcp/test_tool_growth_invariant.py::test_every_tool_has_a_coverage_row_and_every_both_transport_row_has_a_tool",
       "code_ref": "",
@@ -13,7 +13,7 @@
       "owner": "",
       "phase": "08",
       "deferred_at": "",
-      "reason": "Phase 8 verified (08-VERIFICATION.md passed, owner-approved 2026-10-16); offline gate green",
+      "reason": "Re-opened to replace its check (owner chose dispute-check, 2026-10-19): no pre-fix commit can collect the current test",
       "kind": "requirement"
     },
     {
@@ -131,7 +131,7 @@
     {
       "id": "RUN-10",
       "text": "The upload-poll-delete round-trip tests prove that counts change after a delete. In test_rest_corpus_endpoints.py:441-442 (REST) and :480-481 (in-process), after a successful delete the second /corpus/counts or document_counts() shows by_status['processed'] reduced by 1, to 0 in this fixture, and total reduced by 1. This replaces `status_code == 200` and the always-true `total >= 0`. The stub d...",
-      "status": "done",
+      "status": "disputed",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/seam/test_rest_corpus_endpoints.py::test_upload_poll_delete_round_trip",
       "code_ref": "",
@@ -139,7 +139,7 @@
       "owner": "",
       "phase": "08",
       "deferred_at": "",
-      "reason": "Phase 8 verified (08-VERIFICATION.md passed, owner-approved 2026-10-16); offline gate green",
+      "reason": "Re-opened to replace its check (owner chose dispute-check, 2026-10-19): the original fix was test-only, so the check passes at every old commit",
       "kind": "requirement"
     },
     {
