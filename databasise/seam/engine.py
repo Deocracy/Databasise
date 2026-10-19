@@ -166,9 +166,17 @@ one engine process per store root, so an in-process ``threading.Lock`` per resol
 ``_build_stores`` (the STOR-02 first-error pin) and held through the v1 subprocess, the index sync's
 manifest read and staging, the commit or drop, and the inbox cleanup, so two writes can never read
 the same prune manifest. A second write is refused with ``StoreBusyError(store_kind="corpus")``
-(409), not queued. Reads take no gate, and HippoRAG writes, which have no v1 dir, are not gated.
-A cancelled or timed-out write keeps the gate until the v1 worker thread returns (11 REVIEW
-A-CR-01, A2-WR-01).
+(409), not queued. Reads take no gate. A cancelled or timed-out write keeps the gate until the v1
+worker thread returns (11 REVIEW A-CR-01, A2-WR-01).
+
+**12-06-PLAN.md (D-14, HIPP-16): HippoRAG writes queue per workspace.** HippoRAG has no v1 dir, so
+its ingests and deletes take a separate per-workspace gate keyed on ``<store_root>/<workspace>/
+hipporag-write`` (:meth:`Databasise._hipporag_gate_path`, never created on disk), entered by
+:func:`_serialising_write_gate` before ``_build_stores`` because the Faiss store reads its committed
+snapshot at construction. Their read-merge-write steps (edge accumulation, fact provenance, document
+removal) would lose updates if two writers interleaved, so a second HippoRAG writer waits, polling,
+and is refused with ``StoreBusyError(store_kind="corpus")`` only after ``_HIPPORAG_GATE_WAIT_SECONDS``.
+LightRAG writes keep refusing at once (D-07 above); a held v1 gate never delays a HippoRAG write.
 """
 
 from __future__ import annotations
@@ -182,6 +190,7 @@ import logging
 import sqlite3
 import sys
 import threading
+import time
 import uuid
 import weakref
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Sequence
@@ -739,6 +748,33 @@ def _write_gate(working_dir: Path) -> Iterator[None]:
                 gate.release()
 
 
+# D-14 (Phase 12): HippoRAG writes queue. Their read-merge-write steps (edge accumulation D-04, fact
+# provenance D-06, document removal D-12) would lose updates if two writers interleaved, and
+# refusing at once would break two concurrent HippoRAG ingests that are both valid. The ceiling is
+# LightRAG's ingest wall-clock ceiling; a waiter holds no store, so waiting costs nothing.
+_HIPPORAG_GATE_WAIT_SECONDS = 900.0
+_GATE_POLL_SECONDS = 0.02
+
+
+@contextlib.asynccontextmanager
+async def _serialising_write_gate(path: Path) -> AsyncIterator[None]:
+    """Hold ``path``'s gate, waiting (polling, never blocking the loop) up to
+    ``_HIPPORAG_GATE_WAIT_SECONDS``, then refuse with ``StoreBusyError(store_kind="corpus")`` (409).
+    A threading lock polled with ``acquire(blocking=False)``, not acquired in a thread, so a
+    cancelled waiter can never leave the lock held. Released in ``finally``. ``_write_gate`` (the
+    LightRAG refuse-at-once gate, LRAG-04) is unchanged."""
+    gate = _gate_for(path)
+    deadline = time.monotonic() + _HIPPORAG_GATE_WAIT_SECONDS
+    while not gate.acquire(blocking=False):
+        if time.monotonic() >= deadline:
+            raise StoreBusyError(store_kind="corpus")
+        await asyncio.sleep(_GATE_POLL_SECONDS)
+    try:
+        yield
+    finally:
+        gate.release()
+
+
 async def _abort_prepared(stores: dict[str, Any]) -> None:
     for name, store in stores.items():
         try:
@@ -1010,6 +1046,11 @@ class Databasise:
         Not created here; v1 creates it on its first write."""
         return self.store_root / self.workspace / "lightrag-v1"
 
+    def _hipporag_gate_path(self) -> Path:
+        """D-14: the key of this workspace's HippoRAG write gate. Distinct from the v1 dir, and never
+        created on disk: it only keys an in-process lock."""
+        return self.store_root / self.workspace / "hipporag-write"
+
     def _write_gate_held(self) -> bool:
         """D-07: whether a LightRAG write holds this workspace's v1 working dir. Never acquires."""
         return _gate_for(self._v1_working_dir()).locked()
@@ -1278,7 +1319,8 @@ class Databasise:
         remove_inbox_files: bool = False,
     ) -> IngestJob:
         """The run, commit and cleanup ``ingest`` and ``retry_document`` share (11-08): stores
-        opened, the D-07 gate entered (LightRAG only), ``precheck`` awaited inside the gate (a job
+        opened, the D-07 gate entered (LightRAG; HippoRAG queues on its own D-14 gate before the
+        stores open), ``precheck`` awaited inside the gate (a job
         it returns is the answer, and nothing is staged or run), the
         upload staged, the corpus-ingest wiring run, every store committed or every pending write
         dropped, and the inbox cleaned after a committed run (``staged``, or with
@@ -1298,8 +1340,12 @@ class Databasise:
         stores: dict[str, Any] = {}
         wrote_staged = False
         gated = family == "lightrag"  # D-07: HippoRAG writes no v1 dir
-        with contextlib.ExitStack() as gate:
+        async with contextlib.AsyncExitStack() as gate:
             try:
+                # D-14: a HippoRAG write queues on its own per-workspace gate BEFORE the stores open,
+                # because the Faiss store reads its committed snapshot at construction.
+                if family == "hipporag":
+                    await gate.enter_async_context(_serialising_write_gate(self._hipporag_gate_path()))
                 # D-04: built inside the try so a failed open finalizes what opened; still before the
                 # staging block, so a failed open leaves no staged file (WR-04).
                 stores = _build_stores(self.store_root, self.workspace, resolved, into=stores, operation="ingest")
@@ -1579,8 +1625,11 @@ class Databasise:
             touches.append((node_id, kind, key))
 
         stores: dict[str, Any] = {}
-        with contextlib.ExitStack() as gate:
+        async with contextlib.AsyncExitStack() as gate:
             try:
+                # D-14: a HippoRAG delete queues behind HippoRAG ingests, before the stores open.
+                if family == "hipporag":
+                    await gate.enter_async_context(_serialising_write_gate(self._hipporag_gate_path()))
                 # D-08 (STOR-07): the wiring's store_namespaces pick the kv and graph namespaces, as in
                 # ingest; LightRAG's corpus-delete.json declares none, so it keeps the defaults.
                 stores = _build_stores(self.store_root, self.workspace, resolved, into=stores, operation="delete")
