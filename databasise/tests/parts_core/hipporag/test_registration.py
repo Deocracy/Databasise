@@ -39,7 +39,7 @@ _EXPECTED_SHAPE: dict[str, dict[str, object]] = {
     },
     "hipporag/reset-vector-join@0.1.0": {
         "kind": "join",
-        "effects": ["reads_vector", "calls_embedding", "reads_kv"],
+        "effects": ["reads_vector", "reads_kv"],
         "structural_depth": "opaque",
     },
     "hipporag/ppr-retriever@0.1.0": {
@@ -89,7 +89,7 @@ _EXPECTED_SHAPE: dict[str, dict[str, object]] = {
     },
     "hipporag/dpr-fallback@0.1.0": {
         "kind": "retriever",
-        "effects": ["calls_embedding", "reads_vector"],
+        "effects": ["reads_vector"],
         "structural_depth": "opaque",
     },
 }

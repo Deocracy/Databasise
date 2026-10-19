@@ -85,12 +85,10 @@ async def test_dpr_fallback_emits_text_chunk_items_for_every_stored_chunk_sorted
     )
     await vector_store.index_done_callback()
 
-    client = _StubEmbeddingClient(vector=[1.0, 0.0, 0.0])
     ctx = _ctx(
         "dpr-fallback",
-        config={"query": "cats on mats"},
+        inputs={"fact-score": {"query_vector": [1.0, 0.0, 0.0]}},
         stores={"vector": vector_store},
-        clients={"embedding": client},
     )
 
     result = await HIPPORAG_DPR_FALLBACK_PART.body(ctx)
@@ -119,19 +117,16 @@ async def test_dpr_fallback_scores_match_reset_vector_joins_own_passage_weight_s
     )
     await vector_store.index_done_callback()
 
-    client = _StubEmbeddingClient(vector=[1.0, 0.0, 0.0])
+    query_vector = [1.0, 0.0, 0.0]
     ctx = _ctx(
         "dpr-fallback",
-        config={"query": "q"},
+        inputs={"fact-score": {"query_vector": query_vector}},
         stores={"vector": vector_store},
-        clients={"embedding": client},
     )
     dpr_result = await HIPPORAG_DPR_FALLBACK_PART.body(ctx)
     dpr_scores = {item["id"]: item["score"] for item in dpr_result["items"]}
 
-    raw_items, _ = await dense_passage_retrieval(
-        embedding_client=client, chunks_store=chunks_ns, query="q"
-    )
+    raw_items = await dense_passage_retrieval(query_vector=query_vector, chunks_store=chunks_ns)
     raw_scores = {item["id"]: item["score"] for item in raw_items}
 
     assert dpr_scores == raw_scores
@@ -156,10 +151,8 @@ async def test_dpr_fallback_runs_unconditionally_reading_no_guard_state(store_ro
 
     ctx = _ctx(
         "dpr-fallback",
-        config={"query": "q"},
-        inputs={},  # no fact-filter/guard-shaped input reaches this body at all
+        inputs={"fact-score": {"query_vector": [1.0, 0.0, 0.0]}},  # no fact-filter/guard-shaped input
         stores={"vector": vector_store},
-        clients={"embedding": _StubEmbeddingClient()},
     )
     result = await HIPPORAG_DPR_FALLBACK_PART.body(ctx)
     assert len(result["items"]) == 1
@@ -169,9 +162,8 @@ async def test_dpr_fallback_with_empty_chunk_namespace_emits_empty_items_never_r
     vector_store = MultiNamespaceVectorStore(workspace="ws", store_root=store_root)
     ctx = _ctx(
         "dpr-fallback",
-        config={"query": "q"},
+        inputs={"fact-score": {"query_vector": [1.0, 0.0, 0.0]}},
         stores={"vector": vector_store},
-        clients={"embedding": _StubEmbeddingClient()},
     )
 
     result = await HIPPORAG_DPR_FALLBACK_PART.body(ctx)
@@ -179,10 +171,28 @@ async def test_dpr_fallback_with_empty_chunk_namespace_emits_empty_items_never_r
     assert result["items"] == []
 
 
-def test_dpr_fallback_declares_exactly_hash_h_s_two_effects_and_calls_no_top_k():
+async def test_fact_score_emits_the_exact_vector_it_received_from_the_embedding_client(store_root):
+    """HIPP-12 edge (encoding): the vector downstream nodes reuse is the client's own list."""
+    from databasise.parts_core.hipporag.fact_score import HIPPORAG_FACT_SCORER_PART
+
+    sent = [0.25, -0.5, 0.125]
+    client = _StubEmbeddingClient(vector=sent)
+    ctx = _ctx(
+        "fact-score",
+        config={"query": "q"},
+        stores={"vector": MultiNamespaceVectorStore(workspace="ws", store_root=store_root)},
+        clients={"embedding": client},
+    )
+
+    result = await HIPPORAG_FACT_SCORER_PART.body(ctx)
+
+    assert (result["query_vector"], client.calls) == (sent, [["q"]])
+
+
+def test_dpr_fallback_declares_reads_vector_only_and_calls_no_cut():
     import inspect
 
-    assert HIPPORAG_DPR_FALLBACK_PART.effects == ["calls_embedding", "reads_vector"]
+    assert HIPPORAG_DPR_FALLBACK_PART.effects == ["reads_vector"]
     assert "top_k" not in inspect.getsource(dpr_fallback_module)
 
 

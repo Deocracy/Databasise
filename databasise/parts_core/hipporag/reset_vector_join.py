@@ -11,11 +11,12 @@ this plan's own conftest fixture seeds under ``hipporag-text-chunks``, a 06-01-P
 decision for exercising the declared ``reads_kv`` effect meaningfully) and divides the fact's own
 score by its own chunk count, adding the result onto every entity vertex the fact names.
 
-**Passage weights.** This node performs its own dense passage retrieval — embeds
-``ctx.config["query"]`` (``calls_embedding``) and reads §14.2's exhaustive ``score_all``
-sub-capability over the ``hipporag-chunks`` vector namespace (``reads_vector``) — min-max
+**Passage weights.** This node performs its own dense passage retrieval — reads §14.2's
+exhaustive ``score_all`` sub-capability over the ``hipporag-chunks`` vector namespace
+(``reads_vector``) with the query vector ``fact-score`` embedded (``ctx.inputs["fact-score"]
+["query_vector"]``, D-17; this node never calls the embedding client) — min-max
 normalises the resulting scores, and multiplies by ``config["passage_node_weight"]``. The
-embed-then-``score_all`` call itself is ``dpr_fallback.py``'s own ``dense_passage_retrieval``
+``score_all`` call itself is ``dpr_fallback.py``'s own ``dense_passage_retrieval``
 helper, imported rather than re-computed here (06-07-PLAN.md Task 1) — the same helper upstream
 calls in both places (``HippoRAG.py:1467-1499``, ``:1591-1608``), so this node and ``dpr-fallback``
 cannot silently diverge on what dense passage retrieval means.
@@ -63,7 +64,6 @@ def _min_max_normalise(scores: list[float]) -> list[float]:
 
 async def _reset_vector_join_body(ctx: NodeContext) -> dict[str, Any]:
     config = ctx.config or {}
-    query = str(config.get("query", ""))
     arity = config.get("arity", _DEFAULT_ARITY)
     passage_node_weight = float(config.get("passage_node_weight", _DEFAULT_PASSAGE_NODE_WEIGHT))
 
@@ -83,11 +83,9 @@ async def _reset_vector_join_body(ctx: NodeContext) -> dict[str, Any]:
         for vertex_name in entities:
             phrase_weights[vertex_name] = phrase_weights.get(vertex_name, 0.0) + weight
 
-    embedding_client = ctx.clients["embedding"]
+    query_vector = ctx.inputs["fact-score"]["query_vector"]
     chunks_store = ctx.stores["vector"].select(_CHUNKS_NAMESPACE)
-    passage_items, embed_result = await dense_passage_retrieval(
-        embedding_client=embedding_client, chunks_store=chunks_store, query=query
-    )
+    passage_items = await dense_passage_retrieval(query_vector=query_vector, chunks_store=chunks_store)
     passage_ids = [item["id"] for item in passage_items]
     normalised = _min_max_normalise([item["score"] for item in passage_items])
     passage_weights: dict[str, float] = {
@@ -113,7 +111,6 @@ async def _reset_vector_join_body(ctx: NodeContext) -> dict[str, Any]:
     return {
         "reset_vector": reset_vector,
         "vertex_names": vertex_names,
-        "tokens": embed_result.tokens,
     }
 
 
@@ -121,7 +118,7 @@ HIPPORAG_RESET_VECTOR_JOIN_PART = Part(
     name_at_version=_NAME_AT_VERSION,
     kind="join",
     structural_depth="opaque",
-    effects=["reads_vector", "calls_embedding", "reads_kv"],
+    effects=["reads_vector", "reads_kv"],
     upstream_ref="hipporag/src/hipporag/HippoRAG.py",
     body=_reset_vector_join_body,
 )

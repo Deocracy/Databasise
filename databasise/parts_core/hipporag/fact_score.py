@@ -4,7 +4,8 @@ the query-side dense fact scoring call. Ported by search from ``hipporag/HippoRA
 ``self.embedding_model.get_query_doc_scores`` over every stored fact, never a top-k vector search).
 
 Embeds ``ctx.config["query"]`` through ``ctx.clients`` — the same client-call shape
-``parts_core/lightrag/embedder_query.py`` uses — then reads §14.2's exhaustive ``score_all``
+``parts_core/lightrag/embedder_query.py`` uses — once per query: the vector is emitted as
+``query_vector`` and ``reset-vector-join`` and ``dpr-fallback`` reuse it over a direct dep (D-17). It then reads §14.2's exhaustive ``score_all``
 sub-capability off this position's own ``hipporag-facts`` vector namespace
 (``databasise/stores/vector.py``'s ``FaissVectorStore.score_all``), never ``query()``'s top-k path.
 
@@ -45,7 +46,7 @@ async def _fact_score_body(ctx: NodeContext) -> dict[str, Any]:
         {**item, "kind": "graph_fact"}
         for item in sorted(raw_items, key=lambda item: (-item["score"], item["id"]))
     ]
-    return {"items": items, "tokens": embed_result.tokens}
+    return {"items": items, "query_vector": list(vector), "tokens": embed_result.tokens}
 
 
 HIPPORAG_FACT_SCORER_PART = Part(

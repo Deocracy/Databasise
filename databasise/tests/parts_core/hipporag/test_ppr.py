@@ -198,13 +198,13 @@ async def test_reset_vector_join_seeds_the_matching_chunk_vertex_and_ppr_ranks_i
     )
     await graph_store.index_done_callback()
 
+    query_vector = (await embedding_client.embed(["q"])).vectors[0]
     join_output = await HIPPORAG_RESET_VECTOR_JOIN_PART.body(
         _node_ctx(
             "reset-vector-join",
-            config={"query": "q", "passage_node_weight": 1.0},
-            inputs={"fact-filter": {"items": []}},
+            config={"passage_node_weight": 1.0},
+            inputs={"fact-filter": {"items": []}, "fact-score": {"query_vector": query_vector}},
             stores={"vector": vector_store, "kv": kv_store},
-            clients={"embedding": embedding_client},
         )
     )
     weight_by_vertex = dict(zip(join_output["vertex_names"], join_output["reset_vector"], strict=True))

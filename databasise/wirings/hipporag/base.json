@@ -82,13 +82,13 @@
     "dpr-fallback": {
       "component": "hipporag/dpr-fallback@0.1.0",
       "kind": "retriever",
-      "effects": ["calls_embedding", "reads_vector"],
-      "deps": ["fact-filter"]
+      "effects": ["reads_vector"],
+      "deps": ["fact-filter", "fact-score"]
     },
     "reset-vector-join": {
       "component": "hipporag/reset-vector-join@0.1.0",
       "kind": "join",
-      "effects": ["reads_vector", "calls_embedding", "reads_kv"],
+      "effects": ["reads_vector", "reads_kv"],
       "config": {
         "socket_shape": "ref-keyed vector-sum, per CONTRACT.md §13.3's H2 repair",
         "arm_precedence": "disjoint-support sum, order-insensitive — phrase_weights/passage_weights resolve to disjoint vertex indices",
@@ -96,7 +96,7 @@
         "arity": 2,
         "passage_node_weight": 1.0
       },
-      "deps": ["fact-filter"]
+      "deps": ["fact-filter", "fact-score"]
     },
     "ppr": {
       "component": "hipporag/ppr-retriever@0.1.0",
