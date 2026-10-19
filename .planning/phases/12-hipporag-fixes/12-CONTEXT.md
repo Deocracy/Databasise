@@ -148,7 +148,7 @@ The owner routed two more items here:
 ### E. Query semantics (HIPP-05, 11, 12, 13, 14)
 
 - **D-16 (HIPP-12 index nodes = prune, option 2):**
-  - `without_recipe_only_nodes` in `runner/resolve.py` is generalised in place to prune the query run to the ancestors of `provides`. Keep the `engine._without_recipe_only_nodes` alias name, which protected LRAG-19's `test_query_trace_nodes.py` calls.
+  - `without_recipe_only_nodes` in `wirings/resolve.py` is generalised in place to prune the query run to the ancestors of `provides`. Keep the `engine._without_recipe_only_nodes` alias name, which protected LRAG-19's `test_query_trace_nodes.py` calls.
   - Pruning applies to the dispatched run and to the selector effect union (selectors.py `_match_capability`). It does not apply to `_wiring_effects` itself: promotion's `declared_surface` and the compare `mutates_store` refusal stay on full wirings.
   - The node-count tie-break stays on full wirings.
   - base.json keeps its nodes, so MODAL-04 and PARTS §H stay as they are.
