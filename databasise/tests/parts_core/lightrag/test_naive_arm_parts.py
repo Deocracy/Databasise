@@ -366,7 +366,11 @@ async def test_assemble_respects_a_configured_max_total_tokens_budget_by_droppin
     system = PROMPTS["naive_rag_response"].format(
         response_type="Multiple Paragraphs", user_prompt="n/a", content_data=""
     )
-    budget = len(system) // 4 + 200 + len(json.dumps(items[0])) // 4
+    # 11 REVIEW B-WR-03: v1 costs _get_vector_context's dict per naive chunk, not the bare item.
+    v1_cost_row = {
+        "content": "a" * 40, "created_at": None, "file_path": "unknown_source", "source_type": "vector", "chunk_id": None
+    }
+    budget = len(system) // 4 + 200 + len(json.dumps(v1_cost_row)) // 4
     ctx = _ctx("assemble", config={"max_total_tokens": budget}, inputs={"rerank": {"items": items}})
 
     result = await LIGHTRAG_ASSEMBLER_KG_CONTEXT_PART.body(ctx)
