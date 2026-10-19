@@ -2,15 +2,15 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase09-10-tail",
-  "ledger_version": 482,
+  "ledger_version": 616,
   "artifacts": {
-    "databasise/seam/rest.py": "95168569d07d4c1660e4ef4d1f695460ae8df9909635349d925da5b8fd9fd9fe",
-    "databasise/stores/vector.py": "a7f501cd8fbc7d556b949b73ecbca9c8da92f6bc3d112a537712a245ed5f934c"
+    "databasise/seam/rest.py": "fe03ab4bc25e035770e711f52d9097ee55c9b74e9d154d44989c900f3cdb71c2",
+    "databasise/stores/vector.py": "912c3e2f69b9fd53e508492babd5e3c9ae758de88ff9433c34729709734c79cf"
   },
   "checker": {
     "harness": "claude-code",
-    "model": "sonnet",
-    "session": "trace-2026-10-18b"
+    "model": "claude-opus-5-5",
+    "session": "32d1701b-4256-409c-a5a7-e305cc822f40"
   },
   "items": [
     {

@@ -2,22 +2,22 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase10",
-  "ledger_version": 482,
+  "ledger_version": 616,
   "artifacts": {
+    "databasise/namespaces.py": "5e0e2eece8649d6c91bc788bc05dfb667b038c656626a9cf30f8847059b4e46d",
+    "databasise/parts_core/__init__.py": "bb0a19aed6adf402c795260aaef5acafe394c5c1e4577bc32aa28ab8e929b754",
+    "databasise/seam/engine.py": "d4b321da4adfc4a41761b2a70028281b2b089d21e7ccc0fef8b3889581d43527",
     "databasise/stores/graph.py": "1554cb09ed791bea5c2dfe545d738e8bf47d26b81e5f1c6891b8a80694d5a2fa",
     "databasise/stores/kv.py": "f74974527f4d41d012dc7c525c23b735492dfbaefc9bdfc4ec3b88e14d2ecb79",
-    "databasise/stores/vector.py": "a7f501cd8fbc7d556b949b73ecbca9c8da92f6bc3d112a537712a245ed5f934c",
-    "databasise/stores/probes.py": "ea3a6d4d0e70dc78f55d669758f873b9eb0e6355d9c4c61650337b1db85ba137",
-    "databasise/seam/engine.py": "f0e3b086db8abd2e672d5103345ffe1aa61e9a3cd4a69f26d00ea0ff3ec98df1",
-    "databasise/parts_core/__init__.py": "bb0a19aed6adf402c795260aaef5acafe394c5c1e4577bc32aa28ab8e929b754",
-    "databasise/validator/parse.py": "18ab39676c9ac5c18f6f3669fe7eb405d9ee64395e3ba1ccdf2cd20531079e08",
-    "databasise/namespaces.py": "5e0e2eece8649d6c91bc788bc05dfb667b038c656626a9cf30f8847059b4e46d",
-    "databasise/tests/test_removed_stores_absent.py": "6a812a3ef4a2a86b9492f9de297622d0aef23591b0d15ef880067de06cf39a70"
+    "databasise/stores/probes.py": "f43c8fea433221723dd7e06f89175c60991762abbcb8e3b1f87bf86da70dbfde",
+    "databasise/stores/vector.py": "912c3e2f69b9fd53e508492babd5e3c9ae758de88ff9433c34729709734c79cf",
+    "databasise/tests/test_removed_stores_absent.py": "6a812a3ef4a2a86b9492f9de297622d0aef23591b0d15ef880067de06cf39a70",
+    "databasise/validator/parse.py": "18ab39676c9ac5c18f6f3669fe7eb405d9ee64395e3ba1ccdf2cd20531079e08"
   },
   "checker": {
     "harness": "claude-code",
-    "model": "sonnet",
-    "session": "trace-2026-10-18c"
+    "model": "claude-opus-5-5",
+    "session": "32d1701b-4256-409c-a5a7-e305cc822f40"
   },
   "items": [
     {
@@ -29,19 +29,19 @@
     {
       "id": "STOR-02",
       "status": "present",
-      "where": "databasise/seam/engine.py:1304",
+      "where": "databasise/seam/engine.py:1381",
       "quote": "stores = _build_stores(self.store_root, self.workspace, resolved, into=stores, operation=\"ingest\")"
     },
     {
       "id": "STOR-03",
       "status": "present",
-      "where": "databasise/seam/engine.py:1981",
+      "where": "databasise/seam/engine.py:2120",
       "quote": "vector = MultiNamespaceVectorStore(workspace=self.workspace, store_root=self.store_root)"
     },
     {
       "id": "STOR-04",
       "status": "present",
-      "where": "databasise/seam/engine.py:1764",
+      "where": "databasise/seam/engine.py:1903",
       "quote": "lambda: {f\"{kind}:{namespace}\": _probe(kind, namespace) for kind, namespace in _HEALTH_PROBES}"
     },
     {
@@ -53,7 +53,7 @@
     {
       "id": "STOR-06",
       "status": "present",
-      "where": "databasise/seam/engine.py:1346",
+      "where": "databasise/seam/engine.py:1423",
       "quote": "await _drop_pending(stores, self.store_root)"
     },
     {

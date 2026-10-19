@@ -2,25 +2,25 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase11-a",
-  "ledger_version": 529,
+  "ledger_version": 616,
   "artifacts": {
-    "databasise/seam/engine.py": "f0e3b086db8abd2e672d5103345ffe1aa61e9a3cd4a69f26d00ea0ff3ec98df1",
-    "databasise/seam/corpus.py": "b360c0dbdc02f4659079a90f81a68366d74c55ab99d13334795dfedae02226ec",
-    "databasise/foreign/v1_corpus_adapter.py": "d8c7f496d713008e59b5a57213f77b2e8bfb6564bbc2eb88f88f5b71eab6bc1e",
+    "databasise/foreign/v1_corpus_adapter.py": "a035ff6593d7c126110612f1f298be5f449a1db622ec9a0409c099b761c894dd",
     "databasise/foreign/v1_corpus_driver_script.py": "c62a9a5b204ded0a99e5a29fcb0acd2739700997624114571935b0c832727efe",
     "databasise/parts_core/declared_only.py": "59c1da76986f1c4cebaad1ded9b50a678fc8101b919595b725c3445162ee8bcb",
-    "databasise/parts_core/lightrag/full_delete.py": "ae6920ee853375c827e2724761723f5dc32dd904d5777d166e820afab762fe84"
+    "databasise/parts_core/lightrag/full_delete.py": "ae6920ee853375c827e2724761723f5dc32dd904d5777d166e820afab762fe84",
+    "databasise/seam/corpus.py": "b360c0dbdc02f4659079a90f81a68366d74c55ab99d13334795dfedae02226ec",
+    "databasise/seam/engine.py": "d4b321da4adfc4a41761b2a70028281b2b089d21e7ccc0fef8b3889581d43527"
   },
   "checker": {
     "harness": "claude-code",
-    "model": "sonnet",
-    "session": "trace-2026-10-19"
+    "model": "claude-opus-5-5",
+    "session": "32d1701b-4256-409c-a5a7-e305cc822f40"
   },
   "items": [
     {
       "id": "LRAG-01",
       "status": "present",
-      "where": "databasise/seam/engine.py:1010",
+      "where": "databasise/seam/engine.py:1069",
       "quote": "return self.store_root / self.workspace / \"lightrag-v1\""
     },
     {
@@ -38,25 +38,25 @@
     {
       "id": "LRAG-04",
       "status": "present",
-      "where": "databasise/seam/engine.py:722",
+      "where": "databasise/seam/engine.py:750",
       "quote": "if not gate.acquire(blocking=False):"
     },
     {
       "id": "LRAG-05",
       "status": "present",
-      "where": "databasise/foreign/v1_corpus_adapter.py:229",
+      "where": "databasise/foreign/v1_corpus_adapter.py:231",
       "quote": "raise CorpusOpMalformedOutputError(f\"v1 corpus driver op {op!r} wrote non-JSON stdout\") from exc"
     },
     {
       "id": "LRAG-06",
       "status": "present",
-      "where": "databasise/foreign/v1_corpus_adapter.py:103",
+      "where": "databasise/foreign/v1_corpus_adapter.py:105",
       "quote": "f\"v1 is not configured: missing {self.missing_keys or 'none'}, \""
     },
     {
       "id": "LRAG-07",
       "status": "present",
-      "where": "databasise/seam/engine.py:1459",
+      "where": "databasise/seam/engine.py:1536",
       "quote": "async def retry_document(self, document_id: str, selector: Selector | None = None) -> IngestJob:"
     },
     {
@@ -68,7 +68,7 @@
     {
       "id": "LRAG-09",
       "status": "present",
-      "where": "databasise/seam/engine.py:1026",
+      "where": "databasise/seam/engine.py:1090",
       "quote": "return self.store_root / self.workspace / \"corpus-inbox\""
     },
     {

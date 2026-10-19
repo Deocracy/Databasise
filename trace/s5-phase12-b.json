@@ -1,0 +1,83 @@
+{
+  "bak_trace": 1,
+  "step": "S5",
+  "part": "phase12-b",
+  "ledger_version": 616,
+  "artifacts": {
+    "databasise/parts_core/hipporag/assemble_result.py": "a5d95f34ae5a87483f046f533c58e2c6d1b85e4eedd04c532603a06a4ab48c4b",
+    "databasise/wirings/resolve.py": "46737f13e3e00059325415c0f2fb86b5e45d66dd9c2b3ec3a5a40f15f607f848",
+    "databasise/seam/selectors.py": "d3ca06a1044918ce4b09c0ba4a9328f472f0a339f57929fc183d3dd74a7b2aa4",
+    "databasise/parts_core/hipporag/fact_score.py": "38add1631ae6ae6bce33ecdcc7a3733d7c177f10a557611dcb14630a9a925333",
+    "databasise/parts_core/hipporag/qa.py": "bfc87eb7903adc54d27bebe1487da07141d15a83673abe003b519bef20f6563a",
+    "databasise/runner/scheduler.py": "f3b219c9eefff3019e903230d4d0eb9b5d986903d42f2172c030e8b845f13859",
+    "databasise/runner/trace.py": "835d80208000c4431eedb3bb008469b6f9043ff65f497ae75659c44921b1be7b",
+    "databasise/seam/engine.py": "d4b321da4adfc4a41761b2a70028281b2b089d21e7ccc0fef8b3889581d43527",
+    "databasise/stores/probes.py": "f43c8fea433221723dd7e06f89175c60991762abbcb8e3b1f87bf86da70dbfde",
+    "databasise/parts_core/hipporag/document_remover.py": "854ec6e4c3501a91ddf7db06d65205a6aa6e42770be7b59f04d3d934d9b9ddd7",
+    "databasise/parts_core/hipporag/chunk_embed.py": "8e89539e4b92118c98784fa19cdd79d2f60b600f4a3d2da1f21138f6f05d3c63",
+    "databasise/wirings/hipporag/base.json": "4a344737a088b176038a42ada8c402968ab28fe0c904084e0398fa27552c2460",
+    "databasise/wirings/hipporag/corpus-ingest.json": "265d6c2a460dd5ff5ecb514b3db8deeda012ac554d70c388f9119a06d9d537d2"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "claude-opus-5-5",
+    "session": "32d1701b-4256-409c-a5a7-e305cc822f40"
+  },
+  "items": [
+    {
+      "id": "HIPP-11",
+      "status": "present",
+      "where": "databasise/parts_core/hipporag/assemble_result.py:73",
+      "quote": "    selected_items = selected_items[:top_k]"
+    },
+    {
+      "id": "HIPP-12",
+      "status": "present",
+      "where": "databasise/wirings/resolve.py:163",
+      "quote": "    frontier = [node_id for node_id in (run_copy.get(\"provides\") or []) if node_id in nodes]"
+    },
+    {
+      "id": "HIPP-13",
+      "status": "present",
+      "where": "databasise/parts_core/hipporag/qa.py:72",
+      "quote": "        \"completion\": answer,"
+    },
+    {
+      "id": "HIPP-14",
+      "status": "present",
+      "where": "databasise/runner/scheduler.py:704",
+      "quote": "    degraded = partial or any(trace.guards_fired for trace in node_traces)"
+    },
+    {
+      "id": "HIPP-15",
+      "status": "present",
+      "where": "databasise/seam/engine.py:1739",
+      "quote": "        if row is not None and row.family == \"hipporag\":"
+    },
+    {
+      "id": "HIPP-16",
+      "status": "present",
+      "where": "databasise/parts_core/hipporag/document_remover.py:123",
+      "quote": "            await self.graph.delete_node(f\"{CHUNK_VERTEX_PREFIX}{chunk_id}\")"
+    },
+    {
+      "id": "HIPP-17",
+      "status": "present",
+      "where": "databasise/parts_core/hipporag/chunk_embed.py:89",
+      "quote": "            chunk_id = hashlib.sha256(f\"{document_id}:{ordinal}:{piece}\".encode(\"utf-8\")).hexdigest()"
+    },
+    {
+      "id": "HIPP-18",
+      "status": "present",
+      "where": "databasise/wirings/hipporag/base.json:86",
+      "quote": "      \"config\": {"
+    },
+    {
+      "id": "HIPP-19",
+      "status": "present",
+      "where": "databasise/runner/trace.py:66",
+      "quote": "def sum_token_accountings(accountings: list[TokenAccounting]) -> TokenAccounting:"
+    }
+  ],
+  "extra": []
+}
