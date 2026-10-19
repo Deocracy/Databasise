@@ -202,7 +202,8 @@ class _CountingGraph:
     as the real store returns them; weights are strings, as Cozo returns them."""
 
     _DEGREES = {"A": 3, "B": 2, "C": 2, "D": 4}
-    _EDGES = [("A", "B", "1.0"), ("A", "C", "5.0"), ("A", "D", "1.0")]
+    # B-WR-04: "9.0" vs "10.0" orders one way as strings and the other as floats.
+    _EDGES = [("A", "B", "9.0"), ("A", "C", "10.0"), ("A", "D", "1.0")]
 
     def __init__(self) -> None:
         self.degree_calls: dict[str, int] = {}
@@ -233,7 +234,8 @@ async def test_one_hop_relations_sort_by_rank_then_weight_descending_with_one_de
         _ctx("entity-hydrate-expand", inputs={"entity-lookup": {"items": seeds}}, stores={"graph": graph})
     )
 
-    # v1 operate.py:5259-5261: A-D (rank 7), A-C (rank 5, weight 5), A-B (rank 5, weight 1).
+    # v1 operate.py:5259-5261: A-D (rank 7), A-C (rank 5, weight 10.0), A-B (rank 5, weight 9.0).
+    # A string compare would put A-B ("9.0") before A-C ("10.0").
     assert [tuple(r["src_tgt"]) for r in result["relations"]] == [("A", "D"), ("A", "C"), ("A", "B")]
     assert graph.degree_calls == {"A": 1, "B": 1, "C": 1, "D": 1}
 
