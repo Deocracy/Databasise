@@ -126,6 +126,42 @@ def test_default_registry_registers_every_pinned_hipporag_name():
         assert name in registry.keys()
 
 
+# HIPP-18, D-22: config keys no part body, scheduler or guard machinery reads.
+_UNREAD_KEYS: tuple[tuple[str, str], ...] = (
+    ("entity-fact-embed", "namespaces"),
+    ("synonymy-edges", "guard"),
+    ("reset-vector-join", "socket_shape"),
+    ("reset-vector-join", "arm_precedence"),
+    ("reset-vector-join", "apportionment_policy"),
+    ("ppr", "readback"),
+    ("assemble-result", "order_policy"),
+)
+
+
+def test_no_unread_config_key_remains_and_no_docstring_claims_export_level_edge_types():
+    import databasise.parts_core.hipporag.graph_augment_persist as materializer
+
+    registry = default_registry()
+    for variant in ("base", "corpus-ingest"):
+        resolved = load_wiring("hipporag", variant=variant)
+        assert parse_wiring(resolved, registry).report.ok, variant
+        for node_id, node in resolved["nodes"].items():
+            config = node.get("config") or {}
+            for removed_node, removed_key in _UNREAD_KEYS:
+                # Exact string equality on the JSON key (a sibling such as linking_top_k stays).
+                assert not (node_id == removed_node and removed_key in config), (
+                    variant,
+                    node_id,
+                    removed_key,
+                )
+            for key, value in config.items():
+                if isinstance(value, str):
+                    assert "no token spend" not in value, (variant, node_id, key)
+    doc = materializer.__doc__ or ""
+    assert "not exported" in doc
+    assert "auditable" not in doc
+
+
 def test_effective_depth_over_the_parsed_hipporag_wiring_is_opaque_at_every_node():
     registry = default_registry()
     resolved = load_wiring("hipporag")

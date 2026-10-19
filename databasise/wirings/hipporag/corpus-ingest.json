@@ -26,7 +26,6 @@
       "component": "hipporag/entity-fact-embedder@0.1.0",
       "kind": "embedder",
       "effects": ["calls_embedding", "writes_vector", "writes_kv"],
-      "config": { "namespaces": ["entities", "facts"] },
       "deps": ["openie", "document-remover"]
     },
     "fact-edges": {
@@ -47,7 +46,6 @@
       "effects": ["reads_vector"],
       "config": {
         "declared_capability": "§14.2 Vector self-KNN [PARTS-02 H1]",
-        "guard": "num_new_chunks > 0",
         "synonymy_top_k": 5,
         "synonymy_threshold": 0.8
       },
