@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 12
 current_phase_name: HippoRAG Fixes
 status: executing
-stopped_at: Completed 12-03-PLAN.md
-last_updated: "2026-10-19T18:12:32.577Z"
+stopped_at: Completed 12-04-PLAN.md
+last_updated: "2026-10-19T18:28:50.292Z"
 last_activity: 2026-10-19
 last_activity_desc: Phase 12 execution started
-state_head: 9451133506fde3c172894259b3cbb00b3f9ba258
+state_head: e4d845dc351c20f8cf7ba3a81dd95c576e172b01
 progress:
   total_phases: 11
   completed_phases: 4
   total_plans: 57
-  completed_plans: 46
+  completed_plans: 47
   percent: 36
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-19 after Phase 11)
 ## Current Position
 
 Phase: 12 (HippoRAG Fixes) — EXECUTING
-Plan: 4 of 14
+Plan: 5 of 14
 Status: Ready to execute
 Last activity: 2026-10-19 — Phase 12 execution started
 
@@ -109,6 +109,7 @@ Progress: [████░░░░░░] 36% (4/11 phases)
 | Phase 12 P01 | 25min | 2 tasks | 6 files |
 | Phase 12 P02 | 25min | 2 tasks | 8 files |
 | Phase 12 P03 | 30 min | 2 tasks | 6 files |
+| Phase 12 P04 | 45min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -193,6 +194,7 @@ Recent decisions affecting current work:
 - [Phase 12]: D-07: sum_token_accountings and UNBUDGETABLE_SENTINEL live only in runner.trace; mixed counted_by labels report unbudgetable
 - [Phase 12]: D-04: HippoRAG edge weight = sum(cooccurrence_by_chunk) + synonymy_weight + passage_weight, merged per chunk key (idempotent re-ingest)
 - [Phase 12]: D-05: synonymy-edges matches only new entities via self_knn(ids=...), which reads committed and staged vectors
+- [Phase 12]: 12-04: OpenIE chunk failure refuses the whole ingest (D-08); semaphore held across a chunk's NER+triple pair; fact chunk_ids are the KV-stored union (D-06)
 
 ### Pending Todos
 
@@ -243,8 +245,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-19T18:12:32.379Z
-Stopped at: Completed 12-03-PLAN.md
+Last session: 2026-10-19T18:28:50.094Z
+Stopped at: Completed 12-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
