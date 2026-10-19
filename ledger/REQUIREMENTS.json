@@ -1,13 +1,13 @@
 {
-  "ledger_version": 606,
+  "ledger_version": 615,
   "frozen_at": null,
   "items": [
     {
       "id": "RUN-01",
       "text": "The MCP tool-roster versus COVERAGE.md cross-check runs again. databasise/tests/mcp/test_tool_growth_invariant.py resolves _COVERAGE_PATH to a file that exists, and test_every_tool_has_a_coverage_row_and_every_both_transport_row_has_a_tool and test_compare_is_present_in_tool_names_and_absent_from_the_deliberately_absent_table both pass. If the coverage file is missing, the module fails with an ...",
-      "status": "disputed",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
-      "test_ref": "databasise/tests/mcp/test_tool_growth_invariant.py::test_every_tool_has_a_coverage_row_and_every_both_transport_row_has_a_tool",
+      "test_ref": "databasise/tests/seam/test_run01_coverage_crosscheck.py",
       "code_ref": "",
       "evidence": "",
       "owner": "",
@@ -131,9 +131,9 @@
     {
       "id": "RUN-10",
       "text": "The upload-poll-delete round-trip tests prove that counts change after a delete. In test_rest_corpus_endpoints.py:441-442 (REST) and :480-481 (in-process), after a successful delete the second /corpus/counts or document_counts() shows by_status['processed'] reduced by 1, to 0 in this fixture, and total reduced by 1. This replaces `status_code == 200` and the always-true `total >= 0`. The stub d...",
-      "status": "disputed",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
-      "test_ref": "databasise/tests/seam/test_rest_corpus_endpoints.py::test_upload_poll_delete_round_trip",
+      "test_ref": "databasise/tests/seam/test_run10_upload_poll_delete_counts.py",
       "code_ref": "",
       "evidence": "",
       "owner": "",
@@ -2420,5 +2420,6 @@
       "granted_at": 605
     }
   },
-  "notify_cmd": null
+  "notify_cmd": null,
+  "check_baseline": 606
 }
