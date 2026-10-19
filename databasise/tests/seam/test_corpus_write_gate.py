@@ -21,7 +21,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 import databasise.seam.engine as engine_module
-from databasise.foreign.v1_corpus_adapter import CorpusOpSubprocessError
 from databasise.parts_core.lightrag import full_delete, full_ingest, v1_index_sync
 from databasise.parts_core.lightrag.v1_index_sync import V1_INDEX_SYNC_MANIFEST_KEY
 from databasise.seam.corpus import DeletionOutcome, IngestDocument, IngestJob
@@ -345,13 +344,17 @@ async def test_a_reingest_after_a_sync_timeout_mirrors_the_document_v1_committed
 
 async def test_a_cancelled_write_logs_the_discarded_v1_failure_once_redacted(store_root, monkeypatch, caplog):
     """11 REVIEW A2-WR-02: the outcome of a v1 worker whose wait was given up reaches no caller, so
-    it is logged once, server-side, with the failure class and the redacted stderr tail."""
+    it is logged once, server-side, with the failure class and the redacted stderr tail.
+
+    A3-WR-03: the fake raises a raw exception whose message carries the unredacted key, so only
+    ``_log_discarded``'s own redaction can mask it (``CorpusOpSubprocessError`` redacts in its
+    constructor, which made the earlier version of this test vacuous)."""
     started = threading.Event()
 
     def _failing_v1(_op, _payload, **_kwargs):
         started.set()
         time.sleep(0.5)
-        raise CorpusOpSubprocessError(1, "Traceback ...\nAuthenticationError: bad key sk-live1234secret")
+        raise RuntimeError("Traceback ...\nAuthenticationError: bad key sk-live1234secret")
 
     monkeypatch.setattr(full_ingest, "run_corpus_op", _failing_v1)
     engine = Databasise(store_root=store_root, workspace="ws")
@@ -366,7 +369,7 @@ async def test_a_cancelled_write_logs_the_discarded_v1_failure_once_redacted(sto
 
     discarded = [r.getMessage() for r in caplog.records if "discarded the worker's failure" in r.getMessage()]
     assert len(discarded) == 1, discarded
-    assert "failure_class=CorpusOpSubprocessError" in discarded[0]
+    assert "failure_class=RuntimeError" in discarded[0]
     assert "AuthenticationError" in discarded[0] and "sk-[REDACTED]" in discarded[0]
     assert "sk-live1234secret" not in caplog.text
 
