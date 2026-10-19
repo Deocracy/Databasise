@@ -319,6 +319,86 @@ async def test_a_hipporag_delete_removes_the_document_and_a_second_delete_is_not
     assert second.status == "not_found"
 
 
+def _long_text(n_sentences: int = 55) -> str:
+    """About 2600 characters of distinct sentences: three chunks at the default 1200/100."""
+    return " ".join(f"Sentence number {i} says something unique about topic {i * 7}." for i in range(n_sentences))
+
+
+async def _committed_chunk_ids(store_root, workspace: str, document_id: str) -> list[str]:
+    vector_store = MultiNamespaceVectorStore(workspace=workspace, store_root=store_root)
+    try:
+        chunks = vector_store.select("hipporag-chunks")
+        return sorted(
+            doc_id
+            for doc_id, _ in chunks.iter_vectors()
+            if (chunks.get_by_id(doc_id) or {}).get("document_id") == document_id
+        )
+    finally:
+        await vector_store.finalize()
+
+
+async def test_reingest_leaves_no_stale_chunk_and_delete_removes_everything(store_root):
+    """HIPP-16 (D-12): re-ingesting a document id with shorter text replaces the document inside one
+    run. No chunk vector, KV record, vertex or edge from the old chunks remains, a following delete
+    leaves nothing and a query returns no evidence."""
+    workspace = "reingest-ws"
+    engine = _make_engine(store_root, workspace=workspace)
+    selector = Selector(capability=_HIPPORAG_CAPABILITY)
+
+    await engine.ingest(IngestDocument(document_id="reingest-doc", text=_long_text()), selector=selector)
+    old_ids = await _committed_chunk_ids(store_root, workspace, "reingest-doc")
+    assert len(old_ids) == 3
+
+    await engine.ingest(IngestDocument(document_id="reingest-doc", text=_DOCUMENT_TEXT), selector=selector)
+
+    new_ids = await _committed_chunk_ids(store_root, workspace, "reingest-doc")
+    assert len(new_ids) == 1, new_ids
+    stale = [chunk_id for chunk_id in old_ids if chunk_id not in new_ids]
+    kv_store = SqliteKVStore(namespace="hipporag-text-chunks", workspace=workspace, store_root=store_root)
+    graph_store = CozoGraphStore(namespace="hipporag-graph", workspace=workspace, store_root=store_root)
+    try:
+        for chunk_id in stale:
+            assert await kv_store.get_by_id(chunk_id) is None, chunk_id
+        labels = set(await graph_store.get_all_labels())
+        assert not {f"chunk:{chunk_id}" for chunk_id in stale} & labels
+        for label in labels:
+            for edge in await graph_store.get_node_edges(label):
+                assert not {edge["src"], edge["tgt"]} & {f"chunk:{chunk_id}" for chunk_id in stale}
+    finally:
+        await kv_store.finalize()
+        await graph_store.finalize()
+
+    raised: Exception | None = None
+    outcome = None
+    try:
+        outcome = await engine.delete_document("reingest-doc", selector=selector)
+    except Exception as exc:  # noqa: BLE001 - asserted on below
+        raised = exc
+    assert raised is None, repr(raised)
+    assert outcome is not None and outcome.status == "success"
+
+    vector_store = MultiNamespaceVectorStore(workspace=workspace, store_root=store_root)
+    kv_store = SqliteKVStore(namespace="hipporag-text-chunks", workspace=workspace, store_root=store_root)
+    graph_store = CozoGraphStore(namespace="hipporag-graph", workspace=workspace, store_root=store_root)
+    try:
+        assert [d for d, _ in vector_store.select("hipporag-chunks").iter_vectors()] == []
+        for chunk_id in old_ids + new_ids:
+            assert await kv_store.get_by_id(chunk_id) is None
+        assert await kv_store.get_by_id("doc:reingest-doc") is None
+        assert not any(n.startswith("chunk:") for n in await graph_store.get_all_labels())
+    finally:
+        await vector_store.finalize()
+        await kv_store.finalize()
+        await graph_store.finalize()
+
+    evidence = None
+    try:
+        evidence = (await engine.query(QueryObject(text="What did Ed Wood direct?"), selector)).evidence
+    except Exception:  # noqa: BLE001 - a refusal on an emptied index is also "no evidence"
+        pass
+    assert not evidence
+
+
 async def test_no_selector_delete_still_reaches_the_lightrag_delete_wiring(store_root):
     from seam.test_delete_document import _make_stub_full_delete_body, _registry_with
 

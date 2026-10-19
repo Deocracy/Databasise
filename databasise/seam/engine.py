@@ -1195,6 +1195,9 @@ class Databasise:
         Both of ``IngestDocument``'s two input shapes (structured text, raw bytes) take this
         identical path (Task 3) — one operation, two input shapes, never two execution paths.
 
+        A HippoRAG re-ingest of a document id removes that document's previous version in the same
+        run and commit (D-12): the documents are stamped on every ``consumes_documents`` node.
+
         **Staging (11-05, D-09, LRAG-08/09).** A raw upload's ``file_name`` must carry a suffix
         ``upload_suffix`` accepts, else ``UnsupportedUploadTypeError`` before anything is written.
         The bytes are staged immediately before the run, by exclusive create, in this workspace's
@@ -1264,6 +1267,11 @@ class Databasise:
             node_config["docs_format"] = _DOCS_FORMAT_RAW
         node_config["track_id"] = track_id
         resolved["nodes"][target_node_id]["config"] = node_config
+        # D-12: every other consumes_documents node (HippoRAG's document-remover) sees the same
+        # documents, so a re-ingest removes the previous version in this run. Parity stamps only [0].
+        for other_id in resolved["consumes_documents"][1:]:
+            other = resolved["nodes"][other_id]
+            other["config"] = {**(other.get("config") or {}), "documents": node_config["documents"]}
         _stamp_v1_working_dir(resolved, self._v1_working_dir())
 
         resolved = _inject_corpus_token_allowance(resolved)

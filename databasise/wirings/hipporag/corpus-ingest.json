@@ -1,13 +1,19 @@
 {
   "wiring_id": "hipporag-corpus-ingest",
-  "title": "HippoRAG corpus-side ingest — base.json's seven index-side positions (chunk-embed through graph-augment-persist) re-composed as the write path Databasise.ingest() runs",
+  "title": "HippoRAG corpus-side ingest — document-remover runs first (a re-ingest replaces the document inside one commit), then base.json's seven index-side positions (chunk-embed through graph-augment-persist) re-composed as the write path Databasise.ingest() runs",
   "wiring_version": "1",
   "nodes": {
+    "document-remover": {
+      "component": "hipporag/document-remover@0.1.0",
+      "kind": "extractor",
+      "effects": ["writes_kv", "writes_vector", "writes_graph"],
+      "deps": []
+    },
     "chunk-embed": {
       "component": "hipporag/chunker-embedder@0.1.0",
       "kind": "embedder",
       "effects": ["calls_embedding", "writes_vector", "writes_kv"],
-      "deps": []
+      "deps": ["document-remover"]
     },
     "openie": {
       "component": "hipporag/openie-extractor@0.1.0",
@@ -60,6 +66,6 @@
   "recipe": { "chunker": "chunk-embed", "embedding": "chunk-embed", "extraction": "openie" },
   "harnesses": [],
   "provides": ["graph-augment-persist"],
-  "consumes_documents": ["chunk-embed"],
+  "consumes_documents": ["chunk-embed", "document-remover"],
   "store_namespaces": { "kv": "hipporag-text-chunks", "graph": "hipporag-graph" }
 }
