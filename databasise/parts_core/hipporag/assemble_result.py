@@ -29,6 +29,12 @@ fallback. The channel actually used is the run record's own per-node ``guards_fi
 §TR.1, already stamped by the scheduler), reached by a caller through the envelope's existing
 ``trace_token`` -> ``resolve_trace`` path — satisfying "no new envelope field is minted" exactly.
 
+**The one cut (Phase 12 D-20, HIPP-11).** After branch selection and before hydration this node keeps
+the first ``config["top_k"]`` items (default 5, upstream ``qa_top_k``) of the selected branch, in
+that branch's own order. On the PPR branch items scoring ``<= 0`` are dropped first. The one cut
+bounds both the answer (``qa`` reads these items) and the evidence (minted from them) on both
+branches; dense passage retrieval itself is never cut, since ``reset-vector-join`` reuses it whole.
+
 This node emits no ``completion``: the ``qa`` node (Phase 12 D-19) generates the answer from these
 hydrated items; evidence still mints from this node's items.
 """
@@ -48,6 +54,10 @@ async def _assemble_result_body(ctx: NodeContext) -> dict[str, Any]:
 
     selected_output = ctx.inputs["dpr-fallback"] if guard_fired else ctx.inputs["ppr"]
     selected_items = list(selected_output.get("items", []))
+    if not guard_fired:
+        # An item PPR never reached scores exactly 0.0; it carries no evidence.
+        selected_items = [item for item in selected_items if item["score"] > 0.0]
+    selected_items = selected_items[: int(ctx.config.get("top_k", 5))]
 
     kv_store = ctx.stores["kv"]
     hydrated_items: list[dict[str, Any]] = []

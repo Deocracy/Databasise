@@ -5,6 +5,7 @@ row test (one embed per query). 12-10 adds the HIPP-13 row test (the answer is g
 from __future__ import annotations
 
 import json
+import re
 
 from databasise.clients.base import ChatResult
 from databasise.runner.trace import TokenAccounting
@@ -196,3 +197,44 @@ async def test_the_answer_is_generated_text_not_the_joined_evidence(store_root):
     assert envelope.answer != joined
     assert envelope.answer == "low-budget films"
     assert len(llm.qa_calls) == 1
+
+
+class _KeepAllFactsLLMClient(_StubIngestQueryLLMClient):
+    """Like the write-path stub, but fact-filter keeps every candidate fact (the PPR branch)."""
+
+    async def chat(self, messages, **kwargs):
+        content = messages[0]["content"]
+        if "---Candidate Facts---" not in content:
+            return await super().chat(messages, **kwargs)
+        return ChatResult(
+            text=json.dumps({"keep_ids": re.findall(r"id=([^:\s]+):", content)}),
+            tokens=TokenAccounting(prompt_tokens=5, completion_tokens=4, call_count=1, counted_by="stub-llm"),
+            resolved_model_identity="stub-llm-model",
+        )
+
+
+async def _refs_over_twenty_documents(store_root, llm) -> list:
+    engine = Databasise(
+        store_root=store_root,
+        workspace="hipporag-top-k-ws",
+        clients={"embedding": _StubEmbeddingClient(), "llm": llm},
+    )
+    selector = Selector(capability=_HIPPORAG_CAPABILITY)
+    for index in range(20):
+        text = f"{_DOCUMENT_TEXT} Variant {index}."
+        await engine.ingest(IngestDocument(document_id=f"top-k-doc-{index}", text=text), selector=selector)
+    envelope = await engine.query(QueryObject(text="What did Ed Wood direct?"), selector)
+    return list(envelope.evidence)
+
+
+async def test_a_query_returns_at_most_top_k_items_on_both_branches(store_root, tmp_path):
+    """HIPP-11 (D-20): over twenty documents each branch returns at most top_k (5) evidence refs, and
+    every PPR ref scores above zero."""
+    dpr_refs = await _refs_over_twenty_documents(store_root, _StubIngestQueryLLMClient())
+    ppr_refs = await _refs_over_twenty_documents(tmp_path / "ppr-root", _KeepAllFactsLLMClient())
+
+    assert {
+        "dpr_within_top_k": len(dpr_refs) <= 5,
+        "ppr_within_top_k": len(ppr_refs) <= 5,
+        "ppr_scores_positive": all(ref.score > 0 for ref in ppr_refs),
+    } == {"dpr_within_top_k": True, "ppr_within_top_k": True, "ppr_scores_positive": True}

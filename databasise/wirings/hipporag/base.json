@@ -114,7 +114,8 @@
       "kind": "assembler",
       "effects": ["reads_kv"],
       "config": {
-        "order_policy": "hipporag-doc-score-order"
+        "order_policy": "hipporag-doc-score-order",
+        "top_k": 5
       },
       "deps": ["ppr", "dpr-fallback", "fact-filter"]
     },
