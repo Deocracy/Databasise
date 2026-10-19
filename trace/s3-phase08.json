@@ -1,0 +1,83 @@
+{
+  "bak_trace": 1,
+  "step": "S3",
+  "part": "phase08",
+  "ledger_version": 441,
+  "artifacts": {
+    ".planning/REQUIREMENTS.md": "b0d80bee523010ba1f47230bf6ea0a820007f956398e1b410af011daa231a7c8"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "sonnet",
+    "session": "trace-2026-10-18"
+  },
+  "items": [
+    {
+      "id": "RUN-01",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:14",
+      "quote": "**RUN-01**: The MCP tool-roster versus COVERAGE.md cross-check runs again."
+    },
+    {
+      "id": "RUN-02",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:18",
+      "quote": "**RUN-02**: OpenAICompatibleClient._token_accounting (databasise/clients/openai_compat.py:159-161) records call_count=1 for every completed provider call"
+    },
+    {
+      "id": "RUN-03",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:22",
+      "quote": "**RUN-03**: OpenAICompatibleClient no longer passes malformed provider responses to callers unchecked (databasise/clients/openai_compat.py:131, 149)."
+    },
+    {
+      "id": "RUN-04",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:26",
+      "quote": "**RUN-04**: databasise.foreign._mcp_sdk_guard.mcp_sdk_is_installed() returns True when the real mcp distribution is installed in the active virtualenv"
+    },
+    {
+      "id": "RUN-05",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:29",
+      "quote": "**RUN-05**: Model clients are built by one shipped builder that both the parity CLIs and the launcher use."
+    },
+    {
+      "id": "RUN-06",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:33",
+      "quote": "**RUN-06**: Both transports can be started from the installed package."
+    },
+    {
+      "id": "RUN-07",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:37",
+      "quote": "**RUN-07**: The launcher enforces one engine process and one uvicorn worker per store root (G-36: the Cozo/RocksDB graph.cozo lock is exclusive across processes)."
+    },
+    {
+      "id": "RUN-08",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:40",
+      "quote": "**RUN-08**: A browser console on another origin can call the REST seam, or the decision to serve same-origin is enforced and documented."
+    },
+    {
+      "id": "RUN-09",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:44",
+      "quote": "**RUN-09**: The REST upload path-safety test in databasise/tests/seam/test_rest_corpus_endpoints.py:345-356 checks the file actually written to disk."
+    },
+    {
+      "id": "RUN-10",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:47",
+      "quote": "**RUN-10**: The upload-poll-delete round-trip tests prove that counts change after a delete."
+    },
+    {
+      "id": "RUN-12",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:54",
+      "quote": "- [x] **RUN-12**: Phase gate: the offline test suite is green under both invocation styles."
+    }
+  ],
+  "extra": []
+}

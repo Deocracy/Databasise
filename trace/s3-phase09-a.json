@@ -1,0 +1,65 @@
+{
+  "bak_trace": 1,
+  "step": "S3",
+  "part": "phase09-a",
+  "ledger_version": 441,
+  "artifacts": {
+    ".planning/REQUIREMENTS.md": "b0d80bee523010ba1f47230bf6ea0a820007f956398e1b410af011daa231a7c8"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "sonnet",
+    "session": "trace-2026-10-18"
+  },
+  "items": [
+    {
+      "id": "SEAM-01",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:59",
+      "quote": "POST /evidence/resolve and the MCP resolve tool (scope evidence) refuse any EvidenceRef.namespace"
+    },
+    {
+      "id": "SEAM-02",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:63",
+      "quote": "Every SeamRefusalError raised inside a pydantic validator during REST request parsing"
+    },
+    {
+      "id": "SEAM-03",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:67",
+      "quote": "The MCP transport returns a JSON refusal for every refusal REST returns"
+    },
+    {
+      "id": "SEAM-04",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:71",
+      "quote": "Not-found lookups return HTTP 404 with the refusal body: UnknownTraceReferenceError (/trace/resolve), UnknownJobError (GET /jobs/{id}), UnresolvableEvidenceReferenceError (/evidence/resolve) and UnknownGenerationVersionError."
+    },
+    {
+      "id": "SEAM-05",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:75",
+      "quote": "ForeignEngineRefusalError is reported as a server-side failure, not as a 422 caller refusal (proposed: 502)."
+    },
+    {
+      "id": "SEAM-06",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:79",
+      "quote": "GET /corpus, GET /corpus/counts and GET /jobs/{id} never return an unstructured 500 when the v1 corpus adapter fails."
+    },
+    {
+      "id": "SEAM-07",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:83",
+      "quote": "No ingest input from the caller produces HTTP 500 or an MCP UnexpectedToolError."
+    },
+    {
+      "id": "SEAM-08",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:87",
+      "quote": "Page size and offset are bounded on every path."
+    }
+  ],
+  "extra": []
+}

@@ -1,0 +1,65 @@
+{
+  "bak_trace": 1,
+  "step": "S3",
+  "part": "phase10-b",
+  "ledger_version": 441,
+  "artifacts": {
+    ".planning/REQUIREMENTS.md": "b0d80bee523010ba1f47230bf6ea0a820007f956398e1b410af011daa231a7c8"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "sonnet",
+    "session": "trace-2026-10-18"
+  },
+  "items": [
+    {
+      "id": "STOR-09",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:150",
+      "quote": "- [x] **STOR-09**: FaissVectorStore and MultiNamespaceVectorStore report named refusals for invalid input."
+    },
+    {
+      "id": "STOR-10",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:153",
+      "quote": "- [x] **STOR-10**: CozoGraphStore keeps edges consistent with nodes."
+    },
+    {
+      "id": "STOR-11",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:157",
+      "quote": "- [x] **STOR-11**: SqliteKVStore keeps its pending buffer separate from callers."
+    },
+    {
+      "id": "STOR-12",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:160",
+      "quote": "- [x] **STOR-12**: Every store effect the effect vocabulary accepts (reads_lexical, writes_lexical, reads_blob, writes_artifact) meets one of two conditions."
+    },
+    {
+      "id": "STOR-13",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:164",
+      "quote": "- [x] **STOR-13**: FilesystemBlobStore validates digests against ^[0-9a-f]{64}$ inside the store."
+    },
+    {
+      "id": "STOR-14",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:169",
+      "quote": "- [x] **STOR-14**: SqliteLexicalStore.query('alpha beta') matches documents that contain both terms in any position"
+    },
+    {
+      "id": "STOR-15",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:174",
+      "quote": "- [x] **STOR-15**: Quarantined-namespace GC is a real operation."
+    },
+    {
+      "id": "STOR-16",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:178",
+      "quote": "- [x] **STOR-16**: FaissVectorStore.upsert refuses metadata containing the keys 'id' or 'score' with a named refusal."
+    }
+  ],
+  "extra": []
+}

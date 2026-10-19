@@ -1,0 +1,92 @@
+{
+  "bak_trace": 1,
+  "step": "S4",
+  "part": "phase08",
+  "ledger_version": 441,
+  "artifacts": {
+    ".planning/phases/08-run-the-engine/08-01-PLAN.md": "1f41c51892d5541760c5b199d81dcd72a93786c73833f90f5ad40279f01772b1",
+    ".planning/phases/08-run-the-engine/08-02-PLAN.md": "bcc07993d656eb2a97af1cd8416b4f2472f45a2e57ef74fc5f2da75132136e1c",
+    ".planning/phases/08-run-the-engine/08-03-PLAN.md": "bd52aad79696b0895f6d8d28d3e92b7233df06c72debdd9af28ca3e53498c4a5",
+    ".planning/phases/08-run-the-engine/08-04-PLAN.md": "0c0dc36b015f0c84721d6e9d55f825373ffa4c47c5c7dd6e10008c19f618b6f9",
+    ".planning/phases/08-run-the-engine/08-05-PLAN.md": "de4b9a0a8470f7b3675e5480c970984e716312f06c851faba84af9fdcd08e26e",
+    ".planning/phases/08-run-the-engine/08-06-PLAN.md": "5401d2f26c3fdc102d3a9697da58b8b3ac605434adeb85cf701fe81408e32f54",
+    ".planning/phases/08-run-the-engine/08-07-PLAN.md": "34be9570c7ea934d72a16ccad564adf41c014c1a51ca5e4ee0774f1c95744749",
+    ".planning/phases/08-run-the-engine/08-08-PLAN.md": "01415e622da2de874ba55f205f7d94fa757580eb3bb0eae7c85722bd0a851ea0",
+    ".planning/phases/08-run-the-engine/08-09-PLAN.md": "56c45239b51d4d8ca60c6a460212cddecbad4c3a5e6cf7949f9212d57d5fb013",
+    ".planning/phases/08-run-the-engine/08-10-PLAN.md": "67203538fae4614c66a2226594ab31430ae299d9ce749470f4963c3419c28f87"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "sonnet",
+    "session": "trace-2026-10-18"
+  },
+  "items": [
+    {
+      "id": "RUN-01",
+      "status": "present",
+      "where": ".planning/phases/08-run-the-engine/08-03-PLAN.md:14",
+      "quote": "requirements: [RUN-01, RUN-04]"
+    },
+    {
+      "id": "RUN-02",
+      "status": "present",
+      "where": ".planning/phases/08-run-the-engine/08-02-PLAN.md:12",
+      "quote": "requirements: [RUN-02, RUN-03]"
+    },
+    {
+      "id": "RUN-03",
+      "status": "present",
+      "where": ".planning/phases/08-run-the-engine/08-02-PLAN.md:12",
+      "quote": "requirements: [RUN-02, RUN-03]"
+    },
+    {
+      "id": "RUN-04",
+      "status": "present",
+      "where": ".planning/phases/08-run-the-engine/08-03-PLAN.md:14",
+      "quote": "requirements: [RUN-01, RUN-04]"
+    },
+    {
+      "id": "RUN-05",
+      "status": "present",
+      "where": ".planning/phases/08-run-the-engine/08-05-PLAN.md:17",
+      "quote": "requirements: [RUN-05]"
+    },
+    {
+      "id": "RUN-06",
+      "status": "present",
+      "where": ".planning/phases/08-run-the-engine/08-06-PLAN.md:17",
+      "quote": "requirements: [RUN-06, RUN-07]"
+    },
+    {
+      "id": "RUN-07",
+      "status": "present",
+      "where": ".planning/phases/08-run-the-engine/08-07-PLAN.md:43",
+      "quote": "Expansion plan (RUN-07, D-03): the parity CLIs take the same store lock as the launchers and refuse with the same named error while a launcher holds `v1/.parity_v2_store`."
+    },
+    {
+      "id": "RUN-08",
+      "status": "present",
+      "where": ".planning/phases/08-run-the-engine/08-08-PLAN.md:12",
+      "quote": "requirements: [RUN-08]"
+    },
+    {
+      "id": "RUN-09",
+      "status": "present",
+      "where": ".planning/phases/08-run-the-engine/08-04-PLAN.md:10",
+      "quote": "requirements: [RUN-09, RUN-10]"
+    },
+    {
+      "id": "RUN-10",
+      "status": "present",
+      "where": ".planning/phases/08-run-the-engine/08-04-PLAN.md:10",
+      "quote": "requirements: [RUN-09, RUN-10]"
+    },
+    {
+      "id": "RUN-12",
+      "status": "present",
+      "where": ".planning/phases/08-run-the-engine/08-09-PLAN.md:12",
+      "quote": "requirements: [RUN-12]"
+    }
+  ],
+  "extra": []
+}

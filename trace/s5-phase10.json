@@ -1,0 +1,114 @@
+{
+  "bak_trace": 1,
+  "step": "S5",
+  "part": "phase10",
+  "ledger_version": 441,
+  "artifacts": {
+    "databasise/stores/graph.py": "1554cb09ed791bea5c2dfe545d738e8bf47d26b81e5f1c6891b8a80694d5a2fa",
+    "databasise/stores/kv.py": "f74974527f4d41d012dc7c525c23b735492dfbaefc9bdfc4ec3b88e14d2ecb79",
+    "databasise/stores/vector.py": "b09e4ce4da9b0e6c881668c7a957f8dcc7b942dd3753984232c6859fef8f8c2b",
+    "databasise/seam/engine.py": "65ab14d94f7a6d5e94d2f7169c1b18e5bb08478d7213009cf8adbfc1e320e396",
+    "databasise/parts_core/__init__.py": "c7e52b729454dd13da6fdac848200baa9faf3b00239062d0976819ad819dc2e4",
+    "databasise/validator/parse.py": "18ab39676c9ac5c18f6f3669fe7eb405d9ee64395e3ba1ccdf2cd20531079e08",
+    "databasise/namespaces.py": "5e0e2eece8649d6c91bc788bc05dfb667b038c656626a9cf30f8847059b4e46d",
+    "databasise/tests/test_removed_stores_absent.py": "6a812a3ef4a2a86b9492f9de297622d0aef23591b0d15ef880067de06cf39a70"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "sonnet",
+    "session": "trace-2026-10-18"
+  },
+  "items": [
+    {
+      "id": "STOR-01",
+      "status": "present",
+      "where": "databasise/stores/graph.py:155",
+      "quote": "raise GraphStoreBusyError() from exc"
+    },
+    {
+      "id": "STOR-02",
+      "status": "present",
+      "where": "databasise/seam/engine.py:556",
+      "quote": "stores = into if into is not None else {}"
+    },
+    {
+      "id": "STOR-03",
+      "status": "present",
+      "where": "databasise/seam/engine.py:1919",
+      "quote": "vector = MultiNamespaceVectorStore(workspace=self.workspace, store_root=self.store_root)"
+    },
+    {
+      "id": "STOR-04",
+      "status": "present",
+      "where": "databasise/seam/engine.py:1696",
+      "quote": "return _PROBES[kind](root / namespace)"
+    },
+    {
+      "id": "STOR-05",
+      "status": "present",
+      "where": "databasise/parts_core/__init__.py:145",
+      "quote": "elif mode == \"r\" and name not in _READ_ALLOWLIST[kind]:"
+    },
+    {
+      "id": "STOR-06",
+      "status": "present",
+      "where": "databasise/seam/engine.py:1324",
+      "quote": "except ForeignEngineRefusalError:"
+    },
+    {
+      "id": "STOR-07",
+      "status": "present",
+      "where": "databasise/stores/vector.py:365",
+      "quote": "self._pending_deletes.add(doc_id)"
+    },
+    {
+      "id": "STOR-08",
+      "status": "present",
+      "where": "databasise/stores/vector.py:223",
+      "quote": "error = error or VectorStoreCorruptedError(index_path, None, \"<missing vector.meta.json>\")"
+    },
+    {
+      "id": "STOR-09",
+      "status": "present",
+      "where": "databasise/stores/vector.py:373",
+      "quote": "raise InvalidTopKError(top_k)"
+    },
+    {
+      "id": "STOR-10",
+      "status": "present",
+      "where": "databasise/stores/graph.py:404",
+      "quote": "self._pending_edge_rms.update((r[0], r[1]) for r in db_rows)"
+    },
+    {
+      "id": "STOR-11",
+      "status": "present",
+      "where": "databasise/stores/kv.py:73",
+      "quote": "return copy.deepcopy(self._pending_upserts[id])"
+    },
+    {
+      "id": "STOR-12",
+      "status": "present",
+      "where": "databasise/validator/parse.py:68",
+      "quote": "_UNWIRED_STORE_EFFECTS: frozenset[str] = frozenset({\"reads_lexical\", \"writes_lexical\", \"reads_blob\"})"
+    },
+    {
+      "id": "STOR-13",
+      "status": "present",
+      "where": "databasise/tests/test_removed_stores_absent.py:3",
+      "quote": "STOR-13 (blob digest validation)"
+    },
+    {
+      "id": "STOR-14",
+      "status": "present",
+      "where": "databasise/tests/test_removed_stores_absent.py:3",
+      "quote": "STOR-14 (lexical AND query) are met by removal"
+    },
+    {
+      "id": "STOR-15",
+      "status": "present",
+      "where": "databasise/namespaces.py:132",
+      "quote": "raise NamespaceGCError(namespace, type(exc).__name__) from exc"
+    }
+  ],
+  "extra": []
+}

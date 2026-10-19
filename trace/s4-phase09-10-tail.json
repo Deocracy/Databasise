@@ -1,0 +1,31 @@
+{
+  "bak_trace": 1,
+  "step": "S4",
+  "part": "phase09-10-tail",
+  "ledger_version": 441,
+  "artifacts": {
+    ".planning/phases/09-inputs-errors-security/09-09-PLAN.md": "0c6a821f95ee9c2e2ed206892315ccf82f8f3c0e9de63ccbb507ebe7cf4acc9d",
+    ".planning/phases/09-inputs-errors-security/09-10-PLAN.md": "ec7b16f08ca6751f427fdfe735933986ad0c680d4bac99590e6758c4c1e1b651",
+    ".planning/phases/10-stores-locking-data-integrity/10-11-PLAN.md": "7dda2343685f9ec332f7c1e30aa223b040b587579218d0942b88ad46c97f4d01"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "sonnet",
+    "session": "trace-2026-10-18"
+  },
+  "items": [
+    {
+      "id": "SEAM-16",
+      "status": "present",
+      "where": ".planning/phases/09-inputs-errors-security/09-10-PLAN.md:26",
+      "quote": "databasise.seam.selectors has no _DEFAULT_ARM and no _ARM_NAMES attribute; the protected growth test imports _ARM_NAMES from databasise.wirings.resolve instead, after the owner's grant (SEAM-16)"
+    },
+    {
+      "id": "STOR-16",
+      "status": "present",
+      "where": ".planning/phases/10-stores-locking-data-integrity/10-11-PLAN.md:23",
+      "quote": "FaissVectorStore.upsert(['a'], vecs, [{'id': 'SHADOW', 'score': 99}]) raises ReservedMetadataKeyError (a ValueError subclass) with keys ['id', 'score'], and leaves _pending unchanged; metadata with only 'id' or only 'score' is also refused (STOR-16, D-11)"
+    }
+  ],
+  "extra": []
+}

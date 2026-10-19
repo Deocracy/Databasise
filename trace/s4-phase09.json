@@ -1,0 +1,115 @@
+{
+  "bak_trace": 1,
+  "step": "S4",
+  "part": "phase09",
+  "ledger_version": 441,
+  "artifacts": {
+    ".planning/phases/09-inputs-errors-security/09-01-PLAN.md": "3d67a4e550aebd2a3098fa4b21fd22ec24bbe897a113fed9dc9ec41ce61e4356",
+    ".planning/phases/09-inputs-errors-security/09-02-PLAN.md": "c7452c22d139069bf0fed2758b2b69de26d98783fdadeeca929d6beba420476d",
+    ".planning/phases/09-inputs-errors-security/09-03-PLAN.md": "b2832b96c9d01ca91292984fdeeb50715df9960ed9907d759800e961186269fd",
+    ".planning/phases/09-inputs-errors-security/09-04-PLAN.md": "da519d9ca82f98e822fa450262ae558aca7413b44d6c98b4544e448c2d085f8f",
+    ".planning/phases/09-inputs-errors-security/09-05-PLAN.md": "aec8c7d84075d50c29f9eaae34960e25a392bb33261dc9fe454c77d27ba58f81",
+    ".planning/phases/09-inputs-errors-security/09-06-PLAN.md": "4cfca1a611f6658cb90c27a478b5042652a5609aac0b1de1cc6290cc2c42f1aa",
+    ".planning/phases/09-inputs-errors-security/09-07-PLAN.md": "5d1b53f20c1b6bc3d7a59ddd2b94ac4432eec8d7d62204c1cc5a7451966aaf5b",
+    ".planning/phases/09-inputs-errors-security/09-08-PLAN.md": "303cda8b90866918bb4f1d94822e53184bc7d4b9dacb4b3b5e30493a5bda4b23",
+    ".planning/phases/09-inputs-errors-security/09-09-PLAN.md": "0c6a821f95ee9c2e2ed206892315ccf82f8f3c0e9de63ccbb507ebe7cf4acc9d"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "sonnet",
+    "session": "trace-2026-10-18"
+  },
+  "items": [
+    {
+      "id": "SEAM-01",
+      "status": "present",
+      "where": ".planning/phases/09-inputs-errors-security/09-06-PLAN.md:19",
+      "quote": "requirements: [SEAM-01, SEAM-09]"
+    },
+    {
+      "id": "SEAM-02",
+      "status": "present",
+      "where": ".planning/phases/09-inputs-errors-security/09-01-PLAN.md:20",
+      "quote": "requirements: [SEAM-02, SEAM-14]"
+    },
+    {
+      "id": "SEAM-03",
+      "status": "present",
+      "where": ".planning/phases/09-inputs-errors-security/09-04-PLAN.md:14",
+      "quote": "requirements: [SEAM-03]"
+    },
+    {
+      "id": "SEAM-04",
+      "status": "present",
+      "where": ".planning/phases/09-inputs-errors-security/09-02-PLAN.md:14",
+      "quote": "requirements: [SEAM-02, SEAM-04, SEAM-07, SEAM-13]"
+    },
+    {
+      "id": "SEAM-05",
+      "status": "present",
+      "where": ".planning/phases/09-inputs-errors-security/09-05-PLAN.md:14",
+      "quote": "requirements: [SEAM-05, SEAM-06]"
+    },
+    {
+      "id": "SEAM-06",
+      "status": "present",
+      "where": ".planning/phases/09-inputs-errors-security/09-05-PLAN.md:14",
+      "quote": "requirements: [SEAM-05, SEAM-06]"
+    },
+    {
+      "id": "SEAM-07",
+      "status": "present",
+      "where": ".planning/phases/09-inputs-errors-security/09-03-PLAN.md:19",
+      "quote": "requirements: [SEAM-07, SEAM-08]"
+    },
+    {
+      "id": "SEAM-08",
+      "status": "present",
+      "where": ".planning/phases/09-inputs-errors-security/09-03-PLAN.md:19",
+      "quote": "requirements: [SEAM-07, SEAM-08]"
+    },
+    {
+      "id": "SEAM-09",
+      "status": "present",
+      "where": ".planning/phases/09-inputs-errors-security/09-06-PLAN.md:19",
+      "quote": "requirements: [SEAM-01, SEAM-09]"
+    },
+    {
+      "id": "SEAM-10",
+      "status": "present",
+      "where": ".planning/phases/09-inputs-errors-security/09-07-PLAN.md:16",
+      "quote": "requirements: [SEAM-10, SEAM-12]"
+    },
+    {
+      "id": "SEAM-11",
+      "status": "present",
+      "where": ".planning/phases/09-inputs-errors-security/09-08-PLAN.md:16",
+      "quote": "requirements: [SEAM-11]"
+    },
+    {
+      "id": "SEAM-12",
+      "status": "present",
+      "where": ".planning/phases/09-inputs-errors-security/09-07-PLAN.md:16",
+      "quote": "requirements: [SEAM-10, SEAM-12]"
+    },
+    {
+      "id": "SEAM-13",
+      "status": "present",
+      "where": ".planning/phases/09-inputs-errors-security/09-02-PLAN.md:14",
+      "quote": "requirements: [SEAM-02, SEAM-04, SEAM-07, SEAM-13]"
+    },
+    {
+      "id": "SEAM-14",
+      "status": "present",
+      "where": ".planning/phases/09-inputs-errors-security/09-01-PLAN.md:20",
+      "quote": "requirements: [SEAM-02, SEAM-14]"
+    },
+    {
+      "id": "SEAM-15",
+      "status": "present",
+      "where": ".planning/phases/09-inputs-errors-security/09-09-PLAN.md:16",
+      "quote": "requirements: [SEAM-15, SEAM-16]"
+    }
+  ],
+  "extra": []
+}

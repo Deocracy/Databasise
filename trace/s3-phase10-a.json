@@ -1,0 +1,65 @@
+{
+  "bak_trace": 1,
+  "step": "S3",
+  "part": "phase10-a",
+  "ledger_version": 441,
+  "artifacts": {
+    ".planning/REQUIREMENTS.md": "b0d80bee523010ba1f47230bf6ea0a820007f956398e1b410af011daa231a7c8"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "sonnet",
+    "session": "trace-2026-10-18"
+  },
+  "items": [
+    {
+      "id": "STOR-01",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:121",
+      "quote": "- [x] **STOR-01**: Two overlapping engine calls in one process that use the same Cozo graph namespace never return an unstructured 500 caused by 'RocksDB error: IO error: lock hold by current process'."
+    },
+    {
+      "id": "STOR-02",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:125",
+      "quote": "- [x] **STOR-02**: When constructing any store in _build_stores fails (for example the graph open raising under the lock in STOR-01), every store already opened in that call (kv, vector) is finalized before the exception leaves the engine method."
+    },
+    {
+      "id": "STOR-03",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:128",
+      "quote": "- [x] **STOR-03**: POST /evidence/resolve opens only the vector namespace named in the EvidenceRef."
+    },
+    {
+      "id": "STOR-04",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:132",
+      "quote": "- [x] **STOR-04**: GET /health is read-only and reports store state accurately."
+    },
+    {
+      "id": "STOR-05",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:136",
+      "quote": "- [x] **STOR-05**: Capability scoping is enforced per access mode."
+    },
+    {
+      "id": "STOR-06",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:140",
+      "quote": "- [x] **STOR-06**: An ingest whose wiring records any node failure commits nothing."
+    },
+    {
+      "id": "STOR-07",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:144",
+      "quote": "- [x] **STOR-07**: delete_document builds its stores with the resolved wiring's store_namespaces."
+    },
+    {
+      "id": "STOR-08",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:147",
+      "quote": "- [x] **STOR-08**: Opening a FaissVectorStore whose directory holds vector.faiss without vector.meta.json, or vector.meta.json without vector.faiss, raises VectorStoreCorruptedError, as the module docstring states."
+    }
+  ],
+  "extra": []
+}

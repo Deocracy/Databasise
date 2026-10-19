@@ -1,0 +1,65 @@
+{
+  "bak_trace": 1,
+  "step": "S3",
+  "part": "phase09-b",
+  "ledger_version": 441,
+  "artifacts": {
+    ".planning/REQUIREMENTS.md": "b0d80bee523010ba1f47230bf6ea0a820007f956398e1b410af011daa231a7c8"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "sonnet",
+    "session": "trace-2026-10-18"
+  },
+  "items": [
+    {
+      "id": "SEAM-09",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:91",
+      "quote": "Empty inputs are refused instead of being run or enqueued. Query text that is '' or whitespace-only returns EmptyQueryObjectError before any node runs"
+    },
+    {
+      "id": "SEAM-10",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:95",
+      "quote": "Selector(capability=[]) is refused with a named refusal on every route that accepts a selector"
+    },
+    {
+      "id": "SEAM-11",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:98",
+      "quote": "POST /compare detects every comparison-key collision before any arm executes, and each arm executes exactly the wiring that the pre-check resolved."
+    },
+    {
+      "id": "SEAM-12",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:102",
+      "quote": "POST /promote refuses, with a named refusal, an alias that is empty or that no Selector could carry"
+    },
+    {
+      "id": "SEAM-13",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:105",
+      "quote": "On POST /documents/upload, a selector form field that holds the JSON literal 'null' or an empty string means 'no selector' (the default wiring)."
+    },
+    {
+      "id": "SEAM-14",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:108",
+      "quote": "Every concrete SeamRefusalError subclass that a transport can return is exported from one refusal catalogue (refusals.__all__ or a documented re-export list)."
+    },
+    {
+      "id": "SEAM-15",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:111",
+      "quote": "An ingest's file_name is either carried through to the v1 document record"
+    },
+    {
+      "id": "SEAM-16",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:115",
+      "quote": "Seam docstrings and dead code match the behaviour. The rest.py promote docstrings say that a non-string verb is a validation error"
+    }
+  ],
+  "extra": []
+}
