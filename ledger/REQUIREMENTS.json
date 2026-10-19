@@ -1,5 +1,5 @@
 {
-  "ledger_version": 604,
+  "ledger_version": 605,
   "frozen_at": null,
   "items": [
     {
@@ -2414,6 +2414,10 @@
     "databasise/tests/seam/test_empty_inputs.py": {
       "reason": "11-05 Task 2 (LRAG-08, D-09): the accepted MCP raw ingest in test_mcp_ingest_refuses_empty_and_invalid_base64_and_accepts_valid passes file_name 'abc.txt', because D-09 refuses a raw upload with no suffix; the four refusal cases are unchanged",
       "granted_at": 438
+    },
+    "databasise/tests/seam/test_foreign_engine_refusal.py": {
+      "reason": "12-14 Task 3 (A-WR-05, D-11): the engine fault log carries a redacted traceback instead of exc_info; line 118's exc_info identity assertion becomes a no-exc_info plus redacted-detail pin",
+      "granted_at": 605
     }
   },
   "notify_cmd": null
