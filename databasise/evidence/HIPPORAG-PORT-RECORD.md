@@ -103,18 +103,57 @@ only `doc.get("nodes", {})` at the top level) and therefore never reaches
 
 ## The guard-observability resolution
 
-`## §H`'s `Arms:` field states the guard's firing is observable per query through `§18.2`'s
-existing envelope machinery, with no new field minted. `databasise/runner/trace.py`'s honesty
-invariant makes `degraded` unusable for this purpose: `degraded`/`partial` are a required-together
-pair naming an unhealthy run, and `RunRecord.__post_init__` refuses a record where they disagree —
-labelling a completed, correctly-guarded run `degraded` would either be refused outright or make a
-real degradation indistinguishable from an ordinary declared fallback. The channel actually used
-is the run record's own per-node `guards_fired` field (RIG `§TR.1`, already stamped by
-`runner/scheduler.py`'s `run_wiring`), reached by a caller through the envelope's existing
-`trace_token` → `Databasise.resolve_trace(..., debug=True)` path. This satisfies "no new envelope
-field is minted" exactly — `tests/parts_core/hipporag/test_dpr_fallback_guard.py` proves both that
-the guard name never appears in the serialised `ResponseEnvelope` and that it is reachable through
-`resolve_trace`.
+`12-12` (D-21, HIPP-14). `## §H`'s `Arms:` field states the guard's firing is observable per query
+through `§18.2`'s existing envelope machinery, with no new field minted. The 06-07 resolution held
+that `degraded` was unusable for this purpose because `RunRecord.__post_init__` refused a record
+where `degraded` and `partial` disagreed. Phase 12 reverses that: the relaxed invariant lets a
+completed run on a declared degradation path be `degraded` without being `partial`. A fired guard
+now sets `degraded` true (`partial` stays false) with the closed, node-free reason codes
+`declared_fallback` (stop reason) and `fallback_path_taken` (degradation reason); a run whose guard
+did not fire stays clean. The per-node `guards_fired` field stays in the run record, reached by a
+caller through the envelope's existing `trace_token` → `Databasise.resolve_trace(..., debug=True)`
+path, and the guard name still never appears in the serialised `ResponseEnvelope`
+(`tests/parts_core/hipporag/test_dpr_fallback_guard.py`). No new envelope field is minted.
+
+## Phase 12 divergences and limits
+
+Each entry cites the decision that made it. Evidence class is `[code-verified]` for all of them; the
+pinning tests are named in the Phase 12 plan summaries.
+
+- **D-05, asymmetric recall.** `synonymy-edges` matches only entities new in this ingest against
+  every committed and staged entity. A new entity that appears only in an old entity's top-k (not
+  the reverse) is missed; upstream recomputes the full self-KNN each time. A pair is emitted once,
+  on the ingest that introduces it.
+- **D-04, summed weight against upstream's max.** The persisted edge `weight` is the sum of the
+  per-chunk co-occurrence counts, the synonymy weight and the passage weight. Upstream keeps the
+  max of the source count and the synonym score. The sum is the Databasise form; the divergence
+  changes PPR transition probabilities on graphs where one pair carries more than one edge type.
+- **D-08, strict extraction.** An OpenIE response that fails to parse or validate raises instead of
+  yielding an empty finding. A real-provider ingest is therefore refused on one malformed response,
+  where upstream logs and continues. The trade-off is a loud refusal over a silently thinner graph.
+- **D-20, `top_k` default 5.** `assemble-result` keeps the first `top_k` items of the selected branch
+  (default 5, upstream `qa_top_k`), after dropping zero-score PPR items. Dense passage retrieval is
+  never cut. This bounds both the `qa` prompt and the minted evidence.
+- **D-19, `qa` costs a call.** The `qa` node adds one LLM call per HippoRAG query. The owner-run check
+  of its answer quality and per-query cost is listed in section 2 of `.planning/TESTING-PLAN.md`.
+- **D-03, chunk id form.** A chunk id is `sha256(document_id:ordinal:text)` (sha256 over the
+  document id, the ordinal and the chunk text), not the ordinal alone.
+- **D-12 with D-03, rebuild required.** HippoRAG stores built before Phase 12 carry no `doc:`
+  manifest, ordinal-only chunk ids and no per-chunk co-occurrence map. The document remover is a
+  no-op without a manifest, so such a store cannot be corrected in place and must be rebuilt.
+- **D-16, `[writes_artifact]` selector.** A query run is pruned to the ancestors of `provides`, and
+  no query run writes artifacts, so a `[writes_artifact]` selector now raises
+  `UnsatisfiableSelectorError`. `writes_graph`, `writes_kv` and `writes_vector` selectors no longer
+  resolve to HippoRAG either. `base.json` keeps its nodes; promotion's declared surface stays on the
+  full wiring.
+- **D-22, removed config keys.** Config no part body, scheduler or guard path reads is gone from
+  `base.json` and `corpus-ingest.json`: entity-fact-embed `namespaces`, synonymy-edges `guard`,
+  reset-vector-join `socket_shape`, `arm_precedence` and `apportionment_policy`, ppr `readback`,
+  assemble-result `order_policy`. The wiring `config_hash` changes. `declared_capability` is also
+  read by no body; it is kept as a transcription of `docs/system-model/wirings/hipporag-base.json`,
+  not a behaviour claim, and removing it later changes the `config_hash` only.
+- **D-22, edge types.** `edge_types` and the per-chunk co-occurrence map are persisted on the graph
+  edge and not exported; `export_to_igraph` reads only `weight`. No route exposes the types.
 
 ## The `qa` node divergence
 
@@ -198,11 +237,8 @@ deferral forward with its own trigger for when that measurement should be run.
 | Trigger | The first requirement asking for HippoRAG index-side artifact sharing or `stage`-depth eligibility |
 | Standing risk to this future measurement | The upstream package's own alpha status (`2.0.0a4` on PyPI / `2.0.0a5` on `main`) — a pre-1.0 API is being depended on for a measurement, not for production behaviour, so an upstream break between the pinned SHA and a future `2.0.0` would invalidate the harness rather than the engine, and any future run must re-pin and re-verify the call shape (`run_ppr`/`add_synonymy_edges`/`save_igraph`) rather than assume it is unchanged |
 
-**The synonymy-edges guard proxy (06-05) is unchanged by this plan.** `synonymy-edges`' own
-`num_new_chunks > 0` guard condition is read off `entity-fact-embed`'s own entity count, since no
-node in this node's own dep chain carries a literal chunk count — recorded in `06-05-SUMMARY.md`,
-restated here only because it is a second, unrelated guard-shaped mechanism on this same wiring
-that a reader could otherwise conflate with `06-07`'s own `zero_surviving_facts_dpr_fallback`
-guard. The two are independent: `synonymy-edges`' guard is an ordinary `config.get(...)`-driven
-conditional-store-read inside that node's own body, never wired through `runner/guards.py`'s
+**The synonymy-edges no-new-entity short circuit (06-05, reworded by D-05 and D-22).** `synonymy-edges`
+declares no `guard` config key any more. A run that produced no new entity takes no store handle and
+emits no edge, an ordinary conditional inside that node's own body. A reader should not conflate it
+with `06-07`'s `zero_surviving_facts_dpr_fallback` guard, which is wired through `runner/guards.py`'s
 declared-guard machinery.
