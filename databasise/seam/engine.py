@@ -175,7 +175,6 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import contextlib
-import copy
 import hashlib
 import json
 import logging
@@ -283,7 +282,7 @@ from databasise.stores.kv import SqliteKVStore
 from databasise.stores.probes import probe_graph, probe_kv, probe_vector
 from databasise.stores.vector import MultiNamespaceVectorStore, VectorStoreCorruptedError
 from databasise.validator.parse import ParsedWiring, parse_wiring
-from databasise.wirings.resolve import wiring_family
+from databasise.wirings.resolve import wiring_family, without_recipe_only_nodes
 
 # 06-10-PLAN.md: the per-modality corpus-wiring root — databasise/wirings/<family>/corpus-
 # <operation>.json is itself the write-path lookup table (see _corpus_wiring below); no dict or
@@ -375,18 +374,9 @@ _RETRIEVAL_NAMESPACES: dict[str, str] = {
 }
 
 
-def _without_recipe_only_nodes(resolved: dict[str, Any]) -> dict[str, Any]:
-    """D-04 / research Q4 (LRAG-19): a deep copy of ``resolved`` without its recipe-only nodes, the
-    nodes named as a value of ``recipe`` that no remaining node depends on. Such a node (LightRAG's
-    ``embedder-index``) is index-side: it stays in the wiring for recipe identity, promotion classing
-    and RUN-11, and is skipped in query runs. ``resolved`` itself is not changed."""
-    run_copy = copy.deepcopy(resolved)
-    nodes = run_copy.get("nodes") or {}
-    recipe_ids = set((run_copy.get("recipe") or {}).values())
-    for node_id in recipe_ids & set(nodes):
-        if not any(node_id in (node.get("deps") or []) for node in nodes.values()):
-            del nodes[node_id]
-    return run_copy
+# D-04 / research Q4 (LRAG-19): the run copy without recipe-only nodes. One shared helper, so
+# promotion's trace-to-arm match sees the same node set a query run dispatches (B-CR-01).
+_without_recipe_only_nodes = without_recipe_only_nodes
 
 
 def _refuse_empty_namespaces(store_root: Path, workspace: str, resolved: dict[str, Any]) -> None:

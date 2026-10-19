@@ -18,6 +18,7 @@ either arm keeps is one of the seven this plan ports.
 
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 from typing import Any
@@ -144,6 +145,22 @@ def load_wiring(wiring_name: str, *, variant: str = "base") -> dict[str, Any]:
     )
 
 
+def without_recipe_only_nodes(resolved: dict[str, Any]) -> dict[str, Any]:
+    """D-04 / research Q4 (LRAG-19): a deep copy of ``resolved`` without its recipe-only nodes, the
+    nodes named as a value of ``recipe`` that no remaining node depends on. Such a node (LightRAG's
+    ``embedder-index``) is index-side: it stays in the wiring for recipe identity, promotion classing
+    and RUN-11, and is skipped in query runs. ``resolved`` itself is not changed. Shared by the
+    engine's query run and promotion's trace-to-arm match (B-CR-01), so both see the same run shape.
+    """
+    run_copy = copy.deepcopy(resolved)
+    nodes = run_copy.get("nodes") or {}
+    recipe_ids = set((run_copy.get("recipe") or {}).values())
+    for node_id in recipe_ids & set(nodes):
+        if not any(node_id in (node.get("deps") or []) for node in nodes.values()):
+            del nodes[node_id]
+    return run_copy
+
+
 def all_wirings() -> list[tuple[str, dict[str, Any]]]:
     """Every candidate wiring the seam's selectors resolve over (06-01-PLAN.md): every LightRAG
     arm (resolved via :func:`resolve_arm`, preserving ``_ARM_NAMES``' own declared order) plus
@@ -175,4 +192,5 @@ __all__ = [
     "declared_node_ids",
     "all_wirings",
     "wiring_family",
+    "without_recipe_only_nodes",
 ]

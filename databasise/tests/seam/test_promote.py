@@ -28,18 +28,18 @@ from databasise.seam.refusals import (
 )
 from databasise.seam.selectors import _resolve_alias
 from databasise.seam.trace_store import TraceStore, UnknownTraceReferenceError
-from databasise.wirings.resolve import all_wirings, resolve_arm
+from databasise.wirings.resolve import all_wirings, resolve_arm, without_recipe_only_nodes
 
 _ALIAS = "prod-lightrag"
 
 
 def _seed_trace(store_root, arm_name: str) -> str:
-    """Persist a minimal trace record naming exactly ``arm_name``'s own resolved node id set,
-    through the same ``TraceStore.persist()`` path the engine uses — never a hand-written ledger
-    row.
+    """Persist a minimal trace record naming exactly the node id set a post-11-10 query run of
+    ``arm_name`` dispatches (recipe-only nodes skipped, D-04), through the same
+    ``TraceStore.persist()`` path the engine uses — never a hand-written ledger row.
     """
     resolved = next(resolved for name, resolved in all_wirings() if name == arm_name)
-    node_ids = sorted(resolved.get("nodes", {}).keys())
+    node_ids = sorted(without_recipe_only_nodes(resolved).get("nodes", {}).keys())
     fake_record = {
         "run_id": f"fake-run-{arm_name}",
         "wiring_id": resolved.get("wiring_id"),
@@ -352,3 +352,56 @@ async def test_ledger_ordering_is_by_id_not_timestamp(store_root, monkeypatch):
     assert len(history) == 2
     assert history[0].minted_version == "1.0.0"  # id ASC -> oldest first
     assert history[1].minted_version == "1.1.0"
+
+
+# --------------------------------------------------------------------------------------------- #
+# B-CR-01: a real query trace omits embedder-index (D-04) and must still resolve to its arm
+# --------------------------------------------------------------------------------------------- #
+
+
+async def _populate_lightrag_store(store_root, workspace: str, vector: list[float]) -> None:
+    """One row in each LightRAG vector namespace plus the chunk text, through the stores' own
+    public write paths, so naive and hybrid both run every node of their run shape."""
+    import numpy as np
+    from databasise.stores.kv import SqliteKVStore
+    from databasise.stores.vector import FaissVectorStore
+
+    rows = {
+        "chunks": ("chunk-1", {"content": "Ed Wood directed films.", "file_path": "ed.txt"}),
+        "entities": ("ent-1", {"entity_name": "Ed Wood", "content": "Ed Wood"}),
+        "relationships": ("rel-1", {"src_id": "Ed Wood", "tgt_id": "films", "content": "directed"}),
+    }
+    for namespace, (row_id, metadata) in rows.items():
+        store = FaissVectorStore(namespace=namespace, workspace=workspace, store_root=store_root)
+        await store.upsert(ids=[row_id], embeddings=np.array([vector]), metadatas=[metadata])
+        await store.index_done_callback()
+        await store.finalize()
+    kv = SqliteKVStore(namespace="text_chunks", workspace=workspace, store_root=store_root)
+    await kv.upsert({"chunk-1": {"content": "Ed Wood directed films.", "file_path": "ed.txt"}})
+    await kv.index_done_callback()
+    await kv.finalize()
+
+
+async def test_promote_and_rollback_resolve_real_naive_and_hybrid_query_traces(store_root):
+    from databasise.seam.query import QueryObject
+    from databasise.tests.seam._probes import counting_clients
+
+    vector = [1.0, 0.0, 0.0]
+    workspace = "promote-real-trace"
+    await _populate_lightrag_store(store_root, workspace, vector)
+    engine = Databasise(store_root=store_root, workspace=workspace, clients=counting_clients(vector))
+    question = QueryObject(text="Which films did Ed Wood direct?")
+
+    naive_token = (await engine.query(question)).trace_token
+    hybrid_token = (await engine._execute_resolved(question, resolve_arm("hybrid"))).trace_token
+    for token in (naive_token, hybrid_token):
+        trace = await engine.resolve_trace(token, debug=True)
+        assert "embedder-index" not in {node["node_id"] for node in trace["nodes"]}
+
+    assert (await engine.promote(_ALIAS, [naive_token], "human_edit")).version == "1.0.0"
+    assert Ledger(store_root).by_alias(_ALIAS).mutation_id == "naive"
+    await engine.promote(_ALIAS, [hybrid_token], "human_edit")
+    assert Ledger(store_root).by_alias(_ALIAS).mutation_id == "hybrid"
+
+    await engine.rollback(_ALIAS, "1.0.0", [hybrid_token], "human_edit")
+    assert Ledger(store_root).by_alias(_ALIAS).mutation_id == "naive"

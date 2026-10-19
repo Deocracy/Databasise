@@ -14,9 +14,10 @@ every node's config by ``_inject_query``/``_inject_token_allowance``), so it dif
 too* — the same arm run against two different queries never has the same instance hash. The one
 signal that is both query-invariant and unique per arm is the **dispatched node id set**: each
 ``RunRecord.nodes`` entry's own ``node_id``, which ``databasise/tests/seam/test_trace_token.py``
-already proves is exactly the resolved wiring's own node id set. :func:`resolve_single_arm` matches
-that set against every candidate wiring's own resolved node ids
-(``databasise.wirings.resolve.all_wirings()``) — never a caller-supplied name (D-11).
+already proves is exactly the resolved wiring's own node id set minus its recipe-only nodes (D-04,
+11-10). :func:`resolve_single_arm` matches that set against every candidate wiring's own run-shape
+node ids (``databasise.wirings.resolve.without_recipe_only_nodes`` over ``all_wirings()``, B-CR-01)
+or its full node ids (a trace persisted before 11-10) — never a caller-supplied name (D-11).
 
 **Mutation-class derivation compares component identity, not bare node-id sets (D-10).** The
 node-id sets alone cannot express "the same node id now runs a different component" — an arm
@@ -37,7 +38,7 @@ from databasise.seam.refusals import (
     UncalibratedFloorRefusalError,
 )
 from databasise.seam.selectors import _wiring_effects
-from databasise.wirings.resolve import all_wirings
+from databasise.wirings.resolve import all_wirings, without_recipe_only_nodes
 
 # D-08: both values accepted — CONTRACT §7 makes change_origin orthogonal to promotion_provenance,
 # and the frozen contract is not re-litigated at the seam. machine_mutation is accepted even
@@ -119,7 +120,10 @@ def _arm_name_for_node_ids(node_ids: frozenset[str]) -> str:
     persisted against the same wirings on disk.
     """
     for name, resolved in all_wirings():
-        if frozenset(resolved.get("nodes", {}).keys()) == node_ids:
+        # B-CR-01: a query trace omits recipe-only nodes (D-04), so compare the run shape. The full
+        # set still matches a trace persisted before 11-10; no full set equals another arm's run set.
+        run_ids = frozenset(without_recipe_only_nodes(resolved).get("nodes", {}).keys())
+        if node_ids in (run_ids, frozenset(resolved.get("nodes", {}).keys())):
             return name
     raise AssertionError(
         "trace record's own dispatched node id set "
