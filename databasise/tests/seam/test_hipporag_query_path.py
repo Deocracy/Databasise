@@ -1,16 +1,23 @@
 """12-05 (HIPP-12 trace leg, HIPP-05): the HippoRAG query path through the public seam. A query run
 dispatches only query-side nodes, and ``fact-filter`` receives the query text. 12-07 adds the HIPP-12
-row test (one embed per query). Later Phase 12 plans (12-10, 12-11) add their row tests to this module."""
+row test (one embed per query). 12-10 adds the HIPP-13 row test (the answer is generated text); 12-11 adds its row test here."""
 
 from __future__ import annotations
 
+import json
+
+from databasise.clients.base import ChatResult
+from databasise.runner.trace import TokenAccounting
 from databasise.seam import Databasise, QueryObject
 from databasise.seam.corpus import IngestDocument
 from databasise.seam.selectors import Selector, resolve_selector
 from seam.test_hipporag_write_path import (
     _DOCUMENT_TEXT,
     _HIPPORAG_CAPABILITY,
+    _OBJECT,
+    _PREDICATE,
     _QUERY_VECTOR,
+    _SUBJECT,
     _StubEmbeddingClient,
     _StubIngestQueryLLMClient,
 )
@@ -31,6 +38,7 @@ _QUERY_SIDE_NODES = {
     "ppr",
     "dpr-fallback",
     "assemble-result",
+    "qa",
 }
 _QUERY_OPEN = "---Query---\n"
 _QUERY_CLOSE = "\n\n---Candidate Facts---"
@@ -144,3 +152,47 @@ async def test_a_query_runs_only_query_side_nodes_and_embeds_once(store_root):
         "embed_calls": [["What did Ed Wood direct?"]],
     }
     assert node_ids == _QUERY_SIDE_NODES, node_ids
+
+
+_QA_REPLY = "Thought: The passage names the films. Answer: low-budget films"
+
+
+class _StubQaAwareLLMClient:
+    """Answers a call whose first message is a system message (the qa node) with a fixed reply;
+    every other call like the write-path stub (the guard fires, keep_ids [])."""
+
+    def __init__(self):
+        self.qa_calls: list[list[dict]] = []
+
+    async def chat(self, messages, **kwargs):
+        content = messages[0]["content"]
+        if messages[0]["role"] == "system":
+            self.qa_calls.append(list(messages))
+            text = _QA_REPLY
+        elif "---Candidate Facts---" in content:
+            text = json.dumps({"keep_ids": []})
+        elif "---Recognised Entities---" in content:
+            text = json.dumps({"triples": [[_SUBJECT, _PREDICATE, _OBJECT]]})
+        else:
+            text = json.dumps({"entities": [_SUBJECT, _OBJECT]})
+        return ChatResult(
+            text=text,
+            tokens=TokenAccounting(prompt_tokens=5, completion_tokens=4, call_count=1, counted_by="stub-llm"),
+            resolved_model_identity="stub-llm-model",
+        )
+
+
+async def test_the_answer_is_generated_text_not_the_joined_evidence(store_root):
+    """HIPP-13 (D-19): the envelope answer is what the qa node generates from the hydrated passages,
+    not the evidence contents joined by blank lines."""
+    llm = _StubQaAwareLLMClient()
+    engine, selector = await _ingested_engine(store_root, llm)
+
+    envelope = await engine.query(QueryObject(text="What did Ed Wood direct?"), selector)
+
+    resolved = [await engine.resolve_evidence(ref) for ref in envelope.evidence]
+    joined = "\n\n".join(str(record.get("content", "")) for record in resolved)
+    assert envelope.evidence
+    assert envelope.answer != joined
+    assert envelope.answer == "low-budget films"
+    assert len(llm.qa_calls) == 1

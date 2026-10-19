@@ -1,4 +1,5 @@
-"""HippoRAG 2 part bodies (PARTS.md ``## §H``) — all thirteen of the base wiring's node positions.
+"""HippoRAG 2 part bodies (PARTS.md ``## §H``) — all thirteen of the governing node positions plus the
+14th, ``qa`` (Phase 12 D-19, the answer-generation step; a recorded divergence).
 
 ``HIPPORAG_PARTS`` mirrors ``parts_core/lightrag/__init__.py``'s own ``LIGHTRAG_PARTS`` shape:
 06-01-PLAN.md ported the five nodes ``fact-score``, ``fact-filter``, ``reset-vector-join``, ``ppr``
@@ -27,6 +28,7 @@ from databasise.parts_core.hipporag.graph_augment_persist import HIPPORAG_GRAPH_
 from databasise.parts_core.hipporag.openie import HIPPORAG_OPENIE_EXTRACTOR_PART
 from databasise.parts_core.hipporag.passage_edges import HIPPORAG_PASSAGE_EDGE_BUILDER_PART
 from databasise.parts_core.hipporag.ppr import HIPPORAG_PPR_RETRIEVER_PART
+from databasise.parts_core.hipporag.qa import HIPPORAG_QA_READER_PART
 from databasise.parts_core.hipporag.reset_vector_join import HIPPORAG_RESET_VECTOR_JOIN_PART
 from databasise.parts_core.hipporag.synonymy_edges import HIPPORAG_SYNONYMY_EDGE_BUILDER_PART
 
@@ -44,6 +46,7 @@ HIPPORAG_PARTS: tuple[Part, ...] = (
     HIPPORAG_SYNONYMY_EDGE_BUILDER_PART,
     HIPPORAG_GRAPH_MATERIALIZER_PART,
     HIPPORAG_DPR_FALLBACK_PART,
+    HIPPORAG_QA_READER_PART,
 )
 
 # Corpus-side parts, registered beside HIPPORAG_PARTS and not among them: HIPPORAG_PARTS is pinned as

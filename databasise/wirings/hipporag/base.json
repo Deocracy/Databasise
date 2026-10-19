@@ -1,6 +1,6 @@
 {
   "wiring_id": "hipporag-base",
-  "title": "HippoRAG 2 base wiring (all 13 of docs/system-model/wirings/hipporag-base.json's positions: 06-01's 5-node query-side chain, 06-02's 3 index-side positions, 06-05's 4 graph-construction positions completing the index side, and 06-07's dpr-fallback closing the query side)",
+  "title": "HippoRAG 2 base wiring (the 13 governing positions of docs/system-model/wirings/hipporag-base.json: 06-01's 5-node query-side chain, 06-02's 3 index-side positions, 06-05's 4 graph-construction positions completing the index side, and 06-07's dpr-fallback closing the query side; plus the recorded 14th node qa, Phase 12 D-19)",
   "wiring_version": "1",
   "nodes": {
     "chunk-embed": {
@@ -117,12 +117,18 @@
         "order_policy": "hipporag-doc-score-order"
       },
       "deps": ["ppr", "dpr-fallback", "fact-filter"]
+    },
+    "qa": {
+      "component": "hipporag/qa-reader@0.1.0",
+      "kind": "generator",
+      "effects": ["calls_llm"],
+      "deps": ["assemble-result"]
     }
   },
   "recipe": { "chunker": "chunk-embed", "embedding": "chunk-embed", "extraction": "openie" },
   "harnesses": [],
-  "provides": ["assemble-result"],
-  "consumes_query": ["fact-score", "fact-filter", "reset-vector-join", "dpr-fallback"],
+  "provides": ["qa"],
+  "consumes_query": ["fact-score", "fact-filter", "reset-vector-join", "dpr-fallback", "qa"],
   "evidence_position": { "node": "assemble-result", "namespace": "hipporag-chunks" },
   "store_namespaces": { "kv": "hipporag-text-chunks", "graph": "hipporag-graph" }
 }

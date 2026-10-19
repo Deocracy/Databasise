@@ -29,11 +29,8 @@ fallback. The channel actually used is the run record's own per-node ``guards_fi
 §TR.1, already stamped by the scheduler), reached by a caller through the envelope's existing
 ``trace_token`` -> ``resolve_trace`` path — satisfying "no new envelope field is minted" exactly.
 
-**Named limitation, per 06-01-PLAN.md's own instruction:** HippoRAG 2's base wiring has no
-generator position among its thirteen (PARTS.md ``## §H``) — ``completion`` therefore carries
-assembled context (the hydrated chunk texts, joined), never a generated answer. This is a content
-difference at the envelope's ``answer`` field, not an envelope-field difference; plan 06-03 records
-it against F-14.
+This node emits no ``completion``: the ``qa`` node (Phase 12 D-19) generates the answer from these
+hydrated items; evidence still mints from this node's items.
 """
 
 from __future__ import annotations
@@ -54,15 +51,11 @@ async def _assemble_result_body(ctx: NodeContext) -> dict[str, Any]:
 
     kv_store = ctx.stores["kv"]
     hydrated_items: list[dict[str, Any]] = []
-    contents: list[str] = []
     for item in selected_items:
         record = await kv_store.get_by_id(str(item["id"]))
-        content = str((record or {}).get("content", ""))
-        hydrated_items.append({**item, "content": content})
-        if content:
-            contents.append(content)
+        hydrated_items.append({**item, "content": str((record or {}).get("content", ""))})
 
-    return {"items": hydrated_items, "completion": "\n\n".join(contents)}
+    return {"items": hydrated_items}
 
 
 HIPPORAG_RESULT_ASSEMBLER_PART = Part(
