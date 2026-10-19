@@ -620,3 +620,58 @@ def _tool_json(result) -> dict:
     returns a plain dict, rendered by the SDK as one JSON text content block."""
     text = "".join(getattr(item, "text", "") or "" for item in result.content)
     return json.loads(text)
+
+
+async def test_hipporag_documents_appear_in_jobs_corpus_counts_and_health(store_root, monkeypatch):
+    """HIPP-15 (D-13): the job id a HippoRAG ingest returns answers ``processed``; ``/corpus`` and
+    ``/corpus/counts`` with a HippoRAG selector list and count the document from its manifest; and
+    ``/health`` reports HippoRAG's own stores. The faked v1 corpus is empty, so a listing that still
+    came from v1 would show zero documents."""
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    import databasise.seam.engine as engine_module
+    from databasise.seam.rest import create_app
+
+    def _fake(op, payload, *, timeout=None, **kwargs):
+        if op == "status":
+            return {"total": 0, "documents": [], "counts": {}}
+        return {"configured": True, "missing_keys": [], "unsupported_keys": []}
+
+    monkeypatch.setattr(engine_module, "run_corpus_op", _fake)
+
+    clients = {"embedding": _StubEmbeddingClient(), "llm": _StubIngestQueryLLMClient()}
+    client = TestClient(create_app(store_root=store_root, workspace="corpus-surface-ws", clients=clients))
+    selector_json = json.dumps({"capability": _HIPPORAG_CAPABILITY})
+
+    ingest = client.post(
+        "/documents",
+        json={
+            "document": {"document_id": "corpus-doc", "text": _DOCUMENT_TEXT},
+            "selector": {"capability": _HIPPORAG_CAPABILITY},
+        },
+    )
+    assert ingest.status_code == 200
+    job_id = ingest.json()["job_id"]
+
+    job = client.get(f"/jobs/{job_id}")
+    assert job.status_code == 200
+    assert [(d["document_id"], d["status"]) for d in job.json()["documents"]] == [("corpus-doc", "processed")]
+
+    corpus = client.get("/corpus", params={"selector": selector_json})
+    assert corpus.status_code == 200
+    body = corpus.json()
+    assert body["total"] == 1, body
+    assert [(d["document_id"], d["status"]) for d in body["documents"]] == [("corpus-doc", "processed")]
+    assert body["next_offset"] is None
+
+    counts = client.get("/corpus/counts", params={"selector": selector_json})
+    assert counts.status_code == 200
+    assert counts.json() == {"by_status": {"processed": 1}, "total": 1}
+
+    health = client.get("/health")
+    assert health.status_code == 200
+    stores = health.json()["stores"]
+    assert stores["kv:hipporag-text-chunks"] == "ok"
+    assert stores["graph:hipporag-graph"] == "ok"
+    assert stores["vector:hipporag-chunks"] == "ok"

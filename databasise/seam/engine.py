@@ -289,7 +289,7 @@ from databasise.seam.tokens import TokenBreakdownEntry, assemble_token_breakdown
 from databasise.seam.trace_store import TraceStore
 from databasise.stores.graph import CozoGraphStore, GraphStoreBusyError
 from databasise.stores.kv import SqliteKVStore
-from databasise.stores.probes import probe_graph, probe_kv, probe_vector
+from databasise.stores.probes import list_kv_prefix, probe_graph, probe_kv, probe_vector
 from databasise.stores.vector import MultiNamespaceVectorStore, VectorStoreCorruptedError, load_committed
 from databasise.validator.parse import ParsedWiring, parse_wiring
 from databasise.wirings.resolve import wiring_family, without_recipe_only_nodes
@@ -1741,7 +1741,38 @@ class Databasise:
         except _MALFORMED_RESULT as exc:
             raise _foreign_fault("job_status", exc, failure_class="MalformedDriverOutput") from exc
 
-    async def corpus_status(self, page: Page | None = None) -> CorpusStatus:
+    def _is_hipporag_selector(self, selector: Selector | None) -> bool:
+        """D-13: True when ``selector`` resolves to the HippoRAG family. ``None`` is never HippoRAG
+        and resolves nothing, so the no-selector read path stays exactly as it was."""
+        if selector is None:
+            return False
+        resolved = resolve_selector(selector, registry=self.registry, store_root=self.store_root)
+        return wiring_family(resolved) == "hipporag"
+
+    def _hipporag_manifests(self, page: Page, operation: str) -> tuple[list[DocumentStatusEntry], int]:
+        """D-13 (HIPP-15): one page of HippoRAG's document registry. The ``doc:<id>`` manifest in
+        ``hipporag-text-chunks`` is written in the same commit as the document's data, so a manifest
+        is a processed document. Read through :func:`list_kv_prefix`, which creates nothing."""
+        try:
+            rows, total = list_kv_prefix(
+                self.store_root / self.workspace / "hipporag-text-chunks",
+                "doc:",
+                limit=page.limit,
+                offset=page.offset,
+            )
+        except sqlite3.Error as exc:
+            raise _foreign_fault(operation, exc, failure_class="StoreFault") from exc
+        documents = [
+            DocumentStatusEntry(
+                document_id=key.removeprefix("doc:"),
+                status="processed",
+                updated_at=str(manifest.get("ingested_at") or ""),
+            )
+            for key, manifest in rows
+        ]
+        return documents, total
+
+    async def corpus_status(self, page: Page | None = None, selector: Selector | None = None) -> CorpusStatus:
         """The seventh §18 operation (05-04-PLAN.md Task 1, API-06) — a bounded, paginated
         document list, never a full corpus dump. ``page`` above ``MAX_PAGE_SIZE`` is already
         refused by :class:`~databasise.seam.corpus.Page`'s own validator before this method is
@@ -1752,8 +1783,21 @@ class Databasise:
         reported as ``"interrupted"``, in its row and in ``counts``. ``pending`` is never remapped
         (Q9). While a write holds the gate, v1's own status is reported unchanged.
         ``get_job_status`` is not remapped: a job id names one run, and "interrupted" is a
-        corpus-level view of a document no run holds."""
+        corpus-level view of a document no run holds.
+
+        12-09 (D-13, HIPP-15): an optional ``selector``. One that resolves to the HippoRAG family
+        lists that modality's documents from its per-document manifests (every manifest is a
+        processed document, so no ``interrupted`` remap applies); any other selector, and no
+        selector, take the v1 path below unchanged."""
         page = page or Page()
+        if self._is_hipporag_selector(selector):
+            documents, total = self._hipporag_manifests(page, "corpus_status")
+            return CorpusStatus(
+                documents=documents,
+                counts={"processed": total} if total else {},
+                total=total,
+                next_offset=_next_offset(page, documents, total),
+            )
         held = self._write_gate_held()
         result = await _corpus_op_or_refuse(
             "status",
@@ -1781,13 +1825,19 @@ class Databasise:
         except _MALFORMED_RESULT as exc:
             raise _foreign_fault("corpus_status", exc, failure_class="MalformedDriverOutput") from exc
 
-    async def document_counts(self) -> DocumentCounts:
+    async def document_counts(self, selector: Selector | None = None) -> DocumentCounts:
         """The eighth §18 operation (05-04-PLAN.md Task 1, API-06) — a fixed-size record, never a
         per-document list. Calls the same ``"status"`` op ``corpus_status`` calls, with a
         one-row page (the driver refuses ``limit < 1``), and reads only its ``counts`` field.
 
         11-08 (D-08): mid-pipeline buckets move into ``interrupted`` exactly as in
-        ``corpus_status``, and ``total`` stays the sum of ``by_status``."""
+        ``corpus_status``, and ``total`` stays the sum of ``by_status``.
+
+        12-09 (D-13, HIPP-15): a HippoRAG ``selector`` counts that modality's manifests as
+        ``processed`` (see ``corpus_status``); any other selector, and none, take the v1 path."""
+        if self._is_hipporag_selector(selector):
+            _, total = self._hipporag_manifests(Page(limit=1), "document_counts")
+            return DocumentCounts(by_status={"processed": total} if total else {}, total=total)
         held = self._write_gate_held()
         result = await _corpus_op_or_refuse(
             "status", {"track_id": None, "limit": 1, "offset": 0}, "document_counts", self._v1_working_dir()

@@ -16,9 +16,10 @@ Two measurements (10-07 planning, 10-review iteration 2) shape the probes:
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from databasise.stores.graph import GraphStoreBusyError, _ClientRegistry
 from databasise.stores.vector import VectorStoreCorruptedError, load_committed
@@ -124,3 +125,36 @@ def probe_vector(dir_path: Path) -> ProbeState:
         return "absent" if load_committed(Path(dir_path)) is None else "ok"
     except (VectorStoreCorruptedError, OSError):  # an unreadable pair, or a PermissionError on it
         return "corrupted"
+
+
+def list_kv_prefix(
+    dir_path: Path, prefix: str, *, limit: int, offset: int
+) -> tuple[list[tuple[str, dict[str, Any]]], int]:
+    """Phase 12 D-13 (HIPP-15): the ``(key, decoded value)`` rows of one namespace whose key starts
+    with ``prefix``, in ascending key order, plus the total number of such keys. A missing, empty or
+    table-less ``kv.sqlite3`` is ``([], 0)``. The read path creates nothing (LRAG-13), which is why
+    this is not a ``SqliteKVStore`` (its constructor makes the directory and the table). The
+    database opens ``immutable`` like :func:`probe_kv`, except when a live writer's ``-wal`` and
+    ``-shm`` both exist: then plain ``mode=ro`` is safe (it creates neither) and sees a committed
+    write that is still in the WAL. A sqlite error other than a missing table propagates."""
+    db_path = (Path(dir_path) / "kv.sqlite3").resolve()
+    if not db_path.is_file() or db_path.stat().st_size == 0:
+        return [], 0
+    live = db_path.with_name("kv.sqlite3-wal").exists() and db_path.with_name("kv.sqlite3-shm").exists()
+    uri = db_path.as_uri() + ("?mode=ro" if live else "?mode=ro&immutable=1")
+    conn = sqlite3.connect(uri, uri=True, timeout=0.1)
+    # Every key >= prefix and < prefix with its last character incremented starts with prefix.
+    upper = prefix[:-1] + chr(ord(prefix[-1]) + 1)
+    try:
+        total = conn.execute("SELECT COUNT(*) FROM kv WHERE id >= ? AND id < ?", (prefix, upper)).fetchone()[0]
+        rows = conn.execute(
+            "SELECT id, value FROM kv WHERE id >= ? AND id < ? ORDER BY id LIMIT ? OFFSET ?",
+            (prefix, upper, limit, offset),
+        ).fetchall()
+    except sqlite3.OperationalError as exc:
+        if "no such table" in str(exc).lower():
+            return [], 0  # a writer's CREATE TABLE has not reached a snapshot this connection can see
+        raise
+    finally:
+        conn.close()
+    return [(key, json.loads(value)) for key, value in rows], int(total)

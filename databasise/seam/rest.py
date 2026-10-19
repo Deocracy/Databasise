@@ -305,6 +305,19 @@ def _pydantic_validation_response(request: Request, exc: ValidationError) -> JSO
     return _refusal_response(request, refusal)
 
 
+def _selector_field(raw: str | None) -> Selector | None:
+    """The one parse of a selector carried as a JSON string (the upload form field and, since 12-09
+    D-13, the ``/corpus`` query parameter): omitted, blank or ``null`` means no selector; valid JSON
+    that breaks a selector rule returns that rule's own refusal, and anything else is
+    ``MalformedSelectorPayloadError`` (422), never a 500."""
+    if raw is None or raw.strip() in ("", "null"):
+        return None
+    try:
+        return Selector.model_validate_json(raw)
+    except ValidationError as exc:
+        raise (refusal_from_errors(exc.errors()) or MalformedSelectorPayloadError(field="selector")) from exc
+
+
 class InvalidCorsOriginError(ValueError):
     """A CORS origin that is not an exact ``scheme://host[:port]`` value (D-12)."""
 
@@ -455,15 +468,7 @@ def create_app(
             file_name=file.filename,
             content_type=file.content_type,
         )
-        parsed_selector = None
-        if selector is not None and selector.strip() not in ("", "null"):
-            try:
-                parsed_selector = Selector.model_validate_json(selector)
-            except ValidationError as exc:
-                raise (
-                    refusal_from_errors(exc.errors()) or MalformedSelectorPayloadError(field="selector")
-                ) from exc
-        return await engine.ingest(document, parsed_selector)
+        return await engine.ingest(document, _selector_field(selector))
 
     @app.get("/jobs/{job_id}", responses=_FAULT_RESPONSES)
     async def get_job_status(
@@ -497,12 +502,15 @@ def create_app(
     async def get_corpus(
         limit: int = Query(default=50),
         offset: int = Query(default=0),
+        selector: str | None = Query(default=None),
     ) -> CorpusStatus:
-        return await engine.corpus_status(checked_page(limit, offset))
+        """12-09 (D-13): ``selector`` is a JSON-encoded selector naming which modality's documents
+        to list; absent, the listing is the LightRAG corpus exactly as before."""
+        return await engine.corpus_status(checked_page(limit, offset), _selector_field(selector))
 
     @app.get("/corpus/counts", responses=_FAULT_RESPONSES)
-    async def get_corpus_counts() -> DocumentCounts:
-        return await engine.document_counts()
+    async def get_corpus_counts(selector: str | None = Query(default=None)) -> DocumentCounts:
+        return await engine.document_counts(_selector_field(selector))
 
     @app.post("/promote")
     async def post_promote(body: PromoteRequest) -> PromotionResult:
