@@ -11,16 +11,10 @@ store had not earned (CONTRACT.md §14.2: "that the store exposes a batched self
 than forcing an O(N^2) pointwise emulation"). ``databasise/stores/vector.py``'s
 ``FaissVectorStore.self_knn`` is that earned capability.
 
-**The guard.** The governing wiring's own ``config.guard`` names ``num_new_chunks > 0`` — checked
-before any store handle is taken, so a no-new-chunks index build costs nothing at this position.
-This node's sole dep is ``entity-fact-embed``, whose own output carries no direct chunk count;
-the number of entities ``entity-fact-embed`` produced (``ctx.inputs["entity-fact-embed"]
-["entities"]``) is the faithful, available proxy for "did this index run's upstream chain produce
-anything new" — ``entity-fact-embed`` itself already short-circuits to zero entities when
-``openie`` found zero findings, which in turn only happens when ``chunk-embed`` produced zero new
-chunks. Recorded here as a 06-05-PLAN.md design decision, mirroring 06-02-PLAN.md's own precedent
-for interpreting an underspecified upstream-data guard against the data the wiring actually
-threads through this dep chain.
+**The guard.** The wiring declares no guard key for this node; the new-entity rule below is the
+guard. A run that produced no new entity takes no store handle, so a no-new-chunks index build costs
+nothing at this position (``entity-fact-embed`` already short-circuits to zero entities when
+``openie`` found zero findings).
 
 **New entities only (D-05, HIPP-07).** The new-entity rule is the guard, hard-coded: only entities
 new in this ingest are matched, against every committed and staged entity via
@@ -28,8 +22,7 @@ new in this ingest are matched, against every committed and staged entity via
 present, else the refs whose committed ``get_by_id`` is ``None``. No new entity means no store
 query and no edges. A pair is therefore emitted once, on the ingest that introduces it, and never
 re-emitted. Accepted recall difference: a new entity that appears only in an old entity's top-k
-(not the reverse) is missed. The ``guard`` config key is removed separately (D-22).
-"""
+(not the reverse) is missed."""
 
 from __future__ import annotations
 

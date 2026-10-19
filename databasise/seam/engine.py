@@ -459,9 +459,10 @@ def _inject_query(resolved: dict[str, Any], query: str) -> dict[str, Any]:
     the resolved dict rather than a hardcoded id list: LightRAG's own base now declares
     ``["keywords", "embedder-query", "generate"]`` — the exact three ids this function
     previously hardcoded — so LightRAG's own behaviour is byte-identical; HippoRAG's base
-    declares ``["fact-score", "reset-vector-join"]``. Defaults to an empty list for a resolved
-    wiring declaring no ``consumes_query`` at all (the fixture wirings this module's own tests
-    build directly), preserving the prior no-op-for-an-absent-declaration behaviour.
+    declares ``["fact-score", "fact-filter", "reset-vector-join", "dpr-fallback", "qa"]``.
+    Defaults to an empty list for a resolved wiring declaring no ``consumes_query`` at all (the
+    fixture wirings this module's own tests build directly), preserving the prior
+    no-op-for-an-absent-declaration behaviour.
     """
     nodes = resolved.get("nodes", {})
     consumes_query = resolved.get("consumes_query") or []

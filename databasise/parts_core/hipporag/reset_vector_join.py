@@ -6,12 +6,12 @@ the dense array itself never crosses this node's own port, per §13.1's part-loc
 cross-reference — only the already-summed ``reset_vector``/``vertex_names`` pair does.
 
 **Phrase weights.** For each surviving fact ``fact-filter`` emits, this node reads that fact's own
-chunk-association record from the KV store (``reads_kv`` — the ``{fact_id: chunk_ids}`` mapping
-this plan's own conftest fixture seeds under ``hipporag-text-chunks``, a 06-01-PLAN.md design
-decision for exercising the declared ``reads_kv`` effect meaningfully) and divides the fact's own
+chunk-association record from the KV store (``reads_kv`` — the ``fact:<id> -> {chunk_ids}`` record
+``entity-fact-embed`` writes under ``hipporag-text-chunks``, D-06) and divides the fact's own
 score by its own chunk count, adding the result onto every entity vertex the fact names.
 
-**Passage weights.** This node performs its own dense passage retrieval — reads §14.2's
+**Passage weights.** This node makes no embedding or LLM client call (D-17): it takes the query
+vector from ``fact-score``. It performs its own dense passage retrieval — reads §14.2's
 exhaustive ``score_all`` sub-capability over the ``hipporag-chunks`` vector namespace
 (``reads_vector``) with the query vector ``fact-score`` embedded (``ctx.inputs["fact-score"]
 ["query_vector"]``, D-17; this node never calls the embedding client) — min-max
