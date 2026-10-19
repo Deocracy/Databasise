@@ -279,7 +279,7 @@
 - [ ] **HIPP-05**: The fact-filter node receives the query text: fact-filter is listed in consumes_query of wirings/hipporag/base.json, and the LLM prompt it sends contains the query between ---Query--- and ---Candidate Facts---.
   - Test: Seam query test with a stub LLM capturing the fact-filter prompt for query 'What did Ed Wood direct?'; assert the captured query section equals that text. Fails today with ''.
   - Defects: parts-hipporag/HIPPO-3
-- [ ] **HIPP-06**: Every chunk produced by chunk-embed gets a passage vertex in the HippoRAG graph after ingest, including chunks for which OpenIE extracted no triples, so PPR can rank them (passage_edges.py:50-63, graph_augment_persist.py:61-77).
+- [x] **HIPP-06**: Every chunk produced by chunk-embed gets a passage vertex in the HippoRAG graph after ingest, including chunks for which OpenIE extracted no triples, so PPR can rank them (passage_edges.py:50-63, graph_augment_persist.py:61-77).
   - Test: Test in databasise/tests/parts_core/hipporag/test_graph_construction.py: ingest two chunks where the stub OpenIE returns triples for one and none for the other; assert both chunk vertices exist in the exported graph. Fails today for the triple-less chunk.
   - Defects: parts-hipporag/HIPPO-11
 - [ ] **HIPP-07**: synonymy-edges matches the entities new in the current ingest against all entities, both those committed by earlier ingests and those staged by entity-fact-embed in the same run. After the first ingest of a document containing entities 'films' and 'movies' with cosine similarity above the threshold, the films-movies synonymy edge exists. A later ingest that adds no new entity similar to either does not re-emit that pair (synonymy_edges.py:53-54, vector.py:288-289, 317-325).
@@ -330,7 +330,7 @@
 - [ ] **HIPP-18**: Every config key in wirings/hipporag/base.json and wirings/hipporag/corpus-ingest.json is either read by its part body or removed. The keys are entity-fact-embed namespaces, synonymy-edges guard, reset-vector-join socket_shape/arm_precedence/apportionment_policy, ppr readback and assemble-result order_policy. HippoRAG part docstrings and config text make no claim the code does not meet: reset-vector-join 'no token spend' (the body embeds and reports tokens at reset_vector_join.py:114), and edge_types 'auditable' (export_to_igraph drops edge_types and no route exposes it). The affected locations are assemble_result.py:5-7, reset_vector_join.py:9-12 and graph_augment_persist.py:30-33.
   - Test: Test in databasise/tests/parts_core/hipporag/test_registration.py: load both HippoRAG wiring files. Assert none of the listed unread keys remain, or, for each key kept, a test shows that changing its value changes the part's output. A second test asserts either that export_to_igraph's edges carry edge_types, or that no HippoRAG docstring claims export-level audit. Fails today on the listed keys and on the KeyError for e['edge_types'].
   - Defects: parts-hipporag/HIPPO-13, parts-hipporag/HIPPO-14
-- [ ] **HIPP-19**: HippoRAG ingest token accounting never reports tokens from different counters under one counted_by label: summing accountings with mixed counted_by values yields one row per counter (or the unbudgetable sentinel), using one shared helper instead of the duplicated _sum_token_accountings in openie.py:118-131 and entity_fact_embed.py:59-70.
+- [x] **HIPP-19**: HippoRAG ingest token accounting never reports tokens from different counters under one counted_by label: summing accountings with mixed counted_by values yields one row per counter (or the unbudgetable sentinel), using one shared helper instead of the duplicated _sum_token_accountings in openie.py:118-131 and entity_fact_embed.py:59-70.
   - Test: Unit test: sum accountings with counted_by 'tiktoken' and 'provider'; assert the result does not attribute all tokens to 'tiktoken'. Fails today (first label wins).
   - Defects: parts-hipporag/HIPPO-15
 
@@ -893,7 +893,7 @@ These fail today.
 | HIPP-03 | Phase 12 | Pending |
 | HIPP-04 | Phase 12 | Pending |
 | HIPP-05 | Phase 12 | Pending |
-| HIPP-06 | Phase 12 | Pending |
+| HIPP-06 | Phase 12 | Complete |
 | HIPP-07 | Phase 12 | Pending |
 | HIPP-08 | Phase 12 | Pending |
 | HIPP-09 | Phase 12 | Pending |
@@ -906,7 +906,7 @@ These fail today.
 | HIPP-16 | Phase 12 | Pending |
 | HIPP-17 | Phase 12 | Pending |
 | HIPP-18 | Phase 12 | Pending |
-| HIPP-19 | Phase 12 | Pending |
+| HIPP-19 | Phase 12 | Complete |
 | WIRE-01 | Phase 13 | Pending |
 | WIRE-02 | Phase 13 | Pending |
 | WIRE-03 | Phase 13 | Pending |

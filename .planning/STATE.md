@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 12
 current_phase_name: HippoRAG Fixes
 status: executing
-stopped_at: Completed 12-01-PLAN.md
-last_updated: "2026-10-19T17:48:11.070Z"
+stopped_at: Completed 12-02-PLAN.md
+last_updated: "2026-10-19T17:58:36.925Z"
 last_activity: 2026-10-19
 last_activity_desc: Phase 12 execution started
-state_head: a4ed3c98f7a2b75998cf457ea3f7a5c4f4870e70
+state_head: ccc92d02c5fea1ea5277670a6e248441a0b75349
 progress:
   total_phases: 11
   completed_phases: 4
   total_plans: 57
-  completed_plans: 44
+  completed_plans: 45
   percent: 36
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-19 after Phase 11)
 ## Current Position
 
 Phase: 12 (HippoRAG Fixes) — EXECUTING
-Plan: 2 of 14
+Plan: 3 of 14
 Status: Ready to execute
 Last activity: 2026-10-19 — Phase 12 execution started
 
@@ -107,6 +107,7 @@ Progress: [████░░░░░░] 36% (4/11 phases)
 | Phase 11 P10 | 45min | 2 tasks | 10 files |
 | Phase 11 P11 | 40min | 3 tasks | 17 files |
 | Phase 12 P01 | 25min | 2 tasks | 6 files |
+| Phase 12 P02 | 25min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -187,6 +188,8 @@ Recent decisions affecting current work:
 - [Phase 11]: 11-11: all six duplicated v1 prompt strings live in parts_core/lightrag/prompts.py behind one ast drift test; keywords.py reads its prompt from there
 - [Phase 11]: 11-11: the engine stamps max_total_tokens 30000 on every lightrag/assembler-kg-context node; assemble also defaults to 30000 when absent
 - [Phase 12]: D-01 applied: bare chunk id outside the graph; chunk: prefix added in reset-vector-join and stripped in ppr
+- [Phase 12]: D-02: every chunk gets a chunk: vertex via openie chunks passthrough and passage-edges vertices stream
+- [Phase 12]: D-07: sum_token_accountings and UNBUDGETABLE_SENTINEL live only in runner.trace; mixed counted_by labels report unbudgetable
 
 ### Pending Todos
 
@@ -237,8 +240,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-19T17:48:10.903Z
-Stopped at: Completed 12-01-PLAN.md
+Last session: 2026-10-19T17:58:36.760Z
+Stopped at: Completed 12-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
