@@ -123,7 +123,10 @@ pinning tests are named in the Phase 12 plan summaries.
 - **D-05, asymmetric recall.** `synonymy-edges` matches only entities new in this ingest against
   every committed and staged entity. A new entity that appears only in an old entity's top-k (not
   the reverse) is missed; upstream recomputes the full self-KNN each time. A pair is emitted once,
-  on the ingest that introduces it.
+  on the ingest that introduces it, with one exception (A-CR-01): on a re-ingest, the synonymy edges
+  of an entity `document-remover` deleted as an orphan, which the same run re-adds, are restored
+  (the remover returns them as `removed_synonymy_edges`; `synonymy-edges` re-emits those whose two
+  endpoints still exist at the end of the run).
 - **D-04, summed weight against upstream's max.** The persisted edge `weight` is the sum of the
   per-chunk co-occurrence counts, the synonymy weight and the passage weight. Upstream keeps the
   max of the source count and the synonym score. The sum is the Databasise form; the divergence

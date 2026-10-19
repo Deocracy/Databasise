@@ -20,8 +20,8 @@ nothing at this position (``entity-fact-embed`` already short-circuits to zero e
 new in this ingest are matched, against every committed and staged entity via
 ``self_knn(ids=...)``. New refs are ``entity-fact-embed``'s ``new_entities`` when that key is
 present, else the refs whose committed ``get_by_id`` is ``None``. No new entity means no store
-query and no edges. A pair is therefore emitted once, on the ingest that introduces it, and never
-re-emitted. Accepted recall difference: a new entity that appears only in an old entity's top-k
+query and no edges. A pair is therefore emitted once, on the ingest that introduces it, except that a
+re-ingest restores the edges ``document-remover`` hid (A-CR-01, below). Accepted recall difference: a new entity that appears only in an old entity's top-k
 (not the reverse) is missed.
 
 **Restoring a re-ingest's lost edges (A-CR-01).** ``document-remover`` deletes an orphaned entity's
