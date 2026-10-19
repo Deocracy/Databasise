@@ -27,6 +27,9 @@
       "effects": [
         "reads_vector"
       ],
+      "config": {
+        "cosine_better_than_threshold": 0.2
+      },
       "deps": [
         "embedder-query"
       ]
@@ -50,6 +53,9 @@
       "effects": [
         "reads_vector"
       ],
+      "config": {
+        "cosine_better_than_threshold": 0.2
+      },
       "deps": [
         "embedder-query"
       ]
@@ -73,6 +79,9 @@
       "effects": [
         "reads_vector"
       ],
+      "config": {
+        "cosine_better_than_threshold": 0.2
+      },
       "deps": [
         "embedder-query"
       ]

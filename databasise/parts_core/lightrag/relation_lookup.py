@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import Any
 
 from databasise.parts.schema import NodeContext, Part
+from databasise.parts_core.lightrag.chunk_vector import cosine_threshold
 
 _NAME_AT_VERSION = "lightrag/relation-lookup@0.1.0"
 # v1's own default (v1/lightrag/constants.py's DEFAULT_TOP_K), ported unchanged.
@@ -30,13 +31,15 @@ _RELATIONSHIPS_NAMESPACE = "relationships"
 async def _relation_lookup_body(ctx: NodeContext) -> dict[str, Any]:
     config = ctx.config or {}
     top_k = int(config.get("top_k", _DEFAULT_TOP_K))
+    threshold = cosine_threshold(config)
     # v1 searches relationships with the high-level keyword string's embedding (D-16, LRAG-18); no
     # hl keywords means no relation search.
     vector = ctx.inputs["embedder-query"].get("hl_vector")
     if vector is None:
         return {"items": []}
     store = ctx.stores["vector"].select(_RELATIONSHIPS_NAMESPACE)
-    raw_items = await store.query(vector, top_k=top_k)
+    # v1's Faiss store drops hits below the cosine threshold (B-CR-02, see chunk_vector).
+    raw_items = [i for i in await store.query(vector, top_k=top_k) if not i["score"] < threshold]
     items = sorted(raw_items, key=lambda item: (-item["score"], item["id"]))
     return {"items": items}
 

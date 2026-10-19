@@ -21,12 +21,23 @@ _DEFAULT_TOP_K = 10
 _CHUNKS_NAMESPACE = "chunks"
 
 
+def cosine_threshold(config: dict[str, Any]) -> float:
+    """B-CR-02: v1's Faiss store drops hits whose cosine is below ``cosine_better_than_threshold``
+    (faiss_impl.py:421). The v2 store's scores are inner products of L2-normalised vectors, i.e.
+    cosine, so the same cut applies. Like v1's store (faiss_impl.py:208-211), the part has no
+    default of its own: the shipped value, v1 COSINE_THRESHOLD 0.2 (lightrag.py:735), is set in
+    ``wirings/lightrag/base.json``. A config without the key cuts nothing."""
+    return float(config.get("cosine_better_than_threshold", "-inf"))
+
+
 async def _chunk_vector_body(ctx: NodeContext) -> dict[str, Any]:
     config = ctx.config or {}
     top_k = int(config.get("top_k", _DEFAULT_TOP_K))
+    threshold = cosine_threshold(config)
     vector = ctx.inputs["embedder-query"]["vector"]
     store = ctx.stores["vector"].select(_CHUNKS_NAMESPACE)
-    raw_items = await store.query(vector, top_k=top_k)
+    # v1's own test, `dist < threshold` drops: a NaN score is kept and reaches the evidence fault.
+    raw_items = [i for i in await store.query(vector, top_k=top_k) if not i["score"] < threshold]
     # The store's own contract already returns descending-score order (stores/vector.py's
     # `results.sort(key=lambda r: (-r["score"], r["id"]))`); re-sorted here too so this node's own
     # <behavior> contract ("scored chunk items ordered by descending score") holds independent of
