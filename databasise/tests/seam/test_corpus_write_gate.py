@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import threading
 import time
 from pathlib import Path
@@ -19,6 +20,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import databasise.seam.engine as engine_module
+from databasise.foreign.v1_corpus_adapter import CorpusOpSubprocessError
 from databasise.parts_core.lightrag import full_delete, full_ingest, v1_index_sync
 from databasise.parts_core.lightrag.v1_index_sync import V1_INDEX_SYNC_MANIFEST_KEY
 from databasise.seam.corpus import DeletionOutcome, IngestDocument, IngestJob
@@ -294,6 +296,34 @@ async def test_a_sync_over_its_ceiling_raises_the_timeout_fault_and_holds_the_ga
     await _until(lambda: "sync-end" in events)
     await _until(lambda: not engine._write_gate_held())
     assert len(fake_v1.intervals) == 1  # the refused write never reached v1
+
+
+async def test_a_cancelled_write_logs_the_discarded_v1_failure_once_redacted(store_root, monkeypatch, caplog):
+    """11 REVIEW A2-WR-02: the outcome of a v1 worker whose wait was given up reaches no caller, so
+    it is logged once, server-side, with the failure class and the redacted stderr tail."""
+    started = threading.Event()
+
+    def _failing_v1(_op, _payload, **_kwargs):
+        started.set()
+        time.sleep(0.5)
+        raise CorpusOpSubprocessError(1, "Traceback ...\nAuthenticationError: bad key sk-live1234secret")
+
+    monkeypatch.setattr(full_ingest, "run_corpus_op", _failing_v1)
+    engine = Databasise(store_root=store_root, workspace="ws")
+    first = asyncio.create_task(engine.ingest(_doc("a")))
+    await _until(started.is_set)
+
+    with caplog.at_level(logging.WARNING):
+        first.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await first
+        await _until(lambda: not engine._write_gate_held())
+
+    discarded = [r.getMessage() for r in caplog.records if "discarded the worker's failure" in r.getMessage()]
+    assert len(discarded) == 1, discarded
+    assert "failure_class=CorpusOpSubprocessError" in discarded[0]
+    assert "AuthenticationError" in discarded[0] and "sk-[REDACTED]" in discarded[0]
+    assert "sk-live1234secret" not in caplog.text
 
 
 async def test_a_failed_write_releases_the_gate(store_root, fake_v1):

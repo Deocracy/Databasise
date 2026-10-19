@@ -28,11 +28,12 @@ import asyncio
 import concurrent.futures
 import contextvars
 import hashlib
+import logging
 from pathlib import Path
 from typing import Any
 
 from databasise.foreign import run_corpus_op
-from databasise.foreign.v1_corpus_adapter import DEFAULT_V1_INTERPRETER
+from databasise.foreign.v1_corpus_adapter import DEFAULT_V1_INTERPRETER, redact_secrets
 from databasise.identity.canon import canonicalise
 from databasise.parts.admission import (
     MANIFEST_SOURCE_CODE_INSPECTED,
@@ -57,6 +58,8 @@ _UNBUDGETABLE_TOKENS_SENTINEL = "unbudgetable"
 _V1_COUNTED_BY = "v1-subprocess"
 
 _V1_ROOT = Path(__file__).resolve().parents[3] / "v1"
+
+logger = logging.getLogger(__name__)
 
 
 def tokens_from_usage(usage: Any) -> TokenAccounting:
@@ -90,6 +93,22 @@ ABANDONED_WORKERS: contextvars.ContextVar[list[concurrent.futures.Future] | None
 _WORKERS = concurrent.futures.ThreadPoolExecutor(thread_name_prefix="v1-corpus-worker")
 
 
+def _log_discarded(worker: concurrent.futures.Future) -> None:
+    """A2-WR-02: a given-up worker's outcome reaches no caller, so it is logged once, server-side:
+    the failure class and the stderr tail (D-11), redacted (A-WR-05)."""
+    if worker.cancelled():
+        return
+    exc = worker.exception()
+    if exc is None:
+        logger.warning("a cancelled or timed-out v1 write discarded the worker's result; v1 may have committed")
+    else:
+        logger.warning(
+            "a cancelled or timed-out v1 write discarded the worker's failure: failure_class=%s %s",
+            type(exc).__name__,
+            redact_secrets(str(exc)),
+        )
+
+
 async def to_thread_until_done(func: Any, /, *args: Any, **kwargs: Any) -> Any:
     """``asyncio.to_thread`` whose worker outlives a given-up wait (11 REVIEW A-CR-01, A2-WR-01). A
     thread cannot be stopped, so on cancel (or a ``wait_for`` timeout) this stops waiting at once,
@@ -102,6 +121,7 @@ async def to_thread_until_done(func: Any, /, *args: Any, **kwargs: Any) -> Any:
         parked = ABANDONED_WORKERS.get()
         if parked is not None:
             parked.append(worker)
+        worker.add_done_callback(_log_discarded)
         raise
 
 
