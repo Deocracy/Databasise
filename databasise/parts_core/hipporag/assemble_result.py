@@ -23,7 +23,8 @@ per-node ``guards_fired`` field stays in the debug trace. This node only selects
 
 **The one cut (Phase 12 D-20, HIPP-11).** After branch selection and before hydration this node keeps
 the first ``config["top_k"]`` items (default 5, upstream ``qa_top_k``) of the selected branch, in
-that branch's own order. On the PPR branch items scoring ``<= 0`` are dropped first. The one cut
+that branch's own order. On the PPR branch items scoring ``<= 0`` are dropped first; if none is
+left, ``dpr-fallback``'s items stand in (the run is not marked degraded). The one cut
 bounds both the answer (``qa`` reads these items) and the evidence (minted from them) on both
 branches; dense passage retrieval itself is never cut, since ``reset-vector-join`` reuses it whole.
 
@@ -49,7 +50,14 @@ async def _assemble_result_body(ctx: NodeContext) -> dict[str, Any]:
     if not guard_fired:
         # An item PPR never reached scores exactly 0.0; it carries no evidence.
         selected_items = [item for item in selected_items if item["score"] > 0.0]
-    selected_items = selected_items[: int(ctx.config.get("top_k", 5))]
+        if not selected_items:
+            # A-WR-02: PPR reached nothing (all-zero reset, e.g. a one-chunk corpus), so the dense
+            # items dpr-fallback computed in the same run answer, not an empty result.
+            selected_items = list(ctx.inputs["dpr-fallback"].get("items", []))
+    top_k = int((ctx.config or {}).get("top_k", 5))
+    if top_k < 1:  # A-WR-01: a negative cut would silently drop the last item
+        raise ValueError(f"{ctx.node_id!r}: config.top_k must be >= 1, got {top_k}")
+    selected_items = selected_items[:top_k]
 
     kv_store = ctx.stores["kv"]
     hydrated_items: list[dict[str, Any]] = []
