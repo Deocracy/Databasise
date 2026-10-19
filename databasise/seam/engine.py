@@ -166,12 +166,14 @@ one engine process per store root, so an in-process ``threading.Lock`` per resol
 manifest read and staging, the commit or drop, and the inbox cleanup, so two writes can never read
 the same prune manifest. A second write is refused with ``StoreBusyError(store_kind="corpus")``
 (409), not queued. Reads take no gate, and HippoRAG writes, which have no v1 dir, are not gated.
-A cancelled write keeps the gate until the v1 worker thread returns (11 REVIEW A-CR-01).
+A cancelled or timed-out write keeps the gate until the v1 worker thread returns (11 REVIEW
+A-CR-01, A2-WR-01).
 """
 
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import contextlib
 import copy
 import hashlib
@@ -199,6 +201,7 @@ from databasise.parts_core import EFFECT_TO_STORE
 from databasise.parts_core.lightrag import chunk_vector as _chunk_vector
 from databasise.parts_core.lightrag import entity_lookup as _entity_lookup
 from databasise.parts_core.lightrag import relation_lookup as _relation_lookup
+from databasise.parts_core.lightrag.full_ingest import ABANDONED_WORKERS
 from databasise.parts_core.lightrag.v1_index_sync import V1_INDEX_SYNC_MANIFEST_KEY
 from databasise.runner import scheduler as _scheduler
 from databasise.runner.trace import NodeTrace, RunRecord
@@ -713,17 +716,25 @@ def _gate_for(working_dir: Path) -> threading.Lock:
 def _write_gate(working_dir: Path) -> Iterator[None]:
     """Hold ``working_dir``'s write gate, or refuse at once with ``StoreBusyError(store_kind=
     "corpus")`` (409) when another write holds it. Never waits. Released in ``finally``, so a failed
-    or cancelled write never leaves it held. A cancelled write reaches that ``finally`` only after
-    the v1 worker thread has returned: the corpus parts run v1 and the sync's read through
-    ``to_thread_until_done``, which waits for the thread before re-raising the cancel (A-CR-01).
-    The path is never named in the refusal."""
+    or cancelled write never leaves it held. A cancelled or timed-out write may have given up on a
+    v1 worker thread that is still running (``to_thread_until_done`` parks it in
+    ``ABANDONED_WORKERS``); the release is then deferred to a waiter thread that frees the gate once
+    every parked worker has returned (A-CR-01, A2-WR-01). The path is never named in the refusal."""
     gate = _gate_for(working_dir)
     if not gate.acquire(blocking=False):
         raise StoreBusyError(store_kind="corpus")
+    parked: list[concurrent.futures.Future] = []
+    token = ABANDONED_WORKERS.set(parked)
     try:
         yield
     finally:
-        gate.release()
+        ABANDONED_WORKERS.reset(token)
+        if parked:
+            threading.Thread(
+                target=lambda: (concurrent.futures.wait(parked), gate.release()), daemon=True
+            ).start()
+        else:
+            gate.release()
 
 
 async def _abort_prepared(stores: dict[str, Any]) -> None:

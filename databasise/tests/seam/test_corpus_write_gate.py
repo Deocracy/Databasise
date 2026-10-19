@@ -246,17 +246,53 @@ async def test_a_cancelled_write_holds_the_gate_until_the_v1_thread_returns(
     await _until(lambda: phase in events)
 
     first.cancel()
-    await asyncio.sleep(0.2)
+    with pytest.raises(asyncio.CancelledError):
+        await first  # A2-WR-01: the cancel gives up the wait at once
     assert end not in events, "the fake v1 thread returned before the check; raise its delay"
-    assert not first.done() and engine._write_gate_held()
+    assert engine._write_gate_held()
     with pytest.raises(StoreBusyError) as refused:
         await engine.ingest(_doc("b"))
     assert refused.value.store_kind == "corpus"
 
-    with pytest.raises(asyncio.CancelledError):
-        await first
-    assert end in events
-    assert not engine._write_gate_held()
+    await _until(lambda: end in events)
+    await _until(lambda: not engine._write_gate_held())
+    assert len(fake_v1.intervals) == 1  # the refused write never reached v1
+
+
+async def test_a_sync_over_its_ceiling_raises_the_timeout_fault_and_holds_the_gate_until_the_read_returns(
+    store_root, fake_v1, monkeypatch
+):
+    """11 REVIEW A2-WR-01: the sync's 300 s ceiling (condition 4) is enforced again. The timeout
+    gives up the wait; the gate stays held until the worker thread returns, so a write meanwhile
+    is a 409."""
+    events = fake_v1.events
+    fake_v1.delay = 0.0
+    real_read = v1_index_sync.read_v1_snapshot
+
+    def _slow_read(working_dir, **kwargs):
+        events.append("sync-start")
+        time.sleep(2.0)
+        events.append("sync-end")
+        return real_read(working_dir, **kwargs)
+
+    monkeypatch.setattr(v1_index_sync, "read_v1_snapshot", _slow_read)
+    monkeypatch.setattr(v1_index_sync, "V1_INDEX_SYNC_WALL_CLOCK_CEILING_SECONDS", 0.3)
+    engine = Databasise(store_root=store_root, workspace="ws")
+
+    started = time.monotonic()
+    with pytest.raises(ForeignEngineRefusalError) as fault:
+        await engine.ingest(_doc("a"))
+    assert time.monotonic() - started < 1.5  # within the ceiling, well before the 2 s read returns
+    assert fault.value.failure_class == "CorpusOpTimeoutError"
+
+    assert "sync-end" not in events
+    assert engine._write_gate_held()
+    with pytest.raises(StoreBusyError) as refused:
+        await engine.ingest(_doc("b"))
+    assert refused.value.store_kind == "corpus"
+
+    await _until(lambda: "sync-end" in events)
+    await _until(lambda: not engine._write_gate_held())
     assert len(fake_v1.intervals) == 1  # the refused write never reached v1
 
 

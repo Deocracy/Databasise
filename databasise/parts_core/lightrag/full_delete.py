@@ -199,7 +199,7 @@ LIGHTRAG_FULL_DELETE_ADMISSION = AdmissionRecord(
 async def full_delete_body(ctx: NodeContext) -> dict[str, Any]:
     """Reads ``doc_id``/``delete_llm_cache`` from ``ctx.config``, launches the v1 corpus driver's
     ``delete`` branch via ``run_corpus_op`` (blocking — run by ``to_thread_until_done``, so a
-    cancel waits for the subprocess, A-CR-01), and returns the driver's payload with the spend metered from
+    cancel keeps the write gate until the subprocess returns, A-CR-01), and returns the driver's payload with the spend metered from
     its ``usage`` (``tokens_from_usage``, the same rule as ingest; condition 3's verdict above).
 
     11-01-PLAN.md (LRAG-02): this body reports no store touches. v1's subprocess changes v1's own

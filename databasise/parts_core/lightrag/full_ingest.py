@@ -25,6 +25,8 @@ condition, numbered as CONTRACT numbers them (LRAG-12):
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
+import contextvars
 import hashlib
 from pathlib import Path
 from typing import Any
@@ -79,25 +81,28 @@ def tokens_from_usage(usage: Any) -> TokenAccounting:
     )
 
 
+# 11 REVIEW A-CR-01 / A2-WR-01: the engine binds a list here while it holds a v1 write gate. A
+# worker whose wait was given up (a cancel, or the sync's wall-clock timeout) is parked in it, and
+# the engine releases the gate only once every parked worker has returned.
+ABANDONED_WORKERS: contextvars.ContextVar[list[concurrent.futures.Future] | None] = contextvars.ContextVar(
+    "abandoned_v1_workers", default=None
+)
+_WORKERS = concurrent.futures.ThreadPoolExecutor(thread_name_prefix="v1-corpus-worker")
+
+
 async def to_thread_until_done(func: Any, /, *args: Any, **kwargs: Any) -> Any:
-    """``asyncio.to_thread`` that a cancellation cannot unwind past (11 REVIEW A-CR-01). A thread
-    cannot be stopped, so on cancel this waits for the worker to return, then re-raises the
-    ``CancelledError``. The engine's write gate is therefore released only after the v1 subprocess
-    (or the sync's read of v1's files) has stopped touching the working dir."""
-    future = asyncio.ensure_future(asyncio.to_thread(func, *args, **kwargs))
-    cancelled: asyncio.CancelledError | None = None
-    while not future.done():
-        try:
-            await asyncio.shield(future)
-        except asyncio.CancelledError as exc:
-            cancelled = cancelled or exc
-        except Exception:  # noqa: BLE001 - the worker's outcome is read from the future below
-            break
-    if cancelled is not None:
-        if not future.cancelled():
-            future.exception()  # retrieved, so asyncio never logs it as unhandled
-        raise cancelled
-    return future.result()
+    """``asyncio.to_thread`` whose worker outlives a given-up wait (11 REVIEW A-CR-01, A2-WR-01). A
+    thread cannot be stopped, so on cancel (or a ``wait_for`` timeout) this stops waiting at once,
+    parks the worker in :data:`ABANDONED_WORKERS` and re-raises. The engine's write gate stays held
+    until the v1 subprocess (or the sync's read of v1's files) has returned."""
+    worker = _WORKERS.submit(contextvars.copy_context().run, func, *args, **kwargs)
+    try:
+        return await asyncio.wrap_future(worker)
+    except asyncio.CancelledError:
+        parked = ABANDONED_WORKERS.get()
+        if parked is not None:
+            parked.append(worker)
+        raise
 
 
 def _compute_environment_hash() -> str:
@@ -253,7 +258,7 @@ async def full_ingest_body(ctx: NodeContext) -> dict[str, Any]:
     """Reads ``documents``/``track_id`` (and, for a staged upload, ``file_paths``/``docs_format``/
     ``input_dir``; for a retry, ``retry_doc_ids``) from ``ctx.config``, launches the v1 corpus
     driver via ``run_corpus_op`` (blocking — run by :func:`to_thread_until_done`, so a cancel
-    waits for the subprocess) and returns the job handle plus this node's own metered token spend
+    keeps the write gate until the subprocess returns) and returns the job handle plus this node's own metered token spend
     (:func:`tokens_from_usage`).
     """
     config = ctx.config or {}
@@ -283,6 +288,7 @@ async def full_ingest_body(ctx: NodeContext) -> dict[str, Any]:
 
 
 __all__ = [
+    "ABANDONED_WORKERS",
     "INGEST_WALL_CLOCK_CEILING_SECONDS",
     "LIGHTRAG_FULL_INGEST_ADMISSION",
     "full_ingest_body",

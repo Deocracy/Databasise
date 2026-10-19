@@ -34,6 +34,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from databasise.foreign.v1_corpus_adapter import CorpusOpTimeoutError
 from databasise.identity.canon import canonicalise
 from databasise.parity.import_index import mirror_snapshot, read_v1_snapshot
 from databasise.parts.admission import (
@@ -85,7 +86,8 @@ async def v1_index_sync_body(ctx: Any) -> dict[str, Any]:
     working_dir = Path((ctx.config or {})["working_dir"])
 
     async def _sync() -> dict[str, Any]:
-        # A-CR-01: a timeout or cancel waits for the read, which holds v1's RocksDB open.
+        # A-CR-01: a timeout or cancel keeps the write gate until the read, which holds v1's
+        # RocksDB open, has returned.
         snapshot = await to_thread_until_done(read_v1_snapshot, working_dir)
         if snapshot is None:
             return {"synced": False, "counts": {}, "tokens": TokenAccounting(counted_by="none")}
@@ -99,7 +101,11 @@ async def v1_index_sync_body(ctx: Any) -> dict[str, Any]:
         await kv.upsert({V1_INDEX_SYNC_MANIFEST_KEY: _with_pruned(previous, current)})
         return {"synced": True, "counts": counts, "manifest": current, "tokens": TokenAccounting(counted_by="none")}
 
-    return await asyncio.wait_for(_sync(), timeout=V1_INDEX_SYNC_WALL_CLOCK_CEILING_SECONDS)
+    try:
+        return await asyncio.wait_for(_sync(), timeout=V1_INDEX_SYNC_WALL_CLOCK_CEILING_SECONDS)
+    except TimeoutError as exc:
+        # A2-WR-01: condition 4's ceiling; the engine drops the run's staged writes.
+        raise CorpusOpTimeoutError("sync", V1_INDEX_SYNC_WALL_CLOCK_CEILING_SECONDS) from exc
 
 
 LIGHTRAG_V1_INDEX_SYNC_ADMISSION = AdmissionRecord(
