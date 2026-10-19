@@ -1113,6 +1113,10 @@ class Databasise:
                 raise MutableStoreComparisonExcludedError(
                     component=_mutates_store_component(resolved, self.registry)
                 )
+        # 11 REVIEW B-WR-02: refuse a never-populated namespace for any arm before the first arm
+        # spends, rather than after earlier arms ran and their envelopes are discarded.
+        for resolved in wirings:
+            _refuse_empty_namespaces(self.store_root, self.workspace, resolved)
         return {key: await self._execute_resolved(query_object, wiring) for key, wiring in zip(keys, wirings)}
 
     async def ingest(self, document: IngestDocument, selector: Selector | None = None) -> IngestJob:
