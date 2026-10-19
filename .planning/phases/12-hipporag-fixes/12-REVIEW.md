@@ -2,9 +2,9 @@
 phase: 12-hipporag-fixes
 reviewed: 2026-10-19T00:00:00Z
 depth: deep
-diff_base: 0807948
-iteration: 1
-parts: "A (HippoRAG parts and wirings, 12-REVIEW-A.md) + B (seam, stores, runner, foreign, mcp, 12-REVIEW-B.md), merged; ids prefixed A-/B-"
+diff_base: 26ca959^
+iteration: 3
+parts: "A (HippoRAG parts and wirings) + B (seam, stores, runner, foreign, mcp), merged; ids prefixed A-/B-. Iteration 3 re-reviews the three iteration-2 fix commits e85c3fc, f69256e, f886e2c (git diff edd4883..HEAD); the rest of the 59-file scope is unchanged since iteration 2."
 files_reviewed: 59
 files_reviewed_list:
   - databasise/evidence/HIPPORAG-PORT-RECORD.md
@@ -67,242 +67,87 @@ files_reviewed_list:
   - databasise/wirings/hipporag/corpus-ingest.json
   - databasise/wirings/resolve.py
 findings:
-  critical: 2
-  warning: 8
-  info: 11
-  total: 21
+  critical: 0
+  warning: 0
+  info: 15
+  total: 15
 status: issues_found
 ---
-# Phase 12: Code Review (merged lanes A + B)
-
-# Lane A
-
-
-# Phase 12: Code Review Report (Lane A)
+# Phase 12: Code Review Report (iteration 3)
 
 **Reviewed:** 2026-10-19
 **Depth:** deep
-**Files Reviewed:** 32
-**Status:** issues_found
+**Files Reviewed:** 59 (the files touched by e85c3fc, f69256e and f886e2c re-read against `git diff edd4883..HEAD`; the rest unchanged since iteration 2)
+**Status:** issues_found (Info only)
 
 ## Summary
 
-Lane A covers the HippoRAG part bodies, the three HippoRAG wirings, the registry merge, the port record and their tests. I traced the call chains into the stores (`stores/graph.py`, `stores/vector.py`, `stores/kv.py`), the capability proxy (`parts_core/__init__.py`), the scheduler (`runner/scheduler.py`), the refusal type (`seam/refusals.py`) and the engine's ingest and delete paths (`seam/engine.py`). The lane's tests pass: `pytest -q tests/parts_core/hipporag tests/parts/test_registry.py tests/evidence/test_hipporag_port_record.py` gives 99 passed.
+Iteration 3 verifies the three iteration-2 fixes (A-WR-05, IN-06, B-IN-07) and looks for regressions. All three are resolved, and I found no Critical or Warning issue. Two new Info items concern the port record. The 13 other open Info findings are carried forward unchanged.
 
-The D-01 id translation, the D-04 per-chunk merge, the D-06 fact provenance union, the D-08 refusal path (the 10-entry cap and the closed-code filter sit in `ForeignEngineRefusalError`), the D-17 single embed and the D-12 remover's fact and co-occurrence subtraction all trace correctly through the stores' pending-buffer semantics.
+What I checked on the A-WR-05 change, which is the only logic change:
 
-One defect was reproduced. Re-ingesting an unchanged document deletes synonymy edges that another document's ingest created, and the D-05 new-entity rule never rebuilds them. A scratch probe showed it: after ingesting d1, ingesting d2, then re-ingesting d1 unchanged, all five d2-to-d1 synonymy edges were gone. The required re-ingest test only covers a synonym pair that lives inside one document, so it does not catch this. The other findings are an unguarded config read, a degenerate PPR path that silently returns nothing, an OpenIE validation gap that contradicts the port record's own claim, and config keys that HIPP-18's text says must be gone.
+- **The new guard declaration.** `base.json` declares `empty_ppr_dpr_stand_in` in `assemble-result`'s `config.guards` (`evaluating_node: assemble-result`, `value_when_not_fired: false`, `granularity: per-query`). `_validated_guards` passes it through `declare_guard`, so the declaration is valid. `corpus-ingest.json` and `corpus-delete.json` have no `assemble-result`, so they are unaffected.
+- **`_GuardAwareResult._flag`.** The class attribute defaults to `"guard_fired"`, so `fact-filter`'s `__eq__`, which compares a bool sentinel to `guard_fired`, behaves exactly as before. `_StandInResult._flag = "dpr_stand_in"` makes `evaluate_guards`'s `results["assemble-result"] != False` read `dpr_stand_in`. `__ne__` is `not __eq__`, so the `!=` in `runner/guards.py:evaluate_guards` is honoured.
+- **Scheduler evaluation.** `evaluate_guards(guards_by_node[node_id], results)` runs per node, right after `results[node_id] = output`. So `fact-filter`'s guard is still evaluated against its own output, and the new guard against `assemble-result`'s. The two paths are mutually exclusive in the body: the stand-in is set only on the `not guard_fired` branch. So `degraded = partial or any(guards_fired)` yields `declared_fallback` / `fallback_path_taken` with `partial` false, and no run can report both guards.
+- **Other consumers.** The output is still a `dict` (a subclass), so `qa`, the evidence mint and trace serialisation read `items` as before. `dpr_stand_in` is set only when the stand-in supplied at least one item.
+- **Test run.** I re-ran the 25 tests in the two review-fix test files, and a keyword-selected subset of 359 tests (`hipporag or guard or degraded or wiring or cross_modality`), which includes the protected guard and degradation tests: 359 passed. The fix report records the full offline suite at 2203 in both styles. I did not repeat the full run.
+- **Cross-modality parity.** `parity/run_cross_modality.py` refuses an arm where `degraded` is true (lines 339-347). So a HippoRAG arm that takes the stand-in path is now refused, which matches the port record's new sentence. `build_hipporag_index.py` builds only the index side, so it never reaches `assemble-result`.
+
+B-IN-07: `list_kv_prefix` now reads the WAL size in a `try`/`except FileNotFoundError`; a vanished WAL counts as no frames. `live` re-reads existence afterwards, so the later open picks the immutable or `mode=ro` URI from the current state. A WAL that vanished means the writer checkpointed into the main file, so the immutable open sees every row. `PermissionError` and other `OSError`s still propagate to `StoreFault`. The new test patches `Path.stat` to remove the WAL and raise, and passes.
+
+IN-06: the `synonymy_edges.py` docstring and the port record's D-05 entry now state the restore exception.
 
 ## Narrative Findings (AI reviewer)
-
-## Critical Issues
-
-### A-CR-01: Re-ingesting an unchanged document deletes another document's synonymy edges
-
-**File:** `databasise/parts_core/hipporag/document_remover.py:125-134` (with `entity_fact_embed.py:140-141`, `synonymy_edges.py:55-61`)
-
-**Issue:** On re-ingest, the remover runs before the new version is written. It treats every manifest entity that has no edge to a surviving chunk as an orphan and calls `graph.delete_node(entity)` (line 132). `CozoGraphStore.delete_node` (`stores/graph.py:395-404`) puts every disk edge of that entity into `_pending_edge_rms`, and that includes synonymy edges created by *other* documents' ingests. The run then adds the entity back. `entity-fact-embed` marks it new, and `synonymy-edges` recomputes only that entity's own top-k (`self_knn(ids=new_refs)`). An edge that came from the other side, where a later document's entity Y had X in its top-k but X's top-k does not contain Y, is never rebuilt. `graph-augment-persist` cannot restore it either, because `get_edge` returns `None` for a hidden key.
-
-**Reproduced:** d1 has `xray` and five near neighbours `a1..a5`. d2 has `yankee`. Ingest d1, ingest d2, then re-ingest d1 unchanged. Before the re-ingest the synonymy edges were `(a1..a4, yankee)` and `(xray, yankee)`. After it there were none, and the graph's edge set was not equal to its previous state. This breaks D-12's stated outcome ("re-ingesting the same document keeps its synonymy edges"). It is also data loss: an idempotent operation on document A destroys graph structure contributed by document B, and PPR results change. D-05's accepted asymmetric recall covers new entities, not the deletion of existing edges. `test_reingesting_a_document_keeps_its_synonymy_edges` (`tests/seam/test_hipporag_write_path.py:439-467`) only checks the films/movies pair, which lives inside one document, so the defect passes it.
-
-**Fix:** Do not delete an entity that the same run adds back. The cleanest form keeps the remover's chunk, fact and co-occurrence work where it is and moves the orphan sweep after the writes:
-```jsonc
-// corpus-ingest.json: the sweep runs last and sees the re-added passage edges
-"orphan-sweep": { "component": "hipporag/document-remover@0.1.0", "config": {"phase": "orphans"},
-                  "deps": ["graph-augment-persist"], ... }
-// corpus-delete.json: run both phases in one node (or two nodes, chained)
-```
-```python
-# document_remover.py: phase "content" skips the orphan block (lines 125-134);
-# phase "orphans" deletes manifest entities that still have no chunk-prefixed neighbour.
-```
-This also makes the `removed_entities` / `new_entities` override unnecessary. If the node split is not wanted, the remover can instead return each orphan's synonymy edges (`pair -> synonymy_weight`), and `graph-augment-persist` can restore every returned edge whose two endpoints are both present at the end of the run. In either case, add a cross-document regression test that has the asymmetric top-k shape described above.
-
-## Warnings
-
-### A-WR-01: `assemble-result` reads `ctx.config` without a None guard and accepts a negative `top_k`
-
-**File:** `databasise/parts_core/hipporag/assemble_result.py:52`
-
-**Issue:** `ctx.config.get("top_k", 5)` raises `AttributeError` when `config` is `None`. `NodeContext.config` is typed `dict | None`, and the scheduler passes `node.config` through unchanged. Every other HippoRAG part uses `ctx.config or {}`. A wiring variant or patch that drops this node's config block crashes the query, and the failure surfaces as an opaque node fault. `int(...)` is also never range-checked, so `top_k: -1` silently cuts the last item instead of refusing, and `0` silently returns no evidence.
-
-**Fix:**
-```python
-top_k = int((ctx.config or {}).get("top_k", 5))
-if top_k < 1:
-    raise ValueError(f"{ctx.node_id!r}: config.top_k must be >= 1, got {top_k}")
-selected_items = selected_items[:top_k]
-```
-
-### A-WR-02: A degenerate PPR reset vector now produces an empty answer and no evidence, with no degradation signal
-
-**File:** `databasise/parts_core/hipporag/assemble_result.py:49-51`, `databasise/parts_core/hipporag/ppr.py:69-75`
-
-**Issue:** When the guard did not fire but every reset entry is 0 or negative, `ppr` returns all-zero scores (lines 69-75). This happens when the surviving facts score at or below 0 and min-max normalisation gives every passage 0, which is always the case for a single-chunk corpus because `_min_max_normalise` returns zeros when the span is 0. The new D-20 filter `item["score"] > 0.0` then drops every item. `qa` answers `fail_response`, evidence is empty, and the run reports `degraded=False`, even though `dpr-fallback` computed usable passages in the same run. Before Phase 12 these items passed through unfiltered. The filter is tested at node level (`test_an_all_zero_ppr_branch_passes_no_item_on`), but the end-to-end consequence, a silently empty answer on a clean run, is not handled.
-
-**Fix:** When the PPR branch is empty after the zero filter, select the `dpr-fallback` items. If that path is meant to count as a declared degradation, surface it through the guard machinery rather than as a silent empty result. For example:
-```python
-if not guard_fired:
-    selected_items = [i for i in selected_items if i["score"] > 0.0]
-    if not selected_items:
-        selected_items = list(ctx.inputs["dpr-fallback"].get("items", []))
-```
-If this fallback is not acceptable under D-21, at least record the case in the port record's limits section.
-
-### A-WR-03: Malformed triple items are dropped silently, which contradicts D-08 and the port record
-
-**File:** `databasise/parts_core/hipporag/openie.py:113-129`; `databasise/evidence/HIPPORAG-PORT-RECORD.md:131-133`
-
-**Issue:** `_parse_triples` returns `None`, which counts as a failure, only when the response is not an object holding a `triples` list. Any item with the wrong arity, a non-string member or an empty string is skipped (lines 122-128). So `{"triples": [["Ed Wood","directed"]]}` or `{"triples": [[1,2,3]]}` counts as a valid response with zero triples, and the chunk silently adds nothing to the graph. The port record states: "An OpenIE response that fails to parse or validate raises instead of yielding an empty finding ... a loud refusal over a silently thinner graph." Item-level validation failures produce exactly the silently thinner graph that sentence rules out. `_parse_entities` has the same item-level leniency at line 110.
-
-**Fix:** Treat a list that contains any invalid item as `unparseable_response`, and keep `[]` as the only valid zero-triple response:
-```python
-for item in raw:
-    if not (isinstance(item, (list, tuple)) and len(item) == 3
-            and all(isinstance(v, str) and v.strip() for v in item)):
-        return None
-    triples.append(tuple(v.strip() for v in item))
-```
-If item-level leniency is intended, correct the port record's sentence and add the case to the HIPP-10 exception clause.
-
-### A-WR-04: `declared_capability` is still an unread config key, which HIPP-18's text forbids
-
-**File:** `databasise/wirings/hipporag/base.json:42,53,101`; `databasise/wirings/hipporag/corpus-ingest.json:48,59`; `databasise/tests/parts_core/hipporag/test_registration.py:130-138`
-
-**Issue:** HIPP-18 says: "Every config key in wirings/hipporag/base.json and wirings/hipporag/corpus-ingest.json is either read by its part body or removed." No Python module under `parts/`, `parts_core/`, `runner/`, `seam/`, `validator/` or `wirings/` reads `declared_capability`. I checked all of them. It remains on three nodes in `base.json` and two in `corpus-ingest.json`. The port record (lines 152-154) says it was kept on purpose. However, the REQUIREMENTS exception clauses in 12-CONTEXT.md cover HIPP-03/04/10/15/17 only, not HIPP-18. The pinning test checks a fixed list of seven key names, so it cannot detect any other unread key, this one or a future one.
-
-**Fix:** Remove `declared_capability` from both wirings (this changes only `config_hash`, as the record already says), or record a HIPP-18 exception clause in REQUIREMENTS.md. Either way, change the test from a denylist to an allowlist of the keys each part actually reads (for example `{"openie": {"max_concurrency"}, "assemble-result": {"top_k"}, ...}`), so a new unread key fails the test.
 
 ## Info
 
 ### IN-01: The `qa` one-shot text sends `$$94` / `$$940.3`, while upstream renders `$94` / `$940.3`
 
 **File:** `databasise/parts_core/hipporag/qa.py:30`
-
 **Issue:** Upstream builds its chat template with `string.Template` and calls `.substitute()` (`prompt_template_manager.py:120-133` in the reference clone), so the `$$` in `rag_qa_musique.py` reaches the model as `$`. The port copies `$$` into a plain string. The docstring claims the one-shot pair is "kept verbatim", but the model sees different text from what upstream sends.
-
 **Fix:** Use `$94 million` and `$940.3 million` in `_ONE_SHOT_DOCS`, or note the difference in the port record.
 
 ### IN-02: The DPR tests still put `chunk:`-prefixed ids into the `hipporag-chunks` vector namespace
 
 **File:** `databasise/tests/parts_core/hipporag/test_dpr_fallback_guard.py:82,114,148`
-
 **Issue:** D-01 limits the `chunk:` prefix to graph vertex names, and conftest was migrated to bare ids. These three tests still seed `chunk:c1` and similar ids into the chunk vector namespace. They pass, but they show an id form the real write path never produces.
-
 **Fix:** Seed bare ids (`c1`, `c2`, `c3`) and update the expected id lists.
 
 ### IN-03: The "thirteen" wording is stale after the 14th node
 
 **File:** `databasise/evidence/HIPPORAG-PORT-RECORD.md:1,38,40,42`; `databasise/tests/parts_core/hipporag/test_thirteen_positions.py:4-5`
-
 **Issue:** The record's title and findings rows 2, 4 and 6 still say "all thirteen" or "every one of the thirteen", while the cited tests now cover 14 nodes. The test module docstring still says "a single 13-node base wiring".
-
 **Fix:** Change these to "the thirteen governing positions plus the recorded `qa`".
 
 ### IN-04: The chunk-id preimage is ambiguous when a document id contains `:`
 
 **File:** `databasise/parts_core/hipporag/chunk_embed.py:89`
-
 **Issue:** `f"{document_id}:{ordinal}:{piece}"` gives the same preimage for (`"a:1"`, 0, `"x"`) and (`"a"`, 1, `"0:x"`). The seam's `_DOCUMENT_ID_TOKEN_RE` refuses `:`, so ingest through the engine is safe. The part itself accepts any id, though, for example from a parity build or a hand-built context.
-
 **Fix:** Hash a length-prefixed or JSON-encoded tuple, for example `json.dumps([document_id, ordinal, piece])`. This changes the D-03 id values, so do it only together with a rebuild.
 
 ### IN-05: OpenIE's fallback semaphore and model-identity handling
 
-**File:** `databasise/parts_core/hipporag/openie.py:198-200,209-211`
-
+**File:** `databasise/parts_core/hipporag/openie.py:202-204,213-215`
 **Issue:** On a hand-built context, the fallback `asyncio.Semaphore(int(config.get("max_concurrency", 1)))` hangs forever on `0` and raises `ValueError` on a negative value. The scheduler validates the value, but this fallback does not. The node also reports the last non-None `resolved_model_identity` across all chunk calls without a check, while `entity_fact_embed.py:131-137` refuses on a per-call identity mismatch (the WR-02 precedent).
-
 **Fix:** Use `max(1, int(...))` in the fallback, and apply the same identity-divergence refusal across the chunk results.
 
----
+### IN-07: A single non-string entity or blank triple member now refuses the whole document
 
-_Reviewed: 2026-10-19_
-_Reviewer: Claude (gsd-code-reviewer)_
-_Depth: deep_
+**File:** `databasise/parts_core/hipporag/openie.py:110-111,126-131`
+**Issue:** After A-WR-03, one numeric item in `entities` (for example a bare year, which JSON-mode models do emit) or one blank member in one triple makes the chunk `unparseable_response`, and a chunk failure refuses the whole ingest. The port record's D-08 entry accepts this trade-off, and the behaviour now matches it. The consequence for real providers is a higher refusal rate than the tests show, because the tests use stub clients that never emit such items. I did not check whether `.planning/TESTING-PLAN.md` lists it.
+**Fix:** No code change needed under D-08. Add the owner-run real-provider ingest check (rate of `unparseable_response` per corpus) to the testing plan if it is not there.
 
+### IN-08: The port record states upstream behaviour for an all-zero PPR that was not checked against the reference
 
-# Lane B
+**File:** `databasise/evidence/HIPPORAG-PORT-RECORD.md` (D-20 entry, "upstream returns its PPR ranking even when every score is 0")
+**Issue:** This sentence entered the record through the iteration-2 review's own A-WR-05 text, and neither the reviewer nor the fixer verified it. No upstream clone exists in this checkout (`find` for `HippoRAG.py` returns nothing), and the record's evidence-class convention marks every row `[code-verified]`. Upstream may instead raise or return a uniform ranking on an all-zero personalization vector, in which case the divergence is described wrongly.
+**Fix:** Check `HippoRAG.run_ppr` in the reference clone, then either keep the sentence with its citation (file and line) or reword it to "this port substitutes dense retrieval; upstream behaviour on an all-zero reset vector was not checked".
 
+### IN-09: The port record's guard sections still describe a single guard
 
-# Phase 12: Code Review Report (Lane B)
-
-**Reviewed:** 2026-10-19
-**Depth:** deep
-**Files Reviewed:** 27
-**Status:** issues_found
-
-## Summary
-
-Lane B covers the seam/engine, runner, stores and wiring-resolution changes of Phase 12, plus their tests. I followed the call chains into lane A where needed: `parts_core/hipporag/document_remover.py`, `openie.py`, `fact_filter.py`, `seam/promotion.py`, `runner/guards.py` and `parity/build_hipporag_index.py`. The D-08, D-09, D-11, D-13, D-14, D-16 and D-21 mechanics are implemented as decided. The 75 non-protected lane tests pass (`.venv/bin/pytest -q` on the ten non-protected files). I did not run the protected files because of the BAK guard.
-
-The critical finding is that a HippoRAG delete removes LightRAG's staged uploads from the shared workspace inbox, and it does so without holding the v1 gate. A scratch probe confirmed it: a HippoRAG `delete_document("report")` that returns `not_found` still unlinked `corpus-inbox/report.pdf` and `corpus-inbox/__parsed__/report.pdf`. The warnings cover:
-- the new HippoRAG corpus listing path, which can return a bare 500 on a bad manifest and can silently under-report;
-- a promotion `AssertionError` (500) on traces persisted before Phase 12;
-- test assertions that pass without checking anything.
-
-## Critical Issues
-
-### B-CR-01: A HippoRAG delete removes LightRAG's kept and in-flight uploads from the shared inbox
-
-**File:** `databasise/seam/engine.py:1700-1701`
-**Issue:** After a HippoRAG `delete_document` reports `success` or `not_found`, it calls `self._remove_inbox_files(document_id)`. That function unlinks every `<id>.*` file in `<store_root>/<workspace>/corpus-inbox/` and its `__parsed__/`. The inbox is v1's `INPUT_DIR` (`_inbox()`, line 1087), and only LightRAG stages files there; HippoRAG refuses raw uploads (`NoRawUploadPathForModalityError`). So for HippoRAG the call can only destroy another modality's data:
-- **Lost retry source.** A LightRAG upload kept after a v1 timeout, subprocess failure or malformed output (`_KEEP_STAGED`) is deleted. `retry_document` needs that file ("a retry needs the source").
-- **Race with a running LightRAG ingest.** D-12 removed the v1 gate from the HippoRAG delete path (line 1668). So the unlink can also hit a file that a concurrent LightRAG ingest of the same id has just exclusive-created and that v1 is reading.
-
-Using the same document id in both modalities is the project's core use case ("the same corpus, N modalities side-by-side"). It also breaks D-12's rule that a HippoRAG delete never touches v1 state.
-
-Probe result: a HippoRAG delete for `report` returned `not_found`, and the kept upload and its parsed copy were both gone afterwards.
-
-**Fix:**
-```python
-            if family == "lightrag" and result.get("status") in ("success", "not_found"):
-                self._remove_inbox_files(document_id)
-```
-Add a test: stage `corpus-inbox/<id>.pdf`, run a HippoRAG-selected delete, and assert the file still exists.
-
-## Warnings
-
-### B-WR-01: The HippoRAG corpus listing turns an undecodable or non-dict manifest into a bare 500
-
-**File:** `databasise/seam/engine.py:1774-1795`, `databasise/stores/probes.py:160`
-**Issue:** `_hipporag_manifests` catches only `sqlite3.Error`. Three other failures escape:
-- `list_kv_prefix` returns `json.loads(value)` unchecked, so a `doc:` row that is not valid JSON raises `JSONDecodeError`.
-- A row that decodes to a non-dict makes `manifest.get(...)` raise `AttributeError`.
-- `db_path.stat()` can raise `OSError` (for example `PermissionError`).
-
-All three reach FastAPI and MCP as unhandled exceptions. The v1 read routes in this module follow the 09 REVIEW WR-01 / SEAM-06 rule that a read route never answers with a bare 500: they map `_MALFORMED_RESULT` to `MalformedDriverOutput` and `OSError` to `StoreFault`. The new HippoRAG branch of `/corpus` and `/corpus/counts` (and MCP `status`) breaks that rule.
-**Fix:** In `_hipporag_manifests`, catch `OSError` as `StoreFault` and `_MALFORMED_RESULT` (`TypeError`, `ValueError`, `AttributeError`, `KeyError`) as `StoreCorrupted` or `MalformedDriverOutput`. Also validate `isinstance(manifest, dict)` before calling `.get`.
-
-### B-WR-02: `list_kv_prefix` can silently miss committed documents, or create `-shm`, around WAL edge states
-
-**File:** `databasise/stores/probes.py:143-145`
-**Issue:** The URI is `mode=ro&immutable=1` unless both `kv.sqlite3-wal` and `kv.sqlite3-shm` exist.
-- **Missed documents.** When a `-wal` with committed frames exists but `-shm` does not (a crash leftover or a copied store, the case `probe_kv`'s own comment names), the immutable connection ignores the WAL. The listing then omits manifests that are committed. `probe_kv` can accept stale WAL content because it only checks that the file opens. This function returns the document registry for D-13, so stale content here is a wrong answer.
-- **Created file.** The existence check and `sqlite3.connect` are not atomic. If the last writer closes in between and SQLite deletes both files, the `mode=ro` open runs on a WAL database with no `-shm`. `probe_kv`'s comment documents that this creates `-shm`, which breaks the "read path creates nothing" claim (LRAG-13).
-**Fix:** When `-wal` exists without `-shm`, refuse as `StoreBusy` or `StoreCorrupted` (or document the under-report). Re-check that `-shm` exists after connecting, and fall back to an immutable reopen if it has gone. At minimum, state in the docstring that a WAL-without-SHM store lists only checkpointed rows.
-
-### B-WR-03: Promoting a HippoRAG trace persisted before Phase 12 raises `AssertionError` (500)
-
-**File:** `databasise/wirings/resolve.py:148-180` (called from `databasise/seam/promotion.py:122-127`, `engine.py:2161`)
-**Issue:** `_arm_name_for_node_ids` accepts either the pruned run set or the full node set. After D-16 and D-19, HippoRAG's pruned set has 7 nodes and its full set has 14. A query trace persisted before Phase 12 dispatched the old 13 nodes (no `qa`, nothing pruned), so it matches neither and raises `AssertionError`. The function documents that as an "internal invariant, never a consumer-reachable refusal", but `POST /promote` with an old trace token reaches it.
-
-Verified: `_arm_name_for_node_ids(frozenset(full - {"qa"}))` raises `AssertionError`.
-
-This contradicts D-16's statement that "promotion.py:122-127 still matches old full-set traces".
-**Fix:** Convert the no-match case into a typed `SeamRefusalError` (a stale-trace refusal, 422). Alternatively, if old traces must stay promotable, record each wiring's prior node sets.
-
-### B-WR-04: Several new seam tests pass without verifying what they claim
-
-**File:** `databasise/tests/seam/test_hipporag_write_path.py:310-316, 394-399`; `databasise/tests/seam/test_hipporag_query_path.py:230-240`
-**Issue:**
-- **Post-delete "no evidence" checks.** Both wrap `engine.query(...)` in `except Exception` and then `assert not evidence`. Any exception satisfies the assertion, including a regression such as a `KeyError` in the pruned run, a store fault or a `TypeError`. Lines 397-398 discard the exception entirely.
-- **HIPP-11 top_k test.** It asserts `len(refs) <= 5` and `all(ref.score > 0 ...)`. Both hold when no evidence is returned, and nothing checks that the second arm took the PPR branch (`guards_fired == []`). Twenty documents that returned zero evidence would pass.
-**Fix:**
-- Catch only the refusal the comment names (for example `pytest.raises(EmptyNamespaceError)`), or assert that `query_error is None` or is of that type.
-- In the top_k test, assert `0 < len(dpr_refs) <= 5` and `0 < len(ppr_refs) <= 5`. Also assert from `resolve_trace(debug=True)` that fact-filter's `guards_fired` is `[]` for the PPR arm and non-empty for the DPR arm.
-
-## Info
+**File:** `databasise/evidence/HIPPORAG-PORT-RECORD.md` ("The guard-placement divergence", about lines 83-102; "The guard-observability resolution", about lines 104-116)
+**Issue:** After A-WR-05 the built `base.json` carries two per-query guards, `zero_surviving_facts_dpr_fallback` on `fact-filter` and `empty_ppr_dpr_stand_in` on `assemble-result`. The placement section says the built wiring carries "the guard" on `fact-filter`, and the observability section says "a fired guard" with no mention of the second one. The D-20 entry does describe the new guard correctly, so only the two dedicated sections are stale. Also, the fix report noted that the real-world frequency of the stand-in path is unmeasured (a one-chunk stub query still scored above 0), so the iteration-1 claim that a single-chunk corpus is always empty-PPR was wrong.
+**Fix:** Add one sentence to each of the two sections naming the second guard and pointing to the D-20 entry.
 
 ### B-IN-01: Query pruning can drop the `evidence_position` node without any signal
 
@@ -336,16 +181,50 @@ This contradicts D-16's statement that "promotion.py:122-127 still matches old f
 
 ### B-IN-06: Redaction and node-id coverage gaps
 
-**File:** `databasise/foreign/v1_corpus_adapter.py:60-66`; `databasise/seam/engine.py:2019`
+**File:** `databasise/foreign/v1_corpus_adapter.py:60-66`; `databasise/seam/engine.py:2023`
 **Issue:**
 - `redact_secrets` does not mask `?access_token=`, `?token=` or a bare Google `AIza...` key outside a `key=` parameter. All three appear in provider SDK error strings.
 - The query-path store fault calls `_foreign_fault` without `node_id`, so its log line reads `node=-`, while the ingest and delete paths name the node (D-09). The difference is minor but makes query faults harder to trace.
+
 **Fix:**
 - Add `(?i)([?&](?:access_)?token=)[^\s'\",&]+` and `\bAIza[0-9A-Za-z_-]{20,}`.
-- Pass the failing node id at line 2019 (iterate `node_exceptions.items()`).
+- Pass the failing node id at the `_foreign_fault("query", ...)` call (iterate `node_exceptions.items()`).
+
+### B-IN-08: The strict replacement tests depend on private helpers of protected test modules, and the lax originals remain
+
+**File:** `databasise/tests/seam/test_hipporag_review_fixes.py` (the helper imports from `seam.test_hipporag_write_path` and `seam.test_hipporag_query_path`, now also in `_hipporag_envelope` and the A-WR-05 test); `databasise/tests/seam/test_hipporag_write_path.py:310-316,394-399`; `databasise/tests/seam/test_hipporag_query_path.py:230-240`
+**Issue:** This is the residual of B-WR-04. The new tests are strict and pass. They get their fixtures by importing underscore-named helpers (`_DOCUMENT_TEXT`, `_StubEmbeddingClient`, `_KeepAllFactsLLMClient`, `_refs_over_twenty_documents`, ...) from two ledger-protected test modules, which couples them to those modules' internals; a rename there breaks them at import time. Iteration 2 added two more such imports. The three lax assertions in the protected modules (`except Exception` then `assert not evidence`, and the `<= 5` / `all(score > 0)` pair that holds with zero refs) are unchanged and still pass on a regression. Tightening them in place needs the owner's `grant-check-edit`.
+**Fix:** Move the shared stubs to a helper module that is not a test file, or accept the coupling and note it. Ask the owner for the grant to tighten the three originals.
+
+## Resolved in iteration 1 fixes
+
+All ten Critical/Warning findings of iteration 1 were verified resolved in iteration 2 (commits 26ca959, f4ef3ba, 27dd16d, 25ea962, e869d26, 76441a9, 0d42188, edd4883). Their evidence is in the iteration-2 review and is not repeated at length.
+
+- **A-CR-01** (Critical): a re-ingest no longer deletes another document's synonymy edges. A scratch probe showed an exact edge-map round trip, and a changed re-ingest dropped only the removed entity's edge.
+- **B-CR-01** (Critical): a HippoRAG delete no longer unlinks LightRAG's staged uploads.
+- **A-WR-01**: `assemble-result` tolerates `config=None` and refuses `top_k < 1`.
+- **A-WR-02**: an empty PPR branch no longer returns an empty answer; the dense items answer. Its observability residual (A-WR-05) is resolved below.
+- **A-WR-03**: an OpenIE list with any invalid item is `unparseable_response`. Consequence noted as IN-07.
+- **A-WR-04**: the unread `declared_capability` keys are removed, and the allowlist test fails on any unread key.
+- **B-WR-01**: a bad or non-dict manifest row maps to `MalformedDriverOutput`, and store and OS errors map to `StoreFault`.
+- **B-WR-02**: a WAL with frames and no `-shm` is refused instead of listed short.
+- **B-WR-03**: a pre-Phase-12 HippoRAG trace shape promotes, and an unknown shape is a 404 refusal.
+- **B-WR-04**: strict replacement tests exist and pass. The lax protected originals are carried as B-IN-08.
+
+## Resolved in iteration 2 fixes
+
+### A-WR-05 (was Warning): The dense stand-in on an empty PPR branch is invisible in the trace and absent from the port record. Resolved by e85c3fc.
+The stand-in is now a declared degradation: `assemble-result` returns `_StandInResult` with `dpr_stand_in`, and `base.json` declares the per-query guard `empty_ppr_dpr_stand_in` on it. I verified the guard declaration validates, that `_flag` leaves `fact-filter`'s guard unchanged, that the scheduler evaluates each node's guards against its own output, that the two guards cannot both fire in one run, and that `qa` and evidence minting still read a plain `items` list. The test `test_an_empty_ppr_query_reads_degraded_with_the_node_free_reason` covers both the stand-in run and a clean PPR run, and passes. The port record's D-20 entry describes the guard and the cross-modality refusal accurately (checked against `parity/run_cross_modality.py:339-347` and the scheduler's D-21 block). The wiring `config_hash` changes again, which is expected and the same class as the A-WR-04 change. Two documentation leftovers are IN-08 and IN-09. The fix report leaves open whether the owner wants the guard name in the S4 trace records.
+
+### IN-06 (was Info): Docstring and port record still say a synonymy pair is "never re-emitted". Resolved by f69256e.
+Both the `synonymy_edges.py` docstring and the port record's D-05 entry now state the A-CR-01 restore as the one exception. The docstring line is longer than the surrounding wrap width (cosmetic).
+
+### B-IN-07 (was Info): `list_kv_prefix` turns a benign WAL-removal race into a `StoreFault`. Resolved by f886e2c.
+The WAL stat is guarded with `except FileNotFoundError`, and the new test simulates the vanishing WAL. The wider writer-closes-between-check-and-open race remains documented in the docstring.
 
 ---
 
 _Reviewed: 2026-10-19_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: deep_
+_Iteration: 3_
