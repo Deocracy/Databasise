@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Engine Fixes + Operator Console
-current_phase: 12
-current_phase_name: HippoRAG Fixes
-status: verifying
-stopped_at: Completed 12-14-PLAN.md
-last_updated: "2026-10-19T21:11:02.541Z"
+current_phase: 13
+current_phase_name: Selectors, Wiring & Runner
+status: planning
+stopped_at: Phase 12 complete, ready to plan Phase 13
+last_updated: "2026-10-19T23:09:55.562Z"
 last_activity: 2026-10-19
-last_activity_desc: Phase 12 execution started
-state_head: ea1cbe9261916ed871320c3eba3477b93acb4a32
+last_activity_desc: Phase 12 complete, transitioned to Phase 13
+state_head: a5d4aa4db43732ea8a0cc6f5a7177e41e2c6bd0d
 progress:
   total_phases: 11
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 57
   completed_plans: 57
-  percent: 36
+  percent: 45
 ---
 
 # Project State
@@ -29,12 +29,12 @@ See: .planning/PROJECT.md (updated 2026-10-19 after Phase 11)
 
 ## Current Position
 
-Phase: 12 (HippoRAG Fixes) — EXECUTING
-Plan: 14 of 14
-Status: Phase complete — ready for verification
-Last activity: 2026-10-19 — Phase 12 execution started
+Phase: 13 — Selectors, Wiring & Runner
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-19 — Phase 12 complete, transitioned to Phase 13
 
-Progress: [████░░░░░░] 36% (4/11 phases)
+Progress: [█████░░░░░] 45% (4/11 phases)
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Progress: [████░░░░░░] 36% (4/11 phases)
 | 9 | 10 | - | - |
 | 10 | 12 | - | - |
 | 11 | 11 | - | - |
+| 12 | 14 | - | - |
 
 **Recent Trend:**
 
@@ -262,7 +263,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 ## Session Continuity
 
 Last session: 2026-10-19T21:11:02.344Z
-Stopped at: Completed 12-14-PLAN.md
+Stopped at: Phase 12 complete, ready to plan Phase 13
 Resume file: None
 
 ## Operator Next Steps
