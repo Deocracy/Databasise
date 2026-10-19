@@ -1,5 +1,5 @@
 {
-  "ledger_version": 545,
+  "ledger_version": 546,
   "frozen_at": null,
   "items": [
     {
@@ -2369,7 +2369,7 @@
       "kind": "requirement"
     }
   ],
-  "current_phase": "11",
+  "current_phase": "12",
   "check_cmd": null,
   "mockup_freeze": null,
   "scope_lock": null,
