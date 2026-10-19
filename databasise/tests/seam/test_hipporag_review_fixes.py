@@ -191,6 +191,58 @@ def test_a_pre_phase_12_hipporag_trace_still_matches_its_wiring_and_an_unknown_s
         _arm_name_for_node_ids(frozenset({"not-a-node"}), trace_reference="trace-123")
 
 
+async def _hipporag_envelope(store_root, llm, n_documents, workspace):
+    from seam.test_hipporag_write_path import _DOCUMENT_TEXT, _HIPPORAG_CAPABILITY, _StubEmbeddingClient
+
+    from databasise.seam import QueryObject
+
+    engine = Databasise(
+        store_root=store_root,
+        workspace=workspace,
+        clients={"embedding": _StubEmbeddingClient(), "llm": llm},
+    )
+    selector = Selector(capability=_HIPPORAG_CAPABILITY)
+    for index in range(n_documents):
+        await engine.ingest(
+            IngestDocument(document_id=f"stand-in-{index}", text=f"{_DOCUMENT_TEXT} Variant {index}."),
+            selector=selector,
+        )
+    envelope = await engine.query(QueryObject(text="What did Ed Wood direct?"), selector)
+    trace = await engine.resolve_trace(envelope.trace_token, debug=True)
+    node = next(n for n in trace["nodes"] if n["node_id"] == "assemble-result")
+    return envelope, node
+
+
+async def test_an_empty_ppr_query_reads_degraded_with_the_node_free_reason(store_root, tmp_path, monkeypatch):
+    """A-WR-05 (D-21): answering from dpr-fallback because PPR reached nothing is a declared
+    degradation path: the node reports the guard, the run reads degraded, and the reason codes name
+    no node or guard. A query answered by PPR itself reads clean."""
+    from seam.test_hipporag_query_path import _KeepAllFactsLLMClient
+
+    from databasise.parts_core.hipporag.ppr import HIPPORAG_PPR_RETRIEVER_PART
+
+    normal, normal_node = await _hipporag_envelope(tmp_path / "ppr", _KeepAllFactsLLMClient(), 3, "ppr-ws")
+
+    real_ppr = HIPPORAG_PPR_RETRIEVER_PART.body
+
+    async def ppr_reaching_nothing(ctx):  # every PPR score 0: the degenerate reset vector of A-WR-02
+        output = await real_ppr(ctx)
+        return {**output, "items": [{**item, "score": 0.0} for item in output["items"]]}
+
+    monkeypatch.setattr(HIPPORAG_PPR_RETRIEVER_PART, "body", ppr_reaching_nothing)
+    stand_in, stand_in_node = await _hipporag_envelope(store_root, _KeepAllFactsLLMClient(), 3, "stand-in-ws")
+
+    assert stand_in.evidence, "the dense stand-in must still answer"
+    assert stand_in_node["guards_fired"] == ["empty_ppr_dpr_stand_in"]
+    assert (stand_in.degraded, stand_in.stop_reason, stand_in.degradation_reason) == (
+        True,
+        "declared_fallback",
+        "fallback_path_taken",
+    )
+    assert normal_node["guards_fired"] == []
+    assert (normal.degraded, normal.stop_reason, normal.degradation_reason) == (False, None, None)
+
+
 # --- B-WR-04: strict replacements for lax assertions in the protected write-path/query-path tests ---
 # The protected tests wrap the post-delete query in ``except Exception`` (write_path.py:310-316, 394-399)
 # and assert only ``<= 5`` / ``> 0`` in the top_k test (query_path.py:230-240); these pin what they claim.

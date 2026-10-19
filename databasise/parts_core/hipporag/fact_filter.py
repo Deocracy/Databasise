@@ -72,9 +72,11 @@ class _GuardAwareResult(dict):
     docstring for the full reasoning.
     """
 
+    _flag = "guard_fired"  # the output key a bool sentinel is compared against; a subclass may rename it
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, bool):
-            return bool(self.get("guard_fired")) == other
+            return bool(self.get(self._flag)) == other
         return super().__eq__(other)
 
     def __ne__(self, other: object) -> bool:

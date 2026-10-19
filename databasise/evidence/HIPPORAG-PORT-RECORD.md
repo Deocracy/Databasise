@@ -133,7 +133,14 @@ pinning tests are named in the Phase 12 plan summaries.
   where upstream logs and continues. The trade-off is a loud refusal over a silently thinner graph.
 - **D-20, `top_k` default 5.** `assemble-result` keeps the first `top_k` items of the selected branch
   (default 5, upstream `qa_top_k`), after dropping zero-score PPR items. Dense passage retrieval is
-  never cut. This bounds both the `qa` prompt and the minted evidence.
+  never cut. This bounds both the `qa` prompt and the minted evidence. Divergence from upstream
+  (A-WR-02, A-WR-05): upstream returns its PPR ranking even when every score is 0. Here, if no PPR
+  item scores above 0 (an all-zero reset vector), `dpr-fallback`'s items answer instead. That is a
+  declared degradation path under D-21: `base.json` declares the per-query guard
+  `empty_ppr_dpr_stand_in` on `assemble-result`, so the node's `guards_fired` names it and the run
+  reads `degraded` (not `partial`) with `declared_fallback` / `fallback_path_taken`. Like the
+  `fact-filter` guard, a cross-modality arm that took it is one `parity/run_cross_modality.py`
+  refuses (CONTRACT §5, tenth refusal).
 - **D-19, `qa` costs a call.** The `qa` node adds one LLM call per HippoRAG query. The owner-run check
   of its answer quality and per-query cost is listed in section 2 of `.planning/TESTING-PLAN.md`.
 - **D-03, chunk id form.** A chunk id is `sha256(document_id:ordinal:text)` (sha256 over the

@@ -110,7 +110,7 @@ _READ_KEYS: dict[str, set[str]] = {
     "fact-filter": {"guards", "linking_top_k"},
     "reset-vector-join": {"arity", "passage_node_weight"},
     "ppr": {"damping"},
-    "assemble-result": {"top_k"},
+    "assemble-result": {"top_k", "guards"},
 }
 
 

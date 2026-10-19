@@ -103,7 +103,15 @@
       "kind": "assembler",
       "effects": ["reads_kv"],
       "config": {
-        "top_k": 5
+        "top_k": 5,
+        "guards": [
+          {
+            "name": "empty_ppr_dpr_stand_in",
+            "evaluating_node": "assemble-result",
+            "value_when_not_fired": false,
+            "granularity": "per-query"
+          }
+        ]
       },
       "deps": ["ppr", "dpr-fallback", "fact-filter"]
     },
