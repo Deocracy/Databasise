@@ -614,3 +614,4 @@
 {"v": 614, "ts": "2026-10-19T21:25:31Z", "op": "set-status", "id": "RUN-01", "changes": {"status": ["open", "done"]}}
 {"v": 615, "ts": "2026-10-19T21:25:31Z", "op": "set-status", "id": "RUN-10", "changes": {"status": ["open", "done"]}}
 {"v": 616, "ts": "2026-10-19T21:26:38Z", "op": "plant-run", "id": "RUN-01", "ref": "databasise/tests/seam/test_run01_coverage_crosscheck.py", "check_sha256": "3da3eb8683a6556bf3e29bde7ec7d19257bcf6371a55245b5be90450985e9258", "plants_sha256": "6c278a5a988bb146e433c1709f6ed46700337ff5cdc3483108af0dd14cf5b535", "head": "68b90b1f0c94aad70664d78a838c9f4aeef35857", "results": [{"n": 1, "file": "databasise/evidence/COVERAGE.md", "exit": 1, "killed": true}, {"n": 2, "file": "databasise/mcp/server.py", "exit": 1, "killed": true}]}
+{"v": 617, "ts": "2026-10-19T23:12:33Z", "op": "set-phase", "id": "", "changes": {"current_phase": ["12", "13"]}}
