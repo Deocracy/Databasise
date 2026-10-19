@@ -1697,7 +1697,9 @@ class Databasise:
                 for store in stores.values():
                     await store.finalize()
 
-            if result.get("status") in ("success", "not_found"):
+            # B-CR-01: the inbox holds only LightRAG's staged uploads, and a HippoRAG delete holds
+            # no v1 gate, so it must neither lose a kept retry source nor race a v1 ingest.
+            if family == "lightrag" and result.get("status") in ("success", "not_found"):
                 self._remove_inbox_files(document_id)
         node_by_id = {node.node_id: node for node in scheduled["nodes"]}
         seam_events = _mach11_events(parsed, touches, node_by_id)

@@ -99,3 +99,24 @@ async def test_reingesting_a_document_keeps_synonymy_edges_other_documents_creat
     await engine.ingest(first, selector=_HIPPORAG)
 
     assert await y_synonymy_pairs() == before
+
+
+async def test_a_hipporag_delete_leaves_lightrags_staged_uploads_alone(store_root):
+    """B-CR-01: the inbox is LightRAG's; a HippoRAG delete of the same id must not unlink from it."""
+    workspace = "inbox-ws"
+    engine = Databasise(
+        store_root=store_root,
+        workspace=workspace,
+        clients={"embedding": _ClusterEmbeddingClient(), "llm": _TwoDocumentLLMClient()},
+    )
+    inbox = store_root / workspace / "corpus-inbox"
+    (inbox / "__parsed__").mkdir(parents=True)
+    kept = inbox / "report.pdf"
+    parsed = inbox / "__parsed__" / "report.pdf"
+    kept.write_bytes(b"%PDF kept for retry")
+    parsed.write_bytes(b"%PDF parsed")
+
+    outcome = await engine.delete_document("report", selector=_HIPPORAG)
+
+    assert outcome.status == "not_found"
+    assert kept.exists() and parsed.exists()
