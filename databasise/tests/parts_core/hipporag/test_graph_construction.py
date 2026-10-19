@@ -252,6 +252,69 @@ async def test_graph_augment_persist_collapses_two_edge_types_into_summed_weight
     assert set(edge["edge_types"]) == {"fact-cooccurrence", "synonymy"}
 
 
+async def _persist_ingest(
+    graph_store: CozoGraphStore,
+    findings: list[dict[str, Any]],
+    synonymy_edges: list[dict[str, Any]] | None = None,
+) -> None:
+    """One ingest's graph-side run: fact/passage edges from ``findings``, an optional synonymy
+    stream, persist, then the engine's commit."""
+    openie_output = {"findings": findings}
+    fact_result = await HIPPORAG_FACT_EDGE_BUILDER_PART.body(
+        _ctx("fact-edges", inputs={"openie": openie_output})
+    )
+    passage_result = await HIPPORAG_PASSAGE_EDGE_BUILDER_PART.body(
+        _ctx("passage-edges", inputs={"openie": openie_output})
+    )
+    await HIPPORAG_GRAPH_MATERIALIZER_PART.body(
+        _ctx(
+            "graph-augment-persist",
+            inputs={
+                "fact-edges": fact_result,
+                "passage-edges": passage_result,
+                "synonymy-edges": {"edges": synonymy_edges or []},
+            },
+            stores={"graph": graph_store},
+        )
+    )
+    await graph_store.index_done_callback()
+
+
+async def test_cooccurrence_weight_and_types_accumulate_across_ingests(store_root):
+    """HIPP-08 (12-03, D-04): a later ingest adds to an edge instead of replacing it; synonymy
+    adds its own weight and type; re-ingesting the same chunk ids raises nothing; a chunk-entity
+    edge stays at weight 1.0."""
+    graph_store = CozoGraphStore(
+        namespace="hipporag-graph", workspace="accumulate-ws", store_root=store_root
+    )
+    wood, films = _entity_ref("Ed Wood"), _entity_ref("films")
+    d1 = [_finding("Ed Wood", "directed", "films", "c-d1")]
+    d2 = [_finding("Ed Wood", "directed", "films", "c-d2")]
+    d3 = [_finding("cat", "sat_on", "mat", "c-d3")]
+
+    await _persist_ingest(graph_store, d1)
+    await _persist_ingest(graph_store, d2)
+    after_d2 = await graph_store.get_edge(wood, films)
+    assert after_d2["weight"] == 2.0
+    assert "fact-cooccurrence" in after_d2["edge_types"]
+
+    await _persist_ingest(graph_store, d3)
+    after_d3 = await graph_store.get_edge(wood, films)
+    assert after_d3["weight"] == 2.0
+    assert after_d3["edge_types"] == after_d2["edge_types"]
+
+    await _persist_ingest(graph_store, [], [_edge(wood, films, 0.9, "synonymy")])
+    after_d4 = await graph_store.get_edge(wood, films)
+    assert after_d4["weight"] == 2.0 + 0.9
+    assert {"fact-cooccurrence", "synonymy"} <= set(after_d4["edge_types"])
+
+    await _persist_ingest(graph_store, d1)
+    assert (await graph_store.get_edge(wood, films))["weight"] == 2.0 + 0.9
+
+    # a chunk-entity edge never accumulates a co-occurrence count
+    assert (await graph_store.get_edge(_chunk_ref("c-d1"), wood))["weight"] == 1.0
+
+
 async def test_graph_augment_persist_round_trips_through_export_to_igraph_with_negative_control(
     store_root,
 ):

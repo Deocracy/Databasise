@@ -19,6 +19,11 @@ order-insensitive-pair convention ``databasise/parts_core/lightrag/join_roundrob
 ``_relation_key`` already establishes, rather than inventing a second one — so ``A-B`` and ``B-A``
 collapse to one edge, never two.
 
+Each edge also carries ``by_chunk``, ``{chunk_id: count}`` with the same one-per-finding counting
+(the same triple twice in one chunk counts 2), and ``weight`` is its sum. ``graph-augment-persist``
+merges that map into the stored edge per chunk key, so re-ingesting a chunk overwrites its own
+count instead of adding to it (HIPP-08, D-04).
+
 Entity vertex refs use ``ENTITY_VERTEX_PREFIX`` imported from ``entity_fact_embed.py`` (the
 identity space ``export_to_igraph``/``reset-vector-join``/``ppr`` all share) — this module defines
 no prefix literal of its own.
@@ -47,18 +52,26 @@ async def _fact_edges_body(ctx: NodeContext) -> dict[str, Any]:
     openie_output = ctx.inputs["openie"]
     findings = list(openie_output.get("findings", []))
 
-    weight_by_pair: dict[tuple[str, str], float] = {}
+    by_chunk_by_pair: dict[tuple[str, str], dict[str, float]] = {}
     for finding in findings:
         subject_ref = _entity_ref(finding["subject"])
         object_ref = _entity_ref(finding["object"])
         if subject_ref == object_ref:
             continue
         pair = _canonical_pair(subject_ref, object_ref)
-        weight_by_pair[pair] = weight_by_pair.get(pair, 0.0) + 1.0
+        counts = by_chunk_by_pair.setdefault(pair, {})
+        chunk_id = str(finding.get("chunk_id", ""))
+        counts[chunk_id] = counts.get(chunk_id, 0.0) + 1.0
 
     edges = [
-        {"src": src, "tgt": tgt, "weight": weight, "edge_type": _EDGE_TYPE}
-        for (src, tgt), weight in sorted(weight_by_pair.items())
+        {
+            "src": src,
+            "tgt": tgt,
+            "weight": sum(by_chunk.values()),
+            "by_chunk": by_chunk,
+            "edge_type": _EDGE_TYPE,
+        }
+        for (src, tgt), by_chunk in sorted(by_chunk_by_pair.items())
     ]
     return {"edges": edges}
 

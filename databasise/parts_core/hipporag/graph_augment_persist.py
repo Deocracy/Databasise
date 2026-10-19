@@ -25,12 +25,19 @@ rule, and its output MUST NOT go to ``shared`` (CONTRACT.md §3: "An opaque node
 ``quarantined`` and MUST NOT write ``shared``"). A ``shared`` write here would make an index that
 has earned nothing eligible for reuse by another arm.
 
-**The collapse.** Distinct vertex refs across all three edge streams are each persisted once via
-``upsert_node``. Edges are grouped by canonical endpoint pair (mirroring ``fact_edges.py``'s own
-``_canonical_pair`` convention) and their weights summed into the single ``weight`` attribute
-``export_to_igraph`` reads — ``## §H``'s "single ``weight`` edge attribute collapsing all three
-edge types into one weighted view" clause. The contributing edge types are recorded on the edge's
-own ``edge_types`` attrs list, so the collapse is auditable rather than lossy. The
+**The collapse and the cross-ingest merge (D-04).** Distinct vertex refs across all three edge
+streams are each persisted once via ``upsert_node``. Edges are grouped by canonical endpoint pair
+(mirroring ``fact_edges.py``'s own ``_canonical_pair`` convention). For each pair the stored edge is
+read (``get_edge``) and merged with this run's contribution, then written back through
+``upsert_edge``: ``cooccurrence_by_chunk`` is the stored map overwritten per chunk key by the run's
+``fact-cooccurrence`` counts (a fact edge without ``by_chunk`` contributes its weight under key
+``""``), so re-ingesting the same chunk ids raises nothing; ``synonymy_weight`` is the max of stored
+and incoming; ``passage_weight`` is 1.0 once a ``passage-entity`` edge was seen and never a count;
+``edge_types`` is stored types then new ones; ``weight = sum(cooccurrence_by_chunk) +
+synonymy_weight + passage_weight`` is the single attribute ``export_to_igraph`` reads (``## §H``'s
+"single ``weight`` edge attribute collapsing all three edge types into one weighted view" clause).
+The map and the types are persisted on the edge, not exported. An edge of any other type raises
+``ValueError``. Stores written before Phase 12 carry no per-chunk map and are rebuild-required. The
 ``passage-edges`` ``vertices`` stream is upserted too, so a chunk with no edge still gets a vertex
 (HIPP-06, D-02).
 
@@ -52,6 +59,9 @@ from databasise.parts.schema import ArtifactScope, NodeContext, Part
 _NAME_AT_VERSION = "hipporag/graph-materializer@0.1.0"
 _ARTIFACT_SCOPE: ArtifactScope = "quarantined"
 _EDGE_STREAM_NODE_IDS = ("fact-edges", "passage-edges", "synonymy-edges")
+_FACT_TYPE = "fact-cooccurrence"
+_SYNONYMY_TYPE = "synonymy"
+_PASSAGE_TYPE = "passage-entity"
 
 
 def _canonical_pair(a: str, b: str) -> tuple[str, str]:
@@ -65,30 +75,52 @@ async def _graph_augment_persist_body(ctx: NodeContext) -> dict[str, Any]:
         all_edges.extend(stream.get("edges", []))
 
     vertex_refs: set[str] = set(ctx.inputs.get("passage-edges", {}).get("vertices", []))
-    weight_by_pair: dict[tuple[str, str], float] = {}
-    types_by_pair: dict[tuple[str, str], list[str]] = {}
+    incoming: dict[tuple[str, str], dict[str, Any]] = {}
     for edge in all_edges:
         src, tgt = str(edge["src"]), str(edge["tgt"])
         vertex_refs.add(src)
         vertex_refs.add(tgt)
-        pair = _canonical_pair(src, tgt)
-        weight_by_pair[pair] = weight_by_pair.get(pair, 0.0) + float(edge.get("weight", 1.0))
         edge_type = str(edge.get("edge_type", "unknown"))
-        types = types_by_pair.setdefault(pair, [])
-        if edge_type not in types:
-            types.append(edge_type)
+        slot = incoming.setdefault(
+            _canonical_pair(src, tgt),
+            {"by_chunk": {}, "synonymy": 0.0, "passage": 0.0, "types": []},
+        )
+        if edge_type == _FACT_TYPE:
+            by_chunk = edge.get("by_chunk") or {"": float(edge.get("weight", 1.0))}
+            for chunk_id, count in by_chunk.items():
+                slot["by_chunk"][chunk_id] = slot["by_chunk"].get(chunk_id, 0.0) + float(count)
+        elif edge_type == _SYNONYMY_TYPE:
+            slot["synonymy"] = max(slot["synonymy"], float(edge.get("weight", 1.0)))
+        elif edge_type == _PASSAGE_TYPE:
+            slot["passage"] = 1.0
+        else:
+            raise ValueError(f"graph-augment-persist: unknown edge type {edge_type!r}")
+        if edge_type not in slot["types"]:
+            slot["types"].append(edge_type)
 
     graph_store = ctx.stores["graph"]
     for vertex_ref in sorted(vertex_refs):
         await graph_store.upsert_node(vertex_ref, {})
-    for pair, weight in weight_by_pair.items():
-        src, tgt = pair
+    for (src, tgt), slot in incoming.items():
+        stored = await graph_store.get_edge(src, tgt) or {}
+        by_chunk = {**stored.get("cooccurrence_by_chunk", {}), **slot["by_chunk"]}
+        synonymy_weight = max(float(stored.get("synonymy_weight", 0.0)), slot["synonymy"])
+        passage_weight = max(float(stored.get("passage_weight", 0.0)), slot["passage"])
+        edge_types = list(dict.fromkeys([*stored.get("edge_types", []), *slot["types"]]))
         await graph_store.upsert_edge(
-            src, tgt, {"weight": weight, "edge_types": types_by_pair[pair]}
+            src,
+            tgt,
+            {
+                "weight": sum(by_chunk.values()) + synonymy_weight + passage_weight,
+                "edge_types": edge_types,
+                "cooccurrence_by_chunk": by_chunk,
+                "synonymy_weight": synonymy_weight,
+                "passage_weight": passage_weight,
+            },
         )
 
     return {
-        "artifact": {"node_count": len(vertex_refs), "edge_count": len(weight_by_pair)},
+        "artifact": {"node_count": len(vertex_refs), "edge_count": len(incoming)},
         "artifact_scope": _ARTIFACT_SCOPE,
     }
 
