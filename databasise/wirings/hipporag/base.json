@@ -122,7 +122,7 @@
   "recipe": { "chunker": "chunk-embed", "embedding": "chunk-embed", "extraction": "openie" },
   "harnesses": [],
   "provides": ["assemble-result"],
-  "consumes_query": ["fact-score", "reset-vector-join", "dpr-fallback"],
+  "consumes_query": ["fact-score", "fact-filter", "reset-vector-join", "dpr-fallback"],
   "evidence_position": { "node": "assemble-result", "namespace": "hipporag-chunks" },
   "store_namespaces": { "kv": "hipporag-text-chunks", "graph": "hipporag-graph" }
 }

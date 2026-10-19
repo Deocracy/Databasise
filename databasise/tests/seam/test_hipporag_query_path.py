@@ -31,6 +31,21 @@ _QUERY_SIDE_NODES = {
     "dpr-fallback",
     "assemble-result",
 }
+_QUERY_OPEN = "---Query---\n"
+_QUERY_CLOSE = "\n\n---Candidate Facts---"
+
+
+class _CapturingFactFilterLLMClient(_StubIngestQueryLLMClient):
+    """Records every fact-filter prompt; answers like the write-path stub (keep_ids [])."""
+
+    def __init__(self):
+        self.fact_filter_prompts: list[str] = []
+
+    async def chat(self, messages, **kwargs):
+        content = messages[0]["content"]
+        if "---Candidate Facts---" in content:
+            self.fact_filter_prompts.append(content)
+        return await super().chat(messages, **kwargs)
 
 
 async def _ingested_engine(store_root, llm) -> tuple[Databasise, Selector]:
@@ -53,3 +68,28 @@ async def test_a_hipporag_query_trace_names_only_query_side_nodes(store_root):
     node_ids = {node["node_id"] for node in trace["nodes"]}
     assert node_ids & _INDEX_SIDE_NODES == set(), node_ids
     assert node_ids <= _QUERY_SIDE_NODES, node_ids
+
+
+def _query_section(prompt: str) -> str:
+    start = prompt.find(_QUERY_OPEN)
+    end = prompt.find(_QUERY_CLOSE)
+    if start < 0 or end < 0:
+        return f"<markers missing: start={start} end={end}>"
+    return prompt[start + len(_QUERY_OPEN) : end]
+
+
+async def test_fact_filter_prompt_carries_the_query_between_the_markers(store_root):
+    llm = _CapturingFactFilterLLMClient()
+    engine, selector = await _ingested_engine(store_root, llm)
+
+    captured: dict[str, str] = {}
+    for query in ("What did Ed Wood direct?", "Qui a réalisé ce film ?"):
+        llm.fact_filter_prompts.clear()
+        await engine.query(QueryObject(text=query), selector)
+        prompts = list(llm.fact_filter_prompts)
+        captured[query] = _query_section(prompts[0]) if prompts else "<no fact-filter prompt>"
+
+    assert captured == {
+        "What did Ed Wood direct?": "What did Ed Wood direct?",
+        "Qui a réalisé ce film ?": "Qui a réalisé ce film ?",
+    }
