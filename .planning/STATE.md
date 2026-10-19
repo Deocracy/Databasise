@@ -22,10 +22,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-19 after Phase 11)
+See: .planning/PROJECT.md (updated 2026-10-19 after Phase 12)
 
 **Core value:** Modalities are swappable without consumers noticing — LightRAG and HippoRAG 2 both live behind one unchanging §18 envelope, comparable side-by-side on the rig.
-**Current focus:** Phase 12 — HippoRAG Fixes
+**Current focus:** Phase 13 — Selectors, Wiring & Runner
 
 ## Current Position
 
@@ -230,9 +230,12 @@ None yet.
 - [Phase 10] Six Info review items stay open in 10-REVIEW-DISPOSITION.md (accepted limits; kv no-such-table plus -wal leniency; a directory named kv.sqlite3 reads absent; drift-test comment; finalize loops stop at the first failing finalize, also in engine.py; snapshot log text). Node ids still appear in consumer stop_reason/degradation_reason; Phase 13 WIRE owns node-free consumer text.
 - [Phase 10] The 24 protected test files now include the 16 SEAM test files; Phase 10 needed one grant (test_refusal_status_codes.py). Once STOR test_refs are set, the STOR test files join the list.
 - [Phase 10] STOR-07 delete atomicity is proven on a v2 fixture wiring only; the LightRAG delete stages no v2 writes until M-04 (Phase 11).
-- [Phase 11] Routed to Phase 12 by the owner (UAT item 4): A-WR-05, in-process HippoRAG provider errors are logged unredacted; fix with a grant-check-edit on tests/seam/test_foreign_engine_refusal.py so it pins the redacted form.
-- [Phase 11] Deferred to TESTING-PLAN §2: live LightRAG write metering (LRAG-11) and retry of a raw upload stuck mid-parse (LRAG-07). The empty-namespace pre-check covers LightRAG namespaces only; HippoRAG needs its own (Phase 12).
-- [Phase 11] BAK ledger: every done row now needs S3/S4/S5 trace records, a fail-first record-fail --at a pre-fix commit (absolute venv python, PYTHONPATH=$PWD), and plant runs for checks edited under a grant. Traces go stale when quoted files change; refresh after review fixes. RUN-01 and RUN-10 need replacement checks (owner chose dispute-check route) and the owner baseline-checks.
+- [Phase 12] A-WR-05 resolved: the engine fault log carries a redacted traceback and no exc_info (owner grant on test_foreign_engine_refusal.py line 118; SEAM-05 plants 2/2 killed).
+- [Phase 11] Deferred to TESTING-PLAN §2: live LightRAG write metering (LRAG-11) and retry of a raw upload stuck mid-parse (LRAG-07). The empty-namespace pre-check covers LightRAG namespaces only; the HippoRAG pre-check (Phase 12 D-15) was deferred because it changes protected STOR-06 check meaning; revisit with WIRE-02 (Phase 13).
+- [Phase 11] BAK ledger: every done row now needs S3/S4/S5 trace records, a fail-first record-fail --at a pre-fix commit (absolute venv python, PYTHONPATH=$PWD), and plant runs for checks edited under a grant. Traces go stale when quoted files change; refresh after review fixes. RUN-01/RUN-10 replacement checks approved and proven (2026-10-19); owner ran baseline-checks; lock-checks --commit HEAD is still the owner's optional step.
+- [Phase 12] Fifteen Info review items stay open in 12-REVIEW-DISPOSITION.md. B-IN-08: three lax assertions in protected test_hipporag_write_path.py (310-316, 394-399) and test_hipporag_query_path.py (230-240) need an owner grant-check-edit to tighten; strict replacements exist in new files.
+- [Phase 12] All HIPP test files are now protected test_refs. HippoRAG stores built before Phase 12 (no doc: manifest, ordinal-only chunk ids, no per-chunk co-occurrence map) must be rebuilt.
+- [Phase 12] D-21: degraded now covers fired guards and the empty-PPR dense stand-in, so parity/run_cross_modality.py and eval A/A refuse a HippoRAG arm that took a fallback; real-provider qa quality/cost and the D-08 unparseable_response rate are TESTING-PLAN §2 items.
 - Cozo 0.7.6 is architecture-frozen with four known correctness bugs and no upstream fixes expected; relevant to STOR-01 and STOR-10 (Phase 10).
 
 ### Quick Tasks Completed

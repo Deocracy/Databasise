@@ -124,6 +124,11 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 | v1.1 Phase 11: LightRAG writes are gated per working dir (409 on overlap, held until the v1 worker returns); status ops are facade-free and lock-free | v1 RocksDB lock made every status call fail during writes; the operator console polls | ✓ Good |
 | v1.1 Phase 11: hybrid/local/global match v1 kg_query (prompts byte-pinned, cosine threshold 0.2, rank/weight order); tokenizer stays len//4 and chunk_top_k stays 10 | Fidelity required by LRAG-17/18; a fetching tokenizer would break the offline suite; top_k 20 would move parity evidence | — Pending (`shortcut:` markers, revisit with parity re-measure) |
 | v1.1 Phase 11: a v1 config refusal may name missing key names (never values), narrowly amending Phase 9 D-04 | LRAG-06 asks for it; values stay out of every body and log | ✓ Good |
+| v1.1 Phase 12: HippoRAG chunk ids are `sha256(document_id:ordinal:text)` with one bare id form outside the graph; delete and re-ingest go through a `document-remover` and a per-document `doc:` manifest, inside one all-or-none commit | Evidence must resolve and never silently re-point; a refused re-ingest must not destroy the previous version | ✓ Good (verified 5/5; pre-Phase-12 HippoRAG stores must be rebuilt) |
+| v1.1 Phase 12: a per-chunk OpenIE failure, including unparseable JSON, refuses the whole ingest (`ExtractionFailed`, closed reason codes) | Matches v1's fail-the-document rule; no partial-ingest §18 field | — Pending (raises the real-provider refusal rate; TESTING-PLAN measures it) |
+| v1.1 Phase 12: query runs are pruned to the ancestors of `provides`; HippoRAG gains a `qa` generator node (14th, a recorded divergence); top_k is wiring config (5) | Index nodes leave query runs without breaking MODAL-04; the answer means the same for both modalities; QueryObject stays §18.1's five members | ✓ Good (`[writes_artifact]` selectors no longer resolve) |
+| v1.1 Phase 12: a fired guard or the empty-PPR dense stand-in sets `degraded` with node-free reasons (`declared_fallback` / `fallback_path_taken`) | CONTRACT §18.2/§19.8: a declared degradation path needs no new field | ✓ Good (parity refuses an arm that took a fallback) |
+| v1.1 Phase 12: HippoRAG writes serialise on a per-workspace gate (wait with a ceiling, then 409) | Read-merge-write steps lose updates without it; refuse-at-once would break STOR-06's concurrent-ingest check | ✓ Good |
 | Close the operator verbs' check-then-act races with one `BEGIN IMMEDIATE` span per verb plus a UNIQUE `(alias, minted_version)` index | A guard read and the append it gates must commit together or the guard goes stale under concurrency; the schema constraint backstops it independently of any Python read path | ✓ Held (G-07-1 closed; 40/40 concurrency runs, full suite green) |
 
 ## Evolution
@@ -144,4 +149,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-19 after Phase 11*
+*Last updated: 2026-10-19 after Phase 12*
