@@ -167,6 +167,28 @@ def test_list_kv_prefix_refuses_a_wal_with_frames_and_no_shm(store_root):
     assert not (directory / "kv.sqlite3-shm").exists()
 
 
+def test_list_kv_prefix_survives_the_wal_vanishing_between_the_checks(store_root, monkeypatch):
+    """B-IN-07: the last writer closing removes the WAL between ``exists`` and ``stat``; that is healthy."""
+    from pathlib import Path
+
+    from databasise.stores.probes import list_kv_prefix
+
+    directory = _write_kv(store_root, "vanishing-wal-ws", [("doc:a", "{}")])
+    wal = directory / "kv.sqlite3-wal"
+    wal.write_bytes(b"frames")
+    real_stat = Path.stat
+
+    def stat_that_loses_the_wal(self, *args, **kwargs):
+        if self.name == "kv.sqlite3-wal":
+            self.unlink()
+            raise FileNotFoundError(self.name)
+        return real_stat(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "stat", stat_that_loses_the_wal)
+
+    assert list_kv_prefix(directory, "doc:", limit=10, offset=0) == ([("doc:a", {})], 1)
+
+
 def test_list_kv_prefix_still_lists_a_checkpointed_store(store_root):
     from databasise.stores.probes import list_kv_prefix
 

@@ -144,7 +144,11 @@ def list_kv_prefix(
     if not db_path.is_file() or db_path.stat().st_size == 0:
         return [], 0
     wal, shm = db_path.with_name("kv.sqlite3-wal"), db_path.with_name("kv.sqlite3-shm")
-    if wal.exists() and wal.stat().st_size > 0 and not shm.exists():
+    try:
+        wal_has_frames = wal.stat().st_size > 0
+    except FileNotFoundError:  # B-IN-07: the last writer closed and SQLite removed the WAL, which is healthy
+        wal_has_frames = False
+    if wal_has_frames and not shm.exists():
         # B-WR-02: an immutable open ignores the WAL, so it would omit committed documents; a plain
         # read-only open would create -shm. Neither is an honest listing.
         raise sqlite3.OperationalError("kv.sqlite3-wal holds frames but kv.sqlite3-shm is missing")
