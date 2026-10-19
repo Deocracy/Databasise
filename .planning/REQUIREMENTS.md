@@ -267,11 +267,11 @@
 - [x] **HIPP-02**: reset-vector-join's passage weights are keyed by the same strings as the graph's chunk vertex names, so ppr seeds each passage vertex whose chunk scored against the query with a non-zero reset weight (passage_node_weight times its score); the passage branch is no longer silently dropped (reset_vector_join.py:86-93, ppr.py:54-64).
   - Test: Test in databasise/tests/parts_core/hipporag/test_ppr.py: build a graph through passage-edges from real chunk-embed output, run reset-vector-join then ppr with a query embedding that matches one chunk and no entity; assert that chunk vertex has a non-zero reset weight and ranks above an unrelated chunk. Fails today because no passage key matches a vertex name.
   - Defects: parts-hipporag/HIPPO-2
-- [ ] **HIPP-03**: When any node of an ingest wiring fails, Engine.ingest commits none of the staged writes: every store's drop_pending_index_ops runs instead of index_done_callback, so the HippoRAG chunk vectors, hipporag-text-chunks KV records and entity/fact vectors staged by earlier nodes (chunk-embed, entity-fact-embed) are absent afterwards; the 422 refusal is then raised (engine.py:731-761). graph-augment-persist's own in-node graph commit (graph_augment_persist.py:84) stays the last write of a successful run.
+- [x] **HIPP-03**: When any node of an ingest wiring fails, Engine.ingest commits none of the staged writes: every store's drop_pending_index_ops runs instead of index_done_callback, so the HippoRAG chunk vectors, hipporag-text-chunks KV records and entity/fact vectors staged by earlier nodes (chunk-embed, entity-fact-embed) are absent afterwards; the 422 refusal is then raised (engine.py:731-761). graph-augment-persist's own in-node graph commit (graph_augment_persist.py:84) stays the last write of a successful run.
   - Test: Seam test: HippoRAG ingest with an embedding client wired but no llm client (openie fails after chunk-embed staged writes); assert ForeignEngineRefusalError is raised, the hipporag-chunks vector store and hipporag-text-chunks KV store hold zero records for that document_id, and a following query returns no evidence from it. Fails today because the flush at engine.py:750-751 runs before the failure check at :761.
   - Defects: seam-engine/ENG-05, doc-audit-3/D4
   - Phase 12 D-10 exception (owner-delegated 2026-10-19): the refusal is ForeignEngineRefusalError at REST 502 (Phase 9/10 status map), not 422; graph-augment-persist no longer commits in-node, the engine commits every store together (Phase 10 D-07).
-- [ ] **HIPP-04**: A HippoRAG ingest refusal carries the real exception of the node that failed (e.g. ClientNotWiredError naming 'embedding' when chunk-embed has no embedding client), including the failing node id, instead of the synthesized RuntimeError "the 'ingest' node produced no result and no exception"; _node_result_or_refuse looks at every node exception recorded in the run, not only the provides node (engine.py:385-394, 688, 761).
+- [x] **HIPP-04**: A HippoRAG ingest refusal carries the real exception of the node that failed (e.g. ClientNotWiredError naming 'embedding' when chunk-embed has no embedding client), including the failing node id, instead of the synthesized RuntimeError "the 'ingest' node produced no result and no exception"; _node_result_or_refuse looks at every node exception recorded in the run, not only the provides node (engine.py:385-394, 688, 761).
   - Test: Seam test: HippoRAG ingest with no embedding client wired; assert the refusal's cause is ClientNotWiredError and its message names 'embedding' and node 'chunk-embed'. Fails today with the synthesized RuntimeError cause.
   - Defects: doc-audit-1/D3
   - Owner decision first: Whether in-process modality failures keep the ForeignEngineRefusalError class/code or get a distinct, non-'foreign' refusal (changes the REST/MCP error code consumers see).
@@ -890,8 +890,8 @@ These fail today.
 | LRAG-20 | Phase 11 | Complete |
 | HIPP-01 | Phase 12 | Complete |
 | HIPP-02 | Phase 12 | Complete |
-| HIPP-03 | Phase 12 | Pending |
-| HIPP-04 | Phase 12 | Pending |
+| HIPP-03 | Phase 12 | Complete |
+| HIPP-04 | Phase 12 | Complete |
 | HIPP-05 | Phase 12 | Pending |
 | HIPP-06 | Phase 12 | Complete |
 | HIPP-07 | Phase 12 | Pending |

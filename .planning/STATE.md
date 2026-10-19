@@ -4,17 +4,17 @@ milestone: v1.1
 milestone_name: Engine Fixes + Operator Console
 current_phase: 12
 current_phase_name: HippoRAG Fixes
-status: executing
-stopped_at: Completed 12-13-PLAN.md
-last_updated: "2026-10-19T20:36:21.768Z"
+status: verifying
+stopped_at: Completed 12-14-PLAN.md
+last_updated: "2026-10-19T21:11:02.541Z"
 last_activity: 2026-10-19
 last_activity_desc: Phase 12 execution started
-state_head: ff06ca2251dd962994f58b702263a8ff031db243
+state_head: ea1cbe9261916ed871320c3eba3477b93acb4a32
 progress:
   total_phases: 11
   completed_phases: 4
   total_plans: 57
-  completed_plans: 56
+  completed_plans: 57
   percent: 36
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-10-19 after Phase 11)
 
 Phase: 12 (HippoRAG Fixes) — EXECUTING
 Plan: 14 of 14
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-19 — Phase 12 execution started
 
 Progress: [████░░░░░░] 36% (4/11 phases)
@@ -118,6 +118,7 @@ Progress: [████░░░░░░] 36% (4/11 phases)
 | Phase 12 P12 | 10 min | 2 tasks | 4 files |
 | Phase 12 P11 | 12 min | 2 tasks | 4 files |
 | Phase 12 P13 | 30min | 3 tasks | 9 files |
+| Phase 12 P14 | 40min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -209,6 +210,7 @@ Recent decisions affecting current work:
 - [Phase 12]: D-19: qa node (hipporag/qa-reader@0.1.0) ports upstream rag_qa as the 14th node and the wiring's provides; no-context answer is PROMPTS fail_response
 - [Phase 12]: D-21: a fired guard on a completed run reads degraded true, partial false, stop_reason declared_fallback, degradation_reason fallback_path_taken; RunRecord drops only the partial != degraded refusal
 - [Phase 12]: 12-11 D-20: assemble-result applies one top_k cut (default 5) after branch selection; PPR zero-score items dropped first; dpr-fallback itself is never cut
+- [Phase 12]: 12-14: failing node id is private on the refusal (_node_id); fault log carries a redacted traceback with no exc_info; stop_reason alone never refuses a write
 
 ### Pending Todos
 
@@ -259,8 +261,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-19T20:36:21.576Z
-Stopped at: Completed 12-13-PLAN.md
+Last session: 2026-10-19T21:11:02.344Z
+Stopped at: Completed 12-14-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
