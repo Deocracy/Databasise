@@ -51,7 +51,8 @@ writes_kv, writes_graph, writes_artifact}`. Every row below traces to the same m
 `CapabilityScopedStores.require` (`databasise/parts_core/__init__.py`) hands a node's body no
 store handle for an effect it did not declare — a node `## §H`'s own prose describes as writing a
 store must declare that write to reach the store at all, or its own documented behaviour is
-unreachable code.
+unreachable code. The inverse also holds: a node that no longer calls a client stops declaring
+it, so the last two rows below are narrower than `## §H`.
 
 | Node | `## §H` declared | Built declares | Reason |
 |---|---|---|---|
@@ -59,11 +60,25 @@ unreachable code.
 | `chunk-embed` | `calls_embedding` | `calls_embedding`, `writes_vector`, `writes_kv` | `06-02`. `## §H`'s own row states this node fuses chunk storage and embedding (`EmbeddingStore.insert_strings`, no external cut point) — the store writes it performs are real and must be declared. |
 | `entity-fact-embed` | `calls_embedding` | `calls_embedding`, `writes_vector`, `writes_kv` | `06-02` declared `writes_vector` (this node writes two Vector namespaces — entities, facts). `06-07` additionally declares `writes_kv`: closing the fact-chunk-association gap `06-05-SUMMARY.md`'s own "Next Phase Readiness" section named and disposed to this plan — `reset-vector-join.py` (`06-01`, already committed) reads each surviving fact's own chunk association from a KV `fact:<id>` record; before `06-07`, no code wrote that record for a real end-to-end run, only the test fixture hand-seeded it. |
 | `graph-augment-persist` | *(none declared)* | `writes_graph`, `writes_artifact` | `06-05`. This node persists the whole `igraph.Graph` object as one write; `## §H`'s own node-table row for it declares no effect at all, which would make its documented write unreachable. |
+| `reset-vector-join` | `reads_vector`, `calls_embedding`, `reads_kv` | `reads_vector`, `reads_kv` | `12-07` (D-17). The query is embedded once at `fact-score` and the vector reaches this node over a direct dep (`ctx.inputs["fact-score"]["query_vector"]`), so the node never calls the embedding client and no longer declares `calls_embedding`. |
+| `dpr-fallback` | `calls_embedding`, `reads_vector` | `reads_vector` | `12-07` (D-17). Same reason: the query is embedded once at `fact-score` and the vector reaches this node over a direct dep, so neither this node nor `reset-vector-join` calls the embedding client. |
 
-Every additive row above is a genuine over-declaration relative to `## §H`'s node-table text, not
-a resolution of it in either direction: `docs/system-model/PARTS.md` is a verbatim frozen mirror
-and is not edited by this record, and none of the four built parts' effects is narrowed below what
-its own body actually reaches.
+The first four rows are genuine over-declarations relative to `## §H`'s node-table text, and the
+last two are narrowings; none is a resolution of `## §H` in either direction:
+`docs/system-model/PARTS.md` is a verbatim frozen mirror and is not edited by this record, and no
+built part's effects is narrowed below what its own body actually reaches.
+
+## The query-vector deps divergence
+
+`12-07` (D-17). The illustrative `docs/system-model/wirings/hipporag-base.json` declares
+`reset-vector-join` and `dpr-fallback` with `deps: ["fact-filter"]`. The built wiring declares
+`["fact-filter", "fact-score"]` for both. A node reads another node's output only through its own
+declared `deps` → `ctx.inputs`, so the shared query vector `fact-score` emits as `query_vector`
+reaches the two nodes only if `fact-score` is a direct dep of each. The addition leaves the
+scheduling order unchanged (`fact-filter` already depends on `fact-score`) and `fact-score`'s own
+deps stay `[]`. Before this change a HippoRAG query embedded its text three times (once in each of
+the three nodes); it now embeds once. The row follows the `assemble-result` deps divergence
+below.
 
 ## The guard-placement divergence
 
