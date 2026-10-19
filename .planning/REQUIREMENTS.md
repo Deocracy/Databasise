@@ -261,10 +261,10 @@
 
 ### HippoRAG (F5)
 
-- [ ] **HIPP-01**: After a real HippoRAG ingest (chunk-embed writes), a query on the normal PPR path (fact-filter keeps at least one fact) returns items whose ids resolve: assemble-result hydrates non-empty content for every PPR-selected item, and Engine.resolve_evidence succeeds for every evidence ref in the envelope instead of raising UnresolvableEvidenceReferenceError. PPR item ids and chunk-embed vector/KV keys use one chunk-id form (ppr.py:84-89, passage_edges.py:40-41, chunk_embed.py:96-119, assemble_result.py:59-60).
+- [x] **HIPP-01**: After a real HippoRAG ingest (chunk-embed writes), a query on the normal PPR path (fact-filter keeps at least one fact) returns items whose ids resolve: assemble-result hydrates non-empty content for every PPR-selected item, and Engine.resolve_evidence succeeds for every evidence ref in the envelope instead of raising UnresolvableEvidenceReferenceError. PPR item ids and chunk-embed vector/KV keys use one chunk-id form (ppr.py:84-89, passage_edges.py:40-41, chunk_embed.py:96-119, assemble_result.py:59-60).
   - Test: databasise/tests/seam/test_hipporag_write_path.py gains a case whose stub fact-filter keeps all fact ids (PPR branch): ingest one document, query, assert answer/hydrated content is non-empty and resolve_evidence returns content for every ref. Fails today with answer '' and UnresolvableEvidenceReferenceError. The unit conftest (tests/parts_core/hipporag/conftest.py:71,85-86) no longer seeds 'chunk:c1' keys directly into KV/vector stores.
   - Defects: parts-hipporag/HIPPO-1, tests/T-08
-- [ ] **HIPP-02**: reset-vector-join's passage weights are keyed by the same strings as the graph's chunk vertex names, so ppr seeds each passage vertex whose chunk scored against the query with a non-zero reset weight (passage_node_weight times its score); the passage branch is no longer silently dropped (reset_vector_join.py:86-93, ppr.py:54-64).
+- [x] **HIPP-02**: reset-vector-join's passage weights are keyed by the same strings as the graph's chunk vertex names, so ppr seeds each passage vertex whose chunk scored against the query with a non-zero reset weight (passage_node_weight times its score); the passage branch is no longer silently dropped (reset_vector_join.py:86-93, ppr.py:54-64).
   - Test: Test in databasise/tests/parts_core/hipporag/test_ppr.py: build a graph through passage-edges from real chunk-embed output, run reset-vector-join then ppr with a query embedding that matches one chunk and no entity; assert that chunk vertex has a non-zero reset weight and ranks above an unrelated chunk. Fails today because no passage key matches a vertex name.
   - Defects: parts-hipporag/HIPPO-2
 - [ ] **HIPP-03**: When any node of an ingest wiring fails, Engine.ingest commits none of the staged writes: every store's drop_pending_index_ops runs instead of index_done_callback, so the HippoRAG chunk vectors, hipporag-text-chunks KV records and entity/fact vectors staged by earlier nodes (chunk-embed, entity-fact-embed) are absent afterwards; the 422 refusal is then raised (engine.py:731-761). graph-augment-persist's own in-node graph commit (graph_augment_persist.py:84) stays the last write of a successful run.
@@ -888,8 +888,8 @@ These fail today.
 | LRAG-18 | Phase 11 | Complete |
 | LRAG-19 | Phase 11 | Complete |
 | LRAG-20 | Phase 11 | Complete |
-| HIPP-01 | Phase 12 | Pending |
-| HIPP-02 | Phase 12 | Pending |
+| HIPP-01 | Phase 12 | Complete |
+| HIPP-02 | Phase 12 | Complete |
 | HIPP-03 | Phase 12 | Pending |
 | HIPP-04 | Phase 12 | Pending |
 | HIPP-05 | Phase 12 | Pending |
