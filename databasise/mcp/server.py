@@ -134,12 +134,11 @@ async def _status_job(engine: Databasise, args: StatusToolArgs) -> Any:
 
 
 async def _status_corpus(engine: Databasise, args: StatusToolArgs) -> Any:
-    return await engine.corpus_status(checked_page(args.limit, args.offset))
+    return await engine.corpus_status(checked_page(args.limit, args.offset), args.selector)
 
 
 async def _status_counts(engine: Databasise, args: StatusToolArgs) -> Any:
-    del args
-    return await engine.document_counts()
+    return await engine.document_counts(args.selector)
 
 
 async def _status_health(engine: Databasise, args: StatusToolArgs) -> Any:

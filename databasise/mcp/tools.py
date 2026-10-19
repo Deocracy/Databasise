@@ -178,12 +178,15 @@ class StatusToolArgs(_ToolArgs):
     """``scope`` selects which of ``Databasise``'s four bounded read methods this call reaches;
     ``job_id`` is required only for ``scope="job"`` and ``limit``/``offset`` are read only for
     ``scope`` in ``{"job", "corpus"}`` — enforced in ``databasise.mcp.server``, not here (this
-    module declares fields only, never behaviour)."""
+    module declares fields only, never behaviour). ``selector`` (12-09, D-13) is read only for
+    ``scope`` in ``{"corpus", "counts"}`` and names which modality's documents are listed or
+    counted; absent, the LightRAG corpus is."""
 
     scope: StatusScope
     job_id: str | None = None
     limit: int = 50
     offset: int = 0
+    selector: Selector | None = None
 
 
 class ResolveToolArgs(_ToolArgs):
