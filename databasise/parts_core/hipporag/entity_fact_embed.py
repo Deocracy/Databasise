@@ -46,7 +46,7 @@ from __future__ import annotations
 from typing import Any
 
 from databasise.parts.schema import NodeContext, Part
-from databasise.runner.trace import TokenAccounting
+from databasise.runner.trace import sum_token_accountings
 
 _NAME_AT_VERSION = "hipporag/entity-fact-embedder@0.1.0"
 _ENTITIES_NAMESPACE = "hipporag-entities"
@@ -54,20 +54,6 @@ _FACTS_NAMESPACE = "hipporag-facts"
 
 ENTITY_VERTEX_PREFIX = "entity:"
 CHUNK_VERTEX_PREFIX = "chunk:"
-
-
-def _sum_token_accountings(accountings: list[TokenAccounting]) -> TokenAccounting:
-    if not accountings:
-        return TokenAccounting()
-    unbudgetable = any(acc.counted_by == "unbudgetable" for acc in accountings)
-    counted_by = "unbudgetable" if unbudgetable else accountings[0].counted_by
-    return TokenAccounting(
-        prompt_tokens=sum(acc.prompt_tokens for acc in accountings),
-        completion_tokens=sum(acc.completion_tokens for acc in accountings),
-        cached_read_tokens=sum(acc.cached_read_tokens for acc in accountings),
-        call_count=sum(acc.call_count for acc in accountings),
-        counted_by=counted_by,
-    )
 
 
 async def _entity_fact_embed_body(ctx: NodeContext) -> dict[str, Any]:
@@ -168,7 +154,7 @@ async def _entity_fact_embed_body(ctx: NodeContext) -> dict[str, Any]:
             for ref, text in zip(entity_refs, entity_texts, strict=True)
         ],
         "facts": [{"fact_id": fid, **fact_records[fid]} for fid in fact_ids],
-        "tokens": _sum_token_accountings([entity_embed_result.tokens, fact_embed_result.tokens]),
+        "tokens": sum_token_accountings([entity_embed_result.tokens, fact_embed_result.tokens]),
         "resolved_model_identity": entity_embed_result.resolved_model_identity,
     }
 

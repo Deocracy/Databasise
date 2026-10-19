@@ -28,14 +28,9 @@ produced — spend is never conflated with an admission label (D-08, §9).
 
 from __future__ import annotations
 
-from databasise.runner.trace import NodeTrace
+from databasise.runner.trace import UNBUDGETABLE_SENTINEL, NodeTrace  # sentinel defined once in runner.trace (D-07); re-exported
 from databasise.seam._base import _StrictModel
 from databasise.seam.refusals import UnbudgetableParticipantError  # moved to refusals.py (SEAM-14); re-exported
-
-# See module docstring: a node's own body sets counted_by to this literal value to report that its
-# tokens cannot be counted at all — never inferred from a zero count, which is a different, real
-# fact ("none" — no tokenizer counted anything because there was no call to count).
-UNBUDGETABLE_SENTINEL = "unbudgetable"
 
 
 class TokenBreakdownEntry(_StrictModel):

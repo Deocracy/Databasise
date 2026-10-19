@@ -62,6 +62,26 @@ class TokenAccounting:
         }
 
 
+UNBUDGETABLE_SENTINEL = "unbudgetable"
+
+
+def sum_token_accountings(accountings: list[TokenAccounting]) -> TokenAccounting:
+    """Sum counts; two counters are never reported under one label (HIPP-19, D-07). Labels differ
+    (ignoring ``"none"`` no-call zeros) or any is the sentinel -> the sentinel; one label keeps it."""
+    labels = {acc.counted_by for acc in accountings if acc.counted_by != "none"}
+    if UNBUDGETABLE_SENTINEL in labels or len(labels) > 1:
+        counted_by = UNBUDGETABLE_SENTINEL
+    else:
+        counted_by = next(iter(labels), "none")
+    return TokenAccounting(
+        prompt_tokens=sum(acc.prompt_tokens for acc in accountings),
+        completion_tokens=sum(acc.completion_tokens for acc in accountings),
+        cached_read_tokens=sum(acc.cached_read_tokens for acc in accountings),
+        call_count=sum(acc.call_count for acc in accountings),
+        counted_by=counted_by,
+    )
+
+
 @dataclass
 class NodeTrace:
     node_id: str

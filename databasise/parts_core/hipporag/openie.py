@@ -21,9 +21,10 @@ can give every chunk a vertex, including a chunk OpenIE found no triple in (HIPP
 
 Token accounting: this node makes up to two ``chat`` calls per input chunk, so its own emitted
 ``tokens`` is the sum of every call's own ``TokenAccounting`` (never a bare zero for a node that
-made calls). If any individual call reports the ``unbudgetable`` sentinel (§8/§9 — the client
-exposed no usage for that call), the summed total also reports ``unbudgetable`` rather than
-silently treating the unexposed call as a real zero.
+made calls), computed by the shared ``runner.trace.sum_token_accountings``. If any individual call
+reports the ``unbudgetable`` sentinel (§8/§9 — the client exposed no usage for that call), or the
+calls report different ``counted_by`` labels, the summed total reports ``unbudgetable`` rather than
+treating the unexposed call as a real zero or two counters as one (HIPP-19, D-07).
 """
 
 from __future__ import annotations
@@ -34,10 +35,9 @@ import re
 from typing import Any
 
 from databasise.parts.schema import NodeContext, Part
-from databasise.runner.trace import TokenAccounting
+from databasise.runner.trace import TokenAccounting, sum_token_accountings
 
 _NAME_AT_VERSION = "hipporag/openie-extractor@0.1.0"
-_UNBUDGETABLE_SENTINEL = "unbudgetable"
 
 _CODE_FENCE_PATTERN = re.compile(r"^\s*```(?:json|JSON)?\s*\n?(.*?)\n?\s*```\s*$", re.DOTALL)
 
@@ -118,22 +118,6 @@ def _fact_id(subject: str, predicate: str, obj: str) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def _sum_token_accountings(accountings: list[TokenAccounting]) -> TokenAccounting:
-    if not accountings:
-        return TokenAccounting()
-    if any(acc.counted_by == _UNBUDGETABLE_SENTINEL for acc in accountings):
-        counted_by = _UNBUDGETABLE_SENTINEL
-    else:
-        counted_by = accountings[0].counted_by
-    return TokenAccounting(
-        prompt_tokens=sum(acc.prompt_tokens for acc in accountings),
-        completion_tokens=sum(acc.completion_tokens for acc in accountings),
-        cached_read_tokens=sum(acc.cached_read_tokens for acc in accountings),
-        call_count=sum(acc.call_count for acc in accountings),
-        counted_by=counted_by,
-    )
-
-
 async def _openie_body(ctx: NodeContext) -> dict[str, Any]:
     chunk_embed_output = ctx.inputs["chunk-embed"]
     chunks = list(chunk_embed_output.get("chunks", []))
@@ -183,7 +167,7 @@ async def _openie_body(ctx: NodeContext) -> dict[str, Any]:
     return {
         "findings": findings,
         "chunks": chunks,
-        "tokens": _sum_token_accountings(call_accountings),
+        "tokens": sum_token_accountings(call_accountings),
         "resolved_model_identity": resolved_model_identity,
     }
 
