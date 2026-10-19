@@ -191,6 +191,7 @@ import sqlite3
 import sys
 import threading
 import time
+import traceback
 import uuid
 import weakref
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Sequence
@@ -202,6 +203,7 @@ from databasise.foreign import CorpusOpBusyError, run_corpus_op
 from databasise.foreign.v1_corpus_adapter import (
     DEFAULT_V1_INTERPRETER,
     STATUS_WALL_CLOCK_CEILING_SECONDS,
+    redact_secrets,
 )
 from databasise.identity.canon import canonicalise
 from databasise.ledger.ledger import Ledger, LedgerRecord
@@ -215,6 +217,7 @@ from databasise.parts_core.lightrag.v1_index_sync import V1_INDEX_SYNC_MANIFEST_
 from databasise.runner import scheduler as _scheduler
 from databasise.runner.trace import NodeTrace, RunRecord
 from databasise.seam.corpus import (
+    _URL_RE,
     CorpusStatus,
     DeletionOutcome,
     DocumentCounts,
@@ -312,16 +315,22 @@ def _foreign_fault(
     """09-05-PLAN.md (SEAM-05, D-04): the one place an engine fault is built and logged, whether
     the v1 engine, a store (D-13) or the run itself (an early stop) failed. The full cause (stderr,
     traceback) goes to the server log exactly once; the returned refusal carries it privately and
-    exposes only the operation and the allow-listed ``failure_class``."""
+    exposes only the operation and the allow-listed ``failure_class``.
+
+    Phase 12 D-11 (A-WR-05): the full cause stays readable in-process on ``refusal.cause``; the log
+    carries a redacted copy (exception type name plus a ``redact_secrets``-then-URL-scrubbed
+    traceback) and no attached exception, so an in-process provider error cannot leak a key or URL."""
     refusal = ForeignEngineRefusalError(
         operation=operation, cause=cause, failure_class=failure_class, node_id=node_id
     )
+    detail = _URL_RE.sub("<url>", redact_secrets("".join(traceback.format_exception(cause))))
     logger.error(
-        "engine fault: operation=%s failure_class=%s node=%s",
+        "engine fault: operation=%s failure_class=%s node=%s cause=%s detail=%s",
         operation,
         refusal.failure_class,
         node_id or "-",
-        exc_info=cause,
+        type(cause).__name__,
+        detail,
     )
     return refusal
 

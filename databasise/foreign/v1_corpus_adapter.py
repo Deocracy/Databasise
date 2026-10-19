@@ -61,12 +61,14 @@ _SECRET_PATTERNS = (
     (re.compile(r"\bsk-[^\s'\",]+"), "sk-[REDACTED]"),
     (re.compile(r"(?i)\b(bearer\s+)[^\s'\",]+"), r"\1[REDACTED]"),
     (re.compile(r"(?i)(api[_-]?key[\"']?\s*[=:]\s*[\"']?)[^\s'\",&]+"), r"\1[REDACTED]"),
+    # Phase 12 D-11: a bare ``?key=`` / ``&key=`` query parameter (Gemini-style URLs).
+    (re.compile(r"(?i)([?&]key=)[^\s'\",&]+"), r"\1[REDACTED]"),
 )
 
 
 def redact_secrets(text: str) -> str:
     """11 REVIEW A-WR-05: mask API-key-shaped tokens (``sk-...``, ``Bearer ...``, ``api_key=...``
-    values) before a text can reach the server log. D-11 keeps v1's stderr tail in that log; this
+    and bare ``?key=``/``&key=`` query values; ``base_url=...`` and ``monkey=1`` stay) before a text can reach the server log. D-11 keeps v1's stderr tail in that log; this
     is its control."""
     for pattern, replacement in _SECRET_PATTERNS:
         text = pattern.sub(replacement, text)

@@ -115,7 +115,8 @@ def test_the_full_cause_is_logged_once_server_side(client, monkeypatch, caplog):
     assert len(records) == 1
     assert "failure_class=CorpusOpSubprocessError" in records[0].getMessage()
     assert "operation=delete" in records[0].getMessage()
-    assert records[0].exc_info[1] is cause
+    assert not records[0].exc_info
+    assert "detail=" in records[0].getMessage()
 
 
 async def test_in_process_cause_is_readable_but_private(tmp_path, monkeypatch):

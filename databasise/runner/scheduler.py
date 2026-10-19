@@ -123,6 +123,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from databasise.clients import CLIENT_EFFECT_TO_KEY, CapabilityScopedClients
+from databasise.foreign.v1_corpus_adapter import redact_secrets
 from databasise.identity.canon import config_hash
 from databasise.identity.env import environment_hash
 from databasise.identity.instance import instance_hash
@@ -608,7 +609,7 @@ async def run_wiring(
                 cause = (
                     f"NodePlacementRefusedError: execution_mode={placement!r} not hosted (D-08)"
                     if placement is not None
-                    else f"NodeExecutionError: {exc.cause}"
+                    else f"NodeExecutionError: {redact_secrets(str(exc.cause))}"
                 )
                 node_exceptions[node_id] = exc.cause
                 node_traces.append(
