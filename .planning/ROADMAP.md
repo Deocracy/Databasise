@@ -272,7 +272,7 @@ Plans (nine waves; `seam/engine.py` is touched by nine plans, so those run one p
 - HIPP-15/16: M-12 corpus surface — selector parameter on jobs/corpus/counts/health or an engine-owned job registry; whether HippoRAG ingest returns a final job record; whether delete removes entities/facts that lose all provenance; re-ingest as delete-then-ingest
 - HIPP-17: chunk identity — content-addressed chunk ids or a content_hash on EvidenceRef (§18 change shared with LightRAG)
 
-**Plans**: 12/14 plans executed
+**Plans**: 13/14 plans executed
 
 Plans (eight waves; `seam/engine.py`, `wirings/hipporag/base.json` and `tests/seam/test_hipporag_write_path.py` are each touched by several plans, so no two plans in one wave share a file; 12-14 carries the phase's one owner checkpoint and runs last):
 
@@ -288,7 +288,7 @@ Plans (eight waves; `seam/engine.py`, `wirings/hipporag/base.json` and `tests/se
 - [x] 12-10-PLAN.md — qa generator node (upstream rag_qa) as provides; structural pins and port record follow the 14th node (HIPP-13; wave 5)
 - [x] 12-11-PLAN.md — top_k cut on both branches with zero-score PPR items dropped (HIPP-11; wave 6)
 - [x] 12-12-PLAN.md — A fired DPR fallback reads degraded with a node-free reason (HIPP-14; wave 5)
-- [ ] 12-13-PLAN.md — Unread wiring keys removed, docstrings and port record honest, offline gate (HIPP-18; wave 7)
+- [x] 12-13-PLAN.md — Unread wiring keys removed, docstrings and port record honest, offline gate (HIPP-18; wave 7)
 - [ ] 12-14-PLAN.md — Refusal names the failing node privately; refused ingest commits nothing; redacted fault log after the owner's SEAM-05 grant; phase gate (HIPP-04, HIPP-03, A-WR-05; wave 8)
 
 ### Phase 13: Selectors, Wiring & Runner
@@ -463,7 +463,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 9. Inputs, Errors & Security | 10/10 | Complete    | 2026-10-17 |
 | 10. Stores, Locking & Data Integrity | 12/12 | Complete    | 2026-10-17 |
 | 11. LightRAG Corpus Path | 11/11 | Complete    | 2026-10-19 |
-| 12. HippoRAG Fixes | 12/14 | In Progress | - |
+| 12. HippoRAG Fixes | 13/14 | In Progress | - |
 | 13. Selectors, Wiring & Runner | 0/TBD | Not started | - |
 | 14. Promotion & Ledger | 0/TBD | Not started | - |
 | 15. Offline Tooling & Packaging | 0/TBD | Not started | - |
