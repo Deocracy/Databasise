@@ -272,9 +272,9 @@ Plans (nine waves; `seam/engine.py` is touched by nine plans, so those run one p
 - HIPP-15/16: M-12 corpus surface — selector parameter on jobs/corpus/counts/health or an engine-owned job registry; whether HippoRAG ingest returns a final job record; whether delete removes entities/facts that lose all provenance; re-ingest as delete-then-ingest
 - HIPP-17: chunk identity — content-addressed chunk ids or a content_hash on EvidenceRef (§18 change shared with LightRAG)
 
-**Plans**: 13 plans
+**Plans**: 14 plans
 
-Plans (seven waves; `seam/engine.py`, `wirings/hipporag/base.json` and `tests/seam/test_hipporag_write_path.py` are each touched by several plans, so no two plans in one wave share a file; 12-13 carries the phase's one owner checkpoint and runs last):
+Plans (eight waves; `seam/engine.py`, `wirings/hipporag/base.json` and `tests/seam/test_hipporag_write_path.py` are each touched by several plans, so no two plans in one wave share a file; 12-14 carries the phase's one owner checkpoint and runs last):
 
 - [ ] 12-01-PLAN.md — Tracer: one chunk-id form outside the graph; PPR evidence resolves; passage weights keyed by vertex name (HIPP-01, HIPP-02; wave 1)
 - [ ] 12-02-PLAN.md — Every chunk gets a passage vertex; one shared token-sum helper and sentinel (HIPP-06, HIPP-19; wave 1)
@@ -285,10 +285,11 @@ Plans (seven waves; `seam/engine.py`, `wirings/hipporag/base.json` and `tests/se
 - [ ] 12-07-PLAN.md — The query is embedded once and shared; narrowed effects recorded (HIPP-12; wave 4)
 - [ ] 12-08-PLAN.md — Remover-first re-ingest; synonymy kept on re-ingest; content-addressed chunk ids (HIPP-16, HIPP-17; wave 4)
 - [ ] 12-09-PLAN.md — /corpus, /corpus/counts and MCP status take a selector and list HippoRAG documents from the manifests (HIPP-15; wave 5)
-- [ ] 12-10-PLAN.md — qa generator node (upstream rag_qa) as provides; top_k cut with zero-score PPR items dropped (HIPP-13, HIPP-11; wave 5)
-- [ ] 12-11-PLAN.md — A fired DPR fallback reads degraded with a node-free reason (HIPP-14; wave 5)
-- [ ] 12-12-PLAN.md — Unread wiring keys removed, docstrings and port record honest, offline gate (HIPP-18; wave 6)
-- [ ] 12-13-PLAN.md — Refusal names the failing node privately; refused ingest commits nothing; redacted fault log after the owner's SEAM-05 grant; phase gate (HIPP-04, HIPP-03, A-WR-05; wave 7)
+- [ ] 12-10-PLAN.md — qa generator node (upstream rag_qa) as provides; structural pins and port record follow the 14th node (HIPP-13; wave 5)
+- [ ] 12-11-PLAN.md — top_k cut on both branches with zero-score PPR items dropped (HIPP-11; wave 6)
+- [ ] 12-12-PLAN.md — A fired DPR fallback reads degraded with a node-free reason (HIPP-14; wave 5)
+- [ ] 12-13-PLAN.md — Unread wiring keys removed, docstrings and port record honest, offline gate (HIPP-18; wave 7)
+- [ ] 12-14-PLAN.md — Refusal names the failing node privately; refused ingest commits nothing; redacted fault log after the owner's SEAM-05 grant; phase gate (HIPP-04, HIPP-03, A-WR-05; wave 8)
 
 ### Phase 13: Selectors, Wiring & Runner
 

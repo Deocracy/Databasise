@@ -10,7 +10,7 @@ created: "2026-10-19"
 
 # Phase 12: Validation Strategy
 
-> Per-phase validation contract for feedback sampling during execution. The source is 12-RESEARCH.md § Validation Architecture; test files follow the plans (12-01..12-13), which move the query-semantics rows into tests/seam/test_hipporag_query_path.py and HIPP-14 into test_dpr_fallback_guard.py so fewer plans share one hot test file.
+> Per-phase validation contract for feedback sampling during execution. The source is 12-RESEARCH.md § Validation Architecture; test files follow the plans (12-01..12-14), which move the query-semantics rows into tests/seam/test_hipporag_query_path.py and HIPP-14 into test_dpr_fallback_guard.py so fewer plans share one hot test file.
 
 ---
 
