@@ -276,23 +276,23 @@
   - Defects: doc-audit-1/D3
   - Owner decision first: Whether in-process modality failures keep the ForeignEngineRefusalError class/code or get a distinct, non-'foreign' refusal (changes the REST/MCP error code consumers see).
   - Phase 12 D-09 exception (owner-delegated 2026-10-19): the failing node id is carried as the private refusal.node_id and in the server log, never in str(refusal) or the public body (§18.2 low-entropy identity, WIRE-03); 'its message names embedding' is met by str(refusal.cause).
-- [ ] **HIPP-05**: The fact-filter node receives the query text: fact-filter is listed in consumes_query of wirings/hipporag/base.json, and the LLM prompt it sends contains the query between ---Query--- and ---Candidate Facts---.
+- [x] **HIPP-05**: The fact-filter node receives the query text: fact-filter is listed in consumes_query of wirings/hipporag/base.json, and the LLM prompt it sends contains the query between ---Query--- and ---Candidate Facts---.
   - Test: Seam query test with a stub LLM capturing the fact-filter prompt for query 'What did Ed Wood direct?'; assert the captured query section equals that text. Fails today with ''.
   - Defects: parts-hipporag/HIPPO-3
 - [x] **HIPP-06**: Every chunk produced by chunk-embed gets a passage vertex in the HippoRAG graph after ingest, including chunks for which OpenIE extracted no triples, so PPR can rank them (passage_edges.py:50-63, graph_augment_persist.py:61-77).
   - Test: Test in databasise/tests/parts_core/hipporag/test_graph_construction.py: ingest two chunks where the stub OpenIE returns triples for one and none for the other; assert both chunk vertices exist in the exported graph. Fails today for the triple-less chunk.
   - Defects: parts-hipporag/HIPPO-11
-- [ ] **HIPP-07**: synonymy-edges matches the entities new in the current ingest against all entities, both those committed by earlier ingests and those staged by entity-fact-embed in the same run. After the first ingest of a document containing entities 'films' and 'movies' with cosine similarity above the threshold, the films-movies synonymy edge exists. A later ingest that adds no new entity similar to either does not re-emit that pair (synonymy_edges.py:53-54, vector.py:288-289, 317-325).
+- [x] **HIPP-07**: synonymy-edges matches the entities new in the current ingest against all entities, both those committed by earlier ingests and those staged by entity-fact-embed in the same run. After the first ingest of a document containing entities 'films' and 'movies' with cosine similarity above the threshold, the films-movies synonymy edge exists. A later ingest that adds no new entity similar to either does not re-emit that pair (synonymy_edges.py:53-54, vector.py:288-289, 317-325).
   - Test: Test in databasise/tests/parts_core/hipporag/test_graph_construction.py reproducing the audit case: ingest d1 with identical embeddings for 'films' and 'movies'; assert edge ('entity:films','entity:movies') is present after d1. Then ingest an unrelated d2; assert d2's synonymy-edges output contains no films-movies edge. Fails today (the edge appears only after d2, and d2 re-emits it).
   - Defects: parts-hipporag/HIPPO-4
-- [ ] **HIPP-08**: HippoRAG edge weights and edge_types accumulate across ingests: a co-occurrence edge produced by two separate ingests has the summed co-occurrence weight, and a later synonymy emission for the same pair adds its type and weight without discarding the stored co-occurrence count (graph_augment_persist.py:61-82, graph.py:291-296).
+- [x] **HIPP-08**: HippoRAG edge weights and edge_types accumulate across ingests: a co-occurrence edge produced by two separate ingests has the summed co-occurrence weight, and a later synonymy emission for the same pair adds its type and weight without discarding the stored co-occurrence count (graph_augment_persist.py:61-82, graph.py:291-296).
   - Test: Test in test_graph_construction.py: ingests d1 and d2 each produce ('Ed Wood','directed','films') with no synonymy match. Assert that after d2 the ed wood-films edge has co-occurrence weight 2.0 and edge_types contains the co-occurrence type. Then run an unrelated ingest d3 and assert that edge's weight and edge_types are unchanged. Fails today (d1's count is lost, and the synonymy re-emission in a later ingest overwrites the edge).
   - Defects: parts-hipporag/HIPPO-5
   - Owner decision first: Merge rule for edge weights across ingests (sum co-occurrence, take max or recompute synonymy) so the graph matches upstream HippoRAG's incremental behaviour.
-- [ ] **HIPP-09**: A fact extracted from different documents in separate ingests keeps the union of chunk_ids in both its fact vector metadata and its KV 'fact:<id>' record, so reset-vector-join's divisor and the fact's provenance reflect every source chunk (entity_fact_embed.py:139-163).
+- [x] **HIPP-09**: A fact extracted from different documents in separate ingests keeps the union of chunk_ids in both its fact vector metadata and its KV 'fact:<id>' record, so reset-vector-join's divisor and the fact's provenance reflect every source chunk (entity_fact_embed.py:139-163).
   - Test: Test in test_index_side_extraction.py: ingest d1 and d2 that each yield the same triple; assert fact vector metadata chunk_ids and KV 'fact:<id>'.chunk_ids contain chunks from both. Fails today (only d2's chunks).
   - Defects: parts-hipporag/HIPPO-6
-- [ ] **HIPP-10**: OpenIE extraction failures are reported: malformed NER or triple JSON responses and per-chunk chat() exceptions are counted per chunk and returned in the ingest outcome (and trace), so an ingest that extracted nothing is distinguishable from a successful one; NER/triple calls run with bounded concurrency instead of strictly serial (openie.py:72-108, 145-178).
+- [x] **HIPP-10**: OpenIE extraction failures are reported: malformed NER or triple JSON responses and per-chunk chat() exceptions are counted per chunk and returned in the ingest outcome (and trace), so an ingest that extracted nothing is distinguishable from a successful one; NER/triple calls run with bounded concurrency instead of strictly serial (openie.py:72-108, 145-178).
   - Test: Test in test_index_side_extraction.py: the stub LLM returns malformed JSON for one chunk and raises for another. Assert the ingest result reports 2 failed chunks with reasons, and assert the outcome the design decision chooses: either the remaining chunk's triples are persisted, or the ingest refuses. Also assert the stub observed overlapping calls. Fails today (malformed JSON gives zero findings with no report, and one exception fails the whole node).
   - Defects: parts-hipporag/HIPPO-12
   - Owner decision first: Whether a per-chunk LLM failure fails the whole ingest (refuse) or yields a partial ingest with a failure count surfaced in IngestJob/§18 (new field).
@@ -301,33 +301,33 @@
   - Test: Seam test: ingest 20 single-chunk documents, query on each branch; assert len(evidence) <= top_k and no evidence item has PPR score 0. Fails today (20 rows on DPR branch).
   - Defects: parts-hipporag/HIPPO-8
   - Owner decision first: Where top_k comes from: a new QueryObject field (a §18 seam change shared with LightRAG) or HippoRAG wiring config only.
-- [ ] **HIPP-12**: A HippoRAG query run dispatches only query-side nodes (none of the seven index nodes from base.json:6-57 appear in the trace), the effect union used to select the query wiring contains no writes_vector/writes_kv/writes_graph/writes_artifact, and the query text is embedded exactly once per query (shared by fact-score, reset-vector-join and dpr-fallback).
+- [x] **HIPP-12**: A HippoRAG query run dispatches only query-side nodes (none of the seven index nodes from base.json:6-57 appear in the trace), the effect union used to select the query wiring contains no writes_vector/writes_kv/writes_graph/writes_artifact, and the query text is embedded exactly once per query (shared by fact-score, reset-vector-join and dpr-fallback).
   - Test: Seam test: one HippoRAG query with a counting stub embedding client and a debug trace. Assert the trace node ids exclude chunk-embed, openie, entity-fact-embed, fact-edges, passage-edges, synonymy-edges and graph-augment-persist. Assert a capability selector naming writes_graph does not resolve to the HippoRAG query wiring (seam/selectors.py:139-157). Assert embed() was called once with [query]. Fails today (13 nodes, 3 embed calls).
   - Defects: parts-hipporag/HIPPO-9, parts-hipporag/HIPPO-10
   - Owner decision first: How the index nodes leave the query run. Option 1: remove them from wirings/hipporag/base.json. This breaks tests/parts_core/hipporag/test_thirteen_positions.py (MODAL-04), which pins base.json to the frozen 13-position system-model wiring. Option 2: the scheduler prunes to ancestors of provides and selectors.py computes the effect union over those ancestors. This is a runner/selector change shared with LightRAG wirings.
-- [ ] **HIPP-13**: The HippoRAG envelope answer is not an inline copy of evidence content (§18.2): the answer field has the same meaning as for LightRAG and the envelope no longer equals the retrieved chunk texts joined by blank lines (assemble_result.py:31-36, 52-65; engine.py:513).
+- [x] **HIPP-13**: The HippoRAG envelope answer is not an inline copy of evidence content (§18.2): the answer field has the same meaning as for LightRAG and the envelope no longer equals the retrieved chunk texts joined by blank lines (assemble_result.py:31-36, 52-65; engine.py:513).
   - Test: Seam test: HippoRAG query; assert envelope answer != '\n\n'.join(resolved evidence contents) and that it matches the chosen contract (generated text from a stub LLM, or the declared empty/absent form). Fails today.
   - Defects: contract/D-05
   - Owner decision first: M-12/G-22 HippoRAG generated answer: add an LLM generator node (upstream HippoRAG QA step, extra cost) versus returning no answer and evidence only (requires a §18 statement of the no-answer form).
-- [ ] **HIPP-14**: When a HippoRAG query takes a declared degradation path (the fact-filter guard fires and the DPR fallback is used), the non-debug envelope reports it, without the consumer calling resolve_trace(debug=True) (assemble_result.py:22-30, engine.py:271-284, 1106-1109).
+- [x] **HIPP-14**: When a HippoRAG query takes a declared degradation path (the fact-filter guard fires and the DPR fallback is used), the non-debug envelope reports it, without the consumer calling resolve_trace(debug=True) (assemble_result.py:22-30, engine.py:271-284, 1106-1109).
   - Test: Seam test: stub fact-filter keeps no ids; assert the non-debug envelope/trace exposes the fallback (flag or guards_fired) and a PPR-path query does not. Fails today (only nodes[].guards_fired in debug trace).
   - Defects: contract/D-07
   - Owner decision first: Envelope shape for a fired guard under §18.2/§19.8: reuse degraded/partial (changes their current meaning of unhealthy run) or add a modality-neutral field to the non-debug allow-list.
-- [ ] **HIPP-15**: Job, corpus and health status cover HippoRAG: GET /jobs/{job_id} for the job_id returned by a HippoRAG ingest returns a terminal status instead of 422 UnknownJobError; /corpus and /corpus/counts list and count HippoRAG documents when HippoRAG is selected; health probes the selected modality's stores (hipporag-chunks, hipporag-text-chunks, hipporag-graph) instead of only the LightRAG namespaces (engine.py:769, 853-914, 916-963).
+- [x] **HIPP-15**: Job, corpus and health status cover HippoRAG: GET /jobs/{job_id} for the job_id returned by a HippoRAG ingest returns a terminal status instead of 422 UnknownJobError; /corpus and /corpus/counts list and count HippoRAG documents when HippoRAG is selected; health probes the selected modality's stores (hipporag-chunks, hipporag-text-chunks, hipporag-graph) instead of only the LightRAG namespaces (engine.py:769, 853-914, 916-963).
   - Test: Extend databasise/tests/seam/test_hipporag_write_path.py and test_rest_corpus_endpoints.py: run a HippoRAG ingest, then poll get_job_status(job_id) and assert a completed status. Assert corpus_status and document_counts with a HippoRAG selector include the document. Assert health for the HippoRAG selection reports the HippoRAG store namespaces. Fails today with UnknownJobError, v1-only listings, and a v1-only health probe.
   - Defects: contract/D-12, doc-audit-1/D4, tests/T-07
   - Owner decision first: M-12 HippoRAG corpus surface: selector parameter on jobs/corpus/counts/health versus an engine-owned job registry keyed by job_id that records the modality; and whether HippoRAG ingest (blocking) returns a final job record.
   - Phase 12 D-13 exception (owner-delegated 2026-10-19): the corpus legs are tested in test_hipporag_write_path.py, not the protected test_rest_corpus_endpoints.py; 'health for the HippoRAG selection' is met by health() reporting the hipporag namespaces.
-- [ ] **HIPP-16**: HippoRAG supports document delete and clean re-ingest: delete_document with a HippoRAG selector removes the document's chunk vectors, KV records, passage vertices/edges and fact provenance instead of raising NoWritePathForModalityError; re-ingesting a document_id with shorter text leaves no chunk, vector, KV record or passage edge from ordinals beyond the new chunk count.
+- [x] **HIPP-16**: HippoRAG supports document delete and clean re-ingest: delete_document with a HippoRAG selector removes the document's chunk vectors, KV records, passage vertices/edges and fact provenance instead of raising NoWritePathForModalityError; re-ingesting a document_id with shorter text leaves no chunk, vector, KV record or passage edge from ordinals beyond the new chunk count.
   - Test: Seam test (test_delete_document.py / test_hipporag_write_path.py): ingest a 3-chunk text, re-ingest same document_id with 1-chunk text, assert stores hold 1 chunk and no edges to the old chunk vertices; then delete_document and assert zero records and no query evidence. Fails today (stale chunks; delete refuses).
   - Defects: parts-hipporag/HIPPO-7
   - Owner decision first: M-12 HippoRAG corpus surface: whether a delete removes entities/facts that lose all provenance, and whether re-ingest is delete-then-ingest.
-- [ ] **HIPP-17**: An EvidenceRef minted by a HippoRAG query never resolves silently to different text after the same document_id is re-ingested with changed content: it either resolves to the original text or fails with UnresolvableEvidenceReferenceError (chunk_embed.py:80, 96-114; evidence.py:6-20).
+- [x] **HIPP-17**: An EvidenceRef minted by a HippoRAG query never resolves silently to different text after the same document_id is re-ingested with changed content: it either resolves to the original text or fails with UnresolvableEvidenceReferenceError (chunk_embed.py:80, 96-114; evidence.py:6-20).
   - Test: Seam test: ingest text A, query and keep refs, re-ingest same document_id with text B of equal chunk count, resolve old refs; assert content equals A or UnresolvableEvidenceReferenceError is raised. Fails today (returns B's text).
   - Defects: doc-audit-3/D13
   - Owner decision first: Chunk identity: content-addressed chunk ids (sha256 of text) versus a content_hash field on EvidenceRef (a §18 envelope change shared with LightRAG).
   - Phase 12 D-03 exception (owner-delegated 2026-10-19): chunk ids are sha256(document_id:ordinal:text), not 'sha256 of text', so identical text in two documents never shares a chunk id.
-- [ ] **HIPP-18**: Every config key in wirings/hipporag/base.json and wirings/hipporag/corpus-ingest.json is either read by its part body or removed. The keys are entity-fact-embed namespaces, synonymy-edges guard, reset-vector-join socket_shape/arm_precedence/apportionment_policy, ppr readback and assemble-result order_policy. HippoRAG part docstrings and config text make no claim the code does not meet: reset-vector-join 'no token spend' (the body embeds and reports tokens at reset_vector_join.py:114), and edge_types 'auditable' (export_to_igraph drops edge_types and no route exposes it). The affected locations are assemble_result.py:5-7, reset_vector_join.py:9-12 and graph_augment_persist.py:30-33.
+- [x] **HIPP-18**: Every config key in wirings/hipporag/base.json and wirings/hipporag/corpus-ingest.json is either read by its part body or removed. The keys are entity-fact-embed namespaces, synonymy-edges guard, reset-vector-join socket_shape/arm_precedence/apportionment_policy, ppr readback and assemble-result order_policy. HippoRAG part docstrings and config text make no claim the code does not meet: reset-vector-join 'no token spend' (the body embeds and reports tokens at reset_vector_join.py:114), and edge_types 'auditable' (export_to_igraph drops edge_types and no route exposes it). The affected locations are assemble_result.py:5-7, reset_vector_join.py:9-12 and graph_augment_persist.py:30-33.
   - Test: Test in databasise/tests/parts_core/hipporag/test_registration.py: load both HippoRAG wiring files. Assert none of the listed unread keys remain, or, for each key kept, a test shows that changing its value changes the part's output. A second test asserts either that export_to_igraph's edges carry edge_types, or that no HippoRAG docstring claims export-level audit. Fails today on the listed keys and on the KeyError for e['edge_types'].
   - Defects: parts-hipporag/HIPPO-13, parts-hipporag/HIPPO-14
 - [x] **HIPP-19**: HippoRAG ingest token accounting never reports tokens from different counters under one counted_by label: summing accountings with mixed counted_by values yields one row per counter (or the unbudgetable sentinel), using one shared helper instead of the duplicated _sum_token_accountings in openie.py:118-131 and entity_fact_embed.py:59-70.
@@ -892,20 +892,20 @@ These fail today.
 | HIPP-02 | Phase 12 | Complete |
 | HIPP-03 | Phase 12 | Complete |
 | HIPP-04 | Phase 12 | Complete |
-| HIPP-05 | Phase 12 | Pending |
+| HIPP-05 | Phase 12 | Complete |
 | HIPP-06 | Phase 12 | Complete |
-| HIPP-07 | Phase 12 | Pending |
-| HIPP-08 | Phase 12 | Pending |
-| HIPP-09 | Phase 12 | Pending |
-| HIPP-10 | Phase 12 | Pending |
+| HIPP-07 | Phase 12 | Complete |
+| HIPP-08 | Phase 12 | Complete |
+| HIPP-09 | Phase 12 | Complete |
+| HIPP-10 | Phase 12 | Complete |
 | HIPP-11 | Phase 12 | Complete |
-| HIPP-12 | Phase 12 | Pending |
-| HIPP-13 | Phase 12 | Pending |
-| HIPP-14 | Phase 12 | Pending |
-| HIPP-15 | Phase 12 | Pending |
-| HIPP-16 | Phase 12 | Pending |
-| HIPP-17 | Phase 12 | Pending |
-| HIPP-18 | Phase 12 | Pending |
+| HIPP-12 | Phase 12 | Complete |
+| HIPP-13 | Phase 12 | Complete |
+| HIPP-14 | Phase 12 | Complete |
+| HIPP-15 | Phase 12 | Complete |
+| HIPP-16 | Phase 12 | Complete |
+| HIPP-17 | Phase 12 | Complete |
+| HIPP-18 | Phase 12 | Complete |
 | HIPP-19 | Phase 12 | Complete |
 | WIRE-01 | Phase 13 | Pending |
 | WIRE-02 | Phase 13 | Pending |
