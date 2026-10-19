@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 12
 current_phase_name: HippoRAG Fixes
 status: executing
-stopped_at: Completed 12-07-PLAN.md
-last_updated: "2026-10-19T19:13:57.483Z"
+stopped_at: Completed 12-08-PLAN.md
+last_updated: "2026-10-19T19:23:58.660Z"
 last_activity: 2026-10-19
 last_activity_desc: Phase 12 execution started
-state_head: c551e98bb1574f13edcf08836bb3f82ee3ded4fd
+state_head: 0f55817f890db6200b011296d0cc43242118eb67
 progress:
   total_phases: 11
   completed_phases: 4
   total_plans: 57
-  completed_plans: 50
+  completed_plans: 51
   percent: 36
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-19 after Phase 11)
 ## Current Position
 
 Phase: 12 (HippoRAG Fixes) — EXECUTING
-Plan: 8 of 14
+Plan: 9 of 14
 Status: Ready to execute
 Last activity: 2026-10-19 — Phase 12 execution started
 
@@ -113,6 +113,7 @@ Progress: [████░░░░░░] 36% (4/11 phases)
 | Phase 12 P05 | 20min | 2 tasks | 5 files |
 | Phase 12 P06 | 40 min | 3 tasks | 11 files |
 | Phase 12 P07 | 25min | 2 tasks | 9 files |
+| Phase 12 P08 | 25min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -200,6 +201,7 @@ Recent decisions affecting current work:
 - [Phase 12]: 12-04: OpenIE chunk failure refuses the whole ingest (D-08); semaphore held across a chunk's NER+triple pair; fact chunk_ids are the KV-stored union (D-06)
 - [Phase 12]: 12-06: HippoRAG delete is manifest-driven (doc:<id>) and stages one all-or-none commit; HippoRAG writes queue on a per-workspace gate (D-12, D-14)
 - [Phase 12]: D-17: HippoRAG query embeds once at fact-score; reset-vector-join and dpr-fallback reuse query_vector over a direct dep and drop calls_embedding
+- [Phase 12]: 12-08: HippoRAG chunk id is sha256(document_id:ordinal:text); document-remover runs first in corpus-ingest and re-added orphan entities count as new
 
 ### Pending Todos
 
@@ -250,8 +252,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-19T19:13:57.262Z
-Stopped at: Completed 12-07-PLAN.md
+Last session: 2026-10-19T19:23:58.458Z
+Stopped at: Completed 12-08-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

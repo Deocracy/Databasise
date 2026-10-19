@@ -272,7 +272,7 @@ Plans (nine waves; `seam/engine.py` is touched by nine plans, so those run one p
 - HIPP-15/16: M-12 corpus surface — selector parameter on jobs/corpus/counts/health or an engine-owned job registry; whether HippoRAG ingest returns a final job record; whether delete removes entities/facts that lose all provenance; re-ingest as delete-then-ingest
 - HIPP-17: chunk identity — content-addressed chunk ids or a content_hash on EvidenceRef (§18 change shared with LightRAG)
 
-**Plans**: 7/14 plans executed
+**Plans**: 8/14 plans executed
 
 Plans (eight waves; `seam/engine.py`, `wirings/hipporag/base.json` and `tests/seam/test_hipporag_write_path.py` are each touched by several plans, so no two plans in one wave share a file; 12-14 carries the phase's one owner checkpoint and runs last):
 
@@ -283,7 +283,7 @@ Plans (eight waves; `seam/engine.py`, `wirings/hipporag/base.json` and `tests/se
 - [x] 12-05-PLAN.md — Query runs pruned to ancestors of provides; write selectors stop resolving to HippoRAG; fact-filter receives the query (HIPP-12, HIPP-05; wave 3)
 - [x] 12-06-PLAN.md — HippoRAG delete: manifest, document-remover, corpus-delete.json; serialising per-workspace HippoRAG write gate (HIPP-16; wave 3)
 - [x] 12-07-PLAN.md — The query is embedded once and shared; narrowed effects recorded (HIPP-12; wave 4)
-- [ ] 12-08-PLAN.md — Remover-first re-ingest; synonymy kept on re-ingest; content-addressed chunk ids (HIPP-16, HIPP-17; wave 4)
+- [x] 12-08-PLAN.md — Remover-first re-ingest; synonymy kept on re-ingest; content-addressed chunk ids (HIPP-16, HIPP-17; wave 4)
 - [ ] 12-09-PLAN.md — /corpus, /corpus/counts and MCP status take a selector and list HippoRAG documents from the manifests (HIPP-15; wave 5)
 - [ ] 12-10-PLAN.md — qa generator node (upstream rag_qa) as provides; structural pins and port record follow the 14th node (HIPP-13; wave 5)
 - [ ] 12-11-PLAN.md — top_k cut on both branches with zero-score PPR items dropped (HIPP-11; wave 6)
@@ -463,7 +463,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 9. Inputs, Errors & Security | 10/10 | Complete    | 2026-10-17 |
 | 10. Stores, Locking & Data Integrity | 12/12 | Complete    | 2026-10-17 |
 | 11. LightRAG Corpus Path | 11/11 | Complete    | 2026-10-19 |
-| 12. HippoRAG Fixes | 7/14 | In Progress | - |
+| 12. HippoRAG Fixes | 8/14 | In Progress | - |
 | 13. Selectors, Wiring & Runner | 0/TBD | Not started | - |
 | 14. Promotion & Ledger | 0/TBD | Not started | - |
 | 15. Offline Tooling & Packaging | 0/TBD | Not started | - |
