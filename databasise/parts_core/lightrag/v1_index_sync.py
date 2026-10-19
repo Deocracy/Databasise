@@ -36,6 +36,7 @@ from typing import Any
 
 from databasise.foreign.v1_corpus_adapter import CorpusOpTimeoutError
 from databasise.identity.canon import canonicalise
+from databasise.parity.import_index import _VECTOR_KINDS as VECTOR_KINDS
 from databasise.parity.import_index import mirror_snapshot, read_v1_snapshot
 from databasise.parts.admission import (
     MANIFEST_SOURCE_CODE_INSPECTED,
@@ -94,6 +95,12 @@ async def v1_index_sync_body(ctx: Any) -> dict[str, Any]:
         kv, vector, graph = ctx.stores["kv"], ctx.stores["vector"], ctx.stores["graph"]
         previous = await kv.get_by_id(V1_INDEX_SYNC_MANIFEST_KEY)
         counts = await mirror_snapshot(snapshot, kv=kv, vector=vector, graph=graph, manifest=previous)
+        # B-WR-01: every LightRAG vector namespace exists after a sync that mirrored any vector, so
+        # a corpus with no relations reads as empty, not never populated (D-15).
+        dims = [matrix.shape[1] for _ids, matrix, _meta in snapshot.vectors.values()]
+        if dims:
+            for kind in VECTOR_KINDS:
+                await vector.select(kind).ensure_index(dims[0])
         current = snapshot.ids()
         # A-WR-01: the committed manifest still lists the ids pruned now. kv commits before vector
         # and graph, so after a partial commit the next sync prunes them again. The engine narrows

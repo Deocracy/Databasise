@@ -231,6 +231,47 @@ async def _vector_ids_of(store_root: Path) -> set[str]:
         await store.finalize()
 
 
+class _FakeV1IndexWithEntities(_FakeV1Index):
+    """v1's commit of a document that yields entities but no relationships."""
+
+    def _write(self, working_dir: Path) -> None:
+        super()._write(working_dir)
+        _write_faiss(working_dir, "entities", {f"ent-{d}": {"source_id": f"{d}-c"} for d in self.docs})
+
+
+async def test_a_corpus_with_no_relations_is_answerable_on_global_and_hybrid(tmp_path, monkeypatch):
+    """11 REVIEW B-WR-01: the sync commits an empty index for a namespace v1 gave no rows, so the
+    D-15 pre-check reads it as empty, not never populated."""
+    from databasise.seam.query import QueryObject
+    from databasise.tests.seam._probes import counting_clients
+    from databasise.wirings.resolve import resolve_arm
+
+    fake = _FakeV1IndexWithEntities()
+    monkeypatch.setattr(full_ingest_module, "run_corpus_op", fake.ingest)
+    monkeypatch.setattr(engine_module, "run_corpus_op", lambda *_a, **_k: {"counts": {}, "documents": [], "total": 0})
+    engine = Databasise(
+        store_root=tmp_path, workspace="norel", clients=counting_clients([1.0] + [0.0] * (_DIM - 1))
+    )
+    await engine.ingest(IngestDocument(document_id="a", text="text a"))
+
+    assert (tmp_path / "norel" / "relationships" / "vector.faiss").is_file()
+    relationships =FaissVectorStore(namespace="relationships", workspace="norel", store_root=tmp_path)
+    try:
+        assert relationships.get_by_id("ent-a") is None
+        assert await relationships.query([1.0] + [0.0] * (_DIM - 1), top_k=3) == []
+    finally:
+        await relationships.finalize()
+    for arm in ("global", "hybrid"):
+        envelope = await engine._execute_resolved(QueryObject(text="what is a?"), resolve_arm(arm))
+        assert not envelope.degraded, (arm, envelope.degradation_reason)
+
+    # A second sync leaves the empty pair in place and still reads clean (STOR-08, snapshot cache).
+    await engine.ingest(IngestDocument(document_id="b", text="text b"))
+    for arm in ("global", "hybrid"):
+        envelope = await engine._execute_resolved(QueryObject(text="what is b?"), resolve_arm(arm))
+        assert not envelope.degraded, (arm, envelope.degradation_reason)
+
+
 async def test_a_corrupt_v1_index_refuses_the_ingest_and_commits_nothing(tmp_path, monkeypatch):
     def _fake_driver(op: str, payload: dict[str, Any], *, timeout: float, working_dir: Any = None, **_: Any):
         assert working_dir is not None, "full-ingest launched v1 without a per-workspace working_dir"

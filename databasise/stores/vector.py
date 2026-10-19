@@ -278,6 +278,7 @@ class FaissVectorStore(StorageNameSpace):
 
         self._pending: dict[str, _PendingVectorDoc] = {}
         self._pending_deletes: set[str] = set()
+        self._pending_create_dim: int | None = None
         self._prepared: tuple[Any, dict[str, dict[str, Any]], int] | None = None
         # Phase 10 review WR-04: the .tmp pair is one fixed path per namespace, shared by every
         # instance, so abort_prepared may unlink it only if THIS instance wrote it.
@@ -363,6 +364,13 @@ class FaissVectorStore(StorageNameSpace):
         for doc_id in ids:
             self._pending.pop(doc_id, None)
             self._pending_deletes.add(doc_id)
+
+    async def ensure_index(self, dim: int) -> None:
+        """11 REVIEW B-WR-01: at the next flush, commit an empty, valid index pair of ``dim`` if this
+        namespace has no committed pair and no pending rows, so a namespace a writer covered but
+        gave no rows reads as empty rather than never populated. Buffered like a write: dropped by
+        ``abort_prepared``; a no-op when a committed pair exists."""
+        self._pending_create_dim = int(dim)
 
     # ------------------------------------------------------------------ #
     # Reads — only committed (flushed) data is queryable                  #
@@ -515,18 +523,23 @@ class FaissVectorStore(StorageNameSpace):
         the event-loop thread, in ``commit_prepared``, so a concurrent ``query()`` never races a
         worker-thread mutation.
         """
-        if not (self._pending or self._pending_deletes):
+        if not (self._pending or self._pending_deletes or self._pending_create_dim):
             return
 
         signature = self._committed_signature()
         if signature != self._loaded_signature:
             self._read_committed()
         deletes = [doc_id for doc_id in self._pending_deletes if doc_id in self._entries]
-        if not (self._pending or deletes):
-            return  # only deletes of uncommitted ids: nothing to write
+        create = self._pending_create_dim is not None and self._index is None
+        if not (self._pending or deletes or create):
+            return  # only deletes of uncommitted ids, or an index that already exists
 
         if self._index is None:
-            dim = next(iter(self._pending.values())).vector.shape[0]
+            dim = (
+                next(iter(self._pending.values())).vector.shape[0]
+                if self._pending
+                else self._pending_create_dim
+            )
             base_index = faiss.IndexIDMap2(faiss.IndexFlatIP(dim))
         else:
             base_index = self._index
@@ -574,6 +587,7 @@ class FaissVectorStore(StorageNameSpace):
             self._prepared = None
         self._pending.clear()
         self._pending_deletes.clear()
+        self._pending_create_dim = None
 
     async def abort_prepared(self) -> None:
         if self._staged:
@@ -583,6 +597,7 @@ class FaissVectorStore(StorageNameSpace):
         self._prepared = None
         self._pending.clear()
         self._pending_deletes.clear()
+        self._pending_create_dim = None
 
     async def index_done_callback(self) -> None:
         """Flush the pending buffer into the index and sidecar: ``prepare`` then
@@ -640,6 +655,7 @@ class FaissVectorStore(StorageNameSpace):
             self._dim = None
             self._pending.clear()
             self._pending_deletes.clear()
+            self._pending_create_dim = None
             return {"status": "success", "message": "data dropped"}
         except Exception as exc:  # noqa: BLE001 — drop()'s own documented contract (v1 StorageNameSpace)
             return {"status": "error", "message": str(exc)}
