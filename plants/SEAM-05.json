@@ -1,0 +1,15 @@
+{
+  "id": "SEAM-05",
+  "plants": [
+    {
+      "file": "databasise/seam/engine.py",
+      "find": "        type(cause).__name__,\n        detail,\n    )\n    return refusal",
+      "replace": "        type(cause).__name__,\n        detail,\n        exc_info=cause,\n    )\n    return refusal"
+    },
+    {
+      "file": "databasise/seam/engine.py",
+      "find": "\"engine fault: operation=%s failure_class=%s node=%s cause=%s detail=%s\",",
+      "replace": "\"engine fault: operation=%s failure_class=%s node=%s cause=%s info=%s\","
+    }
+  ]
+}
