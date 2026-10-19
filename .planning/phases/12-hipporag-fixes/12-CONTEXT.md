@@ -11,7 +11,7 @@ A HippoRAG ingest builds a graph whose evidence resolves and accumulates correct
 
 The owner routed two more items here:
 - **A-WR-05** (Phase 11 UAT item 4): in-process HippoRAG provider errors are logged unredacted.
-- **The HippoRAG empty-namespace pre-check**: Phase 11 D-15 covered LightRAG namespaces only. This is recorded in STATE.md concerns.
+- **The HippoRAG empty-namespace pre-check**: Phase 11 D-15 covered LightRAG namespaces only. This is recorded in STATE.md concerns. It was deferred after research; see D-15.
 
 **In scope:**
 - the chunk-id form
@@ -85,7 +85,7 @@ The owner routed two more items here:
     - `failed_chunks`, a count;
     - `failure_reasons`, a capped list of closed codes such as `llm_call_failed:<ExceptionClass>` and `unparseable_response`, never raw LLM text, paths or keys. It stays within SEAM-05's 1 KB / no-leak rule.
   - REST maps it to 502 like the other non-unavailable classes. No IngestJob/§18 field is added.
-  - NER and triple calls run with bounded concurrency: an `asyncio.Semaphore` whose bound is set in the wiring config and read by the body. All chunks are collected, using `gather(return_exceptions=True)` or failure collection inside the semaphore, so every failure is counted. Do not use a cancel-on-first TaskGroup.
+  - NER and triple calls run with bounded concurrency: the scheduler's existing `config.max_concurrency` key (`ctx._semaphore`), set to 4 on `openie` in both wirings. No new key is needed. All chunks are collected, using `gather(return_exceptions=True)` or failure collection inside the semaphore, so every failure is counted. Do not use a cancel-on-first TaskGroup.
   - "Ingest outcome (and trace)" in HIPP-10 means the refusal body plus the in-run NodeTrace/server log. Ingest persists no trace.
 - **D-09 (HIPP-04 = keep ForeignEngineRefusalError):**
   - The class, `refusal_type`, `failure_class` vocabulary and REST/MCP bodies stay unchanged. This follows Phase 9 D-04, Phase 10 D-06/D-13 and CONTRACT.md:785. A distinct class would also contradict HIPP-03's own test text.
@@ -114,7 +114,14 @@ The owner routed two more items here:
     - each fact's `chunk_ids` minus the removed ones. A fact left with none is removed from the vector store and KV;
     - the removed chunk ids from `cooccurrence_by_chunk` on every manifest pair edge, recomputing the weight. An edge with no co-occurrence and no synonymy left is deleted;
     - any manifest entity with no passage-entity edge to a surviving chunk vertex (orphan), together with its vertex and entity vector.
-  - Verify that Cozo read-your-writes reflects a pending `delete_node` cascade before graph-augment-persist merges. If it does not, the remover must also stage the edge deletes explicitly.
+  - Research confirmed that a pending `delete_node` cascade is hidden from `get_edge`, `get_node_edges` and export, so the remover stages no explicit edge deletes.
+  - Manifest schema, per research: `doc:<id>` → `{chunk_ids, fact_ids, entities, ingested_at}`. Entity pairs are found with `get_node_edges` per manifest entity, so pairs are not stored. This reading of "touched entity pairs" is accepted.
+  - A store with no manifest makes the remover a no-op. Pre-Phase-12 HippoRAG stores must be rebuilt.
+  - Re-ingest orphan fix (research finding):
+    - The remover returns `removed_entities`.
+    - In `corpus-ingest.json` only, entity-fact-embed depends on the remover, treats a removed-then-re-upserted entity as new, and emits `new_entities`.
+    - synonymy-edges passes `new_entities` to `self_knn(ids=...)`, so re-ingesting the same document keeps its synonymy edges. A test is required.
+  - `chunk-embed` stays `consumes_documents[0]`, because parity's build stamps only that node.
   - `delete_document` with a HippoRAG selector returns the existing `DeletionOutcome` and no longer enters the v1 write gate or stamps the v1 working dir.
   - `test_hipporag_write_path.py:215-229` (the NoWritePath assertion, not protected) is replaced.
 - **D-13 (HIPP-15):**
@@ -126,10 +133,14 @@ The owner routed two more items here:
   - The HIPP-15 test goes in `test_hipporag_write_path.py`. Its fail-first assertion is the `/corpus` or `/corpus/counts` leg.
   - Protected `test_rest_corpus_endpoints.py` (RUN-10, disputed) is not edited.
   - "Health for the HippoRAG selection" is met by health reporting the hipporag namespaces.
-- **D-14 (HippoRAG write gate):**
-  - HippoRAG ingest and delete take a per-workspace write gate built from the existing `_write_gate` helper. A concurrent HippoRAG write is refused at once with the existing `StoreBusyError` (409), as LightRAG does (Phase 11 D-07). Without it, the D-04/D-06/D-12 read-merge-write steps lose updates.
+- **D-14 (HippoRAG write gate, amended after research):**
+  - HippoRAG ingest and delete take a per-workspace HippoRAG gate, on a path key distinct from the v1 dir, acquired before `_build_stores`.
+  - The gate **serialises**: a second writer waits (polling, with a ceiling) and is refused with the existing `StoreBusyError` (409) only when the ceiling expires. Refuse-at-once would break protected `test_ingest_abort.py::test_two_concurrent_hipporag_ingests_on_one_root_both_commit_in_full` (STOR-06) and `test_concurrent_ingest_failure.py`.
+  - Without the gate, the D-04/D-06/D-12 read-merge-write steps lose updates.
+  - `delete_document` picks its gate by the selector's family. The default selector keeps the LightRAG gate (STOR-07).
   - The LightRAG gate behaviour and protected `test_corpus_write_gate.py` (LRAG-04) stay unchanged.
-- **D-15 (HippoRAG empty-namespace pre-check):**
+- **D-15 (HippoRAG empty-namespace pre-check): DEFERRED after research.**
+  - It would make protected `test_ingest_abort.py::test_a_query_after_a_refused_ingest_returns_no_evidence_from_it` (STOR-06) raise EmptyNamespaceError, which changes what that check means. No HIPP row requires the pre-check. It is moved to Deferred; the original text is kept below for the record.
   - A HippoRAG query on a never-populated `hipporag-chunks` is refused before the run with the existing `EmptyNamespaceError` (422, public `store_kind` only), the same as LightRAG.
   - Use a separate HippoRAG table: protected `test_empty_namespace.py:152-158` pins `_RETRIEVAL_NAMESPACES` to the three LightRAG entries. Do not pre-check `hipporag-facts`, which is legitimately absent when OpenIE finds no triples.
   - Check the fresh-root expectations of `test_cross_modality_run.py`, `test_compare.py` and `test_store_isolation.py`.
@@ -279,6 +290,7 @@ Fail-first proofs need care:
 - **Selector-scoped health:** a LightRAG-only workspace always reads `degraded` because the HippoRAG stores are absent (Phase 11 D-14 meaning). Revisit if health gains a selector.
 - **Export-level `edge_types` audit:** one line in `export_to_igraph` if the owner wants it.
 - **Batched edge reads:** for graph-augment-persist's per-pair `get_edge`. That is acceptable at current corpus sizes.
+- **HippoRAG empty-namespace pre-check (D-15):** this needs an owner decision on what the STOR-06 check means: a grant on `test_ingest_abort.py`, or a populate-first rewrite. Revisit with WIRE-02 (Phase 13).
 - **Upstream fidelity gaps outside HIPP scope:** `min_max_normalize` zero-range, entity-vs-fact divisor, `passage_node_weight` 0.05 vs 1.0, synonymy top-k.
 
 </deferred>
