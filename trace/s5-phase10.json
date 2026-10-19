@@ -9,7 +9,7 @@
     "databasise/stores/vector.py": "a7f501cd8fbc7d556b949b73ecbca9c8da92f6bc3d112a537712a245ed5f934c",
     "databasise/stores/probes.py": "ea3a6d4d0e70dc78f55d669758f873b9eb0e6355d9c4c61650337b1db85ba137",
     "databasise/seam/engine.py": "f0e3b086db8abd2e672d5103345ffe1aa61e9a3cd4a69f26d00ea0ff3ec98df1",
-    "databasise/parts_core/__init__.py": "c7e52b729454dd13da6fdac848200baa9faf3b00239062d0976819ad819dc2e4",
+    "databasise/parts_core/__init__.py": "bb0a19aed6adf402c795260aaef5acafe394c5c1e4577bc32aa28ab8e929b754",
     "databasise/validator/parse.py": "18ab39676c9ac5c18f6f3669fe7eb405d9ee64395e3ba1ccdf2cd20531079e08",
     "databasise/namespaces.py": "5e0e2eece8649d6c91bc788bc05dfb667b038c656626a9cf30f8847059b4e46d",
     "databasise/tests/test_removed_stores_absent.py": "6a812a3ef4a2a86b9492f9de297622d0aef23591b0d15ef880067de06cf39a70"
@@ -17,7 +17,7 @@
   "checker": {
     "harness": "claude-code",
     "model": "sonnet",
-    "session": "trace-2026-10-18b"
+    "session": "trace-2026-10-18c"
   },
   "items": [
     {
@@ -47,7 +47,7 @@
     {
       "id": "STOR-05",
       "status": "present",
-      "where": "databasise/parts_core/__init__.py:145",
+      "where": "databasise/parts_core/__init__.py:146",
       "quote": "elif mode == \"r\" and name not in _READ_ALLOWLIST[kind]:"
     },
     {
