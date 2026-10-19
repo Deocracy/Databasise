@@ -1167,7 +1167,9 @@ class Databasise:
         staged or recorded, a LightRAG ingest probes v1 with the status op ``retry_document`` uses.
         If v1 holds any row for the id (any status, text or file, any suffix), v1 is not called:
         the job is ``enqueued: 0`` under that row's track id (D-10). v1 would otherwise keep a
-        second row for ``x.md`` beside ``x.txt``, and a delete removes only one of them.
+        second row for ``x.md`` beside ``x.txt``, and a delete removes only one of them. The
+        v1-index-sync node still runs alone and commits, so a document v1 committed before an
+        earlier sync timed out is mirrored to v2 (A3-WR-01).
         """
         # D-12: only None is absent; a caller-supplied '' reaches the token check and is refused.
         document_id = document.document_id if document.document_id is not None else uuid.uuid4().hex
@@ -1301,6 +1303,9 @@ class Databasise:
                 if gated:
                     gate.enter_context(_write_gate(self._v1_working_dir()))
                 if precheck is not None and (existing := await precheck()) is not None:
+                    if gated:
+                        events = await self._mirror_v1_index_only(resolved, stores)
+                        existing = existing.model_copy(update={"seam_events": events})
                     return existing
                 if gated:
                     # D-02: before the run, so a job v1 records but that times out here is known.
@@ -1393,6 +1398,47 @@ class Databasise:
                     # then answers UnknownJobError (no record, and v1 holds no such track).
                     logger.exception("job family record failed after a committed %s ingest", family)
             return job
+
+    async def _mirror_v1_index_only(self, resolved: dict[str, Any], stores: dict[str, Any]) -> list[SeamEvent]:
+        """11 REVIEW A3-WR-01: run the corpus wiring's v1-index-sync node alone and commit through
+        ``_commit_all``. Called under the write gate when v1 already holds the id: a sync that timed
+        out after v1 committed left that document out of v2, and only a sync mirrors it. v1 itself is
+        not called. A failure drops the staged writes and refuses as the full ingest does."""
+        sync_id = next(
+            node_id
+            for node_id, node in resolved["nodes"].items()
+            if str(node.get("component", "")).startswith("lightrag/v1-index-sync@")
+        )
+        sync_only = {
+            **resolved,
+            "nodes": {sync_id: {**resolved["nodes"][sync_id], "deps": []}},
+            "provides": [sync_id],
+            "consumes_documents": [],
+        }
+        parsed = parse_wiring(sync_only, self.registry)
+        _refuse_unparseable(parsed)
+        touches: list[tuple[str, str, str]] = []
+
+        def _recorder(node_id: str, kind: str, key: str) -> None:
+            touches.append((node_id, kind, key))
+
+        scheduled = await _scheduler.run_wiring(
+            parsed,
+            self.registry,
+            stores,
+            determinism_setting=_DETERMINISM_SETTING,
+            concurrency_setting=_CONCURRENCY_SETTING,
+            clients=self.clients,
+            recorder=_recorder,
+        )
+        try:
+            _node_result_or_refuse(scheduled, sync_id, "ingest")
+        except ForeignEngineRefusalError:
+            await _drop_pending(stores, self.store_root)
+            raise
+        await _commit_all(stores, "ingest", self.store_root)
+        await _narrow_sync_manifest(stores, scheduled, self.store_root)
+        return _mach11_events(parsed, touches, {node.node_id: node for node in scheduled["nodes"]})
 
     def _remove_inbox_files(self, document_id: str) -> None:
         """11-05 (D-09): remove every file for ``document_id`` (already a validated bare token) from

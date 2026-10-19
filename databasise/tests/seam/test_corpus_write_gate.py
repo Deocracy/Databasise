@@ -298,6 +298,50 @@ async def test_a_sync_over_its_ceiling_raises_the_timeout_fault_and_holds_the_ga
     assert len(fake_v1.intervals) == 1  # the refused write never reached v1
 
 
+async def test_a_reingest_after_a_sync_timeout_mirrors_the_document_v1_committed(store_root, fake_v1, monkeypatch):
+    """11 REVIEW A3-WR-01: v1 committed but the sync timed out, so v2 lacks the document. The
+    re-ingest of that id does not call v1 again (A-CR-02), yet it runs the sync, so the document
+    becomes resolvable in v2. It still answers ``enqueued: 0`` with the original track id."""
+    fake_v1.delay = 0.0
+    real_read = v1_index_sync.read_v1_snapshot
+    reads: list[int] = []
+
+    def _first_read_slow(working_dir, **kwargs):
+        reads.append(1)
+        if len(reads) == 1:
+            time.sleep(1.0)
+        return real_read(working_dir, **kwargs)
+
+    def _status(_op, payload, *, working_dir, **_kwargs):
+        rows = json.loads((Path(working_dir) / "kv_store_doc_status.json").read_text())
+        held = [{"document_id": d, "status": r["status"]} for d, r in rows.items() if d == payload["document_id"]]
+        return {"counts": {}, "documents": held, "total": len(held)}
+
+    monkeypatch.setattr(v1_index_sync, "read_v1_snapshot", _first_read_slow)
+    monkeypatch.setattr(v1_index_sync, "V1_INDEX_SYNC_WALL_CLOCK_CEILING_SECONDS", 0.3)
+    monkeypatch.setattr(engine_module, "run_corpus_op", _status)
+    engine = Databasise(store_root=store_root, workspace="ws")
+
+    with pytest.raises(ForeignEngineRefusalError) as fault:
+        await engine.ingest(_doc("a"))
+    assert fault.value.failure_class == "CorpusOpTimeoutError"
+    await _until(lambda: not engine._write_gate_held())
+    status = json.loads((store_root / "ws" / "lightrag-v1" / "kv_store_doc_status.json").read_text())
+    original_track = status["a"]["track_id"]
+
+    job = await engine.ingest(_doc("a"))
+
+    assert (job.job_id, job.enqueued) == (original_track, 0)
+    assert len(fake_v1.intervals) == 1  # v1 was not called again
+    assert not engine._write_gate_held()
+    kv = SqliteKVStore(namespace="text_chunks", workspace="ws", store_root=store_root)
+    try:
+        assert (await kv.get_by_id("a-chunk-000"))["full_doc_id"] == "a"
+        assert (await kv.get_by_id(V1_INDEX_SYNC_MANIFEST_KEY))["text_chunks"] == ["a-chunk-000"]
+    finally:
+        await kv.finalize()
+
+
 async def test_a_cancelled_write_logs_the_discarded_v1_failure_once_redacted(store_root, monkeypatch, caplog):
     """11 REVIEW A2-WR-02: the outcome of a v1 worker whose wait was given up reaches no caller, so
     it is logged once, server-side, with the failure class and the redacted stderr tail."""
