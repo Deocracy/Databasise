@@ -2,14 +2,14 @@
   "bak_trace": 1,
   "step": "S3",
   "part": "phase11-a",
-  "ledger_version": 529,
+  "ledger_version": 616,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "b0d80bee523010ba1f47230bf6ea0a820007f956398e1b410af011daa231a7c8"
+    ".planning/REQUIREMENTS.md": "fd0a42d11f41c7f6ca17c967f6776e721f801d57938f11a3e2aca2990ce8b792"
   },
   "checker": {
     "harness": "claude-code",
-    "model": "sonnet",
-    "session": "trace-2026-10-19"
+    "model": "claude-opus-5-5",
+    "session": "32d1701b-4256-409c-a5a7-e305cc822f40"
   },
   "items": [
     {
