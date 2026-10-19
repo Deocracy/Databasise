@@ -1,5 +1,5 @@
 {
-  "ledger_version": 441,
+  "ledger_version": 482,
   "frozen_at": null,
   "items": [
     {
@@ -581,7 +581,7 @@
       "text": "SqliteLexicalStore.query('alpha beta') matches documents that contain both terms in any position, with each term bound and quoted separately and combined with AND, as the module docstring states. Returned scores follow the vector store convention: higher is better, sorted descending.",
       "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
-      "test_ref": "databasise/tests/test_removed_stores_absent.py",
+      "test_ref": "databasise/tests/test_removed_stores_absent.py::test_removed_store_modules_do_not_exist",
       "code_ref": "",
       "evidence": "Satisfied by removal (Phase 10 D-15): SqliteLexicalStore deleted; the grep test asserts nothing imports stores.lexical",
       "owner": "",
