@@ -11,6 +11,7 @@ from databasise.parts.schema import NodeContext
 from databasise.parts_core.hipporag.assemble_result import HIPPORAG_RESULT_ASSEMBLER_PART
 from databasise.parts_core.hipporag.openie import _parse_entities, _parse_triples
 from databasise.stores.kv import SqliteKVStore
+from databasise.wirings.resolve import load_wiring
 
 
 async def _assemble(store_root, *, config, ppr_items, dpr_items, guard_fired=False):
@@ -99,3 +100,22 @@ def test_an_empty_triples_list_and_a_valid_one_still_parse():
 def test_an_entities_list_with_a_non_string_item_is_unparseable():
     assert _parse_entities('{"entities": ["Ed Wood", 3]}') is None
     assert _parse_entities('{"entities": ["Ed Wood", " "]}') == ["Ed Wood"]
+
+
+# HIPP-18 / A-WR-04: the config keys each node's part (or the scheduler's guard machinery, for
+# fact-filter ``guards``) reads. A new unread key fails the test below; add a key here only with its reader.
+_READ_KEYS: dict[str, set[str]] = {
+    "openie": {"max_concurrency"},
+    "synonymy-edges": {"synonymy_top_k", "synonymy_threshold"},
+    "fact-filter": {"guards", "linking_top_k"},
+    "reset-vector-join": {"arity", "passage_node_weight"},
+    "ppr": {"damping"},
+    "assemble-result": {"top_k"},
+}
+
+
+@pytest.mark.parametrize("variant", ["base", "corpus-ingest"])
+def test_every_config_key_in_the_hipporag_wirings_is_read(variant):
+    for node_id, node in load_wiring("hipporag", variant=variant)["nodes"].items():
+        unread = set(node.get("config") or {}) - _READ_KEYS.get(node_id, set())
+        assert not unread, (variant, node_id, sorted(unread))

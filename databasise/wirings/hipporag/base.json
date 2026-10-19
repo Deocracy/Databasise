@@ -39,7 +39,6 @@
       "kind": "extractor",
       "effects": ["reads_vector"],
       "config": {
-        "declared_capability": "§14.2 Vector self-KNN [PARTS-02 H1]",
         "synonymy_top_k": 5,
         "synonymy_threshold": 0.8
       },
@@ -49,9 +48,6 @@
       "component": "hipporag/graph-materializer@0.1.0",
       "kind": "extractor",
       "effects": ["writes_graph", "writes_artifact"],
-      "config": {
-        "declared_capability": "§14.2 Graph bulk-export"
-      },
       "deps": ["fact-edges", "passage-edges", "synonymy-edges"]
     },
     "fact-score": {
@@ -98,7 +94,6 @@
       "kind": "retriever",
       "effects": ["reads_graph"],
       "config": {
-        "declared_capability": "§14.2 Graph bulk-export",
         "damping": 0.5
       },
       "deps": ["reset-vector-join"]

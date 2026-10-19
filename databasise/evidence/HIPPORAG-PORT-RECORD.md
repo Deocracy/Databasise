@@ -149,9 +149,10 @@ pinning tests are named in the Phase 12 plan summaries.
 - **D-22, removed config keys.** Config no part body, scheduler or guard path reads is gone from
   `base.json` and `corpus-ingest.json`: entity-fact-embed `namespaces`, synonymy-edges `guard`,
   reset-vector-join `socket_shape`, `arm_precedence` and `apportionment_policy`, ppr `readback`,
-  assemble-result `order_policy`. The wiring `config_hash` changes. `declared_capability` is also
-  read by no body; it is kept as a transcription of `docs/system-model/wirings/hipporag-base.json`,
-  not a behaviour claim, and removing it later changes the `config_hash` only.
+  assemble-result `order_policy`. `declared_capability` (three nodes of `base.json`, two of
+  `corpus-ingest.json`) was read by no body either and is removed too, so the wiring no longer
+  transcribes that key from `docs/system-model/wirings/hipporag-base.json`. The wiring `config_hash`
+  changes.
 - **D-22, edge types.** `edge_types` and the per-chunk co-occurrence map are persisted on the graph
   edge and not exported; `export_to_igraph` reads only `weight`. No route exposes the types.
 
