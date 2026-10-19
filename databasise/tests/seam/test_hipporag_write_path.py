@@ -13,6 +13,7 @@ selector. No network, no ``v1/`` artifacts, no live client.
 from __future__ import annotations
 
 import json
+import re
 
 import pytest
 
@@ -86,6 +87,27 @@ class _StubIngestQueryLLMClient:
         )
 
 
+class _StubKeepAllFactsLLMClient:
+    """Like ``_StubIngestQueryLLMClient`` but ``fact-filter`` keeps every candidate fact, so the
+    query takes ``ppr``'s branch (no ``zero_surviving_facts_dpr_fallback`` guard)."""
+
+    async def chat(self, messages, **kwargs):
+        content = messages[0]["content"]
+        if "---Candidate Facts---" in content:
+            text = json.dumps({"keep_ids": re.findall(r"id=([^:\s]+):", content)})
+        elif "---Recognised Entities---" in content:
+            text = json.dumps({"triples": [[_SUBJECT, _PREDICATE, _OBJECT]]})
+        else:
+            text = json.dumps({"entities": [_SUBJECT, _OBJECT]})
+        return ChatResult(
+            text=text,
+            tokens=TokenAccounting(
+                prompt_tokens=5, completion_tokens=4, call_count=1, counted_by="stub-llm"
+            ),
+            resolved_model_identity="stub-llm-model",
+        )
+
+
 def _make_engine(store_root, *, workspace: str = _WORKSPACE) -> Databasise:
     return Databasise(
         store_root=store_root,
@@ -129,6 +151,39 @@ async def test_hipporag_ingest_lands_in_hipporags_own_namespaces_and_is_retrieva
     assert envelope.evidence[0].namespace == "hipporag-chunks"
     resolved = [await engine.resolve_evidence(ref) for ref in envelope.evidence]
     assert any(_SUBJECT in str(record.get("content", "")) for record in resolved)
+
+
+async def test_a_ppr_branch_query_hydrates_content_and_every_ref_resolves(store_root):
+    """HIPP-01 (D-01): with ``fact-filter`` keeping every fact the query takes ``ppr``'s branch;
+    ``ppr`` must emit the bare chunk id so ``assemble-result`` hydrates real text and every
+    evidence ref resolves."""
+    engine = Databasise(
+        store_root=store_root,
+        workspace="ppr-branch-ws",
+        clients={"embedding": _StubEmbeddingClient(), "llm": _StubKeepAllFactsLLMClient()},
+    )
+    selector = Selector(capability=_HIPPORAG_CAPABILITY)
+    await engine.ingest(IngestDocument(document_id="hipporag-ppr-doc", text=_DOCUMENT_TEXT), selector=selector)
+
+    envelope = await engine.query(QueryObject(text="What did Ed Wood direct?"), selector)
+
+    trace = await engine.resolve_trace(envelope.trace_token, debug=True)
+    fact_filter_guards = [n["guards_fired"] for n in trace["nodes"] if n["node_id"] == "fact-filter"]
+    assert fact_filter_guards == [[]]
+    assert envelope.evidence
+
+    failures: list[Exception] = []
+    resolved: list[dict] = []
+    for ref in envelope.evidence:
+        try:
+            resolved.append(await engine.resolve_evidence(ref))
+        except Exception as exc:  # noqa: BLE001 - the assertion below reports what was caught
+            failures.append(exc)
+    assert failures == []
+    assert resolved
+    assert all(_SUBJECT in str(record.get("content", "")) for record in resolved)
+    assert envelope.answer.strip()
+    assert "[no-context]" not in envelope.answer
 
 
 async def test_no_selector_ingest_still_resolves_to_the_lightrag_corpus_wiring(store_root):

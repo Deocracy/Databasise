@@ -76,7 +76,7 @@ async def test_nan_and_negative_reset_entries_are_zeroed_before_the_call(store_r
         implementation="prpack",
     )
     expected_passage_scores = {
-        name: score
+        name[len("chunk:") :]: score  # ppr emits the bare chunk id (D-01)
         for name, score in zip(graph.vs["name"], expected_scores, strict=True)
         if name.startswith("chunk:")
     }
@@ -98,8 +98,8 @@ async def test_readback_contains_only_the_passage_partition_sorted_descending(st
     result = await _ppr_body(ctx)
 
     ids = [item["id"] for item in result["items"]]
-    assert set(ids) == {"chunk:c1", "chunk:c2"}
-    assert all(i.startswith("chunk:") for i in ids)
+    assert set(ids) == {"c1", "c2"}
+    assert not any(i.startswith("chunk:") for i in ids)
     scores = [item["score"] for item in result["items"]]
     assert scores == sorted(scores, reverse=True)
 

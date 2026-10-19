@@ -28,7 +28,8 @@ _FACTS_NAMESPACE = "hipporag-facts"
 _CHUNKS_NAMESPACE = "hipporag-chunks"
 
 # The query vector every stub embedding client in this directory returns — aligned with fact
-# "f1" and chunk "chunk:c1", so the happy-path retrieval chain has an unambiguous top hit.
+# "f1" and chunk "c1" (graph vertex "chunk:c1"; the bare id is the one outside the graph, D-01),
+# so the happy-path retrieval chain has an unambiguous top hit.
 QUERY_VECTOR = [1.0, 0.0, 0.0]
 
 
@@ -68,7 +69,7 @@ async def seeded_hipporag_store(store_root):
         namespace=_CHUNKS_NAMESPACE, workspace=_WORKSPACE, store_root=store_root
     )
     await chunks_store.upsert(
-        ids=["chunk:c1", "chunk:c2"],
+        ids=["c1", "c2"],
         embeddings=np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
         metadatas=[{}, {}],
     )
@@ -80,10 +81,10 @@ async def seeded_hipporag_store(store_root):
     )
     await kv_store.upsert(
         {
-            "fact:f1": {"chunk_ids": ["chunk:c1"]},
-            "fact:f2": {"chunk_ids": ["chunk:c2"]},
-            "chunk:c1": {"content": "Cats sit on mats."},
-            "chunk:c2": {"content": "The cat sat on the mat again."},
+            "fact:f1": {"chunk_ids": ["c1"]},
+            "fact:f2": {"chunk_ids": ["c2"]},
+            "c1": {"content": "Cats sit on mats."},
+            "c2": {"content": "The cat sat on the mat again."},
         }
     )
     await kv_store.index_done_callback()

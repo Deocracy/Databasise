@@ -23,10 +23,12 @@ every negative entry in that aligned array is replaced with ``0`` before the cal
 guard against a malformed reset vector poisoning the whole-graph walk). Damping defaults to
 ``0.5`` — HippoRAG's own default, deliberately not igraph's own ``0.85`` default.
 
-Reads back only the passage-node vertex partition — this plan's own fixture convention, vertex
-names carrying the ``"chunk:"`` prefix (documented here as this plan's own naming convention; the
-conftest fixture under ``tests/parts_core/hipporag/`` seeds graph nodes matching it) — sorted
-descending by score, emitted as ``text_chunk``-kind scored items.
+Reads back only the passage-node vertex partition, still selected by the graph vertex-name prefix
+``CHUNK_VERTEX_PREFIX`` — sorted descending by score, emitted as ``text_chunk``-kind scored items.
+Each item id is the vertex name with that prefix removed once: the bare chunk id ``chunk-embed``
+writes to the ``hipporag-chunks`` vector store and the ``hipporag-text-chunks`` KV store (D-01), so
+``assemble-result`` hydration and evidence resolution find the record. The prefix exists only on
+graph vertex names.
 """
 
 from __future__ import annotations
@@ -35,10 +37,10 @@ import math
 from typing import Any
 
 from databasise.parts.schema import NodeContext, Part
+from databasise.parts_core.hipporag.entity_fact_embed import CHUNK_VERTEX_PREFIX
 
 _NAME_AT_VERSION = "hipporag/ppr-retriever@0.1.0"
 _DEFAULT_DAMPING = 0.5
-_PASSAGE_VERTEX_PREFIX = "chunk:"
 
 
 async def _ppr_body(ctx: NodeContext) -> dict[str, Any]:
@@ -82,9 +84,9 @@ async def _ppr_body(ctx: NodeContext) -> dict[str, Any]:
         )
 
     items = [
-        {"id": name, "score": float(score), "kind": "text_chunk"}
+        {"id": name[len(CHUNK_VERTEX_PREFIX) :], "score": float(score), "kind": "text_chunk"}
         for name, score in zip(graph_vertex_names, scores, strict=True)
-        if name.startswith(_PASSAGE_VERTEX_PREFIX)
+        if name.startswith(CHUNK_VERTEX_PREFIX)
     ]
     items.sort(key=lambda item: (-item["score"], item["id"]))
 

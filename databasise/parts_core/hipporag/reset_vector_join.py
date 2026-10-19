@@ -22,8 +22,9 @@ cannot silently diverge on what dense passage retrieval means.
 
 **The sum.** Disjoint-support and order-insensitive: entity-prefixed and chunk-prefixed vertex
 refs resolve to disjoint indices in the same dense vertex-index space ``CozoGraphStore
-.export_to_igraph`` produces (both sides are keyed by the graph's own vertex-name strings — this
-node never renames them). ``config["arity"]`` — the two branches this node itself computes
+.export_to_igraph`` produces (both sides are keyed by the graph's own vertex-name strings;
+passage ids from the vector store are translated to graph vertex names here, the only place the
+prefix is added, D-01). ``config["arity"]`` — the two branches this node itself computes
 (phrase, passage), not a count of upstream node deps — is checked exactly as
 ``join_roundrobin.py``'s own ``config["arity"]`` check-and-refuse rule: a computed branch count
 disagreeing with a declared arity raises ``ValueError`` rather than merging what arrived. This
@@ -42,6 +43,7 @@ from typing import Any
 
 from databasise.parts.schema import NodeContext, Part
 from databasise.parts_core.hipporag.dpr_fallback import dense_passage_retrieval
+from databasise.parts_core.hipporag.entity_fact_embed import CHUNK_VERTEX_PREFIX
 
 _NAME_AT_VERSION = "hipporag/reset-vector-join@0.1.0"
 _CHUNKS_NAMESPACE = "hipporag-chunks"
@@ -89,7 +91,7 @@ async def _reset_vector_join_body(ctx: NodeContext) -> dict[str, Any]:
     passage_ids = [item["id"] for item in passage_items]
     normalised = _min_max_normalise([item["score"] for item in passage_items])
     passage_weights: dict[str, float] = {
-        doc_id: score * passage_node_weight for doc_id, score in zip(passage_ids, normalised, strict=True)
+        f"{CHUNK_VERTEX_PREFIX}{doc_id}": score * passage_node_weight for doc_id, score in zip(passage_ids, normalised, strict=True)
     }
 
     branches = [phrase_weights, passage_weights]

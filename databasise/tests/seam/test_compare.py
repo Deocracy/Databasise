@@ -140,7 +140,7 @@ async def dual_arm_store(store_root):
 
     chunks_store = FaissVectorStore(namespace="hipporag-chunks", workspace=_WORKSPACE, store_root=store_root)
     await chunks_store.upsert(
-        ids=["chunk:c1", "chunk:c2"],
+        ids=["c1", "c2"],
         embeddings=np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
         metadatas=[{}, {}],
     )
@@ -150,10 +150,10 @@ async def dual_arm_store(store_root):
     hipporag_kv = SqliteKVStore(namespace="hipporag-text-chunks", workspace=_WORKSPACE, store_root=store_root)
     await hipporag_kv.upsert(
         {
-            "fact:f1": {"chunk_ids": ["chunk:c1"]},
-            "fact:f2": {"chunk_ids": ["chunk:c2"]},
-            "chunk:c1": {"content": "Cats sit on mats."},
-            "chunk:c2": {"content": "The cat sat on the mat again."},
+            "fact:f1": {"chunk_ids": ["c1"]},
+            "fact:f2": {"chunk_ids": ["c2"]},
+            "c1": {"content": "Cats sit on mats."},
+            "c2": {"content": "The cat sat on the mat again."},
         }
     )
     await hipporag_kv.index_done_callback()
