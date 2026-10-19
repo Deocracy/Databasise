@@ -1,0 +1,82 @@
+{
+  "bak_trace": 1,
+  "step": "S5",
+  "part": "phase11-b",
+  "ledger_version": 529,
+  "artifacts": {
+    "databasise/parts_core/lightrag/full_ingest.py": "b705a20b35fd32a17ed731e447c928f51cbb6b33a5ce6dec45a357f8ab014f03",
+    "databasise/parts_core/lightrag/assemble.py": "9af2c4c16e3ed9a076ca8c767efb8f541525981135828795ee15de1fc3a6a9fd",
+    "databasise/parts_core/lightrag/entity_hydrate_expand.py": "bccb2eb6c3948ff0c8c1c265ddeb554b282de4549ddd569cd904691363a91e7b",
+    "databasise/seam/engine.py": "f0e3b086db8abd2e672d5103345ffe1aa61e9a3cd4a69f26d00ea0ff3ec98df1",
+    "databasise/eval/aa_run.py": "c5af816bf078348e033f48a4b3ac29aac95c63e20c1d532ffe380305628ee71c",
+    "databasise/foreign/v1_corpus_driver_script.py": "c62a9a5b204ded0a99e5a29fcb0acd2739700997624114571935b0c832727efe"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "sonnet",
+    "session": "trace-2026-10-19"
+  },
+  "items": [
+    {
+      "id": "LRAG-11",
+      "status": "present",
+      "where": "databasise/parts_core/lightrag/full_ingest.py:8",
+      "quote": "11-03-PLAN.md (D-06) is this port's one ``@0.2.0`` bump: the effects become ``calls_llm``,"
+    },
+    {
+      "id": "LRAG-12",
+      "status": "present",
+      "where": "databasise/parts_core/lightrag/full_ingest.py:13",
+      "quote": "``LIGHTRAG_FULL_INGEST_ADMISSION`` names eleven ``ConditionVerdict`` entries, one per CONTRACT \u00a78"
+    },
+    {
+      "id": "LRAG-13",
+      "status": "present",
+      "where": "databasise/seam/engine.py:1743",
+      "quote": "Probes every ``(kind, namespace)`` in ``_HEALTH_PROBES`` read-only (Phase 10 D-14, STOR-04):"
+    },
+    {
+      "id": "LRAG-14",
+      "status": "present",
+      "where": "databasise/seam/engine.py:1803",
+      "quote": "all(v == \"ok\" for v in stores.values()) and all(engine_report.values()) and clients_wired"
+    },
+    {
+      "id": "LRAG-15",
+      "status": "present",
+      "where": "databasise/eval/aa_run.py:574",
+      "quote": "store_root=_EVAL_INGEST_STORE_ROOT,"
+    },
+    {
+      "id": "LRAG-16",
+      "status": "present",
+      "where": "databasise/seam/engine.py:397",
+      "quote": "raise EmptyNamespaceError(store_kind=\"vector\")"
+    },
+    {
+      "id": "LRAG-17",
+      "status": "present",
+      "where": "databasise/parts_core/lightrag/assemble.py:110",
+      "quote": "entities = _budget_rows(ctx.inputs.get(\"budget-entities\"), \"entities_context\") if is_kg else []"
+    },
+    {
+      "id": "LRAG-18",
+      "status": "present",
+      "where": "databasise/parts_core/lightrag/entity_hydrate_expand.py:103",
+      "quote": "relations.sort(key=lambda r: (r[\"rank\"], _as_float(r.get(\"weight\"))), reverse=True)"
+    },
+    {
+      "id": "LRAG-19",
+      "status": "present",
+      "where": "databasise/seam/engine.py:1843",
+      "quote": "run_resolved = _without_recipe_only_nodes(resolved)"
+    },
+    {
+      "id": "LRAG-20",
+      "status": "present",
+      "where": "databasise/foreign/v1_corpus_driver_script.py:120",
+      "quote": "_KNOWN_OPS = (\"ingest\", \"delete\", \"status\", \"health\")"
+    }
+  ],
+  "extra": []
+}

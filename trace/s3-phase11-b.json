@@ -1,0 +1,77 @@
+{
+  "bak_trace": 1,
+  "step": "S3",
+  "part": "phase11-b",
+  "ledger_version": 529,
+  "artifacts": {
+    ".planning/REQUIREMENTS.md": "b0d80bee523010ba1f47230bf6ea0a820007f956398e1b410af011daa231a7c8"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "sonnet",
+    "session": "trace-2026-10-19"
+  },
+  "items": [
+    {
+      "id": "LRAG-11",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:224",
+      "quote": "- [x] **LRAG-11**: LightRAG write-side LLM spend is metered: corpus-delete.json and the full-delete part declare calls_llm"
+    },
+    {
+      "id": "LRAG-12",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:228",
+      "quote": "- [x] **LRAG-12**: The full-ingest and full-delete admission records number CONTRACT \u00a78 conditions correctly"
+    },
+    {
+      "id": "LRAG-13",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:231",
+      "quote": "- [x] **LRAG-13**: GET /health performs no writes: on a fresh, empty store_root it creates no files or directories"
+    },
+    {
+      "id": "LRAG-14",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:234",
+      "quote": "- [x] **LRAG-14**: GET /health reports only facts it checked: stores.vector reflects an actual Faiss index probe or is reported as not probed;"
+    },
+    {
+      "id": "LRAG-15",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:238",
+      "quote": "- [x] **LRAG-15**: eval corpus_ingest --spend --arm lightrag writes only to the eval store"
+    },
+    {
+      "id": "LRAG-16",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:242",
+      "quote": "- [x] **LRAG-16**: Querying a LightRAG arm whose vector namespace (chunks, entities, relationships) has never been populated returns a named refusal"
+    },
+    {
+      "id": "LRAG-17",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:246",
+      "quote": "- [x] **LRAG-17**: LightRAG hybrid/local/global answers are generated from KG context as in v1 kg_query: the assembled prompt includes the budgeted entity and relation description"
+    },
+    {
+      "id": "LRAG-18",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:250",
+      "quote": "- [x] **LRAG-18**: LightRAG retrieval matches v1 ordering and selection: entity-lookup searches with the low-level keyword string and relation-lookup with the high-level keyword s"
+    },
+    {
+      "id": "LRAG-19",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:254",
+      "quote": "- [x] **LRAG-19**: Query traces for the naive/hybrid/local/global LightRAG arms contain no no-op embedder-index node"
+    },
+    {
+      "id": "LRAG-20",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:257",
+      "quote": "- [x] **LRAG-20**: The v1 driver ops 'entities' (entity map for a document_id) and 'entity_info' (entity details by name) are either reachable through an engine method plus REST route and MCP tool"
+    }
+  ],
+  "extra": []
+}

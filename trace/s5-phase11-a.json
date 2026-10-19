@@ -1,0 +1,82 @@
+{
+  "bak_trace": 1,
+  "step": "S5",
+  "part": "phase11-a",
+  "ledger_version": 529,
+  "artifacts": {
+    "databasise/seam/engine.py": "f0e3b086db8abd2e672d5103345ffe1aa61e9a3cd4a69f26d00ea0ff3ec98df1",
+    "databasise/seam/corpus.py": "b360c0dbdc02f4659079a90f81a68366d74c55ab99d13334795dfedae02226ec",
+    "databasise/foreign/v1_corpus_adapter.py": "d8c7f496d713008e59b5a57213f77b2e8bfb6564bbc2eb88f88f5b71eab6bc1e",
+    "databasise/foreign/v1_corpus_driver_script.py": "c62a9a5b204ded0a99e5a29fcb0acd2739700997624114571935b0c832727efe",
+    "databasise/parts_core/declared_only.py": "59c1da76986f1c4cebaad1ded9b50a678fc8101b919595b725c3445162ee8bcb",
+    "databasise/parts_core/lightrag/full_delete.py": "ae6920ee853375c827e2724761723f5dc32dd904d5777d166e820afab762fe84"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "sonnet",
+    "session": "trace-2026-10-19"
+  },
+  "items": [
+    {
+      "id": "LRAG-01",
+      "status": "present",
+      "where": "databasise/seam/engine.py:1010",
+      "quote": "return self.store_root / self.workspace / \"lightrag-v1\""
+    },
+    {
+      "id": "LRAG-02",
+      "status": "present",
+      "where": "databasise/parts_core/lightrag/full_delete.py:205",
+      "quote": "11-01-PLAN.md (LRAG-02): this body reports no store touches. v1's subprocess changes v1's own"
+    },
+    {
+      "id": "LRAG-03",
+      "status": "present",
+      "where": "databasise/parts_core/declared_only.py:87",
+      "quote": "effects=[\"calls_llm\", \"mutates_store\", \"reads_kv\", \"reads_graph\"],"
+    },
+    {
+      "id": "LRAG-04",
+      "status": "present",
+      "where": "databasise/seam/engine.py:722",
+      "quote": "if not gate.acquire(blocking=False):"
+    },
+    {
+      "id": "LRAG-05",
+      "status": "present",
+      "where": "databasise/foreign/v1_corpus_adapter.py:229",
+      "quote": "raise CorpusOpMalformedOutputError(f\"v1 corpus driver op {op!r} wrote non-JSON stdout\") from exc"
+    },
+    {
+      "id": "LRAG-06",
+      "status": "present",
+      "where": "databasise/foreign/v1_corpus_adapter.py:103",
+      "quote": "f\"v1 is not configured: missing {self.missing_keys or 'none'}, \""
+    },
+    {
+      "id": "LRAG-07",
+      "status": "present",
+      "where": "databasise/seam/engine.py:1459",
+      "quote": "async def retry_document(self, document_id: str, selector: Selector | None = None) -> IngestJob:"
+    },
+    {
+      "id": "LRAG-08",
+      "status": "present",
+      "where": "databasise/seam/corpus.py:358",
+      "quote": "def upload_suffix(file_name: str | None) -> str:"
+    },
+    {
+      "id": "LRAG-09",
+      "status": "present",
+      "where": "databasise/seam/engine.py:1026",
+      "quote": "return self.store_root / self.workspace / \"corpus-inbox\""
+    },
+    {
+      "id": "LRAG-10",
+      "status": "present",
+      "where": "databasise/foreign/v1_corpus_driver_script.py:325",
+      "quote": "\"enqueued\": max(requested - dropped, 0),"
+    }
+  ],
+  "extra": []
+}
