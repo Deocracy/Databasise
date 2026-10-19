@@ -160,10 +160,16 @@ async def test_single_selector_resolving_the_same_wiring_is_a_run_not_refused(cb
     assert len(spy.calls) == 1
 
 
-async def test_comparison_between_two_non_mutable_wirings_is_unaffected(tmp_path):
+async def test_comparison_between_two_non_mutable_wirings_is_unaffected(tmp_path, monkeypatch):
     """No ``cbm_reachable`` fixture here — codebase-memory-mcp stays unreachable, as in
     production, and neither LightRAG's naive arm nor the HippoRAG base wiring declares
-    mutates_store, so this comparison must proceed exactly as it did before this plan."""
+    mutates_store, so this comparison must proceed exactly as it did before this plan.
+
+    The store root is empty, so compare's D-15 empty-namespace pre-check (11 REVIEW B-WR-02) is
+    stubbed out: this test is about the mutates_store refusal only."""
+    from databasise.seam import engine as engine_module
+
+    monkeypatch.setattr(engine_module, "_refuse_empty_namespaces", lambda *_args: None)
     engine = _make_engine(tmp_path)
     spy = _ResolvedSpy()
     engine._execute_resolved = spy
