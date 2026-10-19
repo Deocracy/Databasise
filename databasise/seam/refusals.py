@@ -778,7 +778,9 @@ class ForeignEngineRefusalError(SeamRefusalError):
     readable in-process through the read-only ``cause`` property, and logged in full by the engine
     (``databasise.seam.engine._foreign_fault``). The message names only the operation and the failure
     class, never stderr, a traceback, a server path or an env-var name; no flag exposes the cause
-    while seam authentication is undecided.
+    while seam authentication is undecided. The failing node id (``_node_id``, read through ``node_id``)
+    is private the same way: it is the machine's internal wiring identity (CONTRACT section 18.2
+    low-entropy identity, WIRE-03), so it never enters the message or a transport body (Phase 12 D-09).
 
     Phase 11 D-12 is the single place a refusal may name configuration keys: only the
     ``V1NotConfigured`` class adds public ``missing_keys`` and ``unsupported_keys`` (key names,
@@ -787,7 +789,14 @@ class ForeignEngineRefusalError(SeamRefusalError):
     other class keeps exactly ``operation`` and ``failure_class``.
     """
 
-    def __init__(self, *, operation: str, cause: BaseException, failure_class: str | None = None):
+    def __init__(
+        self,
+        *,
+        operation: str,
+        cause: BaseException,
+        failure_class: str | None = None,
+        node_id: str | None = None,
+    ):
         self.operation = operation
         self.failure_class = failure_class or _FOREIGN_FAILURE_CLASSES.get(
             type(cause).__name__, "UnclassifiedEngineFailure"
@@ -803,6 +812,7 @@ class ForeignEngineRefusalError(SeamRefusalError):
                 if isinstance(reason, str) and _EXTRACTION_REASON_CODE.fullmatch(reason)
             ][:_MAX_FAILURE_REASONS]
         self._cause = cause
+        self._node_id = node_id
         super().__init__(
             f"ForeignEngineRefusalError: operation {operation!r} failed ({self.failure_class})"
         )
@@ -810,6 +820,11 @@ class ForeignEngineRefusalError(SeamRefusalError):
     @property
     def cause(self) -> BaseException:
         return self._cause
+
+    @property
+    def node_id(self) -> str | None:
+        """The wiring node whose exception caused the refusal, or ``None`` when no node did."""
+        return self._node_id
 
 
 class StoreBusyError(SeamRefusalError):

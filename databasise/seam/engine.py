@@ -307,14 +307,22 @@ logger = logging.getLogger(__name__)
 
 
 def _foreign_fault(
-    operation: str, cause: BaseException, *, failure_class: str | None = None
+    operation: str, cause: BaseException, *, failure_class: str | None = None, node_id: str | None = None
 ) -> ForeignEngineRefusalError:
     """09-05-PLAN.md (SEAM-05, D-04): the one place an engine fault is built and logged, whether
     the v1 engine, a store (D-13) or the run itself (an early stop) failed. The full cause (stderr,
     traceback) goes to the server log exactly once; the returned refusal carries it privately and
     exposes only the operation and the allow-listed ``failure_class``."""
-    refusal = ForeignEngineRefusalError(operation=operation, cause=cause, failure_class=failure_class)
-    logger.error("engine fault: operation=%s failure_class=%s", operation, refusal.failure_class, exc_info=cause)
+    refusal = ForeignEngineRefusalError(
+        operation=operation, cause=cause, failure_class=failure_class, node_id=node_id
+    )
+    logger.error(
+        "engine fault: operation=%s failure_class=%s node=%s",
+        operation,
+        refusal.failure_class,
+        node_id or "-",
+        exc_info=cause,
+    )
     return refusal
 
 
@@ -839,7 +847,8 @@ def _node_result_or_refuse(scheduled: dict[str, Any], node_id: str, operation: s
     1. a cyclic wiring (``"cycle"``) refuses as ``RunIncomplete``;
     2. ``node_id``'s recorded exception, else the first recorded exception of any other node; a
        store error is ``StoreFault`` (D-13), anything else keeps its existing class;
-    3. ``partial`` or ``stop_reason`` (an early stop with no exception) refuses as ``RunIncomplete``;
+    3. ``partial`` (an early stop with no exception) refuses as ``RunIncomplete``; a ``stop_reason``
+       on a run that is not partial is a declared fallback and never refuses (Phase 12 D-21);
     4. no result for ``node_id`` refuses with a synthesized cause (a cancelled sibling, a dropped
        dispatch). The synthesized ``RuntimeError`` is used only where no real exception exists.
     The caller drops every store's pending writes before the refusal propagates (``_drop_pending``).
@@ -851,15 +860,18 @@ def _node_result_or_refuse(scheduled: dict[str, Any], node_id: str, operation: s
             failure_class="RunIncomplete",
         )
     node_exceptions = scheduled.get("node_exceptions") or {}
+    failed_node_id = node_id
     node_exception = node_exceptions.get(node_id)
     if node_exception is None and node_exceptions:
-        node_exception = next(iter(node_exceptions.values()))
+        failed_node_id, node_exception = next(iter(node_exceptions.items()))
     if node_exception is not None:
         if _is_store_fault(node_exception):
-            raise _foreign_fault(operation, node_exception, failure_class="StoreFault") from node_exception
-        raise _foreign_fault(operation, node_exception) from node_exception
+            raise _foreign_fault(
+                operation, node_exception, failure_class="StoreFault", node_id=failed_node_id
+            ) from node_exception
+        raise _foreign_fault(operation, node_exception, node_id=failed_node_id) from node_exception
     stop_reason = scheduled.get("stop_reason")
-    if scheduled.get("partial") or stop_reason:
+    if scheduled.get("partial"):
         raise _foreign_fault(
             operation,
             RuntimeError(f"the {operation!r} run stopped early: {stop_reason}"),

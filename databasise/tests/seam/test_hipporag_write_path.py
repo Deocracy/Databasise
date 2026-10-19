@@ -25,7 +25,7 @@ from databasise.seam.refusals import NoRawUploadPathForModalityError, NoWritePat
 from databasise.seam.selectors import Selector
 from databasise.stores.graph import CozoGraphStore
 from databasise.stores.kv import SqliteKVStore
-from databasise.stores.vector import MultiNamespaceVectorStore
+from databasise.stores.vector import FaissVectorStore, MultiNamespaceVectorStore
 from databasise.wirings.resolve import WIRING_NAMES
 
 _WORKSPACE = "hipporag-write-path-ws"
@@ -675,3 +675,99 @@ async def test_hipporag_documents_appear_in_jobs_corpus_counts_and_health(store_
     assert stores["kv:hipporag-text-chunks"] == "ok"
     assert stores["graph:hipporag-graph"] == "ok"
     assert stores["vector:hipporag-chunks"] == "ok"
+
+
+# --------------------------------------------------------------------------------------------- #
+# 12-14: a refused ingest names the failing node privately (HIPP-04) and commits nothing (HIPP-03).
+# --------------------------------------------------------------------------------------------- #
+
+
+async def _capture_ingest_exception(engine, document_id: str):
+    try:
+        await engine.ingest(
+            IngestDocument(document_id=document_id, text=_DOCUMENT_TEXT),
+            selector=Selector(capability=_HIPPORAG_CAPABILITY),
+        )
+    except Exception as exc:  # noqa: BLE001 - the assertions below report what was caught
+        return exc
+    return None
+
+
+async def test_an_ingest_with_no_embedding_client_names_chunk_embed_privately(store_root):
+    """HIPP-04 (D-09): the refusal's read-only ``node_id`` is the failing node and its cause is the
+    real ``ClientNotWiredError``; the node id reaches neither the message nor the transport body."""
+    from databasise.seam.refusals import refusal_body
+
+    engine = Databasise(store_root=store_root, workspace="no-embed-ws", clients={"llm": _StubIngestQueryLLMClient()})
+
+    caught = await _capture_ingest_exception(engine, "no-embed-doc")
+
+    assert type(caught).__name__ == "ForeignEngineRefusalError"
+    assert getattr(caught, "node_id", None) == "chunk-embed"
+    assert type(caught.cause).__name__ == "ClientNotWiredError"
+    assert "embedding" in str(caught.cause)
+    assert "chunk-embed" not in str(caught)
+    assert "chunk-embed" not in json.dumps(refusal_body(caught))
+
+
+async def test_an_ingest_with_no_llm_client_refuses_and_commits_nothing(store_root):
+    """HIPP-03 (D-10): an embedding client but no LLM client refuses at openie, after chunk-embed
+    ran; no store holds a record of the document and a query returns no evidence from it."""
+    import sqlite3
+
+    workspace = "no-llm-ws"
+    engine = Databasise(store_root=store_root, workspace=workspace, clients={"embedding": _StubEmbeddingClient()})
+
+    caught = await _capture_ingest_exception(engine, "no-llm-doc")
+
+    assert type(caught).__name__ == "ForeignEngineRefusalError"
+    vectors = FaissVectorStore(namespace="hipporag-chunks", workspace=workspace, store_root=store_root)
+    try:
+        assert list(vectors.iter_vectors()) == []
+    finally:
+        await vectors.finalize()
+    kv_file = store_root / workspace / "hipporag-text-chunks" / "kv.sqlite3"
+    if kv_file.exists():
+        connection = sqlite3.connect(kv_file)
+        try:
+            assert connection.execute("SELECT COUNT(*) FROM kv").fetchone()[0] == 0
+        finally:
+            connection.close()
+    graph_store = CozoGraphStore(namespace="hipporag-graph", workspace=workspace, store_root=store_root)
+    try:
+        assert (await graph_store.export_to_igraph()).vcount() == 0
+    finally:
+        await graph_store.finalize()
+    envelope = await _make_engine(store_root, workspace=workspace).query(
+        QueryObject(text="What did Ed Wood direct?"), Selector(capability=_HIPPORAG_CAPABILITY)
+    )
+    assert envelope.evidence == []
+
+
+def test_a_declared_fallback_never_refuses_a_write_run():
+    """D-21: ``stop_reason`` alone (a declared fallback) never refuses; ``partial`` still does."""
+    from databasise.seam.engine import _node_result_or_refuse
+
+    scheduled = {
+        "results": {"n": {"status": "success"}},
+        "nodes": [],
+        "partial": False,
+        "stop_reason": "declared_fallback",
+        "node_exceptions": {},
+    }
+    failure = None
+    result = None
+    try:
+        result = _node_result_or_refuse(scheduled, "n", "ingest")
+    except Exception as exc:  # noqa: BLE001 - asserted below
+        failure = exc
+    assert failure is None
+    assert result == {"status": "success"}
+
+    partial_failure = None
+    try:
+        _node_result_or_refuse({**scheduled, "partial": True}, "n", "ingest")
+    except Exception as exc:  # noqa: BLE001 - asserted below
+        partial_failure = exc
+    assert type(partial_failure).__name__ == "ForeignEngineRefusalError"
+    assert partial_failure.failure_class == "RunIncomplete"
