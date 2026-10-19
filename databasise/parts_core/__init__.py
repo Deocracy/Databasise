@@ -106,7 +106,8 @@ _PROXY_SLOTS: frozenset[str] = frozenset({"_target", "_kind", "_mode", "_declare
 # Mutators of any store kind. A read proxy refuses them with UndeclaredEffectError even where its own
 # kind lacks the method (a part asking a graph for ``upsert`` is writing, not misspelling).
 _WRITE_VOCABULARY: frozenset[str] = frozenset(
-    {"upsert", "delete", "delete_by_ids", "upsert_node", "upsert_edge", "delete_node", "delete_edge"}
+    {"upsert", "delete", "delete_by_ids", "upsert_node", "upsert_edge", "delete_node", "delete_edge",
+     "ensure_index"}
 )
 
 
