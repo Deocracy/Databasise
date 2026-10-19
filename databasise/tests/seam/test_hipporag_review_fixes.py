@@ -120,3 +120,56 @@ async def test_a_hipporag_delete_leaves_lightrags_staged_uploads_alone(store_roo
 
     assert outcome.status == "not_found"
     assert kept.exists() and parsed.exists()
+
+
+def _write_kv(store_root, workspace, rows):
+    import sqlite3
+
+    directory = store_root / workspace / "hipporag-text-chunks"
+    directory.mkdir(parents=True)
+    conn = sqlite3.connect(directory / "kv.sqlite3")
+    conn.execute("CREATE TABLE kv (id TEXT PRIMARY KEY, value TEXT NOT NULL)")
+    conn.executemany("INSERT INTO kv VALUES (?, ?)", rows)
+    conn.commit()
+    conn.close()
+    return directory
+
+
+@pytest.mark.parametrize("bad_value", ["{not json", "[1, 2]", "3"])
+async def test_a_bad_manifest_row_is_a_typed_refusal_not_a_bare_exception(store_root, bad_value):
+    """B-WR-01: an undecodable or non-dict ``doc:`` row used to escape as JSONDecodeError/AttributeError."""
+    from databasise.seam.refusals import ForeignEngineRefusalError
+
+    _write_kv(store_root, "bad-manifest-ws", [("doc:good", json.dumps({"ingested_at": "t"})), ("doc:bad", bad_value)])
+    engine = Databasise(
+        store_root=store_root,
+        workspace="bad-manifest-ws",
+        clients={"embedding": _ClusterEmbeddingClient(), "llm": _TwoDocumentLLMClient()},
+    )
+
+    with pytest.raises(ForeignEngineRefusalError) as raised:
+        await engine.corpus_status(selector=_HIPPORAG)
+
+    assert raised.value.failure_class == "MalformedDriverOutput"
+
+
+def test_list_kv_prefix_refuses_a_wal_with_frames_and_no_shm(store_root):
+    """B-WR-02: an immutable open ignores the WAL, so the listing would omit committed documents."""
+    import sqlite3
+
+    from databasise.stores.probes import list_kv_prefix
+
+    directory = _write_kv(store_root, "wal-ws", [("doc:a", "{}")])
+    (directory / "kv.sqlite3-wal").write_bytes(b"committed frames")
+
+    with pytest.raises(sqlite3.OperationalError, match="shm"):
+        list_kv_prefix(directory, "doc:", limit=10, offset=0)
+    assert not (directory / "kv.sqlite3-shm").exists()
+
+
+def test_list_kv_prefix_still_lists_a_checkpointed_store(store_root):
+    from databasise.stores.probes import list_kv_prefix
+
+    directory = _write_kv(store_root, "plain-ws", [("doc:a", "{}"), ("other", "{}")])
+
+    assert list_kv_prefix(directory, "doc:", limit=10, offset=0) == ([("doc:a", {})], 1)

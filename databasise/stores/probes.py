@@ -136,11 +136,19 @@ def list_kv_prefix(
     this is not a ``SqliteKVStore`` (its constructor makes the directory and the table). The
     database opens ``immutable`` like :func:`probe_kv`, except when a live writer's ``-wal`` and
     ``-shm`` both exist: then plain ``mode=ro`` is safe (it creates neither) and sees a committed
-    write that is still in the WAL. A sqlite error other than a missing table propagates."""
+    write that is still in the WAL. A sqlite error other than a missing table propagates, including a
+    WAL with frames but no ``-shm`` (a crash leftover or copied store: refused rather than listed
+    short). Residual race, accepted: a writer that closes between the existence check and the open
+    can leave the ``mode=ro`` open to create ``-shm``."""
     db_path = (Path(dir_path) / "kv.sqlite3").resolve()
     if not db_path.is_file() or db_path.stat().st_size == 0:
         return [], 0
-    live = db_path.with_name("kv.sqlite3-wal").exists() and db_path.with_name("kv.sqlite3-shm").exists()
+    wal, shm = db_path.with_name("kv.sqlite3-wal"), db_path.with_name("kv.sqlite3-shm")
+    if wal.exists() and wal.stat().st_size > 0 and not shm.exists():
+        # B-WR-02: an immutable open ignores the WAL, so it would omit committed documents; a plain
+        # read-only open would create -shm. Neither is an honest listing.
+        raise sqlite3.OperationalError("kv.sqlite3-wal holds frames but kv.sqlite3-shm is missing")
+    live = wal.exists() and shm.exists()
     uri = db_path.as_uri() + ("?mode=ro" if live else "?mode=ro&immutable=1")
     conn = sqlite3.connect(uri, uri=True, timeout=0.1)
     # Every key >= prefix and < prefix with its last character incremented starts with prefix.

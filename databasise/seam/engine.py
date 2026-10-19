@@ -1784,16 +1784,18 @@ class Databasise:
                 limit=page.limit,
                 offset=page.offset,
             )
-        except sqlite3.Error as exc:
+            documents = [
+                DocumentStatusEntry(
+                    document_id=key.removeprefix("doc:"),
+                    status="processed",
+                    updated_at=str(manifest.get("ingested_at") or ""),
+                )
+                for key, manifest in rows
+            ]
+        except (sqlite3.Error, OSError) as exc:
             raise _foreign_fault(operation, exc, failure_class="StoreFault") from exc
-        documents = [
-            DocumentStatusEntry(
-                document_id=key.removeprefix("doc:"),
-                status="processed",
-                updated_at=str(manifest.get("ingested_at") or ""),
-            )
-            for key, manifest in rows
-        ]
+        except _MALFORMED_RESULT as exc:  # B-WR-01: an undecodable or non-dict manifest, as on the v1 read routes
+            raise _foreign_fault(operation, exc, failure_class="MalformedDriverOutput") from exc
         return documents, total
 
     async def corpus_status(self, page: Page | None = None, selector: Selector | None = None) -> CorpusStatus:
