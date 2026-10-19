@@ -12,7 +12,7 @@ from databasise.parts_core.lightrag import chunk_vector, entity_lookup, relation
 from databasise.seam import engine as engine_module
 from databasise.seam.engine import Databasise
 from databasise.seam.query import QueryObject
-from databasise.seam.refusals import EmptyNamespaceError
+from databasise.seam.refusals import EmptyNamespaceError, ForeignEngineRefusalError
 from databasise.stores.vector import FaissVectorStore, MultiNamespaceVectorStore
 from databasise.tests.seam._probes import counting_clients, trace_row_count
 from databasise.wirings.resolve import resolve_arm
@@ -118,6 +118,35 @@ async def test_select_and_read_create_no_directory_and_the_first_write_does(stor
     await child.upsert(["a"], np.array([_VECTOR]), [{"content": "alpha"}])
     await handle.index_done_callback()
     assert (store_root / _WS / "never-written" / "vector.faiss").is_file()
+
+
+async def _damage(store_root, how: str) -> None:
+    ns_dir = store_root / _WS / "chunks"
+    if how == "unreadable":
+        store = FaissVectorStore("chunks", _WS, store_root)
+        await store.upsert(["c1"], np.array([_VECTOR]), [{"content": "alpha"}])
+        await store.index_done_callback()
+        (ns_dir / "vector.meta.json").write_text("not json", encoding="utf-8")
+        return
+    ns_dir.mkdir(parents=True)
+    kept = "vector.faiss" if how == "index-only" else "vector.meta.json"
+    (ns_dir / kept).write_bytes(b"half of a pair")
+
+
+@pytest.mark.parametrize("how", ["index-only", "meta-only", "unreadable"])
+async def test_a_half_written_or_unreadable_pair_is_store_corrupted_not_never_populated(store_root, how):
+    """11 REVIEW B3-WR-01: only a namespace with neither file is never populated. A half-written
+    pair (STOR-08) or an unreadable one is the StoreCorrupted fault resolve raises, before any
+    model call."""
+    await _damage(store_root, how)
+    clients = counting_clients(_VECTOR)
+    engine = Databasise(store_root=store_root, workspace=_WS, clients=clients)
+
+    with pytest.raises(ForeignEngineRefusalError) as caught:
+        await engine.query(QueryObject(text="q"))
+
+    assert caught.value.failure_class == "StoreCorrupted"
+    _assert_no_calls(clients)
 
 
 def test_the_engine_retrieval_namespace_table_matches_the_part_modules():

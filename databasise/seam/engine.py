@@ -280,7 +280,7 @@ from databasise.seam.trace_store import TraceStore
 from databasise.stores.graph import CozoGraphStore, GraphStoreBusyError
 from databasise.stores.kv import SqliteKVStore
 from databasise.stores.probes import probe_graph, probe_kv, probe_vector
-from databasise.stores.vector import MultiNamespaceVectorStore, VectorStoreCorruptedError
+from databasise.stores.vector import MultiNamespaceVectorStore, VectorStoreCorruptedError, load_committed
 from databasise.validator.parse import ParsedWiring, parse_wiring
 from databasise.wirings.resolve import wiring_family, without_recipe_only_nodes
 
@@ -381,11 +381,19 @@ _without_recipe_only_nodes = without_recipe_only_nodes
 
 def _refuse_empty_namespaces(store_root: Path, workspace: str, resolved: dict[str, Any]) -> None:
     """D-15: ``EmptyNamespaceError`` when a retrieval node of ``resolved`` reads a vector namespace
-    with no committed index, i.e. one never populated. A namespace emptied by a delete keeps its
-    (zero-row) index and is answered as no match. Reads only; creates nothing."""
+    with neither index file, i.e. one never populated. A namespace emptied by a delete keeps its
+    (zero-row) index and is answered as no match. A half-written pair (STOR-08) or an unreadable
+    one is the ``StoreCorrupted`` fault the run's own open raises (11 REVIEW B3-WR-01). Reads only;
+    creates nothing."""
     for node in (resolved.get("nodes") or {}).values():
         namespace = _RETRIEVAL_NAMESPACES.get(str(node.get("component", "")).split("@")[0])
-        if namespace and not (store_root / workspace / namespace / "vector.faiss").is_file():
+        if not namespace:
+            continue
+        try:
+            committed = load_committed(store_root / workspace / namespace)
+        except VectorStoreCorruptedError as exc:
+            raise _foreign_fault("query", exc, failure_class="StoreCorrupted") from exc
+        if committed is None:
             raise EmptyNamespaceError(store_kind="vector")
 
 # 06-01-PLAN.md: the retrieval position and its namespace are now read off each resolved wiring's
