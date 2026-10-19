@@ -12,9 +12,18 @@ import math
 
 import pytest
 
+from databasise.clients.base import EmbeddingResult
 from databasise.parts.schema import NodeContext
+from databasise.parts_core.hipporag.chunk_embed import HIPPORAG_CHUNKER_EMBEDDER_PART
+from databasise.parts_core.hipporag.entity_fact_embed import CHUNK_VERTEX_PREFIX
+from databasise.parts_core.hipporag.graph_augment_persist import HIPPORAG_GRAPH_MATERIALIZER_PART
+from databasise.parts_core.hipporag.passage_edges import HIPPORAG_PASSAGE_EDGE_BUILDER_PART
 from databasise.parts_core.hipporag.ppr import _ppr_body
+from databasise.parts_core.hipporag.reset_vector_join import HIPPORAG_RESET_VECTOR_JOIN_PART
+from databasise.runner.trace import TokenAccounting
 from databasise.stores.graph import CozoGraphStore
+from databasise.stores.kv import SqliteKVStore
+from databasise.stores.vector import MultiNamespaceVectorStore
 
 _WORKSPACE = "ppr-test"
 
@@ -119,3 +128,95 @@ async def test_changing_damping_produces_a_different_score_vector_negative_contr
     scores_default = [item["score"] for item in result_default["items"]]
     scores_higher = [item["score"] for item in result_higher["items"]]
     assert scores_default != scores_higher
+
+
+class _TextKeyedEmbeddingClient:
+    """Chunk A's text embeds to [1,0,0], chunk B's to [0,1,0]; any other text (the query) to [1,0,0]."""
+
+    async def embed(self, texts, **kwargs):
+        vectors = [[0.0, 1.0, 0.0] if "mountains" in text else [1.0, 0.0, 0.0] for text in texts]
+        return EmbeddingResult(
+            vectors=vectors,
+            tokens=TokenAccounting(prompt_tokens=len(texts), call_count=1, counted_by="stub-embed"),
+            resolved_model_identity="stub-embed-model",
+        )
+
+
+def _node_ctx(node_id, *, config=None, inputs=None, stores=None, clients=None) -> NodeContext:
+    return NodeContext(
+        node_id=node_id,
+        config=config,
+        inputs=inputs or {},
+        stores=stores or {},
+        clients=clients or {},
+    )
+
+
+async def test_reset_vector_join_seeds_the_matching_chunk_vertex_and_ppr_ranks_it_first(store_root):
+    """HIPP-02 (D-01): the passage weight for the chunk that scores against the query must land on
+    that chunk's own graph vertex (``chunk:<id>``), and ``ppr`` then ranks it first by bare id."""
+    workspace = "hipp02-ws"
+    embedding_client = _TextKeyedEmbeddingClient()
+    vector_store = MultiNamespaceVectorStore(workspace=workspace, store_root=store_root)
+    kv_store = SqliteKVStore(namespace="hipporag-text-chunks", workspace=workspace, store_root=store_root)
+    graph_store = CozoGraphStore(namespace="hipporag-graph", workspace=workspace, store_root=store_root)
+
+    chunk_result = await HIPPORAG_CHUNKER_EMBEDDER_PART.body(
+        _node_ctx(
+            "chunk-embed",
+            config={
+                "documents": [
+                    {"document_id": "A", "text": "Alpha passage about rivers."},
+                    {"document_id": "B", "text": "Beta passage about mountains."},
+                ]
+            },
+            stores={"vector": vector_store, "kv": kv_store},
+            clients={"embedding": embedding_client},
+        )
+    )
+    await vector_store.index_done_callback()
+    await kv_store.index_done_callback()
+    id_a, id_b = (record["chunk_id"] for record in chunk_result["chunks"])
+
+    findings = [
+        {"subject": "river", "predicate": "flows", "object": "sea", "chunk_id": id_a, "fact_id": "fa"},
+        {"subject": "mountain", "predicate": "rises", "object": "sky", "chunk_id": id_b, "fact_id": "fb"},
+    ]
+    passage_edges = await HIPPORAG_PASSAGE_EDGE_BUILDER_PART.body(
+        _node_ctx("passage-edges", inputs={"openie": {"findings": findings}})
+    )
+    await HIPPORAG_GRAPH_MATERIALIZER_PART.body(
+        _node_ctx(
+            "graph-augment-persist",
+            inputs={
+                "fact-edges": {"edges": []},
+                "passage-edges": passage_edges,
+                "synonymy-edges": {"edges": []},
+            },
+            stores={"graph": graph_store},
+        )
+    )
+    await graph_store.index_done_callback()
+
+    join_output = await HIPPORAG_RESET_VECTOR_JOIN_PART.body(
+        _node_ctx(
+            "reset-vector-join",
+            config={"query": "q", "passage_node_weight": 1.0},
+            inputs={"fact-filter": {"items": []}},
+            stores={"vector": vector_store, "kv": kv_store},
+            clients={"embedding": embedding_client},
+        )
+    )
+    weight_by_vertex = dict(zip(join_output["vertex_names"], join_output["reset_vector"], strict=True))
+    assert weight_by_vertex.get(CHUNK_VERTEX_PREFIX + id_a, 0.0) > 0
+
+    ppr_output = await _ppr_body(
+        _node_ctx("ppr", inputs={"reset-vector-join": join_output}, stores={"graph": graph_store})
+    )
+    scores = {item["id"]: item["score"] for item in ppr_output["items"]}
+    assert [item["id"] for item in ppr_output["items"]][0] == id_a
+    assert scores[id_a] > scores[id_b]
+
+    await vector_store.finalize()
+    await kv_store.finalize()
+    await graph_store.finalize()
