@@ -10,6 +10,7 @@ v1 call, the sync's manifest read, the staging and the commit.
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import json
 import logging
 import threading
@@ -368,6 +369,57 @@ async def test_a_cancelled_write_logs_the_discarded_v1_failure_once_redacted(sto
     assert "failure_class=CorpusOpSubprocessError" in discarded[0]
     assert "AuthenticationError" in discarded[0] and "sk-[REDACTED]" in discarded[0]
     assert "sk-live1234secret" not in caplog.text
+
+
+class _ResetFailsOnce:
+    """An ``ABANDONED_WORKERS`` stand-in whose first ``reset`` raises: the gate's earlier cleanup
+    failing before the release."""
+
+    def __init__(self):
+        self.parked: list | None = None
+        self.failed = False
+
+    def set(self, parked):
+        self.parked = parked
+        return object()
+
+    def reset(self, _token):
+        if not self.failed:
+            self.failed = True
+            raise RuntimeError("cleanup failed")
+
+
+async def test_a_failing_gate_cleanup_still_releases_the_gate(store_root, fake_v1, monkeypatch):
+    """11 REVIEW A3-WR-02: an exception in the gate's earlier cleanup cannot skip the release."""
+    fake_v1.delay = 0.0
+    monkeypatch.setattr(engine_module, "ABANDONED_WORKERS", _ResetFailsOnce())
+    engine = Databasise(store_root=store_root, workspace="ws")
+
+    with pytest.raises(RuntimeError, match="cleanup failed"):
+        await engine.ingest(_doc("a"))
+
+    assert not engine._write_gate_held()
+    assert isinstance(await engine.ingest(_doc("b")), IngestJob)
+
+
+def test_a_failing_gate_cleanup_still_defers_the_release_to_a_parked_worker(tmp_path, monkeypatch):
+    """A3-WR-02, deferred path: with a parked worker the gate is released once it returns."""
+    var = _ResetFailsOnce()
+    monkeypatch.setattr(engine_module, "ABANDONED_WORKERS", var)
+    worker: concurrent.futures.Future = concurrent.futures.Future()
+
+    with pytest.raises(RuntimeError, match="cleanup failed"), engine_module._write_gate(tmp_path):
+        var.parked.append(worker)
+
+    gate = engine_module._gate_for(tmp_path)
+    assert gate.locked()
+    worker.set_result(None)
+    deadline = time.monotonic() + 5
+    while gate.locked():
+        assert time.monotonic() < deadline, "the gate was never released"
+        time.sleep(0.01)
+    with engine_module._write_gate(tmp_path):
+        pass
 
 
 async def test_a_failed_write_releases_the_gate(store_root, fake_v1):

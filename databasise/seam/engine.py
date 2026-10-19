@@ -726,13 +726,16 @@ def _write_gate(working_dir: Path) -> Iterator[None]:
     try:
         yield
     finally:
-        ABANDONED_WORKERS.reset(token)
-        if parked:
-            threading.Thread(
-                target=lambda: (concurrent.futures.wait(parked), gate.release()), daemon=True
-            ).start()
-        else:
-            gate.release()
+        try:
+            ABANDONED_WORKERS.reset(token)
+        finally:
+            # A3-WR-02: nested, so a failing reset cannot skip the release and hold the gate for good.
+            if parked:
+                threading.Thread(
+                    target=lambda: (concurrent.futures.wait(parked), gate.release()), daemon=True
+                ).start()
+            else:
+                gate.release()
 
 
 async def _abort_prepared(stores: dict[str, Any]) -> None:
