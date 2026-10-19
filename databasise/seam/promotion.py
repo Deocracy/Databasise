@@ -36,6 +36,7 @@ from databasise.seam.refusals import (
     EmptyPromotionTraceIdsError,
     MeasurementPostureRefusalError,
     UncalibratedFloorRefusalError,
+    UnknownTraceReferenceError,
 )
 from databasise.seam.selectors import _wiring_effects
 from databasise.wirings.resolve import all_wirings, without_recipe_only_nodes
@@ -113,23 +114,27 @@ def _dispatched_node_ids(resolved_trace_record: dict[str, Any]) -> frozenset[str
     return frozenset(node["node_id"] for node in resolved_trace_record.get("nodes", []))
 
 
-def _arm_name_for_node_ids(node_ids: frozenset[str]) -> str:
+# B-WR-03: nodes a wiring gained after traces were already persisted. A HippoRAG query trace from
+# before Phase 12 dispatched every base node but ``qa`` (D-19), and no pruning existed (D-16).
+_NODES_ADDED_AFTER_LEGACY_TRACES: dict[str, frozenset[str]] = {"hipporag": frozenset({"qa"})}
+
+
+def _arm_name_for_node_ids(node_ids: frozenset[str], *, trace_reference: str | None = None) -> str:
     """The one candidate in :func:`~databasise.wirings.resolve.all_wirings` whose own resolved
-    node id set equals ``node_ids``. Raises ``AssertionError`` — an internal invariant, never a
-    consumer-reachable refusal — if no candidate matches, which should be unreachable for a trace
-    persisted against the same wirings on disk.
+    node id set equals ``node_ids``. A trace that matches no candidate (for example one persisted
+    against wirings that have since changed shape) raises
+    :class:`~databasise.seam.refusals.UnknownTraceReferenceError`, a named 404 refusal, never an
+    ``AssertionError`` the consumer sees as a 500.
     """
     for name, resolved in all_wirings():
         # B-CR-01: a query trace omits recipe-only nodes (D-04), so compare the run shape. The full
         # set still matches a trace persisted before 11-10; no full set equals another arm's run set.
         run_ids = frozenset(without_recipe_only_nodes(resolved).get("nodes", {}).keys())
-        if node_ids in (run_ids, frozenset(resolved.get("nodes", {}).keys())):
+        full_ids = frozenset(resolved.get("nodes", {}).keys())
+        legacy_ids = full_ids - _NODES_ADDED_AFTER_LEGACY_TRACES.get(name, frozenset())
+        if node_ids in (run_ids, full_ids, legacy_ids):
             return name
-    raise AssertionError(
-        "trace record's own dispatched node id set "
-        f"{sorted(node_ids)!r} does not match any currently registered wiring's own resolved "
-        "node id set"
-    )
+    raise UnknownTraceReferenceError(trace_reference or f"<run with nodes {sorted(node_ids)!r}>")
 
 
 def resolved_wiring_for_arm(arm_name: str) -> dict[str, Any]:
@@ -165,7 +170,10 @@ def resolve_single_arm(
         raise EmptyPromotionTraceIdsError(alias=alias)
 
     arm_names = {
-        _arm_name_for_node_ids(_dispatched_node_ids(record)) for record in resolved_trace_records
+        _arm_name_for_node_ids(
+            _dispatched_node_ids(record), trace_reference=trace_ids[i] if i < len(trace_ids) else None
+        )
+        for i, record in enumerate(resolved_trace_records)
     }
     if len(arm_names) > 1:
         raise DisagreeingPromotionTraceIdsError(trace_ids=list(trace_ids))

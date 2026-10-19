@@ -173,3 +173,19 @@ def test_list_kv_prefix_still_lists_a_checkpointed_store(store_root):
     directory = _write_kv(store_root, "plain-ws", [("doc:a", "{}"), ("other", "{}")])
 
     assert list_kv_prefix(directory, "doc:", limit=10, offset=0) == ([("doc:a", {})], 1)
+
+
+def test_a_pre_phase_12_hipporag_trace_still_matches_its_wiring_and_an_unknown_shape_is_a_named_refusal():
+    """B-WR-03: the old 13-node HippoRAG run shape (no ``qa``) matches; a shape matching no wiring
+    is a 404 refusal, not an AssertionError."""
+    from databasise.seam.promotion import _arm_name_for_node_ids
+    from databasise.seam.refusals import UnknownTraceReferenceError
+    from databasise.wirings.resolve import load_wiring
+
+    full = frozenset(load_wiring("hipporag")["nodes"])
+    assert "qa" in full
+
+    assert _arm_name_for_node_ids(full - {"qa"}) == "hipporag"
+    assert _arm_name_for_node_ids(full) == "hipporag"
+    with pytest.raises(UnknownTraceReferenceError):
+        _arm_name_for_node_ids(frozenset({"not-a-node"}), trace_reference="trace-123")
