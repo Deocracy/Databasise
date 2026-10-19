@@ -120,6 +120,10 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 | v1.1 Phase 10: ingest and delete commit through prepare-all then commit-all under one lock per (event loop, store root); a failed or stopped run commits nothing | Success criterion 3 as written; a crash or failure between two stores' commits remains a documented residual window (kv, then vector, then graph) | — Pending (closing it needs a recovery record or a single transactional backend) |
 | v1.1 Phase 10: health is read-only, keyed `"<kind>:<namespace>"` with ok/absent/corrupted/busy over all ten shipped namespaces | Settled once for LRAG-13/14 and HIPP-15; a §18 shape change made before any GUI consumer | ✓ Good |
 | v1.1 Phase 10: lexical store, blob store and artifact registry deleted; the 17 effects stay, and unwired store effects are refused at parse (`UnparseableWiringError`, 422) | No shipped part used them; CONTRACT §2 stays unamended | ✓ Good (STOR-13/14 satisfied by removal) |
+| v1.1 Phase 11: M-04 option (b): v1 ingests and deletes in a per-workspace dir and a `lightrag/v1-index-sync` node mirrors v1 into the v2 query stores under Phase 10 prepare/commit; prune by own manifest so parity imports survive | Matches the requirement text and core value with no extra LLM spend; option (a) native ingest would be a phase of its own | ✓ Good (verified 25/25; full-corpus mirror per write accepted, `shortcut:`) |
+| v1.1 Phase 11: LightRAG writes are gated per working dir (409 on overlap, held until the v1 worker returns); status ops are facade-free and lock-free | v1 RocksDB lock made every status call fail during writes; the operator console polls | ✓ Good |
+| v1.1 Phase 11: hybrid/local/global match v1 kg_query (prompts byte-pinned, cosine threshold 0.2, rank/weight order); tokenizer stays len//4 and chunk_top_k stays 10 | Fidelity required by LRAG-17/18; a fetching tokenizer would break the offline suite; top_k 20 would move parity evidence | — Pending (`shortcut:` markers, revisit with parity re-measure) |
+| v1.1 Phase 11: a v1 config refusal may name missing key names (never values), narrowly amending Phase 9 D-04 | LRAG-06 asks for it; values stay out of every body and log | ✓ Good |
 | Close the operator verbs' check-then-act races with one `BEGIN IMMEDIATE` span per verb plus a UNIQUE `(alias, minted_version)` index | A guard read and the append it gates must commit together or the guard goes stale under concurrency; the schema constraint backstops it independently of any Python read path | ✓ Held (G-07-1 closed; 40/40 concurrency runs, full suite green) |
 
 ## Evolution
@@ -140,4 +144,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-17 after Phase 10*
+*Last updated: 2026-10-19 after Phase 11*
