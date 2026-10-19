@@ -84,11 +84,18 @@ _SECTION_H_EFFECTS: dict[str, frozenset[str]] = {
 }
 
 
+# 12-10 (D-19): nodes the built wiring carries beyond section H's thirteen. They have no section H
+# row to compare effects with; the record carries them in "The `qa` node divergence" instead.
+_RECORDED_BEYOND_SECTION_H = frozenset({"qa"})
+
+
 def _computed_divergent_node_ids() -> set[str]:
     registry = default_registry()
     built = load_wiring("hipporag")
     divergent = set()
     for node_id, node in built["nodes"].items():
+        if node_id in _RECORDED_BEYOND_SECTION_H:
+            continue
         part = registry.get(node["component"])
         if frozenset(part.effects) != _SECTION_H_EFFECTS[node_id]:
             divergent.add(node_id)
@@ -97,7 +104,14 @@ def _computed_divergent_node_ids() -> set[str]:
 
 def test_pinned_transcription_covers_all_thirteen_node_ids():
     built = load_wiring("hipporag")
-    assert set(_SECTION_H_EFFECTS) == set(built["nodes"].keys())
+    assert set(_SECTION_H_EFFECTS) == set(built["nodes"].keys()) - _RECORDED_BEYOND_SECTION_H
+
+
+def test_record_names_the_qa_divergence_beyond_section_h():
+    section = _section(_record_text(), r"^## The `qa` node divergence")
+    assert "hipporag/qa-reader@0.1.0" in section
+    assert "fail_response" in section
+    assert "rag_qa" in section
 
 
 def test_reconciliation_table_covers_exactly_the_computed_divergent_node_set():

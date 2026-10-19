@@ -34,12 +34,12 @@ verdict is that keeping it `opaque` is what this phase correctly delivers, not a
 
 | # | Finding | Evidence |
 |---|---|---|
-| 1 | The built wiring's resolved thirteen node ids equal `## §H`'s own node-table ids exactly — `chunk-embed`, `openie`, `entity-fact-embed`, `fact-edges`, `passage-edges`, `synonymy-edges`, `graph-augment-persist`, `fact-score`, `fact-filter`, `dpr-fallback`, `reset-vector-join`, `ppr`, `assemble-result` | `[code-verified]` `test_the_built_wirings_resolved_node_id_set_equals_the_governing_thirteen` |
+| 1 | The built wiring's resolved node ids equal `## §H`'s own node-table ids plus the recorded `qa` node (see "The `qa` node divergence") — `chunk-embed`, `openie`, `entity-fact-embed`, `fact-edges`, `passage-edges`, `synonymy-edges`, `graph-augment-persist`, `fact-score`, `fact-filter`, `dpr-fallback`, `reset-vector-join`, `ppr`, `assemble-result` | `[code-verified]` `test_the_built_wirings_resolved_node_id_set_equals_the_governing_thirteen_plus_the_recorded_qa` |
 | 2 | Every one of the thirteen resolves in `default_registry()` to a `Part` with a non-`None` body — no declaration-only placeholder remains | `[code-verified]` `test_every_node_resolves_to_a_registered_part_with_a_non_none_body` |
 | 3 | No `hipporag/` part carries `kind == "opaque"`, and none carries an `AdmissionRecord` | `[code-verified]` `test_no_hipporag_part_is_opaque_kinded_and_none_carries_an_admission_record` |
-| 4 | `effective_depth` over the parsed wiring is `opaque` at all thirteen positions (the taint rule holding transitively) | `[code-verified]` `test_effective_depth_is_opaque_at_all_thirteen_positions` |
+| 4 | `effective_depth` over the parsed wiring is `opaque` at all thirteen positions (the taint rule holding transitively) | `[code-verified]` `test_effective_depth_is_opaque_at_every_position_including_the_recorded_qa` |
 | 5 | The wiring declares no arms and no `*.json-patch.json` file exists under `databasise/wirings/hipporag/` | `[code-verified]` `test_the_wiring_declares_no_arms_and_no_patch_file_exists_for_this_modality`, matching `## §H`'s own `Arms: none (single base wiring)` |
-| 6 | `derive_execution_mode` returns `in-process` for all thirteen — no node needs subprocess containment | `[code-verified]` `test_derive_execution_mode_returns_in_process_for_all_thirteen_positions` |
+| 6 | `derive_execution_mode` returns `in-process` for all thirteen — no node needs subprocess containment | `[code-verified]` `test_derive_execution_mode_returns_in_process_for_every_position` |
 | 7 | The built effects union equals `## §H`'s own declared `effects[]:` union plus exactly four additive effects, no more | `[code-verified]` `test_declared_effects_union_equals_the_governing_union_plus_exactly_the_additive_set` — see the reconciliation table below |
 | 8 | Whole-graph PPR is served by one native `igraph`/`prpack` call over a two-Cozo-query bulk export (06-01), never an N-call pointwise emulation | `[code-verified]` `databasise/parts_core/hipporag/ppr.py`, `databasise/stores/graph.py`'s `export_to_igraph` |
 
@@ -115,6 +115,25 @@ is the run record's own per-node `guards_fired` field (RIG `§TR.1`, already sta
 field is minted" exactly — `tests/parts_core/hipporag/test_dpr_fallback_guard.py` proves both that
 the guard name never appears in the serialised `ResponseEnvelope` and that it is reachable through
 `resolve_trace`.
+
+## The `qa` node divergence
+
+`12-10` (D-19, HIPP-13). `## §H` has no generator position among its thirteen, so the base wiring's
+`answer` was the retrieved passages joined by blank lines, a different meaning from LightRAG's
+generated answer. The built wiring carries a 14th node, `qa` (`hipporag/qa-reader@0.1.0`, kind
+`generator`, effects `["calls_llm"]`, deps `["assemble-result"]`), which ports upstream HippoRAG 2's
+`rag_qa` step (`src/hipporag/HippoRAG.py:1117-1172`, prompt `rag_qa_musique`, commit d5c8329, MIT):
+the upstream system text, one-shot user/assistant pair, one `Wikipedia Title: <passage>` line per
+hydrated passage (the upstream prefix is kept verbatim), then `Question: <query>` and `Thought:` plus a trailing space;
+the answer is the text after `Answer:` (the whole response when the marker is absent). `qa` is the
+wiring's `provides`; `assemble-result` no longer emits `completion` and stays the
+`evidence_position`, so evidence still mints from the retrieved items. With no hydrated passage
+content `qa` makes no LLM call and answers `PROMPTS["fail_response"]`, the same no-context answer
+LightRAG's generator gives. Costs: one more LLM call per query, and a new `config_hash` for the
+wiring (traces of the 13-node wiring no longer map to an arm in promotion). The effect `calls_llm`
+is already in `## §H`'s union, so the declared-effects reconciliation above gains no row.
+`tests/parts_core/hipporag/test_thirteen_positions.py` compares the node set with the governing
+thirteen plus `qa`, and `test_registration.py` pins the part's shape.
 
 ## The `assemble-result` deps divergence
 

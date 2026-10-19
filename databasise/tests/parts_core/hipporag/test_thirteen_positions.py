@@ -52,10 +52,15 @@ def test_the_governing_wiring_declares_exactly_thirteen_positions():
     assert len(_governing_wiring()["nodes"]) == 13
 
 
-def test_the_built_wirings_resolved_node_id_set_equals_the_governing_thirteen():
+# Phase 12 D-19: the one node the built wiring carries beyond the governing thirteen — the
+# answer-generation step, recorded in HIPPORAG-PORT-RECORD.md as a divergence.
+_RECORDED_DIVERGENCE_NODES = frozenset({"qa"})
+
+
+def test_the_built_wirings_resolved_node_id_set_equals_the_governing_thirteen_plus_the_recorded_qa():
     built = load_wiring("hipporag")
     governing = _governing_wiring()
-    assert set(built["nodes"].keys()) == set(governing["nodes"].keys())
+    assert set(built["nodes"].keys()) == set(governing["nodes"].keys()) | _RECORDED_DIVERGENCE_NODES
 
 
 def test_every_node_resolves_to_a_registered_part_with_a_non_none_body():
@@ -77,7 +82,7 @@ def test_no_hipporag_part_is_opaque_kinded_and_none_carries_an_admission_record(
         assert part.admission is None, node_id
 
 
-def test_effective_depth_is_opaque_at_all_thirteen_positions():
+def test_effective_depth_is_opaque_at_every_position_including_the_recorded_qa():
     registry = default_registry()
     built = load_wiring("hipporag")
     parsed = parse_wiring(built, registry)
@@ -111,7 +116,7 @@ def test_the_wiring_declares_no_arms_and_no_patch_file_exists_for_this_modality(
     assert patch_files == []
 
 
-def test_derive_execution_mode_returns_in_process_for_all_thirteen_positions():
+def test_derive_execution_mode_returns_in_process_for_every_position():
     registry = default_registry()
     built = load_wiring("hipporag")
     for node_id, node in built["nodes"].items():

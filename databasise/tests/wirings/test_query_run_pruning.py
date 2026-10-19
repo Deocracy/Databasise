@@ -26,6 +26,7 @@ _HIPPORAG_QUERY_NODES = {
     "ppr",
     "dpr-fallback",
     "assemble-result",
+    "qa",  # 12-10 (D-19): the answer-generation node, the wiring's provides
 }
 
 

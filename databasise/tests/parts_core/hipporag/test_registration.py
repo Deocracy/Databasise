@@ -92,12 +92,18 @@ _EXPECTED_SHAPE: dict[str, dict[str, object]] = {
         "effects": ["reads_vector"],
         "structural_depth": "opaque",
     },
+    # 12-10 (D-19): the 14th node, upstream rag_qa — answer generation.
+    "hipporag/qa-reader@0.1.0": {
+        "kind": "generator",
+        "effects": ["calls_llm"],
+        "structural_depth": "opaque",
+    },
 }
 
 
-def test_hipporag_parts_has_exactly_thirteen_members_matching_the_pinned_names():
+def test_hipporag_parts_has_exactly_the_pinned_members():
     assert {part.name_at_version for part in HIPPORAG_PARTS} == set(_EXPECTED_SHAPE)
-    assert len(HIPPORAG_PARTS) == 13
+    assert len(HIPPORAG_PARTS) == 14
 
 
 def test_every_part_matches_its_pinned_kind_effects_and_structural_depth():
@@ -108,13 +114,13 @@ def test_every_part_matches_its_pinned_kind_effects_and_structural_depth():
         assert part.structural_depth == expected["structural_depth"], part.name_at_version
 
 
-def test_none_of_the_thirteen_parts_requires_containment_beyond_in_process():
+def test_no_hipporag_part_requires_containment_beyond_in_process():
     for part in HIPPORAG_PARTS:
         mode = derive_execution_mode(part.effects, part.kind)
         assert mode == "in-process", (part.name_at_version, mode)
 
 
-def test_default_registry_registers_all_thirteen_hipporag_names():
+def test_default_registry_registers_every_pinned_hipporag_name():
     registry = default_registry()
     for name in _EXPECTED_SHAPE:
         assert name in registry.keys()

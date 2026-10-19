@@ -25,6 +25,7 @@ from databasise.seam.selectors import Selector, resolve_selector
 from parts_core.hipporag.conftest import seeded_hipporag_store  # noqa: F401 — fixture import
 
 _QUERY_TEXT = "What sat on the mat?"
+_QA_ANSWER = "Thought: the passage says so. Answer: the cat"
 
 # A capability set only HippoRAG's own 5-node wiring satisfies at the smallest resolved size —
 # every LightRAG arm satisfying it (hybrid/local/global, via entity-hydrate-expand/chunk-sel-kg)
@@ -51,8 +52,10 @@ class _StubLLMClient:
     dedicated fact-filter unit test, only the end-to-end shape)."""
 
     async def chat(self, messages, **kwargs):
+        # 12-10 (D-19): the qa node's call opens with a system message; answer it with generated text.
+        text = _QA_ANSWER if messages[0]["role"] == "system" else json.dumps({"keep_ids": ["f1", "f2"]})
         return ChatResult(
-            text=json.dumps({"keep_ids": ["f1", "f2"]}),
+            text=text,
             tokens=TokenAccounting(
                 prompt_tokens=5, completion_tokens=4, call_count=1, counted_by="stub-llm"
             ),
@@ -84,9 +87,11 @@ async def test_hipporag_query_returns_evidence_from_its_own_chunks_namespace(see
         assert ref.namespace == "hipporag-chunks"
     assert envelope.degraded is False
     assert envelope.partial is False
-    # HippoRAG's base wiring has no generator position (06-01-PLAN.md's own named limitation) —
-    # the answer carries assembled context from the fixture's own chunk content.
-    assert "cat" in envelope.answer.lower() or "mat" in envelope.answer.lower()
+    # 12-10 (D-19): the answer is the qa node's generated text, not the evidence contents joined.
+    resolved = [await engine.resolve_evidence(ref) for ref in envelope.evidence]
+    joined = "\n\n".join(str(record.get("content", "")) for record in resolved)
+    assert envelope.answer == "the cat"
+    assert envelope.answer != joined
 
 
 async def test_hipporag_query_does_not_touch_lightrags_store_directories(
