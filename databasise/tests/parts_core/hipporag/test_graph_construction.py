@@ -151,17 +151,21 @@ async def test_synonymy_edges_emits_deduped_canonical_edges_above_threshold(stor
     entity_store = FaissVectorStore(
         namespace="hipporag-entities", workspace="synonymy-ws", store_root=store_root
     )
-    # cat/kitten are near-identical (cosine ~1.0); rug is unrelated (cosine 0).
+    # cat/kitten are near-identical (cosine ~1.0); rug is unrelated (cosine 0). kitten and rug are
+    # committed, cat is staged in this run (D-05: the new entity matches committed and staged ones).
     await entity_store.upsert(
-        ids=[_entity_ref("cat"), _entity_ref("kitten"), _entity_ref("rug")],
-        embeddings=np.array(
-            [[1.0, 0.01, 0.0], [1.0, 0.0, 0.01], [0.0, 1.0, 0.0]], dtype="float32"
-        ),
-        metadatas=[{}, {}, {}],
+        ids=[_entity_ref("kitten"), _entity_ref("rug")],
+        embeddings=np.array([[1.0, 0.0, 0.01], [0.0, 1.0, 0.0]], dtype="float32"),
+        metadatas=[{}, {}],
     )
     await entity_store.index_done_callback()
 
     vector_store = MultiNamespaceVectorStore(workspace="synonymy-ws", store_root=store_root)
+    await vector_store.select("hipporag-entities").upsert(
+        ids=[_entity_ref("cat")],
+        embeddings=np.array([[1.0, 0.01, 0.0]], dtype="float32"),
+        metadatas=[{}],
+    )
     ctx = _ctx(
         "synonymy-edges",
         config={"synonymy_top_k": 2, "synonymy_threshold": 0.9},
@@ -180,6 +184,133 @@ async def test_synonymy_edges_emits_deduped_canonical_edges_above_threshold(stor
     assert len(pairs) == len(set(pairs))  # deduped
     assert all(pair[0] < pair[1] for pair in pairs)  # canonically ordered
     assert not any(_entity_ref("rug") in pair for pair in pairs)
+
+
+async def _synonymy_run(vector_store, refs: list[str]) -> list[dict[str, Any]]:
+    result = await HIPPORAG_SYNONYMY_EDGE_BUILDER_PART.body(
+        _ctx(
+            "synonymy-edges",
+            config={"synonymy_top_k": 2, "synonymy_threshold": 0.9},
+            inputs={
+                "entity-fact-embed": {
+                    "entities": [{"ref": ref, "surface_form": ref} for ref in refs]
+                }
+            },
+            stores={"vector": vector_store},
+        )
+    )
+    return result["edges"]
+
+
+async def test_a_synonymy_edge_appears_on_the_introducing_ingest_and_is_not_reemitted(store_root):
+    """HIPP-07 (12-03, D-05): entities are staged in-run, so the first ingest must match them
+    against each other before any commit, and a later ingest must not re-emit the old pair."""
+    workspace = "synonymy-intro-ws"
+    vector_store = MultiNamespaceVectorStore(workspace=workspace, store_root=store_root)
+    entity_store = vector_store.select("hipporag-entities")
+    graph_store = CozoGraphStore(
+        namespace="hipporag-graph", workspace=workspace, store_root=store_root
+    )
+    films, movies, rug = _entity_ref("films"), _entity_ref("movies"), _entity_ref("rug")
+
+    # d1: films and movies embed identically and are staged, not committed
+    await entity_store.upsert(
+        ids=[films, movies],
+        embeddings=np.array([[1.0, 0.0, 0.0], [1.0, 0.0, 0.0]], dtype="float32"),
+        metadatas=[{}, {}],
+    )
+    d1_edges = await _synonymy_run(vector_store, [films, movies])
+    assert [(e["src"], e["tgt"]) for e in d1_edges] == [(films, movies)]
+    await _persist_ingest(graph_store, [], d1_edges)
+    await vector_store.index_done_callback()
+    assert await graph_store.get_edge(films, movies) is not None
+
+    # d2: only an unrelated entity is new; the committed pair is not re-emitted
+    await entity_store.upsert(
+        ids=[rug],
+        embeddings=np.array([[0.0, 1.0, 0.0]], dtype="float32"),
+        metadatas=[{}],
+    )
+    d2_edges = await _synonymy_run(vector_store, [rug])
+    assert [(e["src"], e["tgt"]) for e in d2_edges] == []
+
+
+class _StubEntityStore:
+    """``select()`` target recording the ids ``self_knn`` is asked about."""
+
+    def __init__(self, committed: set[str], neighbours: dict[str, list[dict[str, Any]]]) -> None:
+        self._committed = committed
+        self._neighbours = neighbours
+        self.asked: list[list[str]] = []
+
+    def get_by_id(self, ref: str) -> dict[str, Any] | None:
+        return {"id": ref} if ref in self._committed else None
+
+    async def self_knn(self, *, top_k: int, ids: list[str]) -> dict[str, list[dict[str, Any]]]:
+        self.asked.append(list(ids))
+        return {i: self._neighbours.get(i, []) for i in ids}
+
+
+class _StubVectorStore:
+    def __init__(self, entity_store: _StubEntityStore) -> None:
+        self._entity_store = entity_store
+
+    def select(self, namespace: str) -> _StubEntityStore:
+        return self._entity_store
+
+
+async def test_synonymy_edges_matches_only_new_entities_and_keeps_a_score_equal_to_threshold():
+    cat, kitten, old = _entity_ref("cat"), _entity_ref("kitten"), _entity_ref("old")
+    entity_store = _StubEntityStore(
+        committed={old},
+        neighbours={
+            cat: [
+                {"id": kitten, "score": 0.9},  # exactly the threshold: kept
+                {"id": old, "score": 0.89},  # below it: dropped
+            ]
+        },
+    )
+
+    result = await HIPPORAG_SYNONYMY_EDGE_BUILDER_PART.body(
+        _ctx(
+            "synonymy-edges",
+            config={"synonymy_top_k": 3, "synonymy_threshold": 0.9},
+            inputs={
+                "entity-fact-embed": {
+                    "entities": [{"ref": ref} for ref in (cat, kitten, old)],
+                }
+            },
+            stores={"vector": _StubVectorStore(entity_store)},
+        )
+    )
+
+    assert entity_store.asked == [[cat, kitten]]  # the committed entity is not a query row
+    assert [(e["src"], e["tgt"], e["weight"]) for e in result["edges"]] == [(cat, kitten, 0.9)]
+
+
+async def test_synonymy_edges_prefers_new_entities_and_skips_the_query_when_none_are_new():
+    cat, old = _entity_ref("cat"), _entity_ref("old")
+    entity_store = _StubEntityStore(committed=set(), neighbours={})
+    stores = {"vector": _StubVectorStore(entity_store)}
+    entities = [{"ref": cat}, {"ref": old}]
+
+    only_old = await HIPPORAG_SYNONYMY_EDGE_BUILDER_PART.body(
+        _ctx(
+            "synonymy-edges",
+            inputs={"entity-fact-embed": {"entities": entities, "new_entities": [old]}},
+            stores=stores,
+        )
+    )
+    none_new = await HIPPORAG_SYNONYMY_EDGE_BUILDER_PART.body(
+        _ctx(
+            "synonymy-edges",
+            inputs={"entity-fact-embed": {"entities": entities, "new_entities": []}},
+            stores=stores,
+        )
+    )
+
+    assert entity_store.asked == [[old]]  # the empty new_entities made no self_knn call
+    assert only_old["edges"] == [] and none_new["edges"] == []
 
 
 async def test_synonymy_edges_zero_upstream_chunk_count_makes_no_store_read():

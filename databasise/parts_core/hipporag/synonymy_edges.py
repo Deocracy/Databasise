@@ -21,6 +21,14 @@ anything new" — ``entity-fact-embed`` itself already short-circuits to zero en
 chunks. Recorded here as a 06-05-PLAN.md design decision, mirroring 06-02-PLAN.md's own precedent
 for interpreting an underspecified upstream-data guard against the data the wiring actually
 threads through this dep chain.
+
+**New entities only (D-05, HIPP-07).** The new-entity rule is the guard, hard-coded: only entities
+new in this ingest are matched, against every committed and staged entity via
+``self_knn(ids=...)``. New refs are ``entity-fact-embed``'s ``new_entities`` when that key is
+present, else the refs whose committed ``get_by_id`` is ``None``. No new entity means no store
+query and no edges. A pair is therefore emitted once, on the ingest that introduces it, and never
+re-emitted. Accepted recall difference: a new entity that appears only in an old entity's top-k
+(not the reverse) is missed. The ``guard`` config key is removed separately (D-22).
 """
 
 from __future__ import annotations
@@ -51,7 +59,13 @@ async def _synonymy_edges_body(ctx: NodeContext) -> dict[str, Any]:
     threshold = float(config.get("synonymy_threshold", _DEFAULT_SYNONYMY_THRESHOLD))
 
     entity_store = ctx.stores["vector"].select(_ENTITIES_NAMESPACE)
-    neighbours_by_id = await entity_store.self_knn(top_k=top_k)
+    if "new_entities" in entity_fact_embed_output:
+        new_refs = list(entity_fact_embed_output["new_entities"])
+    else:
+        new_refs = [e["ref"] for e in entities if entity_store.get_by_id(e["ref"]) is None]
+    if not new_refs:
+        return {"edges": []}
+    neighbours_by_id = await entity_store.self_knn(top_k=top_k, ids=new_refs)
 
     weight_by_pair: dict[tuple[str, str], float] = {}
     for entity_ref, neighbours in neighbours_by_id.items():

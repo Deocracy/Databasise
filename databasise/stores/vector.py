@@ -60,7 +60,7 @@ import json
 import os
 import threading
 from collections import OrderedDict
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import MappingProxyType
@@ -433,7 +433,9 @@ class FaissVectorStore(StorageNameSpace):
         results.sort(key=lambda r: (-r["score"], r["id"]))
         return results
 
-    async def self_knn(self, *, top_k: int) -> dict[str, list[dict[str, Any]]]:
+    async def self_knn(
+        self, *, top_k: int, ids: Sequence[str] | None = None
+    ) -> dict[str, list[dict[str, Any]]]:
         """§14.2's batched self-KNN sub-capability (06-05-PLAN.md): one Faiss ``search`` call over
         the whole stored matrix at once, returning each stored id's own top-``k`` nearest
         neighbours excluding itself — never composed by calling :meth:`query` (or ``search``) once
@@ -449,9 +451,18 @@ class FaissVectorStore(StorageNameSpace):
         retrieval-shaped methods agree on ordering. An empty store returns an empty mapping,
         following this class's own established empty-state behaviour rather than raising.
         ``top_k <= 0`` raises :class:`InvalidTopKError` (STOR-09).
+
+        ``ids`` (D-05, HIPP-07) is the one documented exception to this class's committed-only
+        reads: it restricts the query rows to exactly those ids and searches committed AND staged
+        vectors for their neighbours, so an entity staged earlier in the same run is matched before
+        the engine commits. A staged vector replaces the committed one for the same id; an id staged
+        for deletion is neither a query row nor a neighbour; an unknown id is skipped. Omitting
+        ``ids`` keeps the committed-only whole-store path above unchanged.
         """
         if top_k <= 0:
             raise InvalidTopKError(top_k)
+        if ids is not None:
+            return self._self_knn_for_ids(list(ids), top_k)
         if self._index is None or self._index.ntotal == 0:
             return {}
 
@@ -479,6 +490,65 @@ class FaissVectorStore(StorageNameSpace):
                 neighbours.append(
                     {"id": neighbour_id, "score": float(score), **copy.deepcopy(entry["metadata"])}
                 )
+            neighbours.sort(key=lambda r: (-r["score"], r["id"]))
+            results[self_doc_id] = neighbours[:top_k]
+        return results
+
+    def _self_knn_for_ids(self, ids: list[str], top_k: int) -> dict[str, list[dict[str, Any]]]:
+        """The ``ids`` path of :meth:`self_knn`: committed neighbours from one batched Faiss
+        ``search`` (widened by the committed ids this call will filter out), staged neighbours from
+        one numpy product against the staged matrix. Both sides hold L2-normalised vectors, so the
+        scores are inner products comparable to Faiss's."""
+        committed = self._entries if self._index is not None else {}
+        query_ids: list[str] = []
+        rows: list[np.ndarray] = []
+        for doc_id in dict.fromkeys(ids):
+            if doc_id in self._pending_deletes:
+                continue
+            if doc_id in self._pending:
+                rows.append(self._pending[doc_id].vector)
+            elif doc_id in committed:
+                rows.append(self._index.reconstruct(committed[doc_id]["int_id"]))
+            else:
+                continue
+            query_ids.append(doc_id)
+        if not rows:
+            return {}
+        matrix = np.vstack(rows).astype("float32")
+
+        hidden = committed.keys() & (self._pending_deletes | self._pending.keys())
+        candidates: list[dict[str, tuple[float, dict[str, Any]]]] = [{} for _ in query_ids]
+        if committed and self._index.ntotal > 0:
+            k = min(top_k + 1 + len(hidden), self._index.ntotal)
+            scores, int_ids = self._index.search(matrix, k)
+            int_to_doc = {v["int_id"]: did for did, v in committed.items()}
+            for row_index in range(len(query_ids)):
+                for score, int_id in zip(scores[row_index], int_ids[row_index], strict=True):
+                    doc_id = int_to_doc.get(int(int_id)) if int_id != -1 else None
+                    if doc_id is None or doc_id in hidden:
+                        continue
+                    candidates[row_index][doc_id] = (
+                        float(score),
+                        committed[doc_id]["metadata"],
+                    )
+        if self._pending:
+            staged_ids = list(self._pending)
+            staged_matrix = np.vstack([self._pending[d].vector for d in staged_ids])
+            staged_scores = matrix @ staged_matrix.T
+            for row_index in range(len(query_ids)):
+                for col, doc_id in enumerate(staged_ids):
+                    candidates[row_index][doc_id] = (
+                        float(staged_scores[row_index, col]),
+                        self._pending[doc_id].metadata,
+                    )
+
+        results: dict[str, list[dict[str, Any]]] = {}
+        for row_index, self_doc_id in enumerate(query_ids):
+            neighbours = [
+                {"id": doc_id, "score": score, **copy.deepcopy(metadata)}
+                for doc_id, (score, metadata) in candidates[row_index].items()
+                if doc_id != self_doc_id
+            ]
             neighbours.sort(key=lambda r: (-r["score"], r["id"]))
             results[self_doc_id] = neighbours[:top_k]
         return results
@@ -745,7 +815,9 @@ class MultiNamespaceVectorStore(StorageNameSpace):
     async def score_all(self, vector: Any) -> list[dict[str, Any]]:
         raise VectorNamespaceNotSelectedError(self.workspace, self._available_namespaces())
 
-    async def self_knn(self, *, top_k: int) -> dict[str, list[dict[str, Any]]]:
+    async def self_knn(
+        self, *, top_k: int, ids: Sequence[str] | None = None
+    ) -> dict[str, list[dict[str, Any]]]:
         raise VectorNamespaceNotSelectedError(self.workspace, self._available_namespaces())
 
     def get_by_id(self, doc_id: str) -> dict[str, Any] | None:
