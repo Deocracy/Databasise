@@ -151,6 +151,29 @@ def test_two_uploads_are_indexed_from_their_own_bytes_under_the_callers_ids(real
     assert any("UNIQaaa" in content for content in contents), contents
 
 
+@requires_v1
+def test_uat3_an_uploaded_file_resolves_to_the_callers_document_id_and_a_delete_removes_it(real_v1):  # noqa: F811
+    """11-UAT item 3: v1 holds a file ingest as ``doc-<md5>``; evidence must show the caller's id."""
+    client = _client(real_v1, workspace="lrag-uat3")
+    up = _upload(client, "notes.txt", b"UNIQuat Corp weaves baskets.", "caller-doc")
+    assert up.status_code == 200, up.text
+
+    evidence = client.post("/query", json={"query": {"text": "UNIQuat baskets"}}).json()["evidence"]
+    records = [client.post("/evidence/resolve", json=ref).json() for ref in evidence]
+    chunk_records = [r for r in records if "full_doc_id" in r]
+    assert chunk_records, records
+    assert {r["full_doc_id"] for r in chunk_records} == {"caller-doc"}
+    # Outside the sync the reader keeps v1's own id (the parity import is unchanged).
+    raw = read_v1_snapshot(real_v1.store_root / "lrag-uat3" / "lightrag-v1").text_chunks
+    assert raw and all(rec["full_doc_id"].startswith("doc-") for rec in raw.values()), raw
+
+    deleted = client.delete("/documents/caller-doc")
+    assert (deleted.status_code, deleted.json()["status"]) == (200, "success"), deleted.text
+    assert client.get("/corpus").json()["documents"] == []
+    after = client.post("/query", json={"query": {"text": "UNIQuat baskets"}})
+    assert (after.status_code, after.json()["evidence"]) == (200, []), after.text
+
+
 @pytest.mark.parametrize(("name", "suffix"), [("notes.xyz", ".xyz"), ("README", "")])
 def test_an_unsupported_upload_type_is_refused_before_anything_is_written(tmp_path, monkeypatch, name, suffix):
     calls: list[tuple] = []

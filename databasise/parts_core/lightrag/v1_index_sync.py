@@ -89,7 +89,8 @@ async def v1_index_sync_body(ctx: Any) -> dict[str, Any]:
     async def _sync() -> dict[str, Any]:
         # A-CR-01: a timeout or cancel keeps the write gate until the read, which holds v1's
         # RocksDB open, has returned.
-        snapshot = await to_thread_until_done(read_v1_snapshot, working_dir)
+        # 11-UAT item 3: a file ingest's chunks carry the caller's id, not v1's doc-<md5>.
+        snapshot = await to_thread_until_done(read_v1_snapshot, working_dir, caller_doc_ids=True)
         if snapshot is None:
             return {"synced": False, "counts": {}, "tokens": TokenAccounting(counted_by="none")}
         kv, vector, graph = ctx.stores["kv"], ctx.stores["vector"], ctx.stores["graph"]

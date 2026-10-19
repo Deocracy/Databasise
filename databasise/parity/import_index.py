@@ -252,7 +252,24 @@ def _sources(record: dict[str, Any]) -> set[str]:
     return set(str(record.get("source_id") or "").split(_GRAPH_FIELD_SEP)) - {""}
 
 
-def read_v1_snapshot(v1_working_dir: Path, *, processed_only: bool = True) -> V1Snapshot | None:
+def _caller_doc_ids(doc_status: dict[str, dict[str, Any]]) -> dict[str, str]:
+    """``doc-<md5>`` -> the caller's id, by the driver's ``_listed_id`` stem rule: a file ingest is
+    staged as ``<document_id><suffix>``, so the caller's id is its basename's stem."""
+    return {
+        v1_id: Path(str(file_path)).stem
+        for v1_id, row in doc_status.items()
+        if v1_id.startswith("doc-") and (file_path := row.get("file_path")) and file_path != "unknown_source"
+    }
+
+
+def _with_caller_doc_id(record: dict[str, Any], doc_ids: dict[str, str]) -> dict[str, Any]:
+    doc_id = record.get("full_doc_id")
+    return {**record, "full_doc_id": doc_ids[doc_id]} if doc_id in doc_ids else record
+
+
+def read_v1_snapshot(
+    v1_working_dir: Path, *, processed_only: bool = True, caller_doc_ids: bool = False
+) -> V1Snapshot | None:
     """Read v1's committed index (text chunks, the three Faiss kinds, the Cozo graph) as data.
 
     Returns ``None`` when ``v1_working_dir`` is absent, or when ``processed_only`` is set and the
@@ -263,6 +280,9 @@ def read_v1_snapshot(v1_working_dir: Path, *, processed_only: bool = True) -> V1
     chunk vector whose id is a chunk of a ``processed`` doc_status row; an entity, relationship or
     node whose ``source_id`` names such a chunk; an edge that does and whose endpoints are kept.
     Failed, ``dup-*`` and still-processing rows therefore contribute nothing.
+
+    ``caller_doc_ids`` (the seam's sync only; 11-UAT item 3) rewrites the ``full_doc_id`` of text
+    chunks and chunk vectors from v1's ``doc-<md5>`` to the caller's id. Row ids are unchanged.
     """
     if not v1_working_dir.exists():
         return None
@@ -300,8 +320,14 @@ def read_v1_snapshot(v1_working_dir: Path, *, processed_only: bool = True) -> V1
         for key, attrs in edges.items()
         if _sources(attrs) & keep_chunks and key[0] in kept_nodes and key[1] in kept_nodes
     }
+    kept_chunks = {cid: rec for cid, rec in text_chunks.items() if cid in keep_chunks}
+    if caller_doc_ids and (doc_ids := _caller_doc_ids(doc_status)):
+        kept_chunks = {cid: _with_caller_doc_id(rec, doc_ids) for cid, rec in kept_chunks.items()}
+        if "chunks" in kept_vectors:
+            ids, matrix, metadatas = kept_vectors["chunks"]
+            kept_vectors["chunks"] = (ids, matrix, [_with_caller_doc_id(m, doc_ids) for m in metadatas])
     return V1Snapshot(
-        text_chunks={cid: rec for cid, rec in text_chunks.items() if cid in keep_chunks},
+        text_chunks=kept_chunks,
         vectors=kept_vectors,
         nodes=kept_nodes,
         edges=kept_edges,
