@@ -1,0 +1,15 @@
+{
+  "id": "RUN-01",
+  "plants": [
+    {
+      "file": "databasise/evidence/COVERAGE.md",
+      "find": "| retry interrupted document | in-process, REST (`POST /documents/{document_id}/retry`), MCP (`retry` tool) | 11-08 |",
+      "replace": "| retry interrupted document | in-process, REST (`POST /documents/{document_id}/retry`) | 11-08 |"
+    },
+    {
+      "file": "databasise/mcp/tools.py",
+      "find": "    \"retire\",\n    \"retry\",\n)",
+      "replace": "    \"retire\",\n)"
+    }
+  ]
+}

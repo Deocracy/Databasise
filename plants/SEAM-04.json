@@ -1,0 +1,15 @@
+{
+  "id": "SEAM-04",
+  "plants": [
+    {
+      "file": "databasise/seam/rest.py",
+      "find": "    return 404 if isinstance(exc, _NOT_FOUND_REFUSALS) else 422",
+      "replace": "    return 422"
+    },
+    {
+      "file": "databasise/seam/rest.py",
+      "find": "_NOT_FOUND_REFUSALS: tuple[type[SeamRefusalError], ...] = (\n    UnknownTraceReferenceError,\n    UnknownJobError,\n",
+      "replace": "_NOT_FOUND_REFUSALS: tuple[type[SeamRefusalError], ...] = (\n    UnknownTraceReferenceError,\n"
+    }
+  ]
+}

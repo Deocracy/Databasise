@@ -1,0 +1,20 @@
+{
+  "id": "SEAM-15",
+  "plants": [
+    {
+      "file": "databasise/seam/corpus.py",
+      "find": "        default=None, description=\"Advisory only and not stored: discarded at ingest.\"",
+      "replace": "        default=None, description=\"Advisory only: carried into the job payload.\""
+    },
+    {
+      "file": "databasise/mcp/tools.py",
+      "find": "        default=None, description=\"Advisory only and not stored: discarded at ingest.\"",
+      "replace": "        default=None, description=\"Advisory only: carried into the job payload.\""
+    },
+    {
+      "file": "databasise/seam/engine.py",
+      "find": "            on_disk_path = self._inbox() / generated_on_disk_name(document_id, suffix)",
+      "replace": "            on_disk_path = self._inbox() / (document.file_name or generated_on_disk_name(document_id, suffix))"
+    }
+  ]
+}

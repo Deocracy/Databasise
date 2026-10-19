@@ -1,0 +1,20 @@
+{
+  "id": "SEAM-09",
+  "plants": [
+    {
+      "file": "databasise/seam/query.py",
+      "find": "    if query_object.text is not None and query_object.text.strip() == \"\":",
+      "replace": "    if query_object.text is not None and query_object.text == \"\":"
+    },
+    {
+      "file": "databasise/seam/corpus.py",
+      "find": "        if self.text is not None and self.text.strip() == \"\":",
+      "replace": "        if self.text is not None and self.text == \"\":"
+    },
+    {
+      "file": "databasise/seam/corpus.py",
+      "find": "        if self.raw is not None and len(self.raw) == 0:\n            raise EmptyIngestDocumentError(member=\"raw\")\n",
+      "replace": ""
+    }
+  ]
+}

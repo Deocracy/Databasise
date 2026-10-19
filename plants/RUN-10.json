@@ -1,0 +1,15 @@
+{
+  "id": "RUN-10",
+  "plants": [
+    {
+      "file": "databasise/seam/engine.py",
+      "find": "        result = await _corpus_op_or_refuse(\n            \"status\", {\"track_id\": None, \"limit\": 1, \"offset\": 0}, \"document_counts\", self._v1_working_dir()\n        )\n",
+      "replace": "        result = self.__dict__.get(\"_counts_cache\") or await _corpus_op_or_refuse(\n            \"status\", {\"track_id\": None, \"limit\": 1, \"offset\": 0}, \"document_counts\", self._v1_working_dir()\n        )\n        self.__dict__[\"_counts_cache\"] = result\n"
+    },
+    {
+      "file": "databasise/seam/engine.py",
+      "find": "                status=result.get(\"status\") or \"fail\",",
+      "replace": "                status=\"success\","
+    }
+  ]
+}

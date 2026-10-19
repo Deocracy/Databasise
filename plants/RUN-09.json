@@ -1,0 +1,20 @@
+{
+  "id": "RUN-09",
+  "plants": [
+    {
+      "file": "databasise/seam/engine.py",
+      "find": "        document_id = document.document_id if document.document_id is not None else uuid.uuid4().hex",
+      "replace": "        document_id = document.document_id if document.document_id is not None else str(uuid.uuid4())"
+    },
+    {
+      "file": "databasise/seam/engine.py",
+      "find": "            on_disk_path = self._inbox() / generated_on_disk_name(document_id, suffix)",
+      "replace": "            on_disk_path = self._inbox() / (document.file_name or generated_on_disk_name(document_id, suffix))"
+    },
+    {
+      "file": "databasise/seam/engine.py",
+      "find": "            on_disk_path = self._inbox() / generated_on_disk_name(document_id, suffix)",
+      "replace": "            on_disk_path = self._inbox() / generated_on_disk_name(document_id)"
+    }
+  ]
+}

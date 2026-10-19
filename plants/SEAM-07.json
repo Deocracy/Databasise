@@ -1,0 +1,15 @@
+{
+  "id": "SEAM-07",
+  "plants": [
+    {
+      "file": "databasise/seam/corpus.py",
+      "find": "    if not _DOCUMENT_ID_TOKEN_RE.fullmatch(document_id) or document_id in _RESERVED_V1_DOCUMENT_IDS:",
+      "replace": "    if not _DOCUMENT_ID_TOKEN_RE.match(document_id) or document_id in _RESERVED_V1_DOCUMENT_IDS:"
+    },
+    {
+      "file": "databasise/seam/corpus.py",
+      "find": "        if self.raw is not None and len(self.raw) > MAX_DOCUMENT_BYTES:\n            raise OversizedDocumentError(actual_bytes=len(self.raw), limit_bytes=MAX_DOCUMENT_BYTES)\n",
+      "replace": ""
+    }
+  ]
+}

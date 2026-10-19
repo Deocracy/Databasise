@@ -1,0 +1,20 @@
+{
+  "id": "STOR-12",
+  "plants": [
+    {
+      "file": "databasise/validator/parse.py",
+      "find": "            unwired = (set(node.effects) | set(part.effects)) & _UNWIRED_STORE_EFFECTS",
+      "replace": "            unwired = set(node.effects) & _UNWIRED_STORE_EFFECTS"
+    },
+    {
+      "file": "databasise/validator/parse.py",
+      "find": "frozenset({\"reads_lexical\", \"writes_lexical\", \"reads_blob\"})",
+      "replace": "frozenset({\"reads_lexical\", \"writes_lexical\"})"
+    },
+    {
+      "file": "databasise/seam/engine.py",
+      "find": "    if not parsed.report.ok:\n        raise UnparseableWiringError(",
+      "replace": "    if False:\n        raise UnparseableWiringError("
+    }
+  ]
+}
