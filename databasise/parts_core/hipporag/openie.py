@@ -107,11 +107,14 @@ def _parse_entities(text: str) -> list[str] | None:
     raw = payload.get("entities")
     if not isinstance(raw, list):
         return None
-    return [v.strip() for v in raw if isinstance(v, str) and v.strip()]
+    if not all(isinstance(v, str) for v in raw):  # A-WR-03: a bad item is a refusal, not a thinner graph
+        return None
+    return [v.strip() for v in raw if v.strip()]
 
 
 def _parse_triples(text: str) -> list[tuple[str, str, str]] | None:
-    """``None`` when the response is not a JSON object with a ``triples`` list."""
+    """``None`` when the response is not a JSON object with a ``triples`` list, or when any item is
+    not a list of three non-empty strings. ``[]`` is the only valid zero-triple response."""
     payload = _lenient_json(text)
     if not isinstance(payload, dict):
         return None
@@ -120,12 +123,13 @@ def _parse_triples(text: str) -> list[tuple[str, str, str]] | None:
         return None
     triples: list[tuple[str, str, str]] = []
     for item in raw:
-        if (
+        if not (
             isinstance(item, (list, tuple))
             and len(item) == 3
             and all(isinstance(v, str) and v.strip() for v in item)
         ):
-            triples.append((item[0].strip(), item[1].strip(), item[2].strip()))
+            return None
+        triples.append((item[0].strip(), item[1].strip(), item[2].strip()))
     return triples
 
 

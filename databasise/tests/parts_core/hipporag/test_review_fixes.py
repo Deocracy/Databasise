@@ -9,6 +9,7 @@ import pytest
 
 from databasise.parts.schema import NodeContext
 from databasise.parts_core.hipporag.assemble_result import HIPPORAG_RESULT_ASSEMBLER_PART
+from databasise.parts_core.hipporag.openie import _parse_entities, _parse_triples
 from databasise.stores.kv import SqliteKVStore
 
 
@@ -74,3 +75,27 @@ async def test_a_non_empty_ppr_branch_does_not_use_the_dense_items(store_root):
     )
 
     assert [item["id"] for item in result["items"]] == ["p0"]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        '{"triples": [["Ed Wood", "directed"]]}',
+        '{"triples": [[1, 2, 3]]}',
+        '{"triples": [["Ed Wood", "", "films"]]}',
+        '{"triples": [["Ed Wood", "directed", "films"], ["bad"]]}',
+    ],
+)
+def test_a_triples_list_with_any_invalid_item_is_unparseable(text):
+    """A-WR-03: item-level leniency would give a silently thinner graph, which D-08 rules out."""
+    assert _parse_triples(text) is None
+
+
+def test_an_empty_triples_list_and_a_valid_one_still_parse():
+    assert _parse_triples('{"triples": []}') == []
+    assert _parse_triples('{"triples": [[" Ed Wood ", "directed", "films"]]}') == [("Ed Wood", "directed", "films")]
+
+
+def test_an_entities_list_with_a_non_string_item_is_unparseable():
+    assert _parse_entities('{"entities": ["Ed Wood", 3]}') is None
+    assert _parse_entities('{"entities": ["Ed Wood", " "]}') == ["Ed Wood"]
