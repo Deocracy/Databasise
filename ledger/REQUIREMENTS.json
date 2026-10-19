@@ -1,5 +1,5 @@
 {
-  "ledger_version": 439,
+  "ledger_version": 441,
   "frozen_at": null,
   "items": [
     {
@@ -145,7 +145,7 @@
     {
       "id": "RUN-11",
       "text": "tests/parity/test_embedder_index_reproduction.py gives the same verdict on repeated runs with no code change. The live re-embedding test carries a 'live' marker, registered in databasise/pyproject.toml [tool.pytest.ini_options], with addopts that exclude it from the default run. Its similarity threshold (_SIMILARITY_THRESHOLD, line 36) is set from the endpoint's measured output (per-chunk cosin...",
-      "status": "deferred-requested",
+      "status": "deferred-approved",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "",
       "code_ref": "",
