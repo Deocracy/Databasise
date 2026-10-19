@@ -1,0 +1,90 @@
+{
+  "bak_trace": 1,
+  "step": "S4",
+  "part": "phase12-a",
+  "ledger_version": 616,
+  "artifacts": {
+    ".planning/phases/12-hipporag-fixes/12-01-PLAN.md": "d186f3eea150f3bf24180aade8fde32a519bbc73e8fb1e14b2a9296a2006c3a5",
+    ".planning/phases/12-hipporag-fixes/12-02-PLAN.md": "11cd2224ec206e885921cc0e457e8ac04498913e99796ddc128ea6b01fc56b50",
+    ".planning/phases/12-hipporag-fixes/12-03-PLAN.md": "22769b4795ffacbcd43953575b053101bea5c938e0ce5c1ad29dfd92ce84001f",
+    ".planning/phases/12-hipporag-fixes/12-04-PLAN.md": "67622a7bb3458d3ebba2b659c5478821e9892314c7ab47a31589ba2aadf1da8a",
+    ".planning/phases/12-hipporag-fixes/12-05-PLAN.md": "d042defb6ed7931d198bb2a2a9ea29ce875331c4226686cdce1041a24095791d",
+    ".planning/phases/12-hipporag-fixes/12-06-PLAN.md": "7d9343a7df635ebe131e7267fb415d560051a26a1339193d5b420dec9a7ddd9e",
+    ".planning/phases/12-hipporag-fixes/12-07-PLAN.md": "74c24e89818bca92b2aecf68d20f42d0ce75647485f060fee34664ab540108ad",
+    ".planning/phases/12-hipporag-fixes/12-08-PLAN.md": "a8fdc1a567dd9c3cc700f12f2b486a039cfa7a28cc312c1ce84a688cb4355aca",
+    ".planning/phases/12-hipporag-fixes/12-09-PLAN.md": "41cec6b57869ff201753eadbb25d2ff64f2c53cf1ecb3447b0736de6b2a8102d",
+    ".planning/phases/12-hipporag-fixes/12-10-PLAN.md": "a0bc4f773551993beb80c653d1cc98d9c756d6af68143e079733ab4a48c44fbb",
+    ".planning/phases/12-hipporag-fixes/12-11-PLAN.md": "5cab2a0dd4726ea0007de47b9f696f09dd0ac651896ef9d389ad38da7383a3fd",
+    ".planning/phases/12-hipporag-fixes/12-12-PLAN.md": "65cd0acc33342fe83bc21b695bfed41323516d26ec38d5d7487e26952e325bf8",
+    ".planning/phases/12-hipporag-fixes/12-13-PLAN.md": "cc06056413d41abfd60cce3b1070202b19c6960aed2c36e53a2d74a8f3a65251",
+    ".planning/phases/12-hipporag-fixes/12-14-PLAN.md": "0e530b844ce38795c5862e5328a83dd94db9c52d77f3b8a524b25b13bfbbc394"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "claude-opus-5-5",
+    "session": "32d1701b-4256-409c-a5a7-e305cc822f40"
+  },
+  "items": [
+    {
+      "id": "HIPP-01",
+      "status": "present",
+      "where": ".planning/phases/12-hipporag-fixes/12-01-PLAN.md:15",
+      "quote": "requirements: [HIPP-01, HIPP-02]"
+    },
+    {
+      "id": "HIPP-02",
+      "status": "present",
+      "where": ".planning/phases/12-hipporag-fixes/12-01-PLAN.md:15",
+      "quote": "requirements: [HIPP-01, HIPP-02]"
+    },
+    {
+      "id": "HIPP-03",
+      "status": "present",
+      "where": ".planning/phases/12-hipporag-fixes/12-14-PLAN.md:16",
+      "quote": "requirements: [HIPP-04, HIPP-03]"
+    },
+    {
+      "id": "HIPP-04",
+      "status": "present",
+      "where": ".planning/phases/12-hipporag-fixes/12-14-PLAN.md:16",
+      "quote": "requirements: [HIPP-04, HIPP-03]"
+    },
+    {
+      "id": "HIPP-05",
+      "status": "present",
+      "where": ".planning/phases/12-hipporag-fixes/12-05-PLAN.md:14",
+      "quote": "requirements: [HIPP-12, HIPP-05]"
+    },
+    {
+      "id": "HIPP-06",
+      "status": "present",
+      "where": ".planning/phases/12-hipporag-fixes/12-02-PLAN.md:17",
+      "quote": "requirements: [HIPP-06, HIPP-19]"
+    },
+    {
+      "id": "HIPP-07",
+      "status": "present",
+      "where": ".planning/phases/12-hipporag-fixes/12-03-PLAN.md:15",
+      "quote": "requirements: [HIPP-07, HIPP-08]"
+    },
+    {
+      "id": "HIPP-08",
+      "status": "present",
+      "where": ".planning/phases/12-hipporag-fixes/12-03-PLAN.md:15",
+      "quote": "requirements: [HIPP-07, HIPP-08]"
+    },
+    {
+      "id": "HIPP-09",
+      "status": "present",
+      "where": ".planning/phases/12-hipporag-fixes/12-04-PLAN.md:16",
+      "quote": "requirements: [HIPP-10, HIPP-09]"
+    },
+    {
+      "id": "HIPP-10",
+      "status": "present",
+      "where": ".planning/phases/12-hipporag-fixes/12-04-PLAN.md:16",
+      "quote": "requirements: [HIPP-10, HIPP-09]"
+    }
+  ],
+  "extra": []
+}
