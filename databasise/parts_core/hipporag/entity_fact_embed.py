@@ -35,6 +35,9 @@ chunk-prefixed refs resolve to disjoint vertex indices, which is what makes
 ``reset-vector-join``'s sum disjoint-support and order-insensitive per ``## §H``'s
 ``arm_precedence`` declaration.
 
+Fact provenance accumulates across ingests (Phase 12 D-06, HIPP-09): the ``fact:<id>`` KV record and
+the fact vector metadata both hold the stored chunk ids followed by this run's new ones.
+
 Each surviving fact's own entity refs (its subject/object, vertex-prefixed) are carried in that
 fact's vector metadata — the same ``entities`` field ``reset-vector-join`` already reads off each
 scored fact item (``databasise/parts_core/hipporag/reset_vector_join.py``) to accumulate phrase
@@ -88,6 +91,14 @@ async def _entity_fact_embed_body(ctx: NodeContext) -> dict[str, Any]:
         chunk_id = finding.get("chunk_id")
         if chunk_id is not None and chunk_id not in record["chunk_ids"]:
             record["chunk_ids"].append(chunk_id)
+
+    # D-06 (HIPP-09): a fact seen in an earlier ingest keeps that ingest's chunk ids. The KV record
+    # is the source of truth: stored ids first, then this run's new ids, so the union is stable.
+    kv_store = ctx.stores["kv"]
+    for fid, record in fact_records.items():
+        stored = await kv_store.get_by_id(f"fact:{fid}")
+        stored_ids = list((stored or {}).get("chunk_ids", []))
+        record["chunk_ids"] = stored_ids + [c for c in record["chunk_ids"] if c not in stored_ids]
 
     entity_keys = sorted(entity_by_key)
     entity_texts = [entity_by_key[key] for key in entity_keys]
@@ -143,7 +154,6 @@ async def _entity_fact_embed_body(ctx: NodeContext) -> dict[str, Any]:
 
     # 06-07-PLAN.md: the additive fact:<id> -> {chunk_ids} KV write reset-vector-join.py already
     # reads — see this module's own docstring for the full disposition.
-    kv_store = ctx.stores["kv"]
     await kv_store.upsert(
         {f"fact:{fid}": {"chunk_ids": fact_records[fid]["chunk_ids"]} for fid in fact_ids}
     )

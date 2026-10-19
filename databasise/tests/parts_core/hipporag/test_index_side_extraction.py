@@ -472,6 +472,40 @@ async def test_entity_fact_embed_dedupes_an_entity_appearing_in_two_findings(sto
     assert entity_call.count("cat") == 1
 
 
+async def _run_efe_and_commit(store_root, findings: list[dict[str, Any]]) -> None:
+    vector_store = MultiNamespaceVectorStore(workspace="ws", store_root=store_root)
+    kv_store = SqliteKVStore(namespace="hipporag-text-chunks", workspace="ws", store_root=store_root)
+    ctx = _ctx(
+        "entity-fact-embed",
+        inputs={"openie": {"findings": findings}},
+        stores={"vector": vector_store, "kv": kv_store},
+        clients={"embedding": _StubEmbeddingClient()},
+    )
+    await HIPPORAG_ENTITY_FACT_EMBEDDER_PART.body(ctx)
+    await vector_store.index_done_callback()
+    await kv_store.index_done_callback()
+
+
+async def test_a_fact_from_two_ingests_keeps_both_chunk_ids_in_kv_and_vector_metadata(store_root):
+    first = _finding("cat", "sat_on", "mat", "c1")
+    second = _finding("cat", "sat_on", "mat", "c2")
+
+    await _run_efe_and_commit(store_root, [first])
+    await _run_efe_and_commit(store_root, [second])
+
+    async def _stored_chunk_ids() -> tuple[Any, Any]:
+        vector_store = MultiNamespaceVectorStore(workspace="ws", store_root=store_root)
+        kv_store = SqliteKVStore(namespace="hipporag-text-chunks", workspace="ws", store_root=store_root)
+        kv_record = await kv_store.get_by_id(f"fact:{first['fact_id']}")
+        vector_record = vector_store.select("hipporag-facts").get_by_id(first["fact_id"])
+        return (kv_record or {}).get("chunk_ids"), (vector_record or {}).get("chunk_ids")
+
+    assert await _stored_chunk_ids() == (["c1", "c2"], ["c1", "c2"])
+
+    await _run_efe_and_commit(store_root, [second])  # re-running an ingest adds nothing twice
+    assert await _stored_chunk_ids() == (["c1", "c2"], ["c1", "c2"])
+
+
 # --------------------------------------------------------------------------------------------- #
 # Chain test: chunk-embed -> openie -> entity-fact-embed over the seeded source documents
 # --------------------------------------------------------------------------------------------- #
