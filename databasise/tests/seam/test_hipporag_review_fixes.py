@@ -189,3 +189,73 @@ def test_a_pre_phase_12_hipporag_trace_still_matches_its_wiring_and_an_unknown_s
     assert _arm_name_for_node_ids(full) == "hipporag"
     with pytest.raises(UnknownTraceReferenceError):
         _arm_name_for_node_ids(frozenset({"not-a-node"}), trace_reference="trace-123")
+
+
+# --- B-WR-04: strict replacements for lax assertions in the protected write-path/query-path tests ---
+# The protected tests wrap the post-delete query in ``except Exception`` (write_path.py:310-316, 394-399)
+# and assert only ``<= 5`` / ``> 0`` in the top_k test (query_path.py:230-240); these pin what they claim.
+
+
+async def _query_after_delete(store_root, workspace):
+    from seam.test_hipporag_write_path import (
+        _DOCUMENT_TEXT,
+        _HIPPORAG_CAPABILITY,
+        _StubEmbeddingClient,
+        _StubIngestQueryLLMClient,
+    )
+
+    from databasise.seam import QueryObject
+
+    engine = Databasise(
+        store_root=store_root,
+        workspace=workspace,
+        clients={"embedding": _StubEmbeddingClient(), "llm": _StubIngestQueryLLMClient()},
+    )
+    selector = Selector(capability=_HIPPORAG_CAPABILITY)
+    await engine.ingest(IngestDocument(document_id="gone-doc", text=_DOCUMENT_TEXT), selector=selector)
+    assert (await engine.delete_document("gone-doc", selector=selector)).status == "success"
+    return await engine.query(QueryObject(text="What did Ed Wood direct?"), selector)
+
+
+async def test_a_query_after_the_only_document_is_deleted_returns_no_evidence_or_names_the_empty_namespace(
+    store_root,
+):
+    from databasise.seam.refusals import EmptyNamespaceError
+
+    try:
+        envelope = await _query_after_delete(store_root, "post-delete-ws")
+    except EmptyNamespaceError:
+        return  # the named refusal on an emptied index; any other exception is a failure
+    assert list(envelope.evidence) == []
+
+
+async def test_both_branches_return_between_one_and_top_k_refs_and_take_the_branch_they_name(store_root, tmp_path):
+    from seam.test_hipporag_query_path import _KeepAllFactsLLMClient, _refs_over_twenty_documents
+    from seam.test_hipporag_write_path import (
+        _HIPPORAG_CAPABILITY,
+        _StubEmbeddingClient,
+        _StubIngestQueryLLMClient,
+    )
+
+    from databasise.seam import QueryObject
+
+    async def guards_fired_by_fact_filter(root, llm):
+        engine = Databasise(
+            store_root=root,
+            workspace="hipporag-top-k-ws",  # the workspace _refs_over_twenty_documents already filled
+            clients={"embedding": _StubEmbeddingClient(), "llm": llm},
+        )
+        selector = Selector(capability=_HIPPORAG_CAPABILITY)
+        envelope = await engine.query(QueryObject(text="What did Ed Wood direct?"), selector)
+        trace = await engine.resolve_trace(envelope.trace_token, debug=True)
+        node = next(n for n in trace["nodes"] if n["node_id"] == "fact-filter")
+        return list(node.get("guards_fired") or [])
+
+    dpr_refs = await _refs_over_twenty_documents(store_root, _StubIngestQueryLLMClient())
+    ppr_refs = await _refs_over_twenty_documents(tmp_path / "ppr-root", _KeepAllFactsLLMClient())
+
+    assert 0 < len(dpr_refs) <= 5
+    assert 0 < len(ppr_refs) <= 5
+    assert all(ref.score > 0 for ref in ppr_refs)
+    assert await guards_fired_by_fact_filter(store_root, _StubIngestQueryLLMClient()) != []
+    assert await guards_fired_by_fact_filter(tmp_path / "ppr-root", _KeepAllFactsLLMClient()) == []
