@@ -1,7 +1,7 @@
 ---
 phase: 11-lightrag-corpus-path
-verified: 2026-10-18T23:59:00Z
-status: human_needed
+verified: 2026-10-19T07:30:00Z
+status: passed
 score: 25/25 must-haves verified (5 success criteria, 20 LRAG requirements)
 covered_files:
   - ".planning/phases/11-lightrag-corpus-path/11-01-PLAN.md"
@@ -50,33 +50,17 @@ covered_files:
   - "databasise/wirings/lightrag/corpus-delete.json"
   - "databasise/wirings/lightrag/corpus-ingest.json"
   - "databasise/wirings/resolve.py"
-covered_digest: "v3:sha256:50506f538e49220ee66b6ce789dbf4c6e4f602b1ec8ed822ceb3d0c34b96a0e8"
+covered_digest: "v3:sha256:4ae2dfdb6b9ddc7995967bc9e147b149799830572a744d3db649bcf1bef81748"
 behavior_unverified: 0
 overrides_applied: 0
-human_verification:
-  - test: "A3-WR-01: re-ingest an id v1 already holds, against a corpus of realistic size (hundreds of documents), and time it."
-    expected: "The re-ingest returns enqueued 0 and costs one full-corpus mirror (the `shortcut:` at parts_core/lightrag/v1_index_sync.py:86). The owner accepts that cost, or asks for the doc_status-diff upgrade."
-    why_human: "Cost and acceptability at real corpus size is an owner call. The stub corpus has 1-3 documents."
-  - test: "Run one live LightRAG ingest and delete with the real provider (owner-run, `-m live`; this verification did not run it)."
-    expected: "full-ingest and full-delete report counted_by 'v1-subprocess' with real prompt/completion token counts, and the 'unbudgetable' path is not taken."
-    why_human: "The stub server reports fixed usage (11/7). Whether a real provider's usage block is captured by v1's TokenTracker cannot be proven hermetically."
-  - test: "Decide whether an uploaded file's evidence record should expose the caller's document id."
-    expected: "Today /evidence/resolve on an uploaded chunk returns full_doc_id 'doc-<md5 of basename>' (v1's file-ingest id), while a text ingest returns the caller's id. /corpus, /jobs and DELETE all use the caller's id."
-    why_human: "No LRAG requirement text covers it. It is a consumer-visible naming inconsistency, and the fix is a design choice (map in the sync, or accept)."
-  - test: "A-WR-05 (accepted partial): confirm the owner accepts that in-process HippoRAG provider errors stay unredacted in the server log, because the protected test_foreign_engine_refusal.py pins the raw exception."
-    expected: "Owner acknowledges, or routes the fix to Phase 12 with a grant-check-edit."
-    why_human: "Needs the owner's grant on a protected test."
-  - test: "Retry of a raw upload left in `parsing` state (review info item)."
-    expected: "Retry reprocesses it from the kept inbox file. Not exercised: the stub server cannot hold a pipeline mid-parse."
-    why_human: "Only reachable with a real provider and a real timeout."
 ---
 
 # Phase 11: LightRAG Corpus Path Verification Report
 
 **Phase Goal:** A document ingested through the seam's LightRAG path is what the LightRAG query arms retrieve, uploads index their real content, health reports only facts it checked, and the KG arms answer the way v1 answers.
 **Verified:** 2026-10-18
-**Status:** human_needed (no failed truth, no blocker; five owner/real-provider items below)
-**Re-verification:** No, initial verification
+**Status:** passed (no failed truth, no blocker; all five human items resolved, deferred or routed by the owner, see below)
+**Re-verification:** Yes, after the UAT round (commit 8026d56 changed `parity/import_index.py` and `parts_core/lightrag/v1_index_sync.py`)
 
 ## Method
 
@@ -142,9 +126,28 @@ Goal-backward from ROADMAP success criteria 1-5 and LRAG-01..20. SUMMARY claims 
 | Probe check | Cause |
 |-------------|-------|
 | `SC4 health ... no files` (x2) | The probe compared the tree to `[]` after constructing the app. `trace.db*` exists from the engine constructor (Phase 4 `TraceStore`). The before/after delta around `GET /health` is empty (probe_sc2). |
-| `SC2 upa/upb ... own id` (x2) | The probe assumed `full_doc_id` equals the caller's id. For uploads it is v1's `doc-<md5>`. Content assertions pass (each token resolves in its own chunk). See human item 3. |
+| `SC2 upa/upb ... own id` (x2) | The probe assumed `full_doc_id` equals the caller's id. Before 8026d56 it was v1's `doc-<md5>` for uploads; the re-run now passes both checks. |
 | `LRAG-16 read path created no store dirs` | `_build_stores` opens the kv and graph stores before `_refuse_empty_namespaces`, so `text_chunks/kv.sqlite3` and `graph.cozo` appear on a refused query. No vector directory is created, which is what LRAG-16 and D-15 name. The kv/graph open-on-read is Phase 10 behaviour. |
 | `retry on an unknown doc is 404` | Phase 11 D-08 asked only for a named refusal. It returns 422 `UnknownDocumentError`. SEAM-04's 404 list covers the four lookups, not this route. |
+
+## Human verification resolved
+
+Source: `.planning/phases/11-lightrag-corpus-path/11-UAT.md` (status complete: 1 pass, 1 issue now fixed, 2 skipped, 1 routed).
+
+| # | Item | Owner decision | Verifier check |
+|---|------|----------------|----------------|
+| 1 | Re-ingest of a held id runs a full-corpus mirror (A3-WR-01) | Accepted; stays a marked `shortcut:` at `parts_core/lightrag/v1_index_sync.py:86` | Marker present |
+| 2 | Live ingest/delete record real token counts (LRAG-11) | Deferred to `.planning/TESTING-PLAN.md` section 2 ("Live LightRAG write metering") | Hermetic metering tests pass (`test_corpus_metering.py`) |
+| 3 | Uploaded file evidence shows the caller's document_id | Fixed in the sync by 8026d56 | Verified, see below |
+| 4 | A-WR-05 in-process HippoRAG provider errors unredacted in the server log | Routed to Phase 12 (needs grant-check-edit on `test_foreign_engine_refusal.py`) | Out of Phase 11 scope (LRAG-05 concerns v1 stderr) |
+| 5 | Retry of a raw upload stuck mid-parse (LRAG-07) | Deferred to `.planning/TESTING-PLAN.md` section 2 | Hermetic retry tests pass |
+
+### UAT-3 fix re-verification (8026d56)
+
+- `read_v1_snapshot(..., caller_doc_ids=False)` defaults off. The only caller passing `True` is `v1_index_sync.py:93`. `parity/import_index.py` `import_v1_index` and the parity readers do not pass it, so the parity import path is unchanged: `tests/parity/test_import_verification.py` and `test_naive_arm_end_to_end.py` pass.
+- Tests: `test_uat3_an_uploaded_file_resolves_to_the_callers_document_id_and_a_delete_removes_it` passes alone. The set `test_lightrag_corpus_path.py`, `test_v1_index_sync.py`, `test_import_verification.py`, `test_naive_arm_end_to_end.py`, `test_lightrag_working_dir.py` and `test_delete_document.py`: **60 passed, 1 deselected, 0 failed**.
+- Re-run of `probe_sc.py`: 33 of 36. Both SC2 "own id" checks now pass (the resolved `full_doc_id` is the caller's id). The 3 remaining failures are the previously classified probe artifacts (`trace.db` from the engine constructor, twice, and kv/graph opened on a refused query in Phase 10 code).
+- Coordinator-reported full offline gate on HEAD: 2083 passed, both pytest styles (not re-run by me).
 
 ## Gaps
 
@@ -152,7 +155,7 @@ None. No truth failed, and no blocker was found.
 
 ## Advisory (not blocking, not scored)
 
-1. Upload evidence ids: the `doc-<md5>` vs caller-id inconsistency (human item 3).
+1. Upload evidence ids: fixed by 8026d56 (see below).
 2. A refused empty-namespace query still opens (and so creates) the kv and graph stores on a fresh root. Minimal fix if wanted: call `_refuse_empty_namespaces` before `_build_stores` in `_execute_resolved`, but this changes the STOR-02 error precedence the code comment describes, so it needs a deliberate choice.
 3. The review info items (A-IN-01..05, B-IN-01..06) remain open and advisory.
 4. `deferred-items.md`: the F-07 report prose still says two mutable-store components (the table lists three).

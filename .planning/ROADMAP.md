@@ -41,7 +41,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 8: Run the Engine** - Installed launchers for REST and MCP, one shared client builder, one engine process per store root, CORS decision, and a green offline suite (F1) (completed 2026-10-16)
 - [x] **Phase 9: Inputs, Errors & Security** - One refusal shape on both transports, caller input refused before it touches disk or a node, machine faults without leaked stderr (F2) (completed 2026-10-17)
 - [x] **Phase 10: Stores, Locking & Data Integrity** - Graph lock contention as a named outcome, all-or-nothing ingest/delete commits, read-only handles, consistent store adapters (F3) (completed 2026-10-17)
-- [ ] **Phase 11: LightRAG Corpus Path** - Ingested documents reach the queried stores, uploads index their content, honest health, and v1-faithful KG answers (F4)
+- [x] **Phase 11: LightRAG Corpus Path** - Ingested documents reach the queried stores, uploads index their content, honest health, and v1-faithful KG answers (F4) (completed 2026-10-19)
 - [ ] **Phase 12: HippoRAG Fixes** - Resolvable PPR evidence, a graph that accumulates correctly across ingests, query-only runs, and a full document lifecycle (F5)
 - [ ] **Phase 13: Selectors, Wiring & Runner** - Every arm selectable, node-free consumer text, complete and truthful run records, guards that fire on what they declare (F6)
 - [ ] **Phase 14: Promotion & Ledger** - Operator verbs that never 500, aliases that always resolve, no tombstoned generation served, alias history readable (F7)
@@ -231,7 +231,7 @@ Plans (nine waves; the shared engine and store modules force most plans into seq
 - LRAG-17/18: G-27 v1 answer fidelity — match v1 kg_query prompts exactly or relabel the arms; whether live rerank gets an API toggle
 - LRAG-20: expose a delete-impact/per-document entity view or remove the ops
 
-**Plans**: 11/11 plans executed
+**Plans**: 11/11 plans complete
 
 Plans (nine waves; `seam/engine.py` is touched by nine plans, so those run one per wave. Wave 1 and wave 2 each hold two plans that share no file):
 
@@ -445,7 +445,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 8. Run the Engine | 10/10 | Complete    | 2026-10-16 |
 | 9. Inputs, Errors & Security | 10/10 | Complete    | 2026-10-17 |
 | 10. Stores, Locking & Data Integrity | 12/12 | Complete    | 2026-10-17 |
-| 11. LightRAG Corpus Path | 11/11 | In Progress | - |
+| 11. LightRAG Corpus Path | 11/11 | Complete    | 2026-10-19 |
 | 12. HippoRAG Fixes | 0/TBD | Not started | - |
 | 13. Selectors, Wiring & Runner | 0/TBD | Not started | - |
 | 14. Promotion & Ledger | 0/TBD | Not started | - |
