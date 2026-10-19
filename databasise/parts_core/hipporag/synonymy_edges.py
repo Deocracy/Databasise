@@ -22,7 +22,13 @@ new in this ingest are matched, against every committed and staged entity via
 present, else the refs whose committed ``get_by_id`` is ``None``. No new entity means no store
 query and no edges. A pair is therefore emitted once, on the ingest that introduces it, and never
 re-emitted. Accepted recall difference: a new entity that appears only in an old entity's top-k
-(not the reverse) is missed."""
+(not the reverse) is missed.
+
+**Restoring a re-ingest's lost edges (A-CR-01).** ``document-remover`` deletes an orphaned entity's
+vertex, which hides every synonymy edge on it, including ones another document's ingest created.
+In ``corpus-ingest.json`` this node depends on the remover and re-emits each of its
+``removed_synonymy_edges`` whose two endpoints still exist at the end of the run: an endpoint
+survives if the remover did not remove it, or if this run re-added it."""
 
 from __future__ import annotations
 
@@ -67,6 +73,14 @@ async def _synonymy_edges_body(ctx: NodeContext) -> dict[str, Any]:
                 continue
             pair = _canonical_pair(entity_ref, neighbour["id"])
             weight_by_pair.setdefault(pair, neighbour["score"])
+
+    # A-CR-01: restore the edges the remover hid. Recomputed pairs above keep their fresh score.
+    removed = set(ctx.inputs.get("document-remover", {}).get("removed_entities", []))
+    present = {e["ref"] for e in entities}
+    for edge in ctx.inputs.get("document-remover", {}).get("removed_synonymy_edges", []):
+        ends = (edge["src"], edge["tgt"])
+        if all(end in present or end not in removed for end in ends):
+            weight_by_pair.setdefault(_canonical_pair(*ends), float(edge["weight"]))
 
     edges = [
         {"src": src, "tgt": tgt, "weight": weight, "edge_type": _EDGE_TYPE}

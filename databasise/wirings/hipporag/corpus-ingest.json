@@ -49,7 +49,7 @@
         "synonymy_top_k": 5,
         "synonymy_threshold": 0.8
       },
-      "deps": ["entity-fact-embed"]
+      "deps": ["entity-fact-embed", "document-remover"]
     },
     "graph-augment-persist": {
       "component": "hipporag/graph-materializer@0.1.0",

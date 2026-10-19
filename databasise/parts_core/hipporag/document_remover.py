@@ -20,7 +20,10 @@ What one removal stages, and what it deliberately keeps:
   passage weight is deleted, so a synonymy-only edge is never touched;
 - each manifest entity left with no edge to a surviving chunk vertex (an orphan), with its vertex
   and its entity vector. It is returned in ``removed_entities`` so a re-ingest in the same run can
-  treat it as new (D-12 re-ingest orphan fix).
+  treat it as new (D-12 re-ingest orphan fix). Deleting the vertex hides every incident edge,
+  including synonymy edges another document's ingest created, so the orphan's synonymy edges are
+  returned in ``removed_synonymy_edges``; ``synonymy-edges`` restores those whose endpoints still
+  exist at the end of the run (A-CR-01).
 
 This body only stages writes; it never calls a lifecycle method. The engine commits all stores
 together, or drops them all (Phase 10 D-07). Document ids come from ``config["doc_id"]`` (the delete
@@ -106,10 +109,10 @@ class _Remover:
                 },
             )
 
-    async def remove(self, document_id: str) -> tuple[bool, list[str]]:
+    async def remove(self, document_id: str) -> tuple[bool, list[str], list[dict[str, Any]]]:
         manifest = await self.kv.get_by_id(f"doc:{document_id}")
         if manifest is None:
-            return False, []
+            return False, [], []
         chunk_ids = [str(c) for c in manifest.get("chunk_ids", [])]
         removed = set(chunk_ids)
 
@@ -124,10 +127,16 @@ class _Remover:
 
         entities = [str(e) for e in manifest.get("entities", [])]
         orphans: list[str] = []
+        synonymy: dict[tuple[str, str], dict[str, Any]] = {}
         for entity in entities:
-            neighbours = [_other_end(e, entity) for e in await self.graph.get_node_edges(entity)]
-            if not any(n.startswith(CHUNK_VERTEX_PREFIX) for n in neighbours):
+            incident = await self.graph.get_node_edges(entity)
+            if not any(_other_end(e, entity).startswith(CHUNK_VERTEX_PREFIX) for e in incident):
                 orphans.append(entity)
+                for edge in incident:
+                    weight = float(edge["attrs"].get("synonymy_weight", 0.0))
+                    if weight > 0.0:
+                        pair = (edge["src"], edge["tgt"])
+                        synonymy[pair] = {"src": pair[0], "tgt": pair[1], "weight": weight}
         for entity in orphans:
             await self.graph.delete_node(entity)
         if orphans:
@@ -139,21 +148,24 @@ class _Remover:
                 await self._reduce_cooccurrence(entity, removed, seen)
 
         await self.kv.delete([f"doc:{document_id}"])
-        return True, orphans
+        return True, orphans, [synonymy[pair] for pair in sorted(synonymy)]
 
 
 async def _document_remover_body(ctx: NodeContext) -> dict[str, Any]:
     remover = _Remover(ctx)
     found = False
     removed_entities: set[str] = set()
+    removed_synonymy: dict[tuple[str, str], dict[str, Any]] = {}
     for document_id in _document_ids(ctx.config or {}):
-        document_found, orphans = await remover.remove(document_id)
+        document_found, orphans, synonymy_edges = await remover.remove(document_id)
         found = found or document_found
         removed_entities.update(orphans)
+        removed_synonymy.update({(e["src"], e["tgt"]): e for e in synonymy_edges})
     return {
         "status": "success" if found else "not_found",
         "message": "",
         "removed_entities": sorted(removed_entities),
+        "removed_synonymy_edges": [removed_synonymy[pair] for pair in sorted(removed_synonymy)],
     }
 
 
