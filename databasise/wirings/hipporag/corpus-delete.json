@@ -1,0 +1,16 @@
+{
+  "wiring_id": "hipporag-corpus-delete",
+  "title": "HippoRAG corpus-side delete — the document-remover run Databasise.delete_document() dispatches for a HippoRAG selection",
+  "wiring_version": "1",
+  "nodes": {
+    "document-remover": {
+      "component": "hipporag/document-remover@0.1.0",
+      "kind": "extractor",
+      "effects": ["writes_kv", "writes_vector", "writes_graph"],
+      "deps": []
+    }
+  },
+  "harnesses": [],
+  "provides": ["document-remover"],
+  "store_namespaces": { "kv": "hipporag-text-chunks", "graph": "hipporag-graph" }
+}

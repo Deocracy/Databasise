@@ -2,7 +2,7 @@
 path through the public §18 seam. Task 1 (Tests 1-3): a document ingested through
 ``Databasise.ingest()`` with a HippoRAG selector lands in HippoRAG's own graph/vector/KV
 namespaces and comes back as evidence from a HippoRAG query, under stub clients; the no-selector
-path stays byte-for-byte unchanged. Task 2 (Tests 4-7): the named delete refusal, selector parity
+path stays byte-for-byte unchanged. Task 2 (Tests 4-7): the HippoRAG delete (HIPP-16), selector parity
 on REST/MCP, and the write-path invariant over every entry of ``WIRING_NAMES``.
 
 Mirrors ``databasise/tests/seam/test_compare.py``'s own stub-client fixtures and the exact
@@ -267,21 +267,56 @@ async def test_hipporag_ingest_does_not_touch_lightrags_store_directories(store_
 # --------------------------------------------------------------------------------------------- #
 
 
-async def test_hipporag_selected_delete_raises_the_named_refusal_naming_only_the_operation(
-    store_root,
-):
-    engine = _make_engine(store_root, workspace="delete-refusal-ws")
+async def test_a_hipporag_delete_removes_the_document_and_a_second_delete_is_not_found(store_root):
+    """HIPP-16 (delete half, D-12): a HippoRAG-selected delete is a real corpus op. It removes the
+    document's chunk vectors, chunk KV rows, ``doc:<id>`` manifest and chunk vertices, and a query
+    afterwards returns no evidence from it; a second delete reports ``not_found``."""
+    workspace = "hipporag-delete-ws"
+    engine = _make_engine(store_root, workspace=workspace)
     selector = Selector(capability=_HIPPORAG_CAPABILITY)
+    await engine.ingest(IngestDocument(document_id="hipporag-del-doc", text=_DOCUMENT_TEXT), selector=selector)
 
-    with pytest.raises(NoWritePathForModalityError) as exc_info:
-        await engine.delete_document("hipporag-doc-1", selector=selector)
+    vector_store = MultiNamespaceVectorStore(workspace=workspace, store_root=store_root)
+    chunk_ids = [doc_id for doc_id, _ in vector_store.select("hipporag-chunks").iter_vectors()]
+    await vector_store.finalize()
+    assert chunk_ids
 
-    assert exc_info.value.operation == "delete"
-    message = str(exc_info.value)
-    assert "hipporag" not in message.lower()
-    assert "lightrag" not in message.lower()
-    for node_id in ("chunk-embed", "openie", "entity-fact-embed", "full-delete"):
-        assert node_id not in message
+    raised: Exception | None = None
+    outcome = None
+    try:
+        outcome = await engine.delete_document("hipporag-del-doc", selector=selector)
+    except Exception as exc:  # noqa: BLE001 - asserted on below
+        raised = exc
+    assert raised is None, repr(raised)
+    assert isinstance(outcome, DeletionOutcome)
+    assert outcome.status == "success"
+
+    vector_store = MultiNamespaceVectorStore(workspace=workspace, store_root=store_root)
+    kv_store = SqliteKVStore(namespace="hipporag-text-chunks", workspace=workspace, store_root=store_root)
+    graph_store = CozoGraphStore(namespace="hipporag-graph", workspace=workspace, store_root=store_root)
+    try:
+        for namespace in ("hipporag-chunks", "hipporag-facts", "hipporag-entities"):
+            assert [doc_id for doc_id, _ in vector_store.select(namespace).iter_vectors()] == [], namespace
+        for chunk_id in chunk_ids:
+            assert await kv_store.get_by_id(chunk_id) is None
+        assert await kv_store.get_by_id("doc:hipporag-del-doc") is None
+        names = await graph_store.get_all_labels()
+        assert not any(name.startswith("chunk:") for name in names), names
+    finally:
+        await vector_store.finalize()
+        await kv_store.finalize()
+        await graph_store.finalize()
+
+    query_evidence = None
+    query_error: Exception | None = None
+    try:
+        query_evidence = (await engine.query(QueryObject(text="What did Ed Wood direct?"), selector)).evidence
+    except Exception as exc:  # noqa: BLE001 - a refusal on an emptied index is also "no evidence"
+        query_error = exc
+    assert not query_evidence, (query_evidence, repr(query_error))
+
+    second = await engine.delete_document("hipporag-del-doc", selector=selector)
+    assert second.status == "not_found"
 
 
 async def test_no_selector_delete_still_reaches_the_lightrag_delete_wiring(store_root):
@@ -379,23 +414,17 @@ async def test_hipporag_ingest_parity_across_rest_mcp_and_in_process_transports(
     )
     assert set(rest_job.keys()) == set(in_process_job.model_dump().keys()) == set(mcp_job.keys())
 
-    # HippoRAG delete refuses over both transports, mapping to the documented 422 the generic
-    # SeamRefusalError handler already produces — never a per-endpoint branch.
+    # A HippoRAG delete is a real corpus op over both transports (HIPP-16, D-12).
     rest_delete_response = rest_client.request(
         "DELETE", "/documents/hipporag-doc-rest", json={"selector": selector_payload}
     )
-    assert rest_delete_response.status_code == 422
-    assert rest_delete_response.json()["refusal_type"] == "NoWritePathForModalityError"
+    assert rest_delete_response.status_code == 200
+    assert rest_delete_response.json()["status"] == "success"
 
-    from databasise.mcp._sdk import import_sdk
-
-    ToolError = import_sdk("mcp.server.mcpserver.exceptions").ToolError
-    with pytest.raises(ToolError) as exc_info:
-        await mcp_server.call_tool(
-            "delete", {"args": {"document_id": "hipporag-doc-mcp", "selector": selector_payload}}
-        )
-    mcp_text = str(exc_info.value)
-    assert json.loads(mcp_text[mcp_text.index("{") :])["refusal_type"] == "NoWritePathForModalityError"
+    mcp_delete_result = await mcp_server.call_tool(
+        "delete", {"args": {"document_id": "hipporag-doc-mcp", "selector": selector_payload}}
+    )
+    assert _tool_json(mcp_delete_result)["status"] == "success"
 
 
 def _tool_json(result) -> dict:

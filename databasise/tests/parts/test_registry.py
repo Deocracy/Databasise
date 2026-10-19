@@ -16,7 +16,7 @@ from databasise.parts.registry import (
 from databasise.parts.schema import NodeContext
 
 
-def test_default_registry_holds_exactly_thirty_six_entries():
+def test_default_registry_holds_exactly_thirty_seven_entries():
     """D-04's six remaining Phase-1 entries (four executable ``parts_core`` reference parts, two
     declaration-only Falsifier-2 wiring placeholders — 03-08-PLAN.md Task 3 retired the third,
     ``lightrag/query-side`` (version ``0.1.0``), once Phase 3 ported its real eighteen positions)
@@ -37,10 +37,11 @@ def test_default_registry_holds_exactly_thirty_six_entries():
     ``hipporag/graph-materializer@0.1.0``, completing HippoRAG's index side: thirty-four — plus
     06-07-PLAN.md Task 1's ``hipporag/dpr-fallback@0.1.0``, HippoRAG's thirteenth and final
     position: thirty-five — plus 11-01-PLAN.md's ``lightrag/v1-index-sync@0.1.0``, the v1-to-v2
-    index mirror: thirty-six.
+    index mirror: thirty-six — plus 12-06-PLAN.md's ``hipporag/document-remover@0.1.0``, the
+    corpus-side HippoRAG delete: thirty-seven.
     """
     registry = default_registry()
-    assert len(registry.keys()) == 36
+    assert len(registry.keys()) == 37
 
 
 def test_get_on_an_unknown_key_raises_with_the_requested_key_quoted_in_the_message():

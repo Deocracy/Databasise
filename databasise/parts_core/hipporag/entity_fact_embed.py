@@ -38,6 +38,11 @@ chunk-prefixed refs resolve to disjoint vertex indices, which is what makes
 Fact provenance accumulates across ingests (Phase 12 D-06, HIPP-09): the ``fact:<id>`` KV record and
 the fact vector metadata both hold the stored chunk ids followed by this run's new ones.
 
+Document manifests (Phase 12 D-12, HIPP-16): ``chunk-embed`` writes ``doc:<document_id>`` into the
+chunk KV; this node maps each finding's chunk to its document through ``openie``'s ``chunks``
+passthrough and fills that manifest's ``fact_ids`` and ``entities`` (vertex-prefixed refs), which
+``hipporag/document-remover`` deletes by. A document with no manifest is skipped.
+
 Each surviving fact's own entity refs (its subject/object, vertex-prefixed) are carried in that
 fact's vector metadata — the same ``entities`` field ``reset-vector-join`` already reads off each
 scored fact item (``databasise/parts_core/hipporag/reset_vector_join.py``) to accumulate phrase
@@ -157,6 +162,38 @@ async def _entity_fact_embed_body(ctx: NodeContext) -> dict[str, Any]:
     await kv_store.upsert(
         {f"fact:{fid}": {"chunk_ids": fact_records[fid]["chunk_ids"]} for fid in fact_ids}
     )
+
+    # D-12 (HIPP-16): fill the fact_ids and entities of each document's manifest, which chunk-embed
+    # wrote in this same run. A document with no manifest is skipped, never invented here.
+    document_by_chunk = {
+        str(chunk["chunk_id"]): str(chunk["document_id"])
+        for chunk in openie_output.get("chunks", [])
+        if chunk.get("document_id") is not None
+    }
+    facts_by_document: dict[str, set[str]] = {}
+    entities_by_document: dict[str, set[str]] = {}
+    for finding in findings:
+        document_id = document_by_chunk.get(str(finding.get("chunk_id")))
+        if document_id is None:
+            continue
+        facts_by_document.setdefault(document_id, set()).add(str(finding["fact_id"]))
+        entities_by_document.setdefault(document_id, set()).update(
+            f"{ENTITY_VERTEX_PREFIX}{str(raw).strip().lower()}"
+            for raw in (finding["subject"], finding["object"])
+            if str(raw).strip()
+        )
+    for document_id in sorted(facts_by_document):
+        manifest = await kv_store.get_by_id(f"doc:{document_id}")
+        if manifest is not None:
+            await kv_store.upsert(
+                {
+                    f"doc:{document_id}": {
+                        **manifest,
+                        "fact_ids": sorted(facts_by_document[document_id]),
+                        "entities": sorted(entities_by_document[document_id]),
+                    }
+                }
+            )
 
     return {
         "entities": [

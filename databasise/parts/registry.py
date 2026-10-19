@@ -175,10 +175,10 @@ def default_registry() -> PartRegistry:
     # at the one call site that needs it, rather than at every import of this module.
     from databasise.parts_core import PARTS
     from databasise.parts_core.declared_only import DECLARED_ONLY_PARTS
-    from databasise.parts_core.hipporag import HIPPORAG_PARTS
+    from databasise.parts_core.hipporag import HIPPORAG_CORPUS_PARTS, HIPPORAG_PARTS
     from databasise.parts_core.lightrag import LIGHTRAG_PARTS
 
     registry = PartRegistry(seed_tracer_parts=False)
-    for part in (*PARTS, *DECLARED_ONLY_PARTS, *LIGHTRAG_PARTS, *HIPPORAG_PARTS):
+    for part in (*PARTS, *DECLARED_ONLY_PARTS, *LIGHTRAG_PARTS, *HIPPORAG_PARTS, *HIPPORAG_CORPUS_PARTS):
         registry.register(part)
     return registry

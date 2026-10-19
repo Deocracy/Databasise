@@ -131,11 +131,12 @@ supported write path, a file that does not exist is
 config is stamped from the resolved corpus wiring's own ``consumes_documents[0]``, and the node
 whose result is read from its own ``provides[0]`` — never a module constant, so a modality added
 later needs only two files on disk. ``delete_document()`` gains the identical ``selector``
-parameter (Task 2): a HippoRAG-selected delete raises ``NoWritePathForModalityError`` by name,
-since no HippoRAG delete node exists anywhere in this repository (removing a document from
-HippoRAG's index would mean retracting its chunk/entity/fact vectors and its fact/passage/synonymy
-edges — new node code, out of this plan's scope); an unselected or LightRAG-selected delete
-resolves to the identical wiring the former ``_DELETE_WIRING_PATH`` constant named, byte-for-byte.
+parameter (Task 2): a HippoRAG-selected delete raised ``NoWritePathForModalityError`` by name
+until Phase 12 D-12 (HIPP-16) shipped ``wirings/hipporag/corpus-delete.json``: the
+``hipporag/document-remover`` part retracts a document's chunk/entity/fact vectors and its
+fact/passage/synonymy edges by the ``doc:<id>`` manifest, and never touches the v1 working dir; an
+unselected or LightRAG-selected delete resolves to the identical wiring the former
+``_DELETE_WIRING_PATH`` constant named, byte-for-byte.
 
 **10-05-PLAN.md (STOR-06, D-07): a successful run commits through prepare-all, then commit-all.**
 :func:`_commit_all` holds one ``asyncio.Lock`` per (event loop, store root) from the first
@@ -1547,15 +1548,18 @@ class Databasise:
         would never correlate into a ``SeamEvent`` at all.
 
         A caller supplying no selector resolves to the default modality exactly as before this
-        change: LightRAG is the only modality that ships a ``corpus-delete.json`` today, so this
-        call resolves to the identical wiring the former ``_DELETE_WIRING_PATH`` constant named,
-        byte-for-byte. A selector resolving to a modality with no ``corpus-delete.json`` raises
+        change: it resolves to LightRAG's ``corpus-delete.json``, the identical wiring the former
+        ``_DELETE_WIRING_PATH`` constant named, byte-for-byte, and runs under the v1 write gate.
+        A HippoRAG selection (Phase 12 D-12, HIPP-16) runs HippoRAG's own ``corpus-delete.json``
+        (``hipporag/document-remover``); it never touches the v1 working dir, so it enters no v1 gate.
+        A selector resolving to a modality with no ``corpus-delete.json`` raises
         :class:`~databasise.seam.refusals.NoWritePathForModalityError` rather than deleting from a
         different modality's index than the caller selected.
         """
         generated_on_disk_name(document_id)
 
         query_wiring = resolve_selector(selector, registry=self.registry, store_root=self.store_root)
+        family = wiring_family(query_wiring)
         resolved = _corpus_wiring(query_wiring, "delete")
         delete_node_id = resolved["provides"][0]
         node_config = dict(resolved["nodes"][delete_node_id].get("config") or {})
@@ -1581,7 +1585,9 @@ class Databasise:
                 # ingest; LightRAG's corpus-delete.json declares none, so it keeps the defaults.
                 stores = _build_stores(self.store_root, self.workspace, resolved, into=stores, operation="delete")
                 # D-07 (LRAG-04): after the open (STOR-02), held through the run, commit and cleanup.
-                gate.enter_context(_write_gate(self._v1_working_dir()))
+                # D-12: a HippoRAG delete never touches the v1 working dir, so only LightRAG enters it.
+                if family == "lightrag":
+                    gate.enter_context(_write_gate(self._v1_working_dir()))
                 scheduled = await _scheduler.run_wiring(
                     parsed,
                     self.registry,

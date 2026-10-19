@@ -26,11 +26,17 @@ is not exercised here (it lives inside the opaque, quarantined index-side chain 
 represents; see PARTS.md ``## §H``'s Artifact scopes clause), only a stand-in with the same
 input/output shape. Each ``chunk_id`` is a SHA-256 of the document id and the chunk's own ordinal
 (never the chunk text), so re-dispatching the same document reproduces identical ids.
+
+Document manifest (Phase 12 D-12): beside the chunk rows this node upserts ``doc:<document_id>`` ->
+``{chunk_ids, fact_ids, entities, ingested_at}`` into the same KV namespace, in the same commit.
+``fact_ids`` and ``entities`` start empty and ``entity-fact-embed`` fills them; the chunk rows stay
+exactly ``{"content": text}``. ``hipporag/document-remover`` deletes a document by this manifest.
 """
 
 from __future__ import annotations
 
 import hashlib
+from datetime import datetime, timezone
 from typing import Any
 
 from databasise.parts.schema import NodeContext, Part
@@ -116,6 +122,25 @@ async def _chunk_embed_body(ctx: NodeContext) -> dict[str, Any]:
     kv_store = ctx.stores["kv"]
     await kv_store.upsert(
         {record["chunk_id"]: {"content": record["text"]} for record in chunk_records}
+    )
+
+    # D-12 (HIPP-16): the per-document manifest the remover deletes by, written in the same commit as
+    # the data. entity-fact-embed fills fact_ids and entities. Not a store namespace: it lives in
+    # the chunk KV beside the chunk rows, under a "doc:" key no chunk id can take.
+    ingested_at = datetime.now(timezone.utc).isoformat()
+    chunk_ids_by_document: dict[str, list[str]] = {}
+    for record in chunk_records:
+        chunk_ids_by_document.setdefault(record["document_id"], []).append(record["chunk_id"])
+    await kv_store.upsert(
+        {
+            f"doc:{document_id}": {
+                "chunk_ids": chunk_ids,
+                "fact_ids": [],
+                "entities": [],
+                "ingested_at": ingested_at,
+            }
+            for document_id, chunk_ids in chunk_ids_by_document.items()
+        }
     )
 
     return {

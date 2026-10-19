@@ -8,7 +8,8 @@ added the remaining four index-side positions — ``fact-edges``, ``passage-edge
 ``graph-augment-persist`` — completing the index side. 06-07-PLAN.md adds the thirteenth and final
 position, ``dpr-fallback`` — the ``zero_surviving_facts_dpr_fallback`` guard's fallback branch.
 ``databasise/parts/registry.py``'s ``default_registry()`` merges this tuple into the machine's
-registry alongside ``PARTS``, ``DECLARED_ONLY_PARTS`` and ``LIGHTRAG_PARTS``.
+registry alongside ``PARTS``, ``DECLARED_ONLY_PARTS`` and ``LIGHTRAG_PARTS``. ``HIPPORAG_CORPUS_PARTS``
+holds the corpus-side ``hipporag/document-remover`` (Phase 12 D-12), which is no base-wiring position.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from __future__ import annotations
 from databasise.parts.schema import Part
 from databasise.parts_core.hipporag.assemble_result import HIPPORAG_RESULT_ASSEMBLER_PART
 from databasise.parts_core.hipporag.chunk_embed import HIPPORAG_CHUNKER_EMBEDDER_PART
+from databasise.parts_core.hipporag.document_remover import HIPPORAG_DOCUMENT_REMOVER_PART
 from databasise.parts_core.hipporag.dpr_fallback import HIPPORAG_DPR_FALLBACK_PART
 from databasise.parts_core.hipporag.entity_fact_embed import HIPPORAG_ENTITY_FACT_EMBEDDER_PART
 from databasise.parts_core.hipporag.fact_edges import HIPPORAG_FACT_EDGE_BUILDER_PART
@@ -44,4 +46,8 @@ HIPPORAG_PARTS: tuple[Part, ...] = (
     HIPPORAG_DPR_FALLBACK_PART,
 )
 
-__all__ = ["HIPPORAG_PARTS"]
+# Corpus-side parts, registered beside HIPPORAG_PARTS and not among them: HIPPORAG_PARTS is pinned as
+# the base wiring's positions (D-12, HIPP-16).
+HIPPORAG_CORPUS_PARTS: tuple[Part, ...] = (HIPPORAG_DOCUMENT_REMOVER_PART,)
+
+__all__ = ["HIPPORAG_CORPUS_PARTS", "HIPPORAG_DOCUMENT_REMOVER_PART", "HIPPORAG_PARTS"]
