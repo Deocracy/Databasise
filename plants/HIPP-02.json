@@ -1,0 +1,10 @@
+{
+  "id": "HIPP-02",
+  "plants": [
+    {
+      "file": "databasise/parts_core/hipporag/reset_vector_join.py",
+      "find": "        f\"{CHUNK_VERTEX_PREFIX}{doc_id}\": score * passage_node_weight for doc_id, score in zip(passage_ids, normalised, strict=True)",
+      "replace": "        doc_id: score * passage_node_weight for doc_id, score in zip(passage_ids, normalised, strict=True)"
+    }
+  ]
+}
