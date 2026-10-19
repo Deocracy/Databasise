@@ -27,6 +27,11 @@ other arm's own effect set), so a "first candidate in pool order" rule would mak
 after the first unreachable by capability alone — the smallest-wiring rule instead resolves to
 the most specific (least-footprint) wiring that still satisfies the request.
 
+Capability matching sees the effects a query run of the candidate can have (HIPP-12, D-16): the
+union is taken over ``without_recipe_only_nodes(candidate)``, so the write effects of index-side
+nodes never select a query wiring. ``[writes_graph]`` no longer resolves to the HippoRAG wiring and
+``[writes_artifact]`` resolves to nothing. The node-count tie-break below still uses the full wiring.
+
 Every candidate wiring's ``provides``/``harnesses``/``recipe`` fields are read off the raw resolved
 dict returned by ``resolve_arm`` — never through ``ParsedWiring``, which drops all three entirely
 (Pitfall 1; ``databasise/validator/parse.py`` carries only ``nodes``/``parts``/``deps``/
@@ -81,7 +86,7 @@ from databasise.seam.refusals import (
 )
 from databasise.validator.depth import effective_depth
 from databasise.validator.parse import parse_wiring
-from databasise.wirings.resolve import all_wirings, resolve_arm
+from databasise.wirings.resolve import all_wirings, resolve_arm, without_recipe_only_nodes
 
 _SELECTOR_MEMBERS: tuple[str, ...] = ("alias", "capability", "harness")
 
@@ -157,7 +162,7 @@ def _match_capability(
     matches = [
         candidate
         for candidate in candidates
-        if requested <= _wiring_effects(candidate[1], registry)
+        if requested <= _wiring_effects(without_recipe_only_nodes(candidate[1]), registry)
     ]
     if not matches:
         return None

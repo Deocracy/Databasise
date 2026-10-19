@@ -146,14 +146,32 @@ def load_wiring(wiring_name: str, *, variant: str = "base") -> dict[str, Any]:
 
 
 def without_recipe_only_nodes(resolved: dict[str, Any]) -> dict[str, Any]:
-    """D-04 / research Q4 (LRAG-19): a deep copy of ``resolved`` without its recipe-only nodes, the
-    nodes named as a value of ``recipe`` that no remaining node depends on. Such a node (LightRAG's
-    ``embedder-index``) is index-side: it stays in the wiring for recipe identity, promotion classing
-    and RUN-11, and is skipped in query runs. ``resolved`` itself is not changed. Shared by the
-    engine's query run and promotion's trace-to-arm match (B-CR-01), so both see the same run shape.
+    """D-16 (HIPP-12, LRAG-19): a deep copy of ``resolved`` that holds only the work that can reach
+    an answer, the ancestors of ``provides`` over ``deps`` (``provides`` included). Index-side nodes
+    never dispatch on a query (HIPP-12: HippoRAG's seven index nodes), and LightRAG's recipe-only
+    ``embedder-index`` drops as before (LRAG-19). The full wiring still carries identity, recipe,
+    promotion classing and RUN-11; ``resolved`` itself is not changed. Shared by the engine's query
+    run, promotion's trace-to-arm match (B-CR-01) and capability matching, so all three see the same
+    run shape.
+
+    When ``provides`` is empty or names no node there is no answer position to walk from, so the
+    older recipe-only rule applies: delete the nodes named as a value of ``recipe`` that no remaining
+    node depends on.
     """
     run_copy = copy.deepcopy(resolved)
     nodes = run_copy.get("nodes") or {}
+    frontier = [node_id for node_id in (run_copy.get("provides") or []) if node_id in nodes]
+    if frontier:
+        keep: set[str] = set()
+        while frontier:
+            node_id = frontier.pop()
+            if node_id in keep or node_id not in nodes:
+                continue
+            keep.add(node_id)
+            frontier.extend(nodes[node_id].get("deps") or [])
+        for node_id in set(nodes) - keep:
+            del nodes[node_id]
+        return run_copy
     recipe_ids = set((run_copy.get("recipe") or {}).values())
     for node_id in recipe_ids & set(nodes):
         if not any(node_id in (node.get("deps") or []) for node in nodes.values()):
