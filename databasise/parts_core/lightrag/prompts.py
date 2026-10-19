@@ -6,7 +6,10 @@ source through ``ast`` and fails on any byte of drift.
 
 from __future__ import annotations
 
-PROMPTS: dict[str, str] = {}
+from typing import Any
+
+# A str per prompt, except keywords_extraction_examples, which v1 keeps as a list of str.
+PROMPTS: dict[str, Any] = {}
 
 PROMPTS["fail_response"] = (
     "Sorry, I'm not able to provide an answer to that question.[no-context]"
@@ -194,3 +197,11 @@ User Query: {query}
 
 ---Output---
 Output:"""
+
+PROMPTS["keywords_extraction_examples"] = [
+    """{
+  "high_level_keywords": ["<high_level_keyword>"],
+  "low_level_keywords": ["<low_level_keyword>"]
+}
+""",
+]

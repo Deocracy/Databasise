@@ -32,11 +32,8 @@ from databasise.runner.trace import TokenAccounting
 _NAME_AT_VERSION = "lightrag/keyword-extractor@0.1.0"
 _DEFAULT_LANGUAGE = "English"
 
-_KEYWORDS_EXTRACTION_EXAMPLE = """{
-  "high_level_keywords": ["<high_level_keyword>"],
-  "low_level_keywords": ["<low_level_keyword>"]
-}
-"""
+# v1 fills {examples} with "\n".join(PROMPTS["keywords_extraction_examples"]) (operate.py:4175).
+_KEYWORDS_EXTRACTION_EXAMPLE = "\n".join(PROMPTS["keywords_extraction_examples"])
 
 # v1's PROMPTS["keywords_extraction"], kept with the other duplicated prompts (D-16 drift test).
 _KEYWORDS_EXTRACTION_PROMPT = PROMPTS["keywords_extraction"]
