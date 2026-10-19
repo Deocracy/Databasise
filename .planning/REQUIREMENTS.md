@@ -297,7 +297,7 @@
   - Defects: parts-hipporag/HIPPO-12
   - Owner decision first: Whether a per-chunk LLM failure fails the whole ingest (refuse) or yields a partial ingest with a failure count surfaced in IngestJob/§18 (new field).
   - Phase 12 D-08 exception (owner-delegated 2026-10-19): a per-chunk failure (chat() exception or unparseable NER/triple JSON) refuses the whole ingest; the ingest outcome is the refusal, failure_class ExtractionFailed with public failed_chunks and closed-code failure_reasons.
-- [ ] **HIPP-11**: A HippoRAG query returns at most top_k items and evidence refs (default stated in the wiring), with zero-score PPR vertices excluded; both the PPR branch and the DPR fallback apply the cut, so answer and evidence size do not grow with corpus size (dpr_fallback.py:65-69, ppr.py:84-89, assemble_result.py:58-65, engine.py:1053-1056).
+- [x] **HIPP-11**: A HippoRAG query returns at most top_k items and evidence refs (default stated in the wiring), with zero-score PPR vertices excluded; both the PPR branch and the DPR fallback apply the cut, so answer and evidence size do not grow with corpus size (dpr_fallback.py:65-69, ppr.py:84-89, assemble_result.py:58-65, engine.py:1053-1056).
   - Test: Seam test: ingest 20 single-chunk documents, query on each branch; assert len(evidence) <= top_k and no evidence item has PPR score 0. Fails today (20 rows on DPR branch).
   - Defects: parts-hipporag/HIPPO-8
   - Owner decision first: Where top_k comes from: a new QueryObject field (a §18 seam change shared with LightRAG) or HippoRAG wiring config only.
@@ -898,7 +898,7 @@ These fail today.
 | HIPP-08 | Phase 12 | Pending |
 | HIPP-09 | Phase 12 | Pending |
 | HIPP-10 | Phase 12 | Pending |
-| HIPP-11 | Phase 12 | Pending |
+| HIPP-11 | Phase 12 | Complete |
 | HIPP-12 | Phase 12 | Pending |
 | HIPP-13 | Phase 12 | Pending |
 | HIPP-14 | Phase 12 | Pending |
