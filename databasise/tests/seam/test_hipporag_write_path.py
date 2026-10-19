@@ -467,6 +467,46 @@ async def test_reingesting_a_document_keeps_its_synonymy_edges(store_root):
     assert "synonymy" in await synonymy_edge_types()
 
 
+async def test_an_old_ref_never_resolves_to_the_new_text_after_reingest(store_root):
+    """HIPP-17 (D-03): an EvidenceRef minted before a re-ingest with changed text resolves to the
+    original text or is refused as unresolvable, never to the new text."""
+    text_a = "Ed Wood directed several low-budget films."
+    text_b = "Ed Wood also wrote pulp novels for a living."
+    engine = _make_engine(store_root, workspace="ref-ws")
+    selector = Selector(capability=_HIPPORAG_CAPABILITY)
+
+    await engine.ingest(IngestDocument(document_id="ref-doc", text=text_a), selector=selector)
+    kept = (await engine.query(QueryObject(text="What did Ed Wood direct?"), selector)).evidence
+    assert kept
+
+    await engine.ingest(IngestDocument(document_id="ref-doc", text=text_b), selector=selector)
+
+    outcomes: list[tuple[str, str]] = []
+    for ref in kept:
+        try:
+            record = await engine.resolve_evidence(ref)
+            outcomes.append(("resolved", str(record.get("content", ""))))
+        except Exception as exc:  # noqa: BLE001 - the type name is asserted below
+            outcomes.append((type(exc).__name__, ""))
+    for kind, content in outcomes:
+        assert (kind, content) == ("resolved", text_a) or kind == "UnresolvableEvidenceReferenceError", outcomes
+
+
+async def test_identical_text_in_two_documents_gets_two_chunk_ids(store_root):
+    """HIPP-17: the chunk id hashes the document id too, so a document-scoped delete never removes
+    the other document's chunk."""
+    workspace = "twin-ws"
+    engine = _make_engine(store_root, workspace=workspace)
+    selector = Selector(capability=_HIPPORAG_CAPABILITY)
+    await engine.ingest(IngestDocument(document_id="twin-a", text=_DOCUMENT_TEXT), selector=selector)
+    await engine.ingest(IngestDocument(document_id="twin-b", text=_DOCUMENT_TEXT), selector=selector)
+
+    ids_a = await _committed_chunk_ids(store_root, workspace, "twin-a")
+    ids_b = await _committed_chunk_ids(store_root, workspace, "twin-b")
+    assert len(ids_a) == len(ids_b) == 1
+    assert ids_a != ids_b
+
+
 async def test_no_selector_delete_still_reaches_the_lightrag_delete_wiring(store_root):
     from seam.test_delete_document import _make_stub_full_delete_body, _registry_with
 

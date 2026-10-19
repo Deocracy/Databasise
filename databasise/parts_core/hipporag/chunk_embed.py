@@ -24,8 +24,11 @@ Chunking: a deterministic, dependency-free sliding-window character chunker (``c
 ``chunk_overlap`` config keys, defaulting to 1200/100 characters below) — HippoRAG's own chunker
 is not exercised here (it lives inside the opaque, quarantined index-side chain this node
 represents; see PARTS.md ``## §H``'s Artifact scopes clause), only a stand-in with the same
-input/output shape. Each ``chunk_id`` is a SHA-256 of the document id and the chunk's own ordinal
-(never the chunk text), so re-dispatching the same document reproduces identical ids.
+input/output shape. Each ``chunk_id`` is a SHA-256 of the document id, the chunk's ordinal and the
+chunk text (HIPP-17, D-03), so re-dispatching the same text reproduces identical ids, a changed
+chunk gets a new id, and an old EvidenceRef fails as unresolvable once a re-ingest removed it
+instead of resolving to the new text. Identical text in two documents never shares an id (a
+departure from the requirement's "sha256 of text" wording, recorded in REQUIREMENTS.md).
 
 Document manifest (Phase 12 D-12): beside the chunk rows this node upserts ``doc:<document_id>`` ->
 ``{chunk_ids, fact_ids, entities, ingested_at}`` into the same KV namespace, in the same commit.
@@ -83,7 +86,7 @@ async def _chunk_embed_body(ctx: NodeContext) -> dict[str, Any]:
         document_id = str(document["document_id"])
         text = str(document.get("text", ""))
         for ordinal, piece in enumerate(_split_into_chunks(text, chunk_size, chunk_overlap)):
-            chunk_id = hashlib.sha256(f"{document_id}:{ordinal}".encode("utf-8")).hexdigest()
+            chunk_id = hashlib.sha256(f"{document_id}:{ordinal}:{piece}".encode("utf-8")).hexdigest()
             chunk_records.append(
                 {
                     "chunk_id": chunk_id,
