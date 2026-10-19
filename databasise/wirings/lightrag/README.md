@@ -15,9 +15,9 @@ specified-but-absent path is resolved here rather than left dangling.
 `base.json` and the five `arm-*.json-patch.json` files are copied **verbatim** from
 `docs/system-model/wirings/` for every node, dep, config, recipe, harnesses, provides, operation,
 and `resulting_node_id_set` field — the published set was already mechanically checked (03-RESEARCH.md),
-and re-deriving it risks silently diverging from a verdict already run. Exactly nine edits turn
-the illustrative JSON into this registered set (edits 4-9 are Phase 11's v1-fidelity fixes:
-4-6 for D-16 and LRAG-18, 7-9 for D-16 and LRAG-17):
+and re-deriving it risks silently diverging from a verdict already run. Exactly ten edits turn
+the illustrative JSON into this registered set (edits 4-10 are Phase 11's v1-fidelity fixes:
+4-6 and 10 for D-16 and LRAG-18, 7-9 for D-16 and LRAG-17):
 
 1. **Drop `status`/`status_note`, add `wiring_id`/`title` (base.json only).** The published files
    carry `"status": "illustrative-only-not-a-registered-wiring"` and an explanatory `status_note`
@@ -57,6 +57,15 @@ the illustrative JSON into this registered set (edits 4-9 are Phase 11's v1-fide
    "value": ["rerank"]}` (D-16, LRAG-17).** The naive patch removes both budget nodes, so without
    this reset edit 7 leaves assemble with dangling deps and the arm fails to parse. Its
    `resulting_node_id_set` is unchanged.
+10. **`entity-lookup`, `relation-lookup` and `chunk-vector` gain `config.cosine_better_than_threshold:
+    0.2` (base.json only; D-16, LRAG-18, 11 REVIEW B-CR-02).** v1's Faiss store drops hits whose
+    cosine is below v1 `COSINE_THRESHOLD` 0.2 (`faiss_impl.py:421`, `lightrag.py:735`). The parts
+    have no default of their own, as v1's store has none, so the value lives here.
+
+**Known shortcut, not an edit.** `chunk-vector` retrieves `top_k` 10 chunks (its part default),
+where v1's `_get_vector_context` retrieves `chunk_top_k` 20 (`operate.py:4287`). The value is kept
+so the recorded parity evidence stays valid (11 REVIEW B-WR-06). Upgrade path: set
+`chunk-vector` `config.top_k` to 20 here together with a parity re-baseline.
 
 ## Recipe-only nodes (LRAG-19)
 
@@ -65,7 +74,8 @@ recipe-only: it describes how the index is built, not how a query runs. `embedde
 (`recipe.embedding`) is the one such node here. It stays in `base.json` and in every arm patch
 that keeps it, so recipe identity, promotion classing (`derive_mutation_class`) and RUN-11's
 reproduction test read the same wiring. The seam engine does not dispatch it on queries
-(`seam/engine.py` `_without_recipe_only_nodes`, D-04 / research Q4), so no query trace carries
+(`wirings/resolve.py` `without_recipe_only_nodes`, D-04 / research Q4; promotion matches a trace
+against the same pruned node set, 11 REVIEW B-CR-01), so no query trace carries
 the node or any spend from it. The wiring's instance hash is still computed over the full wiring.
 
 ## Naming convention (Task 1 checkpoint)

@@ -14,6 +14,8 @@ from typing import Any
 from databasise.parts.schema import NodeContext, Part
 
 _NAME_AT_VERSION = "lightrag/retriever-chunk-topk@0.1.0"
+# shortcut: v1 retrieves chunk_top_k=20 here (operate.py:4287), kept at 10 so the parity evidence
+# stays valid; upgrade by setting chunk-vector config.top_k to 20 with a parity re-baseline (B-WR-06).
 _DEFAULT_TOP_K = 10
 # This position's own vector namespace (v1's own per-kind naming, matching
 # databasise/parity/import_index.py's _VECTOR_KINDS) — a property of chunk-vector's own §L.1
