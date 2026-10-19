@@ -13,6 +13,10 @@ deduplicated so the same (chunk, entity) pair arriving from two different triple
 chunk collapses to one edge, at unit weight (never a co-occurrence count; that is ``fact-edges``'
 own semantics, not this node's).
 
+This node also emits a ``vertices`` list, one ``CHUNK_VERTEX_PREFIX`` ref per chunk in
+``openie``'s ``chunks`` passthrough, so a chunk with no triple still enters the graph (HIPP-06,
+D-02). The key is optional on input: callers that pass only findings get ``vertices == []``.
+
 Uses ``CHUNK_VERTEX_PREFIX`` on the chunk endpoint and ``ENTITY_VERTEX_PREFIX`` on the entity
 endpoint, both imported from ``entity_fact_embed.py`` — this module defines no prefix literal of
 its own.
@@ -44,6 +48,7 @@ def _chunk_ref(chunk_id: Any) -> str:
 async def _passage_edges_body(ctx: NodeContext) -> dict[str, Any]:
     openie_output = ctx.inputs["openie"]
     findings = list(openie_output.get("findings", []))
+    chunks = list(openie_output.get("chunks", []))
 
     seen: set[tuple[str, str]] = set()
     edges: list[dict[str, Any]] = []
@@ -62,7 +67,10 @@ async def _passage_edges_body(ctx: NodeContext) -> dict[str, Any]:
                 {"src": chunk_ref, "tgt": entity_ref, "weight": _WEIGHT, "edge_type": _EDGE_TYPE}
             )
 
-    return {"edges": sorted(edges, key=lambda e: (e["src"], e["tgt"]))}
+    return {
+        "edges": sorted(edges, key=lambda e: (e["src"], e["tgt"])),
+        "vertices": sorted({_chunk_ref(chunk["chunk_id"]) for chunk in chunks}),
+    }
 
 
 HIPPORAG_PASSAGE_EDGE_BUILDER_PART = Part(

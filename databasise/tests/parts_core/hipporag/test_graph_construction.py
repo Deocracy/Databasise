@@ -419,3 +419,79 @@ async def test_end_to_end_index_run_produces_a_graph_with_passage_and_entity_ver
     vertex_names = set(graph.vs["name"])
     assert any(name.startswith(CHUNK_VERTEX_PREFIX) for name in vertex_names)
     assert any(name.startswith(ENTITY_VERTEX_PREFIX) for name in vertex_names)
+
+
+async def test_a_chunk_with_no_triples_still_gets_a_passage_vertex(store_root):
+    """HIPP-06 (12-02, D-02): OpenIE finding nothing in a chunk must not drop that chunk from the
+    graph, or PPR could never rank it."""
+    workspace = "no-triples-ws"
+    embedding_client = _StubEmbeddingClient()
+    vector_store = MultiNamespaceVectorStore(workspace=workspace, store_root=store_root)
+    kv_store = SqliteKVStore(
+        namespace="hipporag-text-chunks", workspace=workspace, store_root=store_root
+    )
+    graph_store = CozoGraphStore(
+        namespace="hipporag-graph", workspace=workspace, store_root=store_root
+    )
+    documents = [
+        {"document_id": "doc-1", "text": "The cat sat on the mat."},
+        {"document_id": "doc-2", "text": "Nothing to extract here."},
+    ]
+    chunk_result = await HIPPORAG_CHUNKER_EMBEDDER_PART.body(
+        _ctx(
+            "chunk-embed",
+            config={"documents": documents},
+            stores={"vector": vector_store, "kv": kv_store},
+            clients={"embedding": embedding_client},
+        )
+    )
+    await vector_store.index_done_callback()
+    await kv_store.index_done_callback()
+    chunk_ids = [chunk["chunk_id"] for chunk in chunk_result["chunks"]]
+    assert len(chunk_ids) == 2
+
+    llm_client = _StubOpenieLLMClient(
+        ner_responses=[["cat", "mat"], []],
+        triple_responses=[[["cat", "sat_on", "mat"]], []],
+    )
+    openie_result = await HIPPORAG_OPENIE_EXTRACTOR_PART.body(
+        _ctx("openie", inputs={"chunk-embed": chunk_result}, clients={"llm": llm_client})
+    )
+    fact_edges_result = await HIPPORAG_FACT_EDGE_BUILDER_PART.body(
+        _ctx("fact-edges", inputs={"openie": openie_result})
+    )
+    passage_edges_result = await HIPPORAG_PASSAGE_EDGE_BUILDER_PART.body(
+        _ctx("passage-edges", inputs={"openie": openie_result})
+    )
+    await HIPPORAG_GRAPH_MATERIALIZER_PART.body(
+        _ctx(
+            "graph-augment-persist",
+            inputs={
+                "fact-edges": fact_edges_result,
+                "passage-edges": passage_edges_result,
+                "synonymy-edges": {"edges": []},
+            },
+            stores={"graph": graph_store},
+        )
+    )
+    await graph_store.index_done_callback()
+
+    graph = await graph_store.export_to_igraph()
+    vertex_names = list(graph.vs["name"])
+    assert {_chunk_ref(c) for c in chunk_ids} <= set(vertex_names)
+    # a vertex named by both a passage edge and the vertices stream is upserted once
+    assert len(vertex_names) == len(set(vertex_names))
+
+
+async def test_passage_edges_vertices_are_sorted_and_empty_for_no_chunks():
+    """HIPP-06 edges (12-02): the vertices list does not depend on chunk order; no chunks, none."""
+    chunks = [{"chunk_id": "b"}, {"chunk_id": "a"}]
+    result = await HIPPORAG_PASSAGE_EDGE_BUILDER_PART.body(
+        _ctx("passage-edges", inputs={"openie": {"findings": [], "chunks": chunks}})
+    )
+    assert result["vertices"] == [_chunk_ref("a"), _chunk_ref("b")]
+
+    empty = await HIPPORAG_PASSAGE_EDGE_BUILDER_PART.body(
+        _ctx("passage-edges", inputs={"openie": {"findings": [], "chunks": []}})
+    )
+    assert empty["vertices"] == []

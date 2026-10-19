@@ -30,7 +30,9 @@ has earned nothing eligible for reuse by another arm.
 ``_canonical_pair`` convention) and their weights summed into the single ``weight`` attribute
 ``export_to_igraph`` reads — ``## §H``'s "single ``weight`` edge attribute collapsing all three
 edge types into one weighted view" clause. The contributing edge types are recorded on the edge's
-own ``edge_types`` attrs list, so the collapse is auditable rather than lossy.
+own ``edge_types`` attrs list, so the collapse is auditable rather than lossy. The
+``passage-edges`` ``vertices`` stream is upserted too, so a chunk with no edge still gets a vertex
+(HIPP-06, D-02).
 
 ``ctx.stores["graph"]`` is a single, already-namespaced ``CozoGraphStore`` per run — never a
 ``.select()`` handle — the same architecture 06-01-PLAN.md's own key-decision already established
@@ -62,7 +64,7 @@ async def _graph_augment_persist_body(ctx: NodeContext) -> dict[str, Any]:
         stream = ctx.inputs.get(node_id, {})
         all_edges.extend(stream.get("edges", []))
 
-    vertex_refs: set[str] = set()
+    vertex_refs: set[str] = set(ctx.inputs.get("passage-edges", {}).get("vertices", []))
     weight_by_pair: dict[tuple[str, str], float] = {}
     types_by_pair: dict[tuple[str, str], list[str]] = {}
     for edge in all_edges:

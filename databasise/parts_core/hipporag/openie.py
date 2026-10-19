@@ -16,6 +16,9 @@ tolerant, code-fence-stripping JSON parsing: a chunk whose triple-extraction res
 degrades to zero findings for that chunk alone, never an aborted run for its sibling chunks — the
 same graceful-degradation precedent ``keywords.py``/``fact_filter.py`` already establish.
 
+The input chunk records pass through unchanged as the ``chunks`` output key so ``passage-edges``
+can give every chunk a vertex, including a chunk OpenIE found no triple in (HIPP-06, D-02).
+
 Token accounting: this node makes up to two ``chat`` calls per input chunk, so its own emitted
 ``tokens`` is the sum of every call's own ``TokenAccounting`` (never a bare zero for a node that
 made calls). If any individual call reports the ``unbudgetable`` sentinel (§8/§9 — the client
@@ -135,7 +138,7 @@ async def _openie_body(ctx: NodeContext) -> dict[str, Any]:
     chunk_embed_output = ctx.inputs["chunk-embed"]
     chunks = list(chunk_embed_output.get("chunks", []))
     if not chunks:
-        return {"findings": []}
+        return {"findings": [], "chunks": []}
 
     client = ctx.clients["llm"]
     findings: list[dict[str, Any]] = []
@@ -179,6 +182,7 @@ async def _openie_body(ctx: NodeContext) -> dict[str, Any]:
 
     return {
         "findings": findings,
+        "chunks": chunks,
         "tokens": _sum_token_accountings(call_accountings),
         "resolved_model_identity": resolved_model_identity,
     }
