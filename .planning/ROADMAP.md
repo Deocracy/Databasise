@@ -320,11 +320,11 @@ Plans (eight waves; `seam/engine.py`, `wirings/hipporag/base.json` and `tests/se
 - WIRE-17: keep or delete MutableStoreComparisonExcludedError and the ingest NoWritePathForModalityError mapping
 - WIRE-18: wire or delete per-node max_concurrency and budget apportionment (coordinate with WIRE-12)
 
-**Plans**: 13 plans
+**Plans**: 1/13 plans executed
 
 Plans (six waves; `seam/engine.py` is touched by one plan per wave in waves 1-6; all hash-shifting changes are in 13-12 (D-21); the owner's two grants are collected once, in 13-11, after every grant-independent plan):
 
-- [ ] 13-01-PLAN.md — Tracer: parse_wiring reports malformed documents; RFC 6901 pointers, deduplicated cycles, kind mismatch; one placement source (WIRE-06, WIRE-07; wave 1)
+- [x] 13-01-PLAN.md — Tracer: parse_wiring reports malformed documents; RFC 6901 pointers, deduplicated cycles, kind mismatch; one placement source (WIRE-06, WIRE-07; wave 1)
 - [ ] 13-02-PLAN.md — Read-namespace capability tokens make hybrid, local and global selectable; registration validates effects (WIRE-01, WIRE-16; wave 1)
 - [ ] 13-03-PLAN.md — Derived trace schema and deviation record; NodeTrace status, execution_mode, spent/allowance, null cache_hit/tier (WIRE-11, WIRE-10; wave 1)
 - [ ] 13-04-PLAN.md — Sequential dispatch, one NodeTrace per pruned node, closed node-free reason codes, budget API deleted (WIRE-10, WIRE-03, WIRE-12, WIRE-18; wave 2)
@@ -480,7 +480,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 10. Stores, Locking & Data Integrity | 12/12 | Complete    | 2026-10-17 |
 | 11. LightRAG Corpus Path | 11/11 | Complete    | 2026-10-19 |
 | 12. HippoRAG Fixes | 14/14 | Complete    | 2026-10-19 |
-| 13. Selectors, Wiring & Runner | 0/TBD | Not started | - |
+| 13. Selectors, Wiring & Runner | 1/13 | In Progress | - |
 | 14. Promotion & Ledger | 0/TBD | Not started | - |
 | 15. Offline Tooling & Packaging | 0/TBD | Not started | - |
 | 16. GUI Connectors | 0/TBD | Not started | - |
