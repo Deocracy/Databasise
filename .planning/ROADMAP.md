@@ -320,7 +320,7 @@ Plans (eight waves; `seam/engine.py`, `wirings/hipporag/base.json` and `tests/se
 - WIRE-17: keep or delete MutableStoreComparisonExcludedError and the ingest NoWritePathForModalityError mapping
 - WIRE-18: wire or delete per-node max_concurrency and budget apportionment (coordinate with WIRE-12)
 
-**Plans**: 3/13 plans executed
+**Plans**: 4/13 plans executed
 
 Plans (six waves; `seam/engine.py` is touched by one plan per wave in waves 1-6; all hash-shifting changes are in 13-12 (D-21); the owner's two grants are collected once, in 13-11, after every grant-independent plan):
 
@@ -328,7 +328,7 @@ Plans (six waves; `seam/engine.py` is touched by one plan per wave in waves 1-6;
 - [x] 13-02-PLAN.md — Read-namespace capability tokens make hybrid, local and global selectable; registration validates effects (WIRE-01, WIRE-16; wave 1)
 - [x] 13-03-PLAN.md — Derived trace schema and deviation record; NodeTrace status, execution_mode, spent/allowance, null cache_hit/tier (WIRE-11, WIRE-10; wave 1)
 - [ ] 13-04-PLAN.md — Sequential dispatch, one NodeTrace per pruned node, closed node-free reason codes, budget API deleted (WIRE-10, WIRE-03, WIRE-12, WIRE-18; wave 2)
-- [ ] 13-05-PLAN.md — depth_label null unless answered and typed; missing-items fault; no discarded debug keyword (WIRE-04, WIRE-14; wave 1)
+- [x] 13-05-PLAN.md — depth_label null unless answered and typed; missing-items fault; no discarded debug keyword (WIRE-04, WIRE-14; wave 1)
 - [ ] 13-06-PLAN.md — KG arms mint evidence from assemble; ghost provides/evidence references reported (WIRE-02; wave 2)
 - [ ] 13-07-PLAN.md — One-selector compare refuses a mutating wiring; refusal reachability pinned; /health digest failure; failed seam events (WIRE-17, WIRE-15, WIRE-13; wave 2)
 - [ ] 13-08-PLAN.md — Cycles and runner pre-flight errors refused by name; strict ints; misdeclared guards refused before dispatch (WIRE-05, WIRE-08; wave 3)
@@ -480,7 +480,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 10. Stores, Locking & Data Integrity | 12/12 | Complete    | 2026-10-17 |
 | 11. LightRAG Corpus Path | 11/11 | Complete    | 2026-10-19 |
 | 12. HippoRAG Fixes | 14/14 | Complete    | 2026-10-19 |
-| 13. Selectors, Wiring & Runner | 3/13 | In Progress | - |
+| 13. Selectors, Wiring & Runner | 4/13 | In Progress | - |
 | 14. Promotion & Ledger | 0/TBD | Not started | - |
 | 15. Offline Tooling & Packaging | 0/TBD | Not started | - |
 | 16. GUI Connectors | 0/TBD | Not started | - |
