@@ -46,6 +46,7 @@ from __future__ import annotations
 
 from typing import Literal
 
+from databasise.parts.schema import Depth
 from databasise.seam._base import _StrictModel
 from databasise.seam.evidence import EvidenceRef
 from databasise.seam.tokens import TokenBreakdownEntry
@@ -84,7 +85,9 @@ class ResponseEnvelope(_StrictModel):
     answer: str
     evidence: list[EvidenceRef] = []
     trace_token: str | None = None
-    depth_label: str
+    # The answering provides node's effective depth; null when no provides node returned a
+    # completion (WIRE-04, D-06). No default: a caller states it.
+    depth_label: Depth | None
     partial: bool
     degraded: bool
     stop_reason: str | None = None

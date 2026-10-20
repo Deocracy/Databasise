@@ -208,6 +208,7 @@ from databasise.foreign.v1_corpus_adapter import (
 from databasise.identity.canon import canonicalise
 from databasise.ledger.ledger import Ledger, LedgerRecord
 from databasise.parts.registry import PartRegistry, default_registry
+from databasise.parts.schema import Depth
 from databasise.parts_core import EFFECT_TO_STORE
 from databasise.parts_core.lightrag import chunk_vector as _chunk_vector
 from databasise.parts_core.lightrag import entity_lookup as _entity_lookup
@@ -998,7 +999,7 @@ def _select_answer(
     provides: list[str],
     provided: dict[str, Any],
     node_by_id: dict[str, NodeTrace],
-) -> tuple[str, str]:
+) -> tuple[str, Depth | None]:
     """WR-01: the envelope's ``answer``/``depth_label``, selected by iterating ``provides`` — the
     wiring's own declared order — never scheduler dispatch order. Iterating dispatch order let
     whichever provides-node happened to run last silently win for both fields, with no signal in
@@ -1008,9 +1009,12 @@ def _select_answer(
     no selector this phase resolves can produce that today (every arm this phase ships declares
     exactly one ``provides`` position), so it is refused rather than silently resolved by
     incidental order, mirroring ``_execute()``'s own precedent for a cyclic resolved wiring.
+
+    WIRE-04, D-06: ``depth_label`` is ``None`` unless a ``provides`` node returned a completion (an
+    empty completion string counts as answered); it is then that node's effective depth.
     """
     answer = ""
-    depth_label = "stage"
+    depth_label: Depth | None = None
     answered_node_id: str | None = None
     for node_id in provides:
         output = provided.get(node_id)
