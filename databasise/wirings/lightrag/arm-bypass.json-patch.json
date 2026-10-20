@@ -27,7 +27,8 @@
       "prompt_template": "none - direct LLM call, no context"
     } },
     { "op": "replace", "path": "/recipe", "value": {} },
-    { "op": "replace", "path": "/provides", "value": ["generate"] }
+    { "op": "replace", "path": "/provides", "value": ["generate"] },
+    { "op": "replace", "path": "/evidence_position", "value": null }
   ],
   "resulting_node_id_set": [
     "generate"

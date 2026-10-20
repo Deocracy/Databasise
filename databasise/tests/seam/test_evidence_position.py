@@ -68,3 +68,30 @@ async def test_a_local_arm_query_returns_non_empty_evidence_that_resolves(real_v
     for ref in envelope.evidence:
         record = await engine.resolve_evidence(ref)
         assert record, ref
+
+
+def test_bypass_declares_no_evidence_position():
+    assert resolve_arm("bypass")["evidence_position"] is None
+
+
+@pytest.mark.parametrize("arm", ["local", "global", "hybrid"])
+def test_the_kg_arms_point_evidence_at_assemble(arm):
+    assert resolve_arm(arm)["evidence_position"] == _ASSEMBLE_AS_EVIDENCE
+
+
+def test_naive_keeps_the_chunk_vector_as_evidence():
+    assert resolve_arm("naive")["evidence_position"] == {"node": "chunk-vector", "namespace": "chunks"}
+
+
+@requires_v1
+async def test_a_bypass_query_returns_no_evidence_without_error(real_v1):  # noqa: F811
+    engine = Databasise(store_root=real_v1.store_root, workspace="wire02-bypass", clients=build_clients(real_v1.client_env))
+    caught: Exception | None = None
+    envelope: Any = None
+    try:
+        envelope = await engine._execute_resolved(QueryObject(text=_QUERY), resolve_arm("bypass"))
+    except Exception as exc:  # noqa: BLE001 - the test asserts on what was raised
+        caught = exc
+
+    assert caught is None, f"bypass raised {type(caught).__name__}: {caught}"
+    assert envelope.evidence == []

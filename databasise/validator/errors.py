@@ -42,6 +42,10 @@ CODE_SELF_DECLARED_DERIVATION = "self-declared-derivation"
 ``blast_radius``) rather than letting the machine derive it from wiring + registry. MACH-01's
 no-self-declaration clause: the computation governs regardless of what a wiring author writes, so
 an attempt to write one of these keys is refused rather than silently ignored."""
+CODE_UNKNOWN_PROVIDES = "unknown-provides"
+"""A top-level ``provides`` entry names a node the wiring does not contain (WIRE-02)."""
+CODE_UNKNOWN_EVIDENCE_NODE = "unknown-evidence-node"
+"""``evidence_position.node`` names a node the wiring does not contain (WIRE-02)."""
 CODE_UNWIRED_STORE_EFFECT = "unwired-store-effect"
 """A node (or its resolved part) declares a store effect that is in the frozen 17-member Effect
 vocabulary but has no store behind it after Phase 10 D-15 (``reads_lexical``, ``writes_lexical``,

@@ -6,6 +6,7 @@
     { "op": "remove", "path": "/nodes/entity-lookup" },
     { "op": "remove", "path": "/nodes/entity-hydrate-expand" },
     { "op": "remove", "path": "/nodes/chunk-vector" },
+    { "op": "replace", "path": "/evidence_position", "value": { "node": "assemble", "namespace": "chunks" } },
     { "op": "replace", "path": "/nodes/join-entities/deps", "value": ["relation-hydrate-expand"] },
     { "op": "replace", "path": "/nodes/join-entities/config/arm_precedence",
       "value": "relation-hydrate-expand-only, degenerate 1-ary join — global is not entity-free: relation-hydrate-expand's endpoint-expansion sub-step emits entities too (operate.py:6115-6146)" },

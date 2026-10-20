@@ -4,6 +4,7 @@
   "base": "lightrag-base.json",
   "operations": [
     { "op": "remove", "path": "/nodes/chunk-vector" },
+    { "op": "replace", "path": "/evidence_position", "value": { "node": "assemble", "namespace": "chunks" } },
     { "op": "replace", "path": "/nodes/join-chunks/deps", "value": ["chunk-sel-kg"] },
     { "op": "replace", "path": "/nodes/join-chunks/config", "value": {
       "socket_shape": "List[List[X]] -> List[X]",

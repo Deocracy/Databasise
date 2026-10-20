@@ -22,6 +22,10 @@ consistency/hygiene check, not the containment enforcement itself: the runner
 effects directly, never from the wiring's, so neither is affected by what a wiring declares here
 regardless of this check.
 
+(WIRE-02) Top-level references are checked against the wiring's own nodes: a ``provides`` entry or
+``evidence_position.node`` naming a missing node is ``CODE_UNKNOWN_PROVIDES`` /
+``CODE_UNKNOWN_EVIDENCE_NODE``; an empty ``provides`` or a null ``evidence_position`` adds nothing.
+
 Cycle detection (``validator.cycles.strongly_connected_components``) always runs, independent of
 whether any other violation was found: a cycle is reported as data under ``report.cycles``, never
 treated as a violation by itself, because cyclic wirings are legal content (CONTRACT §1) and only
@@ -61,6 +65,8 @@ from databasise.validator.errors import (
     CODE_SELF_DECLARED_DERIVATION,
     CODE_UNKNOWN_COMPONENT,
     CODE_UNKNOWN_EFFECT,
+    CODE_UNKNOWN_EVIDENCE_NODE,
+    CODE_UNKNOWN_PROVIDES,
     CODE_UNWIRED_STORE_EFFECT,
     ValidationReport,
     Violation,
@@ -272,6 +278,29 @@ def parse_wiring(doc: dict[str, Any], registry: PartRegistry) -> ParsedWiring:
                         message=f"dependency {dep!r} is not a node in this wiring",
                     )
                 )
+
+    # WIRE-02: a top-level reference to a node the wiring does not contain (a ghost), independent
+    # of the checks above. A null or absent evidence_position and an empty provides add nothing.
+    if isinstance(doc, dict) and isinstance(doc.get("nodes", {}), dict):
+        provides = doc.get("provides")
+        for index, name in enumerate(provides if isinstance(provides, list) else []):
+            if name not in raw_nodes:
+                violations.append(
+                    Violation(
+                        code=CODE_UNKNOWN_PROVIDES,
+                        pointer=f"/provides/{index}",
+                        message=f"provides entry {name!r} is not a node in this wiring",
+                    )
+                )
+        evidence_position = doc.get("evidence_position")
+        if isinstance(evidence_position, dict) and evidence_position.get("node") not in raw_nodes:
+            violations.append(
+                Violation(
+                    code=CODE_UNKNOWN_EVIDENCE_NODE,
+                    pointer="/evidence_position/node",
+                    message=f"evidence_position names node {evidence_position.get('node')!r}, which is not a node in this wiring",
+                )
+            )
 
     deps = {node_id: tuple(node.deps) for node_id, node in nodes.items()}
 
