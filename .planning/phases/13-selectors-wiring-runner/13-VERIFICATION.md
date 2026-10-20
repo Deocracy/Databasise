@@ -1,7 +1,7 @@
 ---
 phase: 13-selectors-wiring-runner
 verified: 2026-10-20T20:30:00Z
-status: human_needed
+status: passed
 score: 5/5 roadmap success criteria verified (18/18 WIRE requirements satisfied in code)
 covered_files:
   - ".planning/phases/13-selectors-wiring-runner/13-01-PLAN.md"
@@ -95,7 +95,7 @@ human_verification:
 
 **Phase Goal:** Every query arm is selectable, the runner records every node truthfully, and consumers never see internal node ids or an unstructured 500 from the wiring layer
 **Verified:** 2026-10-20T20:30:00Z
-**Status:** human_needed
+**Status:** passed (human items resolved 2026-10-20; see Human Verification Resolution at the end)
 **Re-verification:** No, initial verification
 
 ## Goal Achievement
@@ -179,3 +179,13 @@ No goal-blocking gap. Every success criterion and every WIRE row is backed by co
 
 _Verified: 2026-10-20T20:30:00Z_
 _Verifier: Claude (gsd-verifier)_
+
+## Human Verification Resolution (2026-10-20)
+
+| Item | Owner decision |
+|------|----------------|
+| B-WR-03: a failed query node that reports `counted_by: "unbudgetable"` | **Keep.** The query refuses with 422 UnbudgetableParticipantError, carrying `trace_token`, under Phase 4 D-08: a count that cannot be measured is refused, never replaced by a number. |
+| `depth_label` on a budget-halted answering node | **D-06.** depth_label is null only when no provides node returned a completion. A served completion keeps its real depth, even on a `budget_halt` partial run. ROADMAP SC2's "null on partial runs" means the D-06 case. |
+| WIRE-10 fail-first record | Resolved by the orchestrator. The check failed again at b0b5a6c by AssertionError (v679), and plants/WIRE-10.json killed 2/2 (v680). |
+
+Final offline gate at the final HEAD, `tools/check_offline_suite.py`: 2482 passed, 4 deselected, in both styles; exit 0.

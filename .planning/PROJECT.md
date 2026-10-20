@@ -129,6 +129,11 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 | v1.1 Phase 12: query runs are pruned to the ancestors of `provides`; HippoRAG gains a `qa` generator node (14th, a recorded divergence); top_k is wiring config (5) | Index nodes leave query runs without breaking MODAL-04; the answer means the same for both modalities; QueryObject stays §18.1's five members | ✓ Good (`[writes_artifact]` selectors no longer resolve) |
 | v1.1 Phase 12: a fired guard or the empty-PPR dense stand-in sets `degraded` with node-free reasons (`declared_fallback` / `fallback_path_taken`) | CONTRACT §18.2/§19.8: a declared degradation path needs no new field | ✓ Good (parity refuses an arm that took a fallback) |
 | v1.1 Phase 12: HippoRAG writes serialise on a per-workspace gate (wait with a ceiling, then 409) | Read-merge-write steps lose updates without it; refuse-at-once would break STOR-06's concurrent-ingest check | ✓ Good |
+| v1.1 Phase 13: capability selectors carry namespace tokens (`reads_vector:entities`), so all six arms are reachable; per-arm `wiring_id` and `arm_id` live in the wiring data, and the instance hash is taken before query injection | Hybrid and global were unreachable, and two queries on one arm recorded different hashes | ✓ Good (verified 5/5; pinned parity hashes annotated once) |
+| v1.1 Phase 13: reason fields use closed codes only (node_failed, placement_refused, budget_halt, declared_fallback, fallback_path_taken, cancelled); a leaking reason maps to node_failed and never raises | CONTRACT §18.2: no node id reaches a consumer field | ✓ Good |
+| v1.1 Phase 13: the runner dispatches sequentially, records one NodeTrace per node (`not-scheduled` included), and persists the run record before any post-dispatch refusal, which carries `trace_token` | Truthful traces; the unused budget and apportionment API was deleted | ✓ Good |
+| v1.1 Phase 13: a guard reads one declared `signal` key; a malformed declaration or a missing signal is a named refusal, never a fire (D-19) | The whole-output comparison fired on any truthy output | ✓ Good |
+| v1.1 Phase 13: a failed query node reporting `counted_by: "unbudgetable"` refuses the query (422 UnbudgetableParticipantError); `depth_label` is null only when no provides node returned a completion (D-06) | Owner decisions 2026-10-20: a count that cannot be measured is refused, never replaced by a number; a served completion keeps its real depth | ✓ Good (owner-confirmed) |
 | Close the operator verbs' check-then-act races with one `BEGIN IMMEDIATE` span per verb plus a UNIQUE `(alias, minted_version)` index | A guard read and the append it gates must commit together or the guard goes stale under concurrency; the schema constraint backstops it independently of any Python read path | ✓ Held (G-07-1 closed; 40/40 concurrency runs, full suite green) |
 
 ## Evolution
@@ -149,4 +154,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-19 after Phase 12*
+*Last updated: 2026-10-20 after Phase 13*

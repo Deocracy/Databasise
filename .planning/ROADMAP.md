@@ -43,7 +43,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 10: Stores, Locking & Data Integrity** - Graph lock contention as a named outcome, all-or-nothing ingest/delete commits, read-only handles, consistent store adapters (F3) (completed 2026-10-17)
 - [x] **Phase 11: LightRAG Corpus Path** - Ingested documents reach the queried stores, uploads index their content, honest health, and v1-faithful KG answers (F4) (completed 2026-10-19)
 - [x] **Phase 12: HippoRAG Fixes** - Resolvable PPR evidence, a graph that accumulates correctly across ingests, query-only runs, and a full document lifecycle (F5) (completed 2026-10-19)
-- [ ] **Phase 13: Selectors, Wiring & Runner** - Every arm selectable, node-free consumer text, complete and truthful run records, guards that fire on what they declare (F6)
+- [x] **Phase 13: Selectors, Wiring & Runner** - Every arm selectable, node-free consumer text, complete and truthful run records, guards that fire on what they declare (F6) (completed 2026-10-20)
 - [ ] **Phase 14: Promotion & Ledger** - Operator verbs that never 500, aliases that always resolve, no tombstoned generation served, alias history readable (F7)
 - [ ] **Phase 15: Offline Tooling & Packaging** - Wheel-runnable CLIs that refuse by name and never spend by default, honest parity/eval/evidence records, admission enforced at load (F8)
 - [ ] **Phase 16: GUI Connectors** - Operator read routes: info, wirings, aliases, history, traces, promote preview, chunks, graph nodes, store-busy status, log tail
@@ -320,7 +320,7 @@ Plans (eight waves; `seam/engine.py`, `wirings/hipporag/base.json` and `tests/se
 - WIRE-17: keep or delete MutableStoreComparisonExcludedError and the ingest NoWritePathForModalityError mapping
 - WIRE-18: wire or delete per-node max_concurrency and budget apportionment (coordinate with WIRE-12)
 
-**Plans**: 13/13 plans executed
+**Plans**: 13/13 plans complete
 
 Plans (six waves; `seam/engine.py` is touched by one plan per wave in waves 1-6; all hash-shifting changes are in 13-12 (D-21); the owner's two grants are collected once, in 13-11, after every grant-independent plan):
 
@@ -480,7 +480,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 10. Stores, Locking & Data Integrity | 12/12 | Complete    | 2026-10-17 |
 | 11. LightRAG Corpus Path | 11/11 | Complete    | 2026-10-19 |
 | 12. HippoRAG Fixes | 14/14 | Complete    | 2026-10-19 |
-| 13. Selectors, Wiring & Runner | 13/13 | In Progress | - |
+| 13. Selectors, Wiring & Runner | 13/13 | Complete    | 2026-10-20 |
 | 14. Promotion & Ledger | 0/TBD | Not started | - |
 | 15. Offline Tooling & Packaging | 0/TBD | Not started | - |
 | 16. GUI Connectors | 0/TBD | Not started | - |
