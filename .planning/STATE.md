@@ -254,6 +254,7 @@ None yet.
 - [Phase 12] Fifteen Info review items stay open in 12-REVIEW-DISPOSITION.md. B-IN-08: three lax assertions in protected test_hipporag_write_path.py (310-316, 394-399) and test_hipporag_query_path.py (230-240) need an owner grant-check-edit to tighten; strict replacements exist in new files.
 - [Phase 12] All HIPP test files are now protected test_refs. HippoRAG stores built before Phase 12 (no doc: manifest, ordinal-only chunk ids, no per-chunk co-occurrence map) must be rebuilt.
 - [Phase 12] D-21: degraded now covers fired guards and the empty-PPR dense stand-in, so parity/run_cross_modality.py and eval A/A refuse a HippoRAG arm that took a fallback; real-provider qa quality/cost and the D-08 unparseable_response rate are TESTING-PLAN §2 items.
+- [Phase 13] D-14: NodeTrace.cache_hit is null unless a part reports it, so eval/calibration.py now refuses real-engine A/A calibration (UnusableFloorError); this is TOOL-12's intent (Phase 15).
 - Cozo 0.7.6 is architecture-frozen with four known correctness bugs and no upstream fixes expected; relevant to STOR-01 and STOR-10 (Phase 10).
 
 ### Quick Tasks Completed
