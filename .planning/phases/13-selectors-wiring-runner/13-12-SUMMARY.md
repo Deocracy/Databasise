@@ -17,9 +17,9 @@ affects: [13-13]
 actuals:
   tokens: 60000
   tasks: 3
-  commits: 3
+  commits: 4
 plan_head_before: 6e3db4b1e0f391e773deff949b0713e5a2c05bf6
-plan_head_after: 4133d150a1c44300be03ae18da712bd632877c11
+plan_head_after: f85bcedc834f0f48dcac01ce6e50a270a514875f
 tech-stack:
   added: []
   patterns: ["a guard reads one declared boolean key of the evaluating node's output", "identity hash taken before any injection"]
@@ -64,9 +64,9 @@ completed: 2026-10-20
 2. Task 2 (WIRE-08, D-19): c891dd2
 3. Task 3 (WIRE-15, WIRE-18, D-16, D-17, D-24): 4133d15
 
-## OPEN: one protected test fails because of Task 1 (grant item)
+## Follow-up fix f85bced (resolved; supersedes the earlier grant item)
 
-`databasise/tests/wirings/test_lightrag_guards.py::test_the_resolved_local_and_global_arms_are_unchanged` (WIRE-09 file from 13-09) compares `resolve_arm(arm)` with the raw patch applied to the base. Since D-03, `resolve_arm` also stamps `wiring_id` and `arm_id`, so the digests differ. Not edited: the BAK hook blocks it. Edit needed (one line, after the `expected = jsonpatch.apply_patch(...)` line): `expected.update(wiring_id=f"lightrag-{arm}", arm_id=arm)`. The assertions stay. Needs an owner grant in `check_edit_grants`.
+The protected `tests/wirings/test_lightrag_guards.py::test_the_resolved_local_and_global_arms_are_unchanged` failed after Task 1 because `resolve_arm` stamped `wiring_id`/`arm_id` in code, so it differed from base plus patch. Fix, product side: the D-03 identity now lives in the data (each arm patch sets `/wiring_id` and `/arm_id`, naive only adds `/arm_id`; `wirings/hipporag/base.json` carries `arm_id`), and `resolve_arm`/`all_wirings` stamp nothing. No protected test was edited for it; wave command 1831 passed, other directories 620 passed, `test_query_trace_nodes.py` and the WIRE-12 row tests still pass.
 
 ## Task 1: row tests (WIRE-12) and fail-first evidence
 
@@ -124,7 +124,7 @@ WIRE-18, `databasise/tests/runner/test_runner_surface.py::test_no_wiring_json_ca
 ## Verification
 
 - Task 2 set (`tests/runner tests/parts_core/hipporag` plus the seam hipporag query and write path and port-record tests): 290 passed.
-- Wave command (`tests/seam tests/runner tests/validator tests/wirings tests/identity tests/parts tests/parts_core tests/evidence tests/parity`): 1830 passed, 3 deselected, 1 failed (the OPEN item above).
+- Wave command (`tests/seam tests/runner tests/validator tests/wirings tests/identity tests/parts tests/parts_core tests/evidence tests/parity`): 1831 passed, 3 deselected after the follow-up fix f85bced (1830 passed and 1 failed before it).
 - Remaining test directories (`clients eval foreign launcher ledger mcp stores` and `tests/test_*.py`): 620 passed, 1 deselected.
 
 ## Known Stubs
