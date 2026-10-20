@@ -160,15 +160,16 @@ async def _run_fixture_and_synthesize_mutator_touches(store_root):
     return parsed, scheduled, touches
 
 
-async def test_both_mutator_nodes_are_traced_as_halted_never_silently_dropped(store_root):
+async def test_both_mutator_nodes_are_traced_never_silently_dropped(store_root):
     """CONTRACT §9's own "MUST NOT be discarded" rule — a placement refusal still produces a
-    traced, partial result, per this module's own D-08 note."""
+    traced, partial result, per this module's own D-08 note. Nodes run one at a time (D-17): the
+    first mutator is refused and traced halted, the second never runs and is traced not-scheduled."""
     _parsed, scheduled, _touches = await _run_fixture_and_synthesize_mutator_touches(store_root)
 
     assert scheduled["partial"] is True
     node_by_id = {node.node_id: node for node in scheduled["nodes"]}
-    assert node_by_id["mut-in-deps"].budget_state == "halted"
-    assert node_by_id["mut-out-of-deps"].budget_state == "halted"
+    assert (node_by_id["mut-in-deps"].status, node_by_id["mut-in-deps"].budget_state) == ("failed", "halted")
+    assert node_by_id["mut-out-of-deps"].status == "not-scheduled"
 
 
 async def test_the_recorder_observes_at_least_one_store_touch_for_the_mutating_fixture_run(store_root):

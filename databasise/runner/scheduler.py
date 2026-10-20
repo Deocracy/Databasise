@@ -144,6 +144,10 @@ from databasise.runner.budget import meter, realised_share
 from databasise.runner.guards import GuardDeclaration, declare_guard, evaluate_guards
 from databasise.runner.trace import (
     DEGRADATION_REASON_FALLBACK_PATH,
+    REASON_BUDGET_HALT,
+    REASON_CANCELLED,
+    REASON_NODE_FAILED,
+    REASON_PLACEMENT_REFUSED,
     STOP_REASON_DECLARED_FALLBACK,
     NodeTrace,
     TokenAccounting,
@@ -543,7 +547,31 @@ async def _dispatch_node(
     allowance: int,
     guards: list[GuardDeclaration],
 ) -> _NodeOutcome:
-    """Dispatch one node and return its trace; a node-level failure is data, never raised."""
+    """Dispatch one node and return its trace; nothing a node or a post-dispatch step does is
+    raised (D-13), except a real cancellation of the run itself (D-26).
+    """
+    part = parsed.parts[node_id]
+    started = time.monotonic()
+
+    def _stopped_trace(
+        status: str, execution_mode: str, wall_clock_ms: int, cause: str | None, budget_state: str
+    ) -> NodeTrace:
+        return NodeTrace(
+            **_pending_node_trace(node_id, parsed, identities, depths),
+            execution_mode=execution_mode,
+            status=status,
+            allowance=allowance,
+            spent=None,  # the node never completed, so nothing was metered
+            wall_clock_ms=wall_clock_ms,
+            cache_hit=None,
+            guards_fired=[],
+            budget_state=budget_state,
+            realised_budget_share=0.0,
+            cross_process_failure_cause=cause,
+            resumable=False,
+            tokens=TokenAccounting(),
+        )
+
     try:
         execution_mode, output, wall_clock_ms = await _run_node(
             node_id, parsed, stores, results, max_concurrency, clients, recorder
@@ -553,63 +581,67 @@ async def _dispatch_node(
         cause = (
             f"NodePlacementRefusedError: execution_mode={placement!r} not hosted (D-08)"
             if placement is not None
-            else f"NodeExecutionError: {redact_secrets(str(exc.cause))}"
+            else f"NodeExecutionError: {type(exc.cause).__name__}: {redact_secrets(str(exc.cause))}"
         )
-        failed_part = parsed.parts[node_id]
-        trace = NodeTrace(
-            **_pending_node_trace(node_id, parsed, identities, depths),
-            # A refusal does not suppress the stamp (D-08): the refused placement when there is
-            # one, else the placement derived from the registered part.
-            execution_mode=placement or derive_execution_mode(failed_part.effects, failed_part.kind),
-            status="failed",
-            allowance=allowance,
-            spent=None,  # the node never completed, so nothing was metered
-            wall_clock_ms=exc.wall_clock_ms,
-            cache_hit=None,
-            guards_fired=[],
-            # Closest of the schema's three enum values to "this node's execution did not
-            # complete" — not a claim that a token/step budget specifically was exceeded;
-            # `cross_process_failure_cause` names the real cause.
-            budget_state="halted",
-            realised_budget_share=0.0,
-            cross_process_failure_cause=cause,
-            resumable=False,
-            tokens=TokenAccounting(),
+        # A refusal does not suppress the stamp (D-08): the refused placement when there is one,
+        # else the placement derived from the registered part. "halted" is the closest of the
+        # schema's budget_state values to "did not complete"; the cause names the real reason.
+        trace = _stopped_trace(
+            "failed",
+            placement or derive_execution_mode(part.effects, part.kind),
+            exc.wall_clock_ms,
+            cause,
+            "halted",
         )
-        # Phase 10 review CR-01: stop_reason reaches consumers (envelope, non-debug trace), so
-        # it names the exception class only, never its message (paths, checksums). The full
-        # text stays in the debug-only node trace above.
-        reason = cause if placement is not None else f"NodeExecutionError: {type(exc.cause).__name__}"
-        return _NodeOutcome(trace, False, exc.cause, f"node {node_id!r}: {reason}")
+        # D-05: the consumer-visible reason is a closed code; the node text stays in the trace.
+        reason = REASON_NODE_FAILED if placement is None else REASON_PLACEMENT_REFUSED
+        return _NodeOutcome(trace, False, exc.cause, reason)
+    except asyncio.CancelledError:
+        # D-26: a body that raises CancelledError while the run itself is not being cancelled is
+        # traced; a real cancellation of the run propagates.
+        current = asyncio.current_task()
+        if current is not None and current.cancelling():
+            raise
+        elapsed_ms = math.ceil((time.monotonic() - started) * 1000)
+        mode = derive_execution_mode(part.effects, part.kind)
+        trace = _stopped_trace("cancelled", mode, elapsed_ms, None, "within_budget")
+        return _NodeOutcome(trace, False, None, REASON_CANCELLED)
 
     results[node_id] = output
-    # CR-01: keyed on the registry's own Part.effects, not the wiring's self-declared
-    # WiringNode.effects. The capability-scoped store view above grants access from
-    # part.effects, so a wiring that under-declares (parse_wiring permits a narrower
-    # subset) would otherwise let a node mutate a store and still be stamped resumable —
-    # and (Gap 2 fix) would otherwise let it meter a real LLM/rerank/embedding spend as
-    # zero, which is the same bypass class CR-01 already closed for placement and store
-    # scoping. meter() is therefore handed part.effects, never node.effects.
-    part = parsed.parts[node_id]
-    resumable = not (set(part.effects) & _STORE_MUTATING_EFFECTS)
-    tokens, cache_hit = _body_report(output)
-    token = meter(node_id, part.effects, allowance, tokens)
-    guards_fired = evaluate_guards(guards, results)
-    trace = NodeTrace(
-        **_pending_node_trace(node_id, parsed, identities, depths),
-        execution_mode=execution_mode,
-        spent=token.spent,
-        allowance=token.allowance,
-        wall_clock_ms=wall_clock_ms,
-        cache_hit=cache_hit,
-        guards_fired=guards_fired,
-        budget_state=token.state,
-        realised_budget_share=realised_share(token.spent, token.allowance),
-        cross_process_failure_cause=None,  # the node completed, so no crossing failed
-        resumable=resumable,
-        tokens=tokens,
-    )
-    return _NodeOutcome(trace, True, None, "budget_halt" if token.state == "halted" else None)
+    try:
+        # CR-01: keyed on the registry's own Part.effects, not the wiring's self-declared
+        # WiringNode.effects. The capability-scoped store view above grants access from
+        # part.effects, so a wiring that under-declares (parse_wiring permits a narrower
+        # subset) would otherwise let a node mutate a store and still be stamped resumable —
+        # and (Gap 2 fix) would otherwise let it meter a real LLM/rerank/embedding spend as
+        # zero, which is the same bypass class CR-01 already closed for placement and store
+        # scoping. meter() is therefore handed part.effects, never node.effects.
+        resumable = not (set(part.effects) & _STORE_MUTATING_EFFECTS)
+        tokens, cache_hit = _body_report(output)
+        token = meter(node_id, part.effects, allowance, tokens)
+        guards_fired = evaluate_guards(guards, results)
+        trace = NodeTrace(
+            **_pending_node_trace(node_id, parsed, identities, depths),
+            execution_mode=execution_mode,
+            spent=token.spent,
+            allowance=token.allowance,
+            wall_clock_ms=wall_clock_ms,
+            cache_hit=cache_hit,
+            guards_fired=guards_fired,
+            budget_state=token.state,
+            realised_budget_share=realised_share(token.spent, token.allowance),
+            cross_process_failure_cause=None,  # the node completed, so no crossing failed
+            resumable=resumable,
+            tokens=tokens,
+        )
+    except Exception as exc:  # noqa: BLE001 - any post-dispatch failure is recorded against the node
+        # D-13: a bad report, a malformed token count, a guard comparison that raises: recorded
+        # against this node, which no longer counts as having produced a result.
+        results.pop(node_id, None)
+        cause = f"NodeExecutionError: {type(exc).__name__}: {redact_secrets(str(exc))}"
+        trace = _stopped_trace("failed", execution_mode, wall_clock_ms, cause, "halted")
+        return _NodeOutcome(trace, False, exc, REASON_NODE_FAILED)
+    return _NodeOutcome(trace, True, None, REASON_BUDGET_HALT if token.state == "halted" else None)
 
 
 async def run_wiring(
@@ -629,15 +661,16 @@ async def run_wiring(
     ``registry`` is accepted for signature parity with the rest of this phase's call sites; every
     part this function dispatches is already resolved via ``parsed.parts`` by
     ``validator.parse.parse_wiring``, so the registry itself is not re-queried during execution.
-    ``determinism_setting``/``concurrency_setting`` are threaded through for the caller (the
-    public composer in ``databasise/__init__.py``) to stamp on the run-level record.
+    ``determinism_setting``/``concurrency_setting`` are echoed unchanged in the result so the
+    run-level record stamps what the run was given (D-17).
     ``clients`` (D-06) defaults to ``None`` — treated identically to an empty dict — so a run that
     passes no ``clients`` argument at all behaves exactly as before for every existing part.
     ``recorder`` (D-15) defaults to ``None`` — a run that passes none behaves exactly as before;
     see module docstring's "Optional per-node touch recording" paragraph.
 
     Returns a dict always carrying ``results``, ``nodes``, ``partial``, ``stop_reason``,
-    ``degraded``, ``degradation_reason`` and ``node_exceptions`` (05-01-PLAN.md: the real
+    ``degraded``, ``degradation_reason``, ``determinism_setting``, ``concurrency_setting`` and
+    ``node_exceptions`` (05-01-PLAN.md: the real
     underlying exception object a failed node's dispatch raised, keyed by node_id — additive,
     empty for a clean run) — or, for a cyclic wiring, ``{"cycle": [...]}`` as data (see module
     docstring). A pre-flight refusal (empty ``nodes``, any other accumulated parse violation, or a
@@ -751,4 +784,6 @@ async def run_wiring(
         "degraded": degraded,
         "degradation_reason": degradation_reason,
         "node_exceptions": node_exceptions,
+        "determinism_setting": determinism_setting,
+        "concurrency_setting": concurrency_setting,
     }

@@ -14,6 +14,8 @@ import asyncio
 from databasise.parts.registry import PartRegistry
 from databasise.parts.schema import NodeContext, Part, WiringNode
 from databasise.runner import scheduler
+from databasise.runner.trace import TokenAccounting
+from databasise.seam import promotion
 from databasise.validator.errors import ValidationReport
 from databasise.validator.parse import ParsedWiring
 
@@ -141,3 +143,93 @@ async def test_traces_list_dispatched_nodes_then_not_scheduled_nodes_by_id():
         "not-scheduled",
         "not-scheduled",
     ]
+
+
+async def _captured_run(parsed: ParsedWiring) -> tuple[dict | None, BaseException | None]:
+    try:
+        return await _run(parsed), None
+    except BaseException as exc:  # noqa: BLE001 - the tests assert on what escaped
+        return None, exc
+
+
+async def test_malformed_token_fields_fail_that_node_and_keep_the_siblings():
+    async def bad(ctx: NodeContext):
+        return {"tokens": TokenAccounting(prompt_tokens="x")}
+
+    parsed = _wiring({"early": _ok, "zbad": bad}, {"early": (), "zbad": ()}, effects={"zbad": ["calls_llm"]})
+
+    result, escaped = await _captured_run(parsed)
+
+    assert escaped is None, type(escaped).__name__
+    assert _statuses(result) == {"early": "completed", "zbad": "failed"}
+    assert type(result["node_exceptions"]["zbad"]).__name__ == "TypeError"
+    assert result["partial"] is True
+
+
+async def test_an_output_whose_comparison_raises_fails_that_node():
+    class Bomb:
+        def __ne__(self, other):
+            raise ValueError("comparison exploded")
+
+    async def body(ctx: NodeContext):
+        return Bomb()
+
+    guard = {"name": "g", "evaluating_node": "guarded", "value_when_not_fired": 0, "granularity": "per-query"}
+    parsed = _wiring({"guarded": body}, {"guarded": ()}, config={"guarded": {"guards": [guard]}})
+
+    result, escaped = await _captured_run(parsed)
+
+    assert escaped is None, type(escaped).__name__
+    assert _statuses(result) == {"guarded": "failed"}
+    assert type(result["node_exceptions"]["guarded"]).__name__ == "ValueError"
+
+
+async def test_a_body_that_raises_cancelled_error_is_traced_cancelled():
+    async def body(ctx: NodeContext):
+        raise asyncio.CancelledError()
+
+    parsed = _wiring({"only": body}, {"only": ()})
+
+    result, escaped = await _captured_run(parsed)
+
+    assert escaped is None, type(escaped).__name__
+    assert _statuses(result) == {"only": "cancelled"}
+    assert result["stop_reason"] == "cancelled"
+    assert result["partial"] is True
+
+
+async def test_a_real_cancellation_of_the_run_still_propagates():
+    async def body(ctx: NodeContext):
+        await asyncio.sleep(5)
+
+    run = asyncio.ensure_future(_run(_wiring({"only": body}, {"only": ()})))
+    await asyncio.sleep(0.05)
+    run.cancel()
+
+    try:
+        await run
+        propagated = False
+    except asyncio.CancelledError:
+        propagated = True
+    assert propagated
+
+
+async def test_failure_reasons_are_closed_codes():
+    failed = await _run(_wiring({"only": _slow_fail(0.0)}, {"only": ()}))
+    refused = await _run(_wiring({"net-node": _ok}, {"net-node": ()}, effects={"net-node": ["net"]}))
+
+    assert (failed["stop_reason"], failed["degradation_reason"]) == ("node_failed", "node_failed")
+    assert (refused["stop_reason"], refused["degradation_reason"]) == ("placement_refused", "placement_refused")
+
+
+def test_a_partial_run_is_not_matched_by_its_dispatched_set():
+    record = {
+        "nodes": [
+            {"node_id": "done", "status": "completed"},
+            {"node_id": "later", "status": "not-scheduled"},
+            {"node_id": "broke", "status": "failed"},
+            {"node_id": "legacy"},  # persisted before Phase 13: no status field
+        ]
+    }
+
+    assert promotion._dispatched_node_ids(record) == frozenset({"done", "legacy"})

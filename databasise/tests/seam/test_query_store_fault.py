@@ -1,6 +1,7 @@
 """Phase 10 review CR-01 (D-13 on the query path): a store error inside a query node is a named
 ``ForeignEngineRefusalError``, never a 200 envelope carrying a path, a checksum or a node id; any other
-node exception still degrades, with the exception class name only in ``stop_reason``."""
+node exception still degrades, with the closed ``node_failed`` code as ``stop_reason`` (the exception class
+name stays in the debug trace only)."""
 
 from __future__ import annotations
 
@@ -54,7 +55,7 @@ async def test_another_store_error_under_a_query_node_is_a_store_fault(store_roo
     assert exc_info.value.failure_class == "StoreFault"
 
 
-async def test_a_non_store_node_failure_degrades_and_names_only_the_exception_class(store_root, monkeypatch):
+async def test_a_non_store_node_failure_degrades_with_the_closed_node_failed_code(store_root, monkeypatch):
     engine = await _ingested_engine(store_root)
     secret = f"{store_root}/secret-checksum-5ab2"
 
@@ -67,7 +68,11 @@ async def test_a_non_store_node_failure_degrades_and_names_only_the_exception_cl
 
     assert envelope.partial is True
     for text in (envelope.stop_reason, envelope.degradation_reason):
-        assert "RuntimeError" in text
+        assert text == "node_failed"  # D-05: a closed code, no exception class and no detail
+        assert "RuntimeError" not in text
         assert str(store_root) not in text and "secret-checksum" not in text
     trace = await engine.resolve_trace(envelope.trace_token, debug=False)
     assert str(store_root) not in repr(trace)
+    debug_trace = await engine.resolve_trace(envelope.trace_token, debug=True)
+    failed = [n for n in debug_trace["nodes"] if n.get("status") == "failed"]
+    assert failed and "RuntimeError" in failed[0]["cross_process_failure_cause"]

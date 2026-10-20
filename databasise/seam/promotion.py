@@ -110,8 +110,14 @@ _MEASUREMENT_POSTURE: dict[str, bool] = {
 
 def _dispatched_node_ids(resolved_trace_record: dict[str, Any]) -> frozenset[str]:
     """The node id set a persisted ``RunRecord.to_dict()`` actually dispatched — query-invariant,
-    unlike ``wiring_instance_hash``."""
-    return frozenset(node["node_id"] for node in resolved_trace_record.get("nodes", []))
+    unlike ``wiring_instance_hash``. Only completed nodes count (D-13): a failed, cancelled or
+    not-scheduled node never ran to completion. A node with no ``status`` (a record persisted
+    before Phase 13) reads as completed."""
+    return frozenset(
+        node["node_id"]
+        for node in resolved_trace_record.get("nodes", [])
+        if node.get("status", "completed") == "completed"
+    )
 
 
 # B-WR-03: nodes a wiring gained after traces were already persisted. A HippoRAG query trace from
