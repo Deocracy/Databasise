@@ -25,8 +25,9 @@ from databasise.ledger.ledger import Ledger
 from databasise.seam.engine import Databasise
 from databasise.seam.envelope import PromotionResult
 from databasise.seam.refusals import SeamRefusalError, TombstonedGenerationError
+from databasise.seam.selectors import _resolve_alias
 from databasise.seam.trace_store import TraceStore
-from databasise.wirings.resolve import all_wirings
+from databasise.wirings.resolve import all_wirings, wiring_for_name
 
 _ALIAS = "prod-lightrag"
 
@@ -142,7 +143,10 @@ async def test_six_concurrent_promotes_mint_six_distinct_versions_with_zero_exce
             versions = [outcome.version for outcome in results]
             assert len(set(versions)) == 6, f"duplicate minted semver among {versions}"
 
-            row_count = Ledger(store_root)._conn.execute(
-                "SELECT COUNT(*) FROM ledger"
-            ).fetchone()[0]
+            with Ledger(store_root) as ledger:
+                row_count = ledger._conn.execute("SELECT COUNT(*) FROM ledger").fetchone()[0]
+                active = ledger.by_alias(_ALIAS)
             assert row_count == 6
+
+            # The alias resolves to the wiring of whichever arm the race left active (D-05).
+            assert _resolve_alias(_ALIAS, store_root=store_root) == wiring_for_name(active.mutation_id)

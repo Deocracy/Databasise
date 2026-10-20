@@ -47,14 +47,14 @@ def test_text_plus_an_unconsumable_member_raises_rather_than_answering_from_text
     assert exc_info.value.member_name == "embedding"
 
 
-async def test_resolve_arm_is_never_called_when_the_query_object_is_empty(tmp_path):
+async def test_no_wiring_is_resolved_when_the_query_object_is_empty(tmp_path):
     engine = Databasise(store_root=tmp_path, workspace="empty-query-test")
 
-    with patch("databasise.seam.selectors.resolve_arm") as mock_resolve_arm:
+    with patch("databasise.seam.selectors.wiring_for_name") as mock_wiring_for_name:
         with pytest.raises(EmptyQueryObjectError):
             await engine.query(QueryObject())
 
-    mock_resolve_arm.assert_not_called()
+    mock_wiring_for_name.assert_not_called()
 
 
 def test_no_seam_refusal_message_enumerates_the_resolved_wirings_node_ids():

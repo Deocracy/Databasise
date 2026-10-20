@@ -49,8 +49,10 @@ dict returned by ``resolve_arm`` — never through ``ParsedWiring``, which drops
 
 **The alias selector (Task 2; D-12, FA-06).** Reads the promotion ledger's own ``alias`` column
 (the 04-03 checkpoint's ``dedicated-alias-column`` answer — see ``_resolve_alias``'s own
-docstring for the exact lookup call and the field read to identify the active wiring). Phase 7's
-promote path writes the rows this branch reads; an alias with no row refuses.
+docstring for the exact lookup call and the field read to identify the active wiring). Promote,
+rollback and retire write the rows this branch reads; the branch resolves any ``all_wirings()``
+name through ``wiring_for_name``. A missing ``ledger.db``, an alias with no row, and a row naming a
+wiring that does not resolve all refuse identically, and the read path never creates ``ledger.db``.
 
 **The harness selector (Task 3; D-13, FA-05).** Reads the ordered ``harnesses`` array off the raw
 resolved dict, preserving declared order verbatim. No production wiring in this repository
@@ -96,7 +98,7 @@ from databasise.seam.refusals import (
 )
 from databasise.validator.depth import effective_depth
 from databasise.validator.parse import parse_wiring
-from databasise.wirings.resolve import all_wirings, resolve_arm, without_recipe_only_nodes
+from databasise.wirings.resolve import all_wirings, without_recipe_only_nodes, wiring_for_name
 
 _SELECTOR_MEMBERS: tuple[str, ...] = ("alias", "capability", "harness")
 
@@ -275,30 +277,30 @@ def resolve_selector(
 
 
 def _resolve_alias(alias: str, *, store_root: str | Path) -> dict[str, Any]:
-    """The §18.4 alias branch (D-12, FA-06). Read-only: never appends to the ledger — running an
-    arm MUST NOT append (§6); only Phase 7's promote path does.
+    """The §18.4 alias branch (D-12, FA-06). Read-only: it opens the ledger with
+    ``Ledger.open_existing`` and closes it, so it never creates ``ledger.db`` and never appends
+    (CONTRACT §6). Promote, rollback and retire write the rows this branch reads.
 
-    **The read contract Phase 7 inherits.** The lookup call is ``Ledger(store_root).by_alias
-    (alias)`` — the active-pointer projection over the additive ``alias`` column (the 04-03
-    checkpoint's ``dedicated-alias-column`` answer; see ``databasise/ledger/ledger.py``'s own
-    module docstring). The field read off the returned record to identify the active wiring is
-    ``mutation_id`` — resolved as an arm name via ``resolve_arm`` exactly like every other
-    selector branch. For this read to succeed, Phase 7's promote path must append a
-    ``LedgerRecord`` whose ``alias`` column holds the promoted alias string and whose
-    ``mutation_id`` holds the arm name identifying the promoted wiring. An alias with no such row
-    raises :class:`UnsatisfiableSelectorError` (D-12/FA-06).
+    The lookup is ``by_alias(alias)``, the active-pointer projection over the ``alias`` column. The
+    row's ``mutation_id`` names the active wiring and resolves through ``wiring_for_name``, the one
+    lookup over every ``all_wirings()`` name, HippoRAG included.
 
-    An empty registry and a registry holding other, non-matching rows raise the identical
-    refusal, naming only the consumer's own ``alias`` value — never a mutation_id or wiring id the
-    registry does hold (§18.2's closed set, applied to this branch; the distinction between "no
-    aliases exist" and "your alias is not one of them" is itself the disclosure the no-enumeration
-    rule forbids).
+    A missing ``ledger.db``, an alias with no row, and a row whose ``mutation_id`` no wiring
+    answers to all raise the identical :class:`UnsatisfiableSelectorError`, naming only the
+    consumer's own ``alias`` value, never the row's ``mutation_id`` or a wiring id (§18.2's closed
+    set, applied to this branch: telling "no aliases exist" from "your alias is not one of them" is
+    itself the disclosure the no-enumeration rule forbids).
     """
-    ledger = Ledger(store_root)
-    record = ledger.by_alias(alias)
-    if record is None:
-        raise UnsatisfiableSelectorError(selector_kind="alias", requested=alias)
-    return resolve_arm(record.mutation_id)
+    refusal = UnsatisfiableSelectorError(selector_kind="alias", requested=alias)
+    ledger = Ledger.open_existing(store_root)
+    if ledger is None:
+        raise refusal
+    with ledger:
+        record = ledger.by_alias(alias)
+    resolved = wiring_for_name(record.mutation_id) if record is not None else None
+    if resolved is None:
+        raise refusal
+    return resolved
 
 
 def _wiring_declares_harness(resolved: dict[str, Any], name: str) -> bool:
