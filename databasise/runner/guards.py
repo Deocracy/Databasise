@@ -29,15 +29,24 @@ _ADMISSIBLE_GRANULARITIES: tuple[GuardGranularity, ...] = ("per-query", "per-ins
 
 
 class GuardDeclarationError(ValueError):
-    """A guard declaration is missing, or names, an inadmissible granularity — the two
-    granularities are mandatory and mutually exclusive (CONTRACT §19.8).
+    """A guard declaration is refused before dispatch: an inadmissible granularity (the two
+    granularities are mandatory and mutually exclusive, CONTRACT §19.8), an entry that is not a
+    mapping with exactly the ``declare_guard`` keys, or an ``evaluating_node`` that is neither the
+    guarded node nor one of its transitive dependencies (WIRE-08, D-19). ``node_id`` names the
+    guarded node once the scheduler knows it; it is private to the machine (the seam refusal that
+    wraps this error never exposes it). ``problem`` replaces the granularity message for the
+    non-granularity cases.
     """
 
-    def __init__(self, guard_name: str, granularity: Any):
+    def __init__(
+        self, guard_name: str, granularity: Any, *, node_id: str | None = None, problem: str | None = None
+    ):
         self.guard_name = guard_name
         self.granularity = granularity
+        self.node_id = node_id
         super().__init__(
-            f"guard {guard_name!r} declares granularity {granularity!r}; must be exactly one of "
+            problem
+            or f"guard {guard_name!r} declares granularity {granularity!r}; must be exactly one of "
             f"{_ADMISSIBLE_GRANULARITIES!r}"
         )
 

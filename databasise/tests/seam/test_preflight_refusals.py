@@ -16,9 +16,14 @@ import pytest
 
 pytest.importorskip("fastapi")
 
-from databasise.seam import Databasise, QueryObject
+from databasise.parts.registry import PartRegistry
+from databasise.parts.schema import NodeContext, Part, WiringNode
+from databasise.runner import scheduler
+from databasise.seam import Databasise
 from databasise.seam.corpus import IngestDocument
 from databasise.seam.rest import create_app
+from databasise.validator.errors import ValidationReport
+from databasise.validator.parse import ParsedWiring
 from fastapi.testclient import TestClient
 
 _PASSTHROUGH = "parts-core/passthrough@1.0.0"
@@ -156,3 +161,84 @@ async def test_ingest_delete_and_retry_refuse_a_cyclic_corpus_wiring(operation, 
     assert "cyclic-wiring" in getattr(outcome, "violations", []), repr(outcome)
     inbox = store_root / "preflight-corpus" / "corpus-inbox"
     assert not inbox.exists() or not list(inbox.iterdir())
+
+
+# ---- runner pre-flight: settings are true ints (D-07) ----------------------------------------------
+
+def _single_node_wiring(ran: list[str], config: dict | None) -> ParsedWiring:
+    async def body(ctx: NodeContext):
+        ran.append(ctx.node_id)
+        return {}
+
+    part = Part(
+        name_at_version="test/only@1.0.0",
+        kind="passthrough",
+        structural_depth="stage",
+        effects=[],
+        upstream_ref=None,
+        body=body,
+    )
+    node = WiringNode(component=part.name_at_version, kind="passthrough", config=config, deps=[])
+    return ParsedWiring(
+        nodes={"only": node},
+        parts={"only": part},
+        deps={"only": ()},
+        node_order=("only",),
+        report=ValidationReport(),
+    )
+
+
+async def _run_single(config: dict | None) -> tuple[dict | None, Exception | None, list[str]]:
+    ran: list[str] = []
+    try:
+        result = await scheduler.run_wiring(
+            _single_node_wiring(ran, config),
+            PartRegistry(),
+            {},
+            determinism_setting="cache-bypassed",
+            concurrency_setting="sequential",
+        )
+    except Exception as exc:  # noqa: BLE001 - the test asserts on the captured type
+        return None, exc, ran
+    return result, None, ran
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "error"),
+    [
+        ("max_concurrency", True, "InvalidMaxConcurrencyError"),
+        ("max_concurrency", 2.7, "InvalidMaxConcurrencyError"),
+        ("max_concurrency", "100", "InvalidMaxConcurrencyError"),
+        ("token_allowance", 0.9, "InvalidTokenAllowanceError"),
+        ("token_allowance", "100", "InvalidTokenAllowanceError"),
+        ("token_allowance", False, "InvalidTokenAllowanceError"),
+    ],
+)
+async def test_a_non_int_setting_is_refused_before_dispatch(field, value, error):
+    _, exc, ran = await _run_single({field: value})
+
+    assert type(exc).__name__ == error, repr(exc)
+    assert ran == [], "a node ran although its setting was refused"
+
+
+@pytest.mark.parametrize(
+    ("config", "refused"),
+    [
+        ({"max_concurrency": 1}, None),
+        ({"max_concurrency": 0}, "InvalidMaxConcurrencyError"),
+        ({"token_allowance": 0}, None),
+        ({"token_allowance": -1}, "InvalidTokenAllowanceError"),
+        (None, None),
+    ],
+    ids=["concurrency-1", "concurrency-0", "allowance-0", "allowance-minus-1", "no-config"],
+)
+async def test_boundary_settings(config, refused):
+    result, exc, ran = await _run_single(config)
+
+    if refused is None:
+        assert exc is None, repr(exc)
+        assert ran == ["only"]
+        assert result is not None and result["partial"] is False
+    else:
+        assert type(exc).__name__ == refused, repr(exc)
+        assert ran == []

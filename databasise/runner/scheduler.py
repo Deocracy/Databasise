@@ -141,7 +141,7 @@ from databasise.parts_core import (
     UndeclaredEffectError,
 )
 from databasise.runner.budget import meter, realised_share
-from databasise.runner.guards import GuardDeclaration, declare_guard, evaluate_guards
+from databasise.runner.guards import GuardDeclaration, GuardDeclarationError, declare_guard, evaluate_guards
 from databasise.runner.trace import (
     DEGRADATION_REASON_FALLBACK_PATH,
     REASON_BUDGET_HALT,
@@ -368,18 +368,17 @@ def _resolve_identities(parsed: ParsedWiring) -> dict[str, dict[str, str]]:
 def _validated_max_concurrency(node_id: str, config: dict[str, Any] | None) -> int:
     """Extract and validate ``config.max_concurrency`` (D-09), defaulting to 1 when absent.
     Raises :class:`InvalidMaxConcurrencyError`, naming ``node_id``, for a declared value below 1
-    OR (WR-04) for a declared value ``int()`` cannot coerce at all (a string, a list, a dict, ...)
-    — this module's own documented "refused at validation, before any node is dispatched, naming
-    the offending node id" contract must hold for that class of malformed input too, not just an
-    in-range-but-negative one.
+    OR (WR-04, D-07) for any declared value that is not a true ``int`` (a ``bool``, a float, a
+    string, a list, a dict, ...), which is never coerced — so the documented "refused at
+    validation, before any node is dispatched, naming the offending node id" contract holds for
+    malformed input too.
     """
     max_concurrency = 1
     if config:
         raw = config.get("max_concurrency", 1)
-        try:
-            max_concurrency = int(raw)
-        except (TypeError, ValueError):
-            raise InvalidMaxConcurrencyError(node_id, raw) from None
+        if not isinstance(raw, int) or isinstance(raw, bool):  # D-07: never coerce True, 2.7 or '100'
+            raise InvalidMaxConcurrencyError(node_id, raw)
+        max_concurrency = raw
     if max_concurrency < 1:
         raise InvalidMaxConcurrencyError(node_id, max_concurrency)
     return max_concurrency
@@ -388,32 +387,76 @@ def _validated_max_concurrency(node_id: str, config: dict[str, Any] | None) -> i
 def _validated_token_allowance(node_id: str, config: dict[str, Any] | None) -> int:
     """Extract and validate ``config.token_allowance`` (DEC-A), defaulting to
     ``DEFAULT_TOKEN_ALLOWANCE`` (DEC-B) when absent. Raises :class:`InvalidTokenAllowanceError`,
-    naming ``node_id``, for a declared value ``int()`` cannot coerce at all, OR (WR-01) a negative
-    value — refused at validation, before any node is dispatched, mirroring
+    naming ``node_id``, for a declared value that is not a true ``int`` (never coerced, D-07), OR
+    (WR-01) a negative value — refused at validation, before any node is dispatched, mirroring
     ``_validated_max_concurrency``'s own WR-04-lesson shape for this sibling field.
     """
     raw = DEFAULT_TOKEN_ALLOWANCE
     if config:
         raw = config.get("token_allowance", DEFAULT_TOKEN_ALLOWANCE)
-    try:
-        allowance = int(raw)
-    except (TypeError, ValueError):
-        raise InvalidTokenAllowanceError(node_id, raw) from None
+    if not isinstance(raw, int) or isinstance(raw, bool):  # D-07: never coerce True, 0.9 or '100'
+        raise InvalidTokenAllowanceError(node_id, raw)
+    allowance = raw
     if allowance < 0:
         raise InvalidTokenAllowanceError(node_id, allowance)
     return allowance
 
 
-def _validated_guards(node_id: str, config: dict[str, Any] | None) -> list[GuardDeclaration]:
+def _dependency_closure(node_id: str, deps: Mapping[str, Any]) -> set[str]:
+    """``node_id`` plus every transitive dependency of it, over ``deps``."""
+    seen: set[str] = set()
+    pending = [node_id]
+    while pending:
+        current = pending.pop()
+        if current not in seen:
+            seen.add(current)
+            pending.extend(deps.get(current, ()))
+    return seen
+
+
+def _validated_guards(
+    node_id: str, config: dict[str, Any] | None, parsed: ParsedWiring
+) -> list[GuardDeclaration]:
     """``config.guards`` (absent or falsy -> ``[]``) for ``node_id``, each entry constructed via
-    ``declare_guard(**entry)``, letting :class:`~databasise.runner.guards.GuardDeclarationError`
-    propagate — a malformed guard declaration (an inadmissible ``granularity``) refuses the run
-    before any node is dispatched, the same pre-flight contract this module already gives
-    ``max_concurrency`` and ``token_allowance`` (``node_id`` names the offending node in that
-    propagated error via ``GuardDeclarationError``'s own ``guard_name``/``granularity`` fields).
+    ``declare_guard(**entry)``. A malformed declaration refuses the run before any node is
+    dispatched (the same pre-flight contract as ``max_concurrency`` and ``token_allowance``) with a
+    :class:`~databasise.runner.guards.GuardDeclarationError` carrying ``node_id`` (WIRE-08, D-19):
+    an entry that is not a mapping, one with missing or extra keys, an inadmissible granularity, or
+    an ``evaluating_node`` that is neither ``node_id`` nor in its transitive dependency closure
+    over ``parsed.deps`` (the pruned wiring the engine runs), because only those outputs exist when
+    the guard is evaluated.
     """
     raw_guards = (config or {}).get("guards") or []
-    return [declare_guard(**entry) for entry in raw_guards]
+    reachable = _dependency_closure(node_id, parsed.deps)
+    guards: list[GuardDeclaration] = []
+    for entry in raw_guards:
+        if not isinstance(entry, Mapping):
+            raise GuardDeclarationError(
+                str(entry), None, node_id=node_id, problem="a guard entry must be a mapping"
+            )
+        try:
+            guard = declare_guard(**entry)
+        except TypeError:
+            raise GuardDeclarationError(
+                str(entry.get("name")),
+                entry.get("granularity"),
+                node_id=node_id,
+                problem=f"guard entry keys {sorted(map(str, entry))} must be exactly "
+                "name, evaluating_node, value_when_not_fired and granularity",
+            ) from None
+        except GuardDeclarationError as exc:
+            exc.node_id = node_id
+            raise
+        if guard.evaluating_node not in reachable:
+            raise GuardDeclarationError(
+                guard.name,
+                guard.granularity,
+                node_id=node_id,
+                problem=f"guard {guard.name!r} evaluates {guard.evaluating_node!r}, which is neither "
+                "the guarded node nor one of its dependencies",
+            )
+        guards.append(guard)
+    return guards
 
 
 def _body_report(output: Any) -> tuple[TokenAccounting, bool | None]:
@@ -673,9 +716,22 @@ async def run_wiring(
     ``node_exceptions`` (05-01-PLAN.md: the real
     underlying exception object a failed node's dispatch raised, keyed by node_id — additive,
     empty for a clean run) — or, for a cyclic wiring, ``{"cycle": [...]}`` as data (see module
-    docstring). A pre-flight refusal (empty ``nodes``, any other accumulated parse violation, or a
-    declared ``max_concurrency`` below 1) raises before any node is dispatched — see module
-    docstring for why that one case raises rather than returning.
+    docstring; the seam refuses a cyclic wiring earlier, so this return is a runner-level contract
+    only).
+
+    Raises, before any node is dispatched (WIRE-05; the seam translates each to a named refusal):
+
+    - :class:`WiringRefusedError` when ``parsed.report`` carries any violation (an empty ``nodes``
+      object, an unknown component, a dangling dependency, ...);
+    - :class:`InvalidMaxConcurrencyError` or :class:`InvalidTokenAllowanceError` for a declared
+      ``max_concurrency`` / ``token_allowance`` that is not a true ``int`` (a ``bool``, float or
+      string is never coerced), a ``max_concurrency`` below 1, or a negative ``token_allowance``;
+    - :class:`~databasise.runner.guards.GuardDeclarationError` (with ``node_id``) for a misdeclared
+      guard: an entry that is not a mapping, has missing or extra keys or an inadmissible
+      granularity, or names an ``evaluating_node`` that is neither the guarded node nor one of its
+      transitive dependencies;
+    - :class:`~databasise.identity.env.EnvironmentDigestError` when the environment digest cannot
+      be computed.
     """
     if not parsed.report.ok:
         raise WiringRefusedError(parsed.report.violations)
@@ -695,7 +751,7 @@ async def run_wiring(
         for node_id, node in parsed.nodes.items()
     }
     guards_by_node: dict[str, list[GuardDeclaration]] = {
-        node_id: _validated_guards(node_id, node.config) for node_id, node in parsed.nodes.items()
+        node_id: _validated_guards(node_id, node.config, parsed) for node_id, node in parsed.nodes.items()
     }
 
     depths = effective_depth(parsed)
