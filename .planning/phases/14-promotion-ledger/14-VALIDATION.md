@@ -66,7 +66,7 @@ Every row test is a new node in an unprotected new file. It must fail on pre-fix
 ## Wave 0 Requirements
 
 - [ ] The 14 row test files above, each written test first in the plan that completes its row.
-- [ ] `tests/wirings/test_wiring_for_name.py`, `tests/ledger/test_ledger_store_api.py` (14-02, 14-03), `tests/seam/test_promotion_refusals.py` (14-03) and `tests/seam/test_unresolvable_alias_row_verbs.py` (14-08). These are non-row tests.
+- [ ] Non-row tests: 14-02 creates `tests/ledger/test_ledger_store_api.py`; 14-03 creates `tests/wirings/test_wiring_for_name.py` and `tests/seam/test_promotion_refusals.py`; 14-08 creates `tests/seam/test_unresolvable_alias_row_verbs.py`.
 - [ ] `_REFUSAL_FACTORIES` entries and imports for `PartialRunEvidenceError` and `GateNotCalibratedError`, in unprotected `tests/seam/test_rest_transport.py`. They go in 14-03, before any row points at that file.
 - [ ] Stub LLM and embedding clients for the HippoRAG-alias ingest leg, copied into the new LEDG-03 test file.
 - [ ] Owner `grant-check-edit` for `tests/seam/test_refusal_reachability.py` (WIRE-17), with the edit from 14-RESEARCH §6.4 (checkpoint plan 14-01, wave 1; 14-07 makes the edit).
