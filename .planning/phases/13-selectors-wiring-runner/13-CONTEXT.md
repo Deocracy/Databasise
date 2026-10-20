@@ -192,6 +192,17 @@ Every query arm can be selected. The runner records every node truthfully. Consu
 - **WIRE-13:** `component` is the resolved capability `mutates_store` (D-15).
 - **WIRE-17:** the reachable NoWritePath case is retry with a HippoRAG selector (D-11).
 
+### Post-research resolutions (13-RESEARCH.md open questions)
+
+- **D-22 (EnvironmentDigestError on query, ingest and delete):**
+  - The engine wraps it as the existing `ForeignEngineRefusalError` with a new `failure_class`, `EnvironmentDigestUnavailable`. That class goes in `_ENGINE_UNAVAILABLE`, so REST answers 503.
+  - No new refusal class is minted, so protected SEAM-04 needs no edit.
+  - The other runner pre-flight errors (D-07) do become new seam refusals at 422.
+- **D-23 (response-time leak gate):** a reason value that fails the node-id check is replaced by `node_failed`, and the event is logged. The gate never raises, so it can never produce a 500.
+- **D-24 (archived hashes):** pinned instance and wiring hashes in archived parity and evidence records are annotated as minted before Phase 13 rather than re-minted, because re-minting needs live spend. D-21 still batches every hash shift into one plan.
+- **D-25 (WIRE-05 violation shape):** `UnparseableWiringError.violations` stays a `list[str]` of codes, with no shape change.
+- **D-26 (WIRE-10 cancelled):** under D-17's sequential dispatch, `cancelled` covers a node whose body raised `CancelledError` while the run itself was not being cancelled. The WIRE-10 'slow sibling' test is rewritten to that reachable case, per 13-RESEARCH §6.
+
 ### Claude's Discretion
 - Exact names for the new refusals, the namespace field and the reason-code constants.
 - The derived schema's file layout.
