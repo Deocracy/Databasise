@@ -181,6 +181,7 @@ Every query arm can be selected. The runner records every node truthfully. Consu
   - D-03 (per-arm wiring_id and pre-injection hash), D-16 (environment inputs), D-17 (deleted config strings) and D-19 (the guard `signal` key) each shift config, instance or wiring-instance hashes.
   - They land in one plan. Pinned hashes in evidence and parity records are re-minted or annotated once.
   - Promotion compares no stored hash (engine.py:2168-2174 only collects them).
+  - **Recorded exception (plan check, round 1):** D-02's arm-patch `evidence_position` edits (13-06, wave 2) also shift the arms' `wiring_instance_hash`. They stay in 13-06, because D-09 → D-02 ordering and the ghost-reference check must land with them. The single D-24 annotation pass in 13-12 covers this earlier shift too, so pinned hashes are still annotated once. Promotion compares no stored hash, so nothing reads the hashes between waves 2 and 5.
 
 ### Requirement text exceptions (to record in REQUIREMENTS.md)
 
