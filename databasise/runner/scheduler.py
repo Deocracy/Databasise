@@ -601,14 +601,20 @@ async def _dispatch_node(
     started = time.monotonic()
 
     def _stopped_trace(
-        status: str, execution_mode: str, wall_clock_ms: int, cause: str | None, budget_state: str
+        status: str,
+        execution_mode: str,
+        wall_clock_ms: int,
+        cause: str | None,
+        budget_state: str,
+        spent: int | None = None,
+        tokens: TokenAccounting | None = None,
     ) -> NodeTrace:
         return NodeTrace(
             **_pending_node_trace(node_id, parsed, identities, depths),
             execution_mode=execution_mode,
             status=status,
             allowance=allowance,
-            spent=None,  # the node never completed, so nothing was metered
+            spent=spent,  # None unless the body completed and was metered before a later step failed
             wall_clock_ms=wall_clock_ms,
             cache_hit=None,
             guards_fired=[],
@@ -616,7 +622,7 @@ async def _dispatch_node(
             realised_budget_share=0.0,
             cross_process_failure_cause=cause,
             resumable=False,
-            tokens=TokenAccounting(),
+            tokens=tokens if tokens is not None else TokenAccounting(),
         )
 
     try:
@@ -664,6 +670,7 @@ async def _dispatch_node(
         # zero, which is the same bypass class CR-01 already closed for placement and store
         # scoping. meter() is therefore handed part.effects, never node.effects.
         resumable = not (set(part.effects) & _STORE_MUTATING_EFFECTS)
+        token = None
         tokens, cache_hit = _body_report(output)
         token = meter(node_id, part.effects, allowance, tokens)
         guards_fired = evaluate_guards(guards, results)
@@ -686,7 +693,16 @@ async def _dispatch_node(
         # against this node, which no longer counts as having produced a result.
         results.pop(node_id, None)
         cause = f"NodeExecutionError: {type(exc).__name__}: {redact_secrets(str(exc))}"
-        trace = _stopped_trace("failed", execution_mode, wall_clock_ms, cause, "halted")
+        # 13 REVIEW B-WR-03 (CONTRACT §9): spend already reported and metered stays on the node.
+        trace = _stopped_trace(
+            "failed",
+            execution_mode,
+            wall_clock_ms,
+            cause,
+            "halted",
+            spent=token.spent if token is not None else None,
+            tokens=tokens if token is not None else None,  # a report meter() refused is not carried
+        )
         return _NodeOutcome(trace, False, exc, REASON_NODE_FAILED)
     return _NodeOutcome(trace, True, None, REASON_BUDGET_HALT if token.state == "halted" else None)
 

@@ -138,3 +138,50 @@ async def test_a_malformed_guard_declaration_is_a_named_422_before_dispatch(stor
     with pytest.raises(InvalidGuardDeclarationError) as exc_info:
         await _run_resolved(store_root, PartRegistry(), wiring)
     assert getattr(exc_info.value, "trace_token", None) is None  # pre-dispatch: no run, no trace
+
+
+def _llm_registry_without_signal() -> PartRegistry:
+    """A calls_llm node that reports spend and never emits its guard's declared signal."""
+    from databasise.runner.trace import TokenAccounting
+
+    async def body(ctx):
+        return {"tokens": TokenAccounting(prompt_tokens=5, completion_tokens=3, call_count=1, counted_by="stub-llm")}
+
+    registry = PartRegistry()
+    registry.register(
+        Part(
+            name_at_version="review13/llm@1.0.0",
+            kind="passthrough",
+            structural_depth="stage",
+            effects=["calls_llm"],
+            upstream_ref=None,
+            body=body,
+        )
+    )
+    return registry
+
+
+_LLM_WIRING = {
+    "nodes": {"a": {**_node("review13/llm@1.0.0", effects=["calls_llm"]), "config": {"guards": [_guard()]}}},
+    "provides": ["a"],
+}
+
+
+async def test_a_post_dispatch_failure_keeps_the_spend_already_metered():
+    """B-WR-03 (CONTRACT §9): the guard raises after the LLM call was metered; the failed trace keeps it."""
+    from databasise.runner import scheduler
+    from databasise.validator.parse import parse_wiring
+
+    registry = _llm_registry_without_signal()
+    scheduled = await scheduler.run_wiring(
+        parse_wiring(_LLM_WIRING, registry),
+        registry,
+        {},
+        determinism_setting="cache-bypassed",
+        concurrency_setting="sequential",
+        clients={"llm": object()},
+    )
+    (trace,) = scheduled["nodes"]
+    assert trace.status == "failed"
+    assert trace.spent == 8
+    assert (trace.tokens.prompt_tokens, trace.tokens.completion_tokens, trace.tokens.counted_by) == (5, 3, "stub-llm")
