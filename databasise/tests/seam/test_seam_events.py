@@ -15,7 +15,7 @@ import copy
 import dataclasses
 
 from databasise.parts.registry import Part, PartRegistry
-from databasise.parts_core.declared_only import LIGHTRAG_V1_INDEX_SYNC_PART
+from databasise.parts_core.declared_only import LIGHTRAG_FULL_INGEST_PART
 from databasise.runner.scheduler import TOUCH_KIND_OBSERVED
 from databasise.runner.trace import NodeTrace, TokenAccounting
 from databasise.seam import engine as engine_module
@@ -115,7 +115,7 @@ async def test_an_ingest_with_a_mutating_part_returns_one_seam_event(store_root,
         ctx.record_store_touch("kv")
         return {"track_id": "t", "enqueued": 1, "tokens": TokenAccounting(counted_by="none")}
 
-    part = dataclasses.replace(LIGHTRAG_V1_INDEX_SYNC_PART, name_at_version=_MUTATOR, body=_body)
+    part = dataclasses.replace(LIGHTRAG_FULL_INGEST_PART, name_at_version=_MUTATOR, body=_body)
     wiring = {
         "wiring_id": "seam-events-ingest",
         "nodes": {
