@@ -1106,8 +1106,9 @@ def _select_answer(
 
 def _mutates_store_component(resolved: dict[str, Any], registry: PartRegistry) -> str:
     """06-09-PLAN.md Task 2: the ``name@version`` of the first node in ``resolved`` whose
-    registered ``Part`` declares ``mutates_store`` — used only to name the excluded component in
-    :class:`~databasise.seam.refusals.MutableStoreComparisonExcludedError`'s message. This is a
+    registered ``Part`` declares ``mutates_store`` — used only to name the excluded component in the
+    server log and on :class:`~databasise.seam.refusals.MutableStoreComparisonExcludedError`'s
+    private ``_component`` (13 REVIEW A-WR-01: the public field names the capability). This is a
     separate, small lookup from ``selectors.py``'s own :func:`_wiring_effects`, which stays the
     sole place the effect *union* is computed (this plan's own acceptance criterion) — this
     function never recomputes that union, it only re-walks the same ``nodes`` mapping once more to
@@ -1259,9 +1260,10 @@ class Databasise:
         ]
         for resolved in wirings:
             if "mutates_store" in _wiring_effects(resolved, self.registry):
-                raise MutableStoreComparisonExcludedError(
-                    component=_mutates_store_component(resolved, self.registry)
-                )
+                component = _mutates_store_component(resolved, self.registry)
+                # A-WR-01: the part name goes to the server log; the refusal names the capability.
+                logger.warning("compare refused: part %r declares mutates_store", component)
+                raise MutableStoreComparisonExcludedError(component=component)
         if len(selectors) == 1:
             return await self._execute_resolved(query_object, wirings[0])
         # 11 REVIEW B-WR-02: refuse a never-populated namespace for any arm before the first arm

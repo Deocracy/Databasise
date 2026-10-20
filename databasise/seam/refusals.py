@@ -480,9 +480,11 @@ class MutableStoreComparisonExcludedError(SeamRefusalError):
     re-runnable for a `§5` parity/determinism comparison without a defined snapshot/reset
     protocol, and this project's own recorded decision
     (``databasise/evidence/F-07-MUTABLE-STORE-DISPOSITION.md``) is permanent exclusion rather than
-    building one. Names only the excluded component's own ``name@version`` — never another
-    candidate wiring, arm name, or node id — per `§18.2`'s closed-set rule applied to this refusal
-    path, the same discipline every other refusal in this module already follows.
+    building one. The public ``component`` names only the excluded capability, ``mutates_store``
+    (13 REVIEW A-WR-01, the D-15 rule for ``SeamEvent.component``): a part ``name@version`` names
+    the fitted modality, which `CONTRACT.md` §18.3 keeps out of every consumer field, so it stays on
+    the private ``_component`` and goes to the server log only. Never another candidate wiring, arm
+    name or node id either (§18.2's closed-set rule).
 
     Checked in the comparison path for every selector count, one included (13-07, WIRE-17, D-11):
     `CONTRACT.md §14.4` point 3 refuses before any node runs, so ``compare()`` with one selector
@@ -495,11 +497,11 @@ class MutableStoreComparisonExcludedError(SeamRefusalError):
     """
 
     def __init__(self, *, component: str) -> None:
-        self.component = component
+        self.component = "mutates_store"
+        self._component = component  # private: a part name@version names the fitted modality
         super().__init__(
-            "MutableStoreComparisonExcludedError: component "
-            f"{component!r} declares mutates_store and is excluded from §5 parity/determinism "
-            "comparisons per the recorded disposition in "
+            "MutableStoreComparisonExcludedError: a selected wiring declares mutates_store and is "
+            "excluded from §5 parity/determinism comparisons per the recorded disposition in "
             "databasise/evidence/F-07-MUTABLE-STORE-DISPOSITION.md"
         )
 

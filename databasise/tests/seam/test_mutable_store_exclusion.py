@@ -106,8 +106,10 @@ async def test_comparison_resolving_mutates_store_wiring_is_refused(cbm_reachabl
 
     message = str(exc_info.value)
     assert "MutableStoreComparisonExcludedError" in message
-    assert _CBM_NAME_AT_VERSION in message
-    assert exc_info.value.component == _CBM_NAME_AT_VERSION
+    # 13 REVIEW A-WR-01 (D-15, §18.3): the public field names the capability; the part stays private.
+    assert _CBM_NAME_AT_VERSION not in message
+    assert exc_info.value.component == "mutates_store"
+    assert exc_info.value._component == _CBM_NAME_AT_VERSION
 
 
 async def test_refusal_fires_before_any_arm_executes_no_store_write_possible(cbm_reachable, tmp_path):
@@ -139,7 +141,7 @@ async def test_single_selector_resolving_a_mutating_wiring_is_refused(cbm_reacha
     with pytest.raises(MutableStoreComparisonExcludedError) as exc_info:
         await engine.compare(QueryObject(text=_QUERY_TEXT), [Selector(capability=_MUTATES_STORE_CAPABILITY)])
 
-    assert exc_info.value.component == _CBM_NAME_AT_VERSION
+    assert exc_info.value.component == "mutates_store"
     assert spy.calls == []
 
 
@@ -177,8 +179,8 @@ async def test_refusal_names_only_the_excluded_component(cbm_reachable, tmp_path
         )
 
     message = str(exc_info.value)
-    # The excluded component's own name is present exactly once; no other candidate wiring, arm
-    # name or node id is named anywhere in the message.
-    assert message.count(_CBM_NAME_AT_VERSION) == 1
-    for forbidden in ("naive", "hipporag/base", "lightrag/base", "cbm"):
+    # No part name (13 REVIEW A-WR-01), candidate wiring, arm name or node id is named anywhere in the
+    # message; the capability is.
+    assert "mutates_store" in message
+    for forbidden in (_CBM_NAME_AT_VERSION, "codebase-memory-mcp", "naive", "hipporag/base", "lightrag/base", "cbm"):
         assert forbidden not in message
