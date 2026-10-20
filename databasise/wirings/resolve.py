@@ -219,6 +219,20 @@ def all_wirings() -> list[tuple[str, dict[str, Any]]]:
     return candidates
 
 
+def wiring_for_name(name: str) -> dict[str, Any] | None:
+    """The wiring :func:`all_wirings` pairs with ``name`` (14-03-PLAN.md, D-05), resolving only that
+    one wiring. Returns None for any other string — this module imports nothing from the seam, so
+    callers map None to a named refusal (``selectors._resolve_alias``,
+    ``promotion.resolve_single_arm``, the engine's verb paths). Membership is checked before any
+    file is read, so no input reaches the file system.
+    """
+    if name in _ARM_NAMES:
+        return resolve_arm(name)
+    if name in WIRING_NAMES and name != "lightrag":
+        return load_wiring(name)
+    return None
+
+
 __all__ = [
     "UnknownArmError",
     "UnknownWiringFamilyError",
@@ -230,5 +244,6 @@ __all__ = [
     "declared_node_ids",
     "all_wirings",
     "wiring_family",
+    "wiring_for_name",
     "without_recipe_only_nodes",
 ]
