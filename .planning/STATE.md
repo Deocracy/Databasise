@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 13
 current_phase_name: Selectors, Wiring & Runner
 status: executing
-stopped_at: Completed 13-10-PLAN.md
-last_updated: "2026-10-20T16:17:25.561Z"
+stopped_at: Completed 13-12-PLAN.md
+last_updated: "2026-10-20T17:28:00.625Z"
 last_activity: 2026-10-19
 last_activity_desc: Phase 13 execution started
-state_head: 59803041b36cd39a7fe5dca4eed5af11f78bb773
+state_head: ecdcded213469f043fc0a73244a418e26f36d45f
 progress:
   total_phases: 11
   completed_phases: 5
   total_plans: 70
-  completed_plans: 68
+  completed_plans: 69
   percent: 45
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-19 after Phase 12)
 ## Current Position
 
 Phase: 13 (Selectors, Wiring & Runner) — EXECUTING
-Plan: 12 of 13
+Plan: 13 of 13
 Status: Ready to execute
 Last activity: 2026-10-19 — Phase 13 execution started
 
@@ -128,6 +128,7 @@ Progress: [█████░░░░░] 45% (4/11 phases)
 | Phase 13 P07 | 35min | 3 tasks | 8 files |
 | Phase 13 P08 | 2h | 3 tasks | 8 files |
 | Phase 13 P10 | 75m | 3 tasks | 8 files |
+| Phase 13 P12 | 3h | 3 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -228,6 +229,7 @@ Recent decisions affecting current work:
 - [Phase 13]: WIRE-02: KG-arm evidence is assemble's truncated chunk list; bypass evidence_position is null; validator reports ghost provides/evidence nodes
 - [Phase 13]: 13-08: a cycle is a violation code inside _refuse_unparseable; runner pre-flight errors are translated by one _run_wiring helper; GuardDeclarationError keeps its positional pair and gains keyword-only node_id/problem
 - [Phase 13]: 13-10: persist the raw RunRecord before any post-dispatch refusal; map reasons to closed codes only on the envelope and non-debug trace
+- [Phase 13]: 13-12: naive keeps wiring_id lightrag-base, other arms get lightrag-<arm>; guards read a declared signal key; pinned parity hashes annotated, not re-minted
 
 ### Pending Todos
 
@@ -281,8 +283,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-20T04:47:44.495Z
-Stopped at: Completed 13-10-PLAN.md
+Last session: 2026-10-20T17:28:00.371Z
+Stopped at: Completed 13-12-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
