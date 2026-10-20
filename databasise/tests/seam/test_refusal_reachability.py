@@ -139,3 +139,96 @@ async def test_compare_with_no_selector_is_still_refused(store_root):
     _result, caught = await _outcome(engine.compare(QueryObject(text="x"), []))
 
     assert type(caught).__name__ == "EmptyComparisonRequestError", caught
+
+
+# --------------------------------------------------------------------------------------------- #
+# the other partly reachable refusals (WIRE-17, D-11)
+# --------------------------------------------------------------------------------------------- #
+
+
+async def _hipporag_ingested(store_root, workspace: str) -> None:
+    from databasise.seam.corpus import IngestDocument
+
+    await _engine(store_root, workspace).ingest(
+        IngestDocument(document_id="reach-doc", text="Ed Wood directed several low-budget films."),
+        selector=Selector(capability=_HIPPORAG_CAPABILITY),
+    )
+
+
+async def test_an_unbudgetable_client_on_a_hipporag_query_is_refused(store_root):
+    from fastapi.testclient import TestClient
+
+    from databasise.seam.rest import create_app
+
+    workspace = "reach-unbudgetable"
+    await _hipporag_ingested(store_root, workspace)
+    clients = {
+        "embedding": _StubEmbeddingClient(counted_by="unbudgetable"),
+        "llm": _StubLLMClient(counted_by="unbudgetable"),
+    }
+    engine = Databasise(store_root=store_root, workspace=workspace, clients=clients)
+    selector = Selector(capability=_HIPPORAG_CAPABILITY)
+
+    _result, caught = await _outcome(engine.query(QueryObject(text="What did Ed Wood direct?"), selector))
+
+    assert type(caught).__name__ == "UnbudgetableParticipantError", caught
+    response = TestClient(create_app(store_root=store_root, workspace=workspace, clients=clients)).post(
+        "/query", json={"query": {"text": "What did Ed Wood direct?"}, "selector": {"capability": _HIPPORAG_CAPABILITY}}
+    )
+    assert response.status_code == 422
+
+
+async def test_the_shipped_client_with_usage_is_budgetable_on_lightrag(synthetic_naive_store):
+    from types import SimpleNamespace
+
+    from databasise.clients.openai_compat import OpenAICompatibleClient
+
+    class _UsageEmbeddingsEndpoint:
+        async def create(self, **kwargs):
+            return SimpleNamespace(
+                model="stub-embed-model",
+                usage=SimpleNamespace(prompt_tokens=3, total_tokens=3),
+                data=[SimpleNamespace(index=i, embedding=[1.0, 0.0, 0.0]) for i in range(len(kwargs["input"]))],
+            )
+
+    shipped = OpenAICompatibleClient(
+        base_url="http://ignored",
+        model="requested-embed",
+        client=SimpleNamespace(embeddings=_UsageEmbeddingsEndpoint()),
+    )
+    engine = _engine(
+        synthetic_naive_store["store_root"], synthetic_naive_store["workspace"], embedding=shipped
+    )
+
+    result, caught = await _outcome(engine.query(QueryObject(text="anything"), Selector(capability=_LIGHTRAG_CAPABILITY)))
+
+    assert caught is None, caught
+    assert isinstance(result, ResponseEnvelope)
+
+
+async def test_retry_with_a_hipporag_selector_has_no_write_path(store_root):
+    engine = _engine(store_root, "reach-retry")
+
+    _result, caught = await _outcome(
+        engine.retry_document("reach-doc", Selector(capability=_HIPPORAG_CAPABILITY))
+    )
+
+    assert type(caught).__name__ == "NoWritePathForModalityError", caught
+    assert getattr(caught, "operation", None) == "retry"
+
+
+def test_every_shipped_family_has_a_corpus_ingest_wiring():
+    """The kept ingest mapping in ``engine._corpus_wiring`` is unreachable by shipped wirings."""
+    from databasise.wirings.resolve import WIRING_NAMES, load_wiring
+
+    assert set(WIRING_NAMES) == {"lightrag", "hipporag"}
+    failures = []
+    for name in WIRING_NAMES:
+        try:
+            wiring = load_wiring(name, variant="corpus-ingest")
+        except Exception as exc:  # noqa: BLE001 - reported below
+            failures.append((name, type(exc).__name__))
+            continue
+        if not wiring.get("nodes"):
+            failures.append((name, "empty"))
+    assert failures == []
