@@ -23,10 +23,10 @@ import pytest
 # Test 6 alone, which makes no thread-count claim.
 _KV_ONLY_WIRING = {
     "nodes": {
-        "produce": {"component": "core/passthrough@1.0.0", "kind": "stage", "deps": []},
+        "produce": {"component": "core/passthrough@1.0.0", "kind": "passthrough", "deps": []},
         "store": {
             "component": "core/kv-writer@1.0.0",
-            "kind": "stage",
+            "kind": "kv-writer",
             "effects": ["writes_kv"],
             "config": {"note": "embed-startup-smoke"},
             "deps": ["produce"],
