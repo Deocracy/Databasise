@@ -55,6 +55,7 @@ from databasise.seam.refusals import (
     EmptyQueryObjectError,
     ForbiddenSelectorInputError,
     ForeignEngineRefusalError,
+    GateNotCalibratedError,
     GateVerbNotBuiltError,
     InvalidChangeOriginError,
     InvalidEvidenceNamespaceError,
@@ -70,6 +71,7 @@ from databasise.seam.refusals import (
     InvalidDocumentIdError,
     NoWritePathForModalityError,
     PageBoundsError,
+    PartialRunEvidenceError,
     OversizedDocumentError,
     PageSizeExceededError,
     SeamRefusalError,
@@ -490,6 +492,8 @@ _REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
     ),
     InvalidNodeSettingError: lambda: InvalidNodeSettingError("max_concurrency", node_id="some-node"),
     InvalidGuardDeclarationError: lambda: InvalidGuardDeclarationError(node_id="some-node"),
+    PartialRunEvidenceError: lambda: PartialRunEvidenceError(trace_ids=["trace-1"]),
+    GateNotCalibratedError: lambda: GateNotCalibratedError(verb="promote-next"),
 }
 
 

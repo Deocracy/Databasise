@@ -540,6 +540,22 @@ class DisagreeingPromotionTraceIdsError(SeamRefusalError):
         )
 
 
+class PartialRunEvidenceError(SeamRefusalError):
+    """Raised by ``Databasise.promote`` (14-03-PLAN.md, D-02) for any trace whose record has
+    ``partial`` true (D-03): a partial run cannot be promotion evidence. Rollback and retire raise it
+    only for a partial trace whose arm cannot be identified (D-01). Phase 16's CONN-09 preview
+    reaches it through ``seam.promotion.refuse_partial_evidence``. Names only the caller's own
+    ``trace_ids`` — never an arm, node id or mutation class (CONTRACT §18.3).
+    """
+
+    def __init__(self, *, trace_ids: list[str]):
+        self.trace_ids = list(trace_ids)
+        super().__init__(
+            f"PartialRunEvidenceError: trace ids {self.trace_ids!r} come from partial runs, "
+            "which cannot be promotion evidence"
+        )
+
+
 class InvalidChangeOriginError(SeamRefusalError):
     """Raised by ``Databasise.promote()`` (07-01-PLAN.md, D-08) when ``change_origin`` is absent
     (``None``) or is not one of CONTRACT §7's two enumerated values (``human_edit``,
@@ -590,6 +606,22 @@ class GateVerbNotBuiltError(SeamRefusalError):
     def __init__(self, *, verb: str):
         self.verb = verb
         super().__init__(f"GateVerbNotBuiltError: verb {verb!r} is not built in this milestone")
+
+
+class GateNotCalibratedError(SeamRefusalError):
+    """Raised by ``Databasise.promote`` (14-03-PLAN.md, D-04) for ``promote-next`` and
+    ``promote-now`` before alias validation, trace resolution and any ledger access — the same
+    refusal for every arm. TOOL-12 (Phase 15) lifts it only for an arm with a persisted calibrated
+    floor (EVAL-10); ``MeasurementPostureRefusalError`` and ``UncalibratedFloorRefusalError`` stay
+    for that path. Names only the caller's own ``verb``.
+    """
+
+    def __init__(self, *, verb: str):
+        self.verb = verb
+        super().__init__(
+            f"GateNotCalibratedError: verb {verb!r} is refused because the promotion gate is "
+            "not calibrated"
+        )
 
 
 class MeasurementPostureRefusalError(SeamRefusalError):
@@ -987,4 +1019,6 @@ __all__ = [
     "UnbudgetableParticipantError",
     "InvalidNodeSettingError",
     "InvalidGuardDeclarationError",
+    "PartialRunEvidenceError",
+    "GateNotCalibratedError",
 ]
