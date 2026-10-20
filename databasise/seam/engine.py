@@ -469,6 +469,15 @@ def _next_offset(page: Page, documents: list[Any], total: int) -> int | None:
     return reached if documents and reached < total else None
 
 
+def _node_dicts(resolved: dict[str, Any]) -> list[dict[str, Any]]:
+    """The resolved wiring's node dicts; a malformed `nodes` yields none so the injectors below
+    pass it through to ``parse_wiring``, whose report names the defect (WIRE-06)."""
+    nodes = resolved.get("nodes", {})
+    if not isinstance(nodes, dict):
+        return []
+    return [node for node in nodes.values() if isinstance(node, dict)]
+
+
 def _inject_query(resolved: dict[str, Any], query: str) -> dict[str, Any]:
     """06-01-PLAN.md: stamps ``query`` onto every node the resolved wiring's own declared
     ``consumes_query`` array names — a no-op for a node the resolved wiring does not contain
@@ -482,6 +491,8 @@ def _inject_query(resolved: dict[str, Any], query: str) -> dict[str, Any]:
     no-op-for-an-absent-declaration behaviour.
     """
     nodes = resolved.get("nodes", {})
+    if not isinstance(nodes, dict):  # a malformed document is refused by parse_wiring, not here
+        return resolved
     consumes_query = resolved.get("consumes_query") or []
     for node_id in consumes_query:
         if node_id not in nodes:
@@ -495,7 +506,7 @@ def _inject_query(resolved: dict[str, Any], query: str) -> dict[str, Any]:
 def _inject_token_allowance(resolved: dict[str, Any], allowance: int) -> dict[str, Any]:
     """Mirrors ``run_arm.py``'s own ``_inject_token_allowance`` exactly: sets
     ``config.token_allowance`` on every resolved node that does not already declare one."""
-    for node in resolved.get("nodes", {}).values():
+    for node in _node_dicts(resolved):
         config = dict(node.get("config") or {})
         config.setdefault("token_allowance", allowance)
         node["config"] = config
@@ -537,7 +548,7 @@ def _inject_max_total_tokens(resolved: dict[str, Any], max_total_tokens: int) ->
     """11-11 (LRAG-17, T-11-24): every LightRAG context assembler gets ``config.max_total_tokens``
     (v1's ``DEFAULT_MAX_TOTAL_TOKENS``) unless the wiring sets its own, so no assembled context is
     unbounded."""
-    for node in resolved.get("nodes", {}).values():
+    for node in _node_dicts(resolved):
         if str(node.get("component", "")).startswith("lightrag/assembler-kg-context"):
             config = dict(node.get("config") or {})
             config.setdefault("max_total_tokens", max_total_tokens)

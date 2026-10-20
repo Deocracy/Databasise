@@ -56,6 +56,7 @@ from databasise.validator.errors import (
     CODE_EFFECTS_EXCEED_PART,
     CODE_EMPTY_WIRING,
     CODE_INVALID_NODE_SCHEMA,
+    CODE_INVALID_WIRING_DOCUMENT,
     CODE_SELF_DECLARED_DERIVATION,
     CODE_UNKNOWN_COMPONENT,
     CODE_UNKNOWN_EFFECT,
@@ -144,9 +145,30 @@ def _classify_node_schema_error(err: dict[str, Any]) -> str:
 
 def parse_wiring(doc: dict[str, Any], registry: PartRegistry) -> ParsedWiring:
     violations: list[Violation] = []
-    raw_nodes: dict[str, Any] = doc.get("nodes", {})
+    raw_nodes: dict[str, Any] = {}
 
-    if not raw_nodes:
+    # A wiring is untrusted author input: a non-object document or a non-object `nodes` is
+    # reported (WIRE-06), never raised, and the pass continues over an empty node map.
+    if not isinstance(doc, dict):
+        violations.append(
+            Violation(
+                code=CODE_INVALID_WIRING_DOCUMENT,
+                pointer="",
+                message="a wiring document must be a JSON object",
+            )
+        )
+    elif not isinstance(doc.get("nodes", {}), dict):
+        violations.append(
+            Violation(
+                code=CODE_INVALID_WIRING_DOCUMENT,
+                pointer="/nodes",
+                message="a wiring's `nodes` must be an object mapping node ids to nodes",
+            )
+        )
+    else:
+        raw_nodes = doc.get("nodes", {})
+
+    if not violations and not raw_nodes:
         violations.append(
             Violation(
                 code=CODE_EMPTY_WIRING,

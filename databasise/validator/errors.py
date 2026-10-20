@@ -25,6 +25,15 @@ CODE_DANGLING_DEP = "dangling-dep"
 CODE_UNKNOWN_EFFECT = "unknown-effect"
 CODE_INVALID_NODE_SCHEMA = "invalid-node-schema"
 CODE_EMPTY_WIRING = "empty-wiring"
+CODE_INVALID_WIRING_DOCUMENT = "invalid-wiring-document"
+"""The wiring document is not a JSON object, or its ``nodes`` value is present but not an object
+(WIRE-06): reported instead of raised so a malformed author document is a refusal, not a 500."""
+CODE_KIND_MISMATCH = "kind-mismatch"
+"""A wiring node's ``kind`` differs from the ``kind`` of the registered part its ``component``
+names (WIRE-06): the registry's kind governs placement and depth, so a disagreeing wiring is refused."""
+CODE_CYCLIC_WIRING = "cyclic-wiring"
+"""A wiring's dependency graph holds a cycle where the engine refuses one before dispatch (D-07);
+``parse_wiring`` itself still reports a cycle as data under ``ValidationReport.cycles``, not as this code."""
 CODE_BLAST_RADIUS_REFUSAL = "blast-radius-refusal"
 CODE_EFFECTS_EXCEED_PART = "effects-exceed-part"
 CODE_SELF_DECLARED_DERIVATION = "self-declared-derivation"
