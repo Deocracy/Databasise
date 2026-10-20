@@ -572,8 +572,9 @@ def _build_stores(
     06-01-PLAN.md: ``kv``/``graph`` are each a single namespaced store per run, resolved from the
     wiring's own declared ``store_namespaces`` (``{"kv": ..., "graph": ...}``) when ``resolved``
     is supplied — falling back to the existing ``_TEXT_CHUNKS_KIND``/``_GRAPH_KIND`` constants
-    when it is absent or declares none (``ingest``, ``delete_document`` and ``_execute_resolved``
-    pass ``resolved``; a wiring with no ``store_namespaces`` keeps the defaults). LightRAG's own base now
+    when it is absent or declares none (``ingest``, ``retry_document`` through ``_run_corpus_ingest``,
+    ``delete_document`` and ``_execute_resolved`` pass ``resolved``; a wiring with no
+    ``store_namespaces`` keeps the defaults). LightRAG's own base now
     declares ``{"kv": "text_chunks", "graph": "chunk_entity_relation"}`` — the exact values those
     two constants already hold — so a LightRAG run through ``_execute`` resolves to an identical
     on-disk directory either way. ``vector`` stays a :class:`MultiNamespaceVectorStore`, selected
@@ -1108,22 +1109,17 @@ class Databasise:
         self,
         query_object: QueryObject,
         selector: Selector | None = None,
-        *,
-        debug: bool = False,
     ) -> ResponseEnvelope:
-        """§18.1 query object in, §18.2 closed envelope out. ``debug`` is accepted here only for
-        signature stability with ``resolve_trace`` — the envelope's own trace reference is always
-        opaque; a caller wanting the node-by-node trace exchanges it through ``resolve_trace``.
+        """§18.1 query object in, §18.2 closed envelope out. The envelope's own trace reference is
+        always opaque; a caller wanting the node-by-node trace exchanges it through
+        ``resolve_trace``.
         """
-        del debug
         return await self._execute(query_object, selector)
 
     async def query_stream(
         self,
         query_object: QueryObject,
         selector: Selector | None = None,
-        *,
-        debug: bool = False,
     ) -> AsyncIterator[dict[str, Any]]:
         """The streaming variant of :meth:`query` (API-04, D-16). Shares ``query``'s selector
         resolution, execution and redaction entirely — it calls the identical ``_execute()`` this
@@ -1133,7 +1129,6 @@ class Databasise:
         docstring, "CR-01 gap closure") rather than a second, divergent execution path or shaping
         copy, and never a token-level stream the underlying scheduler does not itself produce.
         """
-        del debug
         envelope = await self._execute(query_object, selector)
         for event in stream_envelope_events(envelope):
             yield event
@@ -1142,8 +1137,6 @@ class Databasise:
         self,
         query_object: QueryObject,
         selectors: Sequence[Selector],
-        *,
-        debug: bool = False,
     ) -> ResponseEnvelope | dict[str, ResponseEnvelope]:
         """API-08's comparison operation (06-03-PLAN.md) — one query object against N selectors,
         returning per-arm envelopes keyed by the caller's own selector values (never an arm id,
@@ -1169,8 +1162,7 @@ class Databasise:
         a key named 'answer' cannot make a map look like an envelope. Keys are not prefixed. A key
         collision is refused before any arm runs.
 
-        ``debug`` is accepted and discarded for signature stability with ``query``/``query_stream``,
-        exactly as those two methods already do. Arms run sequentially, in the caller's own
+        Arms run sequentially, in the caller's own
         supplied order — matching this engine's own declared ``_CONCURRENCY_SETTING``; this method
         never introduces parallel arm execution (06-03-PLAN.md's own flagged assumption: a future
         change to concurrent arm dispatch would change the declared concurrency setting a later
@@ -1187,7 +1179,6 @@ class Databasise:
         and no store is written for any arm, including one that would otherwise have run first in
         the caller's own order.
         """
-        del debug
         check_consumable(query_object, self.registry)
         if len(selectors) == 0:
             raise EmptyComparisonRequestError()
@@ -2086,8 +2077,13 @@ class Databasise:
         retrieval_output = (
             scheduled["results"].get(evidence_node_id) if evidence_node_id else None
         )
-        retrieval_items = retrieval_output["items"] if isinstance(retrieval_output, dict) else []
         try:
+            # WIRE-14, D-09: a retrieval output without `items` is a named fault, never a bare KeyError.
+            if isinstance(retrieval_output, dict) and "items" not in retrieval_output:
+                raise MalformedEvidenceItemError(
+                    namespace=evidence_namespace, index=0, reason="carries no 'items' key"
+                )
+            retrieval_items = retrieval_output["items"] if isinstance(retrieval_output, dict) else []
             evidence = mint_evidence_refs(retrieval_items, namespace=evidence_namespace)
         except MalformedEvidenceItemError as exc:  # 09 REVIEW WR-01: a store fault, not a caller refusal
             raise _foreign_fault("query", exc, failure_class="MalformedDriverOutput") from exc
