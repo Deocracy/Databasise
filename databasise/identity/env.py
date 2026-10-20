@@ -41,7 +41,8 @@ _NIX_STORE_PREFIX = "/nix/store/"
 
 class EnvironmentDigestError(RuntimeError):
     """A collected environment value embedded a Nix store path — Nix is substrate-only per
-    spike 004, and store paths are never identity (D-12).
+    spike 004, and store paths are never identity (D-12) — or :func:`environment_hash` could not
+    collect the environment at all (13 REVIEW A-WR-03).
     """
 
 
@@ -93,5 +94,16 @@ def environment_hash() -> str:
     """The resolved-closure environment digest, memoised per process (D-12). Hashes the python
     version, OS (``platform.system()``), architecture (``platform.machine()``), libc
     (``platform.libc_ver()``) and each distribution's name, version and RECORD digest; not the
-    kernel release (D-16)."""
-    return hashlib.sha256(canonicalise(_collect_environment_payload())).hexdigest()
+    kernel release (D-16).
+
+    Any other collection failure (an empty ``dist-info`` whose version is ``None``, a RECORD that is
+    not UTF-8) is re-raised as :class:`EnvironmentDigestError`, so ``health()`` reads degraded and
+    the seam answers 503 ``EnvironmentDigestUnavailable`` (D-22, 13 REVIEW A-WR-03). Only success is
+    memoised."""
+    try:
+        payload = _collect_environment_payload()
+    except EnvironmentDigestError:
+        raise
+    except Exception as exc:  # noqa: BLE001 - any unreadable distribution makes the identity uncomputable
+        raise EnvironmentDigestError(f"environment digest could not be collected: {type(exc).__name__}") from exc
+    return hashlib.sha256(canonicalise(payload)).hexdigest()

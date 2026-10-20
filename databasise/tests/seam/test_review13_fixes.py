@@ -58,3 +58,40 @@ async def test_a_malformed_items_value_is_malformed_driver_output_with_a_trace(s
         await _run_resolved(store_root, registry, wiring)
     assert exc_info.value.failure_class == "MalformedDriverOutput"
     assert exc_info.value.trace_token
+
+
+class _EmptyDistInfo:
+    """An interrupted install's empty ``*.dist-info``: no metadata, so ``version`` is None."""
+
+    metadata = {"Name": "broken"}
+    version = None
+
+    def read_text(self, _name):
+        return None
+
+
+@pytest.fixture
+def broken_environment(monkeypatch):
+    from databasise.identity import env
+
+    monkeypatch.setattr(env, "distributions", lambda: [_EmptyDistInfo()])
+    env.environment_hash.cache_clear()
+    yield env
+    env.environment_hash.cache_clear()  # the real environment's digest is recomputed by the next caller
+
+
+def test_an_uncollectable_environment_is_an_environment_digest_error(broken_environment):
+    """A-WR-03: the TypeError from a None version surfaces as the named error, and is not memoised."""
+    with pytest.raises(broken_environment.EnvironmentDigestError):
+        broken_environment.environment_hash()
+    assert broken_environment.environment_hash.cache_info().currsize == 0
+
+
+async def test_an_uncollectable_environment_refuses_a_query_as_environment_digest_unavailable(
+    store_root, broken_environment
+):
+    """A-WR-03 (D-22): the query path answers the 503 ForeignEngineRefusalError, never a bare TypeError."""
+    wiring = {"nodes": {"a": _node()}, "provides": ["a"]}
+    with pytest.raises(ForeignEngineRefusalError) as exc_info:
+        await _run_resolved(store_root, PartRegistry(), wiring)
+    assert exc_info.value.failure_class == "EnvironmentDigestUnavailable"
