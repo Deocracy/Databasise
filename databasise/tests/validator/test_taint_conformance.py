@@ -100,7 +100,7 @@ def _n(component: str, *deps: str) -> dict[str, object]:
     spec = FIXTURE_COMPONENTS[component]
     return {
         "component": component,
-        "kind": "primitive",
+        "kind": str(spec["depth"]),  # the fixture Part's kind (see _build_fixture_parts)
         "effects": list(spec["effects"]),  # type: ignore[arg-type]
         "deps": list(deps),
     }
@@ -262,7 +262,7 @@ def test_transient_effects_added_to_case_6_change_nothing():
             "nodes": {
                 "ingest": {
                     "component": "lightrag-ingest@1.5.4",
-                    "kind": "primitive",
+                    "kind": "opaque",
                     "effects": effects,
                     "deps": [],
                 }

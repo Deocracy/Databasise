@@ -57,6 +57,7 @@ from databasise.validator.errors import (
     CODE_EMPTY_WIRING,
     CODE_INVALID_NODE_SCHEMA,
     CODE_INVALID_WIRING_DOCUMENT,
+    CODE_KIND_MISMATCH,
     CODE_SELF_DECLARED_DERIVATION,
     CODE_UNKNOWN_COMPONENT,
     CODE_UNKNOWN_EFFECT,
@@ -217,6 +218,17 @@ def parse_wiring(doc: dict[str, Any], registry: PartRegistry) -> ParsedWiring:
             )
         else:
             parts[node_id] = part
+            if node.kind != part.kind:
+                violations.append(
+                    Violation(
+                        code=CODE_KIND_MISMATCH,
+                        pointer=f"/nodes/{token}/kind",
+                        message=(
+                            f"node {node_id!r} declares kind {node.kind!r} but its component "
+                            f"{node.component!r} is registered with kind {part.kind!r}"
+                        ),
+                    )
+                )
             # CR-01: the runner sources execution_mode/store-scoping/blast-radius from this
             # resolved Part's own effects, never the wiring's self-declared WiringNode.effects
             # (see runner/scheduler.py and validator/blast_radius.py). A wiring MAY declare a

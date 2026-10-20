@@ -127,12 +127,12 @@ def test_parse_wiring_accumulates_three_independent_defects_in_one_pass():
             "unknown_component": {"component": "does-not-exist@1.0", "kind": "stage", "deps": []},
             "dangling_dep": {
                 "component": "core/passthrough@1.0.0",
-                "kind": "stage",
+                "kind": "passthrough",
                 "deps": ["missing"],
             },
             "unknown_effect": {
                 "component": "core/passthrough@1.0.0",
-                "kind": "stage",
+                "kind": "passthrough",
                 "effects": ["not-a-real-effect"],
                 "deps": [],
             },
@@ -155,7 +155,7 @@ def test_empty_wiring_is_one_violation_and_a_single_clean_node_yields_one_depth(
     assert empty_parsed.report.violations[0].code == CODE_EMPTY_WIRING
 
     single_doc = {
-        "nodes": {"solo": {"component": "core/passthrough@1.0.0", "kind": "stage", "deps": []}}
+        "nodes": {"solo": {"component": "core/passthrough@1.0.0", "kind": "passthrough", "deps": []}}
     }
     single_parsed = parse_wiring(single_doc, PartRegistry())
     assert single_parsed.report.ok
@@ -173,7 +173,7 @@ def test_wiring_node_declaring_an_effect_its_part_does_not_is_refused():
         "nodes": {
             "over-declared": {
                 "component": "core/passthrough@1.0.0",
-                "kind": "stage",
+                "kind": "passthrough",
                 "effects": ["writes_kv"],
                 "deps": [],
             }
@@ -196,7 +196,7 @@ def test_wiring_node_declaring_a_narrower_effects_set_than_its_part_is_permitted
     """
     doc = {
         "nodes": {
-            "under-declared": {"component": "core/kv-writer@1.0.0", "kind": "stage", "deps": []}
+            "under-declared": {"component": "core/kv-writer@1.0.0", "kind": "kv-writer", "deps": []}
         }
     }
     parsed = parse_wiring(doc, PartRegistry())
@@ -209,8 +209,8 @@ def test_unintended_cycle_is_reported_as_data_not_raised():
     """
     doc = {
         "nodes": {
-            "x": {"component": "core/passthrough@1.0.0", "kind": "stage", "deps": ["y"]},
-            "y": {"component": "core/passthrough@1.0.0", "kind": "stage", "deps": ["x"]},
+            "x": {"component": "core/passthrough@1.0.0", "kind": "passthrough", "deps": ["y"]},
+            "y": {"component": "core/passthrough@1.0.0", "kind": "passthrough", "deps": ["x"]},
         }
     }
     parsed = parse_wiring(doc, PartRegistry())  # must not raise

@@ -92,6 +92,12 @@ def test_a_node_id_with_a_slash_or_tilde_is_escaped_in_the_pointer(node_id, poin
     assert [v.pointer for v in _violations(doc, "unknown-component")] == [pointer]
 
 
+def test_a_kind_mismatch_is_a_violation():
+    doc = {"nodes": {"a": _node(kind="fixpoint")}}
+
+    assert [v.pointer for v in _violations(doc, "kind-mismatch")] == ["/nodes/a/kind"]
+
+
 def test_every_shipped_wiring_still_parses_ok():
     wirings = [(name, doc) for name, doc in all_wirings()]
     for family in ("lightrag", "hipporag"):
