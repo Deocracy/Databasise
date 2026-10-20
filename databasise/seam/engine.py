@@ -2174,10 +2174,11 @@ class Databasise:
                 scheduled["results"].get(evidence_node_id) if evidence_node_id else None
             )
             try:
-                # WIRE-14, D-09: a retrieval output without `items` is a named fault, never a bare KeyError.
-                if isinstance(retrieval_output, dict) and "items" not in retrieval_output:
+                # WIRE-14, D-09 (13 REVIEW A-WR-02): a retrieval output without an `items` list is a
+                # named fault, never a bare KeyError or TypeError.
+                if isinstance(retrieval_output, dict) and not isinstance(retrieval_output.get("items"), list):
                     raise MalformedEvidenceItemError(
-                        namespace=evidence_namespace, index=0, reason="carries no 'items' key"
+                        namespace=evidence_namespace, index=0, reason="carries no 'items' list"
                     )
                 retrieval_items = retrieval_output["items"] if isinstance(retrieval_output, dict) else []
                 evidence = mint_evidence_refs(retrieval_items, namespace=evidence_namespace)

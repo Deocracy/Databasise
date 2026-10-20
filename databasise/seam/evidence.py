@@ -32,6 +32,7 @@ from __future__ import annotations
 import math
 import numbers
 import re
+from collections.abc import Mapping
 from typing import Any
 
 from pydantic import field_validator
@@ -101,13 +102,16 @@ def mint_evidence_refs(
     element-wise map, order-preserving by construction.
 
     Raises :class:`MalformedEvidenceItemError` — WR-03, never a bare ``KeyError`` — for an item
-    carrying no ``"id"`` key (a differently-shaped item a future retrieval node could return), and
+    that is not a mapping or carries no ``"id"`` key (a differently-shaped item a future retrieval
+    node could return), and
     the same error for a NaN or infinite ``score``: a store-minted bad value is a machine fault
     (09 REVIEW WR-01), checked here before ``EvidenceRef``'s caller-input validator can blame the
     caller for it. The engine reports both as a foreign-engine fault.
     """
     refs: list[EvidenceRef] = []
     for index, item in enumerate(items):
+        if not isinstance(item, Mapping):  # 13 REVIEW A-WR-02: never a bare AttributeError
+            raise MalformedEvidenceItemError(namespace=namespace, index=index, reason="is not a mapping")
         item_id = item.get("id")
         if item_id is None:
             raise MalformedEvidenceItemError(namespace=namespace, index=index)
