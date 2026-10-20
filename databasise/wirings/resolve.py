@@ -162,10 +162,23 @@ def without_recipe_only_nodes(resolved: dict[str, Any]) -> dict[str, Any]:
     When ``provides`` is empty or names no node there is no answer position to walk from, so the
     older recipe-only rule applies: delete the nodes named as a value of ``recipe`` that no remaining
     node depends on.
+
+    13 REVIEW iter 2 WR-01: this runs before ``parse_wiring`` on the engine query path, so it
+    tolerates any document shape and leaves the reporting to ``parse_wiring`` (WIRE-06). A value
+    that is not the expected shape is skipped, never raised on.
     """
     run_copy = copy.deepcopy(resolved)
-    nodes = run_copy.get("nodes") or {}
-    frontier = [node_id for node_id in (run_copy.get("provides") or []) if node_id in nodes]
+    nodes = run_copy.get("nodes") if isinstance(run_copy, dict) else None
+    if not isinstance(nodes, dict):
+        return run_copy  # parse_wiring reports the malformed document
+
+    def _str_list(value: Any) -> list[str]:
+        return [item for item in value if isinstance(item, str)] if isinstance(value, list) else []
+
+    def _deps(node: Any) -> list[str]:
+        return _str_list(node.get("deps")) if isinstance(node, dict) else []
+
+    frontier = [node_id for node_id in _str_list(run_copy.get("provides")) if node_id in nodes]
     if frontier:
         keep: set[str] = set()
         while frontier:
@@ -173,13 +186,14 @@ def without_recipe_only_nodes(resolved: dict[str, Any]) -> dict[str, Any]:
             if node_id in keep or node_id not in nodes:
                 continue
             keep.add(node_id)
-            frontier.extend(nodes[node_id].get("deps") or [])
+            frontier.extend(_deps(nodes[node_id]))
         for node_id in set(nodes) - keep:
             del nodes[node_id]
         return run_copy
-    recipe_ids = set((run_copy.get("recipe") or {}).values())
+    recipe = run_copy.get("recipe")
+    recipe_ids = set(_str_list(list(recipe.values()))) if isinstance(recipe, dict) else set()
     for node_id in recipe_ids & set(nodes):
-        if not any(node_id in (node.get("deps") or []) for node in nodes.values()):
+        if not any(node_id in _deps(node) for node in nodes.values()):
             del nodes[node_id]
     return run_copy
 

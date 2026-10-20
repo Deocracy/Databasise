@@ -197,3 +197,25 @@ async def test_a_signal_missing_at_run_time_is_a_named_refusal_with_a_trace(stor
     body = refusal_body(exc_info.value)
     assert body["trace_token"]
     assert set(body) == {"refusal_type", "message", "trace_token"}  # the node id stays private
+
+
+@pytest.mark.parametrize(
+    "wiring",
+    [
+        {"nodes": {"a": _node()}, "provides": [["a"]]},
+        {"nodes": {"a": _node()}, "provides": "a"},
+        {"nodes": {"a": _node()}, "evidence_position": {"node": ["a"]}},
+        {"nodes": {"a": _node()}, "evidence_position": "a"},
+        {"nodes": {"a": 5}, "provides": ["a"]},
+        {"nodes": {"a": _node(deps=[["b"]])}, "provides": ["a"]},
+    ],
+    ids=["list-in-provides", "string-provides", "list-evidence-node", "string-evidence-position",
+         "non-object-node", "list-in-deps"],
+)
+async def test_a_malformed_wiring_on_the_engine_query_path_is_unparseable_wiring(store_root, wiring):
+    """Iteration 2 WR-01 (WIRE-06): the pruning step before ``parse_wiring`` raised a bare
+    TypeError or AttributeError on these shapes; the engine now gives parse_wiring's named 422."""
+    from databasise.seam.refusals import UnparseableWiringError
+
+    with pytest.raises(UnparseableWiringError):
+        await _run_resolved(store_root, PartRegistry(), wiring)
