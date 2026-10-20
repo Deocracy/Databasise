@@ -122,6 +122,17 @@ class LedgerRecord:
     targets_version: str | None = None
 
 
+@dataclass(frozen=True, kw_only=True)
+class LedgerEntry(LedgerRecord):
+    """The read projection of a ledger row: a :class:`LedgerRecord` plus the table's own ``id``
+    (the generation ordinal) and ``created_at``. Never a write type; ``LedgerRecord``'s CONTRACT §7
+    field list is unchanged.
+    """
+
+    id: int
+    created_at: str
+
+
 _JSON_FIELDS = ("arm_instance_hashes", "opaque_ttl_renewals", "parity_records", "promotion_trace_ids")
 
 # Bounded retry for the WAL-pragma first-touch race; see Ledger._set_wal.
@@ -278,14 +289,14 @@ class Ledger:
         )
         self._conn.commit()
 
-    def _row_to_record(self, row: sqlite3.Row) -> LedgerRecord:
+    def _row_to_record(self, row: sqlite3.Row, cls: type[LedgerRecord] = LedgerRecord) -> Any:
         kwargs: dict[str, Any] = {}
-        for field_name in LedgerRecord.__dataclass_fields__:
+        for field_name in cls.__dataclass_fields__:
             value = row[field_name]
             if field_name in _JSON_FIELDS:
                 value = json.loads(value)
             kwargs[field_name] = value
-        return LedgerRecord(**kwargs)
+        return cls(**kwargs)
 
     def append(self, record: LedgerRecord) -> int:
         """Insert ``record``, returning its monotonically increasing ``id``. Never updates or
@@ -376,9 +387,22 @@ class Ledger:
         return self._row_to_record(row) if row is not None else None
 
     def history(self, mutation_id: str) -> list[LedgerRecord]:
-        """Every record for ``mutation_id``, oldest first."""
+        """Every record for ``mutation_id``, oldest first. Test-only: no product code calls it;
+        the product reads an alias's history through :meth:`history_for_alias`.
+        """
         cur = self._conn.execute(
             "SELECT * FROM ledger WHERE mutation_id = ? ORDER BY id ASC",
             (mutation_id,),
         )
         return [self._row_to_record(r) for r in cur.fetchall()]
+
+    def history_for_alias(self, alias: str) -> list[LedgerEntry]:
+        """Every row for ``alias``, oldest first, rollbacks and tombstones included. Each entry
+        carries the row's ``id`` (the generation ordinal) and ``created_at``. Phase 16's
+        CONN-06/CONN-07 routes read it.
+        """
+        cur = self._conn.execute(
+            "SELECT * FROM ledger WHERE alias = ? ORDER BY id ASC",
+            (alias,),
+        )
+        return [self._row_to_record(r, cls=LedgerEntry) for r in cur.fetchall()]
