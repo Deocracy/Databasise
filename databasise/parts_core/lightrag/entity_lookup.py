@@ -55,4 +55,5 @@ LIGHTRAG_ENTITY_LOOKUP_PART = Part(
     effects=["reads_vector"],
     upstream_ref="v1/lightrag/operate.py",
     body=_entity_lookup_body,
+    reads_namespaces=(f"reads_vector:{_ENTITIES_NAMESPACE}",),
 )

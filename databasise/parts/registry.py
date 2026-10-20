@@ -15,6 +15,7 @@ None``) carries no admission requirement at all, regardless of its ``kind``.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from databasise.parts.admission import validate_admission
@@ -40,6 +41,18 @@ class DuplicatePartError(ValueError):
     def __init__(self, name_at_version: str):
         self.name_at_version = name_at_version
         super().__init__(f"part {name_at_version!r} is already registered")
+
+
+class InvalidReadNamespaceTokenError(ValueError):
+    """Raised by ``PartRegistry.register`` for a ``reads_namespaces`` token that is not
+    ``<reads_kv|reads_vector|reads_graph>:<namespace>`` with that effect declared in the part's own
+    ``effects`` and a ``[A-Za-z0-9-]+`` namespace (WIRE-01, D-01).
+    """
+
+    def __init__(self, name_at_version: str, token: str):
+        self.name_at_version = name_at_version
+        self.token = token
+        super().__init__(f"part {name_at_version!r} declares an invalid read-namespace token {token!r}")
 
 
 class UnadmittedOpaquePartError(RuntimeError):
@@ -82,6 +95,8 @@ async def _kv_writer_body(ctx: NodeContext) -> dict[str, Any]:
     await store.upsert({ctx.node_id: value})
     return value
 
+
+_READ_EFFECTS = ("reads_kv", "reads_vector", "reads_graph")
 
 _TRACER_PARTS: dict[str, Part] = {
     "core/passthrough@1.0.0": Part(
@@ -142,6 +157,14 @@ class PartRegistry:
         """
         if part.name_at_version in self._parts:
             raise DuplicatePartError(part.name_at_version)
+        for token in part.reads_namespaces:
+            effect, _, namespace = token.partition(":")
+            if (
+                effect not in _READ_EFFECTS
+                or effect not in part.effects
+                or not re.fullmatch(r"[A-Za-z0-9-]+", namespace)
+            ):
+                raise InvalidReadNamespaceTokenError(part.name_at_version, token)
         if part.body is not None and part.kind == "opaque":
             if part.admission is None:
                 raise UnadmittedOpaquePartError(part.name_at_version)

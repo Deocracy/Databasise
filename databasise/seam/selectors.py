@@ -154,6 +154,19 @@ def _wiring_effects(resolved: dict[str, Any], registry: PartRegistry) -> set[str
     return effects
 
 
+def _wiring_read_namespaces(resolved: dict[str, Any], registry: PartRegistry) -> set[str]:
+    """The union of every node's registered Part's ``reads_namespaces`` tokens (WIRE-01, D-01).
+    Matching only: kept apart from ``_wiring_effects`` because promotion and compare read that."""
+    tokens: set[str] = set()
+    for node in resolved.get("nodes", {}).values():
+        tokens.update(registry.get(node["component"]).reads_namespaces)
+    return tokens
+
+
+def _capability_tokens(resolved: dict[str, Any], registry: PartRegistry) -> set[str]:
+    return _wiring_effects(resolved, registry) | _wiring_read_namespaces(resolved, registry)
+
+
 def _match_capability(
     requested: set[str], candidates: Sequence[_Candidate], *, registry: PartRegistry
 ) -> _Candidate | None:
@@ -162,7 +175,7 @@ def _match_capability(
     matches = [
         candidate
         for candidate in candidates
-        if requested <= _wiring_effects(without_recipe_only_nodes(candidate[1]), registry)
+        if requested <= _capability_tokens(without_recipe_only_nodes(candidate[1]), registry)
     ]
     if not matches:
         return None

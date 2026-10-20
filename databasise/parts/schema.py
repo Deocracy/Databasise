@@ -129,6 +129,13 @@ class Part:
     part — CONTRACT §8's admission record. ``PartRegistry.register`` enforces this at
     registration time (``UnadmittedOpaquePartError``); a declaration-only part (``body is None``)
     carries no admission requirement.
+
+    ``reads_namespaces`` (13-02-PLAN.md, WIRE-01, D-01) lists the part's read-namespace capability
+    tokens, each ``<read effect>:<namespace>`` (for example ``reads_vector:entities``) — a
+    Databasise token format under CONTRACT §14.2's read-namespace rows. Only the capability selector
+    matches on them (``databasise.seam.selectors``); they are never part of ``effects`` (so WIRE-16's
+    check of ``effects`` against the ``Effect`` literal is unaffected) and never part of instance
+    identity. ``PartRegistry.register`` validates each token.
     """
 
     name_at_version: str
@@ -139,6 +146,7 @@ class Part:
     body: Callable[[NodeContext], Any] | None = None
     artifact_scope: ArtifactScope | None = None
     admission: "AdmissionRecord | None" = None
+    reads_namespaces: tuple[str, ...] = ()
 
 
 class WiringNode(BaseModel):
