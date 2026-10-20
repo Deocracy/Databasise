@@ -58,6 +58,8 @@ from databasise.seam.refusals import (
     GateVerbNotBuiltError,
     InvalidChangeOriginError,
     InvalidEvidenceNamespaceError,
+    InvalidGuardDeclarationError,
+    InvalidNodeSettingError,
     MalformedBase64PayloadError,
     MalformedSelectorPayloadError,
     MeasurementPostureRefusalError,
@@ -484,6 +486,8 @@ _REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
     ActiveGenerationRetirementError: lambda: ActiveGenerationRetirementError(
         alias="some-alias", version="1.0.0"
     ),
+    InvalidNodeSettingError: lambda: InvalidNodeSettingError("max_concurrency", node_id="some-node"),
+    InvalidGuardDeclarationError: lambda: InvalidGuardDeclarationError(node_id="some-node"),
 }
 
 

@@ -772,7 +772,9 @@ class ForeignEngineRefusalError(SeamRefusalError):
     D-06, D-13). The class name is historical; a store fault is not a v1 failure. ``operation``
     names the seam operation that was attempted (e.g. ``"ingest"``); ``failure_class`` is the
     allow-listed public name of what went wrong. REST answers 503 when v1 is unavailable and 502
-    for every other class.
+    for every other class. ``EnvironmentDigestUnavailable`` (Phase 13 D-22) is raised when the
+    resolved-environment digest cannot be computed before a run; the machine cannot name the run's
+    identity, so REST answers 503.
 
     The underlying exception is private: stored on ``_cause`` (so ``refusal_body`` never exposes it),
     readable in-process through the read-only ``cause`` property, and logged in full by the engine
@@ -888,6 +890,30 @@ class UnparseableWiringError(SeamRefusalError):
         )
 
 
+class InvalidNodeSettingError(SeamRefusalError):
+    """Raised before any node is dispatched when a wiring node declares a ``max_concurrency`` or
+    ``token_allowance`` that is not a valid true integer in range (WIRE-05, D-07). REST answers 422.
+    ``setting`` is the public setting name (``max_concurrency`` or ``token_allowance``); the value
+    and the declaring node id are the machine's own wiring content and stay private (``_node_id``),
+    in the message and the body both."""
+
+    def __init__(self, setting: str, *, node_id: str):
+        self.setting = setting
+        self._node_id = node_id
+        super().__init__(f"InvalidNodeSettingError: the wiring declares an invalid {setting!r} setting")
+
+
+class InvalidGuardDeclarationError(SeamRefusalError):
+    """Raised before any node is dispatched when a wiring node's guard declaration is malformed: a
+    bad entry shape, an inadmissible granularity or an evaluating node that is neither the guarded
+    node nor one of its dependencies (WIRE-08, D-19). REST answers 422. No public attribute: the
+    guarded node id is the machine's internal wiring identity and stays on ``_node_id``."""
+
+    def __init__(self, *, node_id: str | None):
+        self._node_id = node_id
+        super().__init__("InvalidGuardDeclarationError: the wiring declares a malformed guard")
+
+
 __all__ = [
     "SeamRefusalError",
     "EmptyQueryObjectError",
@@ -935,4 +961,6 @@ __all__ = [
     "InvalidEvidenceNamespaceError",
     "EmptyIngestDocumentError",
     "UnbudgetableParticipantError",
+    "InvalidNodeSettingError",
+    "InvalidGuardDeclarationError",
 ]

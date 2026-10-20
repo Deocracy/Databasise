@@ -12,6 +12,8 @@ assertion on code that predates the fix.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import pytest
 
 pytest.importorskip("fastapi")
@@ -242,3 +244,101 @@ async def test_boundary_settings(config, refused):
     else:
         assert type(exc).__name__ == refused, repr(exc)
         assert ran == []
+
+
+# ---- engine translation of runner pre-flight errors (D-07, D-22) -----------------------------------
+
+import databasise.identity.env as env_module
+
+_SECRET_NODE = "secret-node-7"
+
+
+def _single_node_query_wiring(config: dict) -> dict:
+    return {
+        "wiring_id": "lightrag-preflight",
+        "nodes": {_SECRET_NODE: _node(config=config)},
+        "provides": [_SECRET_NODE],
+        "consumes_documents": [],
+        "consumes_query": [],
+    }
+
+
+def _guard_entry(evaluating_node: str) -> dict:
+    return {
+        "name": "g",
+        "evaluating_node": evaluating_node,
+        "value_when_not_fired": False,
+        "granularity": "per-query",
+    }
+
+
+@pytest.mark.parametrize(
+    ("config", "setting"),
+    [
+        ({"max_concurrency": True}, "max_concurrency"),
+        ({"token_allowance": "100"}, "token_allowance"),
+    ],
+)
+def test_an_invalid_setting_reaches_rest_as_a_named_422(config, setting, store_root, monkeypatch):
+    _inject_query_wiring(monkeypatch, lambda: _single_node_query_wiring(config))
+    client = _client(store_root)
+
+    response = client.post("/query", json=_QUERY_BODY)
+
+    assert response.status_code == 422, response.text
+    body = _json(response)
+    assert body.get("refusal_type") == "InvalidNodeSettingError", body
+    assert body.get("setting") == setting, body
+    assert _SECRET_NODE not in response.text
+
+
+def test_a_misdeclared_guard_reaches_rest_as_a_named_422(store_root, monkeypatch):
+    config = {"guards": [_guard_entry("not-a-dependency")]}
+    _inject_query_wiring(monkeypatch, lambda: _single_node_query_wiring(config))
+    client = _client(store_root)
+
+    response = client.post("/query", json=_QUERY_BODY)
+
+    assert response.status_code == 422, response.text
+    body = _json(response)
+    assert body.get("refusal_type") == "InvalidGuardDeclarationError", body
+    assert _SECRET_NODE not in response.text and "not-a-dependency" not in response.text
+
+
+class _NixPathDistribution:
+    """A distribution whose RECORD embeds a Nix store path, which the environment digest refuses."""
+
+    metadata: ClassVar[dict[str, str]] = {"Name": "poisoned"}
+    version = "1.0"
+
+    def read_text(self, filename: str) -> str | None:
+        return "/nix/store/abc-poisoned/lib.py,sha256=x,1" if filename == "RECORD" else None
+
+
+def test_an_uncomputable_environment_digest_is_a_named_503(synthetic_naive_store, monkeypatch):
+    store = synthetic_naive_store
+    monkeypatch.setattr(env_module, "distributions", lambda: [_NixPathDistribution()])
+    env_module.environment_hash.cache_clear()
+    try:
+        client = _client(store["store_root"], store["workspace"])
+        response = client.post("/query", json=_QUERY_BODY)
+    finally:
+        env_module.environment_hash.cache_clear()
+
+    assert response.status_code == 503, response.text
+    body = _json(response)
+    assert body.get("failure_class") == "EnvironmentDigestUnavailable", body
+    assert "/nix/store" not in response.text
+
+
+def test_a_repeated_refusal_writes_nothing(store_root, monkeypatch):
+    _inject_query_wiring(monkeypatch, lambda: _single_node_query_wiring({"max_concurrency": True}))
+    client = _client(store_root)
+    rows_before = _trace_rows(client)
+
+    first = client.post("/query", json=_QUERY_BODY)
+    second = client.post("/query", json=_QUERY_BODY)
+
+    assert (first.status_code, _json(first).get("refusal_type")) == (422, "InvalidNodeSettingError")
+    assert (second.status_code, _json(second).get("refusal_type")) == (422, "InvalidNodeSettingError")
+    assert _trace_rows(client) == rows_before

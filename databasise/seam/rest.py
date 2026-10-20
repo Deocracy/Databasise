@@ -133,8 +133,16 @@ _NOT_FOUND_REFUSALS: tuple[type[SeamRefusalError], ...] = (
 # that lacks a key or names an unsupported backend, Phase 11 D-12); 502 for every other class, i.e.
 # an engine run, a store (StoreFault) or the v1 engine failed, stopped early (RunIncomplete) or
 # returned malformed output. A consumer is never told to change input that was not at fault.
+# EnvironmentDigestUnavailable (Phase 13 D-22): the environment digest could not be computed, so the
+# engine cannot stamp a run identity; the engine is unavailable, not the input at fault.
 _ENGINE_UNAVAILABLE = frozenset(
-    {"MissingV1InterpreterError", "CorpusOpTimeoutError", "DriverUnavailable", "V1NotConfigured"}
+    {
+        "MissingV1InterpreterError",
+        "CorpusOpTimeoutError",
+        "DriverUnavailable",
+        "V1NotConfigured",
+        "EnvironmentDigestUnavailable",
+    }
 )
 
 

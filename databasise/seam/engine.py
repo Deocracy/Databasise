@@ -217,6 +217,7 @@ from databasise.parts_core.lightrag import relation_lookup as _relation_lookup
 from databasise.parts_core.lightrag.full_ingest import ABANDONED_WORKERS
 from databasise.parts_core.lightrag.v1_index_sync import V1_INDEX_SYNC_MANIFEST_KEY
 from databasise.runner import scheduler as _scheduler
+from databasise.runner.guards import GuardDeclarationError
 from databasise.runner.trace import NodeTrace, RunRecord
 from databasise.seam.corpus import (
     _URL_RE,
@@ -270,6 +271,8 @@ from databasise.seam.refusals import (
     ForeignEngineRefusalError,
     GateVerbNotBuiltError,
     InvalidChangeOriginError,
+    InvalidGuardDeclarationError,
+    InvalidNodeSettingError,
     InvalidPromotionAliasError,
     MutableStoreComparisonExcludedError,
     NoRawUploadPathForModalityError,
@@ -638,6 +641,43 @@ def _refuse_unparseable(parsed: ParsedWiring) -> None:
     refusal = UnparseableWiringError(violations=[code for code, _, _ in details])
     refusal._details = details
     raise refusal
+
+
+async def _run_wiring(
+    operation: str,
+    parsed: ParsedWiring,
+    registry: PartRegistry,
+    stores: dict[str, Any],
+    recorder: Callable[[str, str, str], None],
+    clients: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """The one ``run_wiring`` call every seam path makes (Phase 13 WIRE-05, D-07, D-22): the
+    runner's pre-dispatch errors become named seam refusals, so none reaches a consumer as a 500. An
+    invalid ``max_concurrency`` / ``token_allowance`` is :class:`InvalidNodeSettingError`, a
+    misdeclared guard is :class:`InvalidGuardDeclarationError` (the node id stays private on both and
+    goes to the server log once), and an environment digest that cannot be computed is a
+    ``ForeignEngineRefusalError`` of failure class ``EnvironmentDigestUnavailable``."""
+    try:
+        return await _scheduler.run_wiring(
+            parsed,
+            registry,
+            stores,
+            determinism_setting=_DETERMINISM_SETTING,
+            concurrency_setting=_CONCURRENCY_SETTING,
+            clients=clients,
+            recorder=recorder,
+        )
+    except _scheduler.InvalidMaxConcurrencyError as exc:
+        logger.warning("%s refused before dispatch: invalid max_concurrency on node %r", operation, exc.node_id)
+        raise InvalidNodeSettingError("max_concurrency", node_id=exc.node_id) from exc
+    except _scheduler.InvalidTokenAllowanceError as exc:
+        logger.warning("%s refused before dispatch: invalid token_allowance on node %r", operation, exc.node_id)
+        raise InvalidNodeSettingError("token_allowance", node_id=exc.node_id) from exc
+    except GuardDeclarationError as exc:
+        logger.warning("%s refused before dispatch: %s (node %r)", operation, exc, exc.node_id)
+        raise InvalidGuardDeclarationError(node_id=exc.node_id) from exc
+    except EnvironmentDigestError as exc:
+        raise _foreign_fault(operation, exc, failure_class="EnvironmentDigestUnavailable") from exc
 
 
 def _corpus_wiring(query_wiring: dict[str, Any], operation: str) -> dict[str, Any]:
@@ -1438,14 +1478,13 @@ class Databasise:
                             staged.unlink(missing_ok=True)
                             wrote_staged = False
                         raise
-                scheduled = await _scheduler.run_wiring(
+                scheduled = await _run_wiring(
+                    "ingest",
                     parsed,
                     self.registry,
                     stores,
-                    determinism_setting=_DETERMINISM_SETTING,
-                    concurrency_setting=_CONCURRENCY_SETTING,
-                    clients=self.clients,
-                    recorder=_recorder,
+                    _recorder,
+                    self.clients,
                 )
                 _log_corpus_overrun(scheduled, "ingest")
                 # D-06 (STOR-06): any node failure or early stop commits nothing. Every store's
@@ -1535,14 +1574,13 @@ class Databasise:
         def _recorder(node_id: str, kind: str, key: str) -> None:
             touches.append((node_id, kind, key))
 
-        scheduled = await _scheduler.run_wiring(
+        scheduled = await _run_wiring(
+            "ingest",
             parsed,
             self.registry,
             stores,
-            determinism_setting=_DETERMINISM_SETTING,
-            concurrency_setting=_CONCURRENCY_SETTING,
-            clients=self.clients,
-            recorder=_recorder,
+            _recorder,
+            self.clients,
         )
         try:
             _node_result_or_refuse(scheduled, sync_id, "ingest")
@@ -1700,14 +1738,13 @@ class Databasise:
                 # D-12: a HippoRAG delete never touches the v1 working dir, so only LightRAG enters it.
                 if family == "lightrag":
                     gate.enter_context(_write_gate(self._v1_working_dir()))
-                scheduled = await _scheduler.run_wiring(
+                scheduled = await _run_wiring(
+                    "delete",
                     parsed,
                     self.registry,
                     stores,
-                    determinism_setting=_DETERMINISM_SETTING,
-                    concurrency_setting=_CONCURRENCY_SETTING,
-                    clients=self.clients,
-                    recorder=_recorder,
+                    _recorder,
+                    self.clients,
                 )
                 _log_corpus_overrun(scheduled, "delete")
                 # G-05-1 / WR-01: the same shared _node_result_or_refuse helper ingest() routes
@@ -2044,14 +2081,13 @@ class Databasise:
             stores = _build_stores(self.store_root, self.workspace, run_resolved, into=stores, operation="query")
             # After _build_stores, so its open errors keep precedence (STOR-02).
             _refuse_empty_namespaces(self.store_root, self.workspace, run_resolved)
-            scheduled = await _scheduler.run_wiring(
+            scheduled = await _run_wiring(
+                "query",
                 parsed,
                 self.registry,
                 stores,
-                determinism_setting=_DETERMINISM_SETTING,
-                concurrency_setting=_CONCURRENCY_SETTING,
-                clients=self.clients,
-                recorder=_recorder,
+                _recorder,
+                self.clients,
             )
         finally:
             for store in stores.values():
