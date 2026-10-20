@@ -1,0 +1,1 @@
+No external API integration: Phase 13 changes Databasise's own selectors, wiring documents, validator, runner and seam refusals; "wiring" is the project's term for a component graph and "REST" is Databasise's own transport, so no third-party API, SDK or service surface is added or changed.

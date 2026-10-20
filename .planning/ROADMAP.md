@@ -320,7 +320,23 @@ Plans (eight waves; `seam/engine.py`, `wirings/hipporag/base.json` and `tests/se
 - WIRE-17: keep or delete MutableStoreComparisonExcludedError and the ingest NoWritePathForModalityError mapping
 - WIRE-18: wire or delete per-node max_concurrency and budget apportionment (coordinate with WIRE-12)
 
-**Plans**: TBD
+**Plans**: 13 plans
+
+Plans (six waves; `seam/engine.py` is touched by one plan per wave in waves 1-6; all hash-shifting changes are in 13-12 (D-21); the owner's two grants are collected once, in 13-11, after every grant-independent plan):
+
+- [ ] 13-01-PLAN.md — Tracer: parse_wiring reports malformed documents; RFC 6901 pointers, deduplicated cycles, kind mismatch; one placement source (WIRE-06, WIRE-07; wave 1)
+- [ ] 13-02-PLAN.md — Read-namespace capability tokens make hybrid, local and global selectable; registration validates effects (WIRE-01, WIRE-16; wave 1)
+- [ ] 13-03-PLAN.md — Derived trace schema and deviation record; NodeTrace status, execution_mode, spent/allowance, null cache_hit/tier (WIRE-11, WIRE-10; wave 1)
+- [ ] 13-04-PLAN.md — Sequential dispatch, one NodeTrace per pruned node, closed node-free reason codes, budget API deleted (WIRE-10, WIRE-03, WIRE-12, WIRE-18; wave 2)
+- [ ] 13-05-PLAN.md — depth_label null unless answered and typed; missing-items fault; no discarded debug keyword (WIRE-04, WIRE-14; wave 1)
+- [ ] 13-06-PLAN.md — KG arms mint evidence from assemble; ghost provides/evidence references reported (WIRE-02; wave 2)
+- [ ] 13-07-PLAN.md — One-selector compare refuses a mutating wiring; refusal reachability pinned; /health digest failure; failed seam events (WIRE-17, WIRE-15, WIRE-13; wave 2)
+- [ ] 13-08-PLAN.md — Cycles and runner pre-flight errors refused by name; strict ints; misdeclared guards refused before dispatch (WIRE-05, WIRE-08; wave 3)
+- [ ] 13-09-PLAN.md — LightRAG keyword fall-through guards dropped with their docs (WIRE-09; wave 3)
+- [ ] 13-10-PLAN.md — Post-dispatch refusals persist the run and carry trace_token; response-time reason check (WIRE-12, WIRE-03; wave 4)
+- [ ] 13-11-PLAN.md — Owner grants for the two protected pins, one sitting (WIRE-12, WIRE-13; wave 4)
+- [ ] 13-12-PLAN.md — Hash-shift batch: per-arm identity and pre-injection hash, guard signal, environment inputs, apportionment strings, one annotation (WIRE-12, WIRE-08, WIRE-15, WIRE-18; wave 5)
+- [ ] 13-13-PLAN.md — SeamEvent.component is mutates_store; inventory and STATE lines; offline gate (WIRE-13, WIRE-11; wave 6)
 
 ### Phase 14: Promotion & Ledger
 
