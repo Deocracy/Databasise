@@ -16,7 +16,6 @@ import inspect
 from pathlib import Path
 
 import pytest
-
 from databasise.parts.registry import default_registry
 from databasise.parts.schema import Part
 from databasise.seam.engine import Databasise, _build_stores
@@ -26,6 +25,7 @@ from databasise.seam.selectors import Selector
 from databasise.stores.graph import CozoGraphStore
 from databasise.stores.vector import FaissVectorStore
 from databasise.tests.seam._probes import trace_row_count
+
 from seam.test_hipporag_write_path import (
     _DOCUMENT_TEXT,
     _HIPPORAG_CAPABILITY,
