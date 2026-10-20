@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 13
 current_phase_name: Selectors, Wiring & Runner
 status: executing
-stopped_at: Completed 13-07-PLAN.md
-last_updated: "2026-10-20T03:55:39.637Z"
+stopped_at: Completed 13-08-PLAN.md
+last_updated: "2026-10-20T04:18:10.715Z"
 last_activity: 2026-10-19
 last_activity_desc: Phase 13 execution started
-state_head: 8857c224a49a8a89f3c5272d50423a83d5f9e7e9
+state_head: 0cd5594b440c11e4c5f1388100450a86f96d19ca
 progress:
   total_phases: 11
   completed_phases: 5
   total_plans: 70
-  completed_plans: 64
+  completed_plans: 65
   percent: 45
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-19 after Phase 12)
 ## Current Position
 
 Phase: 13 (Selectors, Wiring & Runner) — EXECUTING
-Plan: 8 of 13
+Plan: 9 of 13
 Status: Ready to execute
 Last activity: 2026-10-19 — Phase 13 execution started
 
@@ -126,6 +126,7 @@ Progress: [█████░░░░░] 45% (4/11 phases)
 | Phase 13 P05 | 25min | 2 tasks | 4 files |
 | Phase 13 P06 | 30min | 2 tasks | 9 files |
 | Phase 13 P07 | 35min | 3 tasks | 8 files |
+| Phase 13 P08 | 2h | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -224,6 +225,7 @@ Recent decisions affecting current work:
 - [Phase 13]: NodeTrace cache_hit, tier and feed_tier are null when nothing measured them; overspend is reported in spent/allowance with share capped at 1.0 (D-14)
 - [Phase 13]: 13-05: depth_label is Depth | None, null unless a provides node answered; an empty completion counts as answered
 - [Phase 13]: WIRE-02: KG-arm evidence is assemble's truncated chunk list; bypass evidence_position is null; validator reports ghost provides/evidence nodes
+- [Phase 13]: 13-08: a cycle is a violation code inside _refuse_unparseable; runner pre-flight errors are translated by one _run_wiring helper; GuardDeclarationError keeps its positional pair and gains keyword-only node_id/problem
 
 ### Pending Todos
 
@@ -277,8 +279,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-20T03:55:39.385Z
-Stopped at: Completed 13-07-PLAN.md
+Last session: 2026-10-20T04:18:10.470Z
+Stopped at: Completed 13-08-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
