@@ -185,3 +185,15 @@ async def test_a_post_dispatch_failure_keeps_the_spend_already_metered():
     assert trace.status == "failed"
     assert trace.spent == 8
     assert (trace.tokens.prompt_tokens, trace.tokens.completion_tokens, trace.tokens.counted_by) == (5, 3, "stub-llm")
+
+
+async def test_a_signal_missing_at_run_time_is_a_named_refusal_with_a_trace(store_root):
+    """B-WR-04 (D-19, D-04): it was a 200 envelope with partial=True and stop_reason='node_failed'."""
+    from databasise.seam.refusals import InvalidGuardDeclarationError
+
+    wiring = {"nodes": {"a": _node(config={"guards": [_guard()]})}, "provides": ["a"]}
+    with pytest.raises(InvalidGuardDeclarationError) as exc_info:
+        await _run_resolved(store_root, PartRegistry(), wiring)
+    body = refusal_body(exc_info.value)
+    assert body["trace_token"]
+    assert set(body) == {"refusal_type", "message", "trace_token"}  # the node id stays private

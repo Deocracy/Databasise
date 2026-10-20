@@ -926,7 +926,11 @@ class InvalidGuardDeclarationError(SeamRefusalError):
     """Raised before any node is dispatched when a wiring node's guard declaration is malformed: a
     bad entry shape, an inadmissible granularity or an evaluating node that is neither the guarded
     node nor one of its dependencies (WIRE-08, D-19). REST answers 422. No public attribute: the
-    guarded node id is the machine's internal wiring identity and stays on ``_node_id``."""
+    guarded node id is the machine's internal wiring identity and stays on ``_node_id``.
+
+    Also raised on the query path after dispatch when a guard's evaluating node emitted no declared
+    ``signal`` key (D-19: a refusal, never a fire; 13 REVIEW B-WR-04). That run is persisted first,
+    so this refusal then carries the run's ``trace_token`` (D-04)."""
 
     def __init__(self, *, node_id: str | None):
         self._node_id = node_id

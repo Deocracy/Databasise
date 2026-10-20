@@ -2145,6 +2145,11 @@ class Databasise:
             # fault, never a 200 envelope. Every other node exception keeps the degraded envelope, whose
             # stop_reason carries the exception class name only (runner/scheduler.py).
             for node_exception in scheduled.get("node_exceptions", {}).values():
+                # D-19 (13 REVIEW B-WR-04): a guard whose evaluating node emitted no declared signal is
+                # a wiring-contract refusal, never a fire and never a generic node_failed partial run.
+                if isinstance(node_exception, GuardDeclarationError):
+                    logger.warning("query refused after dispatch: %s (node %r)", node_exception, node_exception.node_id)
+                    raise InvalidGuardDeclarationError(node_id=node_exception.node_id) from node_exception
                 if _is_store_fault(node_exception):
                     corrupted = isinstance(node_exception, VectorStoreCorruptedError)
                     raise _foreign_fault(
