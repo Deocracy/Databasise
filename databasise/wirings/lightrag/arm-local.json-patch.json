@@ -6,6 +6,7 @@
     { "op": "remove", "path": "/nodes/relation-lookup" },
     { "op": "remove", "path": "/nodes/relation-hydrate-expand" },
     { "op": "remove", "path": "/nodes/chunk-vector" },
+    { "op": "replace", "path": "/evidence_position", "value": { "node": "assemble", "namespace": "chunks" } },
     { "op": "replace", "path": "/nodes/join-entities/deps", "value": ["entity-hydrate-expand"] },
     { "op": "replace", "path": "/nodes/join-entities/config/arm_precedence",
       "value": "entity-hydrate-expand-only, degenerate 1-ary join (entity-half)" },

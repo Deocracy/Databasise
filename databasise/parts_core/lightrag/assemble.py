@@ -15,6 +15,9 @@ Chunks are capped at ``config["chunk_top_k"]`` (v1 default 20), then cut from th
 only, to v1's available budget: ``max_total_tokens`` (the engine always sets it, v1 default 30000)
 minus the system template, the KG sections, the query and a 200-token buffer (``_build_context_str``).
 
+``items`` is that truncated chunk list as ``{id, score}`` in context order, the evidence a KG arm
+returns (``evidence_position`` points at this node).
+
 No store or client access (no declared effects) — a pure transform over its inputs.
 """
 
@@ -154,6 +157,8 @@ async def _assemble_body(ctx: NodeContext) -> dict[str, Any]:
         "order_policy": order_policy,
         "template_kind": template_kind,
         "chunk_count": len(chunks),
+        # v1's truncated_chunks reference list: what the KG arms return as evidence (WIRE-02, D-02).
+        "items": [{"id": c.get("chunk_id") or c.get("id"), "score": c.get("score")} for c in chunks],
     }
 
 
