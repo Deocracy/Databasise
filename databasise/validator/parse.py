@@ -63,6 +63,7 @@ from databasise.validator.errors import (
     CODE_UNWIRED_STORE_EFFECT,
     ValidationReport,
     Violation,
+    escape_pointer_token,
 )
 
 # Phase 10 D-15 (STOR-12): store effects the vocabulary keeps but no store backs.
@@ -179,12 +180,13 @@ def parse_wiring(doc: dict[str, Any], registry: PartRegistry) -> ParsedWiring:
 
     nodes: dict[str, WiringNode] = {}
     for node_id, raw in raw_nodes.items():
+        token = escape_pointer_token(node_id)
         try:
             nodes[node_id] = WiringNode.model_validate(raw)
         except ValidationError as exc:
             for err in exc.errors():
-                field_path = "/".join(str(p) for p in err["loc"])
-                pointer = f"/nodes/{node_id}/{field_path}" if field_path else f"/nodes/{node_id}"
+                field_path = "/".join(escape_pointer_token(p) for p in err["loc"])
+                pointer = f"/nodes/{token}/{field_path}" if field_path else f"/nodes/{token}"
                 code = _classify_node_schema_error(err)
                 if code == CODE_SELF_DECLARED_DERIVATION:
                     derived_field = next(
@@ -208,14 +210,17 @@ def parse_wiring(doc: dict[str, Any], registry: PartRegistry) -> ParsedWiring:
 
     parts: dict[str, Part] = {}
     for node_id, node in nodes.items():
+        token = escape_pointer_token(node_id)
         try:
             part = registry.get(node.component)
-        except UnknownPartError as exc:
+        except UnknownPartError:
+            # The message carries the wiring's own value only: the registry's part list is not
+            # echoed back to a document author (WIRE-06).
             violations.append(
                 Violation(
                     code=CODE_UNKNOWN_COMPONENT,
-                    pointer=f"/nodes/{node_id}/component",
-                    message=str(exc),
+                    pointer=f"/nodes/{token}/component",
+                    message=f"node {node_id!r} names component {node.component!r}, which is not registered",
                 )
             )
         else:
@@ -232,7 +237,7 @@ def parse_wiring(doc: dict[str, Any], registry: PartRegistry) -> ParsedWiring:
                 violations.append(
                     Violation(
                         code=CODE_EFFECTS_EXCEED_PART,
-                        pointer=f"/nodes/{node_id}/effects",
+                        pointer=f"/nodes/{token}/effects",
                         message=(
                             f"node {node_id!r} declares effects {sorted(extra_effects)} not "
                             f"declared by its resolved part {part.name_at_version!r} "
@@ -247,7 +252,7 @@ def parse_wiring(doc: dict[str, Any], registry: PartRegistry) -> ParsedWiring:
                 violations.append(
                     Violation(
                         code=CODE_UNWIRED_STORE_EFFECT,
-                        pointer=f"/nodes/{node_id}/effects",
+                        pointer=f"/nodes/{token}/effects",
                         message=(
                             f"node {node_id!r} declares store effects {sorted(unwired)} that no "
                             "store backs; the machine wires only kv, vector and graph stores"
@@ -259,7 +264,7 @@ def parse_wiring(doc: dict[str, Any], registry: PartRegistry) -> ParsedWiring:
                 violations.append(
                     Violation(
                         code=CODE_DANGLING_DEP,
-                        pointer=f"/nodes/{node_id}/deps/{dep_index}",
+                        pointer=f"/nodes/{token}/deps/{dep_index}",
                         message=f"dependency {dep!r} is not a node in this wiring",
                     )
                 )
@@ -271,9 +276,12 @@ def parse_wiring(doc: dict[str, Any], registry: PartRegistry) -> ParsedWiring:
     deps_as_sets = {node_id: set(dep_tuple) for node_id, dep_tuple in deps.items()}
     sccs = strongly_connected_components(deps_as_sets)
     cycles: list[list[str]] = [sorted(component) for component in sccs if len(component) > 1]
+    in_cycle = {node_id for cycle in cycles for node_id in cycle}
     for node_id, dep_set in deps_as_sets.items():
-        if node_id in dep_set:  # a self-loop is a one-member SCC that is still a cycle
+        # a self-loop is a one-member SCC that is still a cycle; inside a larger SCC it is listed once
+        if node_id in dep_set and node_id not in in_cycle:
             cycles.append([node_id])
+    cycles.sort()  # stable across calls whatever order the SCC pass yields
 
     report = ValidationReport(violations=violations, cycles=cycles)
 

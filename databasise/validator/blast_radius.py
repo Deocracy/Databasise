@@ -32,7 +32,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from databasise.validator.errors import CODE_BLAST_RADIUS_REFUSAL, Violation
+from databasise.validator.errors import CODE_BLAST_RADIUS_REFUSAL, Violation, escape_pointer_token
 
 if TYPE_CHECKING:
     from databasise.validator.parse import ParsedWiring
@@ -63,7 +63,7 @@ def blast_radius_violations(parsed: ParsedWiring, depth_map: dict[str, str]) -> 
             violations.append(
                 Violation(
                     code=CODE_BLAST_RADIUS_REFUSAL,
-                    pointer=f"/nodes/{node_id}/effects",
+                    pointer=f"/nodes/{escape_pointer_token(node_id)}/effects",
                     message=(
                         f"node {node_id!r} declares a shared artifact write at effective depth "
                         f"{depth!r}; a shared write is legal only at effective depth 'stage' "

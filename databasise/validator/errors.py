@@ -49,6 +49,12 @@ vocabulary but has no store behind it after Phase 10 D-15 (``reads_lexical``, ``
 reaches for a store the machine never builds (STOR-12)."""
 
 
+def escape_pointer_token(token: object) -> str:
+    """One RFC 6901 reference token: ``~`` becomes ``~0`` first, then ``/`` becomes ``~1``, so a
+    node id containing either character still addresses exactly one location."""
+    return str(token).replace("~", "~0").replace("/", "~1")
+
+
 @dataclass(frozen=True)
 class Violation:
     """One defect: a stable ``code``, an RFC 6901 JSON Pointer into the wiring document (for
