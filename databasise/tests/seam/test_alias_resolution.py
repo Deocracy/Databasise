@@ -96,7 +96,7 @@ def _store_with_rows(tmp_path: Path) -> Path:
     ledger = Ledger(root)
     ledger.append(_row("h", "hipporag"))
     ledger.append(_row("x", "nonexistent"))
-    ledger.close()
+    ledger._conn.close()  # Ledger.close() does not exist at the phase base
     return root
 
 
