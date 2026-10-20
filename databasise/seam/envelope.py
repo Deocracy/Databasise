@@ -55,10 +55,9 @@ from databasise.seam.tokens import TokenBreakdownEntry
 # 04-CONTEXT.md — CONTRACT names no outcome vocabulary for this event). "completed": the
 # out-of-deps mutation's own node finished dispatch normally. "halted": the node's own
 # budget_state is "halted" (CONTRACT §9's budget-halt path) — the mutation is still real and still
-# reported, never silently dropped because the run stopped early. "failed": reserved for a node
-# whose dispatch itself raised before completing; no registered part reaches this branch today
-# (FA-08 — nothing in parts_core exercises the out-of-deps case at all yet), but the vocabulary is
-# declared now rather than widened later once one does.
+# reported, never silently dropped because the run stopped early. "failed": a mutating node whose
+# execution raised (13-07, WIRE-13, D-15): the scheduler stamps such a node status "failed" with a
+# failure cause, and the event reports "failed", not "halted".
 SeamEventOutcome = Literal["completed", "halted", "failed"]
 
 
@@ -66,7 +65,9 @@ class SeamEvent(_StrictModel):
     """D-09/MACH-11's seam-level event: a ``mutates_store`` call outside a wiring's ``deps`` graph,
     carrying the component's ``name@version``, its spend, and its outcome — drawn from a closed
     vocabulary declared on this model, refusing construction with anything else. 04-04 wires the
-    detection (``databasise.seam.engine``) and populates this list from a real run.
+    detection (``databasise.seam.engine``) and populates this list from a real run. ``outcome`` is
+    ``failed`` for a mutating node that raised, ``halted`` for one that completed with its budget
+    halted, and ``completed`` otherwise (13-07, D-15).
     """
 
     component: str

@@ -206,6 +206,7 @@ from databasise.foreign.v1_corpus_adapter import (
     redact_secrets,
 )
 from databasise.identity.canon import canonicalise
+from databasise.identity.env import EnvironmentDigestError, environment_hash
 from databasise.ledger.ledger import Ledger, LedgerRecord
 from databasise.parts.registry import PartRegistry, default_registry
 from databasise.parts.schema import Depth
@@ -977,7 +978,18 @@ def _mach11_events(
             if node_trace is not None
             else TokenBreakdownEntry(counted_by="unknown")
         )
-        outcome = "halted" if node_trace is not None and node_trace.budget_state == "halted" else "completed"
+        # D-15 (WIRE-13): a node that raised is stamped status="failed" with budget_state="halted"
+        # and a failure cause, so "failed" is tested first; "halted" is a node that completed and
+        # whose budget halted.
+        if node_trace is not None and (
+            getattr(node_trace, "status", "completed") != "completed"
+            or node_trace.cross_process_failure_cause is not None
+        ):
+            outcome = "failed"
+        elif node_trace is not None and node_trace.budget_state == "halted":
+            outcome = "halted"
+        else:
+            outcome = "completed"
         events.append(SeamEvent(component=part.name_at_version, spend=spend, outcome=outcome))
     return events
 
@@ -1892,8 +1904,9 @@ class Databasise:
         driver's facade-free ``"health"`` op for ``v1_reachable``, catching any failure of that call
         into ``engine`` and ``engine_reason`` (11-09 D-14, Q5). A probe that raises reports its
         store ``corrupted``. ``status`` is ``ok`` only when every store is ``ok``, every engine
-        field is true and both the ``llm`` and ``embedding`` clients are wired (D-14 amends Phase 8
-        D-08). Never raises for an unreachable store or an unreachable
+        field is true, both the ``llm`` and ``embedding`` clients are wired (D-14 amends Phase 8
+        D-08) and the environment digest computes (13-07, D-16: a failure appends one fixed reason
+        to ``engine_reason``). Never raises for an unreachable store or an unreachable
         foreign engine — an unreachable participant is reported as unreachable, which is what a
         health check is for.
         """
@@ -1945,8 +1958,23 @@ class Databasise:
         if not clients_wired:
             reasons.append("model clients not configured")
 
+        # D-16 (WIRE-15): every run folds the environment digest into its identities, so a digest
+        # that raises aborts every run. Worker thread: it reads every distribution's RECORD. Only
+        # success is memoised, so the next health call after the fault is fixed reports it healthy.
+        try:
+            await asyncio.to_thread(environment_hash)
+            digest_ok = True
+        except EnvironmentDigestError as exc:
+            # The class name only: the error text names a distribution path.
+            logger.warning("health: the environment digest failed: %s", type(exc).__name__)
+            reasons.append("environment digest unavailable")
+            digest_ok = False
+
         overall_ok = (
-            all(v == "ok" for v in stores.values()) and all(engine_report.values()) and clients_wired
+            all(v == "ok" for v in stores.values())
+            and all(engine_report.values())
+            and clients_wired
+            and digest_ok
         )
         return HealthReport(
             status="ok" if overall_ok else "degraded",
