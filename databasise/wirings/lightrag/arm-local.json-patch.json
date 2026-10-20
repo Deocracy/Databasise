@@ -3,6 +3,8 @@
   "patch_format_reason": "Subtractive — removes relation-lookup, relation-hydrate-expand, chunk-vector — so per CONTRACT.md:182 this MUST be an RFC 6902 operation list, not an RFC 7386 merge-patch.",
   "base": "lightrag-base.json",
   "operations": [
+    { "op": "replace", "path": "/wiring_id", "value": "lightrag-local" },
+    { "op": "add", "path": "/arm_id", "value": "local" },
     { "op": "remove", "path": "/nodes/relation-lookup" },
     { "op": "remove", "path": "/nodes/relation-hydrate-expand" },
     { "op": "remove", "path": "/nodes/chunk-vector" },

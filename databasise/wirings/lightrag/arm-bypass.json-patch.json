@@ -3,6 +3,8 @@
   "patch_format_reason": "Subtractive — removes every node but generate — so per CONTRACT.md:182 this MUST be an RFC 6902 operation list, not an RFC 7386 merge-patch.",
   "base": "lightrag-base.json",
   "operations": [
+    { "op": "replace", "path": "/wiring_id", "value": "lightrag-bypass" },
+    { "op": "add", "path": "/arm_id", "value": "bypass" },
     { "op": "remove", "path": "/nodes/keywords" },
     { "op": "remove", "path": "/nodes/embedder-query" },
     { "op": "remove", "path": "/nodes/entity-lookup" },

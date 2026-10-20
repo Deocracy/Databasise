@@ -3,6 +3,8 @@
   "patch_format_reason": "Subtractive — removes chunk-vector — so per CONTRACT.md:182 this MUST be an RFC 6902 operation list, not an RFC 7386 merge-patch (merge-patch's null sentinel cannot fail-close a removal).",
   "base": "lightrag-base.json",
   "operations": [
+    { "op": "replace", "path": "/wiring_id", "value": "lightrag-hybrid" },
+    { "op": "add", "path": "/arm_id", "value": "hybrid" },
     { "op": "remove", "path": "/nodes/chunk-vector" },
     { "op": "replace", "path": "/evidence_position", "value": { "node": "assemble", "namespace": "chunks" } },
     { "op": "replace", "path": "/nodes/join-chunks/deps", "value": ["chunk-sel-kg"] },

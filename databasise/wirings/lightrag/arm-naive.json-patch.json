@@ -3,6 +3,7 @@
   "patch_format_reason": "Mixed arm: subtractive (removes the eleven graph-half nodes) AND additive/overriding (replaces assemble's and generate's config). CONTRACT.md:182 requires RFC 6902 for the subtractive half; RFC 6902's own replace/add operations express the overriding half in the same document, so no separate RFC 7386 merge-patch file is needed — this is the D-06 kill-condition check this plan's Task 3 runs: a mixed arm IS expressible in one file under the existing mechanism, no structural gap surfaced.",
   "base": "lightrag-base.json",
   "operations": [
+    { "op": "add", "path": "/arm_id", "value": "naive" },
     { "op": "remove", "path": "/nodes/keywords" },
     { "op": "remove", "path": "/nodes/entity-lookup" },
     { "op": "remove", "path": "/nodes/entity-hydrate-expand" },

@@ -104,18 +104,15 @@ def resolve_arm(arm_name: str) -> dict[str, Any]:
     targets a node absent from the base (the fail-closed subtraction guarantee this module exists
     to preserve — never caught or downgraded here).
 
-    D-03: the resolved wiring names its arm. ``arm_id`` is ``arm_name``; ``wiring_id`` is
-    ``lightrag-<arm_name>``, except ``naive``, which keeps the base's ``lightrag-base``
-    (a sixth arm needing that id would force naive onto ``lightrag-naive``).
+    D-03: the resolved wiring names its arm, in the patch data itself: each arm patch sets
+    ``/arm_id`` to the arm name and ``/wiring_id`` to ``lightrag-<arm_name>``, except ``naive``,
+    which keeps the base's ``lightrag-base`` (a sixth arm needing that id would force naive onto
+    ``lightrag-naive``). This function stamps nothing.
     """
     base = load_base()
     patch_doc = json.loads(_patch_path(arm_name).read_text(encoding="utf-8"))
     operations = patch_doc["operations"]
-    resolved = jsonpatch.apply_patch(base, operations, in_place=False)
-    if arm_name != "naive":
-        resolved["wiring_id"] = f"lightrag-{arm_name}"
-    resolved["arm_id"] = arm_name
-    return resolved
+    return jsonpatch.apply_patch(base, operations, in_place=False)
 
 
 def resolved_node_ids(arm_name: str) -> set[str]:
@@ -192,7 +189,7 @@ def all_wirings() -> list[tuple[str, dict[str, Any]]]:
     arm (resolved via :func:`resolve_arm`, preserving ``_ARM_NAMES``' own declared order) plus
     every non-LightRAG base wiring named in :data:`WIRING_NAMES` (each modality's own single base,
     loaded via :func:`load_wiring` — no arm resolution, since only LightRAG has arms today; D-03:
-    each such base is stamped with ``arm_id`` equal to its wiring name).
+    each such base carries its own ``arm_id`` equal to its wiring name).
     Returns ``(candidate_name, resolved_dict)`` pairs, mirroring
     ``databasise/seam/selectors.py``'s own former ``_capability_candidates`` shape exactly, so
     that module's ``smallest resolved wiring wins`` tie-break logic is unaffected by this widened
@@ -204,7 +201,7 @@ def all_wirings() -> list[tuple[str, dict[str, Any]]]:
     for wiring_name in WIRING_NAMES:
         if wiring_name == "lightrag":
             continue
-        candidates.append((wiring_name, {**load_wiring(wiring_name), "arm_id": wiring_name}))
+        candidates.append((wiring_name, load_wiring(wiring_name)))
     return candidates
 
 
