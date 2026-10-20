@@ -33,7 +33,8 @@ _ADMISSIBLE_GRANULARITIES: tuple[GuardGranularity, ...] = ("per-query", "per-ins
 class GuardDeclarationError(ValueError):
     """A guard declaration is refused before dispatch: an inadmissible granularity (the two
     granularities are mandatory and mutually exclusive, CONTRACT §19.8), an entry that is not a
-    mapping with exactly the ``declare_guard`` keys, a missing or non-string ``signal``, an
+    mapping with exactly the ``declare_guard`` keys, a ``config.guards`` that is not a list, a
+    non-string ``name`` or ``evaluating_node``, a missing or non-string ``signal``, an
     ``evaluating_node`` that is neither the guarded node nor one of its transitive dependencies, or
     (at evaluation) an evaluating node whose output is not a mapping carrying the signal key
     (WIRE-08, D-19). ``node_id`` names the
@@ -83,6 +84,11 @@ def declare_guard(
     """
     if granularity not in _ADMISSIBLE_GRANULARITIES:
         raise GuardDeclarationError(name, granularity)
+    # 13 REVIEW B-WR-02: after the granularity check, so a four-keyword call still reaches it first.
+    if not isinstance(name, str) or not isinstance(evaluating_node, str):
+        raise GuardDeclarationError(
+            str(name), granularity, problem=f"guard {name!r} must declare string name and evaluating_node"
+        )
     if not isinstance(signal, str) or not signal:
         raise GuardDeclarationError(
             name, granularity, problem=f"guard {name!r} must declare a non-empty string signal key"

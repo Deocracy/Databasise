@@ -112,3 +112,29 @@ def test_a_malformed_top_level_reference_is_reported_not_raised(extra, code):
 
     report = parse_wiring({"nodes": {"a": _node()}, **extra}, PartRegistry()).report
     assert code in [violation.code for violation in report.violations]
+
+
+def _guard(**overrides):
+    entry = {
+        "name": "g",
+        "evaluating_node": "a",
+        "value_when_not_fired": False,
+        "granularity": "per-query",
+        "signal": "s",
+    }
+    return {**entry, **overrides}
+
+
+@pytest.mark.parametrize(
+    "guards",
+    [5, "g", [_guard(evaluating_node=["a"])], [_guard(name=["g"])], [_guard(name=7)]],
+    ids=["int", "string", "list-evaluating-node", "list-name", "int-name"],
+)
+async def test_a_malformed_guard_declaration_is_a_named_422_before_dispatch(store_root, guards):
+    """B-WR-02 (WIRE-05, D-07): these shapes raised a bare TypeError (or stored a non-string name)."""
+    from databasise.seam.refusals import InvalidGuardDeclarationError
+
+    wiring = {"nodes": {"a": _node(config={"guards": guards})}, "provides": ["a"]}
+    with pytest.raises(InvalidGuardDeclarationError) as exc_info:
+        await _run_resolved(store_root, PartRegistry(), wiring)
+    assert getattr(exc_info.value, "trace_token", None) is None  # pre-dispatch: no run, no trace

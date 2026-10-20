@@ -427,6 +427,10 @@ def _validated_guards(
     the guard is evaluated.
     """
     raw_guards = (config or {}).get("guards") or []
+    if not isinstance(raw_guards, list):  # 13 REVIEW B-WR-02: named, never a bare TypeError
+        raise GuardDeclarationError(
+            str(raw_guards), None, node_id=node_id, problem="config.guards must be a list of guard entries"
+        )
     reachable = _dependency_closure(node_id, parsed.deps)
     guards: list[GuardDeclaration] = []
     for entry in raw_guards:
