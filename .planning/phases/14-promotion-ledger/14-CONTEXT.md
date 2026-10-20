@@ -107,7 +107,11 @@ The operator verbs (promote, rollback, retire) never fail with a 500 on any trac
   - "Raises" in the row text means "reports a named `kind-mismatch` violation" (Phase 13 D-07/D-08: parse_wiring reports and never raises).
 - **D-13 (LEDG-12, unregister codebase-memory-mcp):**
   - `codebase-memory-mcp@0.1.0` is dropped from `default_registry()` (`registry.py:225`) and added to `falsifier2.probe_registry()`. `falsifier2._parse` (`falsifier2.py:297`) switches to that registry, so the Falsifier 2 gate does not fail with `unknown-component`.
-  - `wirings/codebase-memory-mcp.json` moves out of `wirings/`. The evidence copy stays.
+  - `wirings/codebase-memory-mcp.json` moves to `databasise/tests/fixtures/codebase-memory-mcp.json` (14-RESEARCH §5.3). The evidence copy `w2` is a different, three-node wiring, so it does not replace this one.
+  - Protected `tests/seam/test_refusal_reachability.py` (WIRE-17) reads the old path and the default registry, and no product-side fix exists. It is an owner `grant-check-edit` item with exactly the edit in 14-RESEARCH §6.4:
+    - the `_CBM_WIRING_PATH` path;
+    - an optional `registry=None` on `_engine`;
+    - `test_compare_with_one_mutating_selector_is_refused` registers `CODEBASE_MEMORY_MCP_PART` on a `default_registry()` copy.
   - `test_mutable_store_exclusion.py` passes `registry=`. The `refusals.py:496` docstring is updated.
   - The reachability test covers admitted parts only. Reference and corpus-only parts are not reached through a selector by design.
   - Basis: F-07 lists it as "catalogued, not registered", CONTRACT §14.4 point 3, and the `mutates_store` risk before TOOL-18. CONN-05 already excludes it.
