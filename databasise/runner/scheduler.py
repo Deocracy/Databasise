@@ -442,7 +442,7 @@ def _validated_guards(
                 entry.get("granularity"),
                 node_id=node_id,
                 problem=f"guard entry keys {sorted(map(str, entry))} must be exactly "
-                "name, evaluating_node, value_when_not_fired and granularity",
+                "name, evaluating_node, value_when_not_fired, granularity and signal",
             ) from None
         except GuardDeclarationError as exc:
             exc.node_id = node_id

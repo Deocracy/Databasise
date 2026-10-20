@@ -34,8 +34,9 @@ async def _run_guarded(output: dict) -> dict:
     guard = {
         "name": "g",
         "evaluating_node": "n1",
-        "value_when_not_fired": {"ok": True},
+        "value_when_not_fired": True,
         "granularity": "per-query",
+        "signal": "ok",
     }
     node = WiringNode(
         component="test/evaluator@1.0.0", kind="stage", config={"guards": [guard]}, deps=[]

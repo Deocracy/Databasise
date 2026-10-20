@@ -244,12 +244,17 @@ async def test_ordering_guards_fired_is_declaration_order_never_sorted_and_empty
     store_root,
 ):
     guards = [
-        {"name": "zeta", "evaluating_node": _NODE_ID, "value_when_not_fired": None, "granularity": "per-query"},
-        {"name": "alpha", "evaluating_node": _NODE_ID, "value_when_not_fired": None, "granularity": "per-query"},
-        {"name": "mid", "evaluating_node": _NODE_ID, "value_when_not_fired": None, "granularity": "per-query"},
+        {
+            "name": name,
+            "evaluating_node": _NODE_ID,
+            "value_when_not_fired": None,
+            "granularity": "per-query",
+            "signal": "completion",
+        }
+        for name in ("zeta", "alpha", "mid")
     ]
     # value_when_not_fired=None guarantees every guard fires: the fake LLM caller's own body
-    # always returns a dict, which is never equal to None.
+    # always returns a dict whose "completion" is a string, which is never equal to None.
     record = await _run(_metered_wiring(1000, guards=guards), store_root)
     trace = _trace(record)
 

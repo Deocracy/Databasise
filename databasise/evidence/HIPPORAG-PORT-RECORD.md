@@ -91,7 +91,8 @@ hipporag-base.json` both carry the `zero_surviving_facts_dpr_fallback` guard dec
 The **built** wiring (`databasise/wirings/hipporag/base.json`) instead carries the guard on the
 guarded node's own `config.guards` (the `fact-filter` node), in the narrower shape
 `databasise/runner/guards.py`'s `declare_guard` actually consumes: `name`, `evaluating_node`,
-`value_when_not_fired`, `granularity`. This is a **placement and shape difference between an
+`value_when_not_fired`, `granularity`, `signal` (the boolean key of the evaluating node's output
+that the guard reads, D-19). This is a **placement and shape difference between an
 illustrative document and the built form, not a semantic one** — `runner/guards.py`'s own module
 docstring states the rule this built placement follows: "a guard declaration is carried as an
 ordinary field on the guarded node's own wiring `config` (`config.guards`), so

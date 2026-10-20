@@ -172,9 +172,15 @@ async def test_an_output_whose_comparison_raises_fails_that_node():
             raise ValueError("comparison exploded")
 
     async def body(ctx: NodeContext):
-        return Bomb()
+        return {"flag": Bomb()}
 
-    guard = {"name": "g", "evaluating_node": "guarded", "value_when_not_fired": 0, "granularity": "per-query"}
+    guard = {
+        "name": "g",
+        "evaluating_node": "guarded",
+        "value_when_not_fired": 0,
+        "granularity": "per-query",
+        "signal": "flag",
+    }
     parsed = _wiring({"guarded": body}, {"guarded": ()}, config={"guarded": {"guards": [guard]}})
 
     result, escaped = await _captured_run(parsed)

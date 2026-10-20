@@ -67,7 +67,8 @@
             "name": "zero_surviving_facts_dpr_fallback",
             "evaluating_node": "fact-filter",
             "value_when_not_fired": false,
-            "granularity": "per-query"
+            "granularity": "per-query",
+            "signal": "guard_fired"
           }
         ]
       },
@@ -109,7 +110,8 @@
             "name": "empty_ppr_dpr_stand_in",
             "evaluating_node": "assemble-result",
             "value_when_not_fired": false,
-            "granularity": "per-query"
+            "granularity": "per-query",
+            "signal": "dpr_stand_in"
           }
         ]
       },

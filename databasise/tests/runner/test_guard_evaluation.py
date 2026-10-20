@@ -27,17 +27,18 @@ def _guard(evaluating_node: str, **overrides) -> dict:
         "evaluating_node": evaluating_node,
         "value_when_not_fired": False,
         "granularity": "per-query",
+        "signal": "flag",
     }
     return {**entry, **overrides}
 
 
-def _parsed(ran: list[str], guards) -> ParsedWiring:
+def _parsed(ran: list[str], guards, output=None) -> ParsedWiring:
     """root <- guarded <- downstream, plus an unrelated same-batch sibling of ``guarded``."""
     deps = {"root": (), _GUARDED: ("root",), "sibling": ("root",), "downstream": (_GUARDED,)}
 
     async def body(ctx: NodeContext):
         ran.append(ctx.node_id)
-        return False
+        return {"flag": False} if output is None else output
 
     parts = {
         node_id: Part(
@@ -107,8 +108,14 @@ async def test_an_evaluating_node_that_is_the_guarded_node_or_an_ancestor_is_acc
 @pytest.mark.parametrize(
     "entry",
     [
-        {"guard_name": "g", "evaluating_node": _GUARDED, "value_when_not_fired": False, "granularity": "per-query"},
-        {"name": "g", "evaluating_node": _GUARDED, "value_when_not_fired": False},
+        {
+            "guard_name": "g",
+            "evaluating_node": _GUARDED,
+            "value_when_not_fired": False,
+            "granularity": "per-query",
+            "signal": "flag",
+        },
+        {"name": "g", "evaluating_node": _GUARDED, "value_when_not_fired": False, "signal": "flag"},
         {**_guard(_GUARDED), "extra": 1},
         "g",
     ],
@@ -128,3 +135,87 @@ async def test_an_inadmissible_granularity_is_refused_with_the_guarded_node():
     _, exc = await _run(_parsed(ran, [_guard(_GUARDED, granularity="")]))
 
     _assert_guard_refusal(exc, ran)
+
+
+# --------------------------------------------------------------------------------------------- #
+# WIRE-08 (D-19): a guard reads one declared boolean signal of the evaluating node's output
+# --------------------------------------------------------------------------------------------- #
+
+
+def _signal_guard(**overrides) -> dict:
+    return _guard(_GUARDED, **overrides)
+
+
+def _guard_trace(result: dict, node_id: str = _GUARDED):
+    return next(trace for trace in result["nodes"] if trace.node_id == node_id)
+
+
+@pytest.mark.parametrize(("output", "fires"), [({"flag": True}, True), ({"flag": False}, False)])
+async def test_a_declared_signal_fires_only_on_its_value(output, fires):
+    result, exc = await _run(_parsed([], [_signal_guard()], output=output))
+
+    assert exc is None, repr(exc)
+    assert result is not None
+    assert _guard_trace(result).guards_fired == (["g"] if fires else [])
+
+
+async def test_a_plain_dict_output_without_the_signal_does_not_fire():
+    result, exc = await _run(_parsed([], [_signal_guard()], output={"x": 1}))
+
+    assert exc is None, repr(exc)
+    assert result is not None
+    assert "g" not in _guard_trace(result).guards_fired
+    assert _guard_trace(result).status == "failed"
+    caught = result["node_exceptions"].get(_GUARDED)
+    assert type(caught).__name__ == "GuardDeclarationError", repr(caught)
+    assert getattr(caught, "node_id", None) == _GUARDED
+
+
+async def test_a_non_mapping_output_does_not_fire():
+    result, exc = await _run(_parsed([], [_signal_guard()], output=True))
+
+    assert exc is None, repr(exc)
+    assert result is not None
+    assert _guard_trace(result).guards_fired == []
+    assert type(result["node_exceptions"].get(_GUARDED)).__name__ == "GuardDeclarationError"
+
+
+async def test_no_guards_means_none_fired():
+    for guards in ([], None):
+        result, exc = await _run(_parsed([], guards))
+
+        assert exc is None, repr(exc)
+        assert result is not None
+        assert _guard_trace(result).guards_fired == [], guards
+
+
+async def test_fired_guards_keep_declaration_order():
+    guards = [_signal_guard(name="second-declared-first"), _signal_guard(name="a-first-by-name")]
+
+    result, exc = await _run(_parsed([], guards, output={"flag": True}))
+
+    assert exc is None, repr(exc)
+    assert result is not None
+    assert _guard_trace(result).guards_fired == ["second-declared-first", "a-first-by-name"]
+
+
+async def test_a_four_key_entry_is_refused_by_name():
+    ran: list[str] = []
+    entry = {key: value for key, value in _signal_guard().items() if key != "signal"}
+
+    _, exc = await _run(_parsed(ran, [entry]))
+
+    _assert_guard_refusal(exc, ran)
+
+
+async def test_a_bad_granularity_is_still_the_refusal_when_the_signal_is_missing():
+    guards = pytest.importorskip("databasise.runner.guards")
+    try:
+        guards.declare_guard(name="g", evaluating_node="n", value_when_not_fired=True, granularity="sometimes")
+    except Exception as exc:  # noqa: BLE001 - asserted on below
+        caught = exc
+    else:
+        caught = None
+
+    assert type(caught).__name__ == "GuardDeclarationError", repr(caught)
+    assert "granularity" in str(caught)

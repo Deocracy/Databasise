@@ -114,15 +114,20 @@ def test_5_realised_budget_share_is_present_on_every_node_and_within_0_1(assert_
 
 
 def test_6_guards_fired_lists_exactly_the_declared_guards_that_fired_and_is_never_absent():
-    fired_guard = declare_guard("g1", evaluating_node="upstream-a", value_when_not_fired=None, granularity="per-query")
-    unfired_guard = declare_guard("g2", evaluating_node="upstream-b", value_when_not_fired="expected", granularity="per-instance")
+    fired_guard = declare_guard(
+        "g1", evaluating_node="upstream-a", value_when_not_fired=None, granularity="per-query", signal="state"
+    )
+    unfired_guard = declare_guard(
+        "g2", evaluating_node="upstream-b", value_when_not_fired="expected", granularity="per-instance", signal="state"
+    )
 
     fired = evaluate_guards(
-        [fired_guard, unfired_guard], runtime_values={"upstream-a": "something-else", "upstream-b": "expected"}
+        [fired_guard, unfired_guard],
+        runtime_values={"upstream-a": {"state": "something-else"}, "upstream-b": {"state": "expected"}},
     )
     assert fired == ["g1"]
 
-    none_fired = evaluate_guards([unfired_guard], runtime_values={"upstream-b": "expected"})
+    none_fired = evaluate_guards([unfired_guard], runtime_values={"upstream-b": {"state": "expected"}})
     assert none_fired == []  # empty list, never None/absent
 
     node = _clean_node(guards_fired=fired)
@@ -177,8 +182,8 @@ def test_10_cross_process_failure_cause_is_null_in_process_and_named_on_a_placem
 
 
 def test_11_the_two_guard_granularities_are_distinguishable_and_a_missing_one_is_refused():
-    per_instance = declare_guard("g1", "n1", None, "per-instance")
-    per_query = declare_guard("g2", "n1", None, "per-query")
+    per_instance = declare_guard("g1", "n1", None, "per-instance", signal="state")
+    per_query = declare_guard("g2", "n1", None, "per-query", signal="state")
     assert per_instance.granularity != per_query.granularity
     assert {per_instance.granularity, per_query.granularity} == {"per-instance", "per-query"}
 

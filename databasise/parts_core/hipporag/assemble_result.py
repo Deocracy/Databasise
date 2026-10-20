@@ -26,7 +26,7 @@ the first ``config["top_k"]`` items (default 5, upstream ``qa_top_k``) of the se
 that branch's own order. On the PPR branch items scoring ``<= 0`` are dropped first; if none is
 left, ``dpr-fallback``'s items stand in. That is a declared degradation (A-WR-05, D-21): the output
 carries ``dpr_stand_in`` and ``base.json`` declares the ``empty_ppr_dpr_stand_in`` guard on this
-node, so the scheduler reports the node's ``guards_fired`` and the run ``degraded`` with the
+node (``"signal": "dpr_stand_in"``, WIRE-08, D-19), so the scheduler reports the node's ``guards_fired`` and the run ``degraded`` with the
 node-free ``declared_fallback`` / ``fallback_path_taken`` codes. The one cut
 bounds both the answer (``qa`` reads these items) and the evidence (minted from them) on both
 branches; dense passage retrieval itself is never cut, since ``reset-vector-join`` reuses it whole.
@@ -40,16 +40,7 @@ from __future__ import annotations
 from typing import Any
 
 from databasise.parts.schema import NodeContext, Part
-from databasise.parts_core.hipporag.fact_filter import _GuardAwareResult
-
 _NAME_AT_VERSION = "hipporag/result-assembler@0.1.0"
-
-
-class _StandInResult(_GuardAwareResult):
-    """The output, comparable to a bool sentinel through ``dpr_stand_in`` so the
-    ``empty_ppr_dpr_stand_in`` guard in ``base.json`` can read it (same protocol as fact-filter's)."""
-
-    _flag = "dpr_stand_in"
 
 
 async def _assemble_result_body(ctx: NodeContext) -> dict[str, Any]:
@@ -78,7 +69,7 @@ async def _assemble_result_body(ctx: NodeContext) -> dict[str, Any]:
         record = await kv_store.get_by_id(str(item["id"]))
         hydrated_items.append({**item, "content": str((record or {}).get("content", ""))})
 
-    return _StandInResult(items=hydrated_items, dpr_stand_in=dpr_stand_in)
+    return {"items": hydrated_items, "dpr_stand_in": dpr_stand_in}
 
 
 HIPPORAG_RESULT_ASSEMBLER_PART = Part(
