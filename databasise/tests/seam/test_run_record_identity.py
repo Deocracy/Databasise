@@ -205,3 +205,72 @@ async def test_a_malformed_evidence_refusal_carries_a_trace_token(tmp_path):
     token = getattr(caught, "trace_token", None)
     assert isinstance(token, str), vars(caught)
     assert (await engine.resolve_trace(token, debug=True))["nodes"]
+
+
+# --------------------------------------------------------------------------------------------- #
+# WIRE-12 (D-03): a run's identity names its arm and is stable across queries on one arm
+# --------------------------------------------------------------------------------------------- #
+
+
+async def _commit_entities(store_root, workspace: str) -> None:
+    """The local arm's only retrieval namespace: enough to pass the empty-namespace refusal."""
+    import numpy as np
+    from databasise.stores.vector import FaissVectorStore
+
+    store = FaissVectorStore(namespace="entities", workspace=workspace, store_root=store_root)
+    await store.upsert(ids=["e-1"], embeddings=np.array([[1.0, 0.0, 0.0]]), metadatas=[{"content": "e"}])
+    await store.index_done_callback()
+
+
+async def _arm_trace(engine, arm: str, text: str) -> dict:
+    from databasise.wirings.resolve import resolve_arm
+
+    envelope, caught = await _outcome(engine._execute_resolved(QueryObject(text=text), resolve_arm(arm)))
+    assert caught is None, repr(caught)
+    return await engine.resolve_trace(envelope.trace_token, debug=True)
+
+
+async def test_two_queries_on_the_local_arm_share_the_wiring_instance_hash(store_root):
+    await _commit_entities(store_root, "ident")
+    engine = Databasise(store_root=store_root, workspace="ident", clients=None)
+
+    first = await _arm_trace(engine, "local", "who built the bridge")
+    second = await _arm_trace(engine, "local", "when was it finished")
+
+    assert first["wiring_instance_hash"] == second["wiring_instance_hash"]
+
+
+async def test_a_unicode_query_shares_the_hash(store_root):
+    await _commit_entities(store_root, "ident")
+    engine = Databasise(store_root=store_root, workspace="ident", clients=None)
+
+    ascii_trace = await _arm_trace(engine, "local", "bridge")
+    unicode_trace = await _arm_trace(engine, "local", "pont à 東京")
+
+    assert ascii_trace["wiring_instance_hash"] == unicode_trace["wiring_instance_hash"]
+
+
+async def test_local_and_naive_record_different_wiring_ids(store_root, synthetic_naive_store):
+    await _commit_entities(store_root, "ident")
+    local = await _arm_trace(Databasise(store_root=store_root, workspace="ident", clients=None), "local", "q")
+    naive = await _arm_trace(
+        Databasise(
+            store_root=synthetic_naive_store["store_root"], workspace=synthetic_naive_store["workspace"], clients=None
+        ),
+        "naive",
+        "q",
+    )
+
+    assert local["wiring_id"] == "lightrag-local"
+    assert local["wiring_id"] != naive["wiring_id"]
+    assert (local["arm_id"], naive["arm_id"]) == ("local", "naive")
+
+
+def test_every_arm_has_a_distinct_wiring_id():
+    from databasise.wirings.resolve import all_wirings, wiring_family
+
+    wirings = all_wirings()
+    assert len(wirings) == 6
+    assert len({wiring["wiring_id"] for _, wiring in wirings}) == 6
+    assert all(wiring.get("arm_id") == name for name, wiring in wirings)
+    assert [wiring_family(wiring) for _, wiring in wirings[:5]] == ["lightrag"] * 5

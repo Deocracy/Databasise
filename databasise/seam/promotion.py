@@ -5,14 +5,12 @@ wiring dict, a trace record, a registry) and returns or raises, following ``sele
 module-constant-plus-pure-function shape (``_wiring_effects``/``_match_capability``).
 
 **Trace-id -> single-arm resolution (D-04).** A persisted ``RunRecord.to_dict()`` carries
-``wiring_id``/``arm_id`` fields, but neither distinguishes one LightRAG arm from another in
-practice: every LightRAG arm's own resolved ``wiring_id`` is the shared ``"lightrag-base"`` string
-(no arm patch touches it), and ``arm_id`` is always the literal ``"seam"``
-(``databasise/seam/engine.py::_execute``). ``wiring_instance_hash`` does differ per arm, but it is
-computed over the *fully injected* resolved wiring (query text and token allowance stamped onto
-every node's config by ``_inject_query``/``_inject_token_allowance``), so it differs per *query
-too* — the same arm run against two different queries never has the same instance hash. The one
-signal that is both query-invariant and unique per arm is the **dispatched node id set**: each
+``wiring_id``/``arm_id`` fields (13-12, D-03: ``lightrag-<arm>`` and the arm name, naive keeping
+``lightrag-base``), but a trace persisted before that change carries the shared ``"lightrag-base"``
+and the literal ``"seam"``, so matching does not rely on either. ``wiring_instance_hash`` is
+computed over the full resolved wiring before query injection since 13-12, yet an older trace's
+hash covers the injected wiring and so differs per *query*. The one signal that is query-invariant
+and unique per arm in every trace is the **dispatched node id set**: each
 ``RunRecord.nodes`` entry's own ``node_id``, which ``databasise/tests/seam/test_trace_token.py``
 already proves is exactly the resolved wiring's own node id set minus its recipe-only nodes (D-04,
 11-10). :func:`resolve_single_arm` matches that set against every candidate wiring's own run-shape

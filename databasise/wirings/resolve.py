@@ -69,9 +69,9 @@ class UnknownWiringFamilyError(ValueError):
 def wiring_family(resolved: dict[str, Any]) -> str:
     """The entry of :data:`WIRING_NAMES` that ``resolved``'s own ``wiring_id`` equals or is
     prefixed by with a ``-`` separator (06-10-PLAN.md) — ``"lightrag-base"``,
-    ``"lightrag-corpus-ingest"`` and every arm-patched LightRAG wiring (which keeps the base's own
-    ``wiring_id`` unchanged, per :func:`resolve_arm`) resolve to ``"lightrag"``; ``"hipporag-base"``
-    resolves to ``"hipporag"``. Raises :class:`UnknownWiringFamilyError` when no entry matches.
+    ``"lightrag-corpus-ingest"`` and every arm-patched LightRAG wiring (``"lightrag-local"`` and so
+    on, per :func:`resolve_arm`) resolve to ``"lightrag"``; ``"hipporag-base"`` resolves to
+    ``"hipporag"``. Raises :class:`UnknownWiringFamilyError` when no entry matches.
     """
     wiring_id = str(resolved.get("wiring_id") or "")
     for name in WIRING_NAMES:
@@ -103,11 +103,19 @@ def resolve_arm(arm_name: str) -> dict[str, Any]:
     arm name, or lets ``jsonpatch.JsonPatchConflict`` propagate for a patch whose ``remove``
     targets a node absent from the base (the fail-closed subtraction guarantee this module exists
     to preserve — never caught or downgraded here).
+
+    D-03: the resolved wiring names its arm. ``arm_id`` is ``arm_name``; ``wiring_id`` is
+    ``lightrag-<arm_name>``, except ``naive``, which keeps the base's ``lightrag-base``
+    (a sixth arm needing that id would force naive onto ``lightrag-naive``).
     """
     base = load_base()
     patch_doc = json.loads(_patch_path(arm_name).read_text(encoding="utf-8"))
     operations = patch_doc["operations"]
-    return jsonpatch.apply_patch(base, operations, in_place=False)
+    resolved = jsonpatch.apply_patch(base, operations, in_place=False)
+    if arm_name != "naive":
+        resolved["wiring_id"] = f"lightrag-{arm_name}"
+    resolved["arm_id"] = arm_name
+    return resolved
 
 
 def resolved_node_ids(arm_name: str) -> set[str]:
@@ -183,7 +191,8 @@ def all_wirings() -> list[tuple[str, dict[str, Any]]]:
     """Every candidate wiring the seam's selectors resolve over (06-01-PLAN.md): every LightRAG
     arm (resolved via :func:`resolve_arm`, preserving ``_ARM_NAMES``' own declared order) plus
     every non-LightRAG base wiring named in :data:`WIRING_NAMES` (each modality's own single base,
-    loaded via :func:`load_wiring` — no arm resolution, since only LightRAG has arms today).
+    loaded via :func:`load_wiring` — no arm resolution, since only LightRAG has arms today; D-03:
+    each such base is stamped with ``arm_id`` equal to its wiring name).
     Returns ``(candidate_name, resolved_dict)`` pairs, mirroring
     ``databasise/seam/selectors.py``'s own former ``_capability_candidates`` shape exactly, so
     that module's ``smallest resolved wiring wins`` tie-break logic is unaffected by this widened
@@ -195,7 +204,7 @@ def all_wirings() -> list[tuple[str, dict[str, Any]]]:
     for wiring_name in WIRING_NAMES:
         if wiring_name == "lightrag":
             continue
-        candidates.append((wiring_name, load_wiring(wiring_name)))
+        candidates.append((wiring_name, {**load_wiring(wiring_name), "arm_id": wiring_name}))
     return candidates
 
 

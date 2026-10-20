@@ -2056,7 +2056,9 @@ class Databasise:
         ``compare`` resolves each selector once and hands that wiring here, so the arm that runs
         is the wiring the pre-check inspected even if an alias is repointed in between. Never
         resolves a selector. ``resolved`` is mutated by the query/token-allowance injection, so
-        pass each resolved wiring to exactly one call.
+        pass each resolved wiring to exactly one call. D-03: ``wiring_instance_hash`` (and the
+        fallback ``wiring_id``) come from the full resolved wiring before that injection; the
+        pruned run copy is never hashed.
 
         D-04 / research Q4 (LRAG-19): the run parses, opens stores for and runs
         :func:`_without_recipe_only_nodes`'s copy, so the index-recipe node is never dispatched on
@@ -2068,6 +2070,9 @@ class Databasise:
         token breakdown, the seam events). A ``SeamRefusalError`` raised after the persist carries
         the run's ``trace_token`` as a public attribute, so ``resolve_trace`` returns the run that
         ended in the refusal; a refusal raised before dispatch carries none."""
+        # WIRE-12, D-03: the identity hashes the full resolved wiring as it arrives, before the query,
+        # token-allowance and max_total_tokens injections, so two queries on one arm record one hash.
+        wiring_bytes = canonicalise(resolved)
         resolved = _inject_query(resolved, query_object.text or "")
         resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
         resolved = _inject_max_total_tokens(resolved, _DEFAULT_MAX_TOTAL_TOKENS)
@@ -2099,7 +2104,6 @@ class Databasise:
             for store in stores.values():
                 await store.finalize()
 
-        wiring_bytes = canonicalise(resolved)
         wiring_instance_hash = f"sha256:{hashlib.sha256(wiring_bytes).hexdigest()}"
         wiring_id = resolved.get("wiring_id") or (
             f"wiring:{hashlib.sha256(wiring_bytes).hexdigest()[:16]}"
@@ -2113,7 +2117,7 @@ class Databasise:
             run_id=str(uuid.uuid4()),
             wiring_id=wiring_id,
             wiring_instance_hash=wiring_instance_hash,
-            arm_id="seam",
+            arm_id=resolved.get("arm_id") or "seam",
             arm_execution_order=0,
             executor_version=_EXECUTOR_VERSION,
             concurrency_setting=_CONCURRENCY_SETTING,

@@ -22,6 +22,7 @@ from databasise.parts.registry import default_registry
 from databasise.runner.trace import TokenAccounting
 from databasise.seam import Databasise, QueryObject
 from databasise.seam.selectors import Selector, resolve_selector
+from databasise.wirings.resolve import wiring_family
 from parts_core.hipporag.conftest import seeded_hipporag_store  # noqa: F401 — fixture import
 
 _QUERY_TEXT = "What sat on the mat?"
@@ -114,11 +115,11 @@ async def test_hipporag_query_does_not_touch_lightrags_store_directories(
 def test_capability_selector_for_rerank_still_resolves_a_lightrag_arm():
     registry = default_registry()
     resolved = resolve_selector(Selector(capability=["calls_rerank"]), registry=registry)
-    assert resolved.get("wiring_id") == "lightrag-base"
+    assert wiring_family(resolved) == "lightrag"
 
 
 def test_default_selector_still_resolves_naive(tmp_path):
     registry = default_registry()
     resolved = resolve_selector(None, registry=registry, store_root=tmp_path)
-    assert resolved.get("wiring_id") == "lightrag-base"
+    assert wiring_family(resolved) == "lightrag"
     assert "generate" in resolved.get("nodes", {})
