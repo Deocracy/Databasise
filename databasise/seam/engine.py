@@ -998,8 +998,11 @@ def _mach11_events(
     """Correlate a run's recorded store touches against its own wiring graph (FA-08): for every
     node whose registered ``Part`` declares ``mutates_store``, a touched store key
     ``_accounted_store_keys`` does not cover is an out-of-``deps`` mutation, surfaced as exactly
-    one ``SeamEvent`` per such node — never per touch, since the event names the participant, not
-    each individual store access. A touch counts whether it is machine-observed
+    one ``SeamEvent`` per such node, in recorded-touch order — never per touch, since the event names
+    the participant, not each individual store access. The event's ``component`` is the resolved
+    capability every reported node declares (``mutates_store``), never the part's ``name@version``
+    (D-15, WIRE-13; CONTRACT.md:630 §14 item 4 and §18.3: no modality-named part in a consumer
+    field). A touch counts whether it is machine-observed
     (``TOUCH_KIND_OBSERVED``, the scheduler's own ``_ScopedStoresView``) or node-reported
     (``TOUCH_KIND_NODE_REPORTED``, an opaque/subprocess-hosted node's own
     ``NodeContext.record_store_touch`` self-report, per this module's own docstring's 05-03
@@ -1046,7 +1049,7 @@ def _mach11_events(
             outcome = "halted"
         else:
             outcome = "completed"
-        events.append(SeamEvent(component=part.name_at_version, spend=spend, outcome=outcome))
+        events.append(SeamEvent(component="mutates_store", spend=spend, outcome=outcome))
     return events
 
 

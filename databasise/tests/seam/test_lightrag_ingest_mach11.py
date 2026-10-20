@@ -14,7 +14,7 @@ from databasise.seam.corpus import IngestDocument
 from databasise.seam.engine import Databasise
 from databasise.tests.fixtures.v1_stub_server import real_v1, requires_v1  # noqa: F401 - fixture
 
-_SYNC = "lightrag/v1-index-sync@0.1.0"
+_SYNC = "mutates_store"
 
 
 @requires_v1

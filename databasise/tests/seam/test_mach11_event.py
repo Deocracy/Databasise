@@ -191,17 +191,16 @@ async def test_an_out_of_deps_mutation_yields_exactly_one_event_and_the_in_deps_
     assert isinstance(events[0], SeamEvent)
 
 
-async def test_the_events_component_equals_the_out_of_deps_parts_registered_name_at_version(
+async def test_the_events_component_is_the_capability_not_the_out_of_deps_parts_name_at_version(
     store_root,
 ):
     parsed, scheduled, touches = await _run_fixture_and_synthesize_mutator_touches(store_root)
     node_by_id = {node.node_id: node for node in scheduled["nodes"]}
-    registry = _make_registry()
 
     [event] = _mach11_events(parsed, touches, node_by_id)
 
-    assert event.component == registry.get(OUT_OF_DEPS_MUTATOR_NAME).name_at_version
-    assert event.component == OUT_OF_DEPS_MUTATOR_NAME
+    assert event.component == "mutates_store"
+    assert event.component != OUT_OF_DEPS_MUTATOR_NAME
 
 
 async def test_the_out_of_deps_event_carries_a_present_zero_spend_with_a_non_empty_counted_by(
@@ -365,7 +364,7 @@ async def test_the_real_deleting_part_produces_exactly_one_seam_event(store_root
     assert len(events) == 1
 
 
-async def test_the_real_deleting_events_component_equals_the_registered_name_at_version_not_a_node_id(
+async def test_the_real_deleting_events_component_is_the_capability_not_a_part_name_or_node_id(
     store_root,
 ):
     parsed, scheduled, touches = await _run_real_delete_part_wiring(store_root)
@@ -373,7 +372,8 @@ async def test_the_real_deleting_events_component_equals_the_registered_name_at_
 
     [event] = _mach11_events(parsed, touches, node_by_id)
 
-    assert event.component == LIGHTRAG_FULL_DELETE_PART.name_at_version
+    assert event.component == "mutates_store"
+    assert event.component != LIGHTRAG_FULL_DELETE_PART.name_at_version
     assert event.component != "full-delete"
 
 

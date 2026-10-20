@@ -63,7 +63,9 @@ SeamEventOutcome = Literal["completed", "halted", "failed"]
 
 class SeamEvent(_StrictModel):
     """D-09/MACH-11's seam-level event: a ``mutates_store`` call outside a wiring's ``deps`` graph,
-    carrying the component's ``name@version``, its spend, and its outcome — drawn from a closed
+    carrying the resolved capability (``component`` is ``mutates_store``, never a part's
+    ``name@version``: no modality-named part reaches a consumer field, CONTRACT.md:630 and §18.3,
+    13-13, D-15), its spend, and its outcome — drawn from a closed
     vocabulary declared on this model, refusing construction with anything else. 04-04 wires the
     detection (``databasise.seam.engine``) and populates this list from a real run. ``outcome`` is
     ``failed`` for a mutating node that raised, ``halted`` for one that completed with its budget

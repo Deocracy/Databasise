@@ -78,6 +78,44 @@ def _outcomes(node_trace: NodeTrace | None) -> list[str]:
     return [event.outcome for event in _mach11_events(parsed, touches, node_by_id)]
 
 
+def test_an_emitted_event_names_the_capability():
+    completed = _trace(status="completed", budget_state="within_budget", cause=None)
+    parsed = _parsed_one_node(_mutator_part())
+
+    events = _mach11_events(parsed, [(_NODE, TOUCH_KIND_OBSERVED, "kv")], {_NODE: completed})
+
+    assert [event.component for event in events] == ["mutates_store"]
+    assert "@" not in events[0].component and "/" not in events[0].component
+
+
+def test_events_come_in_recorded_touch_order_one_per_mutating_node():
+    registry = PartRegistry()
+    registry.register(_mutator_part())
+    wiring = {
+        "wiring_id": "seam-events-order",
+        "nodes": {
+            name: {"component": _MUTATOR, "kind": "mutator", "effects": list(_EFFECTS), "deps": []}
+            for name in ("b_node", "a_node")
+        },
+        "provides": [],
+    }
+    parsed = parse_wiring(wiring, registry)
+    touches = [
+        ("b_node", TOUCH_KIND_OBSERVED, "kv"),
+        ("a_node", TOUCH_KIND_OBSERVED, "kv"),
+        ("b_node", TOUCH_KIND_OBSERVED, "kv"),
+    ]
+    traces = {
+        name: _trace(status="completed", budget_state="within_budget", cause=None) for name in ("b_node", "a_node")
+    }
+    traces["b_node"] = dataclasses.replace(traces["b_node"], node_id="b_node")
+    traces["a_node"] = dataclasses.replace(traces["a_node"], node_id="a_node", budget_state="halted")
+
+    outcomes = [event.outcome for event in _mach11_events(parsed, touches, traces)]
+
+    assert outcomes == ["completed", "halted"]
+
+
 def test_a_mutating_node_that_raised_reports_failed():
     failed = _trace(status="failed", budget_state="halted", cause="NodeExecutionError: X")
 
