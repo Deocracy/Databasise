@@ -33,6 +33,7 @@ from databasise.seam.refusals import (
     DisagreeingPromotionTraceIdsError,
     EmptyPromotionTraceIdsError,
     MeasurementPostureRefusalError,
+    PartialRunEvidenceError,
     UncalibratedFloorRefusalError,
     UnknownTraceReferenceError,
 )
@@ -139,6 +140,23 @@ def _arm_name_for_node_ids(node_ids: frozenset[str], *, trace_reference: str | N
         if node_ids in (run_ids, full_ids, legacy_ids):
             return name
     raise UnknownTraceReferenceError(trace_reference or f"<run with nodes {sorted(node_ids)!r}>")
+
+
+def refuse_partial_evidence(resolved_trace_records: list[dict[str, Any]], trace_ids: list[str]) -> None:
+    """The one partial-evidence rule (14-08-PLAN.md, D-03): raises
+    :class:`~databasise.seam.refusals.PartialRunEvidenceError` naming exactly the trace ids whose
+    record has a truthy ``partial``. Keyed on ``partial`` and never ``degraded`` — a degraded run
+    that is not partial took a declared fallback and completed (Phase 13 D-21, CONTRACT §19.8). A
+    seeded record carries no ``partial`` key and reads as complete. Phase 16's CONN-09 preview calls
+    this same function.
+    """
+    partial_ids = [
+        trace_id
+        for trace_id, record in zip(trace_ids, resolved_trace_records)
+        if record.get("partial")
+    ]
+    if partial_ids:
+        raise PartialRunEvidenceError(trace_ids=partial_ids)
 
 
 def resolved_wiring_for_arm(arm_name: str) -> dict[str, Any]:
@@ -267,6 +285,7 @@ __all__ = [
     "RECORD_KIND_PROMOTION",
     "RECORD_KIND_ROLLBACK",
     "RECORD_KIND_TOMBSTONE",
+    "refuse_partial_evidence",
     "resolve_single_arm",
     "resolved_wiring_for_arm",
     "declared_surface",

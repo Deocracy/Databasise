@@ -258,6 +258,7 @@ from databasise.seam.promotion import (
     derive_mutation_class,
     enforce_gate_verb_posture,
     mint_version,
+    refuse_partial_evidence,
     resolve_single_arm,
     resolved_wiring_for_arm,
 )
@@ -2261,7 +2262,12 @@ class Databasise:
         return public
 
     def _resolve_operator_preconditions(
-        self, alias: str, trace_ids: list[str], change_origin: str | None
+        self,
+        alias: str,
+        trace_ids: list[str],
+        change_origin: str | None,
+        *,
+        refuse_partial: bool = False,
     ) -> tuple[list[dict[str, Any]], str, list[str]]:
         """07-02-PLAN.md Task 1: the one shared place the operator-path preconditions live —
         extracted verbatim from ``promote()``'s own former prologue so ``rollback()``/``retire()``
@@ -2269,7 +2275,10 @@ class Databasise:
         quietly stops being checked). Refuses an invalid ``change_origin``; resolves every trace id
         through ``self._trace_store`` (raising :class:`~databasise.seam.trace_store.
         UnknownTraceReferenceError` per unresolvable id); refuses an empty or disagreeing
-        ``trace_ids`` via :func:`~databasise.seam.promotion.resolve_single_arm`.
+        ``trace_ids`` via :func:`~databasise.seam.promotion.resolve_single_arm`. With
+        ``refuse_partial`` (``promote()`` only, 14-08-PLAN.md D-03) a trace whose record is partial
+        refuses first as :class:`~databasise.seam.refusals.PartialRunEvidenceError`, after trace
+        resolution and before arm matching; ``rollback()``/``retire()`` accept a partial trace (D-01).
 
         Returns ``(resolved_records, arm_name, arm_instance_hashes)``. ``promote()`` uses
         ``arm_name`` directly as its promotion target; ``rollback()``/``retire()`` derive their own
@@ -2282,6 +2291,8 @@ class Databasise:
             raise InvalidChangeOriginError(change_origin=change_origin)
 
         resolved_records = [self._trace_store.resolve(trace_id) for trace_id in trace_ids]
+        if refuse_partial:
+            refuse_partial_evidence(resolved_records, list(trace_ids))
         arm_name = resolve_single_arm(resolved_records, alias=alias, trace_ids=list(trace_ids))
 
         # Real data from the runs the operator read — never fabricated, never returned to the
@@ -2346,7 +2357,7 @@ class Databasise:
             raise InvalidPromotionAliasError(alias=alias)
 
         _resolved_records, arm_name, arm_instance_hashes = self._resolve_operator_preconditions(
-            alias, trace_ids, change_origin
+            alias, trace_ids, change_origin, refuse_partial=True
         )
         new_resolved = resolved_wiring_for_arm(arm_name)
 
