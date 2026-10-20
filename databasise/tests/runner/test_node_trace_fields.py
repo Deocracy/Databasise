@@ -25,7 +25,6 @@ from databasise.parts_core.fake_llm_caller import FAKE_LLM_CALLER_PART
 from databasise.parts_core.passthrough import PASSTHROUGH_PART
 from databasise.runner import scheduler
 from databasise.runner.trace import NodeTrace, TokenAccounting
-from databasise.stores.kv import SqliteKVStore
 from databasise.validator.errors import ValidationReport
 from databasise.validator.parse import ParsedWiring
 
@@ -134,3 +133,152 @@ async def test_the_run_record_validates_against_the_derived_schema(store_root, a
     except AssertionError:
         rejected = True
     assert rejected, "assert_valid_trace must reject an execution_mode outside the declared enum"
+
+
+def _spender(spent_prompt: int, spent_completion: int) -> Part:
+    async def body(ctx: NodeContext) -> dict[str, Any]:
+        tokens = TokenAccounting(
+            prompt_tokens=spent_prompt, completion_tokens=spent_completion, call_count=1, counted_by="t"
+        )
+        return {"tokens": tokens}
+
+    return Part(
+        name_at_version="test/spender@1.0.0",
+        kind="llm-caller",
+        structural_depth="stage",
+        effects=["calls_llm"],
+        upstream_ref=None,
+        body=body,
+    )
+
+
+async def test_an_admitted_opaque_node_is_stamped_subprocess():
+    result = await _run(_parsed(_admitted_opaque_part()))
+
+    trace = result["nodes"][0]
+    assert getattr(trace, "execution_mode", None) == "subprocess"
+    assert getattr(trace, "status", None) == "completed"
+
+
+async def test_a_refused_placement_is_stamped_on_the_failed_trace():
+    async def body(ctx: NodeContext) -> dict[str, Any]:
+        return {}
+
+    unit = Part(
+        name_at_version="test/fs-unit@1.0.0",
+        kind="unit",
+        structural_depth="stage",
+        effects=["fs"],
+        upstream_ref=None,
+        body=body,
+    )
+    result = await _run(_parsed(unit, {"token_allowance": 7}))
+
+    trace = result["nodes"][0]
+    assert result["partial"] is True
+    assert getattr(trace, "execution_mode", None) == "confined-unit"
+    assert getattr(trace, "status", None) == "failed"
+    assert getattr(trace, "allowance", None) == 7
+    assert getattr(trace, "spent", "unset") is None
+    assert trace.cache_hit is None
+
+
+async def test_a_failed_body_is_stamped_failed_with_its_derived_placement():
+    async def body(ctx: NodeContext) -> dict[str, Any]:
+        raise RuntimeError("body failed")
+
+    failing = Part(
+        name_at_version="test/failing@1.0.0",
+        kind="stage",
+        structural_depth="stage",
+        effects=[],
+        upstream_ref=None,
+        body=body,
+    )
+    result = await _run(_parsed(failing))
+
+    trace = result["nodes"][0]
+    assert getattr(trace, "execution_mode", None) == "in-process"
+    assert getattr(trace, "status", None) == "failed"
+
+
+async def test_an_overspending_node_reports_spent_and_allowance():
+    result = await _run(_parsed(_spender(1000, 500), {"token_allowance": 1000}))
+
+    trace = result["nodes"][0]
+    spent = getattr(trace, "spent", None)
+    allowance = getattr(trace, "allowance", None)
+    assert spent == 1500
+    assert allowance == 1000
+    assert spent / allowance > 1.0
+    assert trace.budget_state == "halted"
+    assert trace.realised_budget_share == 1.0
+
+
+async def test_spending_exactly_the_allowance_stays_within_budget():
+    exact = (await _run(_parsed(_spender(600, 400), {"token_allowance": 1000})))["nodes"][0]
+    assert getattr(exact, "spent", None) == 1000
+    assert exact.budget_state == "within_budget"
+    assert exact.realised_budget_share == 1.0
+
+    over = (await _run(_parsed(_spender(600, 401), {"token_allowance": 1000})))["nodes"][0]
+    assert getattr(over, "spent", None) == 1001
+    assert over.budget_state == "halted"
+
+
+async def test_a_zero_allowance_node_with_no_spend_is_within_budget():
+    trace = (await _run(_parsed(PASSTHROUGH_PART)))["nodes"][0]
+
+    assert getattr(trace, "spent", None) == 0
+    assert getattr(trace, "allowance", None) == 0
+    assert trace.budget_state == "within_budget"
+    assert trace.realised_budget_share == 0.0
+
+
+def test_node_trace_defaults_carry_no_placeholder_tier():
+    trace = NodeTrace(
+        node_id="n1",
+        instance_hash="a" * 64,
+        depth="stage",
+        effective_depth="stage",
+        wall_clock_ms=0,
+        cache_hit=None,
+        guards_fired=[],
+        budget_state="within_budget",
+        realised_budget_share=0.0,
+        cross_process_failure_cause=None,
+        resumable=True,
+        tokens=TokenAccounting(),
+    )
+
+    assert trace.tier is None
+    assert trace.feed_tier is None
+
+
+async def test_fake_llm_caller_still_reports_its_cache_hit(store_root):
+    registry = PartRegistry(seed_tracer_parts=False)
+    registry.register(FAKE_LLM_CALLER_PART)
+    wiring = {
+        "nodes": {
+            "n1": {
+                "component": FAKE_LLM_CALLER_PART.name_at_version,
+                "kind": "llm-caller",
+                "effects": list(FAKE_LLM_CALLER_PART.effects),
+                "config": {"prompt": "count these words please", "token_allowance": 1000},
+                "deps": [],
+            }
+        }
+    }
+
+    hits = []
+    for _ in range(2):
+        record = await databasise.run_wiring(
+            wiring,
+            store_root=store_root,
+            registry=registry,
+            determinism_setting="cache-bypassed",
+            concurrency_setting="sequential",
+        )
+        hits.append(record["nodes"][0]["cache_hit"])
+
+    assert hits == [False, True]

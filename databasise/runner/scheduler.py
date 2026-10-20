@@ -39,13 +39,12 @@ the runner already sized for it, though nothing requires a body to use it.
    (``ctx.stores["kv"]``) keep working while gaining the underlying deny-by-default enforcement —
    see ``_ScopedStoresView``'s own docstring for the exact mapping rule.
 
-**Placement (D-08).** ``execution_mode`` is now derived via
-``databasise.validator.execution_mode.derive_execution_mode`` (plan 01-03's hardened version,
-with ``host()`` and a named ``UnimplementedPlacementError``) rather than the tracer-era duplicate
-in ``databasise.validator.depth`` — the two modules independently define a function of this name;
-this module intentionally uses the 01-03 one because it is the one that ships a real hosting
-refusal. ``validator.depth.derive_execution_mode`` is left untouched (out of this plan's lane;
-``tests/parts/test_reference_parts.py`` still imports it and is unaffected by this switch).
+**Placement (D-08, D-14).** ``execution_mode`` is derived via
+``databasise.validator.execution_mode.derive_execution_mode`` (with ``host()`` and a named
+``UnimplementedPlacementError``), the only placement source (the tracer-era copy in
+``validator.depth`` is deleted). Every ``NodeTrace`` this module builds carries its node's
+``execution_mode`` -- on the success path the placement ``_run_node`` hosted, on the failure path
+the refused placement or the one derived from the registered part.
 
 **CR-01 fix (containment/blast-radius must trust the registry, not the wiring).** A wiring
 document is untrusted, author-supplied input (``validator/cycles.py``'s own "a hostile or merely
@@ -623,6 +622,9 @@ async def run_wiring(
                         # there is one, else the placement derived from the registered part.
                         execution_mode=placement
                         or derive_execution_mode(failed_part.effects, failed_part.kind),
+                        status="failed",
+                        allowance=token_allowances[node_id],
+                        spent=None,  # the node never completed, so nothing was metered
                         wall_clock_ms=0,
                         cache_hit=None,
                         guards_fired=[],
@@ -687,6 +689,8 @@ async def run_wiring(
                 NodeTrace(
                     **_pending_node_trace(node_id, parsed, identities, depths),
                     execution_mode=execution_mode,
+                    spent=token.spent,
+                    allowance=token.allowance,
                     wall_clock_ms=wall_clock_ms,
                     cache_hit=cache_hit,
                     guards_fired=guards_fired,

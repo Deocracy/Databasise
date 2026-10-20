@@ -15,8 +15,8 @@ is available at this position, and what this module's ``EvidenceRef`` carries in
 the store's own record identifier (``ref``), the namespace it lives in, an ``ItemKind`` label
 (CONTRACT.md §4's frozen union), the run's own score, and the evidence tier label (``tier``, §4's
 T0-T3 ladder — left ``None`` in this plan; no evidence-tier computation exists yet, mirroring
-``databasise.runner.trace``'s own ``TIER_PLACEHOLDER`` note that no scored evidence item flows
-through a tracer node yet). Closing the ``ChunkRef`` gap requires plumbing recipe identity to the
+``databasise.runner.trace``'s ``NodeTrace`` ``tier``/``feed_tier``, which are ``None`` for the same
+reason, D-14). Closing the ``ChunkRef`` gap requires plumbing recipe identity to the
 retrieval position, out of this plan's scope.
 
 **Machine-resolvable, never an inline copy (D-07, T-04-07's mitigation).** ``EvidenceRef`` carries
