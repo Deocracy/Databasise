@@ -862,6 +862,20 @@ class EmptyNamespaceError(SeamRefusalError):
         )
 
 
+class AmbiguousAnswerPositionError(SeamRefusalError):
+    """Raised by ``Databasise.query`` (and ``compare``) after the nodes ran, when the wiring's
+    ``provides`` positions include more than one node that produced a completion (Phase 13 D-04).
+    The seam has no tie-break between two answers, so it refuses instead of picking one. REST answers
+    422. No attribute is public and the message names no node; the refusal carries the run's
+    ``trace_token``, whose debug trace names the nodes."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "AmbiguousAnswerPositionError: the wiring declares more than one answering provides "
+            "position, so the seam cannot choose one answer"
+        )
+
+
 class UnsupportedUploadTypeError(SeamRefusalError):
     """Raised by ``Databasise.ingest`` for a raw upload whose ``file_name`` has no suffix, or one
     v1's default parser does not handle, before anything is written (11-05, D-09). REST answers 422.
@@ -947,6 +961,7 @@ __all__ = [
     "ForeignEngineRefusalError",
     "StoreBusyError",
     "EmptyNamespaceError",
+    "AmbiguousAnswerPositionError",
     "UnsupportedUploadTypeError",
     "UnparseableWiringError",
     "EmptyPromotionTraceIdsError",

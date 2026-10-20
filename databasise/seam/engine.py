@@ -264,6 +264,7 @@ from databasise.seam.promotion import (
 from databasise.seam.query import QueryObject, check_consumable
 from databasise.seam.refusals import (
     ActiveGenerationRetirementError,
+    AmbiguousAnswerPositionError,
     DocumentNotInterruptedError,
     DuplicateDocumentIdError,
     EmptyComparisonRequestError,
@@ -1072,10 +1073,10 @@ def _select_answer(
     whichever provides-node happened to run last silently win for both fields, with no signal in
     the envelope that a choice was made among several — exactly the implicit, order-dependent
     behavior this package's own house style (explicit refusals over silent narrowing) prohibits
-    elsewhere. Raises ``RuntimeError`` if more than one ``provides`` node produces a completion —
-    no selector this phase resolves can produce that today (every arm this phase ships declares
-    exactly one ``provides`` position), so it is refused rather than silently resolved by
-    incidental order, mirroring ``_execute()``'s own precedent for a cyclic resolved wiring.
+    elsewhere. Raises :class:`~databasise.seam.refusals.AmbiguousAnswerPositionError` (a 422 seam
+    refusal, WIRE-12 D-04) if more than one ``provides`` node produces a completion — no selector
+    this phase resolves can produce that today (every arm this phase ships declares exactly one
+    ``provides`` position), so it is refused rather than silently resolved by incidental order.
 
     WIRE-04, D-06: ``depth_label`` is ``None`` unless a ``provides`` node returned a completion (an
     empty completion string counts as answered); it is then that node's effective depth.
@@ -1088,11 +1089,9 @@ def _select_answer(
         if not (isinstance(output, dict) and "completion" in output):
             continue
         if answered_node_id is not None:
-            raise RuntimeError(
-                f"wiring declares more than one provides position with a completion "
-                f"({answered_node_id!r} and {node_id!r} both did); the seam has no defined "
-                "tie-break for more than one answering provides node"
-            )
+            # The node ids stay in this server log line; the refusal and its message name none.
+            logger.error("two provides nodes answered: %r and %r", answered_node_id, node_id)
+            raise AmbiguousAnswerPositionError()
         answered_node_id = node_id
         answer = str(output["completion"])
         node_trace = node_by_id.get(node_id)

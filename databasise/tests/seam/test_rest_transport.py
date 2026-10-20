@@ -75,6 +75,7 @@ from databasise.seam.refusals import (
     SeamRefusalError,
     StoreBusyError,
     EmptyNamespaceError,
+    AmbiguousAnswerPositionError,
     UnsupportedUploadTypeError,
     ActiveGenerationRetirementError,
     TombstonedGenerationError,
@@ -441,6 +442,7 @@ _REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
     ),
     StoreBusyError: lambda: StoreBusyError(store_kind="graph"),
     EmptyNamespaceError: lambda: EmptyNamespaceError(store_kind="vector"),
+    AmbiguousAnswerPositionError: lambda: AmbiguousAnswerPositionError(),
     UnsupportedUploadTypeError: lambda: UnsupportedUploadTypeError(suffix=".xyz"),
     UnparseableWiringError: lambda: UnparseableWiringError(violations=["unwired-store-effect"]),
     ForeignEngineRefusalError: lambda: ForeignEngineRefusalError(

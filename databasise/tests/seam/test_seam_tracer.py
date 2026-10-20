@@ -14,6 +14,7 @@ from databasise.clients.base import ChatResult, EmbeddingResult
 from databasise.runner.trace import NodeTrace, TokenAccounting
 from databasise.seam import Databasise, QueryObject, ResponseEnvelope
 from databasise.seam.engine import _select_answer
+from databasise.seam.refusals import AmbiguousAnswerPositionError
 
 _STUB_COMPLETION = "This is a stub completion for the seam's end-to-end tracer test."
 
@@ -128,5 +129,5 @@ def test_select_answer_refuses_when_more_than_one_provides_node_produces_a_compl
         "node-b": _node_trace("node-b", effective_depth="stage"),
     }
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(AmbiguousAnswerPositionError):
         _select_answer(provides, provided, node_by_id)
