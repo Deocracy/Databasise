@@ -262,6 +262,7 @@ from databasise.seam.promotion import (
     resolved_wiring_for_arm,
 )
 from databasise.seam.query import QueryObject, check_consumable
+from databasise.seam.redact import REASON_VALUE_KEYS, forbidden_identities, node_free_reason
 from databasise.seam.refusals import (
     ActiveGenerationRetirementError,
     AmbiguousAnswerPositionError,
@@ -2126,7 +2127,9 @@ class Databasise:
 
         # 04-04 Task 1 (API-10, D-06) / WIRE-12 (D-04): persist the RunRecord and mint its opaque trace
         # reference right after the run returns, before any post-dispatch refusal can discard it.
-        trace_token = self._trace_store.persist(record.to_dict())
+        record_dict = record.to_dict()
+        trace_token = self._trace_store.persist(record_dict)
+        low_entropy = forbidden_identities(record_dict)[1]
 
         try:
             # Phase 10 review CR-01 (D-13 on the query path): a store error inside a node is a named
@@ -2187,8 +2190,9 @@ class Databasise:
                 depth_label=depth_label,
                 partial=record.partial,
                 degraded=record.degraded,
-                stop_reason=record.stop_reason,
-                degradation_reason=record.degradation_reason,
+                # D-05: the consumer reasons are checked against the closed codes (never raises).
+                stop_reason=node_free_reason(record.stop_reason, low_entropy),
+                degradation_reason=node_free_reason(record.degradation_reason, low_entropy),
                 token_accounting=token_accounting,
                 seam_events=seam_events,
             )
@@ -2233,7 +2237,15 @@ class Databasise:
         record = self._trace_store.resolve(trace_reference)
         if debug:
             return record
-        return {key: value for key, value in record.items() if key in _NON_DEBUG_TRACE_FIELDS}
+        public = {key: value for key, value in record.items() if key in _NON_DEBUG_TRACE_FIELDS}
+        # D-05: a record stored before reasons were closed codes may carry free text naming a node.
+        try:
+            low_entropy = forbidden_identities(record)[1]
+        except (KeyError, TypeError):  # a stored record of an older shape: the log line loses a detail
+            low_entropy = set()
+        for key in REASON_VALUE_KEYS & public.keys():
+            public[key] = node_free_reason(public[key], low_entropy)
+        return public
 
     def _resolve_operator_preconditions(
         self, alias: str, trace_ids: list[str], change_origin: str | None

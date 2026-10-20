@@ -20,7 +20,7 @@ low-entropy identity leaking as a plain string *value* rather than a key (e.g. a
 ``SeamEvent.component``). ``assert_no_forbidden_values`` closes that gap, but — to avoid
 reintroducing the exact false-positive problem the two-tier split exists to avoid — it is scoped:
 it walks every string *value* at every nesting depth and checks it for *equality* (never substring
-containment) against a forbidden low-entropy value, skipping only the fields named in
+containment, except under the two reason keys described below) against a forbidden low-entropy value, skipping only the fields named in
 ``FREEFORM_VALUE_KEYS`` (today: ``answer`` — the one field whose content is genuinely free text an
 LLM composed, where a legitimate word could equal a low-entropy identity by coincidence, e.g. the
 LightRAG base wiring's own ``keywords`` node id). Every other string-valued field in the envelope
@@ -35,20 +35,40 @@ narrowing ``FREEFORM_VALUE_KEYS`` further if needed — never narrowing the forb
 the corpus for a quieter one. If it produces a true positive, the fix is the redaction bug, not this
 module.
 
-**This is a test-time gate, not a response-time check.** It is called by tests and by the leak gate
-over recorded responses, never on the response path while serving. Its checks raise
-``AssertionError`` explicitly rather than using ``assert``, so they still fire under ``python -O``.
+**The two reason fields are the one exception to equality (Phase 13 D-05).** ``stop_reason`` and
+``degradation_reason`` (``REASON_VALUE_KEYS``) are closed codes, so ``assert_no_forbidden_values`` also
+fails when one of them *contains* a forbidden low-entropy value as a substring: that is how
+``"node 'chunk-vector': ..."`` is caught. Every other key keeps the equality check, so an answer or
+any other value that merely contains a node-id word never trips it.
+
+**The ``assert_*`` checks are a test-time gate.** They are called by tests and by the leak gate over
+recorded responses, never on the response path while serving. They raise ``AssertionError``
+explicitly rather than using ``assert``, so they still fire under ``python -O``.
+
+**``node_free_reason`` is the response-time check (D-05, D-23).** The engine runs it on the two reason
+fields only, of the envelope and of the non-debug trace: a value that is not one of the closed reason
+codes becomes ``node_failed`` and is logged at error level. It never raises, so a regression or an
+old stored free-text reason can never turn a served response into a 500.
 """
 
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+from databasise.runner.trace import REASON_CODES, REASON_NODE_FAILED
+
+logger = logging.getLogger(__name__)
 
 # The only field this gate treats as genuinely free text (composed by an LLM from corpus content,
 # where a legitimate word could coincidentally equal a low-entropy identity — see module docstring,
 # CR-04). Every other string-valued field in the envelope is structured, program-controlled output,
 # so `assert_no_forbidden_values` checks it for an exact match against the forbidden set.
 FREEFORM_VALUE_KEYS = frozenset({"answer"})
+
+# The two consumer reason fields, closed codes by D-05: a forbidden identity anywhere inside one is a
+# leak, so these keys are substring-checked while every other key keeps the equality check.
+REASON_VALUE_KEYS = frozenset({"stop_reason", "degradation_reason"})
 
 
 def forbidden_identities(run_record: dict[str, Any]) -> tuple[set[str], set[str]]:
@@ -107,6 +127,8 @@ def assert_no_forbidden_values(
             if isinstance(value, str):
                 if value in low_entropy:
                     raise AssertionError(f"forbidden low-entropy value {value!r} found at {child_path}")
+                if key in REASON_VALUE_KEYS and any(identity in value for identity in low_entropy if identity):
+                    raise AssertionError(f"forbidden low-entropy value found inside the reason at {child_path}")
             else:
                 assert_no_forbidden_values(value, low_entropy, freeform_keys=freeform_keys, path=child_path)
     elif isinstance(obj, list):
@@ -114,8 +136,29 @@ def assert_no_forbidden_values(
             assert_no_forbidden_values(item, low_entropy, freeform_keys=freeform_keys, path=f"{path}[{i}]")
 
 
+def node_free_reason(value: Any, low_entropy: set[str]) -> Any:
+    """The response-time check for one consumer reason field (Phase 13 D-05, D-23): ``None`` stays
+    ``None``, a closed reason code passes unchanged, and anything else (free text, a code with text
+    appended, a non-string) becomes ``node_failed`` with one error-level log line saying whether a
+    forbidden identity was found in it. The value itself is never logged. Never raises."""
+    if value is None or (isinstance(value, str) and value in REASON_CODES):
+        return value
+    try:
+        leaked = isinstance(value, str) and any(identity in value for identity in low_entropy if identity)
+    except Exception:  # noqa: BLE001 - this check must never turn a served response into a 500
+        leaked = False
+    logger.error(
+        "a consumer reason field was not a closed code and was served as %s (forbidden identity found: %s)",
+        REASON_NODE_FAILED,
+        leaked,
+    )
+    return REASON_NODE_FAILED
+
+
 __all__ = [
     "FREEFORM_VALUE_KEYS",
+    "REASON_VALUE_KEYS",
+    "node_free_reason",
     "forbidden_identities",
     "assert_no_forbidden_keys",
     "assert_no_forbidden_values",
