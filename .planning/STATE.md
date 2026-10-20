@@ -5,11 +5,11 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 14
 current_phase_name: Promotion & Ledger
 status: planning
-stopped_at: Phase 13 complete, ready to plan Phase 14
-last_updated: "2026-10-20T20:48:29.723Z"
+stopped_at: Phase 14 context gathered
+last_updated: "2026-10-20T21:23:19.245Z"
 last_activity: 2026-10-20
 last_activity_desc: Phase 13 complete, transitioned to Phase 14
-state_head: 3534e7746e429b1136419101cdcaeacf08aaa566
+state_head: ed03b7dad6f572e5372c85f619ec1eec73fab6ed
 progress:
   total_phases: 11
   completed_phases: 6
@@ -286,9 +286,9 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-20T18:36:27.867Z
-Stopped at: Phase 13 complete, ready to plan Phase 14
-Resume file: None
+Last session: 2026-10-20T21:23:18.828Z
+Stopped at: Phase 14 context gathered
+Resume file: .planning/phases/14-promotion-ledger/14-CONTEXT.md
 
 ## Operator Next Steps
 
