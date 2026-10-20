@@ -81,7 +81,7 @@ except ImportError as exc:  # pragma: no cover - exercised only without the `res
         "Install with: pip install 'databasise[rest]' (or `uv sync --extra rest`)."
     ) from exc
 
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, StrictBool, ValidationError
 
 from databasise.parts.registry import PartRegistry
 from databasise.seam.corpus import (
@@ -211,7 +211,7 @@ class CompareRequest(_RequestModel):
 
 class TraceRequest(_RequestModel):
     trace_reference: str
-    debug: bool = False
+    debug: StrictBool = False
 
 
 class IngestRequest(_RequestModel):

@@ -57,7 +57,7 @@ import base64
 import binascii
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool
 
 from databasise.seam.corpus import IngestDocument
 from databasise.seam.evidence import EvidenceRef
@@ -197,7 +197,7 @@ class ResolveToolArgs(_ToolArgs):
     scope: ResolveScope
     evidence_ref: EvidenceRef | None = None
     trace_reference: str | None = None
-    debug: bool = False
+    debug: StrictBool = False
 
 
 class PromoteToolArgs(_ToolArgs):
