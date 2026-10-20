@@ -82,3 +82,28 @@ def test_docstring_states_every_mapping():
     ):
         assert needle in doc, needle
     assert "sufficient to distinguish" not in doc
+
+
+@pytest.mark.parametrize(
+    "token", ["reads_vector:", "reads_vector:a b", "reads_graph:entities", "writes_kv:x", "entities"]
+)
+def test_registration_refuses_a_malformed_or_undeclared_namespace_token(token):
+    from databasise.parts.registry import PartRegistry
+    from databasise.parts.schema import Part
+
+    registry = PartRegistry(seed_tracer_parts=False)
+    part = Part(
+        name_at_version="probe/ns@0.1.0",
+        kind="retriever",
+        structural_depth="stage",
+        effects=["reads_vector"],
+        upstream_ref=None,
+        reads_namespaces=(token,),
+    )
+    try:
+        registry.register(part)
+    except ValueError as exc:
+        assert type(exc).__name__ == "InvalidReadNamespaceTokenError"
+    else:
+        raise AssertionError(f"{token!r} was accepted")
+    assert registry.keys() == []

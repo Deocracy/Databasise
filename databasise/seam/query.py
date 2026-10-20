@@ -7,22 +7,21 @@ before any wiring is resolved.
 ``generate`` positions in the registered LightRAG parts all read it (``databasise.seam.engine``'s
 ``_inject_query`` stamps it onto their configs, mirroring ``databasise/parity/run_arm.py``).
 
-The other four are refused as unconsumable **by absence, not by permanent exclusion** — each one
-requires a capability no part or store in this milestone's registry declares yet:
+The other four are refused as unconsumable for this contract version (WIRE-16, D-10). Each needs
+a capability outside the frozen 17-member ``Effect`` vocabulary (a project constraint), and
+``PartRegistry.register`` refuses any effect outside that vocabulary, so no part or store
+declaration path enables them:
 
 - ``embedding`` requires a bound ``space_id`` and a part declaring a matching ``reads_space``
-  (§18.1) — no part declares this capability today.
+  (§18.1) — ``reads_space`` is not an ``Effect`` member, so no part can declare it.
 - ``predicates`` requires a store consuming it as a pointwise or bulk-export query per §14.2's
   sub-capability tables — no registered store declares one.
 - ``profile_ref`` requires a part able to resolve the ref through §4's deref-raising discipline —
-  none exists yet.
+  none exists.
 - ``formal_query`` requires a store declaring the ``formal-query-language`` sub-capability §14.2
   names explicitly — no registered store declares it.
 
-A later phase that registers a part/store declaring the matching capability flips one of these four
-from refused to consumable without changing this module's shape — :func:`check_consumable` reads
-the registry's own declared capabilities each call, rather than hardcoding a permanent exclusion
-list.
+:func:`check_consumable` still reads the registry's own declared capabilities on each call.
 """
 
 from __future__ import annotations

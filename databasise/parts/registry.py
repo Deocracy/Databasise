@@ -16,10 +16,10 @@ None``) carries no admission requirement at all, regardless of its ``kind``.
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, get_args
 
 from databasise.parts.admission import validate_admission
-from databasise.parts.schema import NodeContext, Part
+from databasise.parts.schema import Effect, NodeContext, Part
 
 
 class UnknownPartError(KeyError):
@@ -41,6 +41,18 @@ class DuplicatePartError(ValueError):
     def __init__(self, name_at_version: str):
         self.name_at_version = name_at_version
         super().__init__(f"part {name_at_version!r} is already registered")
+
+
+class UnknownPartEffectError(ValueError):
+    """Raised by ``PartRegistry.register`` for effects outside the frozen 17-member ``Effect``
+    literal (WIRE-16, D-10)."""
+
+    def __init__(self, name_at_version: str, effects: list[str]):
+        self.name_at_version = name_at_version
+        self.effects = effects
+        super().__init__(
+            f"part {name_at_version!r} declares effects outside the frozen Effect vocabulary: {effects}"
+        )
 
 
 class InvalidReadNamespaceTokenError(ValueError):
@@ -142,8 +154,13 @@ class PartRegistry:
         literal ``"opaque"`` value with no admission record is refused
         (``UnadmittedOpaquePartError``); a present record is validated via ``validate_admission``
         before the part is filed, so an invalid record is refused here rather than surfacing only
-        at run time. A declaration-only part (``body is None``) is exempt from both checks
-        regardless of its ``kind``.
+        at run time. A declaration-only part (``body is None``) is exempt from both admission
+        checks regardless of its ``kind``.
+
+        An effect outside the frozen ``Effect`` literal is refused (``UnknownPartEffectError``,
+        WIRE-16), declaration-only parts included, so no registration can make a query member
+        beyond that vocabulary consumable. Each ``reads_namespaces`` token is validated too
+        (``InvalidReadNamespaceTokenError``, WIRE-01).
 
         Gated on ``kind``, not ``structural_depth`` — the two are independent fields (see
         ``databasise/parts/schema.py``'s own docstring): ``lightrag/embedder-index@0.1.0``
@@ -157,6 +174,9 @@ class PartRegistry:
         """
         if part.name_at_version in self._parts:
             raise DuplicatePartError(part.name_at_version)
+        unknown = [effect for effect in part.effects if effect not in get_args(Effect)]
+        if unknown:
+            raise UnknownPartEffectError(part.name_at_version, unknown)
         for token in part.reads_namespaces:
             effect, _, namespace = token.partition(":")
             if (
