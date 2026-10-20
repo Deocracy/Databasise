@@ -1,5 +1,5 @@
 {
-  "ledger_version": 644,
+  "ledger_version": 678,
   "frozen_at": null,
   "items": [
     {
@@ -1167,7 +1167,7 @@
     {
       "id": "WIRE-01",
       "text": "Each of the six query candidates (naive, bypass, hybrid, local, global, hipporag) can be resolved by at least one production \u00a718.4 selector without a promote. Today capability matching with the stable fewest-nodes sort makes hybrid (17 nodes) and global (15 nodes, listed after local) unreachable, because both have local's effect union. The selectors.py module docstring (lines 10-25) states whic...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/seam/test_selector_reachability.py",
       "code_ref": "databasise/seam/selectors.py",
@@ -1181,7 +1181,7 @@
     {
       "id": "WIRE-02",
       "text": "parse_wiring reports a named violation whenever a top-level provides entry or evidence_position.node names a node missing from the wiring's nodes. Every resolved wiring returned by all_wirings() passes that check. For bypass, which has no retrieval node, this means its evidence_position is removed or set to null instead of naming the removed chunk-vector. A local-arm /query that retrieves chunk...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/validator/test_top_level_refs.py",
       "code_ref": "databasise/validator/parse.py",
@@ -1195,7 +1195,7 @@
     {
       "id": "WIRE-03",
       "text": "ResponseEnvelope.stop_reason and degradation_reason, and the same two fields in the non-debug /trace/resolve output, never contain an internal node id, a part name@version, or an internal exception class name. A failed embedder-query or fact-score node produces a reason drawn from a fixed node-free vocabulary, and the node detail is shown only in the debug trace. The leak check matches substrings...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/seam/test_stop_reason_leak.py",
       "code_ref": "databasise/seam/redact.py",
@@ -1209,7 +1209,7 @@
     {
       "id": "WIRE-04",
       "text": "When no provides node produced a completion (a failed or partial run), ResponseEnvelope.depth_label is null instead of 'stage'. When a provides node answered, depth_label holds the depth chosen by the owner decision: either the wiring depth required by \u00a718.2/R-1 or the answering node's depth. The field is typed as the Depth Literal ('opaque'|'evidence'|'stage'), not as a free str.",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/seam/test_depth_label.py",
       "code_ref": "databasise/seam/engine.py",
@@ -1223,7 +1223,7 @@
     {
       "id": "WIRE-05",
       "text": "Every refusal the runner raises before dispatch, and every cyclic-wiring outcome, reaches REST as a structured SeamRefusalError subclass with a named type and fields, never as an unstructured 500. This covers a non-ok ValidationReport (WiringRefusedError, with code, pointer and message kept for each violation), invalid max_concurrency or token_allowance, and malformed guard declarations. Query,...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/seam/test_preflight_refusals.py",
       "code_ref": "databasise/seam/engine.py",
@@ -1237,7 +1237,7 @@
     {
       "id": "WIRE-06",
       "text": "parse_wiring returns a ValidationReport and never raises for a malformed document. It covers doc=[], nodes=None and nodes=[1]. Each node id appears in report.cycles at most once; today a self-loop inside a larger SCC is listed twice. Violation.pointer escapes '~' as '~0' and '/' as '~1' (RFC 6901). A WiringNode.kind that differs from the resolved Part.kind is reported as a violation. CODE_UNKNO...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/validator/test_parse_report.py",
       "code_ref": "databasise/validator/parse.py",
@@ -1251,7 +1251,7 @@
     {
       "id": "WIRE-07",
       "text": "Execution placement has one source. validator/depth.py no longer defines derive_execution_mode; parts_core/fixpoint_body.py and tests/parts/test_reference_parts.py use validator/execution_mode.py's version. The placement for nodes declaring calls_llm, calls_embedding or calls_rerank follows the owner's reading of CONTRACT.md:238. UnimplementedPlacementError's message and docstring no longer con...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/validator/test_execution_mode_single_source.py",
       "code_ref": "databasise/validator/execution_mode.py",
@@ -1265,10 +1265,10 @@
     {
       "id": "WIRE-08",
       "text": "A guard fires only on the value it declares. evaluate_guards compares a declared output field (or signal) of the evaluating node, not the node's whole output object, so a plain dict output does not fire a guard. Before dispatch, the runner checks that each guard's evaluating_node is the guarded node or one of its transitive dependencies, and raises a GuardDeclarationError carrying node_id other...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
-      "test_ref": "",
-      "code_ref": "",
+      "test_ref": "databasise/tests/runner/test_guard_evaluation.py",
+      "code_ref": "databasise/runner/guards.py",
       "evidence": "",
       "owner": "",
       "phase": "13",
@@ -1279,7 +1279,7 @@
     {
       "id": "WIRE-09",
       "text": "The LightRAG local and global arms' keyword fall-through guards (ll_keywords_empty_fallthrough, hl_keywords_empty_fallthrough) are handled in one of two ways. Either they are declared in the guarded node's config.guards in the shape declare_guard accepts and are evaluated, so that guards_fired is non-empty on a run whose ll/hl keyword output is empty. Or they are removed from the arm patch file...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/wirings/test_lightrag_guards.py",
       "code_ref": "databasise/wirings/lightrag/arm-local.json-patch.json",
@@ -1293,7 +1293,7 @@
     {
       "id": "WIRE-10",
       "text": "Every node in the wiring has exactly one NodeTrace in the run record, including nodes the TaskGroup cancelled because a sibling failed and nodes in batches that were never scheduled. Each NodeTrace carries a status that distinguishes completed, failed, cancelled and not-scheduled. A failed node's wall_clock_ms is the measured elapsed time before the failure, not 0. An exception raised in the lo...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/runner/test_trace_completeness.py::test_every_node_gets_one_trace_with_its_status",
       "code_ref": "databasise/runner/scheduler.py",
@@ -1307,7 +1307,7 @@
     {
       "id": "WIRE-11",
       "text": "NodeTrace fields report what was measured. An execution_mode field is stamped on every node (in-process, subprocess and so on) on both the success and the refusal path. cache_hit is null when the part reports nothing, instead of False; only fake_llm_caller reports it today. tier and feed_tier are null or explicitly marked as placeholders instead of asserting 'T3'. A budget-halted node's trace c...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/runner/test_node_trace_fields.py",
       "code_ref": "databasise/runner/trace.py",
@@ -1321,10 +1321,10 @@
     {
       "id": "WIRE-12",
       "text": "RunRecord identity and persistence describe the run accurately. concurrency_setting reflects that ready batches run concurrently (or the scheduler runs them sequentially when the record says 'sequential'). RunRecord.wiring_id distinguishes the five LightRAG arms instead of always 'lightrag-base'. wiring_instance_hash is computed before query-text injection, so two queries on the same arm share ...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
-      "test_ref": "",
-      "code_ref": "",
+      "test_ref": "databasise/tests/seam/test_run_record_identity.py",
+      "code_ref": "databasise/seam/engine.py",
       "evidence": "",
       "owner": "",
       "phase": "13",
@@ -1335,10 +1335,10 @@
     {
       "id": "WIRE-13",
       "text": "SeamEvent records are correct. A mutating node whose execution raised gets outcome 'failed', not 'halted'; 'halted' stays reserved for budget halts. SeamEvent.component holds the value fixed by the owner decision (the resolved capability per CONTRACT.md:630 \u00a714 item 4, or name@version), and the leak tests and the envelope agree on whether part names may appear. ingest() passes a recorder to run...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
-      "test_ref": "",
-      "code_ref": "",
+      "test_ref": "databasise/tests/seam/test_seam_events.py",
+      "code_ref": "databasise/seam/engine.py",
       "evidence": "",
       "owner": "",
       "phase": "13",
@@ -1349,7 +1349,7 @@
     {
       "id": "WIRE-14",
       "text": "Engine internal paths fail by name and open the correct stores. An evidence_position node returning a dict without 'items' raises MalformedEvidenceItemError, not a bare KeyError 500. delete_document builds stores from the resolved corpus-delete wiring's store_namespaces, as ingest does. resolve_evidence opens only the stores the evidence namespace needs and does not open the Cozo graph. A Hippo...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/seam/test_engine_internals.py",
       "code_ref": "databasise/seam/engine.py",
@@ -1363,10 +1363,10 @@
     {
       "id": "WIRE-15",
       "text": "environment_hash's docstring lists every input. Whether platform.platform() (kernel release and glibc) is included follows the owner decision, so whether a kernel update changes config_hash and instance_hash is documented. If a Nix-provided distribution's RECORD contains '/nix/store/' and the digest cannot be computed, /health reports not-ok with the EnvironmentDigestError reason, instead of re...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
-      "test_ref": "",
-      "code_ref": "",
+      "test_ref": "databasise/tests/identity/test_env.py",
+      "code_ref": "databasise/identity/env.py",
       "evidence": "",
       "owner": "",
       "phase": "13",
@@ -1377,7 +1377,7 @@
     {
       "id": "WIRE-16",
       "text": "The four advanced query members (embedding, predicates, profile_ref, formal_query) are permanently refused for this contract version, because their required capabilities are outside the frozen 17-member Effect vocabulary (a project constraint). Part registration validates effects against the Effect Literal, so a non-conforming registration such as effects=['reads_space'] raises instead of makin...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/seam/test_advanced_query_members.py",
       "code_ref": "databasise/parts/registry.py",
@@ -1391,7 +1391,7 @@
     {
       "id": "WIRE-17",
       "text": "Each refusal type that shipped wirings can only partly reach has a test that pins where it can occur. UnbudgetableParticipantError is raised on a HippoRAG /query whose injected client reports 'unbudgetable', and not on LightRAG query arms with the shipped client. NoWritePathForModalityError occurs on delete with a HippoRAG selector, and ingest has no code path for it. MutableStoreComparisonExcl...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/seam/test_refusal_reachability.py",
       "code_ref": "databasise/seam/engine.py",
@@ -1405,10 +1405,10 @@
     {
       "id": "WIRE-18",
       "text": "The runner exposes no unused scheduling or budget API. The determinism_setting and concurrency_setting parameters of run_wiring are either used (recorded in the returned dict) or removed. ctx._semaphore and per-node max_concurrency are either used by a production part or removed. split_allowance, apportion, ApportionmentPolicy, Allowance, BudgetHalted and BudgetState 'degraded' are either produ...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
-      "test_ref": "",
-      "code_ref": "",
+      "test_ref": "databasise/tests/runner/test_runner_surface.py",
+      "code_ref": "databasise/runner/scheduler.py",
       "evidence": "",
       "owner": "",
       "phase": "13",
@@ -2418,6 +2418,18 @@
     "databasise/tests/seam/test_foreign_engine_refusal.py": {
       "reason": "12-14 Task 3 (A-WR-05, D-11): the engine fault log carries a redacted traceback instead of exc_info; line 118's exc_info identity assertion becomes a no-exc_info plus redacted-detail pin",
       "granted_at": 605
+    },
+    "databasise/tests/seam/test_query_trace_nodes.py": {
+      "reason": "13-12 Task 1 (WIRE-12, D-03): wiring_instance_hash is computed from the full resolved wiring before query, token-allowance and max_total_tokens injection; _expected_instance_hash (lines 33-38) hashes canonicalise(resolve_arm(arm)) without the three _inject_* calls; line 51 is unchanged",
+      "granted_at": 645
+    },
+    "databasise/tests/seam/test_lightrag_ingest_mach11.py": {
+      "reason": "13-13 Task 1 (WIRE-13, D-15): SeamEvent.component is the resolved capability mutates_store, not a part name@version; line 17's _SYNC constant becomes 'mutates_store'; the assertions at lines 28 and 34 are unchanged",
+      "granted_at": 646
+    },
+    "databasise/tests/runner/test_trace_completeness.py": {
+      "reason": "13-12 Task 2 (WIRE-08): guards must declare a signal key; test_an_output_whose_comparison_raises_fails_that_node gives its guard \"signal\": \"flag\" and its body returns {\"flag\": Bomb()}; the assertions are unchanged",
+      "granted_at": 647
     }
   },
   "notify_cmd": null,

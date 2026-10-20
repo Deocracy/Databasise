@@ -1,0 +1,10 @@
+{
+  "id": "LRAG-19",
+  "plants": [
+    {
+      "file": "databasise/seam/engine.py",
+      "find": "        wiring_instance_hash = f\"sha256:{hashlib.sha256(wiring_bytes).hexdigest()}\"",
+      "replace": "        wiring_instance_hash = f\"sha256:{hashlib.sha256(canonicalise(resolved)).hexdigest()}\""
+    }
+  ]
+}

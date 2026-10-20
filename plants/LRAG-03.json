@@ -1,0 +1,10 @@
+{
+  "id": "LRAG-03",
+  "plants": [
+    {
+      "file": "databasise/seam/engine.py",
+      "find": "        events.append(SeamEvent(component=\"mutates_store\", spend=spend, outcome=outcome))",
+      "replace": "        events.append(SeamEvent(component=node_id, spend=spend, outcome=outcome))"
+    }
+  ]
+}
