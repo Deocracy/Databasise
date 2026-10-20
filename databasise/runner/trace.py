@@ -1,16 +1,20 @@
 """D-10's run-record field stamping: ``RunRecord``, ``NodeTrace`` and ``TokenAccounting``
-dataclasses matching ``docs/system-model/rig-trace.schema.json`` exactly. The two sentinel
+dataclasses matching ``databasise/evidence/rig-trace.databasise.schema.json`` -- the frozen
+``docs/system-model/rig-trace.schema.json`` plus the amendments recorded in
+``databasise/evidence/RIG-TRACE-DEVIATIONS.md`` (D-12). The two sentinel
 constants below (``BUNDLE_REF_SENTINEL``, ``CORPUS_SNAPSHOT_HASH_SENTINEL``) are the ONLY
 sentinel-carrying fields this module emits; every other field carries a real, computed value.
 
 Placeholder policy (explicitly marked, per this plan's own instructions): ``bundle_ref`` and
 ``corpus_snapshot_hash`` have no real eval bundle until Phase 2 (RIG-02's own bundle machinery),
 so they carry the documented sentinel strings below rather than omitting the field and failing
-the schema. ``tier``/``feed_tier`` likewise carry a documented ``T3`` placeholder for nodes that
-never handle a scored evidence item — Phase 2 names the real evidence-tier mechanism. Every other
-field (``arm_execution_order``, ``cache_hit``, ``guards_fired``, ``realised_budget_share``,
-``determinism_setting``, ``concurrency_setting``) is a real value computed by this commit, per
-D-10 — not a placeholder.
+the schema. ``tier``/``feed_tier`` are ``None`` (D-14): no evidence-tier machinery exists to
+measure them (CONTRACT.md:276), and a field never reports a value nothing measured -- the same
+precedent as the bundle_ref sentinel above. ``cache_hit`` is the part's own boolean or ``None``;
+``spent``/``allowance`` carry the metered figures (an overspend shows there while
+``realised_budget_share`` stays capped at 1.0); ``execution_mode`` is the derived placement.
+Every other field (``arm_execution_order``, ``guards_fired``, ``determinism_setting``,
+``concurrency_setting``) is a real value computed by this commit, per D-10 — not a placeholder.
 
 **The honesty invariant (D-10, relaxed by D-21).** RIG.md §TR.3, quoted directly: "A run that
 halted, ran partially, or ran degraded records ``stop_reason``, ``partial``, ``degraded`` and
@@ -39,7 +43,21 @@ BUNDLE_REF_SENTINEL = "sentinel:no-eval-bundle-until-phase-2"
 CORPUS_SNAPSHOT_HASH_SENTINEL = "sentinel:no-corpus-snapshot-until-phase-2"
 STOP_REASON_DECLARED_FALLBACK = "declared_fallback"  # D-21: a completed run on a declared fallback path
 DEGRADATION_REASON_FALLBACK_PATH = "fallback_path_taken"  # D-21: node-free, guard-free consumer code
-TIER_PLACEHOLDER = "T3"  # documented placeholder: no scored evidence item flows through a tracer node
+# D-05: the closed set of run-level reason codes; the derived schema enumerates exactly these six.
+REASON_NODE_FAILED = "node_failed"  # a node's body raised
+REASON_PLACEMENT_REFUSED = "placement_refused"  # a node's derived execution_mode is not hosted
+REASON_BUDGET_HALT = "budget_halt"  # a node spent past its allowance
+REASON_CANCELLED = "cancelled"  # the run was cancelled before it completed
+REASON_CODES = frozenset(
+    {
+        REASON_NODE_FAILED,
+        REASON_PLACEMENT_REFUSED,
+        REASON_BUDGET_HALT,
+        REASON_CANCELLED,
+        STOP_REASON_DECLARED_FALLBACK,
+        DEGRADATION_REASON_FALLBACK_PATH,
+    }
+)
 
 
 @dataclass
@@ -87,15 +105,19 @@ class NodeTrace:
     depth: str
     effective_depth: str
     wall_clock_ms: int
-    cache_hit: bool
+    cache_hit: bool | None
     guards_fired: list[str]
     budget_state: str
     realised_budget_share: float
     cross_process_failure_cause: str | None
     resumable: bool
     tokens: TokenAccounting
-    tier: str = TIER_PLACEHOLDER
-    feed_tier: str = TIER_PLACEHOLDER
+    tier: str | None = None
+    feed_tier: str | None = None
+    status: str = "completed"
+    execution_mode: str | None = None
+    spent: int | None = None
+    allowance: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -113,6 +135,10 @@ class NodeTrace:
             "cross_process_failure_cause": self.cross_process_failure_cause,
             "resumable": self.resumable,
             "tokens": self.tokens.to_dict(),
+            "status": self.status,
+            "execution_mode": self.execution_mode,
+            "spent": self.spent,
+            "allowance": self.allowance,
         }
 
 

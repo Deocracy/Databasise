@@ -402,23 +402,26 @@ def _validated_guards(node_id: str, config: dict[str, Any] | None) -> list[Guard
     return [declare_guard(**entry) for entry in raw_guards]
 
 
-def _body_report(output: Any) -> tuple[TokenAccounting, bool]:
+def _body_report(output: Any) -> tuple[TokenAccounting, bool | None]:
     """The body's own self-reported ``TokenAccounting`` and cache-hit flag, read from its return
     value rather than assumed. When ``output`` is a ``Mapping`` and ``output.get("tokens")`` is
     genuinely a ``TokenAccounting`` instance, that object is returned as-is (the body owns it — no
-    deep copy); otherwise a fresh, all-zero ``TokenAccounting()`` is returned. ``cache_hit`` is
-    ``bool(output.get("cache_hit"))`` when ``output`` is a ``Mapping``, else ``False``. Guarded
-    with ``isinstance`` on both checks — a body returning a list, a string, or ``None`` must not
-    raise here.
+    deep copy); otherwise a fresh, all-zero ``TokenAccounting()`` is returned. ``cache_hit`` is the
+    mapping's own ``cache_hit`` only when it is a ``bool``; anything else (absent, or ``output`` not
+    a ``Mapping``) is ``None`` — a part that reported no cache flag is not guessed to have missed
+    (D-14). Guarded with ``isinstance`` on both checks — a body returning a list, a string, or
+    ``None`` must not raise here.
     """
+    cache_hit: bool | None = None
     if isinstance(output, Mapping):
         tokens = output.get("tokens")
         if not isinstance(tokens, TokenAccounting):
             tokens = TokenAccounting()
-        cache_hit = bool(output.get("cache_hit"))
+        reported = output.get("cache_hit")
+        if isinstance(reported, bool):
+            cache_hit = reported
     else:
         tokens = TokenAccounting()
-        cache_hit = False
     return tokens, cache_hit
 
 
@@ -612,11 +615,16 @@ async def run_wiring(
                     else f"NodeExecutionError: {redact_secrets(str(exc.cause))}"
                 )
                 node_exceptions[node_id] = exc.cause
+                failed_part = parsed.parts[node_id]
                 node_traces.append(
                     NodeTrace(
                         **_pending_node_trace(node_id, parsed, identities, depths),
+                        # A refusal does not suppress the stamp (D-08): the refused placement when
+                        # there is one, else the placement derived from the registered part.
+                        execution_mode=placement
+                        or derive_execution_mode(failed_part.effects, failed_part.kind),
                         wall_clock_ms=0,
-                        cache_hit=False,
+                        cache_hit=None,
                         guards_fired=[],
                         # Closest of the schema's three enum values to "this node's execution did
                         # not complete" — not a claim that a token/step budget specifically was
@@ -656,9 +664,8 @@ async def run_wiring(
                 # cancellation, which forces the unconditional `break` below.
                 continue
 
-            # execution_mode is stamped on the trace only via host()'s refusal path today (D-08
-            # implements in-process hosting only, so a successful dispatch is always in-process).
-            _execution_mode, output, wall_clock_ms = task.result()
+            # _run_node returns the placement it derived and hosted; it is stamped on every trace.
+            execution_mode, output, wall_clock_ms = task.result()
             results[node_id] = output
             # CR-01: keyed on the registry's own Part.effects, not the wiring's self-declared
             # WiringNode.effects. The capability-scoped store view above grants access from
@@ -679,12 +686,13 @@ async def run_wiring(
             node_traces.append(
                 NodeTrace(
                     **_pending_node_trace(node_id, parsed, identities, depths),
+                    execution_mode=execution_mode,
                     wall_clock_ms=wall_clock_ms,
                     cache_hit=cache_hit,
                     guards_fired=guards_fired,
                     budget_state=token.state,
                     realised_budget_share=realised_share(token.spent, token.allowance),
-                    cross_process_failure_cause=None,  # in-process only, no crossing failed
+                    cross_process_failure_cause=None,  # the node completed, so no crossing failed
                     resumable=resumable,
                     tokens=tokens,
                 )

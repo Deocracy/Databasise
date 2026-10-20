@@ -4,8 +4,10 @@ Every test written in every later plan of this phase depends on these three fixt
 
 - ``store_root``: a per-test directory every store adapter writes under, so D-07's
   one-directory-per-namespace layout is inspectable after a test runs.
-- ``rig_trace_schema``: the parsed RIG run-record schema, loaded once per test.
-- ``assert_valid_trace``: validates a run-record dict against that schema, raising
+- ``rig_trace_schema``: the parsed frozen RIG run-record schema (``docs/system-model``), loaded once.
+- ``databasise_trace_schema``: the Databasise derived schema (the frozen file plus the amendments
+  recorded in ``databasise/evidence/RIG-TRACE-DEVIATIONS.md``, D-12), loaded once.
+- ``assert_valid_trace``: validates a run-record dict against the derived schema, raising
   with the full JSON-Schema error path on failure.
 """
 
@@ -48,14 +50,24 @@ def rig_trace_schema() -> dict[str, Any]:
         return json.load(f)
 
 
+@pytest.fixture(scope="session")
+def databasise_trace_schema() -> dict[str, Any]:
+    """Load and return the parsed Databasise derived run-record schema (D-12)."""
+    schema_path = (
+        Path(__file__).resolve().parents[1] / "evidence" / "rig-trace.databasise.schema.json"
+    )
+    with schema_path.open("r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 @pytest.fixture
 def assert_valid_trace(
-    rig_trace_schema: dict[str, Any],
+    databasise_trace_schema: dict[str, Any],
 ) -> Callable[[dict[str, Any]], None]:
-    """Return a callable that validates a run-record dict against rig_trace_schema."""
+    """Return a callable that validates a run-record dict against databasise_trace_schema."""
 
     def _assert_valid_trace(record: dict[str, Any]) -> None:
-        validator = Draft7Validator(rig_trace_schema)
+        validator = Draft7Validator(databasise_trace_schema)
         errors = sorted(validator.iter_errors(record), key=lambda e: list(e.path))
         if errors:
             messages = "\n".join(
@@ -63,7 +75,7 @@ def assert_valid_trace(
                 for e in errors
             )
             raise AssertionError(
-                f"run-record failed rig-trace.schema.json validation:\n{messages}"
+                f"run-record failed rig-trace.databasise.schema.json validation:\n{messages}"
             )
 
     return _assert_valid_trace

@@ -30,6 +30,9 @@ def _clean_node(node_id: str = "n1", **overrides) -> NodeTrace:
         "cross_process_failure_cause": None,
         "resumable": True,
         "tokens": TokenAccounting(),
+        "execution_mode": "in-process",
+        "spent": 0,
+        "allowance": 1000,
     }
     fields.update(overrides)
     return NodeTrace(**fields)
@@ -134,10 +137,10 @@ def test_7_determinism_and_concurrency_setting_carry_the_values_the_run_was_invo
 
 
 def test_8_a_degraded_run_names_its_path_a_clean_run_carries_none(assert_valid_trace):
-    degraded = _clean_record(degraded=True, partial=True, stop_reason="fallback-path-taken", degradation_reason="client-capability-fallback")
+    degraded = _clean_record(degraded=True, partial=True, stop_reason="node_failed", degradation_reason="node_failed")
     assert_valid_trace(degraded.to_dict())
     assert degraded.degraded is True
-    assert degraded.degradation_reason == "client-capability-fallback"
+    assert degraded.degradation_reason == "node_failed"
 
     clean = _clean_record()
     assert_valid_trace(clean.to_dict())
@@ -151,8 +154,8 @@ def test_9_a_budget_halted_run_is_partial_with_a_stop_reason_and_is_still_fully_
         nodes=[halted_node],
         partial=True,
         degraded=True,
-        stop_reason="node 'n1' exceeded its budget allowance",
-        degradation_reason="budget_halted",
+        stop_reason="budget_halt",
+        degradation_reason="budget_halt",
     )
     assert_valid_trace(halted_run.to_dict())
     assert halted_run.partial is True
