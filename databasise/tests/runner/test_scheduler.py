@@ -282,7 +282,7 @@ async def test_7_a_single_node_runs_and_an_empty_wiring_is_refused_before_the_ru
         await _run(empty_parsed)
 
 
-async def test_8_a_sibling_failure_cancels_the_batch_and_marks_the_run_not_clean():
+async def test_8_a_failure_leaves_the_later_nodes_of_the_batch_unscheduled_and_marks_the_run_not_clean():
     sibling_finished = {"value": False}
 
     async def failing_body(ctx: NodeContext):
@@ -290,7 +290,7 @@ async def test_8_a_sibling_failure_cancels_the_batch_and_marks_the_run_not_clean
 
     async def slow_sibling_body(ctx: NodeContext):
         await asyncio.sleep(0.2)
-        sibling_finished["value"] = True  # should never be reached — cancelled by the failure
+        sibling_finished["value"] = True  # never reached — nodes run in id order and `fail` sorts first
         return {}
 
     part_fail = Part(
@@ -311,7 +311,7 @@ async def test_8_a_sibling_failure_cancels_the_batch_and_marks_the_run_not_clean
 
     assert result["partial"] is True
     assert result["stop_reason"] is not None
-    assert sibling_finished["value"] is False  # the sibling was cancelled, not merely outrun
+    assert sibling_finished["value"] is False  # the sibling was never scheduled (D-17)
 
 
 async def test_9_a_placement_refusal_stamps_the_derived_placement_without_suppressing_it():

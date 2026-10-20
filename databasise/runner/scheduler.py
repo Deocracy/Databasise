@@ -1,10 +1,14 @@
 """Structured-concurrency runner.
 
 Claude's Discretion (01-02-PLAN.md ``<decisions_recorded_here>``): ``graphlib.TopologicalSorter``
-for readiness bookkeeping plus one ``asyncio.TaskGroup`` per ready batch. No orchestrator, no
-external scheduler, no metadata DB. Sort each ready batch by node id before dispatch (stated tie-
-break): when nodes become ready together, order is by node id ascending — this is what makes
-``arm_execution_order``/per-batch dispatch order reproducible across two runs of the same wiring.
+for readiness bookkeeping. No orchestrator, no external scheduler, no metadata DB. **Nodes run one
+at a time (D-17).** Each ready batch is sorted by node id (stated tie-break) and dispatched in that
+order, one node body in flight at once, so the recorded ``concurrency_setting: sequential`` is true
+(bundle@v1's A/A keying, RIG §AA.1). Intra-node concurrency through ``ctx._semaphore`` (below) is
+unaffected. The first failed, cancelled or budget-halted node stops the run. **Every node of the
+parsed wiring gets exactly one ``NodeTrace`` (D-13):** completed, failed, cancelled, or
+not-scheduled for the nodes that never ran (dispatched nodes in dispatch order, then the rest
+sorted by node id); recipe-only nodes the caller pruned (D-16) are not in ``parsed`` and get none.
 
 D-09 (one-way door, confirmed 01-01-PLAN.md Task 4, recorded in 01-01-SUMMARY.md): **option-a**
 selected — intra-node concurrency is bounded by a per-node ``asyncio.Semaphore``, sized from that
@@ -74,8 +78,8 @@ of dispatch) before touching identity resolution at all, so a cyclic wiring retu
 
 **Partial outcomes are never discarded (CONTRACT §9).** "A run that halts on budget, or otherwise
 completes only partially, MUST be traced, scored, and tier-labeled exactly as a completed run is;
-it MUST NOT be discarded." Both a placement refusal mid-run (D-08) and a batch-internal node
-failure (structured-concurrency semantics, ``except*``) are therefore surfaced as a **returned**
+it MUST NOT be discarded." Both a placement refusal mid-run (D-08) and a node
+failure are therefore surfaced as a **returned**
 partial result (``partial=True``, a populated ``stop_reason``, the failing node's own trace stamp
 preserved) rather than an exception propagated out of ``run_wiring`` — the refusal/failure is
 real and recorded, but the run is not silently lost. Pre-flight refusals that mean the run never
@@ -117,8 +121,10 @@ from __future__ import annotations
 
 import asyncio
 import graphlib
+import math
 import time
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from typing import Any
 
 from databasise.clients import CLIENT_EFFECT_TO_KEY, CapabilityScopedClients
@@ -129,7 +135,11 @@ from databasise.identity.instance import instance_hash
 from databasise.parts.admission import MissingWallClockCeilingError
 from databasise.parts.registry import PartRegistry, dispatch
 from databasise.parts.schema import NodeContext
-from databasise.parts_core import EFFECT_TO_STORE, CapabilityScopedStores, UndeclaredEffectError
+from databasise.parts_core import (
+    EFFECT_TO_STORE,
+    CapabilityScopedStores,
+    UndeclaredEffectError,
+)
 from databasise.runner.budget import meter, realised_share
 from databasise.runner.guards import GuardDeclaration, declare_guard, evaluate_guards
 from databasise.runner.trace import (
@@ -228,9 +238,10 @@ class NodeExecutionError(RuntimeError):
     every possible underlying exception type having to carry that information itself.
     """
 
-    def __init__(self, node_id: str, cause: BaseException):
+    def __init__(self, node_id: str, cause: BaseException, *, wall_clock_ms: int = 0):
         self.node_id = node_id
         self.cause = cause
+        self.wall_clock_ms = wall_clock_ms  # D-13: measured from the start of dispatch; 0 if never started
         super().__init__(f"node {node_id!r} failed: {cause}")
 
 
@@ -487,7 +498,9 @@ async def _run_node(
     except NodeExecutionError:
         raise
     except Exception as exc:
-        raise NodeExecutionError(node_id, exc) from exc
+        # ceil, so a sub-millisecond failure is not silently floored to a "never ran" 0
+        elapsed_ms = math.ceil((time.monotonic() - start) * 1000)
+        raise NodeExecutionError(node_id, exc, wall_clock_ms=elapsed_ms) from exc
     wall_clock_ms = int((time.monotonic() - start) * 1000)
     return execution_mode, output, wall_clock_ms
 
@@ -506,6 +519,99 @@ def _pending_node_trace(node_id: str, parsed: ParsedWiring, identities: dict, de
     }
 
 
+@dataclass
+class _NodeOutcome:
+    """One dispatched node's trace and what the run does next (D-13)."""
+
+    trace: NodeTrace
+    completed: bool
+    exception: BaseException | None = None
+    stop_reason: str | None = None  # set when the run stops after this node
+
+
+async def _dispatch_node(
+    node_id: str,
+    parsed: ParsedWiring,
+    stores: dict[str, Any],
+    results: dict[str, Any],
+    max_concurrency: int,
+    clients: dict[str, Any] | None,
+    recorder: TouchRecorder | None,
+    *,
+    identities: dict,
+    depths: dict,
+    allowance: int,
+    guards: list[GuardDeclaration],
+) -> _NodeOutcome:
+    """Dispatch one node and return its trace; a node-level failure is data, never raised."""
+    try:
+        execution_mode, output, wall_clock_ms = await _run_node(
+            node_id, parsed, stores, results, max_concurrency, clients, recorder
+        )
+    except NodeExecutionError as exc:
+        placement = getattr(exc, "placement", None)
+        cause = (
+            f"NodePlacementRefusedError: execution_mode={placement!r} not hosted (D-08)"
+            if placement is not None
+            else f"NodeExecutionError: {redact_secrets(str(exc.cause))}"
+        )
+        failed_part = parsed.parts[node_id]
+        trace = NodeTrace(
+            **_pending_node_trace(node_id, parsed, identities, depths),
+            # A refusal does not suppress the stamp (D-08): the refused placement when there is
+            # one, else the placement derived from the registered part.
+            execution_mode=placement or derive_execution_mode(failed_part.effects, failed_part.kind),
+            status="failed",
+            allowance=allowance,
+            spent=None,  # the node never completed, so nothing was metered
+            wall_clock_ms=exc.wall_clock_ms,
+            cache_hit=None,
+            guards_fired=[],
+            # Closest of the schema's three enum values to "this node's execution did not
+            # complete" — not a claim that a token/step budget specifically was exceeded;
+            # `cross_process_failure_cause` names the real cause.
+            budget_state="halted",
+            realised_budget_share=0.0,
+            cross_process_failure_cause=cause,
+            resumable=False,
+            tokens=TokenAccounting(),
+        )
+        # Phase 10 review CR-01: stop_reason reaches consumers (envelope, non-debug trace), so
+        # it names the exception class only, never its message (paths, checksums). The full
+        # text stays in the debug-only node trace above.
+        reason = cause if placement is not None else f"NodeExecutionError: {type(exc.cause).__name__}"
+        return _NodeOutcome(trace, False, exc.cause, f"node {node_id!r}: {reason}")
+
+    results[node_id] = output
+    # CR-01: keyed on the registry's own Part.effects, not the wiring's self-declared
+    # WiringNode.effects. The capability-scoped store view above grants access from
+    # part.effects, so a wiring that under-declares (parse_wiring permits a narrower
+    # subset) would otherwise let a node mutate a store and still be stamped resumable —
+    # and (Gap 2 fix) would otherwise let it meter a real LLM/rerank/embedding spend as
+    # zero, which is the same bypass class CR-01 already closed for placement and store
+    # scoping. meter() is therefore handed part.effects, never node.effects.
+    part = parsed.parts[node_id]
+    resumable = not (set(part.effects) & _STORE_MUTATING_EFFECTS)
+    tokens, cache_hit = _body_report(output)
+    token = meter(node_id, part.effects, allowance, tokens)
+    guards_fired = evaluate_guards(guards, results)
+    trace = NodeTrace(
+        **_pending_node_trace(node_id, parsed, identities, depths),
+        execution_mode=execution_mode,
+        spent=token.spent,
+        allowance=token.allowance,
+        wall_clock_ms=wall_clock_ms,
+        cache_hit=cache_hit,
+        guards_fired=guards_fired,
+        budget_state=token.state,
+        realised_budget_share=realised_share(token.spent, token.allowance),
+        cross_process_failure_cause=None,  # the node completed, so no crossing failed
+        resumable=resumable,
+        tokens=tokens,
+    )
+    return _NodeOutcome(trace, True, None, "budget_halt" if token.state == "halted" else None)
+
+
 async def run_wiring(
     parsed: ParsedWiring,
     registry: PartRegistry,
@@ -517,9 +623,8 @@ async def run_wiring(
     recorder: TouchRecorder | None = None,
 ) -> dict[str, Any]:
     """Drive readiness with ``graphlib.TopologicalSorter``; each ready batch is sorted by node id
-    before dispatch (the stated tie-break — see module docstring), then runs inside one
-    ``asyncio.TaskGroup``, whose structured-concurrency semantics cancel every sibling in the
-    batch the instant one task raises, with no task left orphaned.
+    and its nodes are dispatched one at a time in that order (D-17 — see module docstring). The
+    first failure or budget halt stops the run; nodes that never ran get ``not-scheduled`` traces.
 
     ``registry`` is accepted for signature parity with the rest of this phase's call sites; every
     part this function dispatches is already resolved via ``parsed.parts`` by
@@ -570,7 +675,6 @@ async def run_wiring(
     node_traces: list[NodeTrace] = []
     partial = False
     stop_reason: str | None = None
-    budget_halted = False
     # 05-01-PLAN.md Task 1: the real underlying exception a failed node's dispatch raised (e.g. a
     # CorpusOpTimeoutError/CorpusOpSubprocessError from an opaque node's subprocess body), keyed by
     # node_id — additive to the returned dict. CONTRACT §9's "partial outcomes are never discarded"
@@ -580,136 +684,56 @@ async def run_wiring(
     # than parsing NodeTrace's own prose string.
     node_exceptions: dict[str, BaseException] = {}
 
-    while ts.is_active():
-        ready = sorted(ts.get_ready())
-        node_failures: dict[str, NodeExecutionError] = {}
-        tasks: dict[str, asyncio.Task] = {}
-        try:
-            async with asyncio.TaskGroup() as tg:
-                tasks = {
-                    node_id: tg.create_task(
-                        _run_node(
-                            node_id,
-                            parsed,
-                            stores,
-                            results,
-                            max_concurrencies[node_id],
-                            clients,
-                            recorder,
-                        )
-                    )
-                    for node_id in ready
-                }
-        except* NodeExecutionError as eg:
-            for exc in eg.exceptions:
-                node_failures[exc.node_id] = exc
-
-        for node_id in ready:
-            if node_id in node_failures:
-                exc = node_failures[node_id]
-                placement = getattr(exc, "placement", None)
-                cause = (
-                    f"NodePlacementRefusedError: execution_mode={placement!r} not hosted (D-08)"
-                    if placement is not None
-                    else f"NodeExecutionError: {redact_secrets(str(exc.cause))}"
-                )
-                node_exceptions[node_id] = exc.cause
-                failed_part = parsed.parts[node_id]
-                node_traces.append(
-                    NodeTrace(
-                        **_pending_node_trace(node_id, parsed, identities, depths),
-                        # A refusal does not suppress the stamp (D-08): the refused placement when
-                        # there is one, else the placement derived from the registered part.
-                        execution_mode=placement
-                        or derive_execution_mode(failed_part.effects, failed_part.kind),
-                        status="failed",
-                        allowance=token_allowances[node_id],
-                        spent=None,  # the node never completed, so nothing was metered
-                        wall_clock_ms=0,
-                        cache_hit=None,
-                        guards_fired=[],
-                        # Closest of the schema's three enum values to "this node's execution did
-                        # not complete" — not a claim that a token/step budget specifically was
-                        # exceeded; `cross_process_failure_cause` names the real cause.
-                        budget_state="halted",
-                        realised_budget_share=0.0,
-                        cross_process_failure_cause=cause,
-                        resumable=False,
-                        tokens=TokenAccounting(),
-                    )
-                )
-                partial = True
-                # Phase 10 review CR-01: stop_reason reaches consumers (envelope, non-debug trace), so
-                # it names the exception class only, never its message (paths, checksums). The full
-                # text stays in the debug-only node trace above.
-                reason = (
-                    cause
-                    if placement is not None
-                    else f"NodeExecutionError: {type(exc.cause).__name__}"
-                )
-                stop_reason = stop_reason or f"node {node_id!r}: {reason}"
-                # WR-03: deliberately skips ts.done(node_id) — a failed node never calls it. Safe
-                # only because node_failures being non-empty forces the unconditional `break`
-                # below, so the sorter's now-inconsistent state (this node still "pending" from
-                # its own perspective) is never read again via is_active()/get_ready(). A future
-                # change that keeps scheduling past a partial batch failure must not rely on this
-                # invariant without also fixing ts.done() bookkeeping here.
-                continue
-
-            task = tasks[node_id]
-            if task.cancelled():
-                # Cancelled by TaskGroup because a sibling in this same batch failed — not run,
-                # so it gets no trace entry of its own; the batch-level failure above already
-                # marks the whole run partial.
-                # WR-03: same ts.done()-skip invariant as the node_failures branch above — safe
-                # only because node_failures is guaranteed non-empty whenever a sibling triggers
-                # cancellation, which forces the unconditional `break` below.
-                continue
-
-            # _run_node returns the placement it derived and hosted; it is stamped on every trace.
-            execution_mode, output, wall_clock_ms = task.result()
-            results[node_id] = output
-            # CR-01: keyed on the registry's own Part.effects, not the wiring's self-declared
-            # WiringNode.effects. The capability-scoped store view above grants access from
-            # part.effects, so a wiring that under-declares (parse_wiring permits a narrower
-            # subset) would otherwise let a node mutate a store and still be stamped resumable —
-            # and (Gap 2 fix) would otherwise let it meter a real LLM/rerank/embedding spend as
-            # zero, which is the same bypass class CR-01 already closed for placement and store
-            # scoping. meter() is therefore handed part.effects, never node.effects.
-            part = parsed.parts[node_id]
-            resumable = not (set(part.effects) & _STORE_MUTATING_EFFECTS)
-            tokens, cache_hit = _body_report(output)
-            token = meter(node_id, part.effects, token_allowances[node_id], tokens)
-            guards_fired = evaluate_guards(guards_by_node[node_id], results)
-            if token.state == "halted":
-                budget_halted = True
-                partial = True
-                stop_reason = stop_reason or "budget_halt"  # RIG §LC.1's own vocabulary value
-            node_traces.append(
-                NodeTrace(
-                    **_pending_node_trace(node_id, parsed, identities, depths),
-                    execution_mode=execution_mode,
-                    spent=token.spent,
-                    allowance=token.allowance,
-                    wall_clock_ms=wall_clock_ms,
-                    cache_hit=cache_hit,
-                    guards_fired=guards_fired,
-                    budget_state=token.state,
-                    realised_budget_share=realised_share(token.spent, token.allowance),
-                    cross_process_failure_cause=None,  # the node completed, so no crossing failed
-                    resumable=resumable,
-                    tokens=tokens,
-                )
+    # D-17: one node at a time, in sorted node-id order within each ready batch, so the recorded
+    # ``concurrency_setting: sequential`` is true. The first failure or budget halt stops the run;
+    # every node that never ran gets a not-scheduled trace below.
+    while ts.is_active() and not partial:
+        for node_id in sorted(ts.get_ready()):
+            outcome = await _dispatch_node(
+                node_id,
+                parsed,
+                stores,
+                results,
+                max_concurrencies[node_id],
+                clients,
+                recorder,
+                identities=identities,
+                depths=depths,
+                allowance=token_allowances[node_id],
+                guards=guards_by_node[node_id],
             )
-            ts.done(node_id)
+            node_traces.append(outcome.trace)
+            if outcome.exception is not None:
+                node_exceptions[node_id] = outcome.exception
+            if outcome.completed:
+                ts.done(node_id)
+            if outcome.stop_reason is not None:
+                partial = True
+                stop_reason = outcome.stop_reason
+                break  # the sorter is never read again, so a skipped ts.done() is safe
 
-        if node_failures or budget_halted:
-            # Partial outcomes are never discarded (CONTRACT §9) — return what was traced so far
-            # rather than continuing to schedule further batches past a batch-internal failure or
-            # a budget halt. The already-completed nodes in this same batch (processed above,
-            # including the halted one itself) already got their trace and ts.done(node_id); only
-            # scheduling of further batches stops here.
-            break
+    # D-13: one trace per node of the parsed wiring. Nodes that never ran follow the dispatched
+    # ones, sorted by node id.
+    traced = {trace.node_id for trace in node_traces}
+    for node_id in sorted(parsed.nodes.keys() - traced):
+        part = parsed.parts[node_id]
+        node_traces.append(
+            NodeTrace(
+                **_pending_node_trace(node_id, parsed, identities, depths),
+                execution_mode=derive_execution_mode(part.effects, part.kind),
+                status="not-scheduled",
+                allowance=token_allowances[node_id],
+                spent=None,
+                wall_clock_ms=0,
+                cache_hit=None,
+                guards_fired=[],
+                budget_state="within_budget",
+                realised_budget_share=0.0,
+                cross_process_failure_cause=None,
+                resumable=False,
+                tokens=TokenAccounting(),
+            )
+        )
 
     # D-21: a completed run whose guard fired took a declared degradation path -- degraded without
     # being partial. A partial run keeps its own stop_reason as the degradation_reason.
