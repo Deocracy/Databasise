@@ -117,3 +117,22 @@ async def test_mcp_still_honours_a_boolean_flag(synthetic_naive_store, rest_clie
     )
     text = "".join(getattr(item, "text", "") or "" for item in result.content)
     assert "run_id" in json.loads(text)
+
+
+# --- documentation legs (D-10, G-35) --------------------------------------------------------- #
+
+_RULE = "one store_root is one tenant"
+
+
+def test_the_engine_states_the_tenancy_rule():
+    from databasise.seam.engine import Databasise
+
+    assert _RULE in " ".join((Databasise.__doc__ or "").split())
+
+
+def test_the_inventory_states_the_tenancy_rule():
+    from pathlib import Path
+
+    text = (Path(__file__).resolve().parents[3] / "docs" / "gui" / "API-INVENTORY.md").read_text()
+    assert _RULE in text
+    assert "Parsed in pydantic lax mode" not in text

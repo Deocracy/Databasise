@@ -1127,7 +1127,13 @@ def _mutates_store_component(resolved: dict[str, Any], registry: PartRegistry) -
 class Databasise:
     """The consumer-facing async seam object (D-01). Holds ``store_root``/``workspace``, an
     optional ``PartRegistry`` (defaulting to ``default_registry()``) and an optional ``clients``
-    dict for test injection — the same override point ``run_arm.py`` already establishes."""
+    dict for test injection — the same override point ``run_arm.py`` already establishes.
+
+    Tenancy (D-10, G-35): one store_root is one tenant. The launcher takes its store lock per
+    ``store_root``; ``trace.db`` and ``ledger.db`` carry no workspace key, so ``workspace`` scopes
+    the data stores and not aliases or trace tokens; aliases name wirings, not data. An in-process
+    embedder that opens two engines on one ``store_root`` therefore shares one alias namespace and
+    one trace store. Per-workspace namespaces are deferred."""
 
     def __init__(
         self,

@@ -10,7 +10,7 @@ This document lists every API surface of the Databasise 2.0 engine that an opera
 
 ## 1. How the GUI reaches the API
 
-**App construction.** The REST app is built by the factory `create_app(*, store_root, workspace, registry=None, clients=None) -> FastAPI` (databasise/seam/rest.py:235-250). It constructs one `Databasise` instance (rest.py:247), stores it on `app.state.engine` (rest.py:249), and registers one exception handler for `SeamRefusalError` (rest.py:250). One app instance is bound to one `store_root` and one `workspace`; the GUI cannot choose a workspace per request. `ledger.db` and `trace.db` live at the store root, not per workspace (ledger.py:138, trace_store.py:71, engine.py:560, 1201, 1334, 1474): two apps with different workspaces under one store root share one alias namespace and one trace store, and an alias promoted in workspace A resolves in workspace B against B's stores.
+**App construction.** The REST app is built by the factory `create_app(*, store_root, workspace, registry=None, clients=None) -> FastAPI` (databasise/seam/rest.py:235-250). It constructs one `Databasise` instance (rest.py:247), stores it on `app.state.engine` (rest.py:249), and registers one exception handler for `SeamRefusalError` (rest.py:250). One app instance is bound to one `store_root` and one `workspace`; the GUI cannot choose a workspace per request. `ledger.db` and `trace.db` live at the store root, not per workspace (ledger.py:138, trace_store.py:71, engine.py:560, 1201, 1334, 1474): two apps with different workspaces under one store root share one alias namespace and one trace store. The rule (Phase 14, D-10): one store_root is one tenant. The launcher locks per store_root, aliases name wirings and not data, and `trace.db` and `ledger.db` carry no workspace key.
 
 **Where data exists.** The only complete populated v2 store is `store_root=v1/.parity_v2_store` with `workspace=shared-4fab18fef508b7bc3dda1cc2d8f12e36`. It holds the five LightRAG namespaces (`chunks`, `entities`, `relationships`, `text_chunks`, `chunk_entity_relation`) and the five `hipporag-*` namespaces, plus `trace.db` (directory listing; CROSS-MODALITY-EVIDENCE.md:197-253). `v1/.parity_v2_store.pre-graph-refit` holds a partial backup (chunks, text_chunks, chunk_entity_relation only). Engine stores resolve to `<store_root>/<workspace>/<namespace>` (engine.py:319-347), so a launcher pointed anywhere else serves empty LightRAG and HippoRAG retrieval.
 
@@ -304,7 +304,7 @@ Validation 422: multi-member selector, hash-shaped value (`loc: ['body','selecto
 
 **Request.** `TraceRequest` (rest.py:127-129):
 - `trace_reference`: str, required. A `secrets.token_urlsafe(32)` string, 43 characters, no structure (trace_store.py:47-49, 98).
-- `debug`: bool, default false. Not access-controlled. Parsed in pydantic lax mode, so strings such as `"yes"`, `"true"` and `"1"` also turn it on.
+- `debug`: bool, default false. Not access-controlled. A strict JSON boolean (Phase 14, D-10): a string, a number or null is a 422 validation error whose body carries no run record field.
 
 **Response.** 200 `dict[str, Any]` from `RunRecord.to_dict()` (runner/trace.py:154-171).
 
@@ -357,7 +357,7 @@ Further display caveats:
 - The record holds no query text, selector or answer, so the GUI must keep the query-to-token mapping.
 - `nodes` has no edges and no start timestamps, so neither a DAG view nor a true timeline can be drawn from it.
 - One trace per call; no batch.
-- `debug` is not gated; the server cannot hide internals from any caller.
+- `debug=true` is open to every client because no auth layer exists; the server cannot hide internals from any caller. An operator-only gate is deferred and would follow the CONN-14 launcher-flag pattern.
 
 ---
 
@@ -822,7 +822,7 @@ Routes 5-14 each need a new engine method and an owner decision on where they li
 11. **HippoRAG answer semantics.** HippoRAG's `answer` is a passage dump, not a generated answer, and its normal-path answer is `""` because of the id mismatch (section 3.0, 3.2.1). Add a generator node so `answer` means the same for every modality (§18.3), or label the field per modality in the GUI (which §18.2 says a consumer cannot know)?
 12. **Promotion from HippoRAG.** Refuse HippoRAG traces at `/promote` until alias resolution covers all wirings, or fix alias resolution first?
 13. **Node ids in `stop_reason`.** Resolved by Phase 13 D-05 and D-23: `stop_reason` and `degradation_reason` are closed node-free codes, and a response-time gate serves `node_failed` for any other value. The node text stays in the debug trace.
-14. **Workspace scoping of the ledger and trace store.** `ledger.db` and `trace.db` are per store root, so an alias promoted in one workspace resolves in another against different stores. Scope them per workspace, or record that one store root means one workspace?
+14. **Workspace scoping of the ledger and trace store.** `ledger.db` and `trace.db` are per store root, so an alias promoted in one workspace resolves in another against different stores. Resolved in Phase 14 (D-10, G-35): one store_root is one tenant. The launcher locks per store_root, aliases name wirings and not data, and neither database carries a workspace key; per-workspace namespaces are deferred.
 15. **Admission records.** The LightRAG ingest/delete admission records attach network-isolation and token content to §8 conditions 8 and 9 and omit the TTL and `part_ref`-counting verdicts (full_ingest.py:156-179, full_delete.py:156-178), and the evidence for all three opaque parts claims `cross_check_conditions` runs at registration when it does not (registry.py:145-148). Fixing the records requires a version bump under OPAQUE-BOUNDARY-RULE.md. Fix before a part/admission view ships, or hide the admission column?
 16. **Leftover probe data.** The second-pass MCP probe left one failed document `dup-15f6f452b1ea8f4a9c36928aa0d86588` (track `ba6b68b7ddab4276bdb1a1292d8163a8`) in the shared `v1/.corpus_working_dir`, and another probe left two LLM cache entries there. Delete them (`DELETE /documents/dup-15f6f452b1ea8f4a9c36928aa0d86588`), or keep them?
 
