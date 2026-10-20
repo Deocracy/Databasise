@@ -2,20 +2,20 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase12-a",
-  "ledger_version": 616,
+  "ledger_version": 678,
   "artifacts": {
+    "databasise/parts_core/hipporag/entity_fact_embed.py": "eade98c9ea33630064b838aecebecc6e34d9adc7f26b1fdcd6cfe20689f4f9b9",
+    "databasise/parts_core/hipporag/fact_edges.py": "0427766e1a2cc89f830f2bc1ad9f5937dfcb93f2f3d99cf8964136af708669f4",
+    "databasise/parts_core/hipporag/graph_augment_persist.py": "4bfa19bcae998b89823553c8fbe696e2adc1f1b5730e4a1b2359a001cae2cb13",
+    "databasise/parts_core/hipporag/openie.py": "471ec8b6f7e4d657d8949a6a69ce9e6978a16efc783ad7c8d2e95066aa51ce87",
+    "databasise/parts_core/hipporag/passage_edges.py": "ace8a9f0250940eac91d6cf948a1f14b59fe69492e426922af79bb7dbe8447bf",
     "databasise/parts_core/hipporag/ppr.py": "03876910feb001321596a4184e3185f626510da9fa4e7e78edf5952ab4d15c93",
     "databasise/parts_core/hipporag/reset_vector_join.py": "abaf30075404e10d5ae412c9e03fb963a51fc619f3c33e6c1ca8242c8130632b",
-    "databasise/parts_core/hipporag/passage_edges.py": "ace8a9f0250940eac91d6cf948a1f14b59fe69492e426922af79bb7dbe8447bf",
-    "databasise/parts_core/hipporag/graph_augment_persist.py": "4bfa19bcae998b89823553c8fbe696e2adc1f1b5730e4a1b2359a001cae2cb13",
     "databasise/parts_core/hipporag/synonymy_edges.py": "561c35007788a744fa08094d488c5c4ac87a4091653d656b3f71bab71fed5ea2",
-    "databasise/parts_core/hipporag/fact_edges.py": "0427766e1a2cc89f830f2bc1ad9f5937dfcb93f2f3d99cf8964136af708669f4",
-    "databasise/parts_core/hipporag/entity_fact_embed.py": "eade98c9ea33630064b838aecebecc6e34d9adc7f26b1fdcd6cfe20689f4f9b9",
-    "databasise/parts_core/hipporag/openie.py": "471ec8b6f7e4d657d8949a6a69ce9e6978a16efc783ad7c8d2e95066aa51ce87",
-    "databasise/seam/engine.py": "d4b321da4adfc4a41761b2a70028281b2b089d21e7ccc0fef8b3889581d43527",
-    "databasise/seam/refusals.py": "3f00a26270dc66c994316eae3da9111bc2851381904d879471c395c32c2b9562",
+    "databasise/seam/engine.py": "5df1ef88807233562bf9794bb389fba9eeea8221e2ba3054eda84e43abec48aa",
+    "databasise/seam/refusals.py": "aa2c5b1fcc04f7fccac1d924a162176048b64a0cbc58fec68e556382451635b2",
     "databasise/stores/vector.py": "912c3e2f69b9fd53e508492babd5e3c9ae758de88ff9433c34729709734c79cf",
-    "databasise/wirings/hipporag/base.json": "4a344737a088b176038a42ada8c402968ab28fe0c904084e0398fa27552c2460"
+    "databasise/wirings/hipporag/base.json": "7320e65861aa5583892fdab014ebc1c6917a38001cdfdaaf42116263b0d09e71"
   },
   "checker": {
     "harness": "claude-code",
@@ -38,19 +38,19 @@
     {
       "id": "HIPP-03",
       "status": "present",
-      "where": "databasise/seam/engine.py:1423",
+      "where": "databasise/seam/engine.py:1500",
       "quote": "await _drop_pending(stores, self.store_root)"
     },
     {
       "id": "HIPP-04",
       "status": "present",
-      "where": "databasise/seam/engine.py:881",
+      "where": "databasise/seam/engine.py:951",
       "quote": "raise _foreign_fault(operation, node_exception, node_id=failed_node_id) from node_exception"
     },
     {
       "id": "HIPP-05",
       "status": "present",
-      "where": "databasise/wirings/hipporag/base.json:128",
+      "where": "databasise/wirings/hipporag/base.json:131",
       "quote": "\"consumes_query\": [\"fact-score\", \"fact-filter\", \"reset-vector-join\", \"dpr-fallback\", \"qa\"],"
     },
     {

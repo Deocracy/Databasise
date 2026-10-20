@@ -1,0 +1,75 @@
+{
+  "bak_trace": 1,
+  "step": "S5",
+  "part": "phase13-b",
+  "ledger_version": 678,
+  "artifacts": {
+    "databasise/identity/env.py": "c6883fa7b8d3374add603d784348039bc3886e0a83bd38c184ada79d85ca6676",
+    "databasise/parts/registry.py": "f1805dfc3d7c5eddcccd2c32b428160f061e3c6d03cbc2faddfce9c0f231194d",
+    "databasise/runner/scheduler.py": "a6737354ce01be2fae5685af7912b6f2884d9a69ca7e48d37bd5fdd33f19c238",
+    "databasise/runner/trace.py": "e3c8a06d35a74ab3ee217b0c476f5616e8fa5582ba09a9316fe2d9f3030456e2",
+    "databasise/seam/engine.py": "5df1ef88807233562bf9794bb389fba9eeea8221e2ba3054eda84e43abec48aa"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "claude-opus-5-5",
+    "session": "32d1701b-4256-409c-a5a7-e305cc822f40"
+  },
+  "items": [
+    {
+      "id": "WIRE-10",
+      "status": "present",
+      "where": "databasise/runner/scheduler.py:833",
+      "quote": "                status=\"not-scheduled\","
+    },
+    {
+      "id": "WIRE-11",
+      "status": "present",
+      "where": "databasise/runner/trace.py:118",
+      "quote": "    execution_mode: str | None = None"
+    },
+    {
+      "id": "WIRE-12",
+      "status": "present",
+      "where": "databasise/seam/engine.py:2123",
+      "quote": "            wiring_id=wiring_id,"
+    },
+    {
+      "id": "WIRE-13",
+      "status": "present",
+      "where": "databasise/seam/engine.py:1047",
+      "quote": "            outcome = \"failed\""
+    },
+    {
+      "id": "WIRE-14",
+      "status": "present",
+      "where": "databasise/seam/engine.py:2185",
+      "quote": "                    raise MalformedEvidenceItemError("
+    },
+    {
+      "id": "WIRE-15",
+      "status": "present",
+      "where": "databasise/identity/env.py:42",
+      "quote": "class EnvironmentDigestError(RuntimeError):"
+    },
+    {
+      "id": "WIRE-16",
+      "status": "present",
+      "where": "databasise/parts/registry.py:179",
+      "quote": "            raise UnknownPartEffectError(part.name_at_version, unknown)"
+    },
+    {
+      "id": "WIRE-17",
+      "status": "present",
+      "where": "databasise/seam/engine.py:697",
+      "quote": "        raise NoWritePathForModalityError(operation=operation)"
+    },
+    {
+      "id": "WIRE-18",
+      "status": "present",
+      "where": "databasise/runner/scheduler.py:863",
+      "quote": "        \"determinism_setting\": determinism_setting,"
+    }
+  ],
+  "extra": []
+}

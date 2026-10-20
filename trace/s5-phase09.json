@@ -2,17 +2,17 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase09",
-  "ledger_version": 616,
+  "ledger_version": 678,
   "artifacts": {
     "databasise/mcp/server.py": "3ef83f9eb3b55236110e1b483e77be99ff51bbe977b794081482a101dca7d6c5",
     "databasise/seam/compare.py": "8f6d19a32dccbcd6cbaf605c398d2334b86f1500d8598ddb43cafe62ad880095",
     "databasise/seam/corpus.py": "b360c0dbdc02f4659079a90f81a68366d74c55ab99d13334795dfedae02226ec",
-    "databasise/seam/engine.py": "d4b321da4adfc4a41761b2a70028281b2b089d21e7ccc0fef8b3889581d43527",
-    "databasise/seam/evidence.py": "4b2d6caa48a467ecb5a4390d12880b34689b84354e5df1cef7385aa1961802b8",
-    "databasise/seam/query.py": "359f93b58fde69d369a88054949f360358d1c12f717163c4d9537fb0ca1544a0",
-    "databasise/seam/refusals.py": "3f00a26270dc66c994316eae3da9111bc2851381904d879471c395c32c2b9562",
-    "databasise/seam/rest.py": "fe03ab4bc25e035770e711f52d9097ee55c9b74e9d154d44989c900f3cdb71c2",
-    "databasise/seam/selectors.py": "d3ca06a1044918ce4b09c0ba4a9328f472f0a339f57929fc183d3dd74a7b2aa4"
+    "databasise/seam/engine.py": "5df1ef88807233562bf9794bb389fba9eeea8221e2ba3054eda84e43abec48aa",
+    "databasise/seam/evidence.py": "4234e690e03ab49309a1e28255a9d7c685e23c9fb1db4e04c228614e86780c9d",
+    "databasise/seam/query.py": "b1452596cc6c0aa44290c1198e487d5ce51ff61a4ede6841bc1f8d8fef7850aa",
+    "databasise/seam/refusals.py": "aa2c5b1fcc04f7fccac1d924a162176048b64a0cbc58fec68e556382451635b2",
+    "databasise/seam/rest.py": "d77ad6bf91a8d93d617b18828d5516466eb768936603079432b88b57f5ed4840",
+    "databasise/seam/selectors.py": "94bea57a073332c9b0984b314bf8a5503d360ccdbe19022c9de635d2595aaa8a"
   },
   "checker": {
     "harness": "claude-code",
@@ -23,13 +23,13 @@
     {
       "id": "SEAM-01",
       "status": "present",
-      "where": "databasise/seam/evidence.py:134",
+      "where": "databasise/seam/evidence.py:142",
       "quote": "if not _EVIDENCE_NAMESPACE_RE.fullmatch(namespace):"
     },
     {
       "id": "SEAM-02",
       "status": "present",
-      "where": "databasise/seam/rest.py:291",
+      "where": "databasise/seam/rest.py:299",
       "quote": "refusal = refusal_from_errors(exc.errors())"
     },
     {
@@ -41,19 +41,19 @@
     {
       "id": "SEAM-04",
       "status": "present",
-      "where": "databasise/seam/rest.py:146",
+      "where": "databasise/seam/rest.py:154",
       "quote": "return 404 if isinstance(exc, _NOT_FOUND_REFUSALS) else 422"
     },
     {
       "id": "SEAM-05",
       "status": "present",
-      "where": "databasise/seam/rest.py:145",
+      "where": "databasise/seam/rest.py:153",
       "quote": "return 503 if exc.failure_class in _ENGINE_UNAVAILABLE else 502"
     },
     {
       "id": "SEAM-06",
       "status": "present",
-      "where": "databasise/seam/engine.py:677",
+      "where": "databasise/seam/engine.py:747",
       "quote": "async def _corpus_op_or_refuse(op: str, payload: dict[str, Any], operation: str, working_dir: Path) -> Any:"
     },
     {
@@ -71,37 +71,37 @@
     {
       "id": "SEAM-09",
       "status": "present",
-      "where": "databasise/seam/query.py:92",
+      "where": "databasise/seam/query.py:91",
       "quote": "if query_object.text is not None and query_object.text.strip() == \"\":"
     },
     {
       "id": "SEAM-10",
       "status": "present",
-      "where": "databasise/seam/selectors.py:247",
+      "where": "databasise/seam/selectors.py:270",
       "quote": "raise EmptyCapabilitySelectorError()"
     },
     {
       "id": "SEAM-11",
       "status": "present",
-      "where": "databasise/seam/engine.py:1181",
+      "where": "databasise/seam/engine.py:1256",
       "quote": "keys = comparison_keys(selectors)"
     },
     {
       "id": "SEAM-12",
       "status": "present",
-      "where": "databasise/seam/engine.py:2225",
+      "where": "databasise/seam/engine.py:2347",
       "quote": "if alias == \"\" or _INSTANCE_HASH_PATTERN.match(alias):"
     },
     {
       "id": "SEAM-13",
       "status": "present",
-      "where": "databasise/seam/rest.py:313",
+      "where": "databasise/seam/rest.py:321",
       "quote": "    if raw is None or raw.strip() in (\"\", \"null\"):"
     },
     {
       "id": "SEAM-14",
       "status": "present",
-      "where": "databasise/seam/refusals.py:905",
+      "where": "databasise/seam/refusals.py:957",
       "quote": "\"NoRawUploadPathForModalityError\","
     },
     {
