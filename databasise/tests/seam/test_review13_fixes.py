@@ -95,3 +95,20 @@ async def test_an_uncollectable_environment_refuses_a_query_as_environment_diges
     with pytest.raises(ForeignEngineRefusalError) as exc_info:
         await _run_resolved(store_root, PartRegistry(), wiring)
     assert exc_info.value.failure_class == "EnvironmentDigestUnavailable"
+
+
+@pytest.mark.parametrize(
+    ("extra", "code"),
+    [
+        ({"provides": [["a"]]}, "unknown-provides"),
+        ({"provides": "a"}, "invalid-wiring-document"),
+        ({"evidence_position": {"node": ["a"]}}, "unknown-evidence-node"),
+        ({"evidence_position": "a"}, "invalid-wiring-document"),
+    ],
+)
+def test_a_malformed_top_level_reference_is_reported_not_raised(extra, code):
+    """B-WR-01 (WIRE-06): parse_wiring reports these shapes; it raised TypeError or accepted them."""
+    from databasise.validator.parse import parse_wiring
+
+    report = parse_wiring({"nodes": {"a": _node()}, **extra}, PartRegistry()).report
+    assert code in [violation.code for violation in report.violations]

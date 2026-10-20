@@ -25,6 +25,8 @@ regardless of this check.
 (WIRE-02) Top-level references are checked against the wiring's own nodes: a ``provides`` entry or
 ``evidence_position.node`` naming a missing node is ``CODE_UNKNOWN_PROVIDES`` /
 ``CODE_UNKNOWN_EVIDENCE_NODE``; an empty ``provides`` or a null ``evidence_position`` adds nothing.
+A ``provides`` that is not a list or an ``evidence_position`` that is not a mapping is
+``CODE_INVALID_WIRING_DOCUMENT``; a non-string entry or node counts as unknown (reported, never raised).
 
 Cycle detection (``validator.cycles.strongly_connected_components``) always runs, independent of
 whether any other violation was found: a cycle is reported as data under ``report.cycles``, never
@@ -282,9 +284,19 @@ def parse_wiring(doc: dict[str, Any], registry: PartRegistry) -> ParsedWiring:
     # WIRE-02: a top-level reference to a node the wiring does not contain (a ghost), independent
     # of the checks above. A null or absent evidence_position and an empty provides add nothing.
     if isinstance(doc, dict) and isinstance(doc.get("nodes", {}), dict):
+        # 13 REVIEW B-WR-01: a non-list provides, a non-string entry and a non-mapping
+        # evidence_position are reported, never raised (an unhashable value broke the `in` test).
         provides = doc.get("provides")
+        if provides is not None and not isinstance(provides, list):
+            violations.append(
+                Violation(
+                    code=CODE_INVALID_WIRING_DOCUMENT,
+                    pointer="/provides",
+                    message="`provides` must be a list of node ids",
+                )
+            )
         for index, name in enumerate(provides if isinstance(provides, list) else []):
-            if name not in raw_nodes:
+            if not isinstance(name, str) or name not in raw_nodes:
                 violations.append(
                     Violation(
                         code=CODE_UNKNOWN_PROVIDES,
@@ -293,7 +305,17 @@ def parse_wiring(doc: dict[str, Any], registry: PartRegistry) -> ParsedWiring:
                     )
                 )
         evidence_position = doc.get("evidence_position")
-        if isinstance(evidence_position, dict) and evidence_position.get("node") not in raw_nodes:
+        if evidence_position is not None and not isinstance(evidence_position, dict):
+            violations.append(
+                Violation(
+                    code=CODE_INVALID_WIRING_DOCUMENT,
+                    pointer="/evidence_position",
+                    message="`evidence_position` must be a mapping",
+                )
+            )
+        elif isinstance(evidence_position, dict) and (
+            not isinstance(evidence_position.get("node"), str) or evidence_position["node"] not in raw_nodes
+        ):
             violations.append(
                 Violation(
                     code=CODE_UNKNOWN_EVIDENCE_NODE,
