@@ -99,3 +99,103 @@ None.
 _Fixed: 2026-10-20_
 _Fixer: Claude (gsd-code-fixer)_
 _Iteration: 1_
+
+## Iteration 2
+
+**Fixed at:** 2026-10-20
+**Source review:** .planning/phases/13-selectors-wiring-runner/13-REVIEW-ITER2.md (deep, fix verification: 0 critical, 3 warning, 6 info)
+**Iteration:** 2
+
+**Summary:**
+- Findings in scope: 3 (WR-01..03; IN-01..06 out of scope)
+- Fixed: 3
+- Skipped: 0
+- Status: all_fixed
+
+Each finding was checked against the source before the fix. Isolation: `workflow.use_worktrees` is `false`, so the fixes were edited and committed in the main checkout, and the gates below ran there.
+
+### WR-01: a malformed `provides` on the engine query path was a bare TypeError
+
+**Files modified:** `databasise/wirings/resolve.py`, `databasise/tests/seam/test_review13_fixes.py`
+**Commit:** cb93354
+**Status:** fixed
+**Confirmed against source:** `without_recipe_only_nodes` had three unchecked reads:
+- It ran `node_id in nodes` over `provides` with no type check, a TypeError for `[["a"]]`.
+- It called `.get` on each node, an AttributeError for a non-object node.
+- It called `.values()` on `recipe`.
+
+The other steps before `parse_wiring` in `_execute_resolved` do not read `provides` or `evidence_position`: `canonicalise`, `_inject_query`, `_inject_token_allowance` and `_inject_max_total_tokens`. The reads of both fields after `parse_wiring` are guarded by its refusal.
+**Applied fix:**
+- When `nodes` is not an object, the function returns the copy unchanged.
+- It reads `provides`, `deps` and `recipe` values only when they are lists of strings, or a dict for `recipe`. Anything else is skipped and left for `parse_wiring` to report.
+- Capability matching and promotion share the function, so they get the same tolerance.
+
+**Regression test:** `test_a_malformed_wiring_on_the_engine_query_path_is_unparseable_wiring` goes through `Databasise._execute_resolved` and expects `UnparseableWiringError` for six shapes:
+- a list in `provides`
+- a string `provides`
+- a list `evidence_position.node`
+- a string `evidence_position`
+- a non-object node
+- a list inside `deps`
+
+### WR-02: a non-numeric evidence `score` escaped as a pydantic ValidationError
+
+**Files modified:** `databasise/seam/evidence.py`, `databasise/tests/seam/test_review13_fixes.py`
+**Commit:** 8427350
+**Status:** fixed
+**Confirmed against source:** `mint_evidence_refs` checked finiteness only for `numbers.Real` scores and passed anything else to `EvidenceRef(score=...)`. Pydantic then raised `ValidationError`, which the engine's `except MalformedEvidenceItemError` does not catch.
+**Applied fix:** a score that is not `None` must be a `numbers.Real` and not a `bool`. Anything else raises `MalformedEvidenceItemError(reason="carries a non-numeric score")`. The engine maps that error to the 502 `MalformedDriverOutput`, which carries the persisted run's `trace_token`.
+**Decision on `"0.5"`: refused.**
+- The shipped parts emit floats: the vector store builds `float(score)` (`stores/vector.py:399`), and PPR does the same (`parts_core/hipporag/ppr.py:87`).
+- A string score is therefore a part regression, and coercing it would hide that regression from the trace.
+- `bool` is refused for the same reason, because pydantic would coerce it to 0.0 or 1.0.
+
+**Regression test:** the A-WR-02 parametrised test `test_a_malformed_items_value_is_malformed_driver_output_with_a_trace` gains `"x"`, `"0.5"`, `True`, `[1]` and `{"a": 1}`. Each case asserts `failure_class == "MalformedDriverOutput"` and a non-empty `trace_token`.
+
+### WR-03: API-INVENTORY still described pre-Phase-13 selector, evidence and RUN-02 behaviour
+
+**Files modified:** `docs/gui/API-INVENTORY.md`
+**Commit:** f31fbca
+**Status:** fixed
+**Confirmed against source:** the selector mapping was checked with an in-process probe of `resolve_selector` over the default registry. The probe gave:
+- `reads_vector:entities` → local, `reads_vector:relationships` → global, both → hybrid
+- `reads_graph` alone, with `calls_llm`, or with `reads_kv` → hipporag
+- `reads_graph` with `calls_rerank` → local
+- the write effects and `mutates_store` → `UnsatisfiableSelectorError`
+- `[]` → `EmptyCapabilitySelectorError`
+- node counts: naive 7, bypass 1, hybrid 17, local 15, global 15, hipporag 14
+
+The `evidence_position` values were read from the arm patches and from `base.json`. `openai_compat.py:224-226` returns `call_count=1, counted_by="unbudgetable"`.
+
+**Applied fix:**
+- **Rewritten:**
+  - the `capability` row (:108): the D-01 mapping, its refusals and SEAM-10
+  - the `evidence` row (:124): the D-02 per-arm positions, the HippoRAG `top_k` cut, the WR-02 MalformedDriverOutput rule and updated citations
+  - the :146 sentence, to the RUN-02 behaviour
+- **Removed:** the hybrid/global caveats in the compare pre-submit checks (:256) and in the gaps paragraph (:260).
+- **Marked resolved by D-01:** the defect row (:776), the dry-run note (:787) and open question 10 (:821).
+- **Nearby text in the same state:**
+  - the compare refusal list (:244) now names the usage-less shipped-client case
+  - the wirings-list row (:717) now gives hipporag 14 nodes, says every arm is reachable, and says the index-side nodes never dispatch on a query
+
+### Iteration 2 skipped issues
+
+None.
+
+### Iteration 2 verification
+
+- **Where:** the main checkout (`workflow.use_worktrees: false`), using `databasise/.venv`.
+- **Per fix:** each fix was re-read after the edit and checked with `ast.parse`. `tests/seam/test_review13_fixes.py` was run after each code fix; the final run gave 29 passed.
+- **Wave command:** `cd databasise && .venv/bin/pytest -q tests/seam tests/runner tests/validator tests/wirings tests/identity tests/parts tests/parts_core tests/evidence tests/parity` gave 1862 passed, 3 deselected, in 526s.
+- **Not run:** no `-m live` test was run.
+
+### Iteration 2 notes for the orchestrator
+
+- **Commits:** cb93354 (WR-01), 8427350 (WR-02) and f31fbca (WR-03). Each carries the `phase/13` trailer and the Co-Authored-By line.
+- **Stale inventory text outside WR-03's scope (not edited):**
+  - The default-selector paragraph (:111) and the `answer` row (:123) still describe HippoRAG's provides node as `assemble-result`, with a passage-dump answer. `base.json` now has `provides: ["qa"]`.
+  - The promote-helper note (:352) gives full-wiring node counts (hipporag 13). Promotion matches the query-run node set instead.
+- **Hardening without a test:** WR-01 also makes a non-dict `recipe` tolerated. `parse_wiring` does not validate `recipe`, so that shape now runs instead of raising AttributeError. No test pins it.
+
+_Iteration 2 fixed: 2026-10-20_
+_Fixer: Claude (gsd-code-fixer)_
