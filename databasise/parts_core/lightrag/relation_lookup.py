@@ -51,4 +51,5 @@ LIGHTRAG_RELATION_LOOKUP_PART = Part(
     effects=["reads_vector"],
     upstream_ref="v1/lightrag/operate.py",
     body=_relation_lookup_body,
+    reads_namespaces=(f"reads_vector:{_RELATIONSHIPS_NAMESPACE}",),
 )

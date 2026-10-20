@@ -1,36 +1,46 @@
 """§18.4's four selectors: a stable alias, a declared capability (or capability set), a harness by
 name, or the default selector (no selector at all).
 
-**Capability matching (this plan's Task 1; FA-04, RESEARCH Open Question 1, unresolved and
-carried verbatim).** §18.4 names "a declared capability or capability set" but CONTRACT freezes no
-capability vocabulary beyond §14.1's statement that ``effects[]`` is "the base capability
-vocabulary". This module matches a requested capability set against the frozen 17-member
-``Effect`` vocabulary (``databasise/parts/schema.py``) because that is the only capability
-vocabulary that exists in code — inventing a parallel taxonomy the contract does not name would be
-worse than using a thin one it does. **This is thin**: a consumer asking for "graph retrieval"
-must name ``reads_graph``, a machine-facing word, not a consumer-facing one. It is sufficient to
-distinguish the candidate wirings (they differ from each other in which effects their nodes
-declare) and therefore sufficient for the §18.5 falsifier, but it is not asserted to be the right
-long-term ergonomics.
+**Capability matching (FA-04, RESEARCH Open Question 1; WIRE-01, D-01).** §18.4 names "a declared
+capability or capability set" but CONTRACT freezes no capability vocabulary beyond §14.1's
+statement that ``effects[]`` is "the base capability vocabulary". A capability token here is
+therefore either a member of the frozen 17-member ``Effect`` vocabulary
+(``databasise/parts/schema.py``) or a Databasise read-namespace token ``<read effect>:<namespace>``
+(for example ``reads_vector:entities``) that a part declares on its ``reads_namespaces`` field.
+The namespace tokens exist because effects alone cannot tell ``local``, ``global`` and ``hybrid``
+apart: all three declare the same effect union. **This is thin**: a consumer asking for "graph
+retrieval" must name ``reads_graph``, a machine-facing word, not a consumer-facing one.
 
 **The candidate pool** for the capability, harness and default branches is
 ``databasise.wirings.resolve.all_wirings()``: every LightRAG arm plus the HippoRAG base wiring,
 in that function's own order.
 
 A wiring satisfies a requested capability set when the union of its registered parts' own declared
-``effects`` (never the wiring node's own, possibly-narrower, declared ``effects`` — CR-01 lets a
-wiring under-declare relative to its part) is a superset of the request. When more than one
-candidate satisfies, the **smallest resolved wiring wins** — fewest nodes, ties broken by the
-pool's own order (a stable sort). This is a deliberate choice, not an arbitrary one: the
-candidates' effect sets overlap (``bypass``'s single ``calls_llm`` effect is a subset of every
-other arm's own effect set), so a "first candidate in pool order" rule would make every wiring
-after the first unreachable by capability alone — the smallest-wiring rule instead resolves to
-the most specific (least-footprint) wiring that still satisfies the request.
+``effects`` and ``reads_namespaces`` tokens (never the wiring node's own, possibly-narrower,
+declared ``effects`` — CR-01 lets a wiring under-declare relative to its part) is a superset of the
+request. When more than one candidate satisfies, the **smallest resolved wiring wins** — fewest
+nodes, ties broken by the pool's own order (a stable sort).
+
+Which capability set selects which arm, with no promote:
+
+- ``[reads_vector]``, or ``[reads_vector:chunks]`` -> ``naive`` (7 nodes)
+- ``[calls_llm]`` -> ``bypass`` (1 node)
+- ``[reads_vector:entities]`` -> ``local``
+- ``[reads_vector:relationships]`` -> ``global``
+- ``[reads_vector:entities, reads_vector:relationships]`` (either order) -> ``hybrid``
+- ``[reads_graph, reads_kv]`` -> ``hipporag``
+- ``[reads_graph]`` and ``[reads_graph, calls_llm]`` -> ``hipporag``; ``[reads_graph, calls_rerank]``
+  -> ``local`` (hipporag declares no rerank); ``[writes_graph]`` -> refused (no query wiring writes)
+
+The effect-only ``reads_graph`` requests rest on a **one-node margin**: hipporag has 14 full nodes
+against ``local`` and ``global`` at 15, so hipporag wins every request both can satisfy, until a
+request names something hipporag lacks. Adding a node to hipporag, or removing one from ``local``
+or ``global``, changes which arm an effect-only ``reads_graph`` request selects.
 
 Capability matching sees the effects a query run of the candidate can have (HIPP-12, D-16): the
 union is taken over ``without_recipe_only_nodes(candidate)``, so the write effects of index-side
 nodes never select a query wiring. ``[writes_graph]`` no longer resolves to the HippoRAG wiring and
-``[writes_artifact]`` resolves to nothing. The node-count tie-break below still uses the full wiring.
+``[writes_artifact]`` resolves to nothing. The node-count tie-break above still uses the full wiring.
 
 Every candidate wiring's ``provides``/``harnesses``/``recipe`` fields are read off the raw resolved
 dict returned by ``resolve_arm`` — never through ``ParsedWiring``, which drops all three entirely

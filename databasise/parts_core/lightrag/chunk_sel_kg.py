@@ -210,4 +210,5 @@ LIGHTRAG_CHUNK_SELECTOR_KG_PART = Part(
     effects=["reads_kv", "reads_vector"],
     upstream_ref="v1/lightrag/operate.py",
     body=_chunk_sel_kg_body,
+    reads_namespaces=(f"reads_vector:{_CHUNKS_NAMESPACE}",),
 )

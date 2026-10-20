@@ -55,4 +55,5 @@ LIGHTRAG_RETRIEVER_CHUNK_TOPK_PART = Part(
     effects=["reads_vector"],
     upstream_ref="v1/lightrag/operate.py",
     body=_chunk_vector_body,
+    reads_namespaces=(f"reads_vector:{_CHUNKS_NAMESPACE}",),
 )
