@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 13
 current_phase_name: Selectors, Wiring & Runner
 status: executing
-stopped_at: Completed 13-04-PLAN.md
-last_updated: "2026-10-20T03:29:51.165Z"
+stopped_at: Completed 13-06-PLAN.md
+last_updated: "2026-10-20T03:41:35.517Z"
 last_activity: 2026-10-19
 last_activity_desc: Phase 13 execution started
-state_head: 88343179e383478674ce7df24fc99bbbb1fd7d17
+state_head: e69637d05eabe619a8008da0a2fd711a64c9beec
 progress:
   total_phases: 11
   completed_phases: 5
   total_plans: 70
-  completed_plans: 62
+  completed_plans: 63
   percent: 45
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-19 after Phase 12)
 ## Current Position
 
 Phase: 13 (Selectors, Wiring & Runner) — EXECUTING
-Plan: 6 of 13
+Plan: 7 of 13
 Status: Ready to execute
 Last activity: 2026-10-19 — Phase 13 execution started
 
@@ -124,6 +124,7 @@ Progress: [█████░░░░░] 45% (4/11 phases)
 | Phase 13 P02 | 40min | 3 tasks | 10 files |
 | Phase 13 P03 | 35min | 3 tasks | 9 files |
 | Phase 13 P05 | 25min | 2 tasks | 4 files |
+| Phase 13 P06 | 30min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -221,6 +222,7 @@ Recent decisions affecting current work:
 - [Phase 13]: Run records validate against a derived Databasise trace schema (frozen schema plus recorded amendments); the frozen files stay unedited (D-12)
 - [Phase 13]: NodeTrace cache_hit, tier and feed_tier are null when nothing measured them; overspend is reported in spent/allowance with share capped at 1.0 (D-14)
 - [Phase 13]: 13-05: depth_label is Depth | None, null unless a provides node answered; an empty completion counts as answered
+- [Phase 13]: WIRE-02: KG-arm evidence is assemble's truncated chunk list; bypass evidence_position is null; validator reports ghost provides/evidence nodes
 
 ### Pending Todos
 
@@ -274,8 +276,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-20T03:29:50.906Z
-Stopped at: Completed 13-04-PLAN.md
+Last session: 2026-10-20T03:41:35.260Z
+Stopped at: Completed 13-06-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
