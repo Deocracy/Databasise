@@ -45,3 +45,10 @@ def test_the_resolved_local_and_global_arms_are_unchanged() -> None:
         expected = jsonpatch.apply_patch(load_base(), patch_doc["operations"], in_place=False)
         assert _digest(resolve_arm(arm)) == _digest(expected), arm
         assert set(resolve_arm(arm)["nodes"]) == set(patch_doc["resulting_node_id_set"]), arm
+
+
+def test_the_readme_records_the_dropped_guards() -> None:
+    lines = (_WIRINGS / "lightrag" / "README.md").read_text(encoding="utf-8").splitlines()
+    assert any("D-20" in line for line in lines), "README does not record the D-20 deviation"
+    claims = [line for line in lines if line.startswith("|") and "carries a declared guard" in line]
+    assert claims == [], f"README table rows still claim a declared guard: {claims}"

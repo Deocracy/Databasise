@@ -126,8 +126,18 @@ editing it (the same one-way-door property Task 1's checkpoint context stated fo
 | `arm-naive.json-patch.json` | naive arm — 7 nodes, the tracer path this plan proves end to end |
 | `arm-bypass.json-patch.json` | bypass arm — 1 node (`generate` only) |
 | `arm-hybrid.json-patch.json` | hybrid arm — 17 nodes |
-| `arm-local.json-patch.json` | local arm — 15 nodes, carries a declared guard |
-| `arm-global.json-patch.json` | global arm — 15 nodes, carries a declared guard |
+| `arm-local.json-patch.json` | local arm — 15 nodes |
+| `arm-global.json-patch.json` | global arm — 15 nodes |
 
 `databasise/wirings/resolve.py` is the loader/resolver for this set — see its own module
 docstring for the base-plus-patch resolution mechanism.
+
+## Recorded deviations
+
+- **Keyword fall-through guards dropped (Phase 13, D-20).** v1's keyword fall-through chain switch
+  (`operate.py:5021-5062`) is not modelled. The `ll_keywords_empty_fallthrough` (local) and
+  `hl_keywords_empty_fallthrough` (global) declarations were removed from the two arm patches
+  because nothing evaluated them (`resolve_arm` applies only `operations`), and reinstating the
+  chain switch would put the relation chain into the local arm, giving local hybrid's node set and
+  breaking promotion's node-set matching. The frozen `docs/system-model/wirings` copies keep the
+  illustrative declarations.
