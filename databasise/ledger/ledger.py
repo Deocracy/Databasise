@@ -93,7 +93,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 
 @dataclass(frozen=True)
@@ -172,7 +172,7 @@ class Ledger:
         """Close the underlying connection."""
         self._conn.close()
 
-    def __enter__(self) -> Ledger:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc_info: object) -> None:

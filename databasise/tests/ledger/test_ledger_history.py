@@ -57,7 +57,7 @@ async def _build_history(store_root):
 
 
 async def test_history_for_alias_returns_the_alias_rows_oldest_first(store_root):
-    first, second, rolled, retired = await _build_history(store_root)
+    first, second, rolled, _retired = await _build_history(store_root)
 
     history_for_alias = getattr(Ledger, "history_for_alias", None)
     assert history_for_alias is not None, "Ledger.history_for_alias does not exist"
