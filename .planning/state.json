@@ -31,7 +31,7 @@
     {
       "number": "13",
       "name": "Selectors, Wiring & Runner",
-      "status": "in_progress"
+      "status": "complete"
     },
     {
       "number": "14",
@@ -62,7 +62,7 @@
   "next": {
     "command": "/gsd-progress --next",
     "label": "Advance to the next step",
-    "reason": "Phase 6 of 11 · 45% · executing"
+    "reason": "Phase 7 of 11 · 55% · executing"
   },
-  "updated_at": "2026-10-20T04:47:43.253Z"
+  "updated_at": "2026-10-20T23:12:12.351Z"
 }

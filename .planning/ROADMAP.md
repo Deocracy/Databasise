@@ -363,11 +363,11 @@ Plans (six waves; `seam/engine.py` is touched by one plan per wave in waves 1-6;
 - LEDG-10: capability matching on wiring-node effects or Part effects; whether HippoRAG's index-side nodes count at query time
 - LEDG-12: wire codebase-memory-mcp as a selectable wiring or unregister it (TOOL-15 and TOOL-18 follow)
 
-**Plans**: 11 plans
+**Plans**: 1/11 plans executed
 
 Plans:
 - [ ] 14-01-PLAN.md — Owner grant for the protected WIRE-17 reachability test (checkpoint; D-13; wave 1)
-- [ ] 14-02-PLAN.md — Ledger store: alias history, close/open_existing, lineage (LEDG-07; wave 1)
+- [x] 14-02-PLAN.md — Ledger store: alias history, close/open_existing, lineage (LEDG-07; wave 1)
 - [ ] 14-03-PLAN.md — PartialRunEvidenceError, GateNotCalibratedError and wiring_for_name (prerequisite; wave 1)
 - [ ] 14-04-PLAN.md — Pinning tests for the already-met rows (LEDG-10, LEDG-11; wave 1)
 - [ ] 14-05-PLAN.md — Strict trace flag and the one-store_root-one-tenant rule (LEDG-09; wave 1)
@@ -494,7 +494,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 11. LightRAG Corpus Path | 11/11 | Complete    | 2026-10-19 |
 | 12. HippoRAG Fixes | 14/14 | Complete    | 2026-10-19 |
 | 13. Selectors, Wiring & Runner | 13/13 | Complete    | 2026-10-20 |
-| 14. Promotion & Ledger | 0/TBD | Not started | - |
+| 14. Promotion & Ledger | 1/11 | In Progress | - |
 | 15. Offline Tooling & Packaging | 0/TBD | Not started | - |
 | 16. GUI Connectors | 0/TBD | Not started | - |
 | 17. GUI Mockup | 0/TBD | Not started | - |
