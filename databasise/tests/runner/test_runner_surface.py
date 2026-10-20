@@ -6,6 +6,7 @@ per-node semaphore that the HippoRAG openie part uses stays. The wiring-string l
 from __future__ import annotations
 
 import ast
+import json
 import typing
 from pathlib import Path
 
@@ -78,3 +79,24 @@ def test_the_node_semaphore_has_a_production_user():
                 users.append(path.name)
     assert users, "no production part reads ctx._semaphore, so the scheduler's per-node semaphore is unused"
     assert "openie.py" in users
+
+
+def test_no_wiring_json_carries_an_apportionment_string():
+    """WIRE-18 (D-17): no wiring document under ``databasise/wirings`` declares an apportionment
+    policy; no node apportions a metered budget, so the keys were prose with no behaviour."""
+    keys = {"apportionment_policy", "apportioning_node"}
+
+    def _found(value) -> set[str]:
+        if isinstance(value, dict):
+            return (keys & set(value)) | {k for v in value.values() for k in _found(v)}
+        if isinstance(value, list):
+            return {k for v in value for k in _found(v)}
+        return set()
+
+    offenders = {
+        str(path.relative_to(_PACKAGE_ROOT)): sorted(found)
+        for path in sorted((_PACKAGE_ROOT / "wirings").rglob("*.json"))
+        if (found := _found(json.loads(path.read_text(encoding="utf-8"))))
+    }
+
+    assert offenders == {}

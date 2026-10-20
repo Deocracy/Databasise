@@ -22,9 +22,8 @@ token (no tokenizer dependency; see ``_token_cost``). The kept rows are emitted 
 ``entities_context`` / ``relations_context`` for ``assemble``, beside the kept original ``items``
 that ``chunk-sel-kg`` reads.
 
-Declares no effects (``config["apportionment_policy"]``'s own base-wiring text: "non-effectful
-join, no budget spent at this node" — reused verbatim by this node's config too): reaches no store
-and no client. Truncating from the tail without re-sorting matters specifically because a re-sort
+Declares no effects (a non-effectful cut, no budget spent at this node): reaches no store and no
+client. Truncating from the tail without re-sorting matters specifically because a re-sort
 here would change ranking, and ranking is exactly what the retrieval-level parity comparison
 measures — truncation must be a pure cut, never a re-rank in disguise.
 """

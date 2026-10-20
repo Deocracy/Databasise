@@ -141,3 +141,9 @@ docstring for the base-plus-patch resolution mechanism.
   chain switch would put the relation chain into the local arm, giving local hybrid's node set and
   breaking promotion's node-set matching. The frozen `docs/system-model/wirings` copies keep the
   illustrative declarations.
+- **Apportionment strings removed (Phase 13, D-17).** The `apportionment_policy` and
+  `apportioning_node` config strings were deleted from `base.json` and the three `join-chunks`
+  patch values, and the two `budget-*` nodes dropped their now-empty `config`. Nothing read them.
+  CONTRACT section 9 D4's merge-side apportionment MUST is vacuous while no node apportions a
+  metered budget. The frozen `docs/system-model/wirings` and `evidence/wirings` copies keep the
+  strings.

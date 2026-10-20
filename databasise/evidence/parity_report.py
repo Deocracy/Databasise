@@ -1378,6 +1378,13 @@ def render_markdown() -> str:
             "parity_results/` by `databasise/evidence/parity_report.py`, following "
             "`FALSIFIER-2-EVIDENCE.md`'s committed, re-runnable, human-readable precedent.\n"
         ),
+        (
+            "**Pinned hashes.** The instance and wiring hashes pinned in the committed comparison "
+            "results were minted before Phase 13 (per-arm wiring ids, the pre-injection wiring "
+            "hash, the environment inputs, the guard signal and the config deletions changed "
+            "them). They are kept as minted and not re-minted, because re-minting needs live "
+            "provider spend.\n"
+        ),
         _render_what_was_compared(),
         _render_trace_asymmetry(),
         _render_per_arm_comparison(),

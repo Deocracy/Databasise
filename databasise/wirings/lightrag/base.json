@@ -91,8 +91,7 @@
       "kind": "join",
       "config": {
         "socket_shape": "List[List[X]] -> List[X]",
-        "arm_precedence": "entity-hydrate-expand-emitted-first",
-        "apportionment_policy": "n/a - non-effectful join, no budget spent at this node"
+        "arm_precedence": "entity-hydrate-expand-emitted-first"
       },
       "deps": [
         "entity-hydrate-expand",
@@ -104,8 +103,7 @@
       "kind": "join",
       "config": {
         "socket_shape": "List[List[X]] -> List[X]",
-        "arm_precedence": "order-insensitive-dedup-by-sorted-endpoint-pair",
-        "apportionment_policy": "n/a - non-effectful join, no budget spent at this node"
+        "arm_precedence": "order-insensitive-dedup-by-sorted-endpoint-pair"
       },
       "deps": [
         "entity-hydrate-expand",
@@ -115,10 +113,6 @@
     "budget-entities": {
       "component": "lightrag/truncator-token-budget@0.1.0",
       "kind": "grader-filter",
-      "config": {
-        "apportionment_policy": "first-come-over-joined-list",
-        "apportioning_node": "budget-entities"
-      },
       "deps": [
         "join-entities"
       ]
@@ -126,10 +120,6 @@
     "budget-relations": {
       "component": "lightrag/truncator-token-budget@0.1.0",
       "kind": "grader-filter",
-      "config": {
-        "apportionment_policy": "first-come-over-joined-list",
-        "apportioning_node": "budget-relations"
-      },
       "deps": [
         "join-relations"
       ]
@@ -158,8 +148,7 @@
       "config": {
         "socket_shape": "List[List[X]] -> List[X]",
         "arity": 2,
-        "arm_precedence": "chunk-vector-emitted-first-then-chunk-sel-kg",
-        "apportionment_policy": "n/a - non-effectful join, no budget spent at this node"
+        "arm_precedence": "chunk-vector-emitted-first-then-chunk-sel-kg"
       },
       "deps": [
         "chunk-sel-kg",

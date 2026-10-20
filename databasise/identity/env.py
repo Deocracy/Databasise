@@ -10,6 +10,13 @@ wheels intentionally produce different identities, per CONTRACT.md §1's own env
 clause ("For an opaque node, the environment hash MUST cover the whole resolved runtime closure,
 not merely the component's own build inputs").
 
+**Hashed inputs (WIRE-15, D-16).** The payload is exactly: the python version (major, minor,
+micro), ``platform.system()`` (OS), ``platform.machine()`` (architecture), ``platform.libc_ver()``
+(libc name and version, ``["", ""]`` where unknown), and per installed distribution its name,
+version and RECORD digest. ``platform.platform()`` is not an input, because it embeds the kernel
+release: a kernel update no longer changes ``config_hash`` or ``instance_hash``, while OS,
+architecture and libc still cover the native-wheel runtime closure CONTRACT.md:178 requires.
+
 The collection path asserts no collected value (distribution name, version, or RECORD contents)
 embeds a Nix store path — spike 004's rule that Nix is substrate-only and store paths are never
 identity, enforced here rather than merely assumed. Where a distribution has no RECORD file, its
@@ -61,6 +68,8 @@ def _collect_environment_payload() -> dict[str, Any]:
     """Build the environment-hash payload dict fresh (uncached) — the same structure
     :func:`environment_hash` hashes, exposed separately so tests can exercise version-change
     sensitivity without fighting the process-wide ``functools.cache`` on the public function.
+    Inputs: python version, ``platform.system()``, ``platform.machine()``, ``platform.libc_ver()``
+    and each distribution's name, version and RECORD digest (see the module docstring).
     """
     dist_rows: list[list[Any]] = []
     for dist in distributions():
@@ -72,12 +81,17 @@ def _collect_environment_payload() -> dict[str, Any]:
     dist_rows.sort(key=lambda row: row[0])
     return {
         "python_version": list(sys.version_info[:3]),
-        "platform": platform.platform(),
+        "system": platform.system(),
+        "machine": platform.machine(),
+        "libc": list(platform.libc_ver()),
         "distributions": dist_rows,
     }
 
 
 @functools.cache
 def environment_hash() -> str:
-    """The resolved-closure environment digest, memoised per process (D-12)."""
+    """The resolved-closure environment digest, memoised per process (D-12). Hashes the python
+    version, OS (``platform.system()``), architecture (``platform.machine()``), libc
+    (``platform.libc_ver()``) and each distribution's name, version and RECORD digest; not the
+    kernel release (D-16)."""
     return hashlib.sha256(canonicalise(_collect_environment_payload())).hexdigest()

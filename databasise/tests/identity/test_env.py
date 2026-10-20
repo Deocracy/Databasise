@@ -62,3 +62,47 @@ async def test_health_recovers_once_the_digest_computes_again(fast_health, store
 
     assert _REASON in (failing.engine_reason or "")
     assert _REASON not in (recovered.engine_reason or "")
+
+
+# --------------------------------------------------------------------------------------------- #
+# WIRE-15 (13-12, D-16): the payload carries OS, architecture and libc, not the kernel string
+# --------------------------------------------------------------------------------------------- #
+
+
+def _hash_with(monkeypatch, **patched) -> str:
+    for name, value in patched.items():
+        monkeypatch.setattr(env_module.platform, name, value)
+    env_module.environment_hash.cache_clear()
+    try:
+        return env_module.environment_hash()
+    finally:
+        env_module.environment_hash.cache_clear()
+
+
+def test_a_kernel_update_does_not_change_the_environment_hash(monkeypatch):
+    before = _hash_with(monkeypatch, platform=lambda *a, **k: "Linux-6.18.56-x86_64-with-glibc2.42")
+    after = _hash_with(monkeypatch, platform=lambda *a, **k: "Linux-6.18.57-x86_64-with-glibc2.42")
+
+    assert before == after
+
+
+def test_a_different_architecture_changes_the_hash(monkeypatch):
+    x86 = _hash_with(monkeypatch, machine=lambda: "x86_64")
+    arm = _hash_with(monkeypatch, machine=lambda: "aarch64")
+
+    assert x86 != arm
+
+
+def test_an_empty_libc_still_hashes(monkeypatch):
+    digest = _hash_with(monkeypatch, libc_ver=lambda *a, **k: ("", ""))
+
+    assert len(digest) == 64
+
+
+def test_the_docstrings_list_every_input():
+    text = " ".join(
+        [env_module.__doc__ or "", env_module.environment_hash.__doc__ or "", env_module._collect_environment_payload.__doc__ or ""]
+    )
+
+    for word in ("python", "system", "machine", "libc", "RECORD", "version"):
+        assert word in text, word

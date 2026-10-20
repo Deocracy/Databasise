@@ -2,6 +2,8 @@
 
 Rendered from the committed result files under `databasise/evidence/parity_results/` by `databasise/evidence/parity_report.py`, following `FALSIFIER-2-EVIDENCE.md`'s committed, re-runnable, human-readable precedent.
 
+**Pinned hashes.** The instance and wiring hashes pinned in the committed comparison results were minted before Phase 13 (per-arm wiring ids, the pre-injection wiring hash, the environment inputs, the guard signal and the config deletions changed them). They are kept as minted and not re-minted, because re-minting needs live provider spend.
+
 ## What was compared
 
 - **Corpus**: `databasise/tests/fixtures/corpus/` — 20 documents, 2 queries (HotpotQA distractor setting, D-06). Corpus hash and per-arm query set are recorded per-arm below from each committed comparison result's own `corpus_hash` field.
