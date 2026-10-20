@@ -303,16 +303,7 @@ from databasise.stores.probes import list_kv_prefix, probe_graph, probe_kv, prob
 from databasise.stores.vector import MultiNamespaceVectorStore, VectorStoreCorruptedError, load_committed
 from databasise.validator.errors import CODE_CYCLIC_WIRING
 from databasise.validator.parse import ParsedWiring, parse_wiring
-from databasise.wirings.resolve import wiring_family, without_recipe_only_nodes
-
-# 06-10-PLAN.md: the per-modality corpus-wiring root — databasise/wirings/<family>/corpus-
-# <operation>.json is itself the write-path lookup table (see _corpus_wiring below); no dict or
-# registry duplicates it. Resolved relative to this file, mirroring
-# databasise/wirings/resolve.py's own Path(__file__)-relative load shape. Replaces the former
-# _INGEST_WIRING_PATH/_INGEST_NODE_ID/_DELETE_WIRING_PATH/_DELETE_NODE_ID module constants, which
-# named only LightRAG's own two corpus wirings — the node id each operation targets is now read
-# off the resolved corpus wiring's own consumes_documents[0]/provides[0], never a module constant.
-_WIRINGS_ROOT = Path(__file__).resolve().parent.parent / "wirings"
+from databasise.wirings.resolve import load_wiring, wiring_family, without_recipe_only_nodes
 
 logger = logging.getLogger(__name__)
 
@@ -687,15 +678,16 @@ def _corpus_wiring(query_wiring: dict[str, Any], operation: str) -> dict[str, An
     ``wiring_family`` (the resolved wiring a selector already produced for ``query``/``compare``)
     and loads ``databasise/wirings/<family>/corpus-<operation>.json`` — the on-disk layout IS the
     lookup table, deliberately, so a modality added later needs only a file, never a registry
-    entry. Raises :class:`NoWritePathForModalityError` when that file does not exist, rather than
-    falling back to another modality's corpus wiring: a write silently landing in a different
-    modality's index than the caller selected is undetectable from the return value.
+    entry. The layout lives in ``wirings.resolve.load_wiring``, the one loader (LEDG-13). Raises
+    :class:`NoWritePathForModalityError` when that file does not exist, rather than falling back to
+    another modality's corpus wiring: a write silently landing in a different modality's index
+    than the caller selected is undetectable from the return value.
     """
     family = wiring_family(query_wiring)
-    path = _WIRINGS_ROOT / family / f"corpus-{operation}.json"
-    if not path.is_file():
-        raise NoWritePathForModalityError(operation=operation)
-    return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        return load_wiring(family, variant=f"corpus-{operation}")
+    except FileNotFoundError:
+        raise NoWritePathForModalityError(operation=operation) from None
 
 
 # What a well-formed JSON driver result of the wrong shape raises when parsed (SEAM-06). Deliberately
