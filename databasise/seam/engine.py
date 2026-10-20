@@ -2061,7 +2061,13 @@ class Databasise:
         D-04 / research Q4 (LRAG-19): the run parses, opens stores for and runs
         :func:`_without_recipe_only_nodes`'s copy, so the index-recipe node is never dispatched on
         a query; the wiring identities (instance hash, wiring id) and ``provides`` and
-        ``evidence_position`` still come from the full ``resolved``."""
+        ``evidence_position`` still come from the full ``resolved``.
+
+        WIRE-12, D-04 order: run the nodes, build and persist the ``RunRecord``, and only then run
+        everything that can refuse (the store-fault check, answer selection, evidence minting, the
+        token breakdown, the seam events). A ``SeamRefusalError`` raised after the persist carries
+        the run's ``trace_token`` as a public attribute, so ``resolve_trace`` returns the run that
+        ended in the refusal; a refusal raised before dispatch carries none."""
         resolved = _inject_query(resolved, query_object.text or "")
         resolved = _inject_token_allowance(resolved, _DEFAULT_TOKEN_ALLOWANCE)
         resolved = _inject_max_total_tokens(resolved, _DEFAULT_MAX_TOTAL_TOKENS)
@@ -2093,25 +2099,16 @@ class Databasise:
             for store in stores.values():
                 await store.finalize()
 
-        # Phase 10 review CR-01 (D-13 on the query path): a store error inside a node is a named
-        # fault, never a 200 envelope. Every other node exception keeps the degraded envelope, whose
-        # stop_reason carries the exception class name only (runner/scheduler.py).
-        for node_exception in scheduled.get("node_exceptions", {}).values():
-            if _is_store_fault(node_exception):
-                corrupted = isinstance(node_exception, VectorStoreCorruptedError)
-                raise _foreign_fault(
-                    "query", node_exception, failure_class="StoreCorrupted" if corrupted else "StoreFault"
-                ) from node_exception
-
         wiring_bytes = canonicalise(resolved)
         wiring_instance_hash = f"sha256:{hashlib.sha256(wiring_bytes).hexdigest()}"
         wiring_id = resolved.get("wiring_id") or (
             f"wiring:{hashlib.sha256(wiring_bytes).hexdigest()[:16]}"
         )
 
-        # Constructed and consumed here only — never returned. RunRecord carries exactly the
-        # internal identities (wiring_id, wiring_instance_hash, node_id, instance_hash) §18.2
-        # forbids a consumer from receiving; the envelope below is what actually crosses the seam.
+        # Persisted at once (D-04), so a refusal below still leaves a resolvable trace. RunRecord
+        # carries exactly the internal identities (wiring_id, wiring_instance_hash, node_id,
+        # instance_hash) §18.2 forbids a consumer from receiving; the envelope below is what actually
+        # crosses the seam.
         record = RunRecord(
             run_id=str(uuid.uuid4()),
             wiring_id=wiring_id,
@@ -2128,63 +2125,78 @@ class Databasise:
             degradation_reason=scheduled["degradation_reason"],
         )
 
-        node_by_id = {node.node_id: node for node in record.nodes}
-
-        provides = resolved.get("provides") or []
-        provided = {node_id: scheduled["results"].get(node_id) for node_id in provides}
-        answer, depth_label = _select_answer(provides, provided, node_by_id)
-
-        # Task 1/2 (04-02); 06-01-PLAN.md: mint evidence refs from the resolved wiring's own
-        # declared evidence_position ({"node": ..., "namespace": ...}) — read off the resolved
-        # dict rather than a module-level retrieval-node constant, so a modality-agnostic wiring
-        # can declare its own retrieval position and namespace (HippoRAG's base declares its own
-        # ppr node under the hipporag-chunks namespace). LightRAG's own base now declares the
-        # equivalent position under the module-level CHUNKS_NAMESPACE default — the exact value
-        # that constant already held — so LightRAG's behaviour is unchanged. No re-sort here (see
-        # this module's docstring). A resolved wiring declaring no evidence_position at all, or
-        # one whose declared node never dispatches, yields no retrieval output at all, which mints
-        # to an empty list, never a refusal (the empty-evidence behavior Task 1 proves).
-        evidence_position = resolved.get("evidence_position") or {}
-        evidence_node_id = evidence_position.get("node")
-        evidence_namespace = evidence_position.get("namespace", CHUNKS_NAMESPACE)
-        retrieval_output = (
-            scheduled["results"].get(evidence_node_id) if evidence_node_id else None
-        )
-        try:
-            # WIRE-14, D-09: a retrieval output without `items` is a named fault, never a bare KeyError.
-            if isinstance(retrieval_output, dict) and "items" not in retrieval_output:
-                raise MalformedEvidenceItemError(
-                    namespace=evidence_namespace, index=0, reason="carries no 'items' key"
-                )
-            retrieval_items = retrieval_output["items"] if isinstance(retrieval_output, dict) else []
-            evidence = mint_evidence_refs(retrieval_items, namespace=evidence_namespace)
-        except MalformedEvidenceItemError as exc:  # 09 REVIEW WR-01: a store fault, not a caller refusal
-            raise _foreign_fault("query", exc, failure_class="MalformedDriverOutput") from exc
-
-        # Task 3 (04-02): raises UnbudgetableParticipantError before any envelope is constructed if
-        # a node reports the unbudgetable sentinel (D-08) — left to propagate unmodified.
-        token_accounting = assemble_token_breakdown(record.nodes)
-
-        # 04-04 Task 2 (MACH-11): correlate the run's own recorded touches against its own wiring
-        # graph — see this module's docstring for the rule's full statement (FA-08).
-        seam_events = _mach11_events(parsed, touches, node_by_id)
-
-        # 04-04 Task 1 (API-10, D-06): persist the RunRecord and mint its opaque trace reference
-        # before the record goes out of scope.
+        # 04-04 Task 1 (API-10, D-06) / WIRE-12 (D-04): persist the RunRecord and mint its opaque trace
+        # reference right after the run returns, before any post-dispatch refusal can discard it.
         trace_token = self._trace_store.persist(record.to_dict())
 
-        return ResponseEnvelope(
-            answer=answer,
-            evidence=evidence,
-            trace_token=trace_token,
-            depth_label=depth_label,
-            partial=record.partial,
-            degraded=record.degraded,
-            stop_reason=record.stop_reason,
-            degradation_reason=record.degradation_reason,
-            token_accounting=token_accounting,
-            seam_events=seam_events,
-        )
+        try:
+            # Phase 10 review CR-01 (D-13 on the query path): a store error inside a node is a named
+            # fault, never a 200 envelope. Every other node exception keeps the degraded envelope, whose
+            # stop_reason carries the exception class name only (runner/scheduler.py).
+            for node_exception in scheduled.get("node_exceptions", {}).values():
+                if _is_store_fault(node_exception):
+                    corrupted = isinstance(node_exception, VectorStoreCorruptedError)
+                    raise _foreign_fault(
+                        "query", node_exception, failure_class="StoreCorrupted" if corrupted else "StoreFault"
+                    ) from node_exception
+
+            node_by_id = {node.node_id: node for node in record.nodes}
+
+            provides = resolved.get("provides") or []
+            provided = {node_id: scheduled["results"].get(node_id) for node_id in provides}
+            answer, depth_label = _select_answer(provides, provided, node_by_id)
+
+            # Task 1/2 (04-02); 06-01-PLAN.md: mint evidence refs from the resolved wiring's own
+            # declared evidence_position ({"node": ..., "namespace": ...}) — read off the resolved
+            # dict rather than a module-level retrieval-node constant, so a modality-agnostic wiring
+            # can declare its own retrieval position and namespace (HippoRAG's base declares its own
+            # ppr node under the hipporag-chunks namespace). LightRAG's own base now declares the
+            # equivalent position under the module-level CHUNKS_NAMESPACE default — the exact value
+            # that constant already held — so LightRAG's behaviour is unchanged. No re-sort here (see
+            # this module's docstring). A resolved wiring declaring no evidence_position at all, or
+            # one whose declared node never dispatches, yields no retrieval output at all, which mints
+            # to an empty list, never a refusal (the empty-evidence behavior Task 1 proves).
+            evidence_position = resolved.get("evidence_position") or {}
+            evidence_node_id = evidence_position.get("node")
+            evidence_namespace = evidence_position.get("namespace", CHUNKS_NAMESPACE)
+            retrieval_output = (
+                scheduled["results"].get(evidence_node_id) if evidence_node_id else None
+            )
+            try:
+                # WIRE-14, D-09: a retrieval output without `items` is a named fault, never a bare KeyError.
+                if isinstance(retrieval_output, dict) and "items" not in retrieval_output:
+                    raise MalformedEvidenceItemError(
+                        namespace=evidence_namespace, index=0, reason="carries no 'items' key"
+                    )
+                retrieval_items = retrieval_output["items"] if isinstance(retrieval_output, dict) else []
+                evidence = mint_evidence_refs(retrieval_items, namespace=evidence_namespace)
+            except MalformedEvidenceItemError as exc:  # 09 REVIEW WR-01: a store fault, not a caller refusal
+                raise _foreign_fault("query", exc, failure_class="MalformedDriverOutput") from exc
+
+            # Task 3 (04-02): raises UnbudgetableParticipantError before any envelope is constructed if
+            # a node reports the unbudgetable sentinel (D-08) — left to propagate unmodified.
+            token_accounting = assemble_token_breakdown(record.nodes)
+
+            # 04-04 Task 2 (MACH-11): correlate the run's own recorded touches against its own wiring
+            # graph — see this module's docstring for the rule's full statement (FA-08).
+            seam_events = _mach11_events(parsed, touches, node_by_id)
+
+            return ResponseEnvelope(
+                answer=answer,
+                evidence=evidence,
+                trace_token=trace_token,
+                depth_label=depth_label,
+                partial=record.partial,
+                degraded=record.degraded,
+                stop_reason=record.stop_reason,
+                degradation_reason=record.degradation_reason,
+                token_accounting=token_accounting,
+                seam_events=seam_events,
+            )
+        except SeamRefusalError as exc:
+            # D-04: a refusal after dispatch carries the run's public trace_token; pre-dispatch refusals do not.
+            exc.trace_token = trace_token
+            raise
 
     async def resolve_evidence(self, ref: EvidenceRef) -> dict[str, Any]:
         """The second §18 operation the seam exposes (§18.5 — per part kind, evidence, never per

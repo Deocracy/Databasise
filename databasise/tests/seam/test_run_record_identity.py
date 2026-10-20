@@ -6,9 +6,15 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+from databasise.clients.base import ChatResult, EmbeddingResult
 from databasise.parts.registry import PartRegistry
 from databasise.parts.schema import NodeContext, Part, WiringNode
 from databasise.runner import scheduler
+from databasise.runner.trace import TokenAccounting
+from databasise.seam import Databasise, QueryObject
+from databasise.seam.selectors import Selector
+from databasise.tests.seam._probes import trace_row_count
 from databasise.validator.errors import ValidationReport
 from databasise.validator.parse import ParsedWiring
 
@@ -46,3 +52,85 @@ async def test_a_sequential_run_never_has_two_node_bodies_in_flight():
 
     assert len(result["nodes"]) == 2
     assert in_flight["peak"] == 1
+
+
+# --------------------------------------------------------------------------------------------- #
+# WIRE-12 (D-04): a post-dispatch query refusal leaves a resolvable trace
+# --------------------------------------------------------------------------------------------- #
+
+
+class _UnbudgetableEmbeddingClient:
+    async def embed(self, texts, **kwargs):
+        return EmbeddingResult(
+            vectors=[[1.0, 0.0, 0.0] for _ in texts],
+            tokens=TokenAccounting(counted_by="unbudgetable"),
+            resolved_model_identity="opaque-engine",
+        )
+
+
+class _PlainLLMClient:
+    async def chat(self, messages, **kwargs):
+        return ChatResult(
+            text="stub completion",
+            tokens=TokenAccounting(prompt_tokens=5, completion_tokens=4, call_count=1, counted_by="stub-llm"),
+            resolved_model_identity="stub-llm-model",
+        )
+
+
+def _clients() -> dict[str, object]:
+    return {"embedding": _UnbudgetableEmbeddingClient(), "llm": _PlainLLMClient()}
+
+
+async def _outcome(awaitable):
+    """``(result, exception)`` of awaiting ``awaitable``; never raises."""
+    try:
+        return await awaitable, None
+    except Exception as exc:  # noqa: BLE001 - the assertions name what was caught
+        return None, exc
+
+
+def _rows(store_root) -> int:
+    return trace_row_count(store_root) if (store_root / "trace.db").exists() else 0
+
+
+async def test_an_unbudgetable_refusal_leaves_a_resolvable_trace(synthetic_naive_store):
+    store = synthetic_naive_store
+    engine = Databasise(store_root=store["store_root"], workspace=store["workspace"], clients=_clients())
+    rows_before = _rows(store["store_root"])
+
+    _result, caught = await _outcome(engine.query(QueryObject(text="anything")))
+
+    assert type(caught).__name__ == "UnbudgetableParticipantError", caught
+    token = getattr(caught, "trace_token", None)
+    assert isinstance(token, str), f"the refusal carries no trace_token: {vars(caught)}"
+    record = await engine.resolve_trace(token, debug=True)
+    assert record["nodes"], "the resolved run carries no node traces"
+    assert _rows(store["store_root"]) == rows_before + 1
+
+
+async def test_the_trace_token_reaches_the_rest_body(synthetic_naive_store):
+    pytest.importorskip("fastapi")
+    from databasise.seam.rest import create_app
+    from fastapi.testclient import TestClient
+
+    store = synthetic_naive_store
+    client = TestClient(
+        create_app(store_root=store["store_root"], workspace=store["workspace"], clients=_clients())
+    )
+
+    response = client.post("/query", json={"query": {"text": "anything"}})
+
+    assert response.status_code == 422, response.text
+    token = response.json().get("trace_token")
+    assert isinstance(token, str), response.text
+    resolved = client.post("/trace/resolve", json={"trace_reference": token, "debug": False})
+    assert resolved.status_code == 200, resolved.text
+
+
+async def test_a_pre_dispatch_refusal_carries_no_trace_token(store_root):
+    engine = Databasise(store_root=store_root, workspace="no-token", clients=_clients())
+
+    _result, caught = await _outcome(engine.query(QueryObject(text="x"), Selector(capability=["reads_vector"])))
+
+    assert caught is not None, "an empty namespace must be refused"
+    assert not hasattr(caught, "trace_token"), vars(caught)

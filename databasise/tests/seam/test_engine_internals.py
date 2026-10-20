@@ -93,8 +93,10 @@ async def test_the_missing_items_refusal_is_raised_before_any_envelope_is_constr
 
     envelope, raised = await _run_to_minting(engine)
 
+    # WIRE-12 (D-04): the run is persisted before the refusal, and the refusal names its trace.
     assert raised is not None and envelope is None
-    assert trace_row_count(tmp_path) == 0
+    assert trace_row_count(tmp_path) == 1
+    assert isinstance(getattr(raised, "trace_token", None), str)
 
 
 async def test_an_empty_items_list_mints_no_evidence(tmp_path):

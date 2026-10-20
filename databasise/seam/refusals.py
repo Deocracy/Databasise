@@ -29,7 +29,9 @@ from pydantic import BaseModel
 
 
 class SeamRefusalError(ValueError):
-    """Base class for every typed refusal raised at the ``databasise.seam`` boundary."""
+    """Base class for every typed refusal raised at the ``databasise.seam`` boundary. The engine sets
+    a public ``trace_token`` attribute on a query refusal raised after the nodes ran (Phase 13 D-04),
+    so the consumer can resolve the run that ended in it; a pre-dispatch refusal carries none."""
 
 
 def _finite(value: Any) -> Any:
@@ -788,7 +790,8 @@ class ForeignEngineRefusalError(SeamRefusalError):
     ``V1NotConfigured`` class adds public ``missing_keys`` and ``unsupported_keys`` (key names,
     never values). Phase 12 D-08 adds the second class with public attributes: ``ExtractionFailed``
     carries ``failed_chunks`` and ``failure_reasons`` (a count and closed codes, never text). Every
-    other class keeps exactly ``operation`` and ``failure_class``.
+    other class keeps exactly ``operation`` and ``failure_class``, except that a refusal of a query
+    raised after its nodes ran also carries the public ``trace_token`` (Phase 13 D-04).
     """
 
     def __init__(
