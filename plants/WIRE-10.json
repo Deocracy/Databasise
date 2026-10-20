@@ -1,0 +1,15 @@
+{
+  "id": "WIRE-10",
+  "plants": [
+    {
+      "file": "databasise/runner/scheduler.py",
+      "find": "    for node_id in sorted(parsed.nodes.keys() - traced):",
+      "replace": "    for node_id in sorted(parsed.nodes.keys() - traced)[1:]:"
+    },
+    {
+      "file": "databasise/runner/scheduler.py",
+      "find": "                status=\"not-scheduled\",",
+      "replace": "                status=\"completed\","
+    }
+  ]
+}
