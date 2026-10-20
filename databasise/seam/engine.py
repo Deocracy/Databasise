@@ -296,6 +296,7 @@ from databasise.stores.graph import CozoGraphStore, GraphStoreBusyError
 from databasise.stores.kv import SqliteKVStore
 from databasise.stores.probes import list_kv_prefix, probe_graph, probe_kv, probe_vector
 from databasise.stores.vector import MultiNamespaceVectorStore, VectorStoreCorruptedError, load_committed
+from databasise.validator.errors import CODE_CYCLIC_WIRING
 from databasise.validator.parse import ParsedWiring, parse_wiring
 from databasise.wirings.resolve import wiring_family, without_recipe_only_nodes
 
@@ -620,10 +621,23 @@ def _build_stores(
 
 
 def _refuse_unparseable(parsed: ParsedWiring) -> None:
-    """Phase 10 D-15 / Q5: a non-ok parse report is a named 422 refusal raised before any store is
-    built, never the scheduler's ``WiringRefusedError`` surfacing as a 500. Codes only."""
-    if not parsed.report.ok:
-        raise UnparseableWiringError(violations=sorted({v.code for v in parsed.report.violations}))
+    """Phase 10 D-15 / Q5: a non-ok parse report, or a cyclic dependency graph (Phase 13 WIRE-05,
+    D-07), is one named 422 refusal raised before any store is built, never the scheduler's
+    ``WiringRefusedError`` or a ``{"cycle": ...}`` result surfacing later as a 500 or a 502. The
+    public body carries the sorted violation codes only; each violation's pointer and message (which
+    embed node ids and registered parts) go to the server log once and stay on the refusal's private
+    ``_details`` (D-25)."""
+    details = [(v.code, v.pointer, v.message) for v in parsed.report.violations]
+    if parsed.report.cycles:
+        details.append((CODE_CYCLIC_WIRING, "/nodes", f"dependency cycles: {parsed.report.cycles}"))
+    if not details:
+        return
+    logger.warning(
+        "wiring refused before dispatch: %s", "; ".join(f"{code} at {pointer}" for code, pointer, _ in details)
+    )
+    refusal = UnparseableWiringError(violations=[code for code, _, _ in details])
+    refusal._details = details
+    raise refusal
 
 
 def _corpus_wiring(query_wiring: dict[str, Any], operation: str) -> dict[str, Any]:
@@ -2042,12 +2056,6 @@ class Databasise:
         finally:
             for store in stores.values():
                 await store.finalize()
-
-        if "cycle" in scheduled:
-            # No selector this plan resolves can produce a cyclic wiring (the naive arm is
-            # acyclic, proven by databasise/tests/parity's own conformance tests) — a genuine
-            # occurrence is out of this plan's scope, not silently swallowed.
-            raise RuntimeError("the seam does not yet support a cyclic resolved wiring")
 
         # Phase 10 review CR-01 (D-13 on the query path): a store error inside a node is a named
         # fault, never a 200 envelope. Every other node exception keeps the degraded envelope, whose

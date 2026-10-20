@@ -872,13 +872,16 @@ class UnsupportedUploadTypeError(SeamRefusalError):
 
 
 class UnparseableWiringError(SeamRefusalError):
-    """Raised by ``Databasise.query``/``ingest``/``delete_document`` (and every path through
-    ``_execute_resolved``) when the resolved wiring's parse report is not ok, before any store is
-    built (Phase 10 D-15, research Q5). REST answers 422. ``violations`` carries the sorted unique
-    violation codes only, never node ids, pointers or messages; WIRE-05 adds that detail later."""
+    """Raised by ``Databasise.query``/``ingest``/``delete_document``/``retry_document`` (and every
+    path through ``_execute_resolved``) when the resolved wiring's parse report is not ok or its
+    dependency graph is cyclic, before any store is built (Phase 10 D-15, research Q5; Phase 13
+    WIRE-05, D-07). REST answers 422. ``violations`` carries the sorted unique violation codes only
+    (a cycle is ``cyclic-wiring``), never node ids, pointers or messages: those stay on the private
+    ``_details`` list of ``(code, pointer, message)`` and in the server log (D-25)."""
 
     def __init__(self, *, violations: list[str]):
         self.violations = sorted(set(violations))
+        self._details: list[tuple[str, str, str]] = []  # private: pointers and messages embed node ids
         super().__init__(
             "UnparseableWiringError: the resolved wiring was refused at parse "
             f"({', '.join(self.violations)})"
