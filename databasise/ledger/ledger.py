@@ -149,9 +149,34 @@ class Ledger:
         db_path = Path(store_root) / "ledger.db"
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(db_path)
-        self._conn.row_factory = sqlite3.Row
-        self._set_wal()
-        self._create_schema()
+        try:
+            self._conn.row_factory = sqlite3.Row
+            self._set_wal()
+            self._create_schema()
+        except BaseException:
+            self._conn.close()
+            raise
+
+    @classmethod
+    def open_existing(cls, store_root: str | Path) -> Ledger | None:
+        """The read path for ``_resolve_alias``, rollback and retire (CONTRACT §6: a read must not
+        write): ``None`` when ``ledger.db`` is absent, creating nothing; otherwise a normal
+        :class:`Ledger`, so the schema step and its index migration still run on an old file. The
+        file check and the open can race a first writer; the answer is correct as of the read.
+        """
+        if not (Path(store_root) / "ledger.db").is_file():
+            return None
+        return cls(store_root)
+
+    def close(self) -> None:
+        """Close the underlying connection."""
+        self._conn.close()
+
+    def __enter__(self) -> Ledger:
+        return self
+
+    def __exit__(self, *exc_info: object) -> None:
+        self.close()  # returns None: never swallows the exception
 
     def _set_wal(self) -> None:
         """Switch the database to WAL, tolerating the first-touch race.
@@ -193,9 +218,9 @@ class Ledger:
 
         On success (the ``yield`` body raises nothing), commits. On any exception, rolls back and
         re-raises — this rollback path is load-bearing: every refusal a wrapped verb raises exits
-        through here, and an unreleased write transaction would stall the *next* ``Ledger()``
-        construction for the full busy timeout, because ``__init__`` always runs ``_create_schema``
-        (DDL, which needs the write lock) even for a read-only caller.
+        through here, and the rollback ends the write transaction so later writers are not
+        blocked. Opening a ``Ledger`` over an existing schema never waits on a writer; only
+        first-time schema creation needs the write lock.
 
         ponytail: two ceilings, not enforced in code. (a) One ``append()`` per ``transaction()`` —
         ``append()``'s own ``commit()`` ends the span early; a caller needing two appends in one
@@ -385,6 +410,26 @@ class Ledger:
         )
         row = cur.fetchone()
         return self._row_to_record(row) if row is not None else None
+
+    def lineage(self, alias: str, version: str) -> list[str]:
+        """The versions reached from ``version`` by following ``targets_version`` through the row
+        that minted each version (the unique ``(alias, minted_version)`` index), in walk order
+        starting with ``version``. Stops at a missing or non-rollback row, and on a version already
+        visited, so a cycle terminates. Guards go by version through the rollback lineage, never by
+        wiring identity (RIG §PR.2: a re-promotion is a new generation); the retire and rollback
+        guards and Phase 16's CONN-07 ``active`` read it. Not :meth:`generation_state`: for a
+        rollback's target that returns the active row itself, so a walk over it loops.
+        """
+        visited = [version]
+        while True:
+            row = self._conn.execute(
+                "SELECT record_kind, targets_version FROM ledger "
+                "WHERE alias = ? AND minted_version = ?",
+                (alias, visited[-1]),
+            ).fetchone()
+            if row is None or row["record_kind"] != "rollback" or row["targets_version"] in visited:
+                return visited
+            visited.append(row["targets_version"])
 
     def history(self, mutation_id: str) -> list[LedgerRecord]:
         """Every record for ``mutation_id``, oldest first. Test-only: no product code calls it;
