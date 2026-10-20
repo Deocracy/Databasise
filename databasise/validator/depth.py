@@ -1,4 +1,5 @@
-"""Effective depth (the taint rule) and execution_mode derivation — CONTRACT.md §3.
+"""Effective depth (the taint rule) — CONTRACT.md §3. Execution placement is derived in
+``validator/execution_mode.py``, its only source.
 
 Depth is computed by the validator, never declared. Effective depth is the minimum over a node's
 own structural depth and the effective depth of every transitive dep — the taint rule — ordered
@@ -23,18 +24,6 @@ if TYPE_CHECKING:
 
 _DEPTH_RANK: dict[str, int] = {"opaque": 0, "evidence": 1, "stage": 2}
 _RANK_DEPTH: dict[int, str] = {rank: depth for depth, rank in _DEPTH_RANK.items()}
-
-# Effects requiring containment stronger than in-process hosting, per CONTRACT §3: "only pure,
-# non-iterative nodes MAY be hosted in-process." A node's own machine-owned store reads/writes
-# (kv/vector/graph/lexical/blob, self_storage) stay in-process — they are internal to the trusted
-# runtime, not an external side effect crossing a process boundary. Everything below crosses a
-# real external boundary (LLM/rerank/embedding API, network, filesystem, or an in-place store
-# overwrite outside the artifact-production shape) and is refused by name at the runner (D-08)
-# until a later phase builds the real hosting for it.
-_REQUIRES_CONTAINMENT: frozenset[str] = frozenset(
-    {"calls_llm", "calls_rerank", "calls_embedding", "net", "fs", "mutates_store"}
-)
-
 
 def effective_depth(parsed: ParsedWiring) -> dict[str, str]:
     """Minimum over transitive deps, per node, computed over the SCC condensation of
@@ -63,18 +52,3 @@ def effective_depth(parsed: ParsedWiring) -> dict[str, str]:
         scc_depth[scc_id] = min(own_ranks + dep_ranks)
 
     return {node_id: _RANK_DEPTH[scc_depth[scc_of[node_id]]] for node_id in parsed.nodes}
-
-
-def derive_execution_mode(effects: list[str], kind: str) -> str:
-    """Derived from declared effects, never requested by the component (CONTRACT §3).
-
-    ``fixpoint`` nodes are iterative by construction and MUST NOT be hosted in-process (CONTRACT
-    §2: "Iterative components MUST be hosted as fixpoint nodes; the executor, not the component,
-    owns every loop and its halt condition"). Every other node is in-process unless it declares
-    an effect in ``_REQUIRES_CONTAINMENT``.
-    """
-    if kind == "fixpoint":
-        return "subprocess"
-    if any(effect in _REQUIRES_CONTAINMENT for effect in effects):
-        return "subprocess"
-    return "in-process"

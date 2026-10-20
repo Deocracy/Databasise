@@ -5,10 +5,10 @@ maximum round count and reports which of the two termination reasons applied —
 condition being met, or the round bound being hit first, so a condition that never becomes true
 halts at the bound rather than looping forever.
 
-Its ``kind`` is ``"fixpoint"``, so ``validator.depth.derive_execution_mode`` derives
-``"subprocess"`` for it rather than ``"in-process"`` — this part is therefore also the concrete
-case exercising D-08's named refusal path from the part side (Phase 1's runner implements
-in-process only; subprocess hosting is an explicit, unimplemented refusal until a later phase).
+Its ``kind`` is ``"fixpoint"``, so ``validator/execution_mode.py`` (the only placement source)
+derives ``"long-lived-service"`` for it rather than ``"in-process"`` — this part is therefore also
+the concrete case exercising D-08's named refusal path from the part side (``long-lived-service``
+has no hosting and is an explicit refusal).
 """
 
 from __future__ import annotations

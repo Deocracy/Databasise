@@ -87,26 +87,18 @@ _DERIVED_FIELD_NAMES: frozenset[str] = frozenset(
 )
 
 
-class WiringValidationError(ValueError):
-    """Retained for import stability; ``parse_wiring`` no longer raises this. Every violation now
-    accumulates into the returned ``ParsedWiring.report`` instead — see the module docstring.
-    """
-
-    def __init__(self, violations: list[dict[str, str]]):
-        self.violations = violations
-        super().__init__(f"{len(violations)} wiring violation(s): {violations}")
-
-
 @dataclass(frozen=True)
 class ParsedWiring:
     """The load-frozen snapshot the runner reads. CONTRACT §11 forbids mid-run reads of mutable
-    decision state, so every collection here is a read-only view (``MappingProxyType``/tuple),
-    never a plain mutable dict or list a later step could quietly rewrite underneath the runner.
+    decision state, so ``nodes``, ``parts``, ``deps`` and ``node_order`` are immutable views
+    (``MappingProxyType``/tuple), never a plain mutable dict or list a later step could quietly
+    rewrite underneath the runner.
 
-    ``report`` carries every violation and every detected cycle from the parse pass that produced
-    this snapshot — see ``validator/errors.py``. It defaults to an empty, ``ok`` report so
-    existing call sites that construct a ``ParsedWiring`` directly (test fixtures) need not
-    thread one through when it is not the thing under test.
+    ``report`` is the one mutable member: the accumulator ``parse_wiring`` extends with the
+    blast-radius violations after it builds the snapshot. It carries every violation and every
+    detected cycle from the parse pass that produced this snapshot — see ``validator/errors.py``.
+    It defaults to an empty, ``ok`` report so existing call sites that construct a ``ParsedWiring``
+    directly (test fixtures) need not thread one through when it is not the thing under test.
     """
 
     nodes: Mapping[str, WiringNode]

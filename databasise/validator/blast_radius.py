@@ -19,13 +19,6 @@ proves them):
    predicate below keys on ``writes_artifact`` alone, regardless of what else a node declares.
 3. Every violation names the offending node id, its computed effective depth, and the scope it
    attempted, so a wiring author can act on the message without reading this module's source.
-
-``artifact_scope`` is read via ``getattr(part, "artifact_scope", "shared")`` rather than as a
-statically declared field on ``Part``: this plan's lane is ``databasise/validator/**``, and
-``databasise/parts/schema.py`` — where the field is declared — is plan 01-04's file in this same
-wave. Reading it by name with an explicit default keeps this module correct whether or not that
-field has landed yet in a given worktree, and the default matches CONTRACT §3's own rule: an
-unstated scope is judged ``shared``.
 """
 
 from __future__ import annotations
@@ -54,7 +47,7 @@ def blast_radius_violations(parsed: ParsedWiring, depth_map: dict[str, str]) -> 
         if "writes_artifact" not in part.effects:
             continue
 
-        scope = getattr(part, "artifact_scope", None) or "shared"
+        scope = part.artifact_scope or "shared"
         if scope != "shared":
             continue
 

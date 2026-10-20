@@ -16,7 +16,7 @@ from databasise.parts_core.fake_retriever import FAKE_RETRIEVER_PART
 from databasise.parts_core.fixpoint_body import FIXPOINT_BODY_PART
 from databasise.parts_core.passthrough import PASSTHROUGH_PART
 from databasise.stores.kv import SqliteKVStore
-from databasise.validator.depth import derive_execution_mode
+from databasise.validator.execution_mode import derive_execution_mode
 
 
 async def test_1_passthrough_relays_inputs_unchanged_declares_no_effects_and_is_in_process():
@@ -90,7 +90,8 @@ async def test_5_fixpoint_body_halts_on_its_declared_condition_or_at_the_round_b
     assert result_never_true == {"rounds_run": 5, "halted_on": "max_rounds_reached"}
 
     assert (
-        derive_execution_mode(FIXPOINT_BODY_PART.effects, FIXPOINT_BODY_PART.kind) == "subprocess"
+        derive_execution_mode(FIXPOINT_BODY_PART.effects, FIXPOINT_BODY_PART.kind)
+        == "long-lived-service"
     )
 
 

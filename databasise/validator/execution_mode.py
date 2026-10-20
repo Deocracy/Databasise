@@ -7,11 +7,12 @@ regardless of ``execution_mode``; only pure, non-iterative nodes MAY be hosted i
 CONTRACT §3 requires the derivation but does not freeze an exact effect-to-placement table beyond
 that one in-process eligibility rule, so the mapping below is this plan's own documented choice
 (Claude's Discretion, 01-CONTEXT.md), written down so a later phase amends a stated rule rather
-than reverse-engineering one from behaviour:
+than reverse-engineering one from behaviour. This module is the only source of placement: the
+runner calls :func:`derive_execution_mode` and no other copy exists:
 
     in-process          kind is neither ``fixpoint`` (iterative) nor ``opaque`` (unverified
                          internals), AND none of ``net``/``fs``/``self_storage``/``mutates_store``
-                         is declared. The only placement this phase actually hosts (D-08).
+                         is declared. Always hosted.
     long-lived-service   kind is ``fixpoint``, or the node declares ``net``. An iterative loop or
                          a network call is exactly the shape that wants a standing process rather
                          than a one-shot subprocess.
@@ -23,15 +24,19 @@ than reverse-engineering one from behaviour:
                          store-boundary effect that must not share the runner's own process-wide
                          store handles, but is not iterative, networked, or opaque.
 
-D-08: Phase 1 hosted ``in-process`` only, refusing the other three placements by name. Phase 5
-(05-01-PLAN.md, real opaque-node admission) earns real hosting for ``subprocess``: a node's own
-launch of an OS process under a foreign interpreter is the containment, and the machine's own
-contribution is the declared wall-clock ceiling §8 condition 4 requires — the ceiling is the gate,
-so a subprocess node with no declared ceiling is still refused, by
+D-08: ``in-process`` is always hosted and ``subprocess`` is hosted when the node carries a declared
+wall-clock ceiling: a node's own launch of an OS process under a foreign interpreter is the
+containment, and the machine's own contribution is the ceiling §8 condition 4 requires. The
+ceiling is the gate, so a subprocess node with no declared ceiling is refused by
 :class:`~databasise.parts.admission.MissingWallClockCeilingError`, never silently hosted. The
 derivation above is always computed and stamped on the run record regardless of whether ``host()``
 would refuse it — a refusal never suppresses the stamp. ``confined-unit`` and
-``long-lived-service`` remain unimplemented and are still refused by name.
+``long-lived-service`` have no hosting and are refused by name.
+
+D-18: a node that calls a machine-owned LLM, embedding or rerank client (``calls_llm``,
+``calls_embedding``, ``calls_rerank``, reached through ``ctx.clients``) is pure for placement and
+derives ``in-process``, because the machine injects and meters the client (CONTRACT.md:72, 529,
+599); only ``net``, ``fs``, ``self_storage`` and ``mutates_store`` move a node out of process.
 """
 
 from __future__ import annotations
@@ -48,10 +53,10 @@ _ALL_PLACEMENTS: frozenset[str] = _UNIMPLEMENTED_PLACEMENTS | {"in-process", "su
 
 
 class UnimplementedPlacementError(RuntimeError):
-    """A node's derived ``execution_mode`` placement has no hosting yet. Phase 1 implements
-    ``in-process`` hosting only (D-08); ``subprocess``/``confined-unit``/``long-lived-service``
-    are refused by name until Phase 5's real opaque-node admission forces the hosting to be built.
-    The derivation itself already succeeded before this error is raised — only hosting is unbuilt.
+    """A node's derived ``execution_mode`` placement has no hosting: ``confined-unit`` and
+    ``long-lived-service`` are refused by name (D-08). ``in-process`` and a ceiling-bound
+    ``subprocess`` are hosted. The derivation itself already succeeded before this error is
+    raised — only hosting is unbuilt.
     """
 
 
@@ -88,10 +93,10 @@ def host(placement: str, *, wall_clock_ceiling_seconds: float | None = None) -> 
         raise MissingWallClockCeilingError(wall_clock_ceiling_seconds)
     if placement in _UNIMPLEMENTED_PLACEMENTS:
         raise UnimplementedPlacementError(
-            f"execution_mode={placement!r} is not yet hosted. Phase 1's runner implements "
-            "in-process hosting only (D-08); real opaque-node admission in Phase 5 is what "
-            "earns this placement's hosting. The derivation itself already succeeded and is "
-            "stamped on the run record — only hosting is unbuilt."
+            f"execution_mode={placement!r} is not hosted. The runner hosts in-process nodes and "
+            "subprocess nodes that declare a wall-clock ceiling (D-08); this placement has no "
+            "hosting. The derivation itself already succeeded and is stamped on the run "
+            "record — only hosting is unbuilt."
         )
     raise ValueError(
         f"unknown execution_mode placement {placement!r}; expected one of "
