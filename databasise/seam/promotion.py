@@ -4,13 +4,12 @@ mint rule. No I/O, no engine import — every function here takes already-resolv
 wiring dict, a trace record, a registry) and returns or raises, following ``selectors.py``'s own
 module-constant-plus-pure-function shape (``_wiring_effects``/``_match_capability``).
 
-**Trace-id -> single-arm resolution (D-04).** A persisted ``RunRecord.to_dict()`` carries
-``wiring_id``/``arm_id`` fields (13-12, D-03: ``lightrag-<arm>`` and the arm name, naive keeping
-``lightrag-base``), but a trace persisted before that change carries the shared ``"lightrag-base"``
-and the literal ``"seam"``, so matching does not rely on either. ``wiring_instance_hash`` is
-computed over the full resolved wiring before query injection since 13-12, yet an older trace's
-hash covers the injected wiring and so differs per *query*. The one signal that is query-invariant
-and unique per arm in every trace is the **dispatched node id set**: each
+**Trace-id -> single-arm resolution (D-04, 14-08-PLAN.md D-01).** A persisted
+``RunRecord.to_dict()`` carries ``arm_id`` — the arm name — since Phase 13 D-03, and a wiring name
+``wiring_for_name`` resolves is the arm (a partial record has no completed nodes to match, so it
+needs this). A record persisted before that change carries the literal ``"seam"``, and
+``wiring_instance_hash`` differs per *query* in an older trace, so the fallback is the one signal
+that is query-invariant and unique per arm there: the **dispatched node id set**, each
 ``RunRecord.nodes`` entry's own ``node_id``, which ``databasise/tests/seam/test_trace_token.py``
 already proves is exactly the resolved wiring's own node id set minus its recipe-only nodes (D-04,
 11-10). :func:`resolve_single_arm` matches that set against every candidate wiring's own run-shape
@@ -38,7 +37,7 @@ from databasise.seam.refusals import (
     UnknownTraceReferenceError,
 )
 from databasise.seam.selectors import _wiring_effects
-from databasise.wirings.resolve import all_wirings, without_recipe_only_nodes
+from databasise.wirings.resolve import all_wirings, without_recipe_only_nodes, wiring_for_name
 
 # D-08: both values accepted — CONTRACT §7 makes change_origin orthogonal to promotion_provenance,
 # and the frozen contract is not re-litigated at the seam. machine_mutation is accepted even
@@ -142,6 +141,23 @@ def _arm_name_for_node_ids(node_ids: frozenset[str], *, trace_reference: str | N
     raise UnknownTraceReferenceError(trace_reference or f"<run with nodes {sorted(node_ids)!r}>")
 
 
+def _arm_name_for_record(record: dict[str, Any], trace_reference: str | None) -> str:
+    """One record's arm: ``record["arm_id"]`` when ``wiring_for_name`` resolves it (Phase 13 D-03),
+    else the node-set match for a record persisted before it. A *partial* record the node-set match
+    cannot identify refuses as :class:`~databasise.seam.refusals.PartialRunEvidenceError` (D-01),
+    not as a false unknown trace; a non-partial one keeps its 404.
+    """
+    arm_id = record.get("arm_id")
+    if isinstance(arm_id, str) and wiring_for_name(arm_id) is not None:
+        return arm_id
+    try:
+        return _arm_name_for_node_ids(_dispatched_node_ids(record), trace_reference=trace_reference)
+    except UnknownTraceReferenceError:
+        if record.get("partial"):
+            raise PartialRunEvidenceError(trace_ids=[trace_reference] if trace_reference else []) from None
+        raise
+
+
 def refuse_partial_evidence(resolved_trace_records: list[dict[str, Any]], trace_ids: list[str]) -> None:
     """The one partial-evidence rule (14-08-PLAN.md, D-03): raises
     :class:`~databasise.seam.refusals.PartialRunEvidenceError` naming exactly the trace ids whose
@@ -157,22 +173,6 @@ def refuse_partial_evidence(resolved_trace_records: list[dict[str, Any]], trace_
     ]
     if partial_ids:
         raise PartialRunEvidenceError(trace_ids=partial_ids)
-
-
-def resolved_wiring_for_arm(arm_name: str) -> dict[str, Any]:
-    """The resolved wiring dict for ``arm_name`` from the same candidate pool
-    :func:`resolve_single_arm` matches against — unlike
-    ``databasise.wirings.resolve.resolve_arm``, this also resolves a non-LightRAG wiring name
-    (e.g. ``"hipporag"``), since :func:`all_wirings` is the candidate pool ``resolve_single_arm``
-    actually derives an arm name from.
-    """
-    for name, resolved in all_wirings():
-        if name == arm_name:
-            return resolved
-    raise AssertionError(
-        f"arm name {arm_name!r} was derived from resolve_single_arm's own scan of all_wirings() "
-        "but does not appear there on a second pass — should be unreachable"
-    )
 
 
 def resolve_single_arm(
@@ -192,9 +192,7 @@ def resolve_single_arm(
         raise EmptyPromotionTraceIdsError(alias=alias)
 
     arm_names = {
-        _arm_name_for_node_ids(
-            _dispatched_node_ids(record), trace_reference=trace_ids[i] if i < len(trace_ids) else None
-        )
+        _arm_name_for_record(record, trace_ids[i] if i < len(trace_ids) else None)
         for i, record in enumerate(resolved_trace_records)
     }
     if len(arm_names) > 1:
@@ -287,7 +285,6 @@ __all__ = [
     "RECORD_KIND_TOMBSTONE",
     "refuse_partial_evidence",
     "resolve_single_arm",
-    "resolved_wiring_for_arm",
     "declared_surface",
     "mint_version",
     "derive_mutation_class",

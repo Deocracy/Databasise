@@ -260,7 +260,6 @@ from databasise.seam.promotion import (
     mint_version,
     refuse_partial_evidence,
     resolve_single_arm,
-    resolved_wiring_for_arm,
 )
 from databasise.seam.query import QueryObject, check_consumable
 from databasise.seam.redact import REASON_VALUE_KEYS, forbidden_identities, node_free_reason
@@ -289,6 +288,7 @@ from databasise.seam.refusals import (
     UnparseableWiringError,
     UnrecognisedPromotionVerbError,
     UnresolvableEvidenceReferenceError,
+    UnsatisfiableSelectorError,
 )
 from databasise.seam.selectors import (
     _INSTANCE_HASH_PATTERN,
@@ -304,7 +304,7 @@ from databasise.stores.probes import list_kv_prefix, probe_graph, probe_kv, prob
 from databasise.stores.vector import MultiNamespaceVectorStore, VectorStoreCorruptedError, load_committed
 from databasise.validator.errors import CODE_CYCLIC_WIRING
 from databasise.validator.parse import ParsedWiring, parse_wiring
-from databasise.wirings.resolve import load_wiring, wiring_family, without_recipe_only_nodes
+from databasise.wirings.resolve import load_wiring, wiring_family, wiring_for_name, without_recipe_only_nodes
 
 logger = logging.getLogger(__name__)
 
@@ -1115,6 +1115,19 @@ def _mutates_store_component(resolved: dict[str, Any], registry: PartRegistry) -
         "_mutates_store_component called on a wiring whose _wiring_effects union does not "
         "actually contain mutates_store"
     )
+
+
+def _wiring_for_row(name: str, *, alias: str) -> dict[str, Any]:
+    """The resolved wiring for ``name`` (an arm derived from traces, or an alias row's
+    ``mutation_id``), or a named refusal (14-08-PLAN.md, D-05): a name that no longer resolves is
+    :class:`~databasise.seam.refusals.UnsatisfiableSelectorError` naming only the caller's ``alias``
+    (never the row's value), not an ``AssertionError`` the consumer sees as a 500. An alias whose
+    active row names such a wiring cannot be repaired through promote, rollback or retire.
+    """
+    resolved = wiring_for_name(name)
+    if resolved is None:
+        raise UnsatisfiableSelectorError(selector_kind="alias", requested=alias)
+    return resolved
 
 
 class Databasise:
@@ -2272,7 +2285,9 @@ class Databasise:
         """07-02-PLAN.md Task 1: the one shared place the operator-path preconditions live —
         extracted verbatim from ``promote()``'s own former prologue so ``rollback()``/``retire()``
         share it rather than each carrying their own copy (three copies is where one of them
-        quietly stops being checked). Refuses an invalid ``change_origin``; resolves every trace id
+        quietly stops being checked). Refuses an empty or hash-shaped ``alias`` first
+        (:class:`~databasise.seam.refusals.InvalidPromotionAliasError`), then an invalid
+        ``change_origin``; resolves every trace id
         through ``self._trace_store`` (raising :class:`~databasise.seam.trace_store.
         UnknownTraceReferenceError` per unresolvable id); refuses an empty or disagreeing
         ``trace_ids`` via :func:`~databasise.seam.promotion.resolve_single_arm`. With
@@ -2287,6 +2302,12 @@ class Databasise:
         ``retire()``'s own docstring states explicitly that its resolved arm is recorded, never
         matched against the retirement target.
         """
+        # SEAM-12 / LEDG-05 (D-07): an alias no Selector could carry would write a row nobody can
+        # select. Same pattern Selector's validator refuses, first for all three verbs, before any
+        # trace or store touch.
+        if alias == "" or _INSTANCE_HASH_PATTERN.match(alias):
+            raise InvalidPromotionAliasError(alias=alias)
+
         if change_origin not in CHANGE_ORIGINS:
             raise InvalidChangeOriginError(change_origin=change_origin)
 
@@ -2351,15 +2372,10 @@ class Databasise:
         if verb in _NOT_BUILT_VERBS:
             raise GateVerbNotBuiltError(verb=verb)
 
-        # SEAM-12: an alias no Selector could carry would write a row nobody can select. Same
-        # pattern Selector's validator refuses, checked before trace resolution and any ledger touch.
-        if alias == "" or _INSTANCE_HASH_PATTERN.match(alias):
-            raise InvalidPromotionAliasError(alias=alias)
-
         _resolved_records, arm_name, arm_instance_hashes = self._resolve_operator_preconditions(
             alias, trace_ids, change_origin, refuse_partial=True
         )
-        new_resolved = resolved_wiring_for_arm(arm_name)
+        new_resolved = _wiring_for_row(arm_name, alias=alias)
 
         def _promote_sync() -> tuple[str, int]:
             """Runs entirely on the executor thread: opening ``Ledger`` here (rather than on the
@@ -2374,7 +2390,7 @@ class Databasise:
             with ledger.transaction():
                 prior_record = ledger.by_alias(alias)
                 prior_resolved = (
-                    resolved_wiring_for_arm(prior_record.mutation_id)
+                    _wiring_for_row(prior_record.mutation_id, alias=alias)
                     if prior_record is not None
                     else None
                 )
@@ -2510,11 +2526,11 @@ class Databasise:
                     raise UnknownGenerationVersionError(alias=alias, version=version)
                 if target.record_kind == RECORD_KIND_TOMBSTONE:
                     raise TombstonedGenerationError(alias=alias, version=version)
-                target_resolved = resolved_wiring_for_arm(target.mutation_id)
+                target_resolved = _wiring_for_row(target.mutation_id, alias=alias)
 
                 current_record = ledger.by_alias(alias)
                 current_resolved = (
-                    resolved_wiring_for_arm(current_record.mutation_id)
+                    _wiring_for_row(current_record.mutation_id, alias=alias)
                     if current_record is not None
                     else None
                 )
@@ -2655,9 +2671,9 @@ class Databasise:
                 if active is not None and active.minted_version == version:
                     raise ActiveGenerationRetirementError(alias=alias, version=version)
 
-                target_resolved = resolved_wiring_for_arm(target.mutation_id)
+                target_resolved = _wiring_for_row(target.mutation_id, alias=alias)
                 active_resolved = (
-                    resolved_wiring_for_arm(active.mutation_id) if active is not None else None
+                    _wiring_for_row(active.mutation_id, alias=alias) if active is not None else None
                 )
                 mutation_class = derive_mutation_class(target_resolved, active_resolved)
 

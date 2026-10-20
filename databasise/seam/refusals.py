@@ -165,10 +165,11 @@ class EmptyCapabilitySelectorError(SeamRefusalError):
 
 
 class InvalidPromotionAliasError(SeamRefusalError):
-    """Raised by ``Databasise.promote`` (09-07-PLAN.md, SEAM-12) for an alias that is empty or
-    shaped like an internal instance hash: no ``Selector`` could name it, so promoting it would
-    write a ledger row nobody can select. Refused before any ledger touch. ``alias`` is the
-    caller's own input."""
+    """Raised by ``Databasise.promote``, ``rollback`` and ``retire`` (09-07-PLAN.md, SEAM-12;
+    14-08-PLAN.md, D-07) for an alias that is empty or shaped like an internal instance hash: no
+    ``Selector`` could name it, so a row written for it is one nobody can select. Refused first in
+    the shared verb prologue, before any trace or ledger touch. ``alias`` is the caller's own
+    input."""
 
     def __init__(self, *, alias: str):
         self.alias = alias
