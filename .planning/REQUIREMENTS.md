@@ -376,7 +376,7 @@
   - Test: databasise/tests/runner/test_trace_completeness.py: in a three-batch wiring where a batch-1 node fails while a slow sibling runs, the set of NodeTrace node ids equals the wiring's node set, and the cancelled and unscheduled nodes have the matching status. A node that sleeps 50 ms and then raises has wall_clock_ms >= 50. A part returning malformed token fields yields a run result with that node failed and the sibling traces present, with no exception escaping.
   - Defects: runner/RUN-06, runner/RUN-07, runner/RUN-08
   - Phase 13 D-13 exception (owner-delegated 2026-10-19): 'every node in the wiring' means every node of the Phase 12 D-16 pruned run wiring; pruned recipe-only nodes get no NodeTrace.
-- [ ] **WIRE-11**: NodeTrace fields report what was measured. An execution_mode field is stamped on every node (in-process, subprocess and so on) on both the success and the refusal path. cache_hit is null when the part reports nothing, instead of False; only fake_llm_caller reports it today. tier and feed_tier are null or explicitly marked as placeholders instead of asserting 'T3'. A budget-halted node's trace carries spent and allowance, and realised_budget_share is not capped at 1.0 (or overspend is reported in a separate field). The stale 'in-process only' comments at scheduler.py:636-637 and 664 are removed.
+- [x] **WIRE-11**: NodeTrace fields report what was measured. An execution_mode field is stamped on every node (in-process, subprocess and so on) on both the success and the refusal path. cache_hit is null when the part reports nothing, instead of False; only fake_llm_caller reports it today. tier and feed_tier are null or explicitly marked as placeholders instead of asserting 'T3'. A budget-halted node's trace carries spent and allowance, and realised_budget_share is not capped at 1.0 (or overspend is reported in a separate field). The stale 'in-process only' comments at scheduler.py:636-637 and 664 are removed.
   - Test: databasise/tests/runner/test_node_trace_fields.py: an opaque subprocess node's trace has execution_mode 'subprocess'. A production part that returns no cache_hit has cache_hit None. NodeTrace defaults no longer equal 'T3' for tier and feed_tier. A node spending 1500 tokens against a 1000 allowance has spent 1500, allowance 1000 and a share or overspend greater than 1.0.
   - Defects: runner/RUN-09, runner/RUN-10, runner/RUN-15, contract/D-15
   - Owner decision first: D-15 tier/feed_tier: whether to compute tiers from performed interventions or report null until §4's T-tier evidence exists.
@@ -386,7 +386,7 @@
   - Defects: runner/RUN-12, seam-engine/ENG-08, seam-engine/ENG-04
   - Owner decision first: Arm identity: derive wiring_id from the arm name (for example 'lightrag-local') or add a separate arm field; and how a refusal response carries the trace_token for a persisted failed run.
   - Phase 13 D-03 exception (owner-delegated 2026-10-19): wiring_instance_hash is computed from the full resolved wiring before query, token-allowance and max_total_tokens injection.
-- [ ] **WIRE-13**: SeamEvent records are correct. A mutating node whose execution raised gets outcome 'failed', not 'halted'; 'halted' stays reserved for budget halts. SeamEvent.component holds the value fixed by the owner decision (the resolved capability per CONTRACT.md:630 §14 item 4, or name@version), and the leak tests and the envelope agree on whether part names may appear. ingest() passes a recorder to run_wiring and IngestJob carries seam_events, so a mutates_store ingest node is reported.
+- [x] **WIRE-13**: SeamEvent records are correct. A mutating node whose execution raised gets outcome 'failed', not 'halted'; 'halted' stays reserved for budget halts. SeamEvent.component holds the value fixed by the owner decision (the resolved capability per CONTRACT.md:630 §14 item 4, or name@version), and the leak tests and the envelope agree on whether part names may appear. ingest() passes a recorder to run_wiring and IngestJob carries seam_events, so a mutates_store ingest node is reported.
   - Test: databasise/tests/seam/test_seam_events.py: a mutates_store test part that raises gives a SeamEvent with outcome 'failed'. Deleting through lightrag/full-delete gives DeletionOutcome.seam_events[0].component equal to the decided value, and test_compare.py's forbidden set is consistent with it. An ingest wiring containing a mutates_store test part returns an IngestJob with one seam event.
   - Defects: seam-engine/ENG-03, contract/D-04, tests/T-17, seam-engine/ENG-06
   - Owner decision first: G-26/T-17 SeamEvent.component: resolved capability (§14 item 4) or part name@version, and whether modality-named part names may appear on DeletionOutcome and ResponseEnvelope.
@@ -924,9 +924,9 @@ These fail today.
 | WIRE-08 | Phase 13 | Complete |
 | WIRE-09 | Phase 13 | Pending |
 | WIRE-10 | Phase 13 | Pending |
-| WIRE-11 | Phase 13 | Pending |
+| WIRE-11 | Phase 13 | Complete |
 | WIRE-12 | Phase 13 | Complete |
-| WIRE-13 | Phase 13 | Pending |
+| WIRE-13 | Phase 13 | Complete |
 | WIRE-14 | Phase 13 | Pending |
 | WIRE-15 | Phase 13 | Complete |
 | WIRE-16 | Phase 13 | Pending |

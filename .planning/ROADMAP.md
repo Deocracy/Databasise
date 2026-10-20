@@ -320,7 +320,7 @@ Plans (eight waves; `seam/engine.py`, `wirings/hipporag/base.json` and `tests/se
 - WIRE-17: keep or delete MutableStoreComparisonExcludedError and the ingest NoWritePathForModalityError mapping
 - WIRE-18: wire or delete per-node max_concurrency and budget apportionment (coordinate with WIRE-12)
 
-**Plans**: 12/13 plans executed
+**Plans**: 13/13 plans executed
 
 Plans (six waves; `seam/engine.py` is touched by one plan per wave in waves 1-6; all hash-shifting changes are in 13-12 (D-21); the owner's two grants are collected once, in 13-11, after every grant-independent plan):
 
@@ -336,7 +336,7 @@ Plans (six waves; `seam/engine.py` is touched by one plan per wave in waves 1-6;
 - [x] 13-10-PLAN.md — Post-dispatch refusals persist the run and carry trace_token; response-time reason check (WIRE-12, WIRE-03; wave 4)
 - [x] 13-11-PLAN.md — Owner grants for the two protected pins, one sitting (WIRE-12, WIRE-13; wave 4)
 - [x] 13-12-PLAN.md — Hash-shift batch: per-arm identity and pre-injection hash, guard signal, environment inputs, apportionment strings, one annotation (WIRE-12, WIRE-08, WIRE-15, WIRE-18; wave 5)
-- [ ] 13-13-PLAN.md — SeamEvent.component is mutates_store; inventory and STATE lines; offline gate (WIRE-13, WIRE-11; wave 6)
+- [x] 13-13-PLAN.md — SeamEvent.component is mutates_store; inventory and STATE lines; offline gate (WIRE-13, WIRE-11; wave 6)
 
 ### Phase 14: Promotion & Ledger
 
@@ -480,7 +480,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 10. Stores, Locking & Data Integrity | 12/12 | Complete    | 2026-10-17 |
 | 11. LightRAG Corpus Path | 11/11 | Complete    | 2026-10-19 |
 | 12. HippoRAG Fixes | 14/14 | Complete    | 2026-10-19 |
-| 13. Selectors, Wiring & Runner | 12/13 | In Progress | - |
+| 13. Selectors, Wiring & Runner | 13/13 | In Progress | - |
 | 14. Promotion & Ledger | 0/TBD | Not started | - |
 | 15. Offline Tooling & Packaging | 0/TBD | Not started | - |
 | 16. GUI Connectors | 0/TBD | Not started | - |
