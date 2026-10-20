@@ -1,18 +1,11 @@
-"""Tests for runner/budget.py (Task 2, 01-08-PLAN.md): exact integer split arithmetic, report-only
-realised share, metering at a node's declared boundary, merge-side apportionment, and the
-five-member token-accounting split.
+"""Tests for runner/budget.py (Task 2, 01-08-PLAN.md): report-only realised share, metering at a
+node's declared boundary, and the five-member token-accounting split. The split and apportion
+helpers and their tests are gone (WIRE-18, D-17).
 """
 
 from __future__ import annotations
 
-from databasise.identity.canon import config_hash
-from databasise.runner.budget import (
-    ApportionmentPolicy,
-    apportion,
-    meter,
-    realised_share,
-    split_allowance,
-)
+from databasise.runner.budget import meter, realised_share
 from databasise.runner.trace import TokenAccounting
 
 
@@ -34,38 +27,6 @@ def test_3_spend_one_under_allowance_is_within_budget_with_share_below_1():
     assert realised_share(token.spent, token.allowance) < 1.0
 
 
-def test_4_split_100_across_three_branches_is_exact_and_by_name():
-    allocations = split_allowance(100, ["a", "b", "c"])
-    assert allocations == {"a": 34, "b": 33, "c": 33}
-    assert sum(allocations.values()) == 100
-
-
-def test_5_nested_three_level_split_sums_exactly_to_the_root_with_no_residue():
-    root = 100
-    level_1 = split_allowance(root, ["x", "y", "z"])
-    total = 0
-    for branch, share in level_1.items():
-        level_2 = split_allowance(share, [f"{branch}-1", f"{branch}-2"])
-        for sub_share in level_2.values():
-            level_3 = split_allowance(sub_share, [f"{branch}-leaf-1", f"{branch}-leaf-2"])
-            total += sum(level_3.values())
-    assert total == root
-
-
-def test_6_realised_share_is_report_only_and_never_feeds_an_allocation():
-    allocations_before = split_allowance(100, ["a", "b", "c"])
-
-    def _wrong_share(spent: int, allowance: int) -> float:
-        return 999.0
-
-    # Patch the share computation and re-derive the same split: split_allowance never calls
-    # realised_share internally, so the allocation is unaffected regardless of what the (now
-    # wrong) share function would return.
-    allocations_after = split_allowance(100, ["a", "b", "c"])
-    assert allocations_before == allocations_after
-    assert _wrong_share(1, 1) == 999.0  # the patched function is not consulted by split_allowance
-
-
 def test_7_multiplicative_fanout_accounts_for_the_product_not_the_sum():
     outer_width = 3
     inner_width = 4
@@ -76,19 +37,6 @@ def test_7_multiplicative_fanout_accounts_for_the_product_not_the_sum():
             total_spent += token.spent
     assert total_spent == outer_width * inner_width
     assert total_spent != outer_width + inner_width
-
-
-def test_8_merge_side_apportionment_stamps_each_branchs_realised_share():
-    policy = ApportionmentPolicy(apportioning_node="join1", branch_ids=("a", "b"))
-    shares = apportion(policy, spends={"a": 50, "b": 30}, allowance=100)
-    assert shares == {"a": 0.5, "b": 0.3}
-
-    # The policy is declared AT the apportioning node's own config, so its config_hash covers it
-    # — never the spending node's config.
-    apportioning_config = {"apportionment_policy": {"branch_ids": ["a", "b"]}}
-    spending_config = {"some_other_field": 1}
-    assert config_hash(apportioning_config) != config_hash({**apportioning_config, "apportionment_policy": {"branch_ids": ["a", "c"]}})
-    assert config_hash(spending_config) == config_hash(spending_config)  # unaffected by the policy
 
 
 def test_9_metering_location_only_the_declaring_node_accrues_spend():
