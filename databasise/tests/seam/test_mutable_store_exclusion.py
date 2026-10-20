@@ -19,8 +19,7 @@ wiring file's own JSON content and the *real* registered Part's own declared eff
 *real* selector-resolution and refusal-check code path, rather than a hand-built stand-in
 candidate.
 
-``engine._execute`` (one selector) or ``engine._execute_resolved`` (two or more, the call
-``compare`` makes since 09-08) is replaced with a call-recording spy rather than seeded with real
+``engine._execute_resolved`` (the call ``compare`` makes for one selector or more) is replaced with a call-recording spy rather than seeded with real
 store data: since every store write a comparison could make happens strictly inside that execution
 path, a spy with zero recorded calls is a direct, sufficient proof that no arm ran and therefore no
 store was written — stronger than asserting on the raised exception alone (this plan's own instruction:
@@ -81,21 +80,6 @@ def _make_engine(tmp_path) -> Databasise:
     return Databasise(store_root=tmp_path, workspace="mutable-store-exclusion-test", clients={})
 
 
-class _ExecuteSpy:
-    """Records every ``(query_object, selector)`` pair it is awaited with, in order, and returns
-    a fixed, minimal envelope — standing in for ``Databasise._execute`` so a test can prove
-    whether an arm ran at all without seeding real store data for a wiring this test suite exists
-    to prove never executes."""
-
-    def __init__(self) -> None:
-        self.calls: list[Selector] = []
-
-    async def __call__(self, query_object: QueryObject, selector: Selector) -> ResponseEnvelope:
-        del query_object
-        self.calls.append(selector)
-        return ResponseEnvelope(answer="", depth_label="stage", partial=False, degraded=False)
-
-
 class _ResolvedSpy:
     """Stands in for ``Databasise._execute_resolved``: records every resolved wiring it is awaited
     with, in order, and returns the same fixed minimal envelope."""
@@ -145,19 +129,18 @@ async def test_refusal_fires_before_any_arm_executes_no_store_write_possible(cbm
     assert spy.calls == []
 
 
-async def test_single_selector_resolving_the_same_wiring_is_a_run_not_refused(cbm_reachable, tmp_path):
-    """RIG §RUN.3's degenerate-width rule: one selector is a run, never a comparison — §14.4
-    point 3 excludes the component from parity/determinism *comparisons*, not from execution."""
+async def test_single_selector_resolving_a_mutating_wiring_is_refused(cbm_reachable, tmp_path):
+    """13-07 (WIRE-17, D-11): CONTRACT.md §14.4 point 3 refuses before any node runs, so one
+    selector resolving a mutates_store wiring is refused too, with nothing executed."""
     engine = _make_engine(tmp_path)
-    spy = _ExecuteSpy()
-    engine._execute = spy
+    spy = _ResolvedSpy()
+    engine._execute_resolved = spy
 
-    result = await engine.compare(
-        QueryObject(text=_QUERY_TEXT), [Selector(capability=_MUTATES_STORE_CAPABILITY)]
-    )
+    with pytest.raises(MutableStoreComparisonExcludedError) as exc_info:
+        await engine.compare(QueryObject(text=_QUERY_TEXT), [Selector(capability=_MUTATES_STORE_CAPABILITY)])
 
-    assert isinstance(result, ResponseEnvelope)
-    assert len(spy.calls) == 1
+    assert exc_info.value.component == _CBM_NAME_AT_VERSION
+    assert spy.calls == []
 
 
 async def test_comparison_between_two_non_mutable_wirings_is_unaffected(tmp_path, monkeypatch):

@@ -482,10 +482,10 @@ class MutableStoreComparisonExcludedError(SeamRefusalError):
     candidate wiring, arm name, or node id — per `§18.2`'s closed-set rule applied to this refusal
     path, the same discipline every other refusal in this module already follows.
 
-    Checked in the comparison path only (two or more selectors); a single-selector call is a run
-    under RIG `§RUN.3`'s degenerate-width rule, and `§14.4` point 3 excludes the component from
-    `§5`'s parity/determinism *comparisons*, not from being run — ``query()`` and the one-selector
-    ``compare()`` path never raise this.
+    Checked in the comparison path for every selector count, one included (13-07, WIRE-17, D-11):
+    `CONTRACT.md §14.4` point 3 refuses before any node runs, so ``compare()`` with one selector
+    resolves it, runs this check, and only then returns the bare envelope of a run (RIG `§RUN.3`'s
+    degenerate-width rule). ``query()`` is not a comparison and never raises this.
 
     Currently unreachable with the query candidates: no wiring in ``all_wirings()`` declares
     ``mutates_store``. It is exercised only by ``tests/seam/test_mutable_store_exclusion.py``,

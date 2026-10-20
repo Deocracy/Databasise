@@ -1148,9 +1148,10 @@ class Databasise:
         before any wiring is touched. A zero-length ``selectors`` sequence refuses with
         :class:`~databasise.seam.refusals.EmptyComparisonRequestError`. Exactly one selector
         degenerates to a run, not a comparison (RIG.md ## §RUN.3's degenerate-width rule): it
-        returns ``await self._execute(query_object, selectors[0])`` unchanged — the identical bare
-        ``ResponseEnvelope`` ``query()`` already returns, never a one-key mapping. Two or more
-        selectors check every comparison key (:func:`~databasise.seam.compare.comparison_keys`),
+        returns the identical bare ``ResponseEnvelope`` ``query()`` already returns, never a one-key
+        mapping, but only after the ``mutates_store`` check below ran on its resolved wiring (13-07,
+        WIRE-17, D-11: CONTRACT.md section 14.4 point 3 refuses before any node runs, so a single
+        selector is no exception). Two or more selectors check every comparison key (:func:`~databasise.seam.compare.comparison_keys`),
         resolve each selector once, and run each resolved wiring through ``_execute_resolved`` —
         the same body ``_execute`` runs after resolution, so the §4 ``provenance`` redaction and the
         §18.2 closed-envelope rule apply to every arm by construction. A key collision refuses
@@ -1169,8 +1170,7 @@ class Databasise:
         phase's own calibration is keyed to).
 
         **06-09-PLAN.md Task 2 (MACH-10/F-07):** `§14.4` point 3's explicit-refusal requirement.
-        Once two or more selectors are in play (an actual comparison, not the one-selector run
-        above), every selector is resolved up front — before any arm executes — and each resolved
+        Every selector (one included) is resolved up front — before any arm executes — and each resolved
         wiring's declared effect union is computed via ``selectors.py``'s own
         :func:`~databasise.seam.selectors._wiring_effects` (never a second copy of that
         computation). A ``mutates_store`` effect anywhere in that union raises
@@ -1182,9 +1182,8 @@ class Databasise:
         check_consumable(query_object, self.registry)
         if len(selectors) == 0:
             raise EmptyComparisonRequestError()
-        if len(selectors) == 1:
-            return await self._execute(query_object, selectors[0])
-        keys = comparison_keys(selectors)
+        # Two or more selectors check every key before any selector is resolved (SEAM-11).
+        keys = comparison_keys(selectors) if len(selectors) > 1 else []
         wirings = [
             resolve_selector(selector, registry=self.registry, store_root=self.store_root)
             for selector in selectors
@@ -1194,6 +1193,8 @@ class Databasise:
                 raise MutableStoreComparisonExcludedError(
                     component=_mutates_store_component(resolved, self.registry)
                 )
+        if len(selectors) == 1:
+            return await self._execute_resolved(query_object, wirings[0])
         # 11 REVIEW B-WR-02: refuse a never-populated namespace for any arm before the first arm
         # spends, rather than after earlier arms ran and their envelopes are discarded.
         for resolved in wirings:
