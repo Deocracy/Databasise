@@ -116,6 +116,10 @@ def mint_evidence_refs(
         if item_id is None:
             raise MalformedEvidenceItemError(namespace=namespace, index=index)
         score = item.get("score")
+        # 13 REVIEW iter 2 WR-02: a score is a real number or absent. A string (even "0.5"), a bool
+        # or a container is a driver fault, never left for pydantic to coerce or to raise a 500 on.
+        if score is not None and (isinstance(score, bool) or not isinstance(score, numbers.Real)):
+            raise MalformedEvidenceItemError(namespace=namespace, index=index, reason="carries a non-numeric score")
         if isinstance(score, numbers.Real):
             try:
                 finite = math.isfinite(float(score))

@@ -41,7 +41,12 @@ def test_the_mutable_store_refusal_names_the_capability_not_the_part():
     assert "codebase-memory-mcp" not in repr(body)
 
 
-@pytest.mark.parametrize("items", [None, ["chunk-1"], {"id": "chunk-1"}, "chunk-1"])
+@pytest.mark.parametrize(
+    "items",
+    [None, ["chunk-1"], {"id": "chunk-1"}, "chunk-1"]
+    # iteration 2 WR-02: a non-numeric score was a pydantic ValidationError (a 500 with no trace)
+    + [[{"id": "c1", "score": score}] for score in ("x", "0.5", True, [1], {"a": 1})],
+)
 async def test_a_malformed_items_value_is_malformed_driver_output_with_a_trace(store_root, items):
     """A-WR-02 (D-09, D-04): ``items`` that is not a list of mappings is a named fault, not a bare
     TypeError or AttributeError, and the persisted run's trace_token rides on the refusal."""
