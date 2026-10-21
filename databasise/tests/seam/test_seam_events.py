@@ -153,7 +153,7 @@ async def test_an_ingest_with_a_mutating_part_returns_one_seam_event(store_root,
         ctx.record_store_touch("kv")
         return {"track_id": "t", "enqueued": 1, "tokens": TokenAccounting(counted_by="none")}
 
-    part = dataclasses.replace(LIGHTRAG_FULL_INGEST_PART, name_at_version=_MUTATOR, body=_body)
+    part = dataclasses.replace(LIGHTRAG_FULL_INGEST_PART, name_at_version=_MUTATOR, body=_body, admission=dataclasses.replace(LIGHTRAG_FULL_INGEST_PART.admission, part_name_at_version=_MUTATOR))
     wiring = {
         "wiring_id": "seam-events-ingest",
         "nodes": {

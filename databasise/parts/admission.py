@@ -120,17 +120,34 @@ class ForbiddenSharedScopeError(RuntimeError):
         )
 
 
+class AdmissionRecordPartMismatchError(RuntimeError):
+    """The record names a different part than the one it is attached to: a record is evidence about
+    one ``name@version`` and must not vouch for another (T-15-08)."""
+
+    def __init__(self, part_name_at_version: str, record_part_name_at_version: str):
+        self.part_name_at_version = part_name_at_version
+        self.record_part_name_at_version = record_part_name_at_version
+        super().__init__(
+            f"admission record names {record_part_name_at_version!r} but is attached to "
+            f"{part_name_at_version!r}; a record vouches only for the part it names"
+        )
+
+
 def validate_admission(part: "Part", record: AdmissionRecord) -> None:
     """The record-only half of §8 admission — everything checkable from ``record``/``part`` alone,
     with no dependency on a registry or a resolved wiring (see :func:`cross_check_conditions` for
     the three machine-side conditions that do need those). Raises, by name:
 
+    - :class:`AdmissionRecordPartMismatchError` — the record names a different part.
     - :class:`AdmissionConditionMissingError` — the verdict set is not exactly conditions 1-11
       with no duplicate, or any verdict's ``evidence`` is blank.
     - :class:`SelfReportedManifestError` — ``manifest_source`` is not the code-inspected constant.
     - :class:`MissingWallClockCeilingError` — ``wall_clock_ceiling_seconds`` is absent or <= 0.
     - :class:`ForbiddenSharedScopeError` — the part is opaque and declares the shared scope.
     """
+    if record.part_name_at_version != part.name_at_version:
+        raise AdmissionRecordPartMismatchError(part.name_at_version, record.part_name_at_version)
+
     condition_ids = [verdict.condition for verdict in record.verdicts]
     if sorted(condition_ids) != list(ADMISSION_CONDITION_IDS):
         raise AdmissionConditionMissingError(
@@ -247,6 +264,7 @@ __all__ = [
     "ConditionVerdict",
     "AdmissionRecord",
     "AdmissionConditionMissingError",
+    "AdmissionRecordPartMismatchError",
     "SelfReportedManifestError",
     "MissingWallClockCeilingError",
     "ForbiddenSharedScopeError",

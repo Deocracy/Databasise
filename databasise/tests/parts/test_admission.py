@@ -262,6 +262,18 @@ def test_tool16_1_an_as_of_effect_added_after_registration_is_refused_at_load(tm
     assert type(_engine_outcome(tmp_path, registry)).__name__ == "AdmissionConditionMissingError"
 
 
+def test_tool16_2_a_record_for_part_a_attached_to_part_b_is_refused():
+    part_a = _opaque_part(admission=_valid_admission_record())
+    part_b = dataclasses.replace(part_a, name_at_version="test/other@1.0.0")  # keeps A's record
+    caught = None
+    try:
+        PartRegistry(seed_tracer_parts=False).register(part_b)
+    except Exception as exc:  # noqa: BLE001 - the type name and message are asserted below
+        caught = exc
+    assert type(caught).__name__ == "AdmissionRecordPartMismatchError"
+    assert "test/other@1.0.0" in str(caught) and "test/opaque-part@1.0.0" in str(caught)
+
+
 def test_tool16_5_default_registry_still_builds(tmp_path):
     registry = default_registry()
     assert registry.keys()
