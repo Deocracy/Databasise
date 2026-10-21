@@ -235,6 +235,7 @@ from databasise.seam.corpus import (
     upload_suffix,
 )
 from databasise.seam.envelope import PromotionResult, ResponseEnvelope, SeamEvent
+from databasise.seam.floors_store import FloorStore
 from databasise.seam.jobs_store import JobFamilyStore
 from databasise.seam.evidence import (
     CHUNKS_NAMESPACE,
@@ -257,7 +258,6 @@ from databasise.seam.promotion import (
     _NOT_BUILT_VERBS,
     declared_surface,
     derive_mutation_class,
-    enforce_gate_verb_posture,
     mint_version,
     refuse_partial_evidence,
     resolve_single_arm,
@@ -278,6 +278,7 @@ from databasise.seam.refusals import (
     InvalidGuardDeclarationError,
     InvalidNodeSettingError,
     InvalidPromotionAliasError,
+    MeasurementPostureRefusalError,
     MutableStoreComparisonExcludedError,
     NoRawUploadPathForModalityError,
     NoWritePathForModalityError,
@@ -1166,6 +1167,8 @@ class Databasise:
         self._trace_store = TraceStore(self.store_root)
         # 11-06 (D-02): job id -> minting family; jobs.db is created by the first record, not here.
         self._jobs = JobFamilyStore(self.store_root)
+        # 15-16 (TOOL-12, D-13): calibrated A/A floors; floors.db is created by aa_run, not here.
+        self._floors = FloorStore(self.store_root)
 
     def _v1_working_dir(self) -> Path:
         """11-01 (D-01, LRAG-01): the one v1 working dir this engine's LightRAG corpus ops use.
@@ -2333,6 +2336,76 @@ class Databasise:
         )
         return resolved_records, arm_name, arm_instance_hashes
 
+    def _refuse_gate_verb(
+        self,
+        verb: str,
+        alias: str,
+        new_resolved: dict[str, Any],
+        arm_instance_hashes: list[str],
+    ) -> None:
+        """TOOL-12 stage 2 (D-13): always raises, appends nothing. Reads the alias's prior row
+        read-only (creating no ``ledger.db``), derives the mutation class, and requires a persisted
+        floor for every instance hash the resolved traces carry (never a recomputed hash) whose
+        identity matches the candidate: the newest committed bundle, the tier and metric of the
+        class, and this engine's own determinism and concurrency settings. A missing or stale
+        floor is ``GateNotCalibratedError``; otherwise RIG section F3.2 decides.
+        """
+        # Lazy: eval.aa_run imports databasise.seam at module level.
+        from databasise.eval.aa_run import ANSWER_LEVEL_METRIC, GOLD_PASSAGE_METRIC
+        from databasise.eval.bundle import ANSWER_LEVEL_TIER, GOLD_PASSAGE_TIER, _list_version_numbers
+        from databasise.eval.calibration import CalibrationResult, NullIdentity, StaleNullError
+        from databasise.eval.remint import _COMMITTED_BUNDLE_ROOT
+
+        not_calibrated = GateNotCalibratedError(verb=verb)
+
+        prior_record = None
+        prior_handle = Ledger.open_existing(self.store_root, read_only=True)
+        if prior_handle is not None:
+            try:
+                prior_record = prior_handle.by_alias(alias)
+            finally:
+                prior_handle.close()
+        prior_resolved = wiring_for_name(prior_record.mutation_id) if prior_record is not None else None
+        mutation_class = derive_mutation_class(new_resolved, prior_resolved)
+
+        versions = _list_version_numbers(_COMMITTED_BUNDLE_ROOT)
+        if not versions or not arm_instance_hashes:
+            raise not_calibrated
+        tier, metric = (
+            (ANSWER_LEVEL_TIER, ANSWER_LEVEL_METRIC)
+            if mutation_class == "answer-level"
+            else (GOLD_PASSAGE_TIER, GOLD_PASSAGE_METRIC)
+        )
+        candidate = NullIdentity(
+            bundle_at_v=f"bundle@v{max(versions)}",
+            tier=tier,
+            metric=metric,
+            determinism_setting=_DETERMINISM_SETTING,
+            concurrency_setting=_CONCURRENCY_SETTING,
+        )
+        for instance_hash in arm_instance_hashes:
+            for row in self._floors.lookup(instance_hash):
+                stored = CalibrationResult(
+                    identity=NullIdentity(
+                        row.bundle_at_v, row.tier, row.metric, row.determinism_setting, row.concurrency_setting
+                    ),
+                    floor=row.floor,
+                    n_questions=row.n_questions,
+                    n_resamples=row.n_resamples,
+                    seed=row.seed,
+                )
+                try:
+                    stored.floor_for(candidate)
+                except StaleNullError:
+                    continue
+                break
+            else:
+                raise not_calibrated
+
+        if mutation_class == "retrieval-side":
+            raise GateVerbNotBuiltError(verb=verb)
+        raise MeasurementPostureRefusalError(verb=verb, mutation_class=mutation_class)
+
     async def promote(
         self,
         alias: str,
@@ -2351,9 +2424,10 @@ class Databasise:
         D-07): a ``verb`` outside :data:`~databasise.seam.promotion.PROMOTION_VERBS`'s six declared
         literals refuses first, by name. Then a gate-ladder verb not built in this milestone
         (``check``, ``preview``, ``run``) refuses. Then a gate-adjudicated verb (``promote-next``,
-        ``promote-now``) refuses as :class:`~databasise.seam.refusals.GateNotCalibratedError`, the
-        same for every arm, before anything else is looked at and before any ``Ledger`` exists
-        (no ``ledger.db`` is created). Then the shared prologue
+        ``promote-now``) refuses as :class:`~databasise.seam.refusals.GateNotCalibratedError` when
+        ``floors.db`` holds no floor at all (TOOL-12 stage 1), the same for every arm, before anything
+        else is looked at and before any ``Ledger`` exists (no ``ledger.db`` is created). Then the
+        shared prologue
         (:meth:`_resolve_operator_preconditions`): an ``alias`` that is empty or shaped like an
         instance hash refuses as :class:`~databasise.seam.refusals.InvalidPromotionAliasError`
         (09-07, SEAM-12), an invalid ``change_origin`` refuses, an unknown ``trace_ids`` entry
@@ -2363,9 +2437,12 @@ class Databasise:
         resolve refuses as :class:`~databasise.seam.refusals.UnsatisfiableSelectorError` (D-05).
         An alias whose active row names a wiring that no longer resolves does not refuse: that
         prior has no comparable surface, so the promotion MAJOR-bumps and repairs the alias
-        (14-REVIEW A-WR-02). Only the default
-        ``"operator-asserted"`` verb reaches ``Ledger.append()``; the per-class posture refusals
-        stay in code for TOOL-12 and are unreachable from here.
+        (14-REVIEW A-WR-02). Then, for a gate verb only (TOOL-12 stage 2, :meth:`_refuse_gate_verb`):
+        a missing or stale floor for any of the traces' own instance hashes refuses as
+        ``GateNotCalibratedError``; with a valid floor, a retrieval-side change refuses as
+        :class:`~databasise.seam.refusals.GateVerbNotBuiltError` (no comparison runner exists) and the
+        other classes as :class:`~databasise.seam.refusals.MeasurementPostureRefusalError` (RIG
+        section F3.2). Only the default ``"operator-asserted"`` verb reaches ``Ledger.append()``.
 
         One ``INSERT`` in one transaction **is** the atomic alias repoint (CONTRACT §6) — no
         second write, no transaction wrapper around two statements. ``Ledger`` stays synchronous by
@@ -2383,15 +2460,18 @@ class Databasise:
         if verb in _NOT_BUILT_VERBS:
             raise GateVerbNotBuiltError(verb=verb)
 
-        # LEDG-08 (D-04): no arm has a calibrated floor, so a gate verb is refused identically for
-        # every arm, before alias validation, trace resolution and any Ledger construction.
-        if verb in _GATE_VERBS:
+        # LEDG-08 (D-04) / TOOL-12 stage 1: with no persisted floor at all a gate verb is refused
+        # identically for every arm, before alias validation, trace resolution and any Ledger.
+        if verb in _GATE_VERBS and not self._floors.any_floor():
             raise GateNotCalibratedError(verb=verb)
 
         _resolved_records, arm_name, arm_instance_hashes = self._resolve_operator_preconditions(
             alias, trace_ids, change_origin, refuse_partial=True
         )
         new_resolved = _wiring_for_row(arm_name, alias=alias)
+
+        if verb in _GATE_VERBS:
+            self._refuse_gate_verb(verb, alias, new_resolved, arm_instance_hashes)  # always raises
 
         def _promote_sync() -> tuple[str, int]:
             """Runs entirely on the executor thread: opening ``Ledger`` here (rather than on the
@@ -2413,11 +2493,7 @@ class Databasise:
 
                 mutation_class = derive_mutation_class(new_resolved, prior_resolved)
 
-                # Unreachable until TOOL-12 lifts the up-front GateNotCalibratedError for an arm with
-                # a calibrated floor; the per-class posture refusals stay in code for that path.
-                if verb in _GATE_VERBS:
-                    enforce_gate_verb_posture(verb, mutation_class)  # always raises
-
+                # A gate verb never reaches this closure: promote() raises in _refuse_gate_verb first.
                 if verb != "operator-asserted":
                     # Unreachable by construction: promote()'s own top-of-body guard already
                     # raises UnrecognisedPromotionVerbError for anything outside

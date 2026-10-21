@@ -268,6 +268,11 @@ def enforce_gate_verb_posture(verb: str, mutation_class: MutationClass) -> None:
     :class:`~databasise.seam.refusals.UncalibratedFloorRefusalError` (no calibrated A/A floor
     exists, RIG §AA.2); ``False`` (answer-level/index-side, off by default) raises
     :class:`~databasise.seam.refusals.MeasurementPostureRefusalError` (RIG §F3.2).
+
+    15-16 (TOOL-12): ``Databasise.promote`` no longer calls this. A gate verb with no floor is
+    ``GateNotCalibratedError``; with a valid floor the engine raises ``GateVerbNotBuiltError`` for a
+    retrieval-side change and ``MeasurementPostureRefusalError`` for the other classes, so this
+    function's retrieval-side branch is unreachable from ``promote``. Kept for its pinned signature.
     """
     if _MEASUREMENT_POSTURE[mutation_class]:
         raise UncalibratedFloorRefusalError(verb=verb, mutation_class=mutation_class)
