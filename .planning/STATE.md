@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 15
 current_phase_name: Offline Tooling & Packaging
 status: executing
-stopped_at: Completed 15-03-PLAN.md
-last_updated: "2026-10-21T21:01:35.432Z"
+stopped_at: Completed 15-09-PLAN.md
+last_updated: "2026-10-21T21:06:50.033Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 14 complete, transitioned to Phase 15
-state_head: 3ef4990304372a52ccbec939e005f39b9657d81d
+state_head: 7b6dbaa10c53da756eaaf7a3cce34551360f4452
 progress:
   total_phases: 11
   completed_phases: 7
   total_plans: 100
-  completed_plans: 90
+  completed_plans: 91
   percent: 64
 ---
 
@@ -145,6 +145,7 @@ Progress: [██████░░░░] 64% (4/11 phases)
 | Phase 15 P07 | 40min | 2 tasks | 6 files |
 | Phase 15 P08 | 75min | 3 tasks | 6 files |
 | Phase 15 P03 | 50min | 3 tasks | 5 files |
+| Phase 15 P09 | 20min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -248,6 +249,7 @@ Recent decisions affecting current work:
 - [Phase 13]: 13-12: naive keeps wiring_id lightrag-base, other arms get lightrag-<arm>; guards read a declared signal key; pinned parity hashes annotated, not re-minted
 - [Phase 14]: 14-07: codebase-memory-mcp@0.1.0 leaves default_registry() (37 entries); registered only by probe_registry() and by tests; F-07 records it as catalogued, not registered
 - [Phase 15]: 15-08: human-findings validation runs inside load_human_findings so check_results, _collect_deviations and the spot-check renderer share one validator
+- [Phase 15]: 15-09: import_index parser defaults are None, resolved at call time so the store-lock test's module patch applies; non-verified result still exits 1
 
 ### Pending Todos
 
@@ -304,8 +306,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-21T21:01:35.017Z
-Stopped at: Completed 15-03-PLAN.md
+Last session: 2026-10-21T21:06:49.649Z
+Stopped at: Completed 15-09-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
