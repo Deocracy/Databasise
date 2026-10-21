@@ -28,8 +28,12 @@ query, and write one JSON object to stdout:
 ``{"chunk_ids": [...], "entity_ids": [...], "relation_ids": [...], "answer": str,
 "hl_keywords_used": [...], "ll_keywords_used": [...]}``.
 
-``hl_keywords_used``/``ll_keywords_used`` are read back from v1's own ``aquery_data`` response
-(``data["metadata"]["keywords"]``) — v1's own echo of what it actually used to retrieve, not a
+The script makes exactly one ``rag.aquery_llm`` call per job. v1's own
+``aquery`` is a wrapper over ``aquery_llm`` (Phase 11 D-16), so one call matches v1, keyword
+extraction runs once, and the returned ids and answer come from the same retrieval (TOOL-07, D-08).
+
+``hl_keywords_used``/``ll_keywords_used`` are read back from v1's own response
+(``metadata["keywords"]``) — v1's own echo of what it actually used to retrieve, not a
 value this script merely reflects on its own behalf. This is the mechanism Task 1's acceptance
 criteria uses to confirm a pinned, deliberately distinctive keyword set actually reached v1's
 retrieval rather than v1 silently extracting its own: pass a pinned pair no genuine extraction
@@ -120,11 +124,11 @@ async def _run(job: dict[str, Any]) -> dict[str, Any]:
     try:
         param = QueryParam(mode=mode, hl_keywords=hl_keywords, ll_keywords=ll_keywords)
 
-        # Data-only retrieval — v1's own aquery_data forces only_need_context=True internally, so
-        # this never triggers LLM generation; it returns the final (post-truncation) chunks,
-        # entities and relationships v1 would send to the LLM, per its own docstring.
-        data_response = await rag.aquery_data(query.strip(), param)
-        data = data_response.get("data") or {} if data_response.get("status") == "success" else {}
+        # One call: v1's own ``aquery`` is a wrapper over ``aquery_llm`` (Phase 11 D-16), so this is
+        # exactly what v1 does, keyword extraction runs once, and the ids and the answer below come
+        # from the same retrieval.
+        response = await rag.aquery_llm(query.strip(), param)
+        data = response.get("data") or {}
         chunk_ids = [
             str(c["chunk_id"]) for c in data.get("chunks", []) if c.get("chunk_id")
         ]
@@ -136,18 +140,15 @@ async def _run(job: dict[str, Any]) -> dict[str, Any]:
             for r in data.get("relationships", [])
             if r.get("src_id") and r.get("tgt_id")
         ]
-        used_keywords = (data_response.get("metadata") or {}).get("keywords") or {}
+        used_keywords = (response.get("metadata") or {}).get("keywords") or {}
         hl_keywords_used = [str(k) for k in (used_keywords.get("high_level") or hl_keywords)]
         ll_keywords_used = [str(k) for k in (used_keywords.get("low_level") or ll_keywords)]
 
-        # The prose answer — a second, real call through v1's full pipeline (keyword resolution
-        # short-circuits identically here, so this spends no extra keyword-extraction call).
-        answer = await rag.aquery(query.strip(), param)
-        if not isinstance(answer, str):
-            parts: list[str] = []
-            async for part in answer:
-                parts.append(part)
-            answer = "".join(parts)
+        llm_response = response.get("llm_response") or {}
+        if llm_response.get("is_streaming"):
+            answer = "".join([part async for part in llm_response["response_iterator"]])
+        else:
+            answer = llm_response.get("content") or ""
 
         return {
             "chunk_ids": chunk_ids,
