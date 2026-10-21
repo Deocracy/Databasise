@@ -454,7 +454,7 @@
 - [ ] **LEDG-11**: Wiring validation rejects a wiring node whose kind differs from the registered Part.kind for its part reference. It raises a named validation error that names the node id, the wiring's kind and the part's kind. All shipped wirings still validate.
   - Test: New test in databasise/tests/validator/test_node_kind.py. Copy lightrag/base.json and change one node's kind to a different valid kind. Validation raises the new error; before the fix the file validates without error. Parse and validate every file under databasise/wirings/ and assert that none raises.
   - Defects: registry-ledger/D16
-- [ ] **LEDG-12**: default_registry() contains no admitted part that no selector can reach. codebase-memory-mcp@0.1.0 is either made reachable, meaning its wiring is listed in WIRING_NAMES and all_wirings() and wiring_family({'wiring_id':'codebase-memory-mcp'}) returns a family, or it is removed from default_registry().
+- [x] **LEDG-12**: default_registry() contains no admitted part that no selector can reach. codebase-memory-mcp@0.1.0 is either made reachable, meaning its wiring is listed in WIRING_NAMES and all_wirings() and wiring_family({'wiring_id':'codebase-memory-mcp'}) returns a family, or it is removed from default_registry().
   - Test: Test in databasise/tests/parts/test_registry.py: for every part key in default_registry(), assert that some wiring in all_wirings() references it. Before the fix, codebase-memory-mcp@0.1.0 fails this assertion, and wiring_family on its wiring raises UnknownWiringFamilyError.
   - Defects: registry-ledger/D17
   - Owner decision first: Owner decision: wire codebase-memory-mcp as a selectable wiring now, or unregister it until a consumer exists. It is documented in evidence/f07_report.py:40-46.
@@ -943,7 +943,7 @@ These fail today.
 | LEDG-09 | Phase 14 | Pending |
 | LEDG-10 | Phase 14 | Pending |
 | LEDG-11 | Phase 14 | Pending |
-| LEDG-12 | Phase 14 | Pending |
+| LEDG-12 | Phase 14 | Complete |
 | LEDG-13 | Phase 14 | Pending |
 | LEDG-14 | Phase 14 | Pending |
 | TOOL-01 | Phase 15 | Pending |

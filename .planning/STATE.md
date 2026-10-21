@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 14
 current_phase_name: Promotion & Ledger
 status: executing
-stopped_at: Completed 14-09-PLAN.md
-last_updated: "2026-10-21T00:27:45.769Z"
+stopped_at: Completed 14-07-PLAN.md
+last_updated: "2026-10-21T04:07:39.744Z"
 last_activity: 2026-10-20
 last_activity_desc: Phase 13 complete, transitioned to Phase 14
-state_head: 32709fead390018a7512ab35a64e1788c811b0e0
+state_head: 3e228867b35bcb00d56ceb0ff25530494de05d33
 progress:
   total_phases: 11
   completed_phases: 6
   total_plans: 81
-  completed_plans: 77
+  completed_plans: 79
   percent: 55
 ---
 
@@ -135,6 +135,7 @@ Progress: [██████░░░░] 55% (4/11 phases)
 | Phase 14 P06 | 40min | 2 tasks | 6 files |
 | Phase 14 P08 | 75min | 3 tasks | 10 files |
 | Phase 14 P09 | 35min | 2 tasks | 5 files |
+| Phase 14 P07 | 25min | 1 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -236,6 +237,7 @@ Recent decisions affecting current work:
 - [Phase 13]: 13-08: a cycle is a violation code inside _refuse_unparseable; runner pre-flight errors are translated by one _run_wiring helper; GuardDeclarationError keeps its positional pair and gains keyword-only node_id/problem
 - [Phase 13]: 13-10: persist the raw RunRecord before any post-dispatch refusal; map reasons to closed codes only on the envelope and non-debug trace
 - [Phase 13]: 13-12: naive keeps wiring_id lightrag-base, other arms get lightrag-<arm>; guards read a declared signal key; pinned parity hashes annotated, not re-minted
+- [Phase 14]: 14-07: codebase-memory-mcp@0.1.0 leaves default_registry() (37 entries); registered only by probe_registry() and by tests; F-07 records it as catalogued, not registered
 
 ### Pending Todos
 
@@ -290,8 +292,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-21T00:27:45.425Z
-Stopped at: Completed 14-09-PLAN.md
+Last session: 2026-10-21T04:07:39.424Z
+Stopped at: Completed 14-07-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
