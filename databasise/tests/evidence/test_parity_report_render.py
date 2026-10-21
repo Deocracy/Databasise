@@ -359,9 +359,15 @@ def test_main_check_results_refuses_a_malformed_file_with_one_line_and_exit_1(
     results, _findings = _build(tmp_path, monkeypatch)
     (results / "naive-comparison.json").write_text('[{"status": ', encoding="utf-8")
 
-    code = parity_report.main(["--check-results"])
+    caught = None
+    code = None
+    try:
+        code = parity_report.main(["--check-results"])
+    except BaseException as exc:  # noqa: BLE001 - the pre-change module raises JSONDecodeError
+        caught = exc
 
     err = capsys.readouterr().err.strip().splitlines()
+    assert caught is None
     assert code == 1
     assert len(err) == 1 and err[0].startswith("ParityRecordFormatError:")
 
