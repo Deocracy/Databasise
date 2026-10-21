@@ -186,3 +186,87 @@ def test_v1_arm_result_accepts_none_keywords() -> None:
     assert caught is None, repr(caught)
     assert as_dict["hl_keywords_used"] is None, as_dict["hl_keywords_used"]
     assert as_dict["ll_keywords_used"] is None, as_dict["ll_keywords_used"]
+
+
+def _capture(call: Any) -> tuple[Any, BaseException | None]:
+    try:
+        return call(), None
+    except BaseException as exc:  # noqa: BLE001 - outcomes are asserted by type name and code
+        return None, exc
+
+
+def _forbid_launch(monkeypatch: pytest.MonkeyPatch) -> list[Any]:
+    from databasise.parity import v1_arm
+
+    launches: list[Any] = []
+
+    def _recorder(*args: Any, **kwargs: Any) -> Any:
+        launches.append(args)
+        raise AssertionError("a subprocess was launched")
+
+    monkeypatch.setattr(v1_arm.subprocess, "run", _recorder)
+    return launches
+
+
+def test_a_missing_env_file_is_refused_before_any_launch(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from databasise.parity import v1_arm
+
+    launches = _forbid_launch(monkeypatch)
+    absent = tmp_path / "absent.env"
+    interpreter = tmp_path / "python"
+    interpreter.write_text("", encoding="utf-8")
+
+    _, caught = _capture(lambda: v1_arm.run_v1_arm("hybrid", "q", env_path=absent, interpreter=interpreter))
+
+    assert caught is not None, "run_v1_arm read a missing env file as empty"
+    assert type(caught).__name__ == "MissingParityEnvError", repr(caught)
+    assert str(absent) in str(caught)
+    assert launches == []
+
+
+def test_v1_arm_main_prints_one_named_line(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from databasise.parity import v1_arm
+
+    launches = _forbid_launch(monkeypatch)
+    absent = tmp_path / "absent.env"
+    monkeypatch.setattr(v1_arm, "DEFAULT_V1_ENV_PARITY", absent)
+    interpreter = tmp_path / "python"
+    interpreter.write_text("", encoding="utf-8")
+    monkeypatch.setattr(v1_arm, "DEFAULT_V1_INTERPRETER", interpreter)
+
+    code, caught = _capture(lambda: v1_arm.main(["--mode", "hybrid", "--query", "q", "--spend"]))
+
+    assert caught is None, repr(caught)
+    assert code == 1
+    lines = capsys.readouterr().err.strip().splitlines()
+    assert len(lines) == 1, lines
+    assert lines[0].startswith("MissingParityEnvError:"), lines[0]
+    assert str(absent) in lines[0]
+    assert launches == []
+
+
+def test_v1_arm_main_without_spend_is_estimate_only(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from databasise.parity import v1_arm
+
+    launches = _forbid_launch(monkeypatch)
+    monkeypatch.setattr(v1_arm, "DEFAULT_V1_ENV_PARITY", tmp_path / "absent.env")
+
+    def _must_not_run(*args: Any, **kwargs: Any) -> Any:
+        raise AssertionError("run_v1_arm was called without --spend")
+
+    monkeypatch.setattr(v1_arm, "run_v1_arm", _must_not_run)
+
+    code, caught = _capture(lambda: v1_arm.main(["--mode", "hybrid", "--query", "q"]))
+
+    assert caught is None, repr(caught)
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "mode: estimate-only" in out, out
+    assert "one v1 subprocess run" in out, out
+    assert launches == []

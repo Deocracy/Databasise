@@ -14,6 +14,12 @@ asymmetric (the decomposed arm produces a full run record; this one does not), a
 ``"harness-external"`` so that asymmetry travels with the data itself, not only in prose wherever
 this arm's numbers are later read.
 
+A missing parity env file is a ``MissingParityEnvError`` (``clients.builder.load_env_file``), raised
+before the interpreter check and before anything launches. IN-01's "read a missing file as empty" is
+reversed here only; the corpus adapter (``foreign/v1_corpus_adapter.py``) keeps its behaviour
+(LRAG-06). The arm needs a source checkout with ``v1/.venv`` (D-01). ``main`` is estimate-only
+without ``--spend`` and prints named refusals as one line through ``databasise.cli.refuse`` (D-03).
+
 A non-zero subprocess exit is a refusal (:class:`V1ArmSubprocessError`, carrying the captured
 stderr) — never an empty result. A missing v1 interpreter raises :class:`MissingV1InterpreterError`
 naming the expected path and pointing at ``v1/README-PARITY.md``'s recreate commands.
@@ -29,6 +35,9 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from databasise import cli
+from databasise.clients.builder import load_env_file
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 DEFAULT_V1_INTERPRETER = _REPO_ROOT / "v1" / ".venv" / "bin" / "python"
@@ -95,32 +104,6 @@ class V1ArmResult:
         }
 
 
-def _load_env_file(path: Path) -> dict[str, str]:
-    """A minimal ``KEY=VALUE`` parser for the flat ``.env.parity`` shape, matching
-    ``databasise/parity/run_arm.py``'s own ``_load_env_file`` exactly (duplicated, not imported —
-    each caller's own dependency surface stays obvious rather than reaching into a sibling
-    module's private helper for a ~15-line stdlib parser).
-
-    IN-01: unlike the sibling copy, this one returns ``{}`` rather than raising on an absent
-    file — deliberate, since ``run_v1_arm``/``v1_arm.main()`` is reached directly (without going
-    through ``run_arm.py``'s copy first) only by a caller that does not need the same named
-    refusal; a direct caller wanting that refusal should call ``run_arm._load_env_file`` itself.
-    """
-    if not path.exists():
-        return {}
-    env: dict[str, str] = {}
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        value = value.strip()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-            value = value[1:-1]
-        env[key.strip()] = value
-    return env
-
-
 def run_v1_arm(
     mode: str,
     query: str,
@@ -139,13 +122,16 @@ def run_v1_arm(
 
     ``interpreter``/``driver_script``/``env_path``/``working_dir`` are override points for tests.
     """
+    # First: a missing parity env file is MissingParityEnvError before the interpreter check and
+    # before anything launches, never an empty env that lets v1 fall back to v1/.env (D-08).
+    parity_env = load_env_file(env_path or DEFAULT_V1_ENV_PARITY)
     interpreter = interpreter or DEFAULT_V1_INTERPRETER
     if not interpreter.exists():
         raise MissingV1InterpreterError(interpreter)
     driver_script = driver_script or DEFAULT_V1_DRIVER_SCRIPT
 
     env = dict(os.environ)
-    env.update(_load_env_file(env_path or DEFAULT_V1_ENV_PARITY))
+    env.update(parity_env)
     env.setdefault("ENABLE_LLM_CACHE", "false")
 
     job = {
@@ -197,15 +183,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--query", required=True)
     parser.add_argument("--hl-keyword", action="append", default=[])
     parser.add_argument("--ll-keyword", action="append", default=[])
+    parser.add_argument("--spend", action="store_true", default=False)
     args = parser.parse_args(argv)
+
+    if not args.spend:  # estimate-only: no env file read, nothing launched (D-04)
+        print(f"v1 mode: {args.mode}")
+        print(f"query: {args.query}")
+        print("one v1 subprocess run")
+        print("mode: estimate-only")
+        return cli.EXIT_OK
 
     try:
         result = run_v1_arm(
             args.mode, args.query, hl_keywords=args.hl_keyword, ll_keywords=args.ll_keyword
         )
-    except (MissingV1InterpreterError, V1ArmSubprocessError) as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
+    except cli.offline_refusals(V1ArmSubprocessError, MissingV1InterpreterError) as exc:
+        return cli.refuse(exc)
 
     print(json.dumps(result.to_dict(), indent=2))
     return 0
