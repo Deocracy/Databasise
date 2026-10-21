@@ -121,8 +121,8 @@ def load_wiring(stem: str) -> dict[str, Any]:
 
 # Two probe-only parts backing the b-family blast-radius probes below. Neither is registered into
 # default_registry() — see probe_registry(). artifact_scope is left unset so CONTRACT §3's stated
-# default of `shared` applies via blast_radius.py's own `getattr(part, "artifact_scope", "shared")`
-# read.
+# default of `shared` applies via blast_radius.py's own `part.artifact_scope or "shared"` rule
+# (validator/blast_radius.py:50).
 SHARED_ARTIFACT_WRITER_PROBE_PART = Part(
     name_at_version="probe/shared-artifact-writer@0.1.0",
     kind="extractor",

@@ -135,10 +135,8 @@ class CorpusOpTimeoutError(RuntimeError):
 
 def _load_env_file(path: Path) -> dict[str, str]:
     """A minimal ``KEY=VALUE`` parser for the flat ``.env.parity`` shape — duplicated from
-    ``databasise/parity/v1_arm.py``'s own ``_load_env_file``, not imported, per that module's own
-    documented duplication rule (each caller's own dependency surface stays obvious rather than
-    reaching into a sibling module's private helper for a ~15-line stdlib parser). Returns ``{}``
-    for an absent file rather than raising.
+    ``databasise/clients/builder.py``'s ``load_env_file``, not imported. Unlike that function, which raises ``MissingParityEnvError``, this copy returns ``{}``
+    for an absent file.
     """
     if not path.exists():
         return {}

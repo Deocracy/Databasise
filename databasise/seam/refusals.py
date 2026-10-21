@@ -494,8 +494,9 @@ class MutableStoreComparisonExcludedError(SeamRefusalError):
 
     Currently unreachable with the query candidates: no wiring in ``all_wirings()`` declares
     ``mutates_store``, and the codebase-memory-mcp part is not in ``default_registry()``. It is
-    exercised only by ``tests/seam/test_mutable_store_exclusion.py``, which registers the
-    codebase-memory-mcp part with ``registry=`` and adds its fixture wiring
+    exercised only by ``tests/seam/test_mutable_store_exclusion.py`` and
+    ``tests/seam/test_refusal_reachability.py`` (WIRE-17, one selector as well as two), which
+    register the codebase-memory-mcp part with ``registry=`` and add its fixture wiring
     (``tests/fixtures/codebase-memory-mcp.json``) to the candidate pool.
     """
 

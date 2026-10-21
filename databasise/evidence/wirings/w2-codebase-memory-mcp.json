@@ -25,7 +25,7 @@
     {
       "boundary_id": "w2-knob-chunking-strategy",
       "between": "cbm -> normalise",
-      "rationale": "the machine-chunks-versus-native-chunking boundary SELECTION.md Falsifier 4 names: cbm can be run once consuming machine-produced chunks and once chunking natively, a genuine bypass/substitution point at its own boundary"
+      "rationale": "the native-chunking boundary SELECTION.md Falsifier 4 names: cbm chunks natively at its own ingestion boundary, a genuine bypass/substitution point; the machine-chunk leg is not runnable at its filesystem-path ingestion API, as FALSIFIER-4-EVIDENCE.md records"
     }
   ]
 }

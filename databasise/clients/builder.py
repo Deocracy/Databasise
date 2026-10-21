@@ -71,11 +71,10 @@ def load_env_file(path: Path) -> dict[str, str]:
     ``databasise/pyproject.toml``'s approved runtime dependencies, and this format needs nothing
     more than stdlib string splitting.
 
-    IN-01: deliberately duplicated in ``databasise/parity/v1_arm.py``'s own ``_load_env_file``
-    rather than imported — see that copy's docstring for why — but this copy raises on an absent
-    file while the sibling copy returns ``{}``; that asymmetry is deliberate (this copy is always
-    called first in the normal ``compare_arm_on_query`` flow, so it is the one whose refusal a
-    caller actually sees).
+    Raises ``MissingParityEnvError`` on an absent file. ``databasise/parity/v1_arm.py`` imports
+    this function (its former private copy, which returned ``{}``, is gone);
+    ``databasise/foreign/v1_corpus_adapter.py`` keeps its own ``_load_env_file``, which returns
+    ``{}`` for an absent file.
     """
     if not path.exists():
         raise MissingParityEnvError(path)

@@ -89,7 +89,7 @@ Before applying §19.1–§19.6, the author MUST enumerate candidate boundaries 
 | w2-codebase-memory-mcp-crossing-normalise-answer | value-crossing | normalise -> answer | 'answer''s dep edge on 'normalise' is by construction a point where a value crosses between operations |
 | w2-codebase-memory-mcp-effects-cbm-normalise | effects-change | cbm -> normalise | declared effects[] differs across this dep edge; symmetric difference: ['fs', 'mutates_store', 'self_storage'] |
 | w2-codebase-memory-mcp-crossing-cbm-normalise | value-crossing | cbm -> normalise | 'normalise''s dep edge on 'cbm' is by construction a point where a value crosses between operations |
-| w2-knob-chunking-strategy | knob | cbm -> normalise | the machine-chunks-versus-native-chunking boundary SELECTION.md Falsifier 4 names: cbm can be run once consuming machine-produced chunks and once chunking natively, a genuine bypass/substitution point at its own boundary |
+| w2-knob-chunking-strategy | knob | cbm -> normalise | the native-chunking boundary SELECTION.md Falsifier 4 names: cbm chunks natively at its own ingestion boundary, a genuine bypass/substitution point; the machine-chunk leg is not runnable at its filesystem-path ingestion API, as FALSIFIER-4-EVIDENCE.md records |
 
 ## w3-lightrag-half-decomposed — Half-decomposed full LightRAG
 
