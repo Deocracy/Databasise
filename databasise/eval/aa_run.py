@@ -62,7 +62,6 @@ from pathlib import Path
 from typing import Any
 
 from databasise import cli
-from databasise.clients.builder import BUILDER_REFUSALS
 from databasise.eval.bundle import (
     ANSWER_LEVEL_FAMILY,
     GOLD_PASSAGE_FAMILY,
@@ -72,7 +71,9 @@ from databasise.eval.bundle import (
 from databasise.eval.bundle import _list_version_numbers as _bundle_version_numbers
 from databasise.eval.calibration import (
     CalibrationResult,
+    EmptyPairedDifferencesError,
     NullIdentity,
+    UnpairedScoresError,
     UnusableFloorError,
     calibrate_aa_floor,
     paired_differences,
@@ -95,7 +96,6 @@ from databasise.parts.registry import default_registry
 from databasise.seam import Databasise
 from databasise.seam.evidence import CHUNKS_NAMESPACE, resolve_evidence_ref
 from databasise.seam.query import QueryObject
-from databasise.seam.refusals import SeamRefusalError
 from databasise.seam.selectors import Selector
 from databasise.seam.trace_store import TraceStore
 from databasise.stores.vector import MultiNamespaceVectorStore, load_committed
@@ -173,6 +173,18 @@ class ConfoundedPassError(RuntimeError):
             f"run_one_pass: question {question_id!r} reported partial={partial!r} "
             f"degraded={degraded!r} — a confounded pass cannot calibrate a null"
         )
+
+
+class NoMintedBundleError(ValueError):
+    """The bundle root holds no minted bundle version."""
+
+
+class MissingTargetFamilyCoverageError(ValueError):
+    """The bundle lacks a target family, or a family lacks targets or gold answers for the split."""
+
+
+class QuestionNotInBundleError(ValueError):
+    """A question id of the requested split is not among the bundle's own questions."""
 
 
 class EmptyGoldDocumentIdsError(ValueError):
@@ -345,18 +357,18 @@ def _resolve_split(bundle: EvalBundle, split_name: str) -> tuple[str, ...]:
 def _check_family_covers_questions(bundle: EvalBundle, family_name: str, question_ids: Sequence[str]) -> None:
     family = next((f for f in bundle.target_families if f.name == family_name), None)
     if family is None:
-        raise ValueError(f"bundle {bundle.version!r} carries no target family {family_name!r}")
+        raise MissingTargetFamilyCoverageError(f"bundle {bundle.version!r} carries no target family {family_name!r}")
 
     missing_targets = [qid for qid in question_ids if qid not in family.targets]
     if missing_targets:
-        raise ValueError(
+        raise MissingTargetFamilyCoverageError(
             f"question id(s) {missing_targets} in the requested split are absent from family "
             f"{family_name!r}'s own targets"
         )
     if family_name == ANSWER_LEVEL_FAMILY:
         missing_answers = [qid for qid in question_ids if qid not in bundle.gold_answers]
         if missing_answers:
-            raise ValueError(
+            raise MissingTargetFamilyCoverageError(
                 f"question id(s) {missing_answers} in the requested split are absent from bundle "
                 f"{bundle.version!r}'s gold_answers"
             )
@@ -405,7 +417,7 @@ async def run_one_pass(
     for question_id in sorted(question_ids):
         question = question_by_id.get(question_id)
         if question is None:
-            raise ValueError(
+            raise QuestionNotInBundleError(
                 f"run_one_pass: question id {question_id!r} is not present in bundle "
                 f"{bundle.version!r}'s own questions"
             )
@@ -581,8 +593,41 @@ def _eval_index_probe(arm: str | None) -> Callable[[], None]:
 def _default_bundle_version(bundle_root: Path) -> str:
     numbers = _bundle_version_numbers(bundle_root)
     if not numbers:
-        raise ValueError(f"no minted bundle found at {bundle_root}")
+        raise NoMintedBundleError(f"no minted bundle found at {bundle_root}")
     return f"bundle@v{max(numbers)}"
+
+
+def _refusals() -> tuple[type[BaseException], ...]:
+    """Every refusal ``main`` maps to exit 1 (D-03): the shared offline tuple plus this module's own
+    named classes. Never a bare ``ValueError`` or ``RuntimeError``; ``StaleNullError`` stays loud."""
+    return cli.offline_refusals(
+        SplitNotCalibratableError,
+        NoMintedBundleError,
+        MissingTargetFamilyCoverageError,
+        QuestionNotInBundleError,
+        EmptyGoldDocumentIdsError,
+        GoldPassageMappingError,
+        UnpairedScoresError,
+        EmptyPairedDifferencesError,
+        UnparseableJudgeVerdictError,
+        UnusableFloorError,
+        ConfoundedPassError,  # run_one_pass's own confounded (partial/degraded) pass refusal
+        EmptyEvalIndexError,  # the read-only probe, run by calibrate_family before the first pass
+        cli.ArmSelectorMismatchError,
+    )
+
+
+async def _calibrate_all(
+    *,
+    families: Sequence[str],
+    clients: dict[str, Any],
+    **common: Any,
+) -> dict[str, CalibrationResult]:
+    """Every family inside the one event loop ``main`` opens; keyword call as LRAG-15 expects."""
+    return {
+        family_name: await calibrate_family(family_name=family_name, llm_client=clients.get("llm"), **common)
+        for family_name in families
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -593,14 +638,14 @@ def main(argv: list[str] | None = None) -> int:
     builds real clients from ``v1/.env.parity``, constructs one ``Databasise`` against the same
     store ``corpus_ingest.py``'s own ``--spend`` path ingests the eval-corpus into, runs each
     requested family through :func:`calibrate_family`, and prints the resulting
-    :class:`AARunResult` as indented JSON. Exit codes: 0 on a completed run (estimate-only or
-    real), 1 on any named refusal, with the refusal's message on stderr.
+    :class:`AARunResult` as indented JSON. Exit codes (D-03): 0 on a completed run (estimate-only or
+    real), 1 on a named refusal (one stderr line ``ClassName: message``), 2 on bad arguments.
     """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bundle-version", default=None)
     parser.add_argument("--split", default="dev")
     parser.add_argument("--family", action="append", choices=list(_DEFAULT_FAMILIES), default=None)
-    parser.add_argument("--n-resamples", type=int, default=None)
+    parser.add_argument("--n-resamples", type=cli.positive_int, default=None)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--spend", action="store_true", default=False)
     # D-03/Q6: no --arm keeps the default selector; an arm maps exactly as corpus_ingest's does.
@@ -614,9 +659,8 @@ def main(argv: list[str] | None = None) -> int:
         bundle_version = args.bundle_version or _default_bundle_version(_COMMITTED_BUNDLE_ROOT)
         bundle = load_bundle(_COMMITTED_BUNDLE_ROOT, bundle_version)
         projection = estimate_calls(bundle, split_name=args.split, families=families)
-    except (SplitNotCalibratableError, ValueError) as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
+    except _refusals() as exc:
+        return cli.refuse(exc)
 
     print(json.dumps({**projection, "arm": args.arm}, indent=2))
 
@@ -624,53 +668,34 @@ def main(argv: list[str] | None = None) -> int:
         print("mode: estimate-only")
         return 0
 
-    if args.arm:
-        try:
-            cli.check_named_arm(selector, arm_id=_ARM_WIRING_NAMES[args.arm], registry=default_registry())
-        except cli.ArmSelectorMismatchError as exc:
-            return cli.refuse(exc)
-
     try:
+        if args.arm:  # D-10: before any client is built
+            cli.check_named_arm(selector, arm_id=_ARM_WIRING_NAMES[args.arm], registry=default_registry())
         env = _load_env_file(DEFAULT_V1_ENV_PARITY)
         clients = _build_clients(env)
-    except BUILDER_REFUSALS as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
-
-    engine = Databasise(
-        store_root=_EVAL_INGEST_STORE_ROOT,
-        workspace=_EVAL_INGEST_WORKSPACE,
-        clients=clients,
-    )
-    vector_store = MultiNamespaceVectorStore(
-        workspace=_EVAL_INGEST_WORKSPACE, store_root=_EVAL_INGEST_STORE_ROOT
-    )
-
-    results_by_family: dict[str, CalibrationResult] = {}
-    try:
-        for family_name in families:
-            results_by_family[family_name] = asyncio.run(
-                calibrate_family(
-                    engine=engine,
-                    bundle=bundle,
-                    split_name=args.split,
-                    family_name=family_name,
-                    llm_client=clients.get("llm"),
-                    vector_store=vector_store,
-                    n_resamples=args.n_resamples,
-                    seed=args.seed,
-                    selector=selector,
-                    index_probe=_eval_index_probe(args.arm),
-                )
+        engine = Databasise(
+            store_root=_EVAL_INGEST_STORE_ROOT,
+            workspace=_EVAL_INGEST_WORKSPACE,
+            clients=clients,
+        )
+        vector_store = MultiNamespaceVectorStore(
+            workspace=_EVAL_INGEST_WORKSPACE, store_root=_EVAL_INGEST_STORE_ROOT
+        )
+        results_by_family = asyncio.run(
+            _calibrate_all(
+                families=families,
+                clients=clients,
+                engine=engine,
+                bundle=bundle,
+                split_name=args.split,
+                vector_store=vector_store,
+                n_resamples=args.n_resamples,
+                seed=args.seed,
+                selector=selector,
+                index_probe=_eval_index_probe(args.arm),
             )
-    except (
-        SplitNotCalibratableError,
-        UnparseableJudgeVerdictError,
-        UnusableFloorError,
-        ConfoundedPassError,  # run_one_pass's own confounded (partial/degraded) pass refusal
-        EmptyEvalIndexError,  # the read-only probe, run by calibrate_family before the first pass
-        SeamRefusalError,  # any refusal the real engine.query() call itself raises
-    ) as exc:
+        )
+    except _refusals() as exc:
         return cli.refuse(exc)
 
     first_result = next(iter(results_by_family.values()))
@@ -698,6 +723,11 @@ __all__ = [
     "AARunResult",
     "PassResult",
     "EmptyEvalIndexError",
+    "EmptyGoldDocumentIdsError",
+    "GoldPassageMappingError",
+    "MissingTargetFamilyCoverageError",
+    "NoMintedBundleError",
+    "QuestionNotInBundleError",
     "SplitNotCalibratableError",
     "UnparseableJudgeVerdictError",
     "calibrate_family",

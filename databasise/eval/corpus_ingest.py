@@ -45,7 +45,6 @@ from pathlib import Path
 from typing import Any
 
 from databasise import cli
-from databasise.clients.builder import BUILDER_REFUSALS
 from databasise.parity.corpus import CorpusSnapshot, load_snapshot
 from databasise.parity.run_arm import (
     DEFAULT_V1_ENV_PARITY,
@@ -202,8 +201,8 @@ def main(argv: list[str] | None = None) -> int:
     module's own docstring names. Without ``--spend``: prints the projection and returns 0,
     constructing no client and touching no store. With ``--spend``: prints the identical
     projection first, then ingests, then prints one JSON summary of the resulting jobs. Exit codes:
-    0 on success (estimate-only or a completed ingest), 1 on any refusal — mirrors
-    ``build_hipporag_index.main``'s own convention.
+    0 on success (estimate-only or a completed ingest), 1 on a named refusal (one stderr line
+    ``ClassName: message``), 2 on bad arguments (D-03).
     """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--limit", type=int, required=True)
@@ -211,12 +210,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--spend", action="store_true", default=False)
     args = parser.parse_args(argv)
 
-    snapshot = load_snapshot(CORPUS_DIR)
+    refusals = cli.offline_refusals(
+        LimitExceedsCorpusError, ForeignEngineRefusalError, NoWritePathForModalityError, cli.ArmSelectorMismatchError
+    )
     try:
+        snapshot = load_snapshot(CORPUS_DIR)
         result = estimate(snapshot, limit=args.limit, arm=args.arm)
-    except LimitExceedsCorpusError as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
+    except refusals as exc:
+        return cli.refuse(exc)
 
     print(json.dumps(result.to_dict(), indent=2))
 
@@ -225,33 +226,20 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     try:
+        # D-10: the arm's selector must still resolve to its named wiring, before any client is built.
         cli.check_named_arm(
             _ARM_SELECTORS[args.arm], arm_id=_ARM_WIRING_NAMES[args.arm], registry=default_registry()
         )
-    except cli.ArmSelectorMismatchError as exc:
-        return cli.refuse(exc)
-
-    try:
         env = _load_env_file(DEFAULT_V1_ENV_PARITY)
         clients = _build_clients(env)
-    except BUILDER_REFUSALS as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
-
-    engine = Databasise(
-        store_root=_EVAL_INGEST_STORE_ROOT,
-        workspace=_EVAL_INGEST_WORKSPACE,
-        clients=clients,
-    )
-    try:
+        engine = Databasise(
+            store_root=_EVAL_INGEST_STORE_ROOT,
+            workspace=_EVAL_INGEST_WORKSPACE,
+            clients=clients,
+        )
         jobs = asyncio.run(ingest_documents(engine, snapshot, limit=args.limit, arm=args.arm))
-    except (
-        LimitExceedsCorpusError,
-        ForeignEngineRefusalError,
-        NoWritePathForModalityError,
-    ) as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
+    except refusals as exc:
+        return cli.refuse(exc)
 
     print(json.dumps([job.model_dump() for job in jobs], indent=2))
     return 0

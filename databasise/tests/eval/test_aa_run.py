@@ -497,3 +497,102 @@ def test_main_spend_path_catches_confounded_pass_error_and_exits_1(monkeypatch, 
     err = capsys.readouterr().err
     assert "q1" in err
     assert "a confounded pass cannot calibrate a null" in err
+
+
+# --------------------------------------------------------------------------------------------- #
+# 15-10 (D-03, D-04, D-24) — the shared CLI contract. Every --spend path below patches the module's
+# DEFAULT_V1_ENV_PARITY to a temp path and stubs the env loader, the clients and the engine.
+# --------------------------------------------------------------------------------------------- #
+
+
+def _stub_spend_path(monkeypatch, tmp_path):
+    seen = {"clients": 0, "calibrate": []}
+
+    async def _calibrate(**kwargs):
+        from databasise.eval.calibration import CalibrationResult, NullIdentity
+
+        seen["calibrate"].append(kwargs["family_name"])
+        identity = NullIdentity("bundle@v1", "T1", "m", "cache-bypassed", "sequential")
+        return CalibrationResult(identity=identity, floor=0.0, n_questions=3, n_resamples=10, seed=None)
+
+    def _build(env):
+        seen["clients"] += 1
+        return {"llm": None}
+
+    monkeypatch.setattr(aa_run, "DEFAULT_V1_ENV_PARITY", tmp_path / "absent.env.parity")
+    monkeypatch.setattr(aa_run, "_EVAL_INGEST_STORE_ROOT", tmp_path / "eval")
+    monkeypatch.setattr(aa_run, "_load_env_file", lambda path: {})
+    monkeypatch.setattr(aa_run, "_build_clients", _build)
+    monkeypatch.setattr(aa_run, "Databasise", lambda **kwargs: object())
+    monkeypatch.setattr(aa_run, "MultiNamespaceVectorStore", lambda **kwargs: object())
+    monkeypatch.setattr(aa_run, "calibrate_family", _calibrate)
+    return seen
+
+
+def test_n_resamples_zero_exits_two_before_any_client(monkeypatch, tmp_path):
+    seen = _stub_spend_path(monkeypatch, tmp_path)
+    try:
+        outcome = aa_run.main(["--split", "dev", "--n-resamples", "0", "--spend"])
+    except BaseException as caught:  # noqa: BLE001 - argparse raises SystemExit
+        outcome = caught
+    assert isinstance(outcome, SystemExit) and outcome.code == 2, outcome
+    assert seen["clients"] == 0
+
+
+def test_two_families_run_inside_one_event_loop(monkeypatch, tmp_path):
+    import asyncio
+
+    seen = _stub_spend_path(monkeypatch, tmp_path)
+    runs: list[object] = []
+    real_run = asyncio.run
+
+    def _spy(coro, *args, **kwargs):
+        runs.append(coro)
+        return real_run(coro, *args, **kwargs)
+
+    monkeypatch.setattr(aa_run.asyncio, "run", _spy)
+    outcome = aa_run.main(["--split", "dev", "--spend"])
+    assert outcome == 0
+    assert seen["calibrate"] == [GOLD_PASSAGE_FAMILY, ANSWER_LEVEL_FAMILY]
+    assert len(runs) == 1, f"asyncio.run was called {len(runs)} times"
+
+
+def test_a_bare_value_error_is_not_mapped_to_exit_1(monkeypatch, capsys):
+    def _boom(root, version):
+        raise ValueError("x")
+
+    monkeypatch.setattr(aa_run, "load_bundle", _boom)
+    try:
+        outcome = aa_run.main(["--split", "dev"])
+    except BaseException as caught:  # noqa: BLE001
+        outcome = caught
+    assert isinstance(outcome, ValueError) and str(outcome) == "x", outcome
+
+    named = getattr(aa_run, "NoMintedBundleError", None)
+    assert named is not None, "aa_run has no NoMintedBundleError"
+
+    def _no_bundle(root):
+        raise named("no minted bundle found at /nowhere")
+
+    monkeypatch.setattr(aa_run, "_default_bundle_version", _no_bundle)
+    capsys.readouterr()
+    assert aa_run.main(["--split", "dev"]) == 1
+    err_lines = [line for line in capsys.readouterr().err.splitlines() if line.strip()]
+    assert len(err_lines) == 1 and err_lines[0].startswith("NoMintedBundleError:"), err_lines
+
+
+def test_both_eval_mains_print_the_shared_estimate_only_line(monkeypatch, capsys):
+    from databasise.eval import corpus_ingest
+
+    def _fail(*args, **kwargs):
+        raise AssertionError("no env read, client or engine on the estimate-only path")
+
+    for module in (aa_run, corpus_ingest):
+        monkeypatch.setattr(module, "_load_env_file", _fail)
+        monkeypatch.setattr(module, "_build_clients", _fail)
+        monkeypatch.setattr(module, "Databasise", _fail)
+
+    assert aa_run.main(["--split", "dev"]) == 0
+    assert "mode: estimate-only" in capsys.readouterr().out.splitlines()
+    assert corpus_ingest.main(["--limit", "1"]) == 0
+    assert "mode: estimate-only" in capsys.readouterr().out.splitlines()

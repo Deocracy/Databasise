@@ -135,18 +135,58 @@ def test_reminting_twice_with_the_same_identity_reuses_the_version(bundle_root, 
 # --------------------------------------------------------------------------------------------- #
 
 
-def test_main_with_no_live_credentials_exits_1_and_never_mints(monkeypatch, capsys, bundle_root):
+def test_main_with_no_live_credentials_exits_1_and_never_mints(monkeypatch, capsys, bundle_root, tmp_path):
     def _raise_missing(path):
         raise MissingParityEnvError(path)
 
     minted_calls: list[object] = []
+    monkeypatch.setattr(remint, "DEFAULT_V1_ENV_PARITY", tmp_path / "absent.env.parity")
     monkeypatch.setattr(remint, "_load_env_file", _raise_missing)
     monkeypatch.setattr(remint, "remint", lambda *a, **k: minted_calls.append((a, k)))
 
-    exit_code = remint.main([])
+    exit_code = remint.main(["--spend"])
 
     assert exit_code == 1
     assert minted_calls == []  # never proceeded to a mint with a placeholder identity
 
     err = capsys.readouterr().err
-    assert ".env.parity" in err
+    assert "absent.env.parity" in err  # the patched path, never the real v1/.env.parity
+
+
+# --------------------------------------------------------------------------------------------- #
+# 15-10 (D-03, D-04) — estimate-only by default; the package-directory constant keeps its value.
+# --------------------------------------------------------------------------------------------- #
+
+
+def test_remint_without_spend_is_estimate_only(monkeypatch, capsys, tmp_path):
+    calls: list[str] = []
+
+    async def _resolve(client):
+        calls.append("resolve")
+        return "vendor/model-x"
+
+    monkeypatch.setattr(remint, "DEFAULT_V1_ENV_PARITY", tmp_path / "absent.env.parity")
+    monkeypatch.setattr(remint, "_load_env_file", lambda path: calls.append("env") or {})
+    monkeypatch.setattr(remint, "_build_clients", lambda env: calls.append("clients") or {"llm": None})
+    monkeypatch.setattr(remint, "resolve_judge_identity", _resolve)
+    monkeypatch.setattr(remint, "remint", lambda *a, **k: calls.append("mint"))  # never touch the real bundles
+
+    try:
+        code = remint.main([])
+    except BaseException as caught:  # noqa: BLE001
+        code = f"raised {type(caught).__name__}"
+
+    out = capsys.readouterr().out
+    assert calls == [], calls
+    assert code == 0, code
+    assert "1 chat call" in out
+    assert "mode: estimate-only" in out.splitlines()
+
+
+def test_the_bundle_root_still_resolves_to_the_package_bundles():
+    from pathlib import Path
+
+    package_dir = Path(remint.__file__).resolve().parent.parent
+    assert getattr(remint, "_PACKAGE_DIR", None) == package_dir
+    assert remint._COMMITTED_BUNDLE_ROOT == package_dir / "evidence" / "eval-bundles"
+    assert remint._COMMITTED_BUNDLE_ROOT.as_posix().endswith("databasise/evidence/eval-bundles")

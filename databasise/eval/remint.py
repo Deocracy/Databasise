@@ -3,7 +3,12 @@
 
 **Exact invocation:**
 
-    uv run python -m databasise.eval.remint
+    uv run python -m databasise.eval.remint [--spend]
+
+Without ``--spend`` it only reads its inputs and prints what it would do (exit 0). Exit codes: 0 done
+or estimate-only; 1 named refusal (one stderr line ``ClassName: message``); 2 bad arguments.
+``--spend`` mints into ``databasise/evidence/eval-bundles`` next to this package; from an installed
+wheel that is inside site-packages, so minting needs a source checkout.
 
 **`EVAL-BUNDLE-V1.md`'s own next-minted-version rule, quoted verbatim** (its own Limits section):
 "When a real judge call is first made ..., the resolved identity becomes part of the bundle's own
@@ -31,7 +36,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from databasise.clients.builder import BUILDER_REFUSALS
+from databasise import cli
 from databasise.eval.bundle import EvalBundle, mint_bundle
 from databasise.eval.corpus_ingest import CORPUS_DIR
 from databasise.parity.corpus import CorpusSnapshot, load_snapshot
@@ -46,8 +51,8 @@ from databasise.seam.engine import _CONCURRENCY_SETTING, _DETERMINISM_SETTING
 # still returns a well-formed response with a resolved_model_identity to read.
 _MINIMAL_JUDGE_PROBE_MESSAGES: list[dict[str, str]] = [{"role": "user", "content": "ping"}]
 
-_REPO_EVAL_DIR = Path(__file__).resolve().parent.parent
-_COMMITTED_BUNDLE_ROOT = _REPO_EVAL_DIR / "evidence" / "eval-bundles"
+_PACKAGE_DIR = Path(__file__).resolve().parent.parent
+_COMMITTED_BUNDLE_ROOT = _PACKAGE_DIR / "evidence" / "eval-bundles"
 _JUDGE_PROMPT_PATH = _COMMITTED_BUNDLE_ROOT / "judge-prompt-v1.txt"
 
 
@@ -106,33 +111,51 @@ def remint(
 
 
 def main(argv: list[str] | None = None) -> int:
-    """``uv run python -m databasise.eval.remint`` — the exact invocation this module's own
-    docstring names. Builds real clients from ``v1/.env.parity``, resolves the judge identity from
+    """``uv run python -m databasise.eval.remint [--spend]`` — the exact invocation this module's
+    own docstring names. Without ``--spend`` it reads the corpus snapshot, the judge prompt and the
+    bundle root, prints that it would make 1 chat call, and returns 0 having built no client. With
+    ``--spend`` it builds real clients from ``v1/.env.parity``, resolves the judge identity from
     one real chat call, reads the judge prompt's real SHA-256 (recomputed, never restated as a
     literal), reads the determinism/concurrency setting live off
     ``databasise.seam.engine``'s own module constants, mints, and prints the resulting version id
-    and its ``judge_instance``. Exit codes: 0 on a successful mint, 1 on any refusal — mirrors
-    ``databasise.parity.build_hipporag_index.main``'s own convention.
+    and its ``judge_instance``. Exit codes (D-03): 0 on a mint or an estimate, 1 on a named refusal
+    (one stderr line ``ClassName: message``), 2 on bad arguments.
     """
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--spend", action="store_true", default=False)  # inert until a later plan flips the default
-    parser.parse_args(argv)
+    parser.add_argument("--spend", action="store_true", default=False)
+    args = parser.parse_args(argv)
+
+    refusals = cli.offline_refusals(UnresolvedJudgeIdentityError)
+    try:
+        snapshot = load_snapshot(CORPUS_DIR)
+        judge_prompt_hash = hashlib.sha256(_JUDGE_PROMPT_PATH.read_bytes()).hexdigest()
+        if not _COMMITTED_BUNDLE_ROOT.is_dir():
+            raise FileNotFoundError(f"the committed bundle root {_COMMITTED_BUNDLE_ROOT} does not exist")
+    except refusals as exc:
+        return cli.refuse(exc)
+
+    print(
+        json.dumps(
+            {
+                "chat_calls": 1,
+                "documents": len(snapshot.documents),
+                "judge_prompt_sha256": judge_prompt_hash,
+                "bundle_root": str(_COMMITTED_BUNDLE_ROOT),
+                "note": "--spend makes 1 chat call to resolve the judge identity, then mints the next bundle",
+            },
+            indent=2,
+        )
+    )
+    if not args.spend:
+        print("mode: estimate-only")
+        return 0
 
     try:
         env = _load_env_file(DEFAULT_V1_ENV_PARITY)
         clients = _build_clients(env)
-    except BUILDER_REFUSALS as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
-
-    try:
         judge_instance = asyncio.run(resolve_judge_identity(clients["llm"]))
-    except UnresolvedJudgeIdentityError as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
-
-    snapshot = load_snapshot(CORPUS_DIR)
-    judge_prompt_hash = hashlib.sha256(_JUDGE_PROMPT_PATH.read_bytes()).hexdigest()
+    except refusals as exc:
+        return cli.refuse(exc)
 
     bundle = remint(
         snapshot,

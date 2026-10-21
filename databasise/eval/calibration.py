@@ -80,6 +80,18 @@ ESCALATED_SURVIVOR_TIER = "escalated_survivor"
 _BATCH_WIDTH_TIERS = (BULK_SCREENING_TIER, ESCALATED_SURVIVOR_TIER)
 
 
+class UnpairedScoresError(ValueError):
+    """The two runs handed to :func:`paired_differences` do not cover the same question set."""
+
+
+class EmptyPairedDifferencesError(ValueError):
+    """:func:`calibrate_aa_floor` was handed no paired differences to resample."""
+
+
+class UnknownBatchWidthTierError(ValueError):
+    """:func:`correct_for_batch_width` was handed a tier that is not one of the two named tiers."""
+
+
 class UnusableFloorError(RuntimeError):
     """§AA.2's cache-bypass precondition failed: a node in one of the two A/A runs reports a cache
     hit, or its cache-bypass status cannot be established at all. A refusal to calibrate, not a
@@ -185,7 +197,7 @@ def paired_differences(
     if ids_a != ids_b:
         only_a = sorted(ids_a - ids_b)
         only_b = sorted(ids_b - ids_a)
-        raise ValueError(
+        raise UnpairedScoresError(
             f"paired_differences({metric!r}): run_a and run_b do not cover the same question "
             f"set — only in run_a: {only_a}, only in run_b: {only_b}. A paired statistic over "
             "unequal sets is not paired."
@@ -258,7 +270,7 @@ def calibrate_aa_floor(
 
     diffs = np.asarray(paired_diffs, dtype=float)
     if diffs.size == 0:
-        raise ValueError("calibrate_aa_floor: paired_diffs must be non-empty")
+        raise EmptyPairedDifferencesError("calibrate_aa_floor: paired_diffs must be non-empty")
 
     result = _scipy_stats.bootstrap(
         (diffs,),
@@ -316,7 +328,7 @@ def correct_for_batch_width(
         return [float(v) for v in adjusted]
     if tier == ESCALATED_SURVIVOR_TIER:
         return _holm_step_down(list(p_values))
-    raise ValueError(
+    raise UnknownBatchWidthTierError(
         f"correct_for_batch_width: unknown tier {tier!r} — must be one of {_BATCH_WIDTH_TIERS}"
     )
 
@@ -325,8 +337,11 @@ __all__ = [
     "BULK_SCREENING_TIER",
     "ESCALATED_SURVIVOR_TIER",
     "CalibrationResult",
+    "EmptyPairedDifferencesError",
     "NullIdentity",
     "StaleNullError",
+    "UnknownBatchWidthTierError",
+    "UnpairedScoresError",
     "UnusableFloorError",
     "calibrate_aa_floor",
     "correct_for_batch_width",
