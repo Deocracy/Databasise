@@ -405,7 +405,7 @@ Plans:
 - TOOL-18: codebase-memory-mcp stays registered or is removed (from LEDG-12); whether it keeps declaring mutates_store
 - TOOL-19: MCP tools keep the single 'args' input and generic output schema, or publish per-tool schemas (affects every MCP client)
 
-**Plans**: 13/19 plans executed
+**Plans**: 14/19 plans executed
 
 Plans:
 - [x] 15-01-PLAN.md — Wheel carries tools, bundles and fixtures; one version source; bounded mcp; import-boundary scan fixes (TOOL-01; wave 1)
@@ -420,7 +420,7 @@ Plans:
 - [x] 15-10-PLAN.md — Eval CLIs: empty-index refusal before spend, LightRAG gold mapping, eval-store boundary, D-03 contract, remint estimate-only (TOOL-11; wave 2)
 - [x] 15-11-PLAN.md — run_comparison: inconclusive for partial/degraded/cycle, exit 3, preflight dir, variance guard, run_count, estimate-only (TOOL-06; wave 2)
 - [x] 15-12-PLAN.md — v1 arm: one aquery_llm call, failure mapping, None keywords, env refusal before launch (TOOL-07; wave 2)
-- [ ] 15-13-PLAN.md — storage_audit and run_arm: --arm hipporag, partial/cycle exit 3, unreached, estimate-only (TOOL-08; wave 2)
+- [x] 15-13-PLAN.md — storage_audit and run_arm: --arm hipporag, partial/cycle exit 3, unreached, estimate-only (TOOL-08; wave 2)
 - [ ] 15-14-PLAN.md — run_cross_modality: named-arm check, read-only preflight, partial records, queries hash, estimate-only (TOOL-09; wave 2)
 - [ ] 15-15-PLAN.md — build_hipporag_index: estimate-only, empty-root build, chunk-count refusal (contributes to TOOL-05; wave 2)
 - [ ] 15-16-PLAN.md — Calibration refusals, two-sided floor, judge parser, floors.db and the two-stage promotion gate (TOOL-12; wave 3)
@@ -516,7 +516,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 12. HippoRAG Fixes | 14/14 | Complete    | 2026-10-19 |
 | 13. Selectors, Wiring & Runner | 13/13 | Complete    | 2026-10-20 |
 | 14. Promotion & Ledger | 11/11 | Complete    | 2026-10-21 |
-| 15. Offline Tooling & Packaging | 13/19 | In Progress | - |
+| 15. Offline Tooling & Packaging | 14/19 | In Progress | - |
 | 16. GUI Connectors | 0/TBD | Not started | - |
 | 17. GUI Mockup | 0/TBD | Not started | - |
 | 18. GUI Live | 0/TBD | Not started | - |
