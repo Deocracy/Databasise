@@ -208,6 +208,7 @@ from databasise.foreign.v1_corpus_adapter import (
 from databasise.identity.canon import canonicalise
 from databasise.identity.env import EnvironmentDigestError, environment_hash
 from databasise.ledger.ledger import Ledger, LedgerRecord
+from databasise.parts.admission import admit_registry
 from databasise.parts.registry import PartRegistry, default_registry
 from databasise.parts.schema import Depth
 from databasise.parts_core import EFFECT_TO_STORE
@@ -1153,6 +1154,9 @@ class Databasise:
     ) -> None:
         self.store_root = Path(store_root)
         self.workspace = workspace
+        if registry is not None:
+            # D-17: a None registry already went through default_registry(), which admits.
+            admit_registry(registry)
         self.registry = registry if registry is not None else default_registry()
         self.clients = clients
         # 04-04 Task 1: one TraceStore per engine, opened once against store_root — a second

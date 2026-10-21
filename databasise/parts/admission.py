@@ -157,23 +157,27 @@ def validate_admission(part: "Part", record: AdmissionRecord) -> None:
         raise ForbiddenSharedScopeError(part.name_at_version, part.artifact_scope)
 
 
-def cross_check_conditions(part: "Part", record: AdmissionRecord, *, registry: Any, resolved_wiring: dict) -> None:
+def cross_check_conditions(
+    part: "Part", record: AdmissionRecord, *, registry: Any, resolved_wiring: dict | None
+) -> None:
     """The three §8 conditions the record alone cannot prove — each needs the registry and/or a
     resolved wiring to check against. Lazy-imports ``databasise.seam`` symbols so this module (in
     the one-way ``parts`` -> ``seam`` direction the rest of the package already keeps) does not
     take a module-scope dependency on the seam package.
 
     - Condition 7: the wiring whose ``provides`` node resolves to this opaque part must be
-      excluded from the *default* selector candidate set.
+      excluded from the *default* selector candidate set. ``resolved_wiring=None`` means no wiring
+      provides this part, so the condition has nothing to check and is skipped.
     - Condition 10: nothing this opaque part registers can be enumerated as an SA-1-shareable
-      artifact — i.e. its own ``artifact_scope`` is never the shared value.
+      artifact — i.e. its own ``artifact_scope`` is never the shared value. An unset scope on a
+      part declaring ``writes_artifact`` counts as shared, as ``validator/blast_radius.py`` reads it.
     - Condition 11: the seam's ``QueryObject`` has no ``as_of`` member, and no registered part's
       declared effects include a temporal capability.
     """
     from databasise.seam.query import QueryObject
     from databasise.seam.selectors import _is_default_eligible
 
-    if _is_default_eligible(resolved_wiring, registry):
+    if resolved_wiring is not None and _is_default_eligible(resolved_wiring, registry):
         raise AdmissionConditionMissingError(
             part.name_at_version,
             "condition 7: the wiring whose provides node resolves to this opaque part is "
@@ -181,7 +185,8 @@ def cross_check_conditions(part: "Part", record: AdmissionRecord, *, registry: A
             "selector candidate set",
         )
 
-    if part.artifact_scope == "shared":
+    scope = part.artifact_scope or ("shared" if "writes_artifact" in part.effects else None)
+    if scope == "shared":
         raise AdmissionConditionMissingError(
             part.name_at_version,
             "condition 10: this opaque part declares artifact_scope='shared', which would make "
@@ -203,6 +208,39 @@ def cross_check_conditions(part: "Part", record: AdmissionRecord, *, registry: A
             )
 
 
+def admit_registry(registry: Any) -> None:
+    """Run §8 conditions 7, 10 and 11 for every registered opaque part that carries an admission
+    record (TOOL-16, D-17). This cannot run inside ``PartRegistry.register``: condition 11 reads
+    every registered part's effects and condition 7 resolves wirings against the full registry,
+    so both need all parts loaded. ``default_registry()`` calls it before it returns and
+    ``Databasise.__init__`` calls it for an injected registry. Condition 7 runs once per wiring
+    (every arm, every base, every family's corpus-ingest and corpus-delete wiring) that provides a
+    node whose component is the part; a part no wiring provides is checked on 10 and 11 only.
+    Raises :class:`AdmissionConditionMissingError`.
+    """
+    # Lazy: the wirings package is not a module-scope dependency of the parts package.
+    from databasise.wirings.resolve import WIRING_NAMES, all_wirings, load_wiring
+
+    wirings = [wiring for _, wiring in all_wirings()]
+    wirings += [
+        load_wiring(family, variant=variant)
+        for family in WIRING_NAMES
+        for variant in ("corpus-ingest", "corpus-delete")
+    ]
+    for name_at_version in registry.keys():
+        part = registry.get(name_at_version)
+        if part.kind != "opaque" or part.admission is None:
+            continue
+        providers = [
+            wiring
+            for wiring in wirings
+            for node_id in (wiring.get("provides") or [])
+            if wiring.get("nodes", {}).get(node_id, {}).get("component") == part.name_at_version
+        ]
+        for wiring in providers or [None]:
+            cross_check_conditions(part, part.admission, registry=registry, resolved_wiring=wiring)
+
+
 __all__ = [
     "MANIFEST_SOURCE_CODE_INSPECTED",
     "ADMISSION_CONDITION_IDS",
@@ -214,4 +252,5 @@ __all__ = [
     "ForbiddenSharedScopeError",
     "validate_admission",
     "cross_check_conditions",
+    "admit_registry",
 ]

@@ -217,3 +217,60 @@ def test_no_registered_part_declares_a_temporal_capability():
     registry = default_registry()
     for name_at_version in registry.keys():
         assert "as_of" not in registry.get(name_at_version).effects
+
+
+def _admit_registry_outcome(registry):
+    """TOOL-16 (D-22): ``admit_registry`` is resolved by name so this file collects on a module that
+    predates it; the outcome is captured so the assertions are plain AssertionErrors."""
+    import importlib
+
+    admit = getattr(importlib.import_module("databasise.parts.admission"), "admit_registry", None)
+    if not callable(admit):
+        return None, None
+    try:
+        admit(registry)
+    except Exception as caught:  # noqa: BLE001 - the type name is the assertion
+        return admit, caught
+    return admit, None
+
+
+def _engine_outcome(tmp_path, registry):
+    from databasise.seam.engine import Databasise
+
+    try:
+        Databasise(store_root=tmp_path, workspace="w", registry=registry)
+    except Exception as caught:  # noqa: BLE001
+        return caught
+    return None
+
+
+def test_tool16_1_an_as_of_effect_added_after_registration_is_refused_at_load(tmp_path):
+    registry = PartRegistry(seed_tracer_parts=False)
+    registry.register(_opaque_part(admission=_valid_admission_record()))
+    other = _opaque_part(
+        name_at_version="test/other@1.0.0",
+        kind="stage",
+        structural_depth="stage",
+        admission=None,
+    )
+    registry.register(other)
+    other.effects.append("as_of")  # register() refuses it first, so inject it afterwards
+
+    admit, admit_error = _admit_registry_outcome(registry)
+    assert callable(admit), "databasise.parts.admission.admit_registry does not exist"
+    assert type(admit_error).__name__ == "AdmissionConditionMissingError"
+    assert type(_engine_outcome(tmp_path, registry)).__name__ == "AdmissionConditionMissingError"
+
+
+def test_tool16_5_default_registry_still_builds(tmp_path):
+    registry = default_registry()
+    assert registry.keys()
+    assert _engine_outcome(tmp_path, None) is None
+
+
+def test_admit_registry_skips_condition_7_for_a_part_no_wiring_provides():
+    registry = PartRegistry(seed_tracer_parts=False)
+    registry.register(default_registry().get("lightrag/v1-index-sync@0.1.0"))
+    admit, admit_error = _admit_registry_outcome(registry)
+    assert callable(admit), "databasise.parts.admission.admit_registry does not exist"
+    assert admit_error is None

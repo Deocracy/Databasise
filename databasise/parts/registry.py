@@ -208,7 +208,8 @@ async def dispatch(part: Part, ctx: NodeContext) -> Any:
 def default_registry() -> PartRegistry:
     """A registry preloaded with the ``parts_core`` reference parts, the parts of
     ``parts_core/declared_only.py``, the ported LightRAG parts and the ported HippoRAG parts
-    (index-side and query-side) — no tracer-only parts. ``keys()`` on the result lists the
+    (index-side and query-side) — no tracer-only parts. Every opaque part is checked at load by
+    ``admit_registry`` before the registry is returned. ``keys()`` on the result lists the
     contents; no count is stated here.
     """
     # Local import: parts_core imports Part/Effect from parts.schema (not this module), so
@@ -222,4 +223,9 @@ def default_registry() -> PartRegistry:
     registry = PartRegistry(seed_tracer_parts=False)
     for part in (*PARTS, *DECLARED_ONLY_PARTS, *LIGHTRAG_PARTS, *HIPPORAG_PARTS, *HIPPORAG_CORPUS_PARTS):
         registry.register(part)
+    # Local import, same reason as above; admission needs the full registry and the wirings, so it
+    # runs after registration rather than inside ``register``.
+    from databasise.parts.admission import admit_registry
+
+    admit_registry(registry)
     return registry
