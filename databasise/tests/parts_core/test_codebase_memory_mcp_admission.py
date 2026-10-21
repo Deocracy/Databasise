@@ -79,8 +79,8 @@ def test_call_tool_against_the_live_engine_returns_the_tools_result():
 @_skip_without_binary
 def test_a_timeout_raises_a_named_refusal_carrying_the_tool_name_and_ceiling():
     with pytest.raises(adapter.CbmToolTimeoutError) as exc_info:
-        adapter.call_tool("index_repository", {"repo_path": str(Path(__file__).resolve().parents[2])}, timeout=0.01)
-    assert exc_info.value.tool_name == "index_repository"
+        adapter.call_tool("search_graph", {"project": "x", "query": "y"}, timeout=0.01)
+    assert exc_info.value.tool_name == "search_graph"
     assert exc_info.value.timeout == 0.01
 
 
@@ -106,9 +106,7 @@ def test_the_adapter_terminates_the_child_process_on_both_the_success_and_the_fa
         return int(result.stdout.strip() or "0")
 
     with pytest.raises(adapter.CbmToolTimeoutError):
-        adapter.call_tool(
-            "index_repository", {"repo_path": str(Path(__file__).resolve().parents[2])}, timeout=0.01
-        )
+        adapter.call_tool("search_graph", {"project": "x", "query": "y"}, timeout=0.01)
     assert _own_child_count() == 0
 
     adapter.call_tool("list_projects", {}, timeout=60.0)
@@ -153,7 +151,7 @@ def test_normalise_to_item_kind_maps_every_fixture_tool_to_a_seven_member_kind(t
     }
     for raw_item in _RAW_FIXTURES[tool_name]:
         record = adapter.normalise_to_item_kind(raw_item, tool_name)
-        assert record["kind"] in seven_members
+        assert adapter.item_kind_name(record) in seven_members
         assert record["tool_name"] == tool_name
 
 

@@ -9,6 +9,7 @@ whole-file grep.
 
 from __future__ import annotations
 
+import asyncio
 import re
 from pathlib import Path
 
@@ -151,7 +152,12 @@ def test_the_native_leg_is_reproducible_live_get_code_snippet_still_derives_a_co
     project_root = Path(__file__).resolve().parents[3]
     repo_arg = str(project_root / "databasise")
 
-    adapter.call_tool("index_repository", {"repo_path": repo_arg}, timeout=120.0)
+    # index_repository is outside the adapter's read-only allowlist (15-04, TOOL-18), so this
+    # live setup step drives the session helper directly instead of call_tool.
+    async def _index(session):
+        return await session.call_tool("index_repository", {"repo_path": repo_arg})
+
+    asyncio.run(adapter._run_with_session(None, "index_repository", 120.0, _index))
 
     tools = adapter.list_tools(timeout=60.0)
     assert {tool["name"] for tool in tools} >= {"search_graph", "get_code_snippet", "search_code"}
@@ -173,7 +179,7 @@ def test_the_native_leg_is_reproducible_live_get_code_snippet_still_derives_a_co
     )
     assert snippet_items
     record = adapter.normalise_to_item_kind(snippet_items[0], "get_code_snippet")
-    assert record["kind"] == adapter.ITEM_KIND_CODE_SNIPPET
+    assert adapter.item_kind_name(record) == adapter.ITEM_KIND_CODE_SNIPPET
     assert record["tier"] == "below_T1"
     assert record["ref"] is not None
     assert record["ref"]["chunk_ref"]["content_hash"], "content_hash must be derived from source"

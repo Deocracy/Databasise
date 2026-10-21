@@ -94,6 +94,11 @@ _DERIVED_FINDING_TOOLS = frozenset(
     }
 )
 
+# The one read-only allowlist: every tool this adapter maps to a §4 ItemKind. `call_tool` refuses
+# anything else (delete_project, index_repository, manage_adr, ingest_traces) before it resolves the
+# binary or launches a process (TOOL-18, D-19).
+_ALLOWED_TOOLS = _CODE_SNIPPET_TOOLS | _GRAPH_PATH_TOOLS | _DERIVED_FINDING_TOOLS
+
 _BLOCK_HEADER_RE = re.compile(r"^(?P<block>[a-zA-Z_]+):\s*(?P<count>\d+)\s+\(cols:\s*(?P<cols>[^)]+)\)\s*$")
 
 
@@ -147,6 +152,18 @@ class CbmToolCallError(RuntimeError):
         self.tool_name = tool_name
         self.message = message
         super().__init__(f"codebase-memory-mcp tool {tool_name!r} returned an error: {message}")
+
+
+class CbmToolNotAllowedError(RuntimeError):
+    """``tool_name`` is outside the adapter's read-only allowlist (:data:`_ALLOWED_TOOLS`): a
+    mutating or index-building tool. Raised before any binary is resolved or process launched."""
+
+    def __init__(self, tool_name: str):
+        self.tool_name = tool_name
+        super().__init__(
+            f"codebase-memory-mcp tool {tool_name!r} is not on the read-only allowlist "
+            f"{sorted(_ALLOWED_TOOLS)}"
+        )
 
 
 class UntypedForeignItemError(RuntimeError):
@@ -240,10 +257,13 @@ async def _run_with_session(binary: str | None, tool_name: str, timeout: float, 
 
     params = StdioServerParameters(command=resolved, args=[])
     try:
-        async with stdio_client(params) as (read, write):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                with anyio.fail_after(timeout):
+        # One scope covers launch, the handshake and the call: a server that never answers
+        # `initialize` is bounded too. The SDK waits about 2 s for the child on teardown, so the
+        # total can exceed `timeout` by that much (TOOL-18, D-19).
+        with anyio.fail_after(timeout):
+            async with stdio_client(params) as (read, write):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
                     return await call(session)
     except ForeignEngineUnavailableError:
         raise
@@ -284,7 +304,10 @@ def call_tool(
     ``"cols:"`` table blocks (:func:`_parse_tool_text`) into row items; falls back to a single
     ``{"_raw_text": ...}`` item when neither shape is present. ``timeout`` is required, not
     optional — every call site declares §8 condition 4's wall-clock ceiling explicitly, restated
-    for the MCP hosting shape per §17."""
+    for the MCP hosting shape per §17. Refuses any tool outside :data:`_ALLOWED_TOOLS` with
+    :class:`CbmToolNotAllowedError` before anything is resolved or launched."""
+    if name not in _ALLOWED_TOOLS:
+        raise CbmToolNotAllowedError(name)
 
     async def _call(session: ClientSession) -> list[dict[str, Any]]:
         result = await session.call_tool(name, arguments or {})
@@ -304,6 +327,10 @@ def normalise_to_item_kind(raw_item: dict[str, Any], tool_name: str) -> dict[str
     """Map one raw item returned by ``tool_name`` to a §4 ``ItemKind`` member. Raises
     :class:`UntypedForeignItemError` for a tool this adapter has no evidence-kind mapping for
     (a mutator or the index-build tool — never a pass-through with a bare label).
+
+    The record's ``kind`` is the tagged object ``{<ItemKind member>: <payload>}`` (CONTRACT §2's
+    tagged-sum vocabulary, §4 line 270: ``kind`` MUST NOT be a bare scalar); read the member with
+    :func:`item_kind_name`. ``derived_from`` is a list of refs.
 
     Every returned record's evidence tier is capped ``"below_T1"``: this engine supplies neither
     ``recipe_at_version`` nor ``ordinal`` for any tool (it declares no recipe/chunk-ordinal concept
@@ -343,13 +370,16 @@ def normalise_to_item_kind(raw_item: dict[str, Any], tool_name: str) -> dict[str
             line_range = str(raw_item["lines"])
         ref = {"file_path": file_path, "line_range": line_range, "chunk_ref": chunk_ref}
 
-    derived_from: tuple[str, ...] = ()
+    derived_from: list[str] = []
     if kind == ITEM_KIND_DERIVED_FINDING:
-        derived_from = (f"cbm-project:{project or tool_name}",)
+        derived_from = [f"cbm-project:{project or tool_name}"]
+    # CONTRACT §2: a tagged sum is a single-key object whose key selects the member; §4: a
+    # derived_finding carries derived_from: [Ref] inside its payload.
+    tagged_kind = {kind: {"derived_from": derived_from} if kind == ITEM_KIND_DERIVED_FINDING else {}}
 
     missing_fields = tuple(field for field in CHUNK_REF_FIELDS if not chunk_ref.get(field))
     return {
-        "kind": kind,
+        "kind": tagged_kind,
         "tool_name": tool_name,
         "ref": ref,
         "tier": "below_T1",
@@ -362,6 +392,13 @@ def normalise_to_item_kind(raw_item: dict[str, Any], tool_name: str) -> dict[str
     }
 
 
+def item_kind_name(record: dict[str, Any]) -> str:
+    """The §4 ``ItemKind`` member a :func:`normalise_to_item_kind` record carries: the one key of
+    its tagged ``kind`` object."""
+    (name,) = record["kind"]
+    return name
+
+
 __all__ = [
     "ITEM_KIND_CODE_SNIPPET",
     "ITEM_KIND_GRAPH_PATH",
@@ -372,7 +409,9 @@ __all__ = [
     "CbmToolTimeoutError",
     "CbmTransportError",
     "CbmToolCallError",
+    "CbmToolNotAllowedError",
     "UntypedForeignItemError",
+    "item_kind_name",
     "list_tools",
     "call_tool",
     "normalise_to_item_kind",
