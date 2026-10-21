@@ -253,6 +253,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--arm", required=True, choices=["naive", "bypass", "hybrid", "local", "global"])
     parser.add_argument("--query", required=True)
+    parser.add_argument("--spend", action="store_true", default=False)  # inert until 15-13 flips the default
     args = parser.parse_args(argv)
 
     try:

@@ -17,7 +17,7 @@ _ENV = (
 )
 
 _CASES = [
-    ("databasise.parity.run_arm", ["--arm", "naive", "--query", "q"], {}),
+    ("databasise.parity.run_arm", ["--arm", "naive", "--query", "q", "--spend"], {}),
     ("databasise.parity.storage_audit", ["--arm", "naive"], {}),
     (
         "databasise.parity.run_cross_modality",
