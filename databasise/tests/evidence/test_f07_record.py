@@ -183,8 +183,22 @@ def test_interrupted_and_concurrent_guarantee_stated():
     assert "guaranteed" in limits.lower()
 
 
-def test_verdict_names_the_enforcing_refusal_and_the_unqualified_component():
+def test_verdict_names_the_components_computed_from_the_rows_and_claims_no_enforced_path():
     text = _text()
     verdict = _section(text, r"^## Verdict")
+    # The registered mutates_store components are computed from the registry, not hand-named.
+    live = _live_mutates_store_names(default_registry())
+    assert live, "default_registry() registers no mutates_store part"
+    for name in live:
+        assert f"`{name}`" in verdict, f"{name!r} missing from the verdict"
+    # The refusal is described as defined, and the record no longer claims a reachable path.
     assert "MutableStoreComparisonExcludedError" in verdict
-    assert "lightrag/full-delete@0.2.0" in verdict  # 11-03 D-06 bump
+    assert "enforced as an explicit refusal" not in verdict
+    assert "No served wiring reaches that comparison path" in _collapsed(verdict)
+
+
+def test_codebase_memory_mcp_row_stays_admitted_not_registered():
+    section = _section(_text(), r"^## Population and disposition")
+    rows = _parse_markdown_table(section)
+    cbm = [row[0] for row in rows if row[0].startswith("`codebase-memory-mcp@0.1.0")]
+    assert cbm and "admitted, not registered" in cbm[0]

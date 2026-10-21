@@ -12,9 +12,22 @@ written verbatim so ``test_f07_record.py``'s byte-identical re-render assertion 
 
 from __future__ import annotations
 
+import argparse
+import sys
 from dataclasses import dataclass
+from pathlib import Path
 
-from databasise.parts.registry import PartRegistry
+from databasise.parts.registry import PartRegistry, default_registry
+
+EVIDENCE_PATH = Path(__file__).resolve().parent / "F-07-MUTABLE-STORE-DISPOSITION.md"
+
+# MODAL-05's one status, stated verbatim in this record and in CROSS-MODALITY-EVIDENCE.md's title
+# line, Status section and body (TOOL-15, D-16): a test pins that both records carry it.
+MODAL_05_STATEMENT = (
+    "MODAL-05 is discharged by the 2026-09-10 run; Phase 12 changed the HippoRAG path since "
+    "(HIPP-01, 02, 11, 13, 14), so a pre-Phase-12 HippoRAG store must be rebuilt, and the run "
+    "has not been repeated on today's code."
+)
 
 # §14.4 point 3's two admissible dispositions (docs/system-model/CONTRACT.md, the mutable-store
 # definition's own third numbered point) -- the only two legitimate outcomes for a mutates_store-
@@ -185,6 +198,7 @@ def render_f07_record(registry: PartRegistry) -> str:
             "incomplete discharge rather than rendered as an empty-table document"
         )
     table = _table_markdown(all_rows)
+    registered = ", ".join(f"`{row.component}`" for row in live_rows)
 
     return f"""# F-07 Mutable-Store Disposition — MACH-10
 
@@ -249,33 +263,28 @@ re-verifying the node against it, per §14.4 point 3's own escape clause.
 ## Verdict
 
 F-07 is discharged for every registered mutable-store component this project has built
-(`lightrag/full-delete@0.2.0` among them) and for the admitted-but-unregistered
-`codebase-memory-mcp@0.1.0` (`CA-2`): each carries exactly one recorded disposition
-(`{DISPOSITION_PERMANENT_EXCLUSION}`), enforced as an explicit refusal in the comparison path
-(`databasise.seam.refusals.MutableStoreComparisonExcludedError`, 06-09-PLAN.md Task 2) for any
-wiring a comparison resolves to a `mutates_store` part. The two catalogued-not-built roster
-entries (`MC-1`, `CA-7`) carry the same disposition, scoped explicitly to what they are —
-inherited, not a fresh decision, since neither is built.
+({registered}) and for the admitted-but-unregistered `codebase-memory-mcp@0.1.0` (`CA-2`): each
+carries exactly one recorded disposition (`{DISPOSITION_PERMANENT_EXCLUSION}`). The two
+catalogued-not-built roster entries (`MC-1`, `CA-7`) carry the same disposition, scoped explicitly
+to what they are — inherited, not a fresh decision, since neither is built.
 
-**A qualification stated plainly, not left implicit.** `lightrag/full-delete@0.2.0`'s exclusion
-is a *structural* fact of how it is dispatched (directly, by `Databasise.delete_document()`,
-never through `resolve_selector()`'s candidate pool) rather than an *enforced* refusal — no
-selector-based comparison call can resolve to it in the first place, so there is no live code
-path for `MutableStoreComparisonExcludedError` to guard for this component today. The same holds
-for `codebase-memory-mcp@0.1.0` since it left `default_registry()`; the refusal stays defined and
-is exercised by tests that register the part themselves. This record still names
-`lightrag/full-delete@0.2.0`, because this record's own population is computed from the registry
-rather than from what happens to be reachable.
+**A qualification stated plainly, not left implicit.** The explicit refusal
+`databasise.seam.refusals.MutableStoreComparisonExcludedError` (06-09-PLAN.md Task 2) is defined
+and fires for a registry that registers a `mutates_store` part and resolves a comparison to it. No
+served wiring reaches that comparison path for any component above. Each registered component's
+exclusion is a *structural* fact of how it is dispatched (directly, by `Databasise.ingest()` or
+`Databasise.delete_document()`, never through `resolve_selector()`'s candidate pool), and
+`codebase-memory-mcp@0.1.0` has been outside `default_registry()` since Phase 14, so the refusal
+is exercised only by tests that register such a part themselves. This record still names every
+registered component, because its population is computed from the registry rather than from what
+happens to be reachable.
 
-**How this stands against MODAL-05.** The comparison path's own explicit refusal
-(`MutableStoreComparisonExcludedError`) governs exactly one live candidate pool today: the
-capability/default/harness selectors' shared `all_wirings()` set, which names only LightRAG's
-five arms and HippoRAG's base wiring — neither `codebase-memory-mcp@0.1.0` nor
-`lightrag/full-delete@0.2.0` is a member of that set, so this exclusion does not narrow
-`Databasise.compare()`'s own reachable A/B surface for the LightRAG-vs-HippoRAG comparison
-`MODAL-05` names. `MODAL-05` itself stays unproven for the separate, unrelated reason recorded in
-`databasise/evidence/CROSS-MODALITY-EVIDENCE.md` (the owner-deferred real cross-modality run) —
-this record's own F-07 disposition neither advances nor blocks that separate open requirement.
+**How this stands against MODAL-05.** The capability/default/harness selectors' shared
+`all_wirings()` set names only LightRAG's five arms and HippoRAG's base wiring; no `mutates_store`
+component above is a member, so this exclusion does not narrow `Databasise.compare()`'s own
+reachable A/B surface for the LightRAG-vs-HippoRAG comparison `MODAL-05` names. {MODAL_05_STATEMENT}
+The run is recorded in `databasise/evidence/CROSS-MODALITY-EVIDENCE.md`; this record's own F-07
+disposition neither advances nor blocks it.
 
 ## Method and limits
 
@@ -312,8 +321,24 @@ byte-identically by design.
 """
 
 
+def main(argv: list[str] | None = None) -> int:
+    """``python -m databasise.evidence.f07_report`` renders the record from ``default_registry()``
+    and writes ``F-07-MUTABLE-STORE-DISPOSITION.md``."""
+    argparse.ArgumentParser(description=__doc__).parse_args(argv)
+    text = render_f07_record(default_registry())
+    EVIDENCE_PATH.write_text(text, encoding="utf-8")
+    print(text)
+    return 0
+
+
 __all__ = [
     "DISPOSITION_PERMANENT_EXCLUSION",
     "DISPOSITION_SNAPSHOT_RESET_DEFINED",
+    "EVIDENCE_PATH",
+    "MODAL_05_STATEMENT",
+    "main",
     "render_f07_record",
 ]
+
+if __name__ == "__main__":
+    sys.exit(main())

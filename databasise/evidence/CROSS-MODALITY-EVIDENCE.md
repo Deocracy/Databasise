@@ -1,6 +1,6 @@
-# Cross-Modality Evidence — MODAL-05: BLOCKED, Not Discharged
+# Cross-Modality Evidence — MODAL-05 is discharged by the 2026-09-10 run; Phase 12 changed the HippoRAG path since (HIPP-01, 02, 11, 13, 14), so a pre-Phase-12 HippoRAG store must be rebuilt, and the run has not been repeated on today's code.
 
-**Date:** 2026-09-09
+**Date:** 2026-09-09 (BLOCKED record); discharged by the real run recorded in "Real run — 2026-09-10" below
 
 `.planning/REQUIREMENTS.md` MODAL-05's claim, quoted verbatim:
 
@@ -11,24 +11,24 @@
 
 ## Status
 
-**BLOCKED. MODAL-05 is NOT discharged.** No real cross-modality run against the Phase 3 parity
-corpus occurred in this plan. No index-build counts exist, no token spend exists, no run duration
-exists, and no per-query comparison result exists — every one of those figures is the output of a
-real invocation that did not happen, and none is reported here, anywhere, as if it had.
+MODAL-05 is discharged by the 2026-09-10 run; Phase 12 changed the HippoRAG path since (HIPP-01, 02, 11, 13, 14), so a pre-Phase-12 HippoRAG store must be rebuilt, and the run has not been repeated on today's code.
 
-**This document does not imply a run happened.** It also does not imply MODAL-05 failed — no
-comparison ran, so there is no adverse verdict to record either. MODAL-05 is **open**, not settled
-in either direction. F-14's own seam-invariance outcome was already recorded from a real (synthetic
-fixture) cross-modality call in `databasise/evidence/F-14-SEAM-INVARIANCE.md` (06-03-PLAN.md) —
-that document stays the record for F-14 specifically; this document does not restate or supersede
-it. What this document blocks is the *real-corpus* side-by-side run MODAL-05's own text names as
-"the milestone proof point" — a different, larger claim than F-14's own synthetic-fixture proof.
+The 2026-09-10 section "Real run — 2026-09-10" records the run: `directories_disjoint=True`,
+`artifacts_overlap=False`, identical envelope field sets on both arms and both queries, and
+`partial=False` / `degraded=False` throughout. This document was first written on 2026-09-09 as a
+BLOCKED record (06-08-PLAN.md), then extended by the refused attempt and the completed run; the
+BLOCKED sections are kept below as superseded history, each marked, not deleted. F-14's own
+seam-invariance outcome was recorded from a synthetic-fixture cross-modality call in
+`databasise/evidence/F-14-SEAM-INVARIANCE.md` (06-03-PLAN.md); that document stays the record for
+F-14 specifically, and this document neither restates nor supersedes it.
 
 ## Findings — the blocker, verbatim and verifiable
 
+*Superseded history (2026-09-09): the blocker below was resolved by the real run recorded in "Real run — 2026-09-10".*
+
 | # | What | Blocker | Cited authority |
 |---|---|---|---|
-| 1 | One real invocation of `databasise.parity.build_hipporag_index` against the 20-document Phase 3 parity corpus (`databasise/tests/fixtures/corpus/`, 2,119 words, 15,711 bytes), using live credentials from `v1/.env.parity` (`qwen/qwen3.7-flash` for extraction, `qwen/qwen3-embedding-8b` for embedding) | Not authorized during this plan's execution — presented as a `gate="blocking-human"` checkpoint at Task 1 and resolved by the owner as `defer-and-record-blocked`, not as a spend authorization. No HippoRAG namespace exists under the parity store root today: `v1/.parity_v2_store/` holds only the LightRAG namespace (`shared-4fab18fef508b7bc3dda1cc2d8f12e36`), confirmed by a read-only directory listing — there is no already-built HippoRAG index to reuse in place of the real invocation. | `[code-verified]` `databasise/parity/build_hipporag_index.py` (harness built by this plan, never invoked — its own module docstring states this explicitly); `[code-verified]` `v1/.parity_v2_store/` directory listing at this document's date contains no `hipporag-*`-prefixed namespace |
+| 1 | **Superseded by the "Real run — 2026-09-10" section below, which records the invocation and the comparison.** One real invocation of `databasise.parity.build_hipporag_index` against the 20-document Phase 3 parity corpus (`databasise/tests/fixtures/corpus/`, 2,119 words, 15,711 bytes), using live credentials from `v1/.env.parity` (`qwen/qwen3.7-flash` for extraction, `qwen/qwen3-embedding-8b` for embedding) | Not authorized during this plan's execution — presented as a `gate="blocking-human"` checkpoint at Task 1 and resolved by the owner as `defer-and-record-blocked`, not as a spend authorization. No HippoRAG namespace exists under the parity store root today: `v1/.parity_v2_store/` holds only the LightRAG namespace (`shared-4fab18fef508b7bc3dda1cc2d8f12e36`), confirmed by a read-only directory listing — there is no already-built HippoRAG index to reuse in place of the real invocation. | `[code-verified]` `databasise/parity/build_hipporag_index.py` (harness built by this plan, never invoked — its own module docstring states this explicitly); `[code-verified]` `v1/.parity_v2_store/` directory listing at this document's date contains no `hipporag-*`-prefixed namespace |
 
 Because the index build never ran, `databasise.parity.run_cross_modality` (Task 2's own harness,
 also built by this plan and also never invoked) has no built HippoRAG index to compare against
@@ -39,6 +39,8 @@ rather than failing (see that file's own module docstring). Both blockers trace 
 cause named in row 1: one real, spend-incurring invocation was not authorized in this plan.
 
 ## Owner decision: defer-and-record-blocked
+
+*Superseded history (2026-09-09): the owner later authorized the run; see "Real run — 2026-09-10".*
 
 Presented as a `gate="blocking-human"` checkpoint during Task 1 (the spend checkpoint gating one
 real invocation of the index-build harness against live `v1/.env.parity` credentials), the owner
@@ -62,6 +64,8 @@ rather than softening it.
 
 ## What was built instead
 
+*Superseded history (2026-09-09): both harnesses have since been invoked for real; see "Real run — 2026-09-10".*
+
 Genuine, runnable harness code — reviewable now, invokable later once spend is authorized:
 
 - `databasise/parity/build_hipporag_index.py` — `build_index()`, `IndexBuildResult`. Builds
@@ -81,6 +85,8 @@ Genuine, runnable harness code — reviewable now, invokable later once spend is
   real index is absent, which is the case on every machine today, including this one.
 
 ## Method and limits
+
+*Superseded history (2026-09-09): these limits describe the BLOCKED record only; the run's own limits are in "Real run — 2026-09-10".*
 
 **Method.** No real method to report — this document records the deliberate decision not to
 proceed past harness-writing into a real invocation, and states plainly why.
@@ -109,6 +115,8 @@ proceed past harness-writing into a real invocation, and states plainly why.
 
 ## Entry criterion for the deferred run
 
+*Superseded history (2026-09-09): the entry criterion was met and the run took place on 2026-09-10.*
+
 The real cross-modality run is **deferred to a later plan**. Its entry criterion is the single
 precondition named above: **owner authorization of one real invocation** of
 `databasise.parity.build_hipporag_index` against the 20-document Phase 3 parity corpus, using live
@@ -118,6 +126,8 @@ resulting built index. Both harnesses are already written and ready to run once 
 is given — no further code is needed to unblock this run, only the spend decision itself.
 
 ## Next Phase Readiness
+
+*Superseded history (2026-09-09): MODAL-05 is no longer open; see "Real run — 2026-09-10".*
 
 - **The real cross-modality run is deferred**, not abandoned. Its entry criterion — owner
   authorization of the real invocation named above — is the only precondition unmet.
@@ -134,10 +144,12 @@ is given — no further code is needed to unblock this run, only the spend decis
   plainly rather than inferring it from an absent number.
 
 ---
-*MODAL-05 (Cross-Modality Side-by-Side) — BLOCKED, not discharged*
+*MODAL-05 (Cross-Modality Side-by-Side) — recorded BLOCKED on 2026-09-09; superseded by the sections below*
 *Recorded: 2026-09-09*
 
 ## Real run attempted — refused — 2026-09-10
+
+*Superseded history: the defect this attempt surfaced was fixed (06-14) and the run completed; see "Real run — 2026-09-10" below.*
 
 **Claim.** The owner authorized the real cross-modality run at Task 1's `gate="blocking-human"`
 checkpoint (`approve`, 06-13-PLAN.md). One real invocation of
@@ -250,7 +262,9 @@ up, or inferred.
   harness performs, confirmed rather than assumed
 - Full machine-readable record committed at `databasise/parity/.comparison_results/cross_modality.json`
 
-**Verdict.** MODAL-05 is **discharged**. LightRAG and HippoRAG 2 ran side-by-side on the same
+**Verdict.** MODAL-05 is discharged by the 2026-09-10 run; Phase 12 changed the HippoRAG path since (HIPP-01, 02, 11, 13, 14), so a pre-Phase-12 HippoRAG store must be rebuilt, and the run has not been repeated on today's code.
+
+MODAL-05 is **discharged**. LightRAG and HippoRAG 2 ran side-by-side on the same
 20-document Phase 3 parity corpus, through one `Databasise.compare()` call per query, with
 isolated graph/vector stores (`directories_disjoint=True`, `artifacts_overlap=False`) and
 structurally comparable outputs (identical envelope field sets on both arms; every item

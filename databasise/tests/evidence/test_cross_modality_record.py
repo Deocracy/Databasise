@@ -1,13 +1,11 @@
-"""06-08-PLAN.md Task 3 (owner-authorized deviation — see 06-08-SUMMARY.md ## Deviations from
-Plan): structural assertions over ``databasise/evidence/CROSS-MODALITY-EVIDENCE.md``, adapted to
-the blocked reality the owner's ``defer-and-record-blocked`` checkpoint decision produced. The
-plan's original Task 3 asked for a *passing-shape* record (a per-arm, per-query table of real
-observed counts, a structural-comparability finding drawn from a real run). No cross-modality run
-occurred — Task 1's index build and Task 2's comparison were both deliberately not invoked — so
-this test instead pins the *BLOCKED* shape: the record names the one blocker, names the entry
-criterion for a future run, and never claims a count/spend/duration/comparison result it does not
-have. Parses the actual document structure (front matter heading, blocker table, named sections),
-never a whole-file grep — mirrors ``tests/evidence/test_falsifier5_record.py``'s own
+"""Structural assertions over ``databasise/evidence/CROSS-MODALITY-EVIDENCE.md``.
+
+06-08-PLAN.md wrote the record as BLOCKED (the owner's ``defer-and-record-blocked`` decision); the
+2026-09-10 runs then discharged MODAL-05. 15-17 (TOOL-15, D-16) pins the record's present shape: the
+title line and Status section carry the one MODAL-05 statement, the single Findings row is marked
+superseded by the "Real run — 2026-09-10" section, and each BLOCKED section is kept as marked
+history. Parses the actual document structure (title line, blocker table, named sections), never a
+whole-file grep — mirrors ``tests/evidence/test_falsifier5_record.py``'s own
 parse-the-actual-structure discipline.
 """
 
@@ -70,19 +68,43 @@ def test_document_exists_and_is_non_empty():
 
 
 def test_modal05_claim_quoted_verbatim():
-    text = _text()
-    # Verbatim substrings from .planning/REQUIREMENTS.md's MODAL-05 row.
+    text = _collapsed(re.sub(r"(?m)^>\s?", "", _text()))
+    # Verbatim substrings from .planning/REQUIREMENTS.md's MODAL-05 row (the quote hard-wraps).
     assert "the milestone proof point" in text
     assert "F-14's outcome" in text
     assert "§18.3 seam-invariance falsifier" in text
 
 
-def test_status_section_states_blocked_not_discharged():
+def _modal05_statement() -> str:
+    from databasise.evidence import f07_report
+
+    return f07_report.MODAL_05_STATEMENT
+
+
+def test_title_and_status_state_the_one_modal05_value():
     text = _text()
-    status = _section(text, r"^## Status")
-    assert "BLOCKED" in status
-    assert "NOT discharged" in status or "not discharged" in status.lower()
-    assert "No real cross-modality run" in status
+    statement = _modal05_statement()
+    assert statement in text.splitlines()[0]
+    status = _collapsed(_section(text, r"^## Status"))
+    assert statement in status
+    assert "BLOCKED" in status  # the history is named as history
+    assert "superseded history" in status
+
+
+def test_deferral_sections_are_marked_superseded_history():
+    text = _text()
+    for heading in (
+        r"^## Findings",
+        r"^## Owner decision",
+        r"^## What was built instead",
+        r"^## Method and limits",
+        r"^## Entry criterion",
+        r"^## Next Phase Readiness",
+        r"^## Real run attempted",
+    ):
+        body = _section(text, heading).splitlines()
+        assert body[2].startswith("*Superseded"), f"{heading}: first line is {body[2]!r}"
+    assert _modal05_statement() in _collapsed(_section(text, r"^## Real run — 2026-09-10"))
 
 
 def test_document_never_reports_a_real_run_result():
@@ -103,11 +125,13 @@ def test_document_never_reports_a_real_run_result():
     )
 
 
-def test_findings_table_has_exactly_one_blocker_row():
+def test_findings_table_has_exactly_one_row_marked_superseded():
     text = _text()
     findings = _section(text, r"^## Findings")
     rows = _parse_markdown_table(findings)
-    assert len(rows) == 1, f"expected exactly 1 blocker row, found {len(rows)}: {rows}"
+    assert len(rows) == 1, f"expected exactly 1 row, found {len(rows)}: {rows}"
+    assert "Superseded by the" in rows[0][1]
+    assert "Real run — 2026-09-10" in rows[0][1]
 
 
 def test_blocker_names_the_unauthorized_real_invocation():
@@ -135,17 +159,13 @@ def test_entry_criterion_named():
     assert "run_cross_modality" in criterion
 
 
-def test_modal05_stays_pending_in_limits():
+def test_the_superseded_limits_and_readiness_sections_keep_their_history_only():
     text = _text()
     limits = _section(text, r"^## Method and limits")
-    assert "MODAL-05 stays Pending" in limits
-
-
-def test_next_phase_readiness_names_the_deferred_run_and_the_entry_criterion():
-    text = _text()
+    assert "MODAL-05 stays Pending" in limits  # history, under the superseded marker
     readiness = _section(text, r"^## Next Phase Readiness")
     assert "deferred" in readiness.lower()
-    assert "MODAL-05, this phase's core-value requirement, remains unproven" in readiness
+    assert "no longer open" in readiness
 
 
 def test_f14_evidence_is_cited_not_restated():
