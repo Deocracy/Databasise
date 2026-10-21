@@ -1,10 +1,10 @@
 ---
 phase: 14-promotion-ledger
 fixed_at: 2026-10-20T00:00:00Z
-review_path: .planning/phases/14-promotion-ledger/14-REVIEW.md
-iteration: 1
-findings_in_scope: 4
-fixed: 4
+review_path: .planning/phases/14-promotion-ledger/14-REVIEW-ITER2.md
+iteration: 2
+findings_in_scope: 2
+fixed: 2
 skipped: 0
 status: all_fixed
 ---
@@ -36,7 +36,8 @@ status: all_fixed
 - The write verbs keep the migrating open. promote uses `Ledger(...)`; rollback and retire use `open_existing(store_root)`.
 - **Migration, smallest safe behaviour:** `_create_schema` now runs `CREATE UNIQUE INDEX IF NOT EXISTS ux_ledger_generation` first and `DROP INDEX IF EXISTS ix_ledger_generation` only after the create succeeds. When duplicate `(alias, minted_version)` rows block the create, the `sqlite3.IntegrityError` is caught. The old index stays and a warning is logged on `databasise.ledger.ledger`.
   - *Why this is the smallest safe change:* each DDL statement autocommits, so the old drop-then-create order committed the drop even when the create failed. Swapping the order fixes that loss, and one `except` removes the 500. The duplicates are not repaired, which an append-only ledger could not do anyway.
-  - *What the old index covered:* writers on such a file stay serialized by `transaction()`'s `BEGIN IMMEDIATE`, so only the database-level backstop is missing. `by_alias` and `lineage` read with `ORDER BY id DESC LIMIT 1` and `fetchone()`, so the duplicates do not break them.
+  - *What the old index covered:* writers on such a file stay serialized by `transaction()`'s `BEGIN IMMEDIATE`, so only the database-level backstop is missing. `by_alias` reads with `ORDER BY id DESC LIMIT 1`, so the duplicates do not break it.
+  - *Correction (iteration 2):* this report first said `lineage` also read with `ORDER BY id DESC LIMIT 1`. That was false. At 75f9d59 `lineage` had no `ORDER BY` and could follow an older duplicate row (14-REVIEW-ITER2 WR-01). Commit de86d65 adds the `ORDER BY id DESC LIMIT 1`.
   - *Cost:* every writer open on such a file retries the create, takes the write lock and logs again. That cost falls only on a file already in this invariant-violating state.
 - **Docstrings corrected:**
   - `transaction()` (it said an open over an existing schema "never waits on a writer"). It now says the first-time schema creation and the pre-07-05 unique-index migration take the write lock and can wait up to the busy timeout, and the read-only open never does.
@@ -152,3 +153,78 @@ None.
 _Fixed: 2026-10-20_
 _Fixer: Claude (gsd-code-fixer)_
 _Iteration: 1_
+
+---
+
+## Iteration 2
+
+**Fixed at:** 2026-10-20
+**Source review:** .planning/phases/14-promotion-ledger/14-REVIEW-ITER2.md (deep, fix commits 75f9d59..a1420be: 0 critical, 2 warning, 7 info)
+**Iteration:** 2
+
+**Summary:**
+- Findings in scope: 2 (WR-01, WR-02; the seven Info findings are out of scope)
+- Fixed: 2
+- Skipped: 0
+
+**Verification:** edits and commits were made in the main checkout (`workflow.use_worktrees` is `false`), and every gate below ran there. Both findings were checked against the source and reproduced with the new regression test before the fix:
+- WR-01: `lineage("prod", "1.0.0")` returned `['1.0.0', '0.9.0']`.
+- WR-02: `ledger.db` changed at byte 4100 after the alias read.
+
+Both tests are in the unprotected `databasise/tests/seam/test_review14_fixes.py`. No protected test file was edited, grepped, read or diffed. No `-m live` test was run.
+
+## Fixed Issues (iteration 2)
+
+### WR-01: `lineage` reads an arbitrary duplicate row
+
+**Files modified:** `databasise/ledger/ledger.py`, `databasise/tests/seam/test_review14_fixes.py`
+**Commit:** de86d65
+**Status:** fixed
+**Applied fix:**
+- The `lineage` query is now `WHERE alias = ? AND minted_version = ? ORDER BY id DESC LIMIT 1`. It reads the same row that `by_alias` and `generation_state` treat as authoritative.
+- The `lineage` docstring no longer relies on the unique index.
+- The `_create_schema` comment ("only the database-level backstop is missing") now names the three projections that take the latest row.
+- The false iteration-1 claim in this report (A-WR-01, "What the old index covered") is corrected in place.
+
+**Test:** `test_lineage_on_a_duplicates_file_follows_the_active_row`. A pre-07-05 file holds `0.9.0` (promotion), then `1.0.0` (rollback targeting `0.9.0`), then `1.0.0` (the active promotion). `lineage("prod", "1.0.0")` returns `["1.0.0"]`.
+
+### WR-02: The alias read wrote `ledger.db` on close (WAL checkpoint)
+
+**Files modified:** `databasise/ledger/ledger.py`, `databasise/seam/selectors.py` (docstring), `docs/gui/API-INVENTORY.md` (:570), `databasise/tests/seam/test_review14_fixes.py`
+**Commit:** 6ab36cd
+**Status:** fixed
+**Applied fix:**
+- `Ledger.open_existing(read_only=True)` calls `conn.setconfig(sqlite3.SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE, True)`, guarded by `hasattr`, before `PRAGMA query_only = ON`.
+- The plain-path open stays, so the protected LEDG-06 lifecycle check still identifies these connections by path. The constant is present on the venv (Python 3.12.13, SQLite 3.53.1).
+- The `open_existing` docstring, the `_resolve_alias` docstring and API-INVENTORY :570 now state the remaining limits instead of "never changes":
+  - A Python whose `sqlite3` lacks the constant keeps the close checkpoint.
+  - Hot-journal recovery after a crashed rollback-journal writer can still write the file.
+  - Neither changes the logical content.
+- Residual difference 2 in iteration 1's A-WR-01 deviation note is therefore narrowed to hot-journal recovery, plus the close checkpoint on a Python without the constant.
+
+**Test:** `test_an_alias_read_never_checkpoints_committed_wal_frames_into_the_main_file`. A row is committed into the WAL with `wal_autocheckpoint = 0` through a connection that also has the close checkpoint disabled, and that connection is closed. An alias read then leaves the `ledger.db` bytes unchanged and the `-wal` file non-empty. The test is skipped where the constant is missing.
+
+## Skipped Issues (iteration 2)
+
+None.
+
+## Verification (iteration 2)
+
+- **Where:** the main checkout, using `databasise/.venv`.
+- **Command:** `databasise/.venv/bin/python -m pytest -q databasise/tests/ledger databasise/tests/seam/test_review14_fixes.py databasise/tests/seam/test_alias_resolution.py databasise/tests/seam/test_retire_lineage.py databasise/tests/seam/test_operator_verb_concurrency.py -p no:cacheprovider`
+- **Result:** 51 passed, 0 failed, in 48.7s, run after both commits.
+- **Also run:** `test_seam_doc_consistency`, `test_docstring_currency` and `test_review14_fixes`, selected with `-k` (37 passed).
+
+## Notes for the orchestrator (iteration 2)
+
+- **Commits:** each carries the `phase/14` trailer and the Co-Authored-By line.
+  - de86d65 (WR-01)
+  - 6ab36cd (WR-02)
+- **This report** and the untracked 14-REVIEW-ITER2.md go in a separate `.planning/` commit.
+- **Left as is:** IN-07's ruff `I001` in `test_review14_fixes.py` predates this iteration and is still present. The new `import dataclasses` line did not cause it.
+
+---
+
+_Fixed: 2026-10-20_
+_Fixer: Claude (gsd-code-fixer)_
+_Iteration: 2_
