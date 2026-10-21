@@ -83,6 +83,7 @@ except ImportError as exc:  # pragma: no cover - exercised only without the `res
 
 from pydantic import BaseModel, ConfigDict, StrictBool, ValidationError
 
+from databasise import __version__
 from databasise.parts.registry import PartRegistry
 from databasise.seam.corpus import (
     CorpusStatus,
@@ -360,7 +361,7 @@ def create_app(
     root and stub ``clients`` exactly as an in-process test would.
     """
     engine = Databasise(store_root=store_root, workspace=workspace, registry=registry, clients=clients)
-    app = FastAPI(title="databasise", version="0.1.0")
+    app = FastAPI(title="databasise", version=__version__)
     app.state.engine = engine
     app.add_exception_handler(SeamRefusalError, _refusal_response)
     app.add_exception_handler(RequestValidationError, _validation_response)

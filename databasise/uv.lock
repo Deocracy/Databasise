@@ -242,7 +242,6 @@ wheels = [
 
 [[package]]
 name = "databasise"
-version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "faiss-cpu" },
@@ -285,7 +284,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "igraph", specifier = ">=0.11,<2.0" },
     { name = "jsonpatch" },
-    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=2.2.0" },
+    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=2.2.0,<3" },
     { name = "numpy", specifier = ">=1.24,<3.0" },
     { name = "openai", specifier = ">=2.0.0,<4.0.0" },
     { name = "pycozo", extras = ["embedded"], specifier = "==0.7.6" },

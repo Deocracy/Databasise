@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "databasise"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Databasise 2.0 — the agnostic machine: fitting contract + versioned components over machine-owned primitives."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -98,7 +98,7 @@ rest = [
 # Package-legitimacy checkpoint confirmed 2026-09-08 (05-04-PLAN.md's pre-task checkpoint,
 # resolved: official Model Context Protocol SDK, github.com/modelcontextprotocol/python-sdk).
 mcp = [
-    "mcp>=2.2.0",
+    "mcp>=2.2.0,<3",
 ]
 
 # 08-01-PLAN.md (RUN-06): the operator-facing REST and MCP launchers.
@@ -151,7 +151,15 @@ packages = [
     "databasise.eval",
     # 08-01-PLAN.md: the installed launchers (databasise-rest), named in the same commit that creates it.
     "databasise.launcher",
+    # 15-01-PLAN.md (TOOL-01): the offline CLIs and the import-boundary check ship in the wheel,
+    # named in the same commit as the package-data entry below that they read at run time.
+    "databasise.tools",
 ]
+
+# 15-01-PLAN.md (TOOL-01, D-01): one version source — the wheel METADATA and the REST app both read
+# databasise.__version__.
+[tool.setuptools.dynamic]
+version = {attr = "databasise.__version__"}
 
 # The wiring documents ship with the package rather than existing only in a source checkout
 # (Falsifier 2 evidence run, 02-01-PLAN.md Task 1).
@@ -161,3 +169,6 @@ packages = [
 # root, so wirings ship in an installed package and not only in a source checkout (Falsifier-2
 # evidence run precedent). The cbm wiring now lives under tests/fixtures/, not here.
 "databasise.wirings" = ["*.json", "lightrag/*.json", "hipporag/*.json"]
+# 15-01-PLAN.md (TOOL-01): the offline CLIs read the eval bundles and both corpus fixtures at run
+# time (CONTRACT §10 and §18.3), so they ship inside the installed package.
+"databasise" = ["evidence/eval-bundles/**/*", "tests/fixtures/corpus/**/*", "tests/fixtures/eval-corpus/**/*"]

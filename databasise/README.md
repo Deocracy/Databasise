@@ -49,6 +49,15 @@ uv sync
 uv run pytest
 ```
 
+## What the wheel ships
+
+The wheel carries the `databasise.tools` package, the eval bundles (`evidence/eval-bundles/`), both
+corpus fixtures (`tests/fixtures/corpus/` and `tests/fixtures/eval-corpus/`) and the wirings, so the
+offline CLIs find their data from site-packages. The version has one source,
+`databasise.__version__`, which the wheel metadata and the REST app both read. The parity CLIs
+(`databasise.parity.*`) are not self-contained: they need a source checkout with `v1/.venv` and the
+v1 index.
+
 ## Run the engine
 
 ```bash
