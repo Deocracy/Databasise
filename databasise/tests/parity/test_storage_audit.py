@@ -579,3 +579,57 @@ def test_audit_run_still_accepts_two_arguments():
     rows, violations = storage_audit.audit_run(_parsed({"n1": ["reads_kv"]}), [])
     assert violations == []
     assert rows[0].state == "no-touch"
+
+
+def _no_spend_paths(monkeypatch, tmp_path, module):
+    """Every store, lock and client path raises; the root must stay absent (D-04, D-24)."""
+    from databasise.parity import run_arm as run_arm_module
+
+    root, _ = _isolate_audit_paths(monkeypatch, tmp_path)
+
+    def boom(*_args, **_kwargs):
+        raise AssertionError("work started without --spend")
+
+    monkeypatch.setattr(module, "store_lock", boom)
+    monkeypatch.setattr(module, "run_audit" if hasattr(module, "run_audit") else "run_arm", boom)
+    monkeypatch.setattr(run_arm_module, "_build_clients", boom)
+    monkeypatch.setattr(run_arm_module, "_build_stores", boom)
+    return root
+
+
+def test_storage_audit_without_spend_is_estimate_only(monkeypatch, tmp_path, capsys):
+    root = _no_spend_paths(monkeypatch, tmp_path, storage_audit)
+
+    caught = None
+    status = None
+    try:
+        status = storage_audit.main(["--arm", "naive"])
+    except BaseException as exc:  # noqa: BLE001 - the pre-fix default runs the audit and raises
+        caught = exc
+    out = capsys.readouterr().out
+
+    assert caught is None, f"main raised {type(caught).__name__}: {caught}"
+    assert status == 0
+    assert "mode: estimate-only" in out
+    assert "nodes" in out
+    assert not root.exists()
+
+
+def test_run_arm_without_spend_is_estimate_only(monkeypatch, tmp_path, capsys):
+    from databasise.parity import run_arm as run_arm_module
+
+    root = _no_spend_paths(monkeypatch, tmp_path, run_arm_module)
+
+    caught = None
+    status = None
+    try:
+        status = run_arm_module.main(["--arm", "naive", "--query", "q"])
+    except BaseException as exc:  # noqa: BLE001
+        caught = exc
+    out = capsys.readouterr().out
+
+    assert caught is None, f"main raised {type(caught).__name__}: {caught}"
+    assert status == 0
+    assert "mode: estimate-only" in out
+    assert "nodes" in out
+    assert not root.exists()

@@ -34,21 +34,21 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import sys
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from databasise.clients import CLIENT_EFFECT_TO_KEY
 from databasise import cli
-from databasise.clients.builder import BUILDER_REFUSALS
+from databasise.clients import CLIENT_EFFECT_TO_KEY
 from databasise.parity import import_index
 from databasise.parity import run_arm as _run_arm
 from databasise.parity.import_index import DEFAULT_STORE_ROOT
 from databasise.parts.registry import PartRegistry, default_registry
 from databasise.parts_core import EFFECT_TO_STORE
 from databasise.runner import scheduler as _scheduler
-from databasise.store_lock import StoreLockedError, store_lock
+from databasise.store_lock import store_lock
 from databasise.validator.parse import ParsedWiring, parse_wiring
 from databasise.wirings.resolve import all_wirings
 
@@ -257,22 +257,30 @@ def _render_summary(rows: list[AuditRow]) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """``uv run python -m databasise.parity.storage_audit --arm naive`` — prints one row per
-    resolved node plus a three-way summary line, following ``check_import_boundary.py``'s own
+    """``uv run python -m databasise.parity.storage_audit --arm naive --spend`` — prints one row per
+    resolved node plus a summary line, following ``check_import_boundary.py``'s own
     clean-exit-0/violations-exit-1 convention (see module docstring).
+
+    Needs a source checkout with the imported parity store and ``v1/.env.parity``; neither ships in
+    the wheel. Without ``--spend`` it prints an estimate and ``mode: estimate-only`` and touches
+    nothing. Exit codes: 0 done or estimate-only; 1 a named refusal or a violation; 2 bad arguments;
+    3 the run was partial or cyclic, so the audit did not see every node.
     """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--arm", required=True, choices=[name for name, _ in all_wirings()])
     parser.add_argument("--query", default=_DEFAULT_QUERY)
-    parser.add_argument("--spend", action="store_true", default=False)  # inert until 15-13 flips the default
+    parser.add_argument("--spend", action="store_true", default=False)
     args = parser.parse_args(argv)
 
     try:
+        if not args.spend:
+            print(json.dumps(_run_arm.estimate_arm(args.arm, args.query)))
+            print("mode: estimate-only")
+            return cli.EXIT_OK
         with store_lock(import_index.DEFAULT_STORE_ROOT):  # D-03
             result = asyncio.run(run_audit(args.arm, args.query))
-    except (StoreLockedError, *BUILDER_REFUSALS) as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
+    except cli.offline_refusals() as exc:
+        return cli.refuse(exc)
 
     if result.get("cycle"):
         print(f"cycle: {result['cycle']}")

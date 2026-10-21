@@ -26,10 +26,13 @@ from __future__ import annotations
 import argparse
 import asyncio
 import hashlib
+import json
 import sys
 import uuid
 from pathlib import Path
 from typing import Any
+
+from databasise import cli
 
 # Re-exports (08-01, RUN-05): the builder moved to databasise.clients.builder; the old names stay
 # bound here so every importer and monkeypatch seam keeps working, and the exception classes keep
@@ -55,7 +58,7 @@ from databasise.parity.import_index import _import_workspace as _parity_workspac
 from databasise.parts.registry import PartRegistry, default_registry
 from databasise.runner import scheduler as _scheduler
 from databasise.runner.trace import RunRecord
-from databasise.store_lock import StoreLockedError, store_lock
+from databasise.store_lock import StoreLockedError, store_lock  # noqa: F401
 from databasise.stores.graph import CozoGraphStore
 from databasise.stores.kv import SqliteKVStore
 from databasise.stores.vector import MultiNamespaceVectorStore
@@ -270,28 +273,48 @@ async def run_arm(
     return {"run_record": record.to_dict(), "provided": provided}
 
 
-def main(argv: list[str] | None = None) -> int:
-    """``uv run python -m databasise.parity.run_arm --arm naive --query "..."`` — prints the run
-    record as JSON and the ``provides`` node's output, following the committed-and-re-runnable
-    evidence style ``databasise/evidence/falsifier2.py`` establishes.
-    """
-    import json
+def estimate_arm(arm_name: str, query: str) -> dict[str, Any]:
+    """The read-only estimate both CLIs print without ``--spend`` (D-04): the arm, its node count and
+    how many nodes declare each client effect. Opens no store, lock or client."""
+    parsed = parse_wiring(resolve_query_arm(arm_name, query), default_registry())
+    effects = [parsed.parts[node_id].effects for node_id in parsed.node_order]
+    return {
+        "arm": arm_name,
+        "nodes": len(effects),
+        "calls_llm": sum("calls_llm" in e for e in effects),
+        "calls_embedding": sum("calls_embedding" in e for e in effects),
+        "calls_rerank": sum("calls_rerank" in e for e in effects),
+    }
 
+
+def main(argv: list[str] | None = None) -> int:
+    """``uv run python -m databasise.parity.run_arm --arm naive --query "..." --spend`` — prints the
+    run record as JSON and the ``provides`` node's output, following the committed-and-re-runnable
+    evidence style ``databasise/evidence/falsifier2.py`` establishes.
+
+    Needs a source checkout with the imported parity store (``v1/.parity_v2_store``) and
+    ``v1/.env.parity``; neither ships in the wheel. Without ``--spend`` it prints an estimate and
+    ``mode: estimate-only`` and touches nothing. Exit codes: 0 done or estimate-only; 1 a named
+    refusal (one stderr line); 2 bad arguments.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--arm", required=True, choices=[name for name, _ in all_wirings()])
     parser.add_argument("--query", required=True)
-    parser.add_argument("--spend", action="store_true", default=False)  # inert until 15-13 flips the default
+    parser.add_argument("--spend", action="store_true", default=False)
     args = parser.parse_args(argv)
 
     try:
+        if not args.spend:
+            print(json.dumps(estimate_arm(args.arm, args.query)))
+            print("mode: estimate-only")
+            return cli.EXIT_OK
         with store_lock(import_index.DEFAULT_STORE_ROOT):  # D-03
             result = asyncio.run(run_arm(args.arm, args.query))
-    except (StoreLockedError, *BUILDER_REFUSALS) as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
+    except cli.offline_refusals() as exc:
+        return cli.refuse(exc)
 
     print(json.dumps(result, indent=2, default=str))
-    return 0
+    return cli.EXIT_OK
 
 
 if __name__ == "__main__":
