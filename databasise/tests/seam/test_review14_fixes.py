@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import sqlite3
 
@@ -145,6 +146,23 @@ def test_the_writer_open_keeps_the_old_index_and_logs_when_duplicates_block_the_
     assert "ix_ledger_generation" in _indexes(db)
     assert "ux_ledger_generation" not in _indexes(db)
     assert "duplicate (alias, minted_version)" in caplog.text
+
+
+def test_lineage_on_a_duplicates_file_follows_the_active_row(tmp_path):
+    """14-REVIEW-ITER2 WR-01: two rows mint (prod, 1.0.0); the latest, a promotion, is the one."""
+    with Ledger(tmp_path) as ledger:
+        ledger._conn.execute("DROP INDEX ux_ledger_generation")
+        ledger._conn.execute("CREATE INDEX ix_ledger_generation ON ledger(alias, minted_version)")
+        ledger.append(_row("naive", "0.9.0"))
+        ledger.append(
+            dataclasses.replace(
+                _row("naive", "1.0.0"), record_kind="rollback", targets_version="0.9.0"
+            )
+        )
+        ledger.append(_row("naive", "1.0.0"))
+
+    with Ledger.open_existing(tmp_path) as ledger:
+        assert ledger.lineage("prod", "1.0.0") == ["1.0.0"]
 
 
 def _naive_trace(tmp_path) -> str:

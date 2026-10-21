@@ -319,7 +319,8 @@ class Ledger:
         # (alias, minted_version) rows (the G-07-1 race); there the create fails, the old plain
         # index stays, and the condition is logged instead of raised, so an operator verb never
         # sees a raw IntegrityError as a 500. Writers on such a file stay serialized by
-        # transaction()'s BEGIN IMMEDIATE; only the database-level backstop is missing.
+        # transaction()'s BEGIN IMMEDIATE, and every projection that reads a generation's row
+        # (by_alias, generation_state, lineage) takes the latest one with ORDER BY id DESC.
         try:
             self._conn.execute(
                 "CREATE UNIQUE INDEX IF NOT EXISTS ux_ledger_generation "
@@ -457,7 +458,8 @@ class Ledger:
 
     def lineage(self, alias: str, version: str) -> list[str]:
         """The versions reached from ``version`` by following ``targets_version`` through the row
-        that minted each version (the unique ``(alias, minted_version)`` index), in walk order
+        that minted each version (the latest such row, as :meth:`by_alias` reads it, so a pre-07-05
+        file with duplicate ``(alias, minted_version)`` rows follows the active row), in walk order
         starting with ``version``. Stops at a missing or non-rollback row, and on a version already
         visited, so a cycle terminates. Guards go by version through the rollback lineage, never by
         wiring identity (RIG §PR.2: a re-promotion is a new generation); the retire and rollback
@@ -468,7 +470,7 @@ class Ledger:
         while True:
             row = self._conn.execute(
                 "SELECT record_kind, targets_version FROM ledger "
-                "WHERE alias = ? AND minted_version = ?",
+                "WHERE alias = ? AND minted_version = ? ORDER BY id DESC LIMIT 1",
                 (alias, visited[-1]),
             ).fetchone()
             if row is None or row["record_kind"] != "rollback" or row["targets_version"] in visited:
