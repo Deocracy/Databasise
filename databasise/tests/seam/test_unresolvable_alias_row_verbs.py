@@ -1,7 +1,7 @@
-"""14-08-PLAN.md Task 2 (D-05): promote, rollback and retire onto an alias whose active row names a
-wiring that does not resolve refuse by name (``UnsatisfiableSelectorError`` naming only the caller's
-alias) and never raise ``AssertionError``. Consequence recorded in the plan: such an alias can no
-longer be repaired through these three verbs.
+"""14-08-PLAN.md Task 2 (D-05): rollback and retire onto an alias whose active row names a wiring
+that does not resolve refuse by name (``UnsatisfiableSelectorError`` naming only the caller's alias)
+and never raise ``AssertionError``. Promote no longer refuses there: 14-REVIEW A-WR-02 makes it
+repair the alias (``tests/seam/test_review14_fixes.py``).
 """
 
 from __future__ import annotations
@@ -83,7 +83,6 @@ async def test_the_verbs_refuse_an_unresolvable_alias_row_by_name(tmp_path):
     engine = Databasise(store_root=tmp_path, workspace="alias-row")
 
     calls = {
-        "promote": engine.promote("x", [trace], "human_edit"),
         "rollback": engine.rollback("x", "1.0.0", [trace], "human_edit"),
         "retire": engine.retire("x", "1.0.0", [trace], "human_edit"),
     }
@@ -101,7 +100,6 @@ def test_rest_answers_422_for_an_unresolvable_alias_row(tmp_path):
     client = TestClient(create_app(store_root=tmp_path, workspace="alias-row"), raise_server_exceptions=False)
 
     bodies = {
-        "/promote": {"alias": "x", "trace_ids": [trace], "change_origin": "human_edit"},
         "/rollback": {"alias": "x", "version": "1.0.0", "trace_ids": [trace], "change_origin": "human_edit"},
         "/retire": {"alias": "x", "version": "1.0.0", "trace_ids": [trace], "change_origin": "human_edit"},
     }

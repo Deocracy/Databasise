@@ -8,8 +8,11 @@ import sqlite3
 import pytest
 
 from databasise.ledger.ledger import Ledger, LedgerRecord
+from databasise.seam.engine import Databasise
 from databasise.seam.refusals import UnsatisfiableSelectorError
 from databasise.seam.selectors import _resolve_alias
+from databasise.seam.trace_store import TraceStore
+from databasise.wirings.resolve import wiring_for_name
 
 
 def _row(mutation_id: str, version: str, alias: str = "prod") -> LedgerRecord:
@@ -142,6 +145,41 @@ def test_the_writer_open_keeps_the_old_index_and_logs_when_duplicates_block_the_
     assert "ix_ledger_generation" in _indexes(db)
     assert "ux_ledger_generation" not in _indexes(db)
     assert "duplicate (alias, minted_version)" in caplog.text
+
+
+def _naive_trace(tmp_path) -> str:
+    resolved = wiring_for_name("naive")
+    node_ids = sorted(resolved["nodes"])
+    return TraceStore(tmp_path).persist(
+        {
+            "run_id": "fake-run-naive",
+            "wiring_id": resolved["wiring_id"],
+            "wiring_instance_hash": f"sha256:{'0' * 63}{len(node_ids) % 10}",
+            "arm_id": "seam",
+            "nodes": [{"node_id": node_id} for node_id in node_ids],
+        }
+    )
+
+
+# --- A-WR-02: promote repairs an alias whose active row names a wiring that no longer resolves
+
+
+async def test_promote_repairs_an_alias_whose_active_row_names_a_retired_arm(tmp_path):
+    with Ledger(tmp_path) as ledger:
+        ledger.append(_row("naive", "1.0.0"))
+        ledger.append(_row("retired-arm", "2.0.0"))
+    trace = _naive_trace(tmp_path)
+    with pytest.raises(UnsatisfiableSelectorError):
+        _resolve_alias("prod", store_root=tmp_path)
+
+    result = await Databasise(store_root=tmp_path, workspace="repair").promote(
+        "prod", [trace], "human_edit"
+    )
+
+    assert result.version == "3.0.0"  # MAJOR bump: the prior has no comparable surface
+    assert _resolve_alias("prod", store_root=tmp_path)["arm_id"] == "naive"
+    with Ledger(tmp_path) as ledger:
+        assert ledger.by_alias("prod").parent == "retired-arm"
 
 
 def test_the_writer_open_still_migrates_a_legacy_file_without_duplicates(tmp_path):

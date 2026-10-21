@@ -1122,8 +1122,9 @@ def _wiring_for_row(name: str, *, alias: str) -> dict[str, Any]:
     """The resolved wiring for ``name`` (an arm derived from traces, or an alias row's
     ``mutation_id``), or a named refusal (14-08-PLAN.md, D-05): a name that no longer resolves is
     :class:`~databasise.seam.refusals.UnsatisfiableSelectorError` naming only the caller's ``alias``
-    (never the row's value), not an ``AssertionError`` the consumer sees as a 500. An alias whose
-    active row names such a wiring cannot be repaired through promote, rollback or retire.
+    (never the row's value), not an ``AssertionError`` the consumer sees as a 500. Rollback and
+    retire refuse when the alias's active row names such a wiring; promote does not, because it
+    treats that prior as having no surface, so a promote repairs the alias (14-REVIEW A-WR-02).
     """
     resolved = wiring_for_name(name)
     if resolved is None:
@@ -2354,9 +2355,11 @@ class Databasise:
         (09-07, SEAM-12), an invalid ``change_origin`` refuses, an unknown ``trace_ids`` entry
         refuses, a partial trace refuses as :class:`~databasise.seam.refusals.PartialRunEvidenceError`
         (D-03), and an empty or disagreeing ``trace_ids`` refuses (via
-        :func:`~databasise.seam.promotion.resolve_single_arm`). Last, an alias whose active row
-        names a wiring that no longer resolves refuses as
-        :class:`~databasise.seam.refusals.UnsatisfiableSelectorError` (D-05). Only the default
+        :func:`~databasise.seam.promotion.resolve_single_arm`). Last, an arm whose wiring does not
+        resolve refuses as :class:`~databasise.seam.refusals.UnsatisfiableSelectorError` (D-05).
+        An alias whose active row names a wiring that no longer resolves does not refuse: that
+        prior has no comparable surface, so the promotion MAJOR-bumps and repairs the alias
+        (14-REVIEW A-WR-02). Only the default
         ``"operator-asserted"`` verb reaches ``Ledger.append()``; the per-class posture refusals
         stay in code for TOOL-12 and are unreachable from here.
 
@@ -2397,10 +2400,11 @@ class Databasise:
             """
             with Ledger(self.store_root) as ledger, ledger.transaction():
                 prior_record = ledger.by_alias(alias)
+                # 14-REVIEW A-WR-02: a prior row naming a wiring that no longer resolves has no
+                # comparable surface, so it classes and mints against None (a MAJOR bump), and
+                # prior_version still comes from the row. This is what lets promote repair it.
                 prior_resolved = (
-                    _wiring_for_row(prior_record.mutation_id, alias=alias)
-                    if prior_record is not None
-                    else None
+                    wiring_for_name(prior_record.mutation_id) if prior_record is not None else None
                 )
 
                 mutation_class = derive_mutation_class(new_resolved, prior_resolved)
