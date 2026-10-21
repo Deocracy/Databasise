@@ -44,7 +44,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 11: LightRAG Corpus Path** - Ingested documents reach the queried stores, uploads index their content, honest health, and v1-faithful KG answers (F4) (completed 2026-10-19)
 - [x] **Phase 12: HippoRAG Fixes** - Resolvable PPR evidence, a graph that accumulates correctly across ingests, query-only runs, and a full document lifecycle (F5) (completed 2026-10-19)
 - [x] **Phase 13: Selectors, Wiring & Runner** - Every arm selectable, node-free consumer text, complete and truthful run records, guards that fire on what they declare (F6) (completed 2026-10-20)
-- [ ] **Phase 14: Promotion & Ledger** - Operator verbs that never 500, aliases that always resolve, no tombstoned generation served, alias history readable (F7)
+- [x] **Phase 14: Promotion & Ledger** - Operator verbs that never 500, aliases that always resolve, no tombstoned generation served, alias history readable (F7) (completed 2026-10-21)
 - [ ] **Phase 15: Offline Tooling & Packaging** - Wheel-runnable CLIs that refuse by name and never spend by default, honest parity/eval/evidence records, admission enforced at load (F8)
 - [ ] **Phase 16: GUI Connectors** - Operator read routes: info, wirings, aliases, history, traces, promote preview, chunks, graph nodes, store-busy status, log tail
 - [ ] **Phase 17: GUI Mockup** - Static six-screen operator console mockup on fixtures, every control id-stamped, missing backends badged
@@ -363,7 +363,7 @@ Plans (six waves; `seam/engine.py` is touched by one plan per wave in waves 1-6;
 - LEDG-10: capability matching on wiring-node effects or Part effects; whether HippoRAG's index-side nodes count at query time
 - LEDG-12: wire codebase-memory-mcp as a selectable wiring or unregister it (TOOL-15 and TOOL-18 follow)
 
-**Plans**: 11/11 plans executed
+**Plans**: 11/11 plans complete
 
 Plans:
 - [x] 14-01-PLAN.md — Owner grant for the protected WIRE-17 reachability test (checkpoint; D-13; wave 1)
@@ -494,7 +494,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 11. LightRAG Corpus Path | 11/11 | Complete    | 2026-10-19 |
 | 12. HippoRAG Fixes | 14/14 | Complete    | 2026-10-19 |
 | 13. Selectors, Wiring & Runner | 13/13 | Complete    | 2026-10-20 |
-| 14. Promotion & Ledger | 11/11 | In Progress | - |
+| 14. Promotion & Ledger | 11/11 | Complete    | 2026-10-21 |
 | 15. Offline Tooling & Packaging | 0/TBD | Not started | - |
 | 16. GUI Connectors | 0/TBD | Not started | - |
 | 17. GUI Mockup | 0/TBD | Not started | - |

@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Engine Fixes + Operator Console
-current_phase: 14
-current_phase_name: Promotion & Ledger
-status: executing
-stopped_at: Completed 14-10-PLAN.md
-last_updated: "2026-10-21T04:50:41.055Z"
-last_activity: 2026-10-20
-last_activity_desc: Phase 13 complete, transitioned to Phase 14
-state_head: 6cf549490933e095cd2daaad700728f6bc506425
+current_phase: 15
+current_phase_name: Offline Tooling & Packaging
+status: planning
+stopped_at: Phase 14 complete, ready to plan Phase 15
+last_updated: "2026-10-21T16:38:16.846Z"
+last_activity: 2026-10-21
+last_activity_desc: Phase 14 complete, transitioned to Phase 15
+state_head: 9b9446e657a87a642ee53ab2be1f54e5e365883c
 progress:
   total_phases: 11
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 81
   completed_plans: 81
-  percent: 55
+  percent: 64
 ---
 
 # Project State
@@ -25,16 +25,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-19 after Phase 12)
 
 **Core value:** Modalities are swappable without consumers noticing — LightRAG and HippoRAG 2 both live behind one unchanging §18 envelope, comparable side-by-side on the rig.
-**Current focus:** Phase 14 — Promotion & Ledger
+**Current focus:** Phase 15 — Offline Tooling & Packaging
 
 ## Current Position
 
-Phase: 14 (Promotion & Ledger) — READY TO EXECUTE
+Phase: 15 — Offline Tooling & Packaging
 Plan: Not started
-Status: Ready to execute
-Last activity: 2026-10-20 — Phase 13 complete, transitioned to Phase 14
+Status: Ready to plan
+Last activity: 2026-10-21 — Phase 14 complete, transitioned to Phase 15
 
-Progress: [██████░░░░] 55% (4/11 phases)
+Progress: [██████░░░░] 64% (4/11 phases)
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [██████░░░░] 55% (4/11 phases)
 | 11 | 11 | - | - |
 | 12 | 14 | - | - |
 | 13 | 13 | - | - |
+| 14 | 11 | - | - |
 
 **Recent Trend:**
 
@@ -296,7 +297,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 ## Session Continuity
 
 Last session: 2026-10-21T04:50:40.380Z
-Stopped at: Completed 14-10-PLAN.md
+Stopped at: Phase 14 complete, ready to plan Phase 15
 Resume file: None
 
 ## Operator Next Steps

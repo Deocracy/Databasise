@@ -1,7 +1,7 @@
 ---
 phase: 14-promotion-ledger
 verified: 2026-10-21T06:01:21Z
-status: human_needed
+status: passed
 score: 5/5 roadmap success criteria verified (14/14 LEDG requirements satisfied in code)
 covered_files:
   - ".planning/phases/14-promotion-ledger/14-01-PLAN.md"
@@ -70,7 +70,7 @@ human_verification:
 
 **Phase Goal:** The operator verbs never fail with a 500 on any trace, every alias with a generation can be selected and resolves, and an alias's history is readable from the ledger
 **Verified:** 2026-10-21T06:01:21Z
-**Status:** human_needed (all five criteria verified in code and by test; three owner policy confirmations open)
+**Status:** passed. All five criteria are verified in code and by test. The three owner policy items were resolved on 2026-10-21; see the Human Verification Resolution section at the end.
 **Re-verification:** No, initial verification
 
 ## Goal Achievement
@@ -156,3 +156,15 @@ No goal-blocking gap. Every success criterion and every LEDG row was checked aga
 
 _Verified: 2026-10-21T06:01:21Z_
 _Verifier: Claude (gsd-verifier)_
+
+## Human Verification Resolution (2026-10-21)
+
+The owner said "continue" after Claude recommended an option for each item. Claude took that as accepting the recommendations; the owner may revise any of them.
+
+| Item | Decision |
+|------|----------|
+| A-WR-02 repair policy | **Keep.** Repairing an alias whose active row names an unresolvable wiring always takes a MAJOR bump, because once the old wiring is gone nothing shows the new surface is compatible with it. Rollback and retire on that alias still refuse by name. |
+| D-08 read-path narrowing | **Keep.** Consumer alias reads open with `PRAGMA query_only` and no checkpoint on close, and never migrate. Only promote, rollback and retire migrate an old file. The plain-path open stays, because the protected LEDG-06 lifecycle check identifies connections by path. |
+| SC5 wording | **SC5 means LEDG-12's wording:** no *admitted* registered part is unreachable. The four parts that no selector reaches (`parts-core/passthrough`, `fake-retriever`, `fake-llm-caller`, `fixpoint-body`) carry no admission record. They are runner helpers and test doubles, not consumer parts. |
+
+Final offline gate at the final code commit (`check_offline_suite.py`): 2608 passed, 4 deselected, in both styles; exit 0.
