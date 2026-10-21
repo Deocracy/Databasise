@@ -405,7 +405,7 @@ Plans:
 - TOOL-18: codebase-memory-mcp stays registered or is removed (from LEDG-12); whether it keeps declaring mutates_store
 - TOOL-19: MCP tools keep the single 'args' input and generic output schema, or publish per-tool schemas (affects every MCP client)
 
-**Plans**: 6/19 plans executed
+**Plans**: 7/19 plans executed
 
 Plans:
 - [x] 15-01-PLAN.md — Wheel carries tools, bundles and fixtures; one version source; bounded mcp; import-boundary scan fixes (TOOL-01; wave 1)
@@ -414,7 +414,7 @@ Plans:
 - [x] 15-04-PLAN.md — codebase-memory-mcp adapter: tool-error mapping, launch timeout, read-only allowlist, §4 item shapes, lazy hashing, guard lock (TOOL-18; wave 1)
 - [x] 15-05-PLAN.md — Bundle identity covers text and gold ids; sealed-open flag; split counts (TOOL-13; wave 1)
 - [x] 15-06-PLAN.md — run_wiring canonicalises before running; finalize pinned (TOOL-10; wave 1)
-- [ ] 15-07-PLAN.md — MCP tool descriptions without plan references; ten-tool counts (TOOL-19; wave 1)
+- [x] 15-07-PLAN.md — MCP tool descriptions without plan references; ten-tool counts (TOOL-19; wave 1)
 - [ ] 15-08-PLAN.md — parity_report renders only states it reads; named input refusal; recorded_by; resolvable planning paths (TOOL-14; wave 1)
 - [ ] 15-09-PLAN.md — import_index argparse, pass-through paths, workspace line; verify_import catches a missing v2 graph (TOOL-02, TOOL-03; wave 2)
 - [ ] 15-10-PLAN.md — Eval CLIs: empty-index refusal before spend, LightRAG gold mapping, eval-store boundary, D-03 contract, remint estimate-only (TOOL-11; wave 2)
@@ -516,7 +516,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 12. HippoRAG Fixes | 14/14 | Complete    | 2026-10-19 |
 | 13. Selectors, Wiring & Runner | 13/13 | Complete    | 2026-10-20 |
 | 14. Promotion & Ledger | 11/11 | Complete    | 2026-10-21 |
-| 15. Offline Tooling & Packaging | 6/19 | In Progress | - |
+| 15. Offline Tooling & Packaging | 7/19 | In Progress | - |
 | 16. GUI Connectors | 0/TBD | Not started | - |
 | 17. GUI Mockup | 0/TBD | Not started | - |
 | 18. GUI Live | 0/TBD | Not started | - |
