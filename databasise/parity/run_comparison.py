@@ -48,10 +48,11 @@ import hashlib
 import json
 import statistics
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Literal
 
+from databasise import cli
 from databasise.clients.builder import BUILDER_REFUSALS
 from databasise.identity.canon import canonicalise
 from databasise.parity import import_index
@@ -485,6 +486,19 @@ class ComparisonRecord:
         }
 
 
+def _incomplete_reason(decomposed: dict[str, Any]) -> str | None:
+    """``partial: ...``, ``degraded: ...`` or ``cycle: ...`` when the decomposed run did not finish
+    cleanly, else None (D-07)."""
+    if "cycle" in decomposed:
+        return f"cycle: {decomposed['cycle']}"
+    run_record = decomposed.get("run_record") or {}
+    if run_record.get("partial"):
+        return f"partial: {run_record.get('stop_reason')}"
+    if run_record.get("degraded"):
+        return f"degraded: {run_record.get('degradation_reason')}"
+    return None
+
+
 def _inconclusive_record(
     arm_name: str, query_id: str, query_text: str, corpus_hash: str, reason: str
 ) -> ComparisonRecord:
@@ -574,12 +588,6 @@ async def compare_arm_on_query(
         pinned_ll = list(pin_result.low_level_keywords)
         pinned_keywords = {"high_level_keywords": pinned_hl, "low_level_keywords": pinned_ll}
 
-        band_runs = [
-            await _run_keywords_live(query_text, resolved_clients, registry)
-            for _ in range(keyword_variance_runs)
-        ]
-        band = compute_keyword_variance_band(band_runs)
-
     decomposed = await _run_decomposed_arm(
         arm_name,
         query_text,
@@ -590,6 +598,22 @@ async def compare_arm_on_query(
         workspace=resolved_workspace,
         clients=resolved_clients,
     )
+    incomplete = _incomplete_reason(decomposed)
+    if incomplete is not None:
+        # D-07: a partial, degraded or cyclic run is never a comparison; the band calls and the v1 arm are skipped.
+        return replace(
+            _inconclusive_record(arm_name, query_id, query_text, corpus_hash, incomplete),
+            run_count=1,
+            decomposed_run_record=decomposed.get("run_record"),
+        )
+
+    if has_keywords_node:
+        band_runs = [
+            await _run_keywords_live(query_text, resolved_clients, registry)
+            for _ in range(keyword_variance_runs)
+        ]
+        band = compute_keyword_variance_band(band_runs)
+
     decomposed_chunk_ids, decomposed_entity_ids, decomposed_relation_ids = _extract_decomposed_ids(
         decomposed.get("results", {})
     )
@@ -710,10 +734,11 @@ async def _run_cli(arm_name: str, query_ids: list[str] | None) -> tuple[list[Com
 
 def main(argv: list[str] | None = None) -> int:
     """``uv run python -m databasise.parity.run_comparison --arm naive`` — prints the human
-    summary and the JSON result path. Exit codes: ``0`` every requested query completed cleanly,
-    ``1`` at least one query errored while running an arm, ``2`` at least one query was
-    inconclusive (the index-identity precondition failed) — distinct from both the clean and the
-    error status, per this module's own "never a plain pass/fail" rule.
+    summary and the JSON result path. Exit codes (D-03): ``0`` every requested query completed,
+    ``1`` a named refusal or an arm error, ``2`` bad arguments (argparse only), ``3`` at least one
+    query was inconclusive (the index-identity precondition failed, or the decomposed run was
+    partial, degraded or cyclic) — distinct from both the clean and the error status, per this
+    module's own "never a plain pass/fail" rule.
     """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--arm", required=True, choices=sorted(_ARM_TO_V1_MODE))
@@ -740,7 +765,7 @@ def main(argv: list[str] | None = None) -> int:
     if had_error:
         return 1
     if any(r.status == "inconclusive" for r in records):
-        return 2
+        return cli.EXIT_INCONCLUSIVE
     return 0
 
 
