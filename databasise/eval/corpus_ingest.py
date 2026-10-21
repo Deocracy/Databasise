@@ -44,6 +44,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from databasise import cli
 from databasise.clients.builder import BUILDER_REFUSALS
 from databasise.parity.corpus import CorpusSnapshot, load_snapshot
 from databasise.parity.run_arm import (
@@ -51,6 +52,7 @@ from databasise.parity.run_arm import (
     _build_clients,
     _load_env_file,
 )
+from databasise.parts.registry import default_registry
 from databasise.seam import Databasise
 from databasise.seam.corpus import IngestDocument, IngestJob
 from databasise.seam.refusals import ForeignEngineRefusalError, NoWritePathForModalityError
@@ -63,10 +65,15 @@ CORPUS_DIR = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "ev
 # A declared assumption, not a measurement — see module docstring.
 CHARS_PER_TOKEN = 4
 
-# The v1 corpus this module's own `--spend` path ingests into, kept separate from the Phase 3
-# parity store (`databasise.parity.run_arm.DEFAULT_STORE_ROOT`) and the Phase 6 build harness's
-# own store (`databasise.parity.import_index.DEFAULT_STORE_ROOT`) so a real eval-corpus ingest run
-# never lands documents in either of those two stores' own directories.
+# The eval store this module's `--spend` path ingests into, kept separate from the Phase 3 parity
+# store (`databasise.parity.run_arm.DEFAULT_STORE_ROOT`), the Phase 6 build harness's store
+# (`databasise.parity.import_index.DEFAULT_STORE_ROOT`) and the operator corpus (`v1/.corpus_working_dir`).
+# Where each arm writes, all under `<root>/eval-corpus-ingest` unless noted:
+#   LightRAG: the v1 working dir `lightrag-v1`, plus the v2 namespaces `chunks`, `entities`,
+#             `relationships`, `text_chunks` and `chunk_entity_relation`.
+#   HippoRAG: the `hipporag-*` namespaces.
+#   Both:     `trace.db` and `jobs.db` at `<root>` itself.
+# Nothing is written to `v1/.corpus_working_dir`, and `aa_run` reads the same root back.
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _EVAL_INGEST_STORE_ROOT = _REPO_ROOT / "v1" / ".eval_corpus_store"
 _EVAL_INGEST_WORKSPACE = "eval-corpus-ingest"
@@ -79,6 +86,9 @@ _ARM_SELECTORS: dict[str, Selector] = {
 }
 
 _ARM_CHOICES: tuple[str, ...] = ("lightrag", "hipporag")
+
+# The wiring name each arm's selector must still resolve to (D-10), checked before any client is built.
+_ARM_WIRING_NAMES: dict[str, str] = {"lightrag": "naive", "hipporag": "hipporag"}
 
 
 class LimitExceedsCorpusError(ValueError):
@@ -213,6 +223,13 @@ def main(argv: list[str] | None = None) -> int:
     if not args.spend:
         print("mode: estimate-only")
         return 0
+
+    try:
+        cli.check_named_arm(
+            _ARM_SELECTORS[args.arm], arm_id=_ARM_WIRING_NAMES[args.arm], registry=default_registry()
+        )
+    except cli.ArmSelectorMismatchError as exc:
+        return cli.refuse(exc)
 
     try:
         env = _load_env_file(DEFAULT_V1_ENV_PARITY)

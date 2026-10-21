@@ -80,6 +80,7 @@ from databasise.eval.calibration import (
 from databasise.eval.corpus_ingest import (
     _ARM_CHOICES,
     _ARM_SELECTORS,
+    _ARM_WIRING_NAMES,
     _EVAL_INGEST_STORE_ROOT,
     _EVAL_INGEST_WORKSPACE,
 )
@@ -90,6 +91,7 @@ from databasise.parity.run_arm import (
     _build_clients,
     _load_env_file,
 )
+from databasise.parts.registry import default_registry
 from databasise.seam import Databasise
 from databasise.seam.evidence import CHUNKS_NAMESPACE, resolve_evidence_ref
 from databasise.seam.query import QueryObject
@@ -171,6 +173,15 @@ class ConfoundedPassError(RuntimeError):
             f"run_one_pass: question {question_id!r} reported partial={partial!r} "
             f"degraded={degraded!r} — a confounded pass cannot calibrate a null"
         )
+
+
+class EmptyGoldDocumentIdsError(ValueError):
+    """``score_gold_passage`` was handed no gold document ids; recall over zero documents is undefined."""
+
+
+class GoldPassageMappingError(ValueError):
+    """An evidence record carries neither ``document_id`` (HippoRAG) nor ``full_doc_id`` (LightRAG
+    chunks), so it cannot be mapped to a gold document (TOOL-11)."""
 
 
 class EmptyEvalIndexError(RuntimeError):
@@ -255,7 +266,7 @@ def score_gold_passage(envelope: Any, *, gold_document_ids: Sequence[str], vecto
     """
     gold_ids = list(gold_document_ids)
     if not gold_ids:
-        raise ValueError(
+        raise EmptyGoldDocumentIdsError(
             "score_gold_passage: gold_document_ids is empty — cannot compute a recall fraction "
             "with zero gold documents"
         )
@@ -266,7 +277,14 @@ def score_gold_passage(envelope: Any, *, gold_document_ids: Sequence[str], vecto
     resolved_document_ids: set[str] = set()
     for ref in envelope.evidence:
         record = resolve_evidence_ref(ref, vector_store)
-        resolved_document_ids.add(str(record["document_id"]))
+        # HippoRAG chunk records carry document_id; LightRAG chunk records carry full_doc_id.
+        document_id = record.get("document_id") or record.get("full_doc_id")
+        if document_id is None:
+            raise GoldPassageMappingError(
+                f"evidence record {ref.ref!r} in namespace {ref.namespace!r} has neither document_id nor "
+                f"full_doc_id (keys: {sorted(record)})"
+            )
+        resolved_document_ids.add(str(document_id))
 
     matched = sum(1 for doc_id in gold_ids if str(doc_id) in resolved_document_ids)
     return matched / len(gold_ids)
@@ -605,6 +623,12 @@ def main(argv: list[str] | None = None) -> int:
     if not args.spend:
         print("mode: estimate-only")
         return 0
+
+    if args.arm:
+        try:
+            cli.check_named_arm(selector, arm_id=_ARM_WIRING_NAMES[args.arm], registry=default_registry())
+        except cli.ArmSelectorMismatchError as exc:
+            return cli.refuse(exc)
 
     try:
         env = _load_env_file(DEFAULT_V1_ENV_PARITY)

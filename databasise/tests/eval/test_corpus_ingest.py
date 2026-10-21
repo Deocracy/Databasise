@@ -148,6 +148,40 @@ def test_spend_flag_ingests_exactly_the_limit_never_the_whole_corpus(monkeypatch
 
 
 # --------------------------------------------------------------------------------------------- #
+# TOOL-11 (D-10) — a selector that no longer resolves to its named arm is refused before any client.
+# --------------------------------------------------------------------------------------------- #
+
+
+def test_a_selector_that_resolves_to_another_arm_is_refused_before_clients(tmp_path, monkeypatch, capsys):
+    from databasise.seam.selectors import Selector
+
+    built: list[str] = []
+
+    class _StubEngine:
+        async def ingest(self, document, selector=None):
+            return IngestJob(job_id="stub-job", enqueued=1)
+
+    monkeypatch.setitem(
+        corpus_ingest._ARM_SELECTORS, "lightrag", Selector(capability=["reads_graph", "reads_kv"])
+    )
+    monkeypatch.setattr(corpus_ingest, "_EVAL_INGEST_STORE_ROOT", tmp_path / "eval")
+    monkeypatch.setattr(corpus_ingest, "DEFAULT_V1_ENV_PARITY", tmp_path / "absent.env.parity")
+    monkeypatch.setattr(corpus_ingest, "_load_env_file", lambda path: {})
+    monkeypatch.setattr(corpus_ingest, "_build_clients", lambda env: built.append("clients") or {})
+    monkeypatch.setattr(corpus_ingest, "Databasise", lambda **kwargs: _StubEngine())
+
+    try:
+        code = corpus_ingest.main(["--limit", "1", "--arm", "lightrag", "--spend"])
+    except BaseException as caught:  # noqa: BLE001
+        code = f"raised {type(caught).__name__}"
+
+    err = capsys.readouterr().err
+    assert code == 1, code
+    assert "ArmSelectorMismatchError" in err, err
+    assert built == []
+
+
+# --------------------------------------------------------------------------------------------- #
 # Test 4 — an over-large limit is refused by name, never silently clamped.
 # --------------------------------------------------------------------------------------------- #
 
