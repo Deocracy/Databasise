@@ -564,7 +564,7 @@ All fail today.
 - [ ] **TOOL-10**: databasise.run_wiring canonicalises the wiring document before executing it, so a wiring containing an integer outside int64 raises CanonicalisationError with zero nodes run. It finalizes every store in a finally block, so a scheduler exception still finalizes the SqliteKVStore.
   - Test: databasise/tests/test_tracer_end_to_end.py adds two cases. A wiring with 2**70 in its config raises CanonicalisationError, and a recording part body is never invoked. A monkeypatched scheduler.run_wiring that raises still leads to SqliteKVStore.finalize being called (checked with a spy). Both fail today.
   - Defects: mcp-clients/D14
-- [ ] **TOOL-11**: eval.corpus_ingest --arm lightrag writes into the eval store (v1/.eval_corpus_store) and never into v1/.corpus_working_dir; otherwise it refuses with a named error. The _EVAL_INGEST_STORE_ROOT comment states where each arm writes. eval.aa_run takes `--arm` and queries the same arm the ingest populated. It refuses when that arm's index is empty instead of scoring an empty index as floor 0.0. score_gold_passage maps LightRAG chunk evidence to document ids, or refuses with a named error, instead of raising KeyError on record['document_id'].
+- [x] **TOOL-11**: eval.corpus_ingest --arm lightrag writes into the eval store (v1/.eval_corpus_store) and never into v1/.corpus_working_dir; otherwise it refuses with a named error. The _EVAL_INGEST_STORE_ROOT comment states where each arm writes. eval.aa_run takes `--arm` and queries the same arm the ingest populated. It refuses when that arm's index is empty instead of scoring an empty index as floor 0.0. score_gold_passage maps LightRAG chunk evidence to document ids, or refuses with a named error, instead of raising KeyError on record['document_id'].
   - Test: databasise/tests/eval/test_corpus_ingest.py uses a spy to assert that the working_dir passed to run_corpus_op for the lightrag arm lies under the eval store root, and that the mtime of v1/.corpus_working_dir is unchanged. databasise/tests/eval/test_aa_run.py asserts that --arm is parsed and forwarded to the QueryObject selector, that an empty index raises a named refusal, and that gold_passage scoring over LightRAG-shaped metadata (no document_id key) returns a score or a named refusal. All fail today.
   - Defects: eval/EVAL-01, eval/EVAL-02, eval/EVAL-08
   - Owner decision first: M-04 LightRAG write path: eval ingest depends on how LightRAG ingest reaches the v2 stores. G-34: whether eval ingest may touch the live corpus at all.
@@ -956,7 +956,7 @@ These fail today.
 | TOOL-08 | Phase 15 | Pending |
 | TOOL-09 | Phase 15 | Pending |
 | TOOL-10 | Phase 15 | Pending |
-| TOOL-11 | Phase 15 | Pending |
+| TOOL-11 | Phase 15 | Complete |
 | TOOL-12 | Phase 15 | Pending |
 | TOOL-13 | Phase 15 | Pending |
 | TOOL-14 | Phase 15 | Pending |
