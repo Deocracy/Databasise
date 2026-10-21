@@ -35,6 +35,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from databasise.cli import refuse
+
 RESULTS_DIR = Path(__file__).resolve().parent / "parity_results"
 EVIDENCE_PATH = Path(__file__).resolve().parent / "PARITY-EVIDENCE.md"
 DEVIATIONS_PATH = Path(__file__).resolve().parent / "DECLARED-DEVIATIONS.md"
@@ -61,21 +63,58 @@ _GATE_AMENDMENT_REF = ".planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT
 _GATE_WAIVER_REF = ".planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md"
 _VALIDATION_REF = ".planning/phases/03-lightrag-query-side/03-VALIDATION.md"
 
-# The corpus snapshot carries exactly 2 queries (03-VALIDATION.md's own note); Task 3's human
-# spot-check section is rendered per query, never inferred from whatever the record set happens
-# to name.
-QUERY_IDS: tuple[str, ...] = ("q1", "q2")
-
-
 # --------------------------------------------------------------------------------------------- #
 # Loading committed inputs
 # --------------------------------------------------------------------------------------------- #
 
 
+class ParityRecordFormatError(ValueError):
+    """A committed input this module reads is malformed: not valid JSON, or a ``declared_causes``
+    / ``answer_spotchecks`` entry missing a key the renderer needs (15-08, TOOL-14). One named
+    refusal for both, so a caller never sees ``JSONDecodeError`` or ``KeyError``.
+    """
+
+
+def _load_json(path: Path) -> Any:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ParityRecordFormatError(
+            f"{path}: not valid JSON ({exc.msg} at line {exc.lineno} column {exc.colno})"
+        ) from exc
+
+
+# The keys each human-findings entry needs before this module indexes it.
+_FINDINGS_REQUIRED_KEYS: dict[str, tuple[str, ...]] = {
+    "declared_causes": ("arm", "query_id", "field"),
+    "answer_spotchecks": ("query_id", "arm", "judgment"),
+}
+
+
+def _validate_human_findings(raw: Any, path: Path) -> dict[str, Any]:
+    """The one validator over ``human_findings.json`` that :func:`check_results` and
+    :func:`_collect_deviations` (and the spot-check renderer) share, through
+    :func:`load_human_findings`."""
+    if not isinstance(raw, dict):
+        raise ParityRecordFormatError(f"{path}: top level must be a JSON object")
+    for list_key, required in _FINDINGS_REQUIRED_KEYS.items():
+        entries = raw.get(list_key, [])
+        if not isinstance(entries, list):
+            raise ParityRecordFormatError(f"{path}: {list_key!r} must be a list")
+        for index, entry in enumerate(entries):
+            if not isinstance(entry, dict):
+                raise ParityRecordFormatError(f"{path}: {list_key}[{index}] must be an object")
+            missing = [key for key in required if key not in entry]
+            if missing:
+                raise ParityRecordFormatError(
+                    f"{path}: {list_key}[{index}] is missing required key(s) {missing}"
+                )
+    return raw
+
+
 def load_comparison(arm: str) -> list[dict[str, Any]]:
     """Load the committed per-query comparison records for one arm."""
-    path = RESULTS_DIR / f"{arm}-comparison.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+    return _load_json(RESULTS_DIR / f"{arm}-comparison.json")
 
 
 def load_storage_audit(arm: str) -> dict[str, Any]:
@@ -83,8 +122,7 @@ def load_storage_audit(arm: str) -> dict[str, Any]:
     an environment-precondition refusal (see module docstring and 03-09-SUMMARY.md); once a real
     run lands, this same loader reads whatever shape ``databasise.parity.storage_audit`` writes.
     """
-    path = RESULTS_DIR / f"{arm}-storage-audit.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+    return _load_json(RESULTS_DIR / f"{arm}-storage-audit.json")
 
 
 def load_human_findings() -> dict[str, Any]:
@@ -96,7 +134,7 @@ def load_human_findings() -> dict[str, Any]:
     """
     if not HUMAN_FINDINGS_PATH.exists():
         return {}
-    return json.loads(HUMAN_FINDINGS_PATH.read_text(encoding="utf-8"))
+    return _validate_human_findings(_load_json(HUMAN_FINDINGS_PATH), HUMAN_FINDINGS_PATH)
 
 
 # --------------------------------------------------------------------------------------------- #
@@ -124,6 +162,56 @@ def _run_state() -> str:
     if statuses == {"inconclusive"}:
         return "inconclusive"
     return "mixed"
+
+
+def _arm_state(arm: str) -> str:
+    """The same three values as :func:`_run_state`, for one arm's comparison records plus its
+    storage audit."""
+    statuses = {record.get("status", "inconclusive") for record in load_comparison(arm)}
+    statuses.add(load_storage_audit(arm).get("status", "inconclusive"))
+    if statuses == {"completed"}:
+        return "completed"
+    if statuses == {"inconclusive"}:
+        return "inconclusive"
+    return "mixed"
+
+
+def _state_summary() -> str:
+    """One clause naming which arms are completed, inconclusive or mixed, read per arm."""
+    states = {arm: _arm_state(arm) for arm in ARMS}
+    return "; ".join(
+        f"{label}: " + ", ".join(f"`{arm}`" for arm in ARMS if states[arm] == label)
+        for label in ("completed", "inconclusive", "mixed")
+        if label in states.values()
+    )
+
+
+def _query_ids() -> list[str]:
+    """Every query id any committed comparison record names, in sorted order."""
+    return sorted(
+        {record.get("query_id", "?") for arm in ARMS for record in load_comparison(arm)}
+    )
+
+
+def _queries_phrase() -> str:
+    count = len(_query_ids())
+    return f"{count} {'query' if count == 1 else 'queries'}"
+
+
+def _unrecorded_spotcheck_queries() -> list[str]:
+    recorded = {raw["query_id"] for raw in load_human_findings().get("answer_spotchecks", [])}
+    return [query_id for query_id in _query_ids() if query_id not in recorded]
+
+
+def _spotcheck_gap() -> str:
+    """Whether the human answer-substance spot-check is recorded, read from ``human_findings.json``
+    per query — never assumed unrecorded."""
+    unrecorded = _unrecorded_spotcheck_queries()
+    if unrecorded:
+        return (
+            f"the human answer-substance spot-check for {'/'.join(unrecorded)} is not yet recorded"
+        )
+    return "the human answer-substance spot-check is recorded for every query"
 
 
 def _arm_degraded(arm: str) -> tuple[bool, str]:
@@ -234,17 +322,20 @@ def check_results(results_dir: Path | None = None) -> list[ProvenanceViolation]:
     """Validate every committed result file under ``parity_results/`` (or ``results_dir``, for
     tests) carries its required provenance fields, and that no result carries a comparison number
     alongside an ``"inconclusive"`` status — the plan's own stated prohibition. Returns an empty
-    list when clean; never raises for a validation failure (the CLI decides the exit code).
+    list when clean; never raises for a validation failure (the CLI decides the exit code) — except
+    :class:`ParityRecordFormatError`, the one named refusal for a malformed JSON file or a
+    findings entry missing a required key.
     """
     results_dir = results_dir or RESULTS_DIR
     violations: list[ProvenanceViolation] = []
+    load_human_findings()  # raises ParityRecordFormatError on a malformed findings file
 
     for arm in ARMS:
         comparison_path = results_dir / f"{arm}-comparison.json"
         if not comparison_path.exists():
             violations.append(ProvenanceViolation(str(comparison_path), "file does not exist"))
         else:
-            records = json.loads(comparison_path.read_text(encoding="utf-8"))
+            records = _load_json(comparison_path)
             if not records:
                 violations.append(
                     ProvenanceViolation(str(comparison_path), "no query records recorded")
@@ -283,7 +374,7 @@ def check_results(results_dir: Path | None = None) -> list[ProvenanceViolation]:
         if not audit_path.exists():
             violations.append(ProvenanceViolation(str(audit_path), "file does not exist"))
         else:
-            audit = json.loads(audit_path.read_text(encoding="utf-8"))
+            audit = _load_json(audit_path)
             missing = [k for k in _REQUIRED_AUDIT_KEYS if k not in audit]
             if missing:
                 violations.append(
@@ -309,7 +400,7 @@ def _degraded_but_vacuous_arms(results_dir: Path | None = None) -> list[str]:
         comparison_path = results_dir / f"{arm}-comparison.json"
         if not comparison_path.exists():
             continue
-        records = json.loads(comparison_path.read_text(encoding="utf-8"))
+        records = _load_json(comparison_path)
         for record in records:
             if record.get("status") != "completed":
                 continue
@@ -461,6 +552,14 @@ def render_deviations_markdown(
                 "populate this section with either named entries or an updated zero statement that "
                 "reflects an actual completed comparison.\n"
             )
+        elif state == "mixed":
+            sections.append(
+                "## Zero declared deviations\n\n"
+                "No excursion is recorded in this document. The run state of this render is "
+                f"**mixed** ({_state_summary()}), so this stated zero covers only the arms whose "
+                "comparison completed; the arms that did not complete have not been measured, "
+                "which is a different statement from \"measured and found no excursion\".\n"
+            )
         else:
             sections.append(
                 "## Zero declared deviations\n\n"
@@ -476,8 +575,10 @@ def render_deviations_markdown(
             "|---|---|---|---|---|---|\n"
         )
         rows = [
-            f"| {d.arm} | {d.query_id} | {d.description} | {d.cause} | "
-            f"{d.recorded_by or 'unrecorded'} | {d.recorded_at or 'unrecorded'} |"
+            f"| {_escape_cell(d.arm)} | {_escape_cell(d.query_id)} | "
+            f"{_escape_cell(d.description)} | {_escape_cell(d.cause)} | "
+            f"{_escape_cell(d.recorded_by or 'unrecorded')} | "
+            f"{_escape_cell(d.recorded_at or 'unrecorded')} |"
             for d in deviations
         ]
         sections.append("## Named deviations\n\n" + header + "\n".join(rows) + "\n")
@@ -501,7 +602,8 @@ def _render_pending_causes_section(pending: list[DeclaredDeviation]) -> str:
         return ""
     header = "| arm | query | measured difference | cause |\n|---|---|---|---|\n"
     rows = [
-        f"| {d.arm} | {d.query_id} | {d.description} | PENDING — see "
+        f"| {_escape_cell(d.arm)} | {_escape_cell(d.query_id)} | "
+        f"{_escape_cell(d.description)} | PENDING — see "
         "`.planning/phases/03-lightrag-query-side/03-UAT.md` |"
         for d in pending
     ]
@@ -549,34 +651,43 @@ def render_deviations_document(deviations: list[DeclaredDeviation]) -> str:
 def _render_known_design_deviation() -> str:
     """CR-01's known structural v2-vs-v1 difference (one shared query-vector embed vs v1's two
     separate keyword-derived vectors) — originally recorded as a standing prediction ahead of any
-    measurement. Now testable against the committed records (03-10-PLAN.md Task 2): state the
-    measured outcome rather than leaving the prediction standing.
+    measurement. Testable against the committed records (03-10-PLAN.md Task 2): the heading, the
+    counts and the outcome sentence are all computed per arm and per query from those records
+    (15-08, TOOL-14), never asserted for every query on the strength of some of them.
     """
+    graph_arms = ("hybrid", "local", "global")
+    graph_diffs = [
+        (arm, record.get("query_id", "?"), record.get("entity_diff"), record.get("relation_diff"))
+        for arm in graph_arms
+        for record in load_comparison(arm)
+        if record.get("status") == "completed"
+    ]
+    measured_heading = "measured" if graph_diffs else "pending measurement"
     header = (
-        "## Known design deviation (pending measurement)\n\n"
+        f"## Known design deviation ({measured_heading})\n\n"
         "Not a measured excursion (`_collect_deviations()` only picks up a `symmetric_difference` "
         "on a `status=\"completed\"` comparison record); recorded here ahead of the automatic "
         "mechanism because it is already known from reading the code, per CR-01's `03-REVIEW.md` "
         "finding.\n\n"
     )
-    graph_diffs = [
-        (arm, record.get("entity_diff"), record.get("relation_diff"))
-        for arm in ("hybrid", "local", "global")
-        for record in load_comparison(arm)
-        if record.get("status") == "completed"
+    total = len(graph_diffs)
+    nonempty = [
+        f"{arm}/{query_id}"
+        for arm, query_id, entity_diff, relation_diff in graph_diffs
+        if (entity_diff or {}).get("symmetric_difference")
+        or (relation_diff or {}).get("symmetric_difference")
     ]
-    zero_entity_relation = graph_diffs and all(
-        entity_diff is not None
-        and relation_diff is not None
-        and not entity_diff.get("symmetric_difference")
-        and not relation_diff.get("symmetric_difference")
-        for _arm, entity_diff, relation_diff in graph_diffs
+    zero_entity_relation = graph_diffs and not nonempty and all(
+        entity_diff is not None and relation_diff is not None
+        for _arm, _query_id, entity_diff, relation_diff in graph_diffs
     )
-    any_degraded = any(_arm_degraded(arm)[0] for arm in ("hybrid", "local", "global"))
+    measured_arms = "`/`".join(arm for arm in graph_arms if any(g[0] == arm for g in graph_diffs))
+    any_degraded = any(_arm_degraded(arm)[0] for arm in graph_arms)
     if zero_entity_relation:
         status_sentence = (
-            "**Status, from the completed run**: `hybrid`/`local`/`global` all measured "
-            "`entity_diff`/`relation_diff` `symmetric_difference=[]` on both corpus queries — "
+            f"**Status, from the completed run**: `{measured_arms}` measured "
+            f"`entity_diff`/`relation_diff` `symmetric_difference=[]` on all {total} completed "
+            "arm/query records — "
             "the predicted excursion did not surface as a non-empty diff. "
             + (
                 "That measurement is not dispositive, though: the same three arms' decomposed "
@@ -592,23 +703,25 @@ def _render_known_design_deviation() -> str:
                 "they declared.\n\n"
             )
         )
-    elif graph_diffs and not any_degraded:
-        # All three graph arms completed with no crash, so "not yet re-derivable" (the fallback
-        # below) would be false — the data needed to derive the outcome is right here. It just
-        # isn't the zero-diff outcome the standing prediction hoped for: a real, measured,
-        # non-empty entity/relation excursion on a completed, non-degraded run confirms the
-        # structural difference surfaces as an actual disagreement, not merely an unrefuted
-        # prediction (03-13-PLAN.md gap 2 — this branch did not exist before a real completed
-        # non-degraded graph-arm run first existed to measure it).
+    elif nonempty and not any_degraded:
+        # No crash on any graph arm, so "not yet re-derivable" (the fallback below) would be
+        # false — the data needed to derive the outcome is right here (03-13-PLAN.md gap 2).
+        where = (
+            "on every completed arm/query record"
+            if len(nonempty) == total
+            else f"on {len(nonempty)} of {total} completed arm/query records "
+            f"({', '.join(nonempty)}) and empty on the rest"
+        )
         status_sentence = (
-            "**Status, from the completed run**: `hybrid`/`local`/`global` all completed with "
-            "no decomposed-run degradation, and their `entity_diff`/`relation_diff` "
-            "`symmetric_difference` is non-empty on every query — the predicted structural "
-            "difference **does surface as a measured excursion**, not merely an unrefuted "
-            "prediction. See the per-arm table above for the actual counts, and the Verdict "
-            "section for how each excursion is read (a real disagreement on real content, not a "
-            "crash and not a match — CONTRACT §5 causes are outstanding, not authored by this "
-            "renderer).\n\n"
+            f"**Status, from the completed run**: `{measured_arms}` completed with no "
+            "decomposed-run degradation, and their `entity_diff`/`relation_diff` "
+            f"`symmetric_difference` is non-empty {where} — the predicted structural "
+            "difference **surfaces as a measured excursion** "
+            + ("" if len(nonempty) == total else "on those records ")
+            + "rather than only as an unrefuted prediction. See the per-arm table above for the "
+            "actual counts, and the Verdict section for how each excursion is read (a real "
+            "disagreement on real content, not a crash and not a match — a CONTRACT §5 cause is "
+            "named by a `declared_causes` entry, not authored by this renderer).\n\n"
         )
     else:
         status_sentence = (
@@ -761,46 +874,62 @@ class AnswerSpotCheck:
             )
 
 
+class DuplicateSpotCheckError(ParityRecordFormatError):
+    """Two ``answer_spotchecks`` entries share one ``(query_id, arm)`` key: one of them would
+    silently hide the other, so the render refuses by name instead."""
+
+
 def _render_spotcheck_arm_guidance() -> str:
-    """Which arm the live re-run this section names can actually be performed against (03-10 fix
-    cycle, finding 5). `hybrid`/`local`/`global`'s decomposed runs degrade before reaching
-    `generate` (see the per-arm degradation notes above and the Verdict section), so they never
-    produce a decomposed-side answer to read side by side with v1's — instructing a spot-check
-    against one of those three arms would mean judging two non-answers. `naive` completed its
-    full pipeline end to end and has a real generated answer on both sides, so it is the arm
-    where this read is actually possible today. Derived per-arm on every render, not a fixed
-    recommendation, so a repair of the crash flips this automatically.
+    """Which arms the live re-run this section names can actually be performed against (03-10 fix
+    cycle, finding 5). An arm whose decomposed run is recorded as degraded never produces a
+    decomposed-side answer to read side by side with v1's, and an arm with no completed comparison
+    record has nothing to read at all. All five arms are checked, and which arm hosts the read is
+    derived per arm on every render, not a fixed recommendation, so a repair of a crash flips this
+    automatically.
     """
-    if _run_state() != "completed":
+    if _run_state() == "inconclusive":
         return (
             "No comparison run recorded in this document reached completion (see \"What was "
             "compared\"), so no arm has an answer to read yet either side of this spot-check.\n"
         )
-    graph_arms = ("hybrid", "local", "global")
-    blocked_arms = [arm for arm in graph_arms if _arm_degraded(arm)[0]]
-    if blocked_arms:
+    unfinished = [arm for arm in ARMS if _arm_state(arm) != "completed"]
+    blocked = [arm for arm in ARMS if _arm_degraded(arm)[0]]
+    hosting = [arm for arm in ARMS if arm not in unfinished and arm not in blocked]
+    if len(hosting) == len(ARMS):
         return (
-            f"`{'`, `'.join(blocked_arms)}` cannot host this read today: each one's decomposed "
-            "run degrades before reaching `generate` (see the per-arm degradation notes above), "
-            "so there is no decomposed-side answer to compare — v1's own answer for those "
-            "query/arm pairs is also `\"…[no-context]\"` (see `original_arm_result.answer` in "
-            "the raw `parity_results/` files). Run this spot-check against `naive` instead, "
-            "whose pipeline completed end to end on both sides; the graph arms become available "
-            "for this read once their crash is repaired (out of this plan's scope).\n"
+            "All five arms completed without a decomposed-run degradation, so this read is "
+            "available against any of them.\n"
         )
-    return (
-        "All five arms completed without a decomposed-run degradation, so this read is "
-        "available against any of them.\n"
+    clauses = []
+    if blocked:
+        clauses.append(
+            f"`{'`, `'.join(blocked)}` cannot host this read today: each one's decomposed run is "
+            "recorded as degraded (see the per-arm degradation notes above), so there is no "
+            "decomposed-side answer to compare — v1's own answer for those query/arm pairs is "
+            "in `original_arm_result.answer` in the raw `parity_results/` files"
+        )
+    if unfinished:
+        clauses.append(
+            f"`{'`, `'.join(unfinished)}` did not complete every comparison and storage audit "
+            "(see \"What was compared\"), so there is nothing to read side by side for it"
+        )
+    advice = (
+        f"Run this spot-check against `{'`, `'.join(hosting)}` instead, whose pipeline "
+        "completed without a recorded degradation."
+        if hosting
+        else "No arm can host this read today."
     )
+    return "; ".join(clauses) + ". " + advice + "\n"
 
 
 def _render_answer_spotcheck() -> str:
     """The landing place 03-VERIFICATION.md's second ``behavior_unverified_items`` entry asks
     for: a committed input a human record survives re-render through, because both evidence
     documents are renderer-owned and a hand edit to either is overwritten on the next render
-    (03-REVIEW-FIX.md CR-01).
+    (03-REVIEW-FIX.md CR-01). Keyed by ``(query_id, arm)``, so two arms recorded for one query
+    both appear; an exact duplicate key is refused by name.
     """
-    by_query: dict[str, AnswerSpotCheck] = {}
+    by_key: dict[tuple[str, str], AnswerSpotCheck] = {}
     for raw in load_human_findings().get("answer_spotchecks", []):
         spotcheck = AnswerSpotCheck(
             query_id=raw["query_id"],
@@ -810,7 +939,13 @@ def _render_answer_spotcheck() -> str:
             recorded_by=raw.get("recorded_by", ""),
             recorded_at=raw.get("recorded_at", ""),
         )
-        by_query[spotcheck.query_id] = spotcheck
+        key = (spotcheck.query_id, spotcheck.arm)
+        if key in by_key:
+            raise DuplicateSpotCheckError(
+                f"{HUMAN_FINDINGS_PATH}: answer_spotchecks names (query_id={key[0]!r}, "
+                f"arm={key[1]!r}) more than once — one entry would hide the other."
+            )
+        by_key[key] = spotcheck
 
     sections = [
         "## Human spot-check of answer substance\n",
@@ -831,9 +966,10 @@ def _render_answer_spotcheck() -> str:
         ),
         _render_spotcheck_arm_guidance(),
     ]
-    for query_id in QUERY_IDS:
-        entry = by_query.get(query_id)
-        if entry is None:
+    query_ids = sorted(set(_query_ids()) | {query_id for query_id, _arm in by_key})
+    for query_id in query_ids:
+        entries = [by_key[key] for key in sorted(by_key) if key[0] == query_id]
+        if not entries:
             sections.append(
                 f"### `{query_id}`\n\n"
                 "**Not yet recorded.** A human is required — answer substance is not "
@@ -845,15 +981,17 @@ def _render_answer_spotcheck() -> str:
                 f"Run instructions: `{_VALIDATION_REF}`'s Manual-Only Verifications table, "
                 "\"Human spot-check of answer substance\" row.\n"
             )
-        else:
+            continue
+        blocks = [f"### `{query_id}`\n"]
+        for entry in entries:
             recorded_by = entry.recorded_by or "unrecorded"
             recorded_at = entry.recorded_at or "unrecorded"
-            sections.append(
-                f"### `{query_id}`\n\n"
+            blocks.append(
                 f"**Judgment: `{entry.judgment}`** (arm `{entry.arm}`, recorded by "
                 f"{recorded_by} at {recorded_at}).\n\n"
                 f"{_escape_cell(entry.notes)}\n"
             )
+        sections.append("\n".join(blocks))
     return "\n".join(sections)
 
 
@@ -872,12 +1010,19 @@ def _escape_cell(value: str) -> str:
 def _render_what_was_compared() -> str:
     state = _run_state()
     completed = state == "completed"
+    mixed = state == "mixed"
 
     if completed:
         one_index_trailing = (
             "and gated on every comparison run by plan 03-02's index-identity verifier "
             "(`databasise.parity.import_index.verify_import`) — the same precondition this "
             "run passed.\n"
+        )
+    elif mixed:
+        one_index_trailing = (
+            "and gated on every comparison run by plan 03-02's index-identity verifier "
+            "(`databasise.parity.import_index.verify_import`) — the precondition the completed "
+            "records passed and the inconclusive records failed against (see below).\n"
         )
     else:
         one_index_trailing = (
@@ -886,9 +1031,14 @@ def _render_what_was_compared() -> str:
             "document's own recorded runs failed against (see below).\n"
         )
 
-    if completed:
-        naive_record = load_comparison("naive")[0]
-        ids = naive_record["resolved_model_identities"]
+    completed_records = [
+        record
+        for arm in ARMS
+        for record in load_comparison(arm)
+        if record.get("status") == "completed"
+    ]
+    if completed_records:
+        ids = completed_records[0].get("resolved_model_identities", {})
         # Which arms actually reached `generate` is read from each arm's own recorded
         # `decomposed_generate` value, never assumed from a fixed arm-name list — a degraded run
         # that halts before `generate` records `decomposed_generate=""`, and which arms that is
@@ -903,7 +1053,12 @@ def _render_what_was_compared() -> str:
                 and record.get("resolved_model_identities", {}).get("decomposed_generate")
             }
         )
-        generate_not_ran_arms = sorted(set(ARMS) - set(generate_ran_arms))
+        completed_arm_names = {
+            arm
+            for arm in ARMS
+            if any(record.get("status") == "completed" for record in load_comparison(arm))
+        }
+        generate_not_ran_arms = sorted(completed_arm_names - set(generate_ran_arms))
         never_ran_clause = (
             f" `{'`, `'.join(generate_not_ran_arms)}` recorded `decomposed_generate=\"\"` "
             "because their `generate` node never ran — see the per-arm degradation note in "
@@ -915,9 +1070,9 @@ def _render_what_was_compared() -> str:
         pinned_models_clause = (
             "The completed run resolved these identities live from each provider's response, "
             "never the requested id (Phase 1 D-12) — recorded per-comparison in each committed "
-            f"record's own `resolved_model_identities` field: `decomposed_generate={ids['decomposed_generate']!r}`, "
-            f"`original_arm_llm_model={ids['original_arm_llm_model']!r}`, "
-            f"`original_arm_embedding_model={ids['original_arm_embedding_model']!r}` "
+            f"record's own `resolved_model_identities` field: `decomposed_generate={ids.get('decomposed_generate')!r}`, "
+            f"`original_arm_llm_model={ids.get('original_arm_llm_model')!r}`, "
+            f"`original_arm_embedding_model={ids.get('original_arm_embedding_model')!r}` "
             f"(`{'`, `'.join(generate_ran_arms)}`, the arm(s) whose `generate` node ran)."
             f"{never_ran_clause}\n"
         )
@@ -928,7 +1083,7 @@ def _render_what_was_compared() -> str:
             "the pins themselves are config, not a claim about what ran.\n"
         )
 
-    if completed:
+    if completed or mixed:
         hashes = sorted(
             {
                 record.get("corpus_hash", "")
@@ -937,9 +1092,19 @@ def _render_what_was_compared() -> str:
                 if record.get("status") == "completed"
             }
         )
+        corpus_hash = f"`{hashes[0] if len(hashes) == 1 else hashes}`"
+    if mixed:
+        run_state_bullet = (
+            f"- **Run state (this render)**: mixed — {_state_summary()}. The completed records "
+            f"ran against corpus hash {corpus_hash}; each inconclusive record stopped at a "
+            "precondition and carries no comparison number (its `inconclusive_reason` is in "
+            "\"Per-arm retrieval-level comparison\" below), so no statement here covers the "
+            "arms that did not complete.\n"
+        )
+    elif completed:
         run_state_bullet = (
             "- **Run state (this render)**: all five arms' comparison runs and storage audits "
-            f"completed, against corpus hash `{hashes[0] if len(hashes) == 1 else hashes}`. "
+            f"completed, against corpus hash {corpus_hash}. "
             "`v1/.venv`, `v1/.parity_working_dir`, `v1/.parity_v2_store`, and `v1/.env.parity` "
             "were all present for this run — this is a completed comparison, not D-02's failed-"
             "precondition refusal (`inconclusive`) path. That refusal path is proven "
@@ -965,9 +1130,10 @@ def _render_what_was_compared() -> str:
     lines = [
         "## What was compared\n",
         (
-            "- **Corpus**: `databasise/tests/fixtures/corpus/` — 20 documents, 2 queries "
-            "(HotpotQA distractor setting, D-06). Corpus hash and per-arm query set are recorded "
-            "per-arm below from each committed comparison result's own `corpus_hash` field.\n"
+            f"- **Corpus**: `databasise/tests/fixtures/corpus/` — {_queries_phrase()} named in the "
+            "committed results (HotpotQA distractor setting, D-06). Corpus hash and per-arm query "
+            "set are recorded per-arm below from each committed comparison result's own "
+            "`corpus_hash` field.\n"
         ),
         (
             "- **One index**: built exactly once by a real v1 OpenRouter ingest run over the "
@@ -1155,11 +1321,15 @@ def _render_storage_audit() -> str:
         outcome = audit.get("status", "unknown")
         rows.append(f"| {arm} | {matched} | {no_touch} | {over_declared} | {outcome} |")
     sections.append(header + "\n".join(rows) + "\n")
-    if _run_state() == "completed":
+    state = _run_state()
+    if state != "inconclusive":
+        # Only an arm whose comparison records and audit both completed has an audit to read; in
+        # the completed state that is every arm.
+        audited_arms = [arm for arm in ARMS if _arm_state(arm) == "completed"]
         counts = {arm: load_storage_audit(arm) for arm in ARMS}
         arm_degraded = {arm: _arm_degraded(arm) for arm in ARMS}
-        clean_arms = [arm for arm in ARMS if not arm_degraded[arm][0]]
-        degraded_arms = [arm for arm in ARMS if arm_degraded[arm][0]]
+        clean_arms = [arm for arm in audited_arms if not arm_degraded[arm][0]]
+        degraded_arms = [arm for arm in audited_arms if arm_degraded[arm][0]]
 
         if clean_arms:
             clean_detail = "; ".join(
@@ -1203,6 +1373,16 @@ def _render_storage_audit() -> str:
                 f"{counts[arm].get('over_declared_count', 0)}) are coverage of a halted run, "
                 "not proof every node touches only what it declares.\n"
             )
+        if state == "mixed":
+            skipped = [arm for arm in ARMS if arm not in audited_arms]
+            sections.append(
+                f"The run state is mixed: `{'`, `'.join(skipped)}` did not complete both its "
+                "comparison and its storage audit, so the counts above for "
+                "that arm (usually `matched=0 no-touch=0 over-declared=0`) record an audit that "
+                "stopped before the scheduler ran a node, read from that arm's committed "
+                "`<arm>-storage-audit.json` — not a claim that every node correctly touched "
+                "nothing.\n"
+            )
     else:
         sections.append(
             "Every arm above reports `matched=0 no-touch=0 over-declared=0` in this render — "
@@ -1228,8 +1408,11 @@ def _render_not_measured() -> str:
         "hold regardless of this document's own findings: no promotion decision and no parity "
         "claim rides on an unmeasured comparison.\n\n"
     )
-    if _run_state() == "completed":
-        graph_arms = ("hybrid", "local", "global")
+    state = _run_state()
+    if state != "inconclusive":
+        graph_arms = tuple(
+            arm for arm in ("hybrid", "local", "global") if _arm_state(arm) == "completed"
+        )
         degraded_arms = [arm for arm in graph_arms if _arm_degraded(arm)[0]]
         excursion_arms = [
             arm
@@ -1274,12 +1457,23 @@ def _render_not_measured() -> str:
                 "a halted run"
             )
         degradation_clause = "; ".join(arm_clauses)
+        if degradation_clause:
+            degradation_clause = ", " + degradation_clause
+        if state == "completed":
+            run_clause = (
+                "the retrieval-level comparison **has** run — all five arms are `completed` (see "
+                "\"What was compared\" and \"Per-arm retrieval-level comparison\")"
+            )
+        else:
+            run_clause = (
+                f"the run state is **mixed** ({_state_summary()}; see \"What was compared\"), "
+                "so the retrieval-level comparison has run only for the completed arms and the "
+                "other arms are unmeasured"
+            )
         second_paragraph = (
-            "Separately, and specific to this render: the retrieval-level comparison **has** "
-            "run — all five arms are `completed` (see \"What was compared\" and \"Per-arm "
-            "retrieval-level comparison\") — but the human answer-substance spot-check for q1/q2 "
-            "has not yet been recorded (see \"Human spot-check of answer substance\" above), "
-            f"{degradation_clause}. Neither gap is measured by this document; both are named "
+            f"Separately, and specific to this render: {run_clause} — but {_spotcheck_gap()} "
+            f"(see \"Human spot-check of answer substance\" above){degradation_clause}. "
+            "Neither gap is measured by this document; both are named "
             "here rather than left implicit.\n"
         )
     else:
@@ -1295,8 +1489,113 @@ def _render_not_measured() -> str:
     return first_paragraph + second_paragraph
 
 
+def _arm_cause_summary(arm: str) -> tuple[int, int, list[str]]:
+    """``(excursions, excursions_with_a_named_cause, recorded_by values)`` for ``arm``, read from
+    its completed comparison records and the matching ``declared_causes`` entries. An entry counts
+    only when its recorded ``symmetric_difference`` equals the measured one and its cause is not a
+    generic/blanket phrase. Lenient on purpose (no stale/orphan refusal): that refusal belongs to
+    :func:`_collect_deviations`, which ``main()`` runs before rendering."""
+    entries = {
+        (e["arm"], e["query_id"], e["field"]): e
+        for e in load_human_findings().get("declared_causes", [])
+    }
+    total = with_cause = 0
+    recorded_by: set[str] = set()
+    for record in load_comparison(arm):
+        if record.get("status") != "completed":
+            continue
+        for field_name in ("chunk_diff", "entity_diff", "relation_diff"):
+            measured = (record.get(field_name) or {}).get("symmetric_difference")
+            if not measured:
+                continue
+            total += 1
+            entry = entries.get((arm, record.get("query_id", "?"), field_name))
+            if (
+                entry is not None
+                and entry.get("symmetric_difference") == measured
+                and entry.get("cause", "").strip().lower() not in _GENERIC_CAUSES
+            ):
+                with_cause += 1
+                recorded_by.add(entry.get("recorded_by") or "unrecorded")
+    return total, with_cause, sorted(recorded_by)
+
+
+def _arm_cause_sentence(arm: str) -> str:
+    total, with_cause, recorded_by = _arm_cause_summary(arm)
+    who = "; ".join(f"\"{name}\"" for name in recorded_by)
+    if with_cause == total:
+        return (
+            f"Each of its {total} excursion(s) has a named cause in `DECLARED-DEVIATIONS.md` "
+            f"(CONTRACT §5 line 308: declared deviations are named explicitly), recorded by {who}; "
+            "`recorded_by` is shown beside every cause, and a cause recorded by an AI agent is "
+            "accepted as a named cause, not read as owner-verified."
+        )
+    owner_action = (
+        "each one needs a CONTRACT §5 named cause (a `declared_causes` entry that records who "
+        "recorded it) before it can be read as accepted; see `DECLARED-DEVIATIONS.md`'s "
+        "\"Outstanding\" section and "
+        "`.planning/milestones/v1.0-phases/03-lightrag-query-side/03-UAT.md` for the exact "
+        "owner action."
+    )
+    if with_cause == 0:
+        return f"None of its {total} excursion(s) has a recorded cause yet; {owner_action}"
+    return (
+        f"{with_cause} of its {total} excursion(s) have a named cause (recorded by {who}); the "
+        f"other {total - with_cause} have none yet, and {owner_action}"
+    )
+
+
+def _arm_verdict_line(arm: str) -> str:
+    records = [r for r in load_comparison(arm) if r.get("status") == "completed"]
+    if not records:
+        return (
+            f"`{arm}` has no completed comparison record, so no retrieval-level outcome is "
+            "recorded for it.\n"
+        )
+    measured_fields = [
+        name
+        for name in ("chunk_diff", "entity_diff", "relation_diff")
+        if any(r.get(name) is not None for r in records)
+    ]
+    if not measured_fields:
+        return (
+            f"`{arm}` completed with no retrieval to compare (it has no chunk, entity or "
+            "relation diff), so there is no retrieval-level outcome to state for it.\n"
+        )
+    fields = "`/`".join(measured_fields)
+    queries = ", ".join(f"`{r.get('query_id', '?')}`" for r in records)
+    degraded, reason = _arm_degraded(arm)
+    arm_excursions = _arm_excursion_summary(arm)
+    if degraded:
+        return (
+            f"`{arm}` completed and measured `{fields}` `symmetric_difference=[]` on {queries} "
+            f"— but **this is not read as exact retrieval-level agreement.** `{arm}`'s "
+            f"decomposed run degraded before completing a real retrieval ({reason} — see the "
+            "per-arm degradation note in \"Per-arm retrieval-level comparison\"), and the "
+            "original (v1) arm's own answer for the same query/arm pairs also carries zero "
+            "chunk/entity/relation ids. The measured zero is both sides retrieving nothing, "
+            "not a validated match over non-trivial content — a live defect this comparison "
+            "surfaced, not evidence of parity. Fixing that defect is out of this plan's "
+            "scope; recorded here so the verdict does not overstate what this arm actually "
+            "showed.\n"
+        )
+    if arm_excursions:
+        return (
+            f"`{arm}` completed with no decomposed-run degradation, but **this is not read "
+            "as exact retrieval-level agreement either.** Both sides retrieved real, "
+            f"non-trivial content, and the two disagree: {arm_excursions} A completed run "
+            "with a real disagreement is a genuine excursion, not a crash and not a match. "
+            f"{_arm_cause_sentence(arm)}\n"
+        )
+    return (
+        f"`{arm}` completed and measured `{fields}` `symmetric_difference=[]` on {queries}, "
+        "with no decomposed-run degradation — a validated exact retrieval-level agreement.\n"
+    )
+
+
 def _render_verdict() -> str:
-    if _run_state() != "completed":
+    state = _run_state()
+    if state == "inconclusive":
         return (
             "## Verdict\n\n"
             "**No parity verdict is recorded by this document.** Every one of the five arms' "
@@ -1311,57 +1610,27 @@ def _render_verdict() -> str:
             "the exact commands 03-09-SUMMARY.md names.\n"
         )
 
-    graph_arms = ("hybrid", "local", "global")
-    arm_status = {arm: _arm_degraded(arm) for arm in graph_arms}
-    degraded_arms = [arm for arm in graph_arms if arm_status[arm][0]]
-
-    lines = [
-        "## Verdict\n",
-        (
-            "**All five arms completed.** `naive` and `bypass` ran their full pipelines end to "
-            "end and their retrieval-level comparisons are informative: `bypass` has no "
-            "retrieval to compare; `naive` measured exact chunk-set agreement past "
-            "`ranking_agreement=1.000` with two named tail-length excursions per query, both "
-            "carried as declared deviations in `DECLARED-DEVIATIONS.md` with a grounded cause "
-            "(top_k cutoff vs v1's token-budget truncation) rather than folded into a silent "
-            "pass.\n"
-        ),
-    ]
-    for arm in graph_arms:
-        degraded, reason = arm_status[arm]
-        arm_excursions = _arm_excursion_summary(arm)
-        if degraded:
-            lines.append(
-                f"`{arm}` also completed and measured `chunk_diff`/`entity_diff`/"
-                "`relation_diff` `symmetric_difference=[]` on both corpus queries — but **this "
-                f"is not read as exact retrieval-level agreement.** `{arm}`'s decomposed run "
-                f"degraded before completing a real retrieval ({reason} — see the per-arm "
-                "degradation note in \"Per-arm retrieval-level comparison\"), and the original "
-                "(v1) arm's own answer for the same query/arm pairs also carries zero "
-                "chunk/entity/relation ids. The measured zero is both sides retrieving nothing, "
-                "not a validated match over non-trivial content — a live defect this comparison "
-                "surfaced, not evidence of parity. Fixing that defect is out of this plan's "
-                "scope; recorded here so the verdict does not overstate what this arm actually "
-                "showed.\n"
-            )
-        elif arm_excursions:
-            lines.append(
-                f"`{arm}` completed with no decomposed-run degradation, but **this is not read "
-                "as exact retrieval-level agreement either.** Both sides retrieved real, "
-                f"non-trivial content, and the two disagree: {arm_excursions} A completed run "
-                "with a real disagreement is a genuine excursion, not a crash and not a match — "
-                "each one needs a CONTRACT §5 human-authored cause before it can be read as "
-                "accepted, and none is recorded yet for this arm; see `DECLARED-DEVIATIONS.md`'s "
-                "\"Outstanding\" section and "
-                "`.planning/phases/03-lightrag-query-side/03-UAT.md` for the exact owner "
-                "action.\n"
-            )
-        else:
-            lines.append(
-                f"`{arm}` also completed and measured `chunk_diff`/`entity_diff`/"
-                "`relation_diff` `symmetric_difference=[]` on both corpus queries, with no "
-                "decomposed-run degradation — a validated exact retrieval-level agreement.\n"
-            )
+    degraded_arms = [arm for arm in ARMS if _arm_degraded(arm)[0]]
+    if state == "mixed":
+        opening = (
+            "**Mixed run state: no single parity verdict is recorded.** "
+            f"Per arm, {_state_summary()}. An arm that did not complete has no retrieval-level "
+            "outcome at all; the lines below state an outcome only for the arms that completed.\n"
+        )
+    elif degraded_arms:
+        opening = (
+            "**Every arm recorded `completed` status, but "
+            f"`{'`, `'.join(degraded_arms)}` degraded before completing a real retrieval**, so "
+            "the five runs did not all complete cleanly; the lines below state each arm's "
+            "outcome as recorded.\n"
+        )
+    else:
+        opening = (
+            "**All five arms completed.** Each arm's retrieval-level outcome is stated below as "
+            "read from its committed records.\n"
+        )
+    lines = ["## Verdict\n", opening]
+    lines.extend(_arm_verdict_line(arm) for arm in ARMS)
 
     coverage_gap = (
         f", and the {'/'.join(degraded_arms)} degradation above means the retrieval-level "
@@ -1373,10 +1642,10 @@ def _render_verdict() -> str:
     )
     lines.append(
         "**What this verdict does not cover.** D-10's gate is the deterministic retrieval "
-        "level only — this document makes no answer-level parity claim. The human "
-        "answer-substance spot-check for q1/q2 is not yet recorded (see \"Human spot-check of "
-        "answer substance\" above). GATE-01's standing condition continues to hold: no "
-        f"promotion decision and no parity claim rides on an unmeasured comparison{coverage_gap}.\n"
+        f"level only — this document makes no answer-level parity claim. {_spotcheck_gap().capitalize()} "
+        "(see \"Human spot-check of answer substance\" above). GATE-01's standing condition "
+        f"continues to hold: no promotion decision and no parity claim rides on an unmeasured "
+        f"comparison{coverage_gap}.\n"
     )
     return "\n".join(lines)
 
@@ -1424,6 +1693,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--check-results", action="store_true")
     args = parser.parse_args(argv)
 
+    try:
+        return _run(args)
+    except ParityRecordFormatError as exc:
+        return refuse(exc)
+
+
+def _run(args: argparse.Namespace) -> int:
     if args.check_results:
         violations = check_results()
         if violations:

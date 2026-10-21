@@ -224,7 +224,7 @@ def test_zero_deviations_renders_an_explicit_stated_zero_not_an_empty_document()
     assert "Zero declared deviations" in text
     assert "completed comparison that found no excursion" in text
     # CR-01: the known design deviation is renderer-owned, so a re-render never drops it.
-    assert "Known design deviation (pending measurement)" in text
+    assert "Known design deviation (measured)" in text
 
 
 def test_zero_deviations_against_an_inconclusive_fixture_states_nothing_measured_yet(
@@ -411,7 +411,7 @@ def test_render_markdown_states_the_hybrid_local_global_excursions_rather_than_a
 
     assert "Degraded run" not in text
     assert "not read as exact retrieval-level agreement either" in text
-    assert "each one needs a CONTRACT §5 human-authored cause" in text
+    assert "each one needs a CONTRACT §5 named cause" in text
 
 
 def test_render_not_measured_does_not_assert_agreement_for_an_arm_with_a_real_excursion():
