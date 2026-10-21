@@ -6,16 +6,17 @@ validator cannot derive `depth` from wiring + registry without a self-declaratio
 brake and D's regime was doing structural work."
 
 This module re-runs that falsifier as a committed, ``python -m``-runnable artifact: it loads the
-named wirings under ``evidence/wirings/*.json``, resolves them against the real
-``default_registry()``, computes ``effective_depth``/``execution_mode``/blast-radius per node
+named wirings under ``evidence/wirings/*.json``, resolves them against ``probe_registry()`` (the
+real ``default_registry()`` plus the catalogued ``codebase-memory-mcp@0.1.0`` and two probe-only
+parts, admitted only there, since 14-07 D-13), computes ``effective_depth``/``execution_mode``/blast-radius per node
 through the same functions the runner calls — never a reimplementation, never the superseded
 tracer-era ``derive_execution_mode`` in ``databasise/validator/depth.py`` — and renders a Markdown
 document a second author can read without opening a test file (02-CONTEXT.md D-03).
 
 It also re-runs MACH-01's no-self-declaration clause and SELECTION.md Falsifier 1 limb (b) as a
 committed probe suite (``PROBES``): each probe expecting a refusal is paired with a control that
-must not fire, resolved against ``probe_registry()`` — ``default_registry()`` plus two probe-only
-parts that are never registered into the production registry (02-CONTEXT.md D-03).
+must not fire, resolved against the same ``probe_registry()``. None of its three additions is
+registered into the production registry (02-CONTEXT.md D-03).
 """
 
 from __future__ import annotations
@@ -43,6 +44,16 @@ from databasise.validator.parse import ParsedWiring, parse_wiring
 
 WIRINGS_DIR = Path(__file__).resolve().parent / "wirings"
 EVIDENCE_PATH = Path(__file__).resolve().parent / "FALSIFIER-2-EVIDENCE.md"
+
+# The registry every rendered result is computed against (B-WR-01), named once for the render.
+_REGISTRY_TEXT = (
+    "Every result in this document (the named wirings, the probes and the verdict) is computed "
+    "against `probe_registry()`: `default_registry()` plus the catalogued "
+    "`codebase-memory-mcp@0.1.0` and the two probe-only parts "
+    "`probe/shared-artifact-writer@0.1.0` and `probe/evidence-writer@0.1.0`. These three parts "
+    "are admitted only in `probe_registry()`; none is registered in the production "
+    "`default_registry()`.\n"
+)
 
 NAMED_WIRINGS: tuple[str, ...] = (
     "w1-lightrag-query-side",
@@ -134,8 +145,8 @@ def probe_registry() -> PartRegistry:
     """``default_registry()`` plus the two probe-only parts above and the catalogued
     ``codebase-memory-mcp@0.1.0`` (admitted, not registered in production since 14-07, D-13),
     assembled fresh on every call. Never registers them into a shared or module-level registry: the
-    production ``default_registry()`` stays exactly D-04's seven entries regardless of how many
-    times a probe runs.
+    production ``default_registry()`` never carries any of the three, however many times a probe
+    runs.
     """
     registry = default_registry()
     registry.register(SHARED_ARTIFACT_WRITER_PROBE_PART)
@@ -302,7 +313,7 @@ def _parse(stem: str) -> tuple[dict[str, Any], ParsedWiring]:
 
 
 def evaluate_wiring(stem: str) -> WiringEvidence:
-    """Resolve one named wiring against ``default_registry()`` and compute one ``NodeRow`` per
+    """Resolve one named wiring against ``probe_registry()`` and compute one ``NodeRow`` per
     node, iterating in ``parsed.node_order`` (sorted node id) order for a deterministic render.
     """
     doc, parsed = _parse(stem)
@@ -493,26 +504,26 @@ def _render_probe_table() -> str:
 def render_markdown() -> str:
     """Render every named wiring's computed-vs-declared table, its CONTRACT §19.10 candidate
     boundary set, and a closing Falsifier 2 verdict. A pure function of the committed wiring
-    documents plus ``default_registry()`` — no timestamp, no host path, no run-varying value of
+    documents plus ``probe_registry()`` — no timestamp, no host path, no run-varying value of
     any kind — so two calls in one process return byte-identical text.
     """
     sections = [
         "# Falsifier 2 Evidence\n",
         (
             "Computed-vs-declared depth and execution_mode for each of MACH-01's named wirings, "
-            "resolved against `default_registry()` and computed by "
+            "resolved against `probe_registry()` and computed by "
             "`databasise.validator.depth.effective_depth` and "
             "`databasise.validator.execution_mode.derive_execution_mode` — the same functions "
             "the runner calls, never a reimplementation.\n"
         ),
+        _REGISTRY_TEXT,
     ]
     for stem in NAMED_WIRINGS:
         doc, parsed = _parse(stem)
         evidence = evaluate_wiring(stem)
         sections.append(f"## {evidence.wiring_id} — {evidence.title}\n")
         sections.append(
-            f"Resolved against `default_registry()`'s Phase-1 entries ({len(evidence.rows)} "
-            "node(s)).\n"
+            f"Resolved against `probe_registry()` ({len(evidence.rows)} node(s)).\n"
         )
         sections.append(_render_node_table(evidence.rows))
         sections.append("**Divergence from declared structural_depth:**\n")
@@ -534,8 +545,7 @@ def render_markdown() -> str:
     sections.append(
         "SELECTION.md Falsifier 1 limb (b) and Falsifier 2's own no-self-declaration clause "
         "(02-CONTEXT.md D-03), demonstrated as paired refusal-and-control probes resolved "
-        "against `probe_registry()` (`default_registry()` plus two probe-only parts never "
-        "registered into the production registry). Every probe expecting a refusal is paired "
+        "against the same `probe_registry()`. Every probe expecting a refusal is paired "
         "with a control that must not fire, so a check that has stopped firing surfaces as a "
         "failed probe rather than as a quietly green suite.\n"
     )
@@ -546,7 +556,7 @@ def render_markdown() -> str:
     sections.append(
         "**Result: Falsifier 2 did not fire.** Every `effective_depth` and `execution_mode` "
         "value in every wiring above was derived from that wiring's `nodes`/`deps` plus "
-        "`default_registry()` alone, through "
+        "`probe_registry()` alone, through "
         "`databasise.validator.depth.effective_depth` and "
         "`databasise.validator.execution_mode.derive_execution_mode` — no self-declared depth "
         "or execution_mode field was read from any wiring document. D4's brake holds. All three "

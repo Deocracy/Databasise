@@ -1,10 +1,12 @@
 # Falsifier 2 Evidence
 
-Computed-vs-declared depth and execution_mode for each of MACH-01's named wirings, resolved against `default_registry()` and computed by `databasise.validator.depth.effective_depth` and `databasise.validator.execution_mode.derive_execution_mode` — the same functions the runner calls, never a reimplementation.
+Computed-vs-declared depth and execution_mode for each of MACH-01's named wirings, resolved against `probe_registry()` and computed by `databasise.validator.depth.effective_depth` and `databasise.validator.execution_mode.derive_execution_mode` — the same functions the runner calls, never a reimplementation.
+
+Every result in this document (the named wirings, the probes and the verdict) is computed against `probe_registry()`: `default_registry()` plus the catalogued `codebase-memory-mcp@0.1.0` and the two probe-only parts `probe/shared-artifact-writer@0.1.0` and `probe/evidence-writer@0.1.0`. These three parts are admitted only in `probe_registry()`; none is registered in the production `default_registry()`.
 
 ## w1-lightrag-query-side — Decomposed lightrag-local query side
 
-Resolved against `default_registry()`'s Phase-1 entries (15 node(s)).
+Resolved against `probe_registry()` (15 node(s)).
 
 | node id | component | wiring kind | structural_depth | effective_depth | execution_mode | part effects | artifact_scope | blast-radius |
 |---|---|---|---|---|---|---|---|---|
@@ -65,7 +67,7 @@ Before applying §19.1–§19.6, the author MUST enumerate candidate boundaries 
 
 ## w2-codebase-memory-mcp — Opaque codebase-memory-mcp arm
 
-Resolved against `default_registry()`'s Phase-1 entries (3 node(s)).
+Resolved against `probe_registry()` (3 node(s)).
 
 | node id | component | wiring kind | structural_depth | effective_depth | execution_mode | part effects | artifact_scope | blast-radius |
 |---|---|---|---|---|---|---|---|---|
@@ -91,7 +93,7 @@ Before applying §19.1–§19.6, the author MUST enumerate candidate boundaries 
 
 ## w3-lightrag-half-decomposed — Half-decomposed full LightRAG
 
-Resolved against `default_registry()`'s Phase-1 entries (16 node(s)).
+Resolved against `probe_registry()` (16 node(s)).
 
 | node id | component | wiring kind | structural_depth | effective_depth | execution_mode | part effects | artifact_scope | blast-radius |
 |---|---|---|---|---|---|---|---|---|
@@ -154,7 +156,7 @@ Before applying §19.1–§19.6, the author MUST enumerate candidate boundaries 
 
 ## Self-declaration probes
 
-SELECTION.md Falsifier 1 limb (b) and Falsifier 2's own no-self-declaration clause (02-CONTEXT.md D-03), demonstrated as paired refusal-and-control probes resolved against `probe_registry()` (`default_registry()` plus two probe-only parts never registered into the production registry). Every probe expecting a refusal is paired with a control that must not fire, so a check that has stopped firing surfaces as a failed probe rather than as a quietly green suite.
+SELECTION.md Falsifier 1 limb (b) and Falsifier 2's own no-self-declaration clause (02-CONTEXT.md D-03), demonstrated as paired refusal-and-control probes resolved against the same `probe_registry()`. Every probe expecting a refusal is paired with a control that must not fire, so a check that has stopped firing surfaces as a failed probe rather than as a quietly green suite.
 
 | probe_id | wiring shape | expected code | observed code | verdict |
 |---|---|---|---|---|
@@ -178,4 +180,4 @@ SELECTION.md Falsifier 1 limb (b) and Falsifier 2's own no-self-declaration clau
 
 SELECTION.md's `## Falsifiers` list, item 2: "Depth cannot be computed statically. Over three real parts (decomposed `lightrag-local`, opaque `codebase-memory-mcp`, half-decomposed LightRAG), the validator cannot derive `depth` from wiring + registry without a self-declaration. Then D4 has no brake and D's regime was doing structural work."
 
-**Result: Falsifier 2 did not fire.** Every `effective_depth` and `execution_mode` value in every wiring above was derived from that wiring's `nodes`/`deps` plus `default_registry()` alone, through `databasise.validator.depth.effective_depth` and `databasise.validator.execution_mode.derive_execution_mode` — no self-declared depth or execution_mode field was read from any wiring document. D4's brake holds. All three named wirings above compute without any self-declaration, and every self-declaration and blast-radius refusal probe fired with its expected code, each paired with a control that did not fire — the computation governs regardless of what a wiring author attempts to write.
+**Result: Falsifier 2 did not fire.** Every `effective_depth` and `execution_mode` value in every wiring above was derived from that wiring's `nodes`/`deps` plus `probe_registry()` alone, through `databasise.validator.depth.effective_depth` and `databasise.validator.execution_mode.derive_execution_mode` — no self-declared depth or execution_mode field was read from any wiring document. D4's brake holds. All three named wirings above compute without any self-declaration, and every self-declaration and blast-radius refusal probe fired with its expected code, each paired with a control that did not fire — the computation governs regardless of what a wiring author attempts to write.
