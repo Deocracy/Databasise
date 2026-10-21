@@ -165,6 +165,32 @@ def test_lineage_on_a_duplicates_file_follows_the_active_row(tmp_path):
         assert ledger.lineage("prod", "1.0.0") == ["1.0.0"]
 
 
+@pytest.mark.skipif(
+    not hasattr(sqlite3, "SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE"),
+    reason="this Python's sqlite3 cannot disable the close checkpoint",
+)
+def test_an_alias_read_never_checkpoints_committed_wal_frames_into_the_main_file(tmp_path):
+    """14-REVIEW-ITER2 WR-02: the WAL holds a committed row and no other connection is open."""
+    with Ledger(tmp_path) as ledger:
+        ledger.append(_row("naive", "1.0.0"))
+    db = tmp_path / "ledger.db"
+    conn = sqlite3.connect(db)
+    conn.setconfig(sqlite3.SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE, True)
+    conn.execute("PRAGMA wal_autocheckpoint = 0")
+    writer = Ledger.__new__(Ledger)  # append through this handle so the frame stays in the WAL
+    writer._conn = conn
+    writer.append(_row("naive", "2.0.0"))
+    writer.close()
+    wal = tmp_path / "ledger.db-wal"
+    assert wal.stat().st_size > 0
+    before = db.read_bytes()
+
+    assert _resolve_alias("prod", store_root=tmp_path)["wiring_id"]
+
+    assert db.read_bytes() == before
+    assert wal.stat().st_size > 0
+
+
 def _naive_trace(tmp_path) -> str:
     resolved = wiring_for_name("naive")
     node_ids = sorted(resolved["nodes"])

@@ -168,7 +168,11 @@ class Ledger:
 
         ``read_only=True`` (``_resolve_alias``, CONTRACT §6: a read must not write): a
         ``PRAGMA query_only`` connection with no journal-mode change, no schema step, no migration
-        and no commit. A file with no ``ledger`` table (a zero-byte file included) also gives ``None``,
+        and no commit. Its close does not checkpoint the WAL into ``ledger.db`` when this Python's
+        ``sqlite3`` has ``SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE`` (without it, closing the last
+        connection still checkpoints). SQLite's hot-journal recovery, after a writer crashed in
+        rollback-journal mode, can still write the file; neither changes the logical content.
+        A file with no ``ledger`` table (a zero-byte file included) also gives ``None``,
         so the caller refuses it exactly as it refuses an absent file. Only the read methods are
         valid on this handle. The file check and the open can race a first writer; the answer is
         correct as of the read.
@@ -181,9 +185,13 @@ class Ledger:
         self = cls.__new__(cls)
         # A plain path plus PRAGMA query_only, not a `mode=ro` URI: the LEDG-06 lifecycle check
         # recognises ledger connections by their file path, and query_only refuses every write
-        # statement on this connection just the same.
+        # statement on this connection just the same. query_only does not stop the WAL checkpoint
+        # SQLite runs when the last connection closes, so that is disabled here (14-REVIEW-ITER2
+        # WR-02); a Python whose sqlite3 lacks the constant keeps the close checkpoint.
         self._conn = sqlite3.connect(db_path)
         try:
+            if hasattr(sqlite3, "SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE"):
+                self._conn.setconfig(sqlite3.SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE, True)
             self._conn.execute("PRAGMA query_only = ON")
             self._conn.row_factory = sqlite3.Row
             has_table = self._conn.execute(

@@ -281,6 +281,8 @@ def _resolve_alias(alias: str, *, store_root: str | Path) -> dict[str, Any]:
     ``Ledger.open_existing(read_only=True)``, a ``query_only`` connection, and closes it, so it
     never creates ``ledger.db``, never changes its journal mode, schema or indexes, and never
     appends (CONTRACT §6; 14-REVIEW A-WR-01 narrows D-08's migrating open to the writer verbs).
+    Its close does not checkpoint the WAL where ``sqlite3`` supports that; hot-journal recovery
+    can still write the file (see ``Ledger.open_existing``).
     Promote, rollback and retire write the rows this branch reads.
 
     The lookup is ``by_alias(alias)``, the active-pointer projection over the ``alias`` column. The
