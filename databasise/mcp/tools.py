@@ -1,4 +1,4 @@
-"""``databasise.mcp.tools`` — the five tool names and their argument models (05-07-PLAN.md
+"""``databasise.mcp.tools`` — the ``TOOL_NAMES`` (ten) tool names and their argument models (05-07-PLAN.md
 Task 1, action D). Every field here is the seam's own model, reused rather than re-declared:
 ``QueryToolArgs`` carries the identical ``QueryObject``/``Selector`` REST deserializes into,
 ``ResolveToolArgs`` carries the identical ``EvidenceRef`` ``/evidence/resolve`` deserializes into,
@@ -19,8 +19,8 @@ truth REST and MCP both defer to.
   regardless of which modality is fitted underneath — the selector argument picks a *wiring*, the
   tool itself never becomes modality-specific.
 - ``delete``: removes a document from the corpus. §19.6 requires this be a separate port from
-  ingest (different declared effect, ``mutates_store`` vs ``writes_artifact``) — and a mutation is
-  not an answering variant a selector could express. 06-10-PLAN.md: ``selector`` names which fitted
+  ingest (a different port, though both corpus ports declare ``mutates_store``) — and a mutation
+  is not an answering variant a selector could express. 06-10-PLAN.md: ``selector`` names which fitted
   modality's index the delete reaches, exactly as it does for ``ingest`` — a modality with no
   delete wiring refuses by name (``NoWritePathForModalityError``) rather than silently deleting
   from a different modality's index.

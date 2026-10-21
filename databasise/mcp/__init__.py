@@ -1,5 +1,5 @@
-"""``databasise.mcp`` — API-07's second transport: five intention-level tools over the identical
-``Databasise`` engine object the REST transport (``databasise.seam.rest``) already wraps. This
+"""``databasise.mcp`` — API-07's second transport: every intention-level tool in
+``TOOL_NAMES`` (ten) over the identical ``Databasise`` engine object the REST transport (``databasise.seam.rest``) already wraps. This
 package holds no logic of its own — no selector resolution, no redaction, no envelope assembly
 (the same separation ``databasise.seam.rest``'s own module docstring states, verified the same way:
 ``databasise/tests/mcp/test_tool_growth_invariant.py``'s AST walk).

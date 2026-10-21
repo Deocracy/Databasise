@@ -1,6 +1,6 @@
 """05-07-PLAN.md Task 1 (first half) + Task 3 (the three-way harness): the MCP transport's own
-structural/behavior proofs, plus MCP-versus-REST-versus-in-process equality for every one of the
-five tools — EMBED-02's one-seam-many-transports claim, proved against three call paths rather
+structural/behavior proofs, plus MCP-versus-REST-versus-in-process equality for every
+tool in ``TOOL_NAMES`` — EMBED-02's one-seam-many-transports claim, proved against three call paths rather
 than asserted for a third.
 
 **No ``__init__.py`` in this directory — deliberate, documented deviation from the plan's literal
@@ -399,7 +399,7 @@ def _strip_trace_token(envelope_dict: dict[str, Any]) -> dict[str, Any]:
 
 async def _compare_scenario(engine, rest_client, server):
     """06-03-PLAN.md: `compare` exercised through both transports, both results asserted equal —
-    exactly as the five pre-existing tools are, over `dual_arm_store`'s own two-arm data. Each
+    exactly as the other tools of ``TOOL_NAMES`` are, over `dual_arm_store`'s own two-arm data. Each
     arm's own `trace_token` is stripped before comparison (mirroring `_query_scenario`'s own
     top-level exclusion): three independent calls each mint a fresh, random trace token (D-06), so
     unlike a flat envelope's top-level fields, `compare`'s per-arm nesting needs the exclusion
