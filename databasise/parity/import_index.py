@@ -115,7 +115,7 @@ class Violation:
     (chunk id, vector kind, or node/edge identity) if the failure is id-scoped.
     """
 
-    assertion: Literal["chunk-text", "vector-tolerance", "graph-topology"]
+    assertion: Literal["chunk-text", "vector-tolerance", "graph-topology", "precondition"]
     detail: str
     offending_id: str | None = None
 
@@ -623,7 +623,7 @@ async def verify_import(
             status="refused",
             violations=(
                 Violation(
-                    assertion="chunk-text",
+                    assertion="precondition",
                     detail=(
                         f"no imported v2 store found at {Path(store_root) / workspace} — "
                         "run import_v1_index() first"
@@ -669,6 +669,14 @@ async def verify_import(
     # (c) graph node count, edge count, node id set, edge endpoint-pair set all matching.
     v1_graph = _v1_graph(v1_working_dir)
     v2_graph = _v2_graph(store_root, workspace)
+    if v1_graph is not None and v2_graph is None:
+        # D-06: the comparison below runs only when both graphs exist; a missing v2 graph must not pass.
+        violations.append(
+            Violation(
+                assertion="graph-topology",
+                detail=f"v1 has a graph but v2's {_GRAPH_KIND} namespace is absent under {Path(store_root) / workspace}",
+            )
+        )
     if v1_graph is not None and v2_graph is not None:
         v1_nodes, v1_edges = v1_graph
         v2_nodes, v2_edges = v2_graph

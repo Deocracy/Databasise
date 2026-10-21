@@ -193,6 +193,25 @@ async def test_verify_without_prior_import_is_refused_not_pass_or_fail(synthetic
     assert result.status == "refused"
 
 
+async def test_tool03_a_missing_v2_graph_is_a_graph_topology_violation(synthetic_v1_index, store_root):
+    import shutil
+
+    workspace = await import_v1_index(synthetic_v1_index, store_root, workspace=_WORKSPACE)
+    shutil.rmtree(Path(store_root) / workspace / "chunk_entity_relation")
+
+    result = await verify_import(synthetic_v1_index, store_root, workspace)
+
+    assert result.status != "verified", "verify_import reported verified with the v2 graph missing"
+    assert any(v.assertion == "graph-topology" for v in result.violations), result.violations
+
+
+async def test_tool03_an_empty_store_root_is_refused_as_a_precondition(synthetic_v1_index, tmp_path):
+    result = await verify_import(synthetic_v1_index, tmp_path / "empty_store_root", workspace=_WORKSPACE)
+
+    assert result.status == "refused"
+    assert [v.assertion for v in result.violations] == ["precondition"], result.violations
+
+
 # --------------------------------------------------------------------------------------------- #
 # Real Task 2 build — skip-guarded, exercised only when v1/ has actually been run
 # --------------------------------------------------------------------------------------------- #
