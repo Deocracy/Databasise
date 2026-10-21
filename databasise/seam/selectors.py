@@ -278,21 +278,23 @@ def resolve_selector(
 
 def _resolve_alias(alias: str, *, store_root: str | Path) -> dict[str, Any]:
     """The §18.4 alias branch (D-12, FA-06). Read-only: it opens the ledger with
-    ``Ledger.open_existing`` and closes it, so it never creates ``ledger.db`` and never appends
-    (CONTRACT §6). Promote, rollback and retire write the rows this branch reads.
+    ``Ledger.open_existing(read_only=True)``, a ``query_only`` connection, and closes it, so it
+    never creates ``ledger.db``, never changes its journal mode, schema or indexes, and never
+    appends (CONTRACT §6; 14-REVIEW A-WR-01 narrows D-08's migrating open to the writer verbs).
+    Promote, rollback and retire write the rows this branch reads.
 
     The lookup is ``by_alias(alias)``, the active-pointer projection over the ``alias`` column. The
     row's ``mutation_id`` names the active wiring and resolves through ``wiring_for_name``, the one
     lookup over every ``all_wirings()`` name, HippoRAG included.
 
-    A missing ``ledger.db``, an alias with no row, and a row whose ``mutation_id`` no wiring
-    answers to all raise the identical :class:`UnsatisfiableSelectorError`, naming only the
+    A missing ``ledger.db``, a file with no ``ledger`` table (a zero-byte file included), an alias
+    with no row, and a row whose ``mutation_id`` no wiring answers to all raise the identical :class:`UnsatisfiableSelectorError`, naming only the
     consumer's own ``alias`` value, never the row's ``mutation_id`` or a wiring id (§18.2's closed
     set, applied to this branch: telling "no aliases exist" from "your alias is not one of them" is
     itself the disclosure the no-enumeration rule forbids).
     """
     refusal = UnsatisfiableSelectorError(selector_kind="alias", requested=alias)
-    ledger = Ledger.open_existing(store_root)
+    ledger = Ledger.open_existing(store_root, read_only=True)
     if ledger is None:
         raise refusal
     with ledger:

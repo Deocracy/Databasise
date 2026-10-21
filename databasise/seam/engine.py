@@ -2534,10 +2534,11 @@ class Databasise:
             ``_promote_sync``: every ledger touch this rollback needs (reading the target
             generation, reading the alias's current active generation, minting the version, and
             appending) happens in this one offloaded call, never split across the calling
-            event-loop thread and the executor thread. The ledger is opened read-only
-            (``Ledger.open_existing``): a store with no ``ledger.db`` has no such generation, so
-            the verb refuses as ``UnknownGenerationVersionError`` and creates no file (LEDG-06,
-            D-08); an opened ledger is closed on this thread before the closure returns.
+            event-loop thread and the executor thread. The ledger is opened without being created
+            (``Ledger.open_existing``, the migrating writer open, since this verb appends): a store
+            with no ``ledger.db`` has no such generation, so the verb refuses as
+            ``UnknownGenerationVersionError`` and creates no file (LEDG-06, D-08); an opened ledger
+            is closed on this thread before the closure returns.
             """
             opened = Ledger.open_existing(self.store_root)
             if opened is None:

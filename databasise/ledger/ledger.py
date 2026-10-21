@@ -45,7 +45,8 @@ Collapsing them into one column would make a tombstone's own version indistingui
 version it minted. No SQL default on either NOT NULL column — an absent value fails at the
 database, never falls back to a plausible string. All four columns land in the single ``CREATE
 TABLE IF NOT EXISTS`` column list; the one later schema change, the unique index below, is applied
-by :meth:`Ledger._create_schema` on an existing file as well.
+by :meth:`Ledger._create_schema` on an existing file as well (when old duplicate rows block it,
+the old index stays and the condition is logged).
 
 **07-05-PLAN.md (G-07-1): ``(alias, minted_version)`` is now UNIQUE.** A minted semver is a
 published name under D-06/CONTRACT §0.4 and is never reused; previously this rule was enforced
@@ -85,6 +86,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import logging
 import sqlite3
 import time
 from collections.abc import Iterator
@@ -131,6 +133,8 @@ class LedgerEntry(LedgerRecord):
     created_at: str
 
 
+_log = logging.getLogger(__name__)
+
 _JSON_FIELDS = ("arm_instance_hashes", "opaque_ttl_renewals", "parity_records", "promotion_trace_ids")
 
 # Bounded retry for the WAL-pragma first-touch race; see Ledger._set_wal.
@@ -156,15 +160,42 @@ class Ledger:
             raise
 
     @classmethod
-    def open_existing(cls, store_root: str | Path) -> Ledger | None:
-        """The read path for ``_resolve_alias``, rollback and retire (CONTRACT §6: a read must not
-        write): ``None`` when ``ledger.db`` is absent, creating nothing; otherwise a normal
-        :class:`Ledger`, so the schema step and its index migration still run on an old file. The
-        file check and the open can race a first writer; the answer is correct as of the read.
+    def open_existing(cls, store_root: str | Path, *, read_only: bool = False) -> Ledger | None:
+        """Open ``ledger.db`` without creating it: ``None`` when the file is absent.
+
+        ``read_only=False`` (rollback and retire, which append anyway): a normal :class:`Ledger`,
+        so the schema step and its index migration still run on an old file (D-08).
+
+        ``read_only=True`` (``_resolve_alias``, CONTRACT §6: a read must not write): a
+        ``PRAGMA query_only`` connection with no journal-mode change, no schema step, no migration
+        and no commit. A file with no ``ledger`` table (a zero-byte file included) also gives ``None``,
+        so the caller refuses it exactly as it refuses an absent file. Only the read methods are
+        valid on this handle. The file check and the open can race a first writer; the answer is
+        correct as of the read.
         """
-        if not (Path(store_root) / "ledger.db").is_file():
+        db_path = Path(store_root) / "ledger.db"
+        if not db_path.is_file():
             return None
-        return cls(store_root)
+        if not read_only:
+            return cls(store_root)
+        self = cls.__new__(cls)
+        # A plain path plus PRAGMA query_only, not a `mode=ro` URI: the LEDG-06 lifecycle check
+        # recognises ledger connections by their file path, and query_only refuses every write
+        # statement on this connection just the same.
+        self._conn = sqlite3.connect(db_path)
+        try:
+            self._conn.execute("PRAGMA query_only = ON")
+            self._conn.row_factory = sqlite3.Row
+            has_table = self._conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'ledger'"
+            ).fetchone()
+        except BaseException:
+            self._conn.close()
+            raise
+        if has_table is None:
+            self._conn.close()
+            return None
+        return self
 
     def close(self) -> None:
         """Close the underlying connection."""
@@ -217,8 +248,10 @@ class Ledger:
         On success (the ``yield`` body raises nothing), commits. On any exception, rolls back and
         re-raises — this rollback path is load-bearing: every refusal a wrapped verb raises exits
         through here, and the rollback ends the write transaction so later writers are not
-        blocked. Opening a ``Ledger`` over an existing schema never waits on a writer; only
-        first-time schema creation needs the write lock.
+        blocked. Opening a ``Ledger`` over a current schema takes no write lock. First-time schema
+        creation and the unique-index migration on a pre-07-05 file do, so those opens can wait up
+        to the connection's busy timeout behind a writer. ``open_existing(read_only=True)`` never
+        takes the write lock.
 
         ponytail: two ceilings, not enforced in code. (a) One ``append()`` per ``transaction()`` —
         ``append()``'s own ``commit()`` ends the span early; a caller needing two appends in one
@@ -279,19 +312,32 @@ class Ledger:
         # whole fix; reusing the old name would ship a "fix" that does nothing on an existing
         # ledger.db. Dropping/creating an index is not a row mutation, so the append-only
         # BEFORE UPDATE/BEFORE DELETE triggers below are untouched.
-        self._conn.execute("DROP INDEX IF EXISTS ix_ledger_generation")
-        self._conn.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS ux_ledger_generation ON ledger(alias, minted_version)"
-        )
-        # ponytail: a raw sqlite3.IntegrityError from this index is deliberately NOT wrapped into
-        # a SeamRefusalError. Once Ledger.transaction() (above) encloses every write path, this
-        # constraint is a backstop no caller can reach through the seam — it signals a broken
-        # machine invariant, not a caller error, exactly like _promote_sync's own unreachable-by-
-        # construction UnrecognisedPromotionVerbError backstop. Wrapping it would add new §18
-        # surface for a path no consumer can reach. Second ceiling: if a pre-existing database
-        # already holds duplicate (alias, minted_version) rows, this CREATE UNIQUE INDEX fails at
-        # open time — that is a genuine pre-existing invariant violation and must surface loudly;
-        # no repair machinery is added for it here.
+        #
+        # 14-REVIEW A-WR-01: CREATE the unique index first and DROP the old one only once it
+        # exists. Each DDL statement autocommits, so the old drop-then-create order committed the
+        # drop even when the create failed. A pre-07-05 file can hold duplicate
+        # (alias, minted_version) rows (the G-07-1 race); there the create fails, the old plain
+        # index stays, and the condition is logged instead of raised, so an operator verb never
+        # sees a raw IntegrityError as a 500. Writers on such a file stay serialized by
+        # transaction()'s BEGIN IMMEDIATE; only the database-level backstop is missing.
+        try:
+            self._conn.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ux_ledger_generation "
+                "ON ledger(alias, minted_version)"
+            )
+        except sqlite3.IntegrityError:
+            _log.warning(
+                "ledger.db holds duplicate (alias, minted_version) rows from before 07-05; "
+                "kept the old ix_ledger_generation index, ux_ledger_generation not created"
+            )
+        else:
+            self._conn.execute("DROP INDEX IF EXISTS ix_ledger_generation")
+        # ponytail: a raw sqlite3.IntegrityError from this index on INSERT is deliberately NOT
+        # wrapped into a SeamRefusalError. Once Ledger.transaction() (above) encloses every write
+        # path, this constraint is a backstop no caller can reach through the seam — it signals a
+        # broken machine invariant, not a caller error, exactly like _promote_sync's own
+        # unreachable-by-construction UnrecognisedPromotionVerbError backstop. Wrapping it would
+        # add new §18 surface for a path no consumer can reach.
         self._conn.execute(
             """
             CREATE TRIGGER IF NOT EXISTS trg_ledger_no_update
