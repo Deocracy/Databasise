@@ -53,13 +53,15 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import functools
 import json
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Any
 
+from databasise import cli
 from databasise.clients.builder import BUILDER_REFUSALS
 from databasise.eval.bundle import (
     ANSWER_LEVEL_FAMILY,
@@ -89,12 +91,12 @@ from databasise.parity.run_arm import (
     _load_env_file,
 )
 from databasise.seam import Databasise
-from databasise.seam.evidence import resolve_evidence_ref
+from databasise.seam.evidence import CHUNKS_NAMESPACE, resolve_evidence_ref
 from databasise.seam.query import QueryObject
 from databasise.seam.refusals import SeamRefusalError
 from databasise.seam.selectors import Selector
 from databasise.seam.trace_store import TraceStore
-from databasise.stores.vector import MultiNamespaceVectorStore
+from databasise.stores.vector import MultiNamespaceVectorStore, load_committed
 
 # NullIdentity.metric — stable, declared once, never inlined at a call site.
 GOLD_PASSAGE_METRIC = "gold_passage_recall"
@@ -168,6 +170,20 @@ class ConfoundedPassError(RuntimeError):
         super().__init__(
             f"run_one_pass: question {question_id!r} reported partial={partial!r} "
             f"degraded={degraded!r} — a confounded pass cannot calibrate a null"
+        )
+
+
+class EmptyEvalIndexError(RuntimeError):
+    """Raised by the read-only index probe when the arm's evidence namespace in the eval store holds
+    no vectors: a run on it would pay one embedding call per question and score nothing (TOOL-11,
+    D-12). Names the arm and the namespace so the owner knows which ingest to run."""
+
+    def __init__(self, arm: str, namespace: str, location: Path) -> None:
+        self.arm = arm
+        self.namespace = namespace
+        super().__init__(
+            f"the eval index for arm {arm!r} is empty: namespace {namespace!r} at {location} holds no "
+            f"vectors; run `python -m databasise.eval.corpus_ingest --limit N --arm {arm} --spend` first"
         )
 
 
@@ -419,6 +435,7 @@ async def calibrate_family(
     n_resamples: int | None = None,
     seed: int | None = None,
     selector: Selector | None = None,
+    index_probe: Callable[[], None] | None = None,
 ) -> CalibrationResult:
     """Run ``family_name`` twice over ``split_name``'s question ids, feed the two score mappings
     to ``paired_differences``, and hand the diffs plus both passes' node traces to
@@ -427,9 +444,14 @@ async def calibrate_family(
     ``paired_differences``' unequal-set ``ValueError`` — every one of them is a refusal this
     module exists to preserve, and swallowing any of them would produce a number nobody could
     trust.
+
+    ``index_probe`` (TOOL-11, D-12) is a read-only callable run once before the first pass; it raises
+    to refuse a run on an index that holds nothing, so no embedding or chat call is paid for it.
     """
     question_ids = _resolve_split(bundle, split_name)
     _check_family_covers_questions(bundle, family_name, question_ids)
+    if index_probe is not None:
+        index_probe()
 
     run_a = await run_one_pass(
         engine=engine,
@@ -517,6 +539,27 @@ def estimate_calls(bundle: EvalBundle, *, split_name: str, families: Sequence[st
 # --------------------------------------------------------------------------------------------- #
 
 
+# The namespace each arm's evidence is read from in the eval store; no --arm means the engine's
+# default (naive) arm, which reads the LightRAG chunks.
+_EVIDENCE_NAMESPACE_BY_ARM: dict[str | None, str] = {
+    None: CHUNKS_NAMESPACE,
+    "lightrag": CHUNKS_NAMESPACE,
+    "hipporag": "hipporag-chunks",
+}
+
+
+def _assert_eval_index_populated(arm: str, namespace: str) -> None:
+    """Read-only: ``load_committed`` never creates a directory. The eval root is read at call time."""
+    location = Path(_EVAL_INGEST_STORE_ROOT) / _EVAL_INGEST_WORKSPACE / namespace
+    committed = load_committed(location)
+    if committed is None or not committed.entries:
+        raise EmptyEvalIndexError(arm, namespace, location)
+
+
+def _eval_index_probe(arm: str | None) -> Callable[[], None]:
+    return functools.partial(_assert_eval_index_populated, arm or "default", _EVIDENCE_NAMESPACE_BY_ARM[arm])
+
+
 def _default_bundle_version(bundle_root: Path) -> str:
     numbers = _bundle_version_numbers(bundle_root)
     if not numbers:
@@ -593,6 +636,7 @@ def main(argv: list[str] | None = None) -> int:
                     n_resamples=args.n_resamples,
                     seed=args.seed,
                     selector=selector,
+                    index_probe=_eval_index_probe(args.arm),
                 )
             )
     except (
@@ -600,10 +644,10 @@ def main(argv: list[str] | None = None) -> int:
         UnparseableJudgeVerdictError,
         UnusableFloorError,
         ConfoundedPassError,  # run_one_pass's own confounded (partial/degraded) pass refusal
+        EmptyEvalIndexError,  # the read-only probe, run by calibrate_family before the first pass
         SeamRefusalError,  # any refusal the real engine.query() call itself raises
     ) as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
+        return cli.refuse(exc)
 
     first_result = next(iter(results_by_family.values()))
     result = AARunResult(
@@ -629,6 +673,7 @@ __all__ = [
     "VERDICT_SCORES",
     "AARunResult",
     "PassResult",
+    "EmptyEvalIndexError",
     "SplitNotCalibratableError",
     "UnparseableJudgeVerdictError",
     "calibrate_family",
