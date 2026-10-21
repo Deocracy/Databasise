@@ -21,15 +21,16 @@ registered into the production registry (02-CONTEXT.md D-03).
 
 from __future__ import annotations
 
+import argparse
 import copy
 import json
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from databasise.parts.registry import PartRegistry, default_registry
 from databasise.parts.schema import Part
-from databasise.parts_core.declared_only import CODEBASE_MEMORY_MCP_PART
 from databasise.validator.blast_radius import blast_radius_violations
 from databasise.validator.depth import effective_depth
 from databasise.validator.errors import (
@@ -151,6 +152,9 @@ def probe_registry() -> PartRegistry:
     registry = default_registry()
     registry.register(SHARED_ARTIFACT_WRITER_PROBE_PART)
     registry.register(EVIDENCE_WRITER_PROBE_PART)
+    # Lazy: the declaration-only module loads only when a probe registry is built (15-RESEARCH 19).
+    from databasise.parts_core.declared_only import CODEBASE_MEMORY_MCP_PART
+
     registry.register(CODEBASE_MEMORY_MCP_PART)
     return registry
 
@@ -478,6 +482,22 @@ def _wiring_shape_summary(probe: Probe) -> str:
     )
 
 
+def _probe_verdict(probe: Probe, observed: frozenset[str]) -> str:
+    if probe.expected_code is None:
+        return "OK (no violation)" if not observed else "UNEXPECTED VIOLATION"
+    return "fired as expected" if probe.expected_code in observed else "DID NOT FIRE"
+
+
+def failing_probes() -> tuple[str, ...]:
+    """Ids of the probes whose verdict cell is ``DID NOT FIRE`` or ``UNEXPECTED VIOLATION``."""
+    return tuple(
+        probe.probe_id
+        for probe in PROBES
+        if _probe_verdict(probe, evaluate_probe(probe))
+        in ("DID NOT FIRE", "UNEXPECTED VIOLATION")
+    )
+
+
 def _render_probe_table() -> str:
     header = (
         "| probe_id | wiring shape | expected code | observed code | verdict |\n"
@@ -489,10 +509,7 @@ def _render_probe_table() -> str:
         observed = evaluate_probe(probe)
         expected_cell = probe.expected_code if probe.expected_code is not None else "— (control)"
         observed_cell = ", ".join(sorted(observed)) if observed else "—"
-        if probe.expected_code is None:
-            verdict = "OK (no violation)" if not observed else "UNEXPECTED VIOLATION"
-        else:
-            verdict = "fired as expected" if probe.expected_code in observed else "DID NOT FIRE"
+        verdict = _probe_verdict(probe, observed)
         lines.append(
             f"| {probe.probe_id} | {_wiring_shape_summary(probe)} | {expected_cell} | "
             f"{observed_cell} | {verdict} |"
@@ -553,26 +570,38 @@ def render_markdown() -> str:
 
     sections.append("## Falsifier 2 verdict\n")
     sections.append(f'SELECTION.md\'s `## Falsifiers` list, item 2: "{_FALSIFIER_2_TEXT}"\n')
-    sections.append(
-        "**Result: Falsifier 2 did not fire.** Every `effective_depth` and `execution_mode` "
-        "value in every wiring above was derived from that wiring's `nodes`/`deps` plus "
-        "`probe_registry()` alone, through "
-        "`databasise.validator.depth.effective_depth` and "
-        "`databasise.validator.execution_mode.derive_execution_mode` — no self-declared depth "
-        "or execution_mode field was read from any wiring document. D4's brake holds. All three "
-        "named wirings above compute without any self-declaration, and every self-declaration "
-        "and blast-radius refusal probe fired with its expected code, each paired with a control "
-        "that did not fire — the computation governs regardless of what a wiring author "
-        "attempts to write.\n"
-    )
+    failing = failing_probes()
+    if failing:
+        sections.append(
+            "**Result: Falsifier 2 fired.** A probe did not behave as expected "
+            f"({', '.join(f'`{probe_id}`' for probe_id in failing)}): a refusal that stopped "
+            "firing, or a control that fired. The no-self-declaration computation is not "
+            "demonstrated by this run, and D4's brake is not shown to hold.\n"
+        )
+    else:
+        sections.append(
+            "**Result: Falsifier 2 did not fire.** Every `effective_depth` and `execution_mode` "
+            "value in every wiring above was derived from that wiring's `nodes`/`deps` plus "
+            "`probe_registry()` alone, through "
+            "`databasise.validator.depth.effective_depth` and "
+            "`databasise.validator.execution_mode.derive_execution_mode` — no self-declared "
+            "depth or execution_mode field was read from any wiring document. D4's brake holds. "
+            "All three named wirings above compute without any self-declaration, and every "
+            "self-declaration and blast-radius refusal probe fired with its expected code, each "
+            "paired with a control that did not fire — the computation governs regardless of "
+            "what a wiring author attempts to write.\n"
+        )
     return "\n".join(sections)
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> int:
+    """Write the rendered document; exit 1 when any probe did not behave as expected."""
+    argparse.ArgumentParser(description=__doc__).parse_args(argv)
     text = render_markdown()
     EVIDENCE_PATH.write_text(text, encoding="utf-8")
     print(text)
+    return 1 if failing_probes() else 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
