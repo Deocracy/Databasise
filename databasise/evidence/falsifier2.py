@@ -28,6 +28,7 @@ from typing import Any
 
 from databasise.parts.registry import PartRegistry, default_registry
 from databasise.parts.schema import Part
+from databasise.parts_core.declared_only import CODEBASE_MEMORY_MCP_PART
 from databasise.validator.blast_radius import blast_radius_violations
 from databasise.validator.depth import effective_depth
 from databasise.validator.errors import (
@@ -130,14 +131,16 @@ EVIDENCE_WRITER_PROBE_PART = Part(
 
 
 def probe_registry() -> PartRegistry:
-    """``default_registry()`` plus the two probe-only parts above, assembled fresh on every call.
-    Never registers them into a shared or module-level registry: the production
-    ``default_registry()`` stays exactly D-04's seven entries regardless of how many times a
-    probe runs.
+    """``default_registry()`` plus the two probe-only parts above and the catalogued
+    ``codebase-memory-mcp@0.1.0`` (admitted, not registered in production since 14-07, D-13),
+    assembled fresh on every call. Never registers them into a shared or module-level registry: the
+    production ``default_registry()`` stays exactly D-04's seven entries regardless of how many
+    times a probe runs.
     """
     registry = default_registry()
     registry.register(SHARED_ARTIFACT_WRITER_PROBE_PART)
     registry.register(EVIDENCE_WRITER_PROBE_PART)
+    registry.register(CODEBASE_MEMORY_MCP_PART)
     return registry
 
 
@@ -294,7 +297,7 @@ def evaluate_probe(probe: Probe) -> frozenset[str]:
 
 def _parse(stem: str) -> tuple[dict[str, Any], ParsedWiring]:
     doc = load_wiring(stem)
-    parsed = parse_wiring(doc, default_registry())
+    parsed = parse_wiring(doc, probe_registry())
     return doc, parsed
 
 

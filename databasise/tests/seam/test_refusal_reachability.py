@@ -26,7 +26,7 @@ from databasise.seam import selectors as selectors_module
 from databasise.seam.envelope import ResponseEnvelope
 from databasise.seam.selectors import Selector
 
-_CBM_WIRING_PATH = Path(__file__).resolve().parent.parent.parent / "wirings" / "codebase-memory-mcp.json"
+_CBM_WIRING_PATH = Path(__file__).resolve().parent.parent / "fixtures" / "codebase-memory-mcp.json"
 _MUTATES_STORE_CAPABILITY = ["mutates_store"]
 _LIGHTRAG_CAPABILITY = ["reads_vector"]
 _HIPPORAG_CAPABILITY = ["reads_graph", "reads_kv"]
@@ -97,11 +97,12 @@ class _StubLLMClient:
         )
 
 
-def _engine(store_root, workspace: str, embedding=None, llm=None) -> Databasise:
+def _engine(store_root, workspace: str, embedding=None, llm=None, registry=None) -> Databasise:
     return Databasise(
         store_root=store_root,
         workspace=workspace,
         clients={"embedding": embedding or _StubEmbeddingClient(), "llm": llm or _StubLLMClient()},
+        registry=registry,
     )
 
 
@@ -111,7 +112,12 @@ def _engine(store_root, workspace: str, embedding=None, llm=None) -> Databasise:
 
 
 async def test_compare_with_one_mutating_selector_is_refused(cbm_reachable, store_root):
-    engine = _engine(store_root, "reach-one-mutating")
+    from databasise.parts.registry import default_registry
+    from databasise.parts_core.declared_only import CODEBASE_MEMORY_MCP_PART
+
+    registry = default_registry()
+    registry.register(CODEBASE_MEMORY_MCP_PART)
+    engine = _engine(store_root, "reach-one-mutating", registry=registry)
     rows_before = _trace_rows(store_root)
 
     result, caught = await _outcome(

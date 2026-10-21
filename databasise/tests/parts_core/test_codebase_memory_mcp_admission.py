@@ -31,7 +31,7 @@ from databasise.parts_core.declared_only import CODEBASE_MEMORY_MCP_PART
 _FIXTURES_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "codebase_memory_mcp_raw_items.json"
 _RAW_FIXTURES: dict[str, list[dict]] = json.loads(_FIXTURES_PATH.read_text(encoding="utf-8"))
 
-_WIRING_PATH = Path(__file__).resolve().parents[2] / "wirings" / "codebase-memory-mcp.json"
+_WIRING_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "codebase-memory-mcp.json"
 
 # A live-engine test needs both the binary AND the `mcp` extra (databasise's own optional
 # dependency, lazily imported by the adapter — see that module's own docstring/comment for why).
@@ -195,7 +195,7 @@ async def test_a_cross_process_failure_is_recorded_on_the_nodes_trace_never_sile
     record. Monkeypatches ``codebase_memory_mcp.call_tool`` (the name that module actually calls)
     to raise a real ``CbmTransportError``, and drives the real, unmodified
     ``codebase-memory-mcp@0.1.0`` Part through ``parse_wiring``/``run_wiring`` — the same path
-    ``databasise/wirings/codebase-memory-mcp.json`` resolves against."""
+    ``databasise/tests/fixtures/codebase-memory-mcp.json`` resolves against."""
     import databasise.parts_core.codebase_memory_mcp as cbm_module
     from databasise.runner import scheduler as _scheduler
     from databasise.validator.parse import parse_wiring
@@ -211,6 +211,7 @@ async def test_a_cross_process_failure_is_recorded_on_the_nodes_trace_never_sile
     monkeypatch.setattr(cbm_module, "call_tool", _raise_transport_error)
 
     registry = default_registry()
+    registry.register(CODEBASE_MEMORY_MCP_PART)
     wiring = json.loads(_WIRING_PATH.read_text(encoding="utf-8"))
     wiring["nodes"]["cbm"]["config"] = {"tool": "list_projects", "arguments": {}}
 
@@ -279,6 +280,7 @@ def test_the_effects_gain_mutates_store_additively_and_keep_self_storage_and_fs(
 
 def test_registering_the_part_succeeds_and_validate_admission_and_cross_check_conditions_pass():
     registry = default_registry()
+    registry.register(CODEBASE_MEMORY_MCP_PART)
     validate_admission(CODEBASE_MEMORY_MCP_PART, CODEBASE_MEMORY_MCP_PART.admission)
 
     wiring = json.loads(_WIRING_PATH.read_text(encoding="utf-8"))

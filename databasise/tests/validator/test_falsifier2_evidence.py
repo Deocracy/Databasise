@@ -23,6 +23,7 @@ from databasise.evidence.falsifier2 import (
     enumerate_boundaries,
     evaluate_wiring,
     load_wiring,
+    probe_registry,
     render_markdown,
 )
 from databasise.parts.registry import PartRegistry, default_registry
@@ -162,11 +163,18 @@ def test_divergence_list_names_the_taint_overridden_nodes_and_is_empty_for_w1():
 def test_enumerate_boundaries_covers_all_three_classes_for_every_wiring():
     for stem in NAMED_WIRINGS:
         doc = load_wiring(stem)
-        parsed = parse_wiring(doc, default_registry())
+        parsed = parse_wiring(doc, probe_registry())
         evidence = evaluate_wiring(stem)
         boundaries = enumerate_boundaries(evidence, parsed)
         classes = {row.boundary_class for row in boundaries}
         assert classes == {"effects-change", "value-crossing", "knob"}, stem
+
+
+def test_the_probe_registry_carries_the_catalogued_part():
+    """``codebase-memory-mcp@0.1.0`` is admitted but not registered in production (14-07, LEDG-12,
+    D-13); the evidence lane registers it through ``probe_registry()``."""
+    assert "codebase-memory-mcp@0.1.0" in probe_registry().keys()  # noqa: SIM118 - not a dict
+    assert "codebase-memory-mcp@0.1.0" not in default_registry().keys()  # noqa: SIM118 - not a dict
 
 
 def test_empty_wiring_reports_exactly_one_violation_and_no_depth_map():

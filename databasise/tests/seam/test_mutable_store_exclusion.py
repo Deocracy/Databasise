@@ -2,14 +2,14 @@
 ``Databasise.compare()`` refuses a comparison whose selectors resolve a ``mutates_store``-
 declaring wiring, before any arm executes.
 
-Drives the real, committed ``codebase-memory-mcp@0.1.0`` wiring (``databasise/wirings/
-codebase-memory-mcp.json``, the real registered ``Part`` in ``default_registry()``) through a
-real ``Databasise.compare()`` call. As of this plan's own F-07 record (Method and limits), that
+Drives the real, committed ``codebase-memory-mcp@0.1.0`` wiring (the fixture ``databasise/tests/
+fixtures/codebase-memory-mcp.json``, the real ``Part`` this test registers itself since 14-07
+removed it from ``default_registry()``) through a real ``Databasise.compare()`` call. As of this plan's own F-07 record (Method and limits), that
 wiring is not resolvable through any of §18.4's four production selectors today —
 ``databasise/wirings/resolve.py``'s ``WIRING_NAMES`` names only ``("lightrag", "hipporag")``, and
 even adding a third name there would not resolve it: ``load_wiring()`` reads
 ``<name>/base.json`` (a per-modality subdirectory, matching ``lightrag/`` and ``hipporag/``),
-while the committed file lives flat at ``databasise/wirings/codebase-memory-mcp.json`` — a
+while the committed file lives flat at ``databasise/tests/fixtures/codebase-memory-mcp.json`` — a
 different, deliberately non-modality layout (this wiring is not a query-answering modality; see
 ``PARTS.md ## §X``'s own "no arm family" verdict). The ``cbm_reachable`` fixture below reads that
 real, committed file directly and appends it to the capability selector's own candidate pool for
@@ -33,7 +33,8 @@ import json
 from pathlib import Path
 
 import pytest
-
+from databasise.parts.registry import default_registry
+from databasise.parts_core.declared_only import CODEBASE_MEMORY_MCP_PART
 from databasise.seam import Databasise, QueryObject
 from databasise.seam import selectors as selectors_module
 from databasise.seam.envelope import ResponseEnvelope
@@ -42,10 +43,8 @@ from databasise.seam.selectors import Selector
 
 _QUERY_TEXT = "does this component mutate its own backing store?"
 
-# databasise/tests/seam/test_mutable_store_exclusion.py -> databasise/wirings/
-_CBM_WIRING_PATH = (
-    Path(__file__).resolve().parent.parent.parent / "wirings" / "codebase-memory-mcp.json"
-)
+# databasise/tests/seam/test_mutable_store_exclusion.py -> databasise/tests/fixtures/
+_CBM_WIRING_PATH = Path(__file__).resolve().parent.parent / "fixtures" / "codebase-memory-mcp.json"
 
 # codebase-memory-mcp@0.1.0's own declared effects (databasise/parts_core/declared_only.py) are
 # the only registered Part set declaring "mutates_store" that also satisfies this exact singleton
@@ -77,7 +76,11 @@ def cbm_reachable(monkeypatch):
 
 
 def _make_engine(tmp_path) -> Databasise:
-    return Databasise(store_root=tmp_path, workspace="mutable-store-exclusion-test", clients={})
+    registry = default_registry()
+    registry.register(CODEBASE_MEMORY_MCP_PART)
+    return Databasise(
+        store_root=tmp_path, workspace="mutable-store-exclusion-test", clients={}, registry=registry
+    )
 
 
 class _ResolvedSpy:

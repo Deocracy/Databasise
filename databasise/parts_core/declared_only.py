@@ -129,7 +129,6 @@ LIGHTRAG_CORPUS_PARTS: tuple[Part, ...] = (
     LIGHTRAG_V1_INDEX_SYNC_PART,
 )
 
-DECLARED_ONLY_PARTS: tuple[Part, ...] = (
-    CODEBASE_MEMORY_MCP_PART,
-    *LIGHTRAG_CORPUS_PARTS,
-)
+# CODEBASE_MEMORY_MCP_PART is not here: no selector reaches it, so default_registry() does not admit
+# it (14-07, LEDG-12, D-13). falsifier2.probe_registry() and tests that need it register it.
+DECLARED_ONLY_PARTS: tuple[Part, ...] = (*LIGHTRAG_CORPUS_PARTS,)

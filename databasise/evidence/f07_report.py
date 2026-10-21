@@ -1,8 +1,8 @@
 """``databasise.evidence.f07_report`` — 06-09-PLAN.md Task 1: MACH-10/F-07's disposition record,
 rendered from the registry itself (never hand-transcribed), following
 ``databasise/evidence/parity_report.py``'s own render-from-committed-inputs convention:
-:func:`render_f07_record` is a pure function of ``default_registry()`` plus this module's own two
-catalogued-not-built roster entries (`MC-1`, `CA-7`) — re-rendering on unchanged inputs reproduces
+:func:`render_f07_record` is a pure function of ``default_registry()`` plus this module's own three
+catalogued-not-registered roster entries (`CA-2`, `MC-1`, `CA-7`) — re-rendering on unchanged inputs reproduces
 the committed document byte-identically (this plan's own acceptance criterion: "a second run of
 the discharge is not a second finding").
 
@@ -34,20 +34,23 @@ class _DispositionRow:
 
 
 _CODEBASE_MEMORY_MCP_REASON = (
-    "CA-2 in MODEL-RED-TEAM.md's own F-07 roster; the only mutable-store component this "
-    "project has actually admitted and registered. Admitted whole-engine opaque (PARTS.md "
-    "## §X); its provides node resolves opaque effective depth, so it is already excluded "
-    "from the *default* selector under §8 condition 7. It is also not currently resolvable "
-    "through any of §18.4's four production selectors at all: databasise/wirings/resolve.py's "
+    "CA-2 in MODEL-RED-TEAM.md's own F-07 roster; admitted whole-engine opaque under "
+    "ADMISSION-CODEBASE-MEMORY-MCP.md (PARTS.md ## §X) but not registered in default_registry() "
+    "since Phase 14 (LEDG-12, D-13): no selector reaches it. databasise/wirings/resolve.py's "
     'WIRING_NAMES names only ("lightrag", "hipporag"), so the capability/default/harness '
-    "selectors' shared candidate pool (all_wirings()) never includes "
-    "databasise/wirings/codebase-memory-mcp.json today. No requirement in this milestone asks "
-    "for manage_adr/delete_project's own behaviour to be A/B-testable. Reversal condition: a "
-    "future requirement asking for that A/B-testability, at which point the snapshot/reset "
-    "protocol is a file-copy-and-restore of the engine's own SQLite database plus its WAL and "
-    "SHM siblings, in databasise/foreign/codebase_memory_mcp_adapter.py. No adapter owns a "
-    "file-unlink shape for delete_project today: it is admitted but not driven (COVERAGE.md's "
-    "OPT-OUT row)."
+    "selectors' shared candidate pool (all_wirings()) never included its single-node wiring, and "
+    "an admitted mutates_store part that nothing can select is surface with no consumer. It is "
+    "registered only by the Falsifier-2 probe registry (databasise/evidence/falsifier2.py "
+    "probe_registry()) and by tests that pass registry=; its single-node wiring is the fixture "
+    "databasise/tests/fixtures/codebase-memory-mcp.json. Its provides node resolves opaque "
+    "effective depth, so it would be excluded from the *default* selector under §8 condition 7 "
+    "if it were wired. Reversal condition: a requirement that wires it as a selectable arm "
+    "(TOOL-15/TOOL-18) and asks for manage_adr/delete_project's own behaviour to be A/B-testable, "
+    "at which point it re-enters default_registry() and needs its own row in _KNOWN_REASONS, and "
+    "the snapshot/reset protocol is a file-copy-and-restore of the engine's own SQLite database "
+    "plus its WAL and SHM siblings, in databasise/foreign/codebase_memory_mcp_adapter.py. No "
+    "adapter owns a file-unlink shape for delete_project today: it is admitted but not driven "
+    "(COVERAGE.md's OPT-OUT row)."
 )
 
 _LIGHTRAG_FULL_DELETE_REASON = (
@@ -83,18 +86,24 @@ _LIGHTRAG_FULL_INGEST_REASON = (
 )
 
 _KNOWN_REASONS: dict[str, str] = {
-    "codebase-memory-mcp@0.1.0": _CODEBASE_MEMORY_MCP_REASON,
     "lightrag/full-ingest@0.2.0": _LIGHTRAG_FULL_INGEST_REASON,
     "lightrag/full-delete@0.2.0": _LIGHTRAG_FULL_DELETE_REASON,
     "lightrag/v1-index-sync@0.1.0": _LIGHTRAG_V1_INDEX_SYNC_REASON,
 }
 
-# The two roster entries MODEL-RED-TEAM.md's F-07 finding names that are catalogued in
-# CATALOG.md ## §T but never registered in default_registry() today. Their disposition is not a
+# The three roster entries MODEL-RED-TEAM.md's F-07 finding names that are catalogued in
+# CATALOG.md ## §T but not registered in default_registry() today (CA-2 is admitted but left
+# unregistered by 14-07; MC-1 and CA-7 are not built). Their disposition is not a
 # fresh decision of its own — it is the projection of this record's own default
 # (permanent-exclusion) onto a component that does not yet exist, stated explicitly rather than
 # left unanswered until the day one is actually built.
 _CATALOGUED_NOT_BUILT: tuple[_DispositionRow, ...] = (
+    _DispositionRow(
+        component="codebase-memory-mcp@0.1.0 (CA-2, admitted, not registered)",
+        disposition=DISPOSITION_PERMANENT_EXCLUSION,
+        reason=_CODEBASE_MEMORY_MCP_REASON,
+        tag="[code-verified]",
+    ),
     _DispositionRow(
         component="MC-1 (postgres-mcp's execute_sql, Unrestricted Mode)",
         disposition=DISPOSITION_PERMANENT_EXCLUSION,
@@ -162,7 +171,7 @@ def _table_markdown(rows: list[_DispositionRow]) -> str:
 
 
 def render_f07_record(registry: PartRegistry) -> str:
-    """Pure function of ``registry`` (plus this module's own two catalogued-not-built rows) —
+    """Pure function of ``registry`` (plus this module's own three catalogued-not-registered rows) —
     calling this twice against the same registry state reproduces the identical document, byte
     for byte (``parity_report.py``'s own convention, applied here). Raises if the resulting
     enumeration would be empty: an F-07 record naming nothing is refused as incomplete rather
@@ -223,36 +232,40 @@ outcome as settled." This record takes the second branch, per component, below.
 
 ## Population and disposition
 
-Enumerated from `default_registry()` itself at render time — never a hand list — plus the two
-roster entries named above that this project has not registered as a `Part`:
+Enumerated from `default_registry()` itself at render time — never a hand list — plus the
+roster entries named above that this project has not registered as a `Part` in
+`default_registry()`:
 
 {table}
 
-Every real, registered component above is given the **`{DISPOSITION_PERMANENT_EXCLUSION}`**
-disposition, on `06-RESEARCH.md`'s own recommended grounds: the only real instance
-(`codebase-memory-mcp@0.1.0`) is admitted whole-engine opaque and already excluded from the
-default selector, and no requirement in this milestone asks for either real component's mutation
-behaviour to be A/B-testable. The alternative not taken, for either component, is
+Every component above is given the **`{DISPOSITION_PERMANENT_EXCLUSION}`**
+disposition, on `06-RESEARCH.md`'s own recommended grounds: the one admitted-but-unregistered
+instance (`codebase-memory-mcp@0.1.0`) is admitted whole-engine opaque, no selector reaches it, and
+no requirement in this milestone asks for any listed component's mutation behaviour to be
+A/B-testable. The alternative not taken, for any component, is
 **`{DISPOSITION_SNAPSHOT_RESET_DEFINED}`** — building an explicit snapshot/reset protocol and
 re-verifying the node against it, per §14.4 point 3's own escape clause.
 
 ## Verdict
 
-F-07 is discharged for both real, registered mutable-store components this project has built:
-`codebase-memory-mcp@0.1.0` and `lightrag/full-delete@0.2.0` each carry exactly one recorded
-disposition (`{DISPOSITION_PERMANENT_EXCLUSION}`), enforced as an explicit refusal in the
-comparison path for the component actually reachable there
-(`databasise.seam.refusals.MutableStoreComparisonExcludedError`, 06-09-PLAN.md Task 2). The two
-catalogued-not-built roster entries (`MC-1`, `CA-7`) carry the same disposition, scoped
-explicitly to what they are — inherited, not a fresh decision, since neither is built.
+F-07 is discharged for every registered mutable-store component this project has built
+(`lightrag/full-delete@0.2.0` among them) and for the admitted-but-unregistered
+`codebase-memory-mcp@0.1.0` (`CA-2`): each carries exactly one recorded disposition
+(`{DISPOSITION_PERMANENT_EXCLUSION}`), enforced as an explicit refusal in the comparison path
+(`databasise.seam.refusals.MutableStoreComparisonExcludedError`, 06-09-PLAN.md Task 2) for any
+wiring a comparison resolves to a `mutates_store` part. The two catalogued-not-built roster
+entries (`MC-1`, `CA-7`) carry the same disposition, scoped explicitly to what they are —
+inherited, not a fresh decision, since neither is built.
 
 **A qualification stated plainly, not left implicit.** `lightrag/full-delete@0.2.0`'s exclusion
 is a *structural* fact of how it is dispatched (directly, by `Databasise.delete_document()`,
-never through `resolve_selector()`'s candidate pool) rather than an *enforced* refusal the way
-`codebase-memory-mcp@0.1.0`'s is — no selector-based comparison call can resolve to it in the
-first place, so there is no live code path for `MutableStoreComparisonExcludedError` to guard for
-this component today. This record still names it, because this record's own population is
-computed from the registry rather than from what happens to be reachable.
+never through `resolve_selector()`'s candidate pool) rather than an *enforced* refusal — no
+selector-based comparison call can resolve to it in the first place, so there is no live code
+path for `MutableStoreComparisonExcludedError` to guard for this component today. The same holds
+for `codebase-memory-mcp@0.1.0` since it left `default_registry()`; the refusal stays defined and
+is exercised by tests that register the part themselves. This record still names
+`lightrag/full-delete@0.2.0`, because this record's own population is computed from the registry
+rather than from what happens to be reachable.
 
 **How this stands against MODAL-05.** The comparison path's own explicit refusal
 (`MutableStoreComparisonExcludedError`) governs exactly one live candidate pool today: the
@@ -269,8 +282,8 @@ this record's own F-07 disposition neither advances nor blocks that separate ope
 **Method.** `_live_mutates_store_rows()` (`databasise/evidence/f07_report.py`) walks
 `default_registry().keys()`, filters to every `Part` whose `effects` contain `mutates_store`, and
 raises rather than silently omitting a row if it finds a component this module has not been told
-a disposition reason for. The two catalogued-not-built rows are a fixed, hand-maintained
-addition, since neither is discoverable from the registry by construction.
+a disposition reason for. The three catalogued-not-registered rows are a fixed, hand-maintained
+addition, since none is discoverable from `default_registry()` by construction.
 
 **The write-quiesce caveat (06-RESEARCH.md's own assumption A5), recorded as unestablished.** Had
 either component taken the `{DISPOSITION_SNAPSHOT_RESET_DEFINED}` disposition instead, a
