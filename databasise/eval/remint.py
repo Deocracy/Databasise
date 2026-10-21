@@ -115,6 +115,7 @@ def main(argv: list[str] | None = None) -> int:
     ``databasise.parity.build_hipporag_index.main``'s own convention.
     """
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--spend", action="store_true", default=False)  # inert until a later plan flips the default
     parser.parse_args(argv)
 
     try:

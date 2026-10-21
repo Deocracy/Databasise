@@ -18,16 +18,16 @@ _ENV = (
 
 _CASES = [
     ("databasise.parity.run_arm", ["--arm", "naive", "--query", "q", "--spend"], {}),
-    ("databasise.parity.storage_audit", ["--arm", "naive"], {}),
+    ("databasise.parity.storage_audit", ["--arm", "naive", "--spend"], {}),
     (
         "databasise.parity.run_cross_modality",
-        [],
+        ["--spend"],
         {"preflight": lambda *a, **k: None},
     ),
-    ("databasise.parity.build_hipporag_index", [], {}),
+    ("databasise.parity.build_hipporag_index", ["--spend"], {}),
     ("databasise.eval.aa_run", ["--spend"], {}),
     ("databasise.eval.corpus_ingest", ["--limit", "1", "--spend"], {}),
-    ("databasise.eval.remint", [], {}),
+    ("databasise.eval.remint", ["--spend"], {}),
 ]
 
 

@@ -13,7 +13,7 @@ import importlib
 import os
 
 import pytest
-from databasise.parity import import_index
+from databasise.parity import import_index, run_arm
 from databasise.store_lock import store_lock
 
 _NOT_STARTED = "work started while the store root was held"
@@ -21,11 +21,11 @@ _NOT_STARTED = "work started while the store root was held"
 # (module, argv, work functions that must never be reached)
 _ENTRY_POINTS = [
     pytest.param("import_index", [], ["import_v1_index", "verify_import"], id="import_index"),
-    pytest.param("build_hipporag_index", [], ["build_index"], id="build_hipporag_index"),
-    pytest.param("run_arm", ["--arm", "naive", "--query", "q"], ["run_arm"], id="run_arm"),
-    pytest.param("run_comparison", ["--arm", "naive"], ["_run_cli"], id="run_comparison"),
-    pytest.param("run_cross_modality", [], ["run_cross_modality"], id="run_cross_modality"),
-    pytest.param("storage_audit", ["--arm", "naive"], ["run_audit"], id="storage_audit"),
+    pytest.param("build_hipporag_index", ["--spend"], ["build_index"], id="build_hipporag_index"),
+    pytest.param("run_arm", ["--arm", "naive", "--query", "q", "--spend"], ["run_arm"], id="run_arm"),
+    pytest.param("run_comparison", ["--arm", "naive", "--spend"], ["_run_cli"], id="run_comparison"),
+    pytest.param("run_cross_modality", ["--spend"], ["run_cross_modality"], id="run_cross_modality"),
+    pytest.param("storage_audit", ["--arm", "naive", "--spend"], ["run_audit"], id="storage_audit"),
 ]
 
 
@@ -36,6 +36,11 @@ def test_parity_cli_refuses_while_the_store_root_is_held(
     module = importlib.import_module(f"databasise.parity.{module_name}")
     root = tmp_path / "store"
     monkeypatch.setattr(import_index, "DEFAULT_STORE_ROOT", root)
+    # D-24: no --spend node may reach the real env file, even if a lock or work-function patch stops holding.
+    absent_env = tmp_path / "absent.env"
+    monkeypatch.setattr(run_arm, "DEFAULT_V1_ENV_PARITY", absent_env)
+    if hasattr(module, "DEFAULT_V1_ENV_PARITY"):
+        monkeypatch.setattr(module, "DEFAULT_V1_ENV_PARITY", absent_env)
 
     def _boom(*_args, **_kwargs):
         raise AssertionError(_NOT_STARTED)

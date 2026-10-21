@@ -75,8 +75,15 @@ def test_parity_clis_refuse_a_bad_rerank_config_instead_of_raising(
     from databasise.parity import import_index
 
     module = importlib.import_module(f"databasise.parity.{module_name}")
+    from databasise.parity import run_arm as run_arm_module
+
     monkeypatch.setattr(import_index, "DEFAULT_STORE_ROOT", tmp_path / "store")
-    argv = ["--arm", "naive", "--query", "q"] if module_name == "run_arm" else ["--arm", "naive"]
+    # D-24: a --spend run must never reach the real env file.
+    absent_env = tmp_path / "absent.env"
+    monkeypatch.setattr(run_arm_module, "DEFAULT_V1_ENV_PARITY", absent_env)
+    if hasattr(module, "DEFAULT_V1_ENV_PARITY"):
+        monkeypatch.setattr(module, "DEFAULT_V1_ENV_PARITY", absent_env)
+    argv = ["--arm", "naive", "--query", "q", "--spend"] if module_name == "run_arm" else ["--arm", "naive", "--spend"]
 
     for error in (UnsupportedRerankBindingError("RERANK_BINDING"), MissingParityEnvKeyError(["RERANK_MODEL"])):
 
