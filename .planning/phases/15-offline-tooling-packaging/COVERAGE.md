@@ -1,0 +1,1 @@
+No external API integration: Phase 15 changes Databasise's own offline CLIs, packaging, evidence renderers, registry admission and its own MCP tool descriptions; the codebase-memory-mcp adapter wraps an already-admitted local binary and adds no new capability surface.
