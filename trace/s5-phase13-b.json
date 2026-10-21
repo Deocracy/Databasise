@@ -2,13 +2,13 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase13-b",
-  "ledger_version": 705,
+  "ledger_version": 726,
   "artifacts": {
     "databasise/identity/env.py": "c6883fa7b8d3374add603d784348039bc3886e0a83bd38c184ada79d85ca6676",
-    "databasise/parts/registry.py": "f1805dfc3d7c5eddcccd2c32b428160f061e3c6d03cbc2faddfce9c0f231194d",
+    "databasise/parts/registry.py": "8364d40d988afb94a58e3582f5a18108a9dce65308d0d8937ba3f9ecf1301b20",
     "databasise/runner/scheduler.py": "a6737354ce01be2fae5685af7912b6f2884d9a69ca7e48d37bd5fdd33f19c238",
     "databasise/runner/trace.py": "e3c8a06d35a74ab3ee217b0c476f5616e8fa5582ba09a9316fe2d9f3030456e2",
-    "databasise/seam/engine.py": "59798449ae4ea1b18107e9162f62ec842ed39d2542aa01d1212a2cefeef9b5c2"
+    "databasise/seam/engine.py": "385aea2a6e1600e035624f70b2b919ee82f6e6b1e053ae5a93a79b1edc17ba16"
   },
   "checker": {
     "harness": "claude-code",
@@ -31,7 +31,7 @@
     {
       "id": "WIRE-12",
       "status": "present",
-      "where": "databasise/seam/engine.py:2136",
+      "where": "databasise/seam/engine.py:2137",
       "quote": "            wiring_id=wiring_id,"
     },
     {
@@ -43,7 +43,7 @@
     {
       "id": "WIRE-14",
       "status": "present",
-      "where": "databasise/seam/engine.py:2198",
+      "where": "databasise/seam/engine.py:2199",
       "quote": "                    raise MalformedEvidenceItemError("
     },
     {

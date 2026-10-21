@@ -2,14 +2,14 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase11-a",
-  "ledger_version": 705,
+  "ledger_version": 726,
   "artifacts": {
     "databasise/foreign/v1_corpus_adapter.py": "a035ff6593d7c126110612f1f298be5f449a1db622ec9a0409c099b761c894dd",
     "databasise/foreign/v1_corpus_driver_script.py": "c62a9a5b204ded0a99e5a29fcb0acd2739700997624114571935b0c832727efe",
-    "databasise/parts_core/declared_only.py": "59c1da76986f1c4cebaad1ded9b50a678fc8101b919595b725c3445162ee8bcb",
+    "databasise/parts_core/declared_only.py": "91c1c2e11dd30e54170dce00817384f8376875e036b847decdd63d67e0e2e210",
     "databasise/parts_core/lightrag/full_delete.py": "ae6920ee853375c827e2724761723f5dc32dd904d5777d166e820afab762fe84",
     "databasise/seam/corpus.py": "b360c0dbdc02f4659079a90f81a68366d74c55ab99d13334795dfedae02226ec",
-    "databasise/seam/engine.py": "59798449ae4ea1b18107e9162f62ec842ed39d2542aa01d1212a2cefeef9b5c2"
+    "databasise/seam/engine.py": "385aea2a6e1600e035624f70b2b919ee82f6e6b1e053ae5a93a79b1edc17ba16"
   },
   "checker": {
     "harness": "claude-code",
@@ -20,7 +20,7 @@
     {
       "id": "LRAG-01",
       "status": "present",
-      "where": "databasise/seam/engine.py:1168",
+      "where": "databasise/seam/engine.py:1169",
       "quote": "return self.store_root / self.workspace / \"lightrag-v1\""
     },
     {
@@ -56,7 +56,7 @@
     {
       "id": "LRAG-07",
       "status": "present",
-      "where": "databasise/seam/engine.py:1625",
+      "where": "databasise/seam/engine.py:1626",
       "quote": "async def retry_document(self, document_id: str, selector: Selector | None = None) -> IngestJob:"
     },
     {
@@ -68,7 +68,7 @@
     {
       "id": "LRAG-09",
       "status": "present",
-      "where": "databasise/seam/engine.py:1189",
+      "where": "databasise/seam/engine.py:1190",
       "quote": "return self.store_root / self.workspace / \"corpus-inbox\""
     },
     {

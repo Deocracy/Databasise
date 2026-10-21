@@ -2,17 +2,17 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase09",
-  "ledger_version": 705,
+  "ledger_version": 726,
   "artifacts": {
     "databasise/mcp/server.py": "3ef83f9eb3b55236110e1b483e77be99ff51bbe977b794081482a101dca7d6c5",
     "databasise/seam/compare.py": "8f6d19a32dccbcd6cbaf605c398d2334b86f1500d8598ddb43cafe62ad880095",
     "databasise/seam/corpus.py": "b360c0dbdc02f4659079a90f81a68366d74c55ab99d13334795dfedae02226ec",
-    "databasise/seam/engine.py": "59798449ae4ea1b18107e9162f62ec842ed39d2542aa01d1212a2cefeef9b5c2",
+    "databasise/seam/engine.py": "385aea2a6e1600e035624f70b2b919ee82f6e6b1e053ae5a93a79b1edc17ba16",
     "databasise/seam/evidence.py": "4234e690e03ab49309a1e28255a9d7c685e23c9fb1db4e04c228614e86780c9d",
     "databasise/seam/query.py": "b1452596cc6c0aa44290c1198e487d5ce51ff61a4ede6841bc1f8d8fef7850aa",
-    "databasise/seam/refusals.py": "66d1e009e512000f8ddb2c9140d79b00a05bb1e93a2630df13377def7e354581",
+    "databasise/seam/refusals.py": "ba10c8a24792e76b4534c04abe75e22702fcea801f3e035a697efb580e2d5bef",
     "databasise/seam/rest.py": "0abba36fabbfc8f40044d39b85fa4c0c7b4922cd6823d7cdeaf42ed3aea3c69d",
-    "databasise/seam/selectors.py": "d6d04c2db923d6b3dc8e9b69f25fcc835373030978e4fb17d59688dad6c25f9a"
+    "databasise/seam/selectors.py": "d4eb92f604f3a852a054f3fb2aae2e9c4b40d8790c7ef625b36df408a21e532b"
   },
   "checker": {
     "harness": "claude-code",
@@ -83,13 +83,13 @@
     {
       "id": "SEAM-11",
       "status": "present",
-      "where": "databasise/seam/engine.py:1269",
+      "where": "databasise/seam/engine.py:1270",
       "quote": "keys = comparison_keys(selectors)"
     },
     {
       "id": "SEAM-12",
       "status": "present",
-      "where": "databasise/seam/engine.py:2309",
+      "where": "databasise/seam/engine.py:2310",
       "quote": "if alias == \"\" or _INSTANCE_HASH_PATTERN.match(alias):"
     },
     {
@@ -101,7 +101,7 @@
     {
       "id": "SEAM-14",
       "status": "present",
-      "where": "databasise/seam/refusals.py:994",
+      "where": "databasise/seam/refusals.py:996",
       "quote": "\"NoRawUploadPathForModalityError\","
     },
     {
