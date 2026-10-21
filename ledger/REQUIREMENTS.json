@@ -1,5 +1,5 @@
 {
-  "ledger_version": 705,
+  "ledger_version": 709,
   "frozen_at": null,
   "items": [
     {
@@ -1575,8 +1575,8 @@
       "text": "default_registry() contains no admitted part that no selector can reach. codebase-memory-mcp@0.1.0 is either made reachable, meaning its wiring is listed in WIRING_NAMES and all_wirings() and wiring_family({'wiring_id':'codebase-memory-mcp'}) returns a family, or it is removed from default_registry().",
       "status": "open",
       "spec_ref": ".planning/REQUIREMENTS.md",
-      "test_ref": "",
-      "code_ref": "",
+      "test_ref": "databasise/tests/parts/test_registry_reachability.py",
+      "code_ref": "databasise/parts/registry.py",
       "evidence": "",
       "owner": "",
       "phase": "14",
@@ -2430,6 +2430,10 @@
     "databasise/tests/runner/test_trace_completeness.py": {
       "reason": "13-12 Task 2 (WIRE-08): guards must declare a signal key; test_an_output_whose_comparison_raises_fails_that_node gives its guard \"signal\": \"flag\" and its body returns {\"flag\": Bomb()}; the assertions are unchanged",
       "granted_at": 647
+    },
+    "databasise/tests/seam/test_refusal_reachability.py": {
+      "reason": "14-07 Task 1 (LEDG-12, D-13): codebase-memory-mcp@0.1.0 leaves default_registry() and its single-node wiring moves to databasise/tests/fixtures/codebase-memory-mcp.json; line 29 _CBM_WIRING_PATH points at the fixture; _engine gains registry=None and passes it to Databasise; test_compare_with_one_mutating_selector_is_refused builds default_registry() plus CODEBASE_MEMORY_MCP_PART and passes that registry; no other line changes",
+      "granted_at": 706
     }
   },
   "notify_cmd": null,

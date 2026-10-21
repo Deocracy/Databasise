@@ -1,0 +1,10 @@
+{
+  "id": "WIRE-17",
+  "plants": [
+    {
+      "file": "databasise/seam/engine.py",
+      "find": "            if \"mutates_store\" in _wiring_effects(resolved, self.registry):",
+      "replace": "            if False and \"mutates_store\" in _wiring_effects(resolved, self.registry):"
+    }
+  ]
+}
