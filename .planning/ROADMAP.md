@@ -363,7 +363,7 @@ Plans (six waves; `seam/engine.py` is touched by one plan per wave in waves 1-6;
 - LEDG-10: capability matching on wiring-node effects or Part effects; whether HippoRAG's index-side nodes count at query time
 - LEDG-12: wire codebase-memory-mcp as a selectable wiring or unregister it (TOOL-15 and TOOL-18 follow)
 
-**Plans**: 6/11 plans executed
+**Plans**: 7/11 plans executed
 
 Plans:
 - [ ] 14-01-PLAN.md — Owner grant for the protected WIRE-17 reachability test (checkpoint; D-13; wave 1)
@@ -374,7 +374,7 @@ Plans:
 - [x] 14-06-PLAN.md — Alias resolution over every wiring; corpus wirings through load_wiring (LEDG-03, LEDG-13; wave 2)
 - [ ] 14-07-PLAN.md — codebase-memory-mcp unregistered; F-07 regenerated; granted WIRE-17 edit, one atomic task (LEDG-12; wave 2)
 - [x] 14-08-PLAN.md — Verb prologue: partial evidence, alias validation, gate verbs up front (LEDG-01, LEDG-02, LEDG-05, LEDG-08; wave 3)
-- [ ] 14-09-PLAN.md — Verb closures: lineage guards and deterministic ledger closing (LEDG-04, LEDG-06; wave 4)
+- [x] 14-09-PLAN.md — Verb closures: lineage guards and deterministic ledger closing (LEDG-04, LEDG-06; wave 4)
 - [ ] 14-10-PLAN.md — Docstring currency, inventory sweep, STATE amendments, offline gate (LEDG-14; wave 5)
 - [ ] 14-11-PLAN.md — Documents that named the moved cbm wiring path (D-13 follow-through after 14-07; wave 3)
 
@@ -494,7 +494,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 11. LightRAG Corpus Path | 11/11 | Complete    | 2026-10-19 |
 | 12. HippoRAG Fixes | 14/14 | Complete    | 2026-10-19 |
 | 13. Selectors, Wiring & Runner | 13/13 | Complete    | 2026-10-20 |
-| 14. Promotion & Ledger | 6/11 | In Progress | - |
+| 14. Promotion & Ledger | 7/11 | In Progress | - |
 | 15. Offline Tooling & Packaging | 0/TBD | Not started | - |
 | 16. GUI Connectors | 0/TBD | Not started | - |
 | 17. GUI Mockup | 0/TBD | Not started | - |
