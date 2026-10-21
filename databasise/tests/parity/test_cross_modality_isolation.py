@@ -22,8 +22,10 @@ against stubbed/fake data is correct and expected; fabricating evidence of a rea
 
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 
+import numpy as np
 import pytest
 from databasise.namespaces import artifacts_overlap
 from databasise.parity import import_index
@@ -36,6 +38,7 @@ from databasise.parity.run_cross_modality import (
     preflight,
 )
 from databasise.seam.engine import _build_stores
+from databasise.stores.vector import FaissVectorStore
 from databasise.wirings.resolve import load_wiring, resolve_arm
 
 _WORKSPACE = "cross-modality-isolation-test"
@@ -202,3 +205,45 @@ async def test_tool09_a_selector_resolving_to_another_arm_is_refused_before_clie
 
     assert type(caught).__name__ == "ArmSelectorMismatchError", f"run raised {caught!r}"
     assert calls == [], f"the run went on to {calls} before refusing the mismatched selector"
+
+
+async def _seed_namespace(store_root: Path, workspace: str, namespace: str) -> None:
+    store = FaissVectorStore(namespace=namespace, workspace=workspace, store_root=store_root)
+    await store.upsert(["a", "b"], np.eye(2, 4, dtype="float32"), [{"n": 1}, {"n": 2}])
+    await store.index_done_callback()
+    await store.finalize()
+
+
+def _listing(root: Path) -> list[tuple[str, int]]:
+    return sorted(
+        (str(p.relative_to(root)), p.stat().st_size if p.is_file() else -1) for p in root.rglob("*")
+    )
+
+
+async def test_tool09_a_hipporag_only_workspace_is_refused_naming_lightrag_chunks(store_root):
+    await _seed_namespace(store_root, _WORKSPACE, "hipporag-chunks")
+
+    try:
+        result = cross_modality.preflight(store_root=store_root, workspace=_WORKSPACE)
+    except BaseException as caught:  # noqa: BLE001
+        assert type(caught).__name__ == "MissingArmIndexError", f"preflight raised {caught!r}"
+        # The HippoRAG namespace name also contains "chunks"; the message must name the LightRAG one.
+        assert str(caught).replace("hipporag-chunks", "").count("chunks") >= 1, (
+            f"the refusal does not name the LightRAG chunks namespace: {caught}"
+        )
+    else:
+        raise AssertionError(f"a HippoRAG-only workspace passed preflight: {result!r}")
+
+
+async def test_tool09_preflight_leaves_the_store_root_listing_unchanged(store_root):
+    # Empty workspace: the refusal must not create the workspace or a namespace directory.
+    before = _listing(store_root)
+    with contextlib.suppress(BaseException):  # only the listing is under test
+        cross_modality.preflight(store_root=store_root, workspace=_WORKSPACE)
+    assert _listing(store_root) == before, "preflight changed an empty store root"
+
+    for namespace in ("chunks", "hipporag-chunks"):
+        await _seed_namespace(store_root, _WORKSPACE, namespace)
+    before = _listing(store_root)
+    cross_modality.preflight(store_root=store_root, workspace=_WORKSPACE)
+    assert _listing(store_root) == before, "preflight changed a seeded store root"

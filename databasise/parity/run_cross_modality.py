@@ -62,7 +62,7 @@ from databasise.seam.engine import _GRAPH_KIND, _TEXT_CHUNKS_KIND
 from databasise.seam.envelope import ResponseEnvelope
 from databasise.seam.selectors import Selector
 from databasise.store_lock import StoreLockedError, store_lock
-from databasise.stores.vector import FaissVectorStore
+from databasise.stores.vector import VectorStoreCorruptedError, load_committed
 from databasise.wirings.resolve import load_wiring, resolve_arm
 
 _LIGHTRAG_ARM = "naive"
@@ -215,9 +215,17 @@ def _index_recipe_hash(resolved: dict[str, Any]) -> str:
     return f"sha256:{hashlib.sha256(canonicalise(resolved)).hexdigest()}"
 
 
-def _vector_namespace_non_empty(store_root: Path, workspace: str, namespace: str) -> bool:
-    store = FaissVectorStore(namespace=namespace, workspace=workspace, store_root=store_root)
-    return any(True for _ in store.iter_vectors())
+def _require_namespace(store_root: Path, workspace: str, namespace: str, builder: str) -> None:
+    """Read-only: ``load_committed`` never creates a directory (D-10). Absent, empty or torn all refuse."""
+    path = Path(store_root) / workspace / namespace
+    try:
+        committed = load_committed(path)
+    except VectorStoreCorruptedError as exc:
+        raise MissingArmIndexError(f"the vector namespace {namespace!r} at {path} is unreadable: {exc}") from exc
+    if committed is None or not committed.entries:
+        raise MissingArmIndexError(
+            f"no built index in the vector namespace {namespace!r} at {path} - run {builder} first"
+        )
 
 
 def preflight(*, store_root: Path, workspace: str) -> PreflightResult:
@@ -230,17 +238,10 @@ def preflight(*, store_root: Path, workspace: str) -> PreflightResult:
     lightrag_resolved = resolve_arm(_LIGHTRAG_ARM)
     hipporag_resolved = load_wiring("hipporag")
 
-    lightrag_index_dir = Path(store_root) / workspace
-    if not lightrag_index_dir.exists():
-        raise MissingArmIndexError(
-            f"no imported LightRAG index found at {lightrag_index_dir} — run "
-            "databasise.parity.import_index first (03-02-PLAN.md Task 3)"
-        )
-    if not _vector_namespace_non_empty(store_root, workspace, "hipporag-chunks"):
-        raise MissingArmIndexError(
-            f"no built HippoRAG index found at {Path(store_root) / workspace / 'hipporag-chunks'}"
-            " — run databasise.parity.build_hipporag_index first (06-08-PLAN.md Task 1)"
-        )
+    _require_namespace(store_root, workspace, "chunks", "databasise.parity.import_index (03-02-PLAN.md Task 3)")
+    _require_namespace(
+        store_root, workspace, "hipporag-chunks", "databasise.parity.build_hipporag_index (06-08-PLAN.md Task 1)"
+    )
 
     lightrag_dirs = _resolved_store_dirs(
         store_root, workspace, lightrag_resolved, _LIGHTRAG_VECTOR_NAMESPACES
