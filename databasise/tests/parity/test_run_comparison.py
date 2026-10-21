@@ -13,7 +13,6 @@ import hashlib
 from types import SimpleNamespace
 
 import pytest
-
 from databasise.parity import import_index, run_arm
 from databasise.parity import run_comparison as rc
 from databasise.parity.import_index import VerificationResult
@@ -96,14 +95,14 @@ def rig(tmp_path, monkeypatch):
 
 
 async def _compare(rig, arm="naive", **overrides):
-    kwargs = dict(
-        corpus_hash="h",
-        store_root=rig.store_root,
-        workspace="ws",
-        clients={},
-        env_path=rig.env,
-        verify_fn=rig.verify,
-    )
+    kwargs = {
+        "corpus_hash": "h",
+        "store_root": rig.store_root,
+        "workspace": "ws",
+        "clients": {},
+        "env_path": rig.env,
+        "verify_fn": rig.verify,
+    }
     kwargs.update(overrides)
     return await rc.compare_arm_on_query(arm, "q1", "what is it", **kwargs)
 
@@ -221,3 +220,62 @@ async def test_decomposed_stores_are_built_from_the_resolved_wiring(rig):
     resolved = rig.build_calls[0]
     assert isinstance(resolved, dict)
     assert "nodes" in resolved
+
+
+# --------------------------------------------------------------------------------------------- #
+# Task 3: unknown queries exit 2 without writing, estimate-only without --spend, one stderr line
+# --------------------------------------------------------------------------------------------- #
+
+
+def _boom(*_args, **_kwargs):
+    raise AssertionError("must not be reached")
+
+
+def test_an_unknown_query_exits_two_and_leaves_the_results_file_unchanged(rig):
+    rig.results_dir.mkdir(parents=True)
+    results_file = rig.results_dir / "naive.json"
+    results_file.write_bytes(b'[{"committed": "claim"}]')
+    before = hashlib.sha256(results_file.read_bytes()).hexdigest()
+
+    outcome = _main(["--arm", "naive", "--query", "nope", "--spend"])
+
+    assert isinstance(outcome, SystemExit) and outcome.code == 2
+    assert hashlib.sha256(results_file.read_bytes()).hexdigest() == before
+
+
+def test_without_spend_the_cli_is_estimate_only(rig, monkeypatch, capsys):
+    from databasise.parity.corpus import load_snapshot
+
+    for name in ("store_lock", "_build_clients", "run_v1_arm", "_run_cli"):
+        monkeypatch.setattr(rc, name, _boom)
+    query_id = load_snapshot().queries[0].id
+
+    outcome = _main(["--arm", "hybrid", "--query", query_id])
+
+    out = capsys.readouterr().out
+    assert outcome == 0
+    assert "mode: estimate-only" in out
+    assert "call-count projection" in out
+    assert query_id in out
+    assert not rig.results_dir.exists() or list(rig.results_dir.iterdir()) == []
+
+
+def test_a_builder_refusal_is_one_stderr_line(rig, monkeypatch, capsys):
+    from databasise.clients.builder import MissingParityEnvKeyError
+
+    async def _verified(**_kwargs):
+        return VerificationResult(status="verified")
+
+    def _no_clients(_env):
+        raise MissingParityEnvKeyError(["LLM_MODEL"])
+
+    monkeypatch.setattr(import_index, "verify_import", _verified)
+    monkeypatch.setattr(rc, "_build_clients", _no_clients)
+
+    outcome = _main(["--arm", "naive", "--spend"])
+
+    err_lines = capsys.readouterr().err.strip().splitlines()
+    assert outcome == 1
+    assert len(err_lines) == 1
+    assert err_lines[0].startswith("MissingParityEnvKeyError:")
+    assert not rig.results_dir.exists() or list(rig.results_dir.iterdir()) == []

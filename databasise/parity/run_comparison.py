@@ -53,7 +53,6 @@ from pathlib import Path
 from typing import Any, Awaitable, Callable, Literal
 
 from databasise import cli
-from databasise.clients.builder import BUILDER_REFUSALS
 from databasise.identity.canon import canonicalise
 from databasise.parity import import_index
 from databasise.parity.corpus import CorpusSnapshot, load_snapshot
@@ -80,7 +79,7 @@ from databasise.parts.registry import PartRegistry, default_registry
 from databasise.parts.schema import NodeContext
 from databasise.runner import scheduler as _scheduler
 from databasise.runner.trace import RunRecord
-from databasise.store_lock import StoreLockedError, store_lock
+from databasise.store_lock import store_lock
 from databasise.validator.parse import parse_wiring
 from databasise.wirings.resolve import resolve_arm
 
@@ -721,6 +720,10 @@ def _render_human_summary(records: list[ComparisonRecord]) -> str:
     return "\n".join(lines)
 
 
+def _refusals() -> tuple[type[BaseException], ...]:
+    return cli.offline_refusals(MissingV1InterpreterError, V1ArmSubprocessError)
+
+
 async def _run_cli(arm_name: str, query_ids: list[str] | None) -> tuple[list[ComparisonRecord], bool]:
     snapshot: CorpusSnapshot = load_snapshot()
     queries = snapshot.queries
@@ -735,49 +738,80 @@ async def _run_cli(arm_name: str, query_ids: list[str] | None) -> tuple[list[Com
             record = await compare_arm_on_query(
                 arm_name, query.id, query.question, corpus_hash=snapshot.corpus_hash
             )
-        except (*BUILDER_REFUSALS, MissingV1InterpreterError, V1ArmSubprocessError) as exc:
+        except _refusals() as exc:
+            # A missing key, interpreter or subprocess failure holds for every query: one line, then stop.
+            cli.refuse(exc)
             had_error = True
-            print(f"error comparing query {query.id!r}: {exc}", file=sys.stderr)
-            continue
+            break
         records.append(record)
     return records, had_error
 
 
+def _print_projection(arm_name: str, queries: tuple[Any, ...]) -> None:
+    """The call-count projection (D-04) — a count of calls per query, not a bill."""
+    nodes = resolve_arm(arm_name).get("nodes", {})
+    has_keywords = _KEYWORDS_NODE_ID in nodes
+    print(f"call-count projection (a count of calls, not a bill) for arm {arm_name!r}:")
+    for query in queries:
+        print(
+            f"  {query.id}: keyword pin calls={1 if has_keywords else 0}, "
+            f"keyword band calls={_DEFAULT_KEYWORD_VARIANCE_RUNS if has_keywords else 0}, "
+            f"decomposed nodes={len(nodes)}, v1 subprocess runs=1"
+        )
+
+
 def main(argv: list[str] | None = None) -> int:
-    """``uv run python -m databasise.parity.run_comparison --arm naive`` — prints the human
-    summary and the JSON result path. Exit codes (D-03): ``0`` every requested query completed,
-    ``1`` a named refusal or an arm error, ``2`` bad arguments (argparse only), ``3`` at least one
-    query was inconclusive (the index-identity precondition failed, or the decomposed run was
-    partial, degraded or cyclic) — distinct from both the clean and the error status, per this
-    module's own "never a plain pass/fail" rule.
+    """``uv run python -m databasise.parity.run_comparison --arm naive`` — without ``--spend`` it
+    prints the call-count projection and returns 0 (no lock, client, provider call or file);
+    with ``--spend`` it prints the human summary and writes the JSON result. Exit codes (D-03):
+    ``0`` done or estimate-only, ``1`` a named refusal or an arm error (one stderr line), ``2`` bad
+    arguments (argparse only, including an unknown ``--query`` id), ``3`` at least one query was
+    inconclusive (the index-identity precondition failed, or the decomposed run was partial,
+    degraded or cyclic) — distinct from both the clean and the error status, per this module's own
+    "never a plain pass/fail" rule.
     """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--arm", required=True, choices=sorted(_ARM_TO_V1_MODE))
     parser.add_argument("--query", action="append", dest="query_ids", default=None)
-    parser.add_argument("--spend", action="store_true", default=False)  # inert until a later plan flips the default
+    parser.add_argument("--spend", action="store_true", default=False)
     args = parser.parse_args(argv)
+
+    try:
+        snapshot = load_snapshot()
+    except _refusals() as exc:
+        return cli.refuse(exc)
+    known = {q.id for q in snapshot.queries}
+    unknown = [q for q in args.query_ids or [] if q not in known]
+    if unknown:  # before the lock and any write: a rejected run never touches the results file
+        parser.error(f"unknown --query id(s): {', '.join(unknown)} (known: {', '.join(sorted(known))})")
+    queries = tuple(q for q in snapshot.queries if not args.query_ids or q.id in set(args.query_ids))
+
+    _print_projection(args.arm, queries)
+    if not args.spend:
+        print("mode: estimate-only")
+        return cli.EXIT_OK
 
     try:
         with store_lock(import_index.DEFAULT_STORE_ROOT):  # D-03
             records, had_error = asyncio.run(_run_cli(args.arm, args.query_ids))
-    except StoreLockedError as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
+    except _refusals() as exc:
+        return cli.refuse(exc)
 
     print(_render_human_summary(records))
 
-    _RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    result_path = _RESULTS_DIR / f"{args.arm}.json"
-    result_path.write_text(
-        json.dumps([r.to_dict() for r in records], indent=2, default=str), encoding="utf-8"
-    )
-    print(f"\n[result] JSON result written to: {result_path}")
+    if records:  # an empty list would overwrite the committed results with nothing
+        _RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+        result_path = _RESULTS_DIR / f"{args.arm}.json"
+        result_path.write_text(
+            json.dumps([r.to_dict() for r in records], indent=2, default=str), encoding="utf-8"
+        )
+        print(f"\n[result] JSON result written to: {result_path}")
 
     if had_error:
-        return 1
+        return cli.EXIT_REFUSED
     if any(r.status == "inconclusive" for r in records):
         return cli.EXIT_INCONCLUSIVE
-    return 0
+    return cli.EXIT_OK
 
 
 if __name__ == "__main__":
