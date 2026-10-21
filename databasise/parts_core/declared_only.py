@@ -37,11 +37,12 @@ records (``parts_core/lightrag/OPAQUE-BOUNDARY-RULE.md`` §2).
 
 from __future__ import annotations
 
+import functools
+from typing import Any
+
 from databasise.parts.schema import Part
-from databasise.parts_core.codebase_memory_mcp import (
-    CODEBASE_MEMORY_MCP_ADMISSION,
-    codebase_memory_mcp_body,
-)
+from databasise.parts_core import codebase_memory_mcp
+from databasise.parts_core.codebase_memory_mcp import codebase_memory_mcp_body
 from databasise.parts_core.lightrag.full_delete import (
     LIGHTRAG_FULL_DELETE_ADMISSION,
     full_delete_body,
@@ -55,6 +56,7 @@ from databasise.parts_core.lightrag.v1_index_sync import (
     v1_index_sync_body,
 )
 
+
 # The opaque codebase-memory-mcp part (MACH-01's second named wiring): opaque structural depth.
 # effects gains mutates_store additively (05-06-PLAN.md Task 2E) — PARTS.md ## §X's X1 repair
 # landed mutates_store and the mutable-store capability for manage_adr/delete_project's real
@@ -65,16 +67,29 @@ from databasise.parts_core.lightrag.v1_index_sync import (
 # databasise/evidence/wirings/w2-codebase-memory-mcp.json and FALSIFIER-2-EVIDENCE.md pin them as
 # committed Falsifier-2 evidence — this discrepancy is recorded, not silently resolved, in
 # ADMISSION-CODEBASE-MEMORY-MCP.md.
-CODEBASE_MEMORY_MCP_PART = Part(
-    name_at_version="codebase-memory-mcp@0.1.0",
-    kind="opaque",
-    structural_depth="opaque",
-    effects=["self_storage", "fs", "mutates_store"],
-    upstream_ref="external:codebase-memory-mcp",
-    body=codebase_memory_mcp_body,
-    artifact_scope="self_storage",
-    admission=CODEBASE_MEMORY_MCP_ADMISSION,
-)
+#
+# Built on first access (module __getattr__ below) so importing this module does not hash the
+# 293 MB binary through the admission record (15-04, TOOL-18, D-19); the cached Part is the same
+# object every time, which tests/parts/test_admission.py relies on.
+@functools.cache
+def _build_codebase_memory_mcp_part() -> Part:
+    return Part(
+        name_at_version="codebase-memory-mcp@0.1.0",
+        kind="opaque",
+        structural_depth="opaque",
+        effects=["self_storage", "fs", "mutates_store"],
+        upstream_ref="external:codebase-memory-mcp",
+        body=codebase_memory_mcp_body,
+        artifact_scope="self_storage",
+        admission=codebase_memory_mcp.CODEBASE_MEMORY_MCP_ADMISSION,
+    )
+
+
+def __getattr__(name: str) -> Any:
+    if name == "CODEBASE_MEMORY_MCP_PART":
+        return _build_codebase_memory_mcp_part()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 # The full LightRAG ingest core (MACH-01's third named wiring): opaque structural depth. @0.2.0
 # (11-03, LRAG-03): v1 mutates its own per-workspace working dir (mutates_store) and writes no

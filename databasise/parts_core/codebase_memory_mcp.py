@@ -18,6 +18,7 @@ obligations §X's source-level analysis cannot itself prove either way.
 from __future__ import annotations
 
 import asyncio
+import functools
 import hashlib
 import subprocess
 from pathlib import Path
@@ -78,8 +79,19 @@ def _reported_version(binary: str | None) -> str:
     return (result.stdout.strip() or result.stderr.strip())
 
 
-_BINARY_SHA256 = _binary_sha256(DEFAULT_CBM_BINARY)
-_REPORTED_VERSION = _reported_version(DEFAULT_CBM_BINARY)
+# Hashing the binary (293 MB) and running `--version` cost ~0.27 s, so none of it happens at import:
+# the hash, the reported version and the admission record are built on first access (module
+# __getattr__ at the foot of this file) and cached (15-04, TOOL-18, D-19).
+
+
+@functools.cache
+def _binary_sha256_cached() -> str:
+    return _binary_sha256(DEFAULT_CBM_BINARY)
+
+
+@functools.cache
+def _reported_version_cached() -> str:
+    return _reported_version(DEFAULT_CBM_BINARY)
 
 # Confirmed this session (05-06-PLAN.md Task 2 action C): calling list_tools() against the
 # installed 0.10.8 binary returns exactly PARTS.md ## §X's own fifteen tool names — no new tool,
@@ -112,180 +124,185 @@ def _compute_environment_hash() -> str:
     own SHA-256, and its self-reported version."""
     payload = {
         "binary_path": DEFAULT_CBM_BINARY or "",
-        "binary_sha256": _BINARY_SHA256,
-        "reported_version": _REPORTED_VERSION,
+        "binary_sha256": _binary_sha256_cached(),
+        "reported_version": _reported_version_cached(),
     }
     return "sha256:" + hashlib.sha256(canonicalise(payload)).hexdigest()
 
 
-_VERSION_DRIFT_NOTE = (
-    f"pinned clone codebase-memory-mcp@{PINNED_CLONE_SHA} (PARTS.md ## §X's code-verified basis) "
-    f"vs installed {_REPORTED_VERSION or '(unknown — binary not found)'} at {DEFAULT_CBM_BINARY or '(none)'}"
-)
+def _version_drift_note() -> str:
+    return (
+        f"pinned clone codebase-memory-mcp@{PINNED_CLONE_SHA} (PARTS.md ## §X's code-verified basis) "
+        f"vs installed {_reported_version_cached() or '(unknown — binary not found)'} "
+        f"at {DEFAULT_CBM_BINARY or '(none)'}"
+    )
 
-CODEBASE_MEMORY_MCP_ADMISSION = AdmissionRecord(
-    part_name_at_version="codebase-memory-mcp@0.1.0",
-    entry_path="whole-engine opaque node, hosted as a subprocess over the MCP stdio transport",
-    storage="self-contained",
-    wall_clock_ceiling_seconds=CBM_WALL_CLOCK_CEILING_SECONDS,
-    wall_clock_ceiling_basis=(
-        f"measured {CBM_MEASURED_INDEX_DURATION_SECONDS}s (cold-start) running index_repository "
-        "through the adapter against this repository's own databasise/ directory "
-        "(~177 Python files, 3204 nodes, 14401 edges); the engine self-reports no ceiling "
-        "anywhere in its source or README (PARTS.md ## §X condition 4) — declared ceiling is "
-        "~40x that measurement, headroom for a substantially larger target repository"
-    ),
-    feed_tier=(
-        "n/a — index_repository takes a filesystem repo_path, no machine-produced feed "
-        "(PARTS.md ## §X condition 6, §X.5's Falsifier-4 finding)"
-    ),
-    ttl_days=90,
-    network_namespace=(
-        "open question, not a clean yes (PARTS.md ## §X condition 3, ## §R row N12): zero LLM "
-        "and zero outbound network calls confirmed across all fifteen tool handlers, but a "
-        "loopback-bound HTTP UI server (127.0.0.1-only, same-origin CORS) exists inside the same "
-        "OS process outside the MCP tool surface, and whether §8 condition 3's denial is scoped "
-        "per-MCP-tool-call or per-OS-process is not settled by CONTRACT text. No OS-level "
-        "network-namespace isolation is built this phase (05-RESEARCH.md Open Question 3, "
-        "accepted as a scope boundary consistent with the project's no-Docker, local-NixOS "
-        "constraint) — this admission carries the open question forward as its own caveat "
-        "rather than as a closed condition."
-    ),
-    environment_hash=_compute_environment_hash(),
-    manifest_source=MANIFEST_SOURCE_CODE_INSPECTED,
-    verdicts=(
-        ConditionVerdict(
-            condition=1,
-            verdict="confirms-the-rule",
-            evidence=(
-                "not a satisfied/failed condition but evidence for the rule itself: the "
-                "engine's own tool self-report is demonstrably imprecise — ten of fifteen "
-                "tools self-declare destructive_hint=True despite calling no mutation function, "
-                "and only list_projects self-declares read_only_hint=True (confirmed live "
-                "against the installed 0.10.8 binary this session, matching PARTS.md ## §X "
-                "condition 1's own mcp.c:698-724 code-verified finding against the pinned "
-                "clone). This manifest is built from code inspection (§X's handler-by-handler "
-                f"scan), never from the engine's own self-report. {_VERSION_DRIFT_NOTE}."
+
+@functools.cache
+def _build_admission() -> AdmissionRecord:
+    return AdmissionRecord(
+        part_name_at_version="codebase-memory-mcp@0.1.0",
+        entry_path="whole-engine opaque node, hosted as a subprocess over the MCP stdio transport",
+        storage="self-contained",
+        wall_clock_ceiling_seconds=CBM_WALL_CLOCK_CEILING_SECONDS,
+        wall_clock_ceiling_basis=(
+            f"measured {CBM_MEASURED_INDEX_DURATION_SECONDS}s (cold-start) running index_repository "
+            "through the adapter against this repository's own databasise/ directory "
+            "(~177 Python files, 3204 nodes, 14401 edges); the engine self-reports no ceiling "
+            "anywhere in its source or README (PARTS.md ## §X condition 4) — declared ceiling is "
+            "~40x that measurement, headroom for a substantially larger target repository"
+        ),
+        feed_tier=(
+            "n/a — index_repository takes a filesystem repo_path, no machine-produced feed "
+            "(PARTS.md ## §X condition 6, §X.5's Falsifier-4 finding)"
+        ),
+        ttl_days=90,
+        network_namespace=(
+            "open question, not a clean yes (PARTS.md ## §X condition 3, ## §R row N12): zero LLM "
+            "and zero outbound network calls confirmed across all fifteen tool handlers, but a "
+            "loopback-bound HTTP UI server (127.0.0.1-only, same-origin CORS) exists inside the same "
+            "OS process outside the MCP tool surface, and whether §8 condition 3's denial is scoped "
+            "per-MCP-tool-call or per-OS-process is not settled by CONTRACT text. No OS-level "
+            "network-namespace isolation is built this phase (05-RESEARCH.md Open Question 3, "
+            "accepted as a scope boundary consistent with the project's no-Docker, local-NixOS "
+            "constraint) — this admission carries the open question forward as its own caveat "
+            "rather than as a closed condition."
+        ),
+        environment_hash=_compute_environment_hash(),
+        manifest_source=MANIFEST_SOURCE_CODE_INSPECTED,
+        verdicts=(
+            ConditionVerdict(
+                condition=1,
+                verdict="confirms-the-rule",
+                evidence=(
+                    "not a satisfied/failed condition but evidence for the rule itself: the "
+                    "engine's own tool self-report is demonstrably imprecise — ten of fifteen "
+                    "tools self-declare destructive_hint=True despite calling no mutation function, "
+                    "and only list_projects self-declares read_only_hint=True (confirmed live "
+                    "against the installed 0.10.8 binary this session, matching PARTS.md ## §X "
+                    "condition 1's own mcp.c:698-724 code-verified finding against the pinned "
+                    "clone). This manifest is built from code inspection (§X's handler-by-handler "
+                    f"scan), never from the engine's own self-report. {_version_drift_note()}."
+                ),
+            ),
+            ConditionVerdict(
+                condition=2,
+                verdict="satisfied",
+                evidence=(
+                    "environment_hash covers the whole resolved closure for this single-binary, "
+                    "no-interpreter engine: the resolved binary path, its own SHA-256 digest, and "
+                    "its self-reported version (PARTS.md ## §X condition 2: the engine vendors its "
+                    "own tree-sitter grammars and embedding model with no separate interpreter/venv "
+                    "to hash) — computed by this module's own _compute_environment_hash, "
+                    "independent of the ingest/delete ports' identically-shaped but differently-"
+                    "sourced functions."
+                ),
+            ),
+            ConditionVerdict(
+                condition=3,
+                verdict="open-question",
+                evidence=(
+                    "PARTS.md ## §X condition 3 and ## §R row N12, carried forward verbatim as this "
+                    "record's own network_namespace field states: zero LLM/network calls in any of "
+                    "the fifteen tool handlers, but a loopback-bound HTTP UI server exists in the "
+                    "same OS process outside the MCP tool surface, and per-call-vs-per-process "
+                    "denial scoping is not settled by §8's text. Recorded as open, not rounded to "
+                    "a yes."
+                ),
+            ),
+            ConditionVerdict(
+                condition=4,
+                verdict="satisfied",
+                evidence=(
+                    f"CBM_WALL_CLOCK_CEILING_SECONDS={CBM_WALL_CLOCK_CEILING_SECONDS} is declared "
+                    "here — the engine self-reports none (PARTS.md ## §X condition 4's own negative-"
+                    "result grep against the source and README) — and enforced by "
+                    "databasise.foreign.codebase_memory_mcp_adapter.call_tool's timeout= parameter, "
+                    "raising CbmToolTimeoutError on breach; databasise.validator.execution_mode.host "
+                    "refuses to host this placement at all without a positive ceiling."
+                ),
+            ),
+            ConditionVerdict(
+                condition=5,
+                verdict="satisfied",
+                evidence=(
+                    "storage='self-contained', confirmed live: the engine's own SQLite cache, "
+                    "bundled embeddings, and tree-sitter parse state never cross into this "
+                    "machine's artifact registry (PARTS.md ## §X condition 5, platform.c:535's "
+                    "cache-path evidence) — CODEBASE_MEMORY_MCP_PART.artifact_scope='self_storage', "
+                    "never 'shared', enforced by validate_admission's ForbiddenSharedScopeError."
+                ),
+            ),
+            ConditionVerdict(
+                condition=6,
+                verdict="satisfied",
+                evidence=(
+                    "vacuously satisfiable, re-confirmed live: index_repository's only input is a "
+                    "filesystem repo_path (confirmed by calling it directly against this "
+                    "repository's own databasise/ directory this session) — this engine never "
+                    "consumes a machine-produced feed at all, so it declares no consumed feed_tier "
+                    "(PARTS.md ## §X condition 6, §X.5's Falsifier-4 structural finding, carried "
+                    "forward unchanged by this drift check)."
+                ),
+            ),
+            ConditionVerdict(
+                condition=7,
+                verdict="machine-side-obligation",
+                evidence=(
+                    "policy-level, not source-evidenced (PARTS.md ## §X condition 7) — enforced by "
+                    "databasise.parts.admission.cross_check_conditions at registration time: the "
+                    "codebase-memory-mcp wiring's own provides node must be excluded from the "
+                    "default selector's candidate set (databasise.seam.selectors._is_default_eligible)."
+                ),
+            ),
+            ConditionVerdict(
+                condition=8,
+                verdict="machine-side-obligation",
+                evidence=(
+                    "policy-level ~90-day TTL/ledger mechanic, not source-evidenced (PARTS.md ## §X "
+                    "condition 8) — ttl_days=90 is declared on this record; renewal-with-reason "
+                    "ledger enforcement is the same machine-side mechanism the sibling LightRAG "
+                    "ports' admission records already rely on, not re-invented here."
+                ),
+            ),
+            ConditionVerdict(
+                condition=9,
+                verdict="machine-side-obligation",
+                evidence=(
+                    "the invocation shape half is satisfied, re-confirmed live: every one of the "
+                    "fifteen tools (unchanged from PARTS.md ## §X's own table — see "
+                    "CBM_KNOWN_TOOL_NAMES and this record's live tool-surface comparison in "
+                    "ADMISSION-CODEBASE-MEMORY-MCP.md) is an explicit, named MCP call with no "
+                    "implicit/ambient invocation path. The counting-and-non-promotion half — "
+                    "whether an explicit part_ref invocation is counted as data and never a "
+                    "promotion trigger — is a machine-side ledger mechanic with no source evidence "
+                    "either way, exactly as §X's own table records; not rounded up to a full yes."
+                ),
+            ),
+            ConditionVerdict(
+                condition=10,
+                verdict="satisfied",
+                evidence=(
+                    "enforced by databasise.parts.admission.cross_check_conditions: this part's "
+                    "artifact_scope is 'self_storage', and the machine keeps no artifact registry "
+                    "(removed in Phase 10, D-15), so nothing enumerates this part's output as an "
+                    "SA-1-shareable artifact (PARTS.md ## §X condition 10)."
+                ),
+            ),
+            ConditionVerdict(
+                condition=11,
+                verdict="satisfied",
+                evidence=(
+                    "re-confirmed live against the installed 0.10.8 binary's own input schemas this "
+                    "session: none of the fifteen tools' schemas carries an as_of/valid_at/interval "
+                    "parameter of any kind (PARTS.md ## §X condition 11's own negative-result scan, "
+                    "unaffected by the version drift since the tool surface has not moved) — and "
+                    "databasise.seam.query.QueryObject declares no 'as_of' member, structurally "
+                    "impossible to violate, checked at registration by cross_check_conditions."
+                ),
             ),
         ),
-        ConditionVerdict(
-            condition=2,
-            verdict="satisfied",
-            evidence=(
-                "environment_hash covers the whole resolved closure for this single-binary, "
-                "no-interpreter engine: the resolved binary path, its own SHA-256 digest, and "
-                "its self-reported version (PARTS.md ## §X condition 2: the engine vendors its "
-                "own tree-sitter grammars and embedding model with no separate interpreter/venv "
-                "to hash) — computed by this module's own _compute_environment_hash, "
-                "independent of the ingest/delete ports' identically-shaped but differently-"
-                "sourced functions."
-            ),
-        ),
-        ConditionVerdict(
-            condition=3,
-            verdict="open-question",
-            evidence=(
-                "PARTS.md ## §X condition 3 and ## §R row N12, carried forward verbatim as this "
-                "record's own network_namespace field states: zero LLM/network calls in any of "
-                "the fifteen tool handlers, but a loopback-bound HTTP UI server exists in the "
-                "same OS process outside the MCP tool surface, and per-call-vs-per-process "
-                "denial scoping is not settled by §8's text. Recorded as open, not rounded to "
-                "a yes."
-            ),
-        ),
-        ConditionVerdict(
-            condition=4,
-            verdict="satisfied",
-            evidence=(
-                f"CBM_WALL_CLOCK_CEILING_SECONDS={CBM_WALL_CLOCK_CEILING_SECONDS} is declared "
-                "here — the engine self-reports none (PARTS.md ## §X condition 4's own negative-"
-                "result grep against the source and README) — and enforced by "
-                "databasise.foreign.codebase_memory_mcp_adapter.call_tool's timeout= parameter, "
-                "raising CbmToolTimeoutError on breach; databasise.validator.execution_mode.host "
-                "refuses to host this placement at all without a positive ceiling."
-            ),
-        ),
-        ConditionVerdict(
-            condition=5,
-            verdict="satisfied",
-            evidence=(
-                "storage='self-contained', confirmed live: the engine's own SQLite cache, "
-                "bundled embeddings, and tree-sitter parse state never cross into this "
-                "machine's artifact registry (PARTS.md ## §X condition 5, platform.c:535's "
-                "cache-path evidence) — CODEBASE_MEMORY_MCP_PART.artifact_scope='self_storage', "
-                "never 'shared', enforced by validate_admission's ForbiddenSharedScopeError."
-            ),
-        ),
-        ConditionVerdict(
-            condition=6,
-            verdict="satisfied",
-            evidence=(
-                "vacuously satisfiable, re-confirmed live: index_repository's only input is a "
-                "filesystem repo_path (confirmed by calling it directly against this "
-                "repository's own databasise/ directory this session) — this engine never "
-                "consumes a machine-produced feed at all, so it declares no consumed feed_tier "
-                "(PARTS.md ## §X condition 6, §X.5's Falsifier-4 structural finding, carried "
-                "forward unchanged by this drift check)."
-            ),
-        ),
-        ConditionVerdict(
-            condition=7,
-            verdict="machine-side-obligation",
-            evidence=(
-                "policy-level, not source-evidenced (PARTS.md ## §X condition 7) — enforced by "
-                "databasise.parts.admission.cross_check_conditions at registration time: the "
-                "codebase-memory-mcp wiring's own provides node must be excluded from the "
-                "default selector's candidate set (databasise.seam.selectors._is_default_eligible)."
-            ),
-        ),
-        ConditionVerdict(
-            condition=8,
-            verdict="machine-side-obligation",
-            evidence=(
-                "policy-level ~90-day TTL/ledger mechanic, not source-evidenced (PARTS.md ## §X "
-                "condition 8) — ttl_days=90 is declared on this record; renewal-with-reason "
-                "ledger enforcement is the same machine-side mechanism the sibling LightRAG "
-                "ports' admission records already rely on, not re-invented here."
-            ),
-        ),
-        ConditionVerdict(
-            condition=9,
-            verdict="machine-side-obligation",
-            evidence=(
-                "the invocation shape half is satisfied, re-confirmed live: every one of the "
-                "fifteen tools (unchanged from PARTS.md ## §X's own table — see "
-                "CBM_KNOWN_TOOL_NAMES and this record's live tool-surface comparison in "
-                "ADMISSION-CODEBASE-MEMORY-MCP.md) is an explicit, named MCP call with no "
-                "implicit/ambient invocation path. The counting-and-non-promotion half — "
-                "whether an explicit part_ref invocation is counted as data and never a "
-                "promotion trigger — is a machine-side ledger mechanic with no source evidence "
-                "either way, exactly as §X's own table records; not rounded up to a full yes."
-            ),
-        ),
-        ConditionVerdict(
-            condition=10,
-            verdict="satisfied",
-            evidence=(
-                "enforced by databasise.parts.admission.cross_check_conditions: this part's "
-                "artifact_scope is 'self_storage', and the machine keeps no artifact registry "
-                "(removed in Phase 10, D-15), so nothing enumerates this part's output as an "
-                "SA-1-shareable artifact (PARTS.md ## §X condition 10)."
-            ),
-        ),
-        ConditionVerdict(
-            condition=11,
-            verdict="satisfied",
-            evidence=(
-                "re-confirmed live against the installed 0.10.8 binary's own input schemas this "
-                "session: none of the fifteen tools' schemas carries an as_of/valid_at/interval "
-                "parameter of any kind (PARTS.md ## §X condition 11's own negative-result scan, "
-                "unaffected by the version drift since the tool surface has not moved) — and "
-                "databasise.seam.query.QueryObject declares no 'as_of' member, structurally "
-                "impossible to violate, checked at registration by cross_check_conditions."
-            ),
-        ),
-    ),
-)
+    )
 
 
 async def codebase_memory_mcp_body(ctx: NodeContext) -> dict[str, Any]:
@@ -321,11 +338,20 @@ async def codebase_memory_mcp_body(ctx: NodeContext) -> dict[str, Any]:
     }
 
 
+def __getattr__(name: str) -> Any:
+    """PEP 562: ``CODEBASE_MEMORY_MCP_ADMISSION`` is built on first access, so importing this module
+    hashes no binary and runs no subprocess; ``from ... import CODEBASE_MEMORY_MCP_ADMISSION``
+    reaches it here, and the cached record is the same object every time."""
+    if name == "CODEBASE_MEMORY_MCP_ADMISSION":
+        return _build_admission()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 __all__ = [
     "PINNED_CLONE_SHA",
     "CBM_MEASURED_INDEX_DURATION_SECONDS",
     "CBM_WALL_CLOCK_CEILING_SECONDS",
     "CBM_KNOWN_TOOL_NAMES",
-    "CODEBASE_MEMORY_MCP_ADMISSION",
+    "CODEBASE_MEMORY_MCP_ADMISSION",  # noqa: F822 — served by the module __getattr__
     "codebase_memory_mcp_body",
 ]

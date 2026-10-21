@@ -45,6 +45,7 @@ from __future__ import annotations
 import importlib
 import importlib.machinery
 import sys
+import threading
 from pathlib import Path
 from types import ModuleType
 
@@ -57,6 +58,10 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 # session: `sys.prefix` resolves inside `_PROJECT_ROOT`, so the real SDK's own `__file__` does as
 # well). Excluded first, before the broader project-root check.
 _VENV_ROOT = Path(sys.prefix).resolve()
+
+# import_real_mcp mutates sys.path and sys.modules; two threads doing it at once would restore
+# each other's stripped path (15-04, TOOL-18, D-19).
+_IMPORT_LOCK = threading.RLock()
 
 
 def _resolves_inside_project(path_str: str) -> bool:
@@ -97,24 +102,25 @@ def import_real_mcp(dotted_name: str) -> ModuleType:
     duration of the lookup, restore unconditionally.
     """
     top_level = dotted_name.split(".", 1)[0]
-    cached = sys.modules.get(top_level)
-    if cached is not None:
-        cached_file = getattr(cached, "__file__", None)
-        cached_shadowed = (
-            _resolves_inside_project(cached_file)
-            if cached_file
-            else any(_resolves_inside_project(loc) for loc in getattr(cached, "__path__", []) or [])
-        )
-        if cached_shadowed:
-            for key in [k for k in sys.modules if k == top_level or k.startswith(top_level + ".")]:
-                del sys.modules[key]
+    with _IMPORT_LOCK:
+        cached = sys.modules.get(top_level)
+        if cached is not None:
+            cached_file = getattr(cached, "__file__", None)
+            cached_shadowed = (
+                _resolves_inside_project(cached_file)
+                if cached_file
+                else any(_resolves_inside_project(loc) for loc in getattr(cached, "__path__", []) or [])
+            )
+            if cached_shadowed:
+                for key in [k for k in sys.modules if k == top_level or k.startswith(top_level + ".")]:
+                    del sys.modules[key]
 
-    saved_path = list(sys.path)
-    sys.path[:] = [entry for entry in saved_path if not _resolves_inside_project(entry)]
-    try:
-        return importlib.import_module(dotted_name)
-    finally:
-        sys.path[:] = saved_path
+        saved_path = list(sys.path)
+        sys.path[:] = [entry for entry in saved_path if not _resolves_inside_project(entry)]
+        try:
+            return importlib.import_module(dotted_name)
+        finally:
+            sys.path[:] = saved_path
 
 
 __all__ = ["import_real_mcp", "mcp_sdk_is_installed"]

@@ -10,7 +10,6 @@ import os
 import stat
 import subprocess
 import sys
-import textwrap
 import time
 from pathlib import Path
 
@@ -155,3 +154,102 @@ def test_a_derived_finding_carries_a_list_derived_from_and_a_tagged_kind():
     snippet = adapter.normalise_to_item_kind({"file_path": "a.py", "source": "x"}, "get_code_snippet")
     assert item_kind_name(snippet) == adapter.ITEM_KIND_CODE_SNIPPET
     assert snippet["derived_from"] == []
+
+
+# ---------------------------------------------------------------------------
+# Task 3: lazy part module, declared effects, SDK guard lock
+# ---------------------------------------------------------------------------
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+
+# Counts the work the part module used to do at import: reading the codebase-memory-mcp binary to
+# hash it, and any subprocess.run (the `--version` probe). Other modules hash their own large
+# inputs at import, so only reads of this one binary count. Printed as "<reads> <runs>".
+_IMPORT_COST_SCRIPT = """\
+import pathlib, subprocess
+from databasise.foreign.codebase_memory_mcp_adapter import DEFAULT_CBM_BINARY
+counts = {"read": 0, "run": 0}
+_read_bytes, _run = pathlib.Path.read_bytes, subprocess.run
+
+def read_bytes(self):
+    if DEFAULT_CBM_BINARY and str(self) == DEFAULT_CBM_BINARY:
+        counts["read"] += 1
+    return _read_bytes(self)
+
+def run(*args, **kwargs):
+    counts["run"] += 1
+    return _run(*args, **kwargs)
+
+pathlib.Path.read_bytes, subprocess.run = read_bytes, run
+import databasise.parts_core.codebase_memory_mcp
+import databasise.parts_core.declared_only
+print(counts["read"], counts["run"])
+"""
+
+
+def test_importing_the_part_module_hashes_nothing_and_runs_no_subprocess():
+    env = {**os.environ, "PYTHONPATH": str(_REPO_ROOT)}
+    result = subprocess.run(
+        [sys.executable, "-c", _IMPORT_COST_SCRIPT], cwd=_REPO_ROOT, env=env, capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.split() == ["0", "0"], result.stdout
+
+
+def test_the_lazy_record_and_part_are_the_same_object_on_every_access():
+    from databasise.parts_core.codebase_memory_mcp import (
+        CODEBASE_MEMORY_MCP_ADMISSION as first_record,
+    )
+    from databasise.parts_core.codebase_memory_mcp import (
+        CODEBASE_MEMORY_MCP_ADMISSION as second_record,
+    )
+    from databasise.parts_core.declared_only import (
+        CODEBASE_MEMORY_MCP_PART as first_part,
+    )
+    from databasise.parts_core.declared_only import (
+        CODEBASE_MEMORY_MCP_PART as second_part,
+    )
+
+    assert first_part is second_part
+    assert first_record is second_record
+    assert first_part.admission is first_record
+
+
+def test_every_store_touch_the_part_records_is_declared(monkeypatch):
+    import asyncio
+
+    from databasise.parts.schema import NodeContext
+    from databasise.parts_core import codebase_memory_mcp as cbm_module
+    from databasise.parts_core.declared_only import CODEBASE_MEMORY_MCP_PART
+
+    monkeypatch.setattr(cbm_module, "call_tool", lambda *args, **kwargs: [{"project": "p"}])
+    touches: list[str] = []
+    ctx = NodeContext(
+        node_id="cbm",
+        config={"tool": "list_projects", "arguments": {}},
+        inputs={},
+        stores={},
+        record_store_touch=touches.append,
+    )
+    asyncio.run(cbm_module.codebase_memory_mcp_body(ctx))
+    declared = set(CODEBASE_MEMORY_MCP_PART.effects)
+    assert set(touches) <= declared, set(touches) - declared
+    assert "mutates_store" in declared
+
+
+def test_import_real_mcp_holds_a_lock():
+    import threading
+
+    from databasise.foreign import _mcp_sdk_guard as guard
+
+    lock = getattr(guard, "_IMPORT_LOCK", None)
+    assert type(lock) is type(threading.RLock()), repr(lock)
+
+    modules: list[object] = []
+    threads = [threading.Thread(target=lambda: modules.append(guard.import_real_mcp("mcp"))) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert len(modules) == 2
+    assert all(hasattr(module, "ClientSession") for module in modules)
