@@ -157,8 +157,7 @@ packages = [
 # (Falsifier 2 evidence run, 02-01-PLAN.md Task 1).
 [tool.setuptools.package-data]
 "databasise.evidence" = ["wirings/*.json"]
-# Widened from ["lightrag/*.json"] (05-06-PLAN.md Task 2F): databasise/wirings/codebase-memory-
-# mcp.json now sits at the package root, not under lightrag/ — without this the new wiring ships
-# in a source checkout and vanishes from an installed package, exactly the failure this same
-# package-data entry was already widened once to prevent (Falsifier-2 evidence run precedent).
+# Covers the per-family directories (lightrag/, hipporag/) and any wiring JSON at the package
+# root, so wirings ship in an installed package and not only in a source checkout (Falsifier-2
+# evidence run precedent). The cbm wiring now lives under tests/fixtures/, not here.
 "databasise.wirings" = ["*.json", "lightrag/*.json", "hipporag/*.json"]

@@ -134,7 +134,9 @@ admission.
 
 **Licenses:** dispatching `codebase-memory-mcp` as a real, executable opaque `Part` through the
 same `parse_wiring -> run_wiring` machinery the LightRAG corpus-side ports use
-(`databasise/wirings/codebase-memory-mcp.json`); calling any of the eleven evidence-returning tools
+(the wiring lives at `databasise/tests/fixtures/codebase-memory-mcp.json`; since Phase 14 the
+part is not registered in `default_registry()`, and the Falsifier-2 probe registry and tests that
+pass `registry=` register it); calling any of the eleven evidence-returning tools
 through the adapter and receiving a §4-typed, tier-capped result; recording the engine's declared
 mutation surface (`manage_adr`/`delete_project`) as a machine-known fact.
 

@@ -114,7 +114,7 @@ Abbreviations used in the reachability columns:
 | `wirings/lightrag/corpus-ingest.json`, `corpus-delete.json` | Single opaque node each (`full-ingest`, `full-delete`) | ING, DEL | LightRAG write path |
 | `wirings/hipporag/base.json` | 13 nodes (7 index-side no-ops plus 6 query nodes) | QRY | HippoRAG selectable by capability |
 | `wirings/hipporag/corpus-ingest.json` | 7-node ingest; no `corpus-delete.json` | ING | HippoRAG cannot delete |
-| `wirings/codebase-memory-mcp.json` | One opaque node | none (not in `WIRING_NAMES`) | Do not list as a modality |
+| `tests/fixtures/codebase-memory-mcp.json` | One opaque node; the part is not in `default_registry()` since Phase 14 | none (not in `WIRING_NAMES`) | Do not list as a modality |
 | `registry_artifact/index.py` | `ArtifactRegistry` SQLite (`<store_root>/artifact_registry.db`) | none (tests only) | An artifact browser would always be empty |
 | `registry_artifact/write_path.py` | `write_artifact` (75-122) | none (tests only) | none until wired |
 | `registry_artifact/__init__.py` | Package marker | none | none |
