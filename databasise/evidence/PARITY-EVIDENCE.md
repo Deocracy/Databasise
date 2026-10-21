@@ -20,7 +20,7 @@ Rendered from the committed result files under `databasise/evidence/parity_resul
 
 ## The trace asymmetry
 
-Stated before the numbers, not after them. The decomposed arm's run comes back as a full RIG §TR.1 run record (`databasise.runner.trace.RunRecord`) — one entry per node, its own token accounting, its own effects. The original (pre-decomposition) arm comes back as `databasise.parity.v1_arm.V1ArmResult`, instrumented from the outside only (wall clock, exit status, captured stderr) — its `instrumentation` field is always `"harness-external"`. This is not a defect to fix; v1 was never built to emit a RIG §TR.1 record and never will be. Wherever a number below appears next to the original arm, it is read against this asymmetry, not against a claim of matching instrumentation (D-05, `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`).
+Stated before the numbers, not after them. The decomposed arm's run comes back as a full RIG §TR.1 run record (`databasise.runner.trace.RunRecord`) — one entry per node, its own token accounting, its own effects. The original (pre-decomposition) arm comes back as `databasise.parity.v1_arm.V1ArmResult`, instrumented from the outside only (wall clock, exit status, captured stderr) — its `instrumentation` field is always `"harness-external"`. This is not a defect to fix; v1 was never built to emit a RIG §TR.1 record and never will be. Wherever a number below appears next to the original arm, it is read against this asymmetry, not against a claim of matching instrumentation (D-05, `.planning/milestones/v1.0-phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`).
 
 ## Per-arm retrieval-level comparison
 
@@ -65,7 +65,7 @@ Stated before the numbers, not after them. The decomposed arm's run comes back a
 
 ## Human spot-check of answer substance
 
-Criterion 6's substitute-gate half this document's retrieval-level comparison does not cover: an LLM-generated answer's *substance* is not mechanically checkable — `generate` is stochastic and no A/A floor is calibrated yet (MACH-02/MACH-03 deferred to Phase 6, `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`) — so only a human judgment call substitutes for it. Recorded per query in `human_findings.json`'s `answer_spotchecks` list; run instructions are `.planning/phases/03-lightrag-query-side/03-VALIDATION.md`'s Manual-Only Verifications row for this behavior.
+Criterion 6's substitute-gate half this document's retrieval-level comparison does not cover: an LLM-generated answer's *substance* is not mechanically checkable — `generate` is stochastic and no A/A floor is calibrated yet (MACH-02/MACH-03 deferred to Phase 6, `.planning/milestones/v1.0-phases/03-lightrag-query-side/03-GATE-AMENDMENT.md`) — so only a human judgment call substitutes for it. Recorded per query in `human_findings.json`'s `answer_spotchecks` list; run instructions are `.planning/milestones/v1.0-phases/03-lightrag-query-side/03-VALIDATION.md`'s Manual-Only Verifications row for this behavior.
 
 Each completed comparison record already carries the original (v1) arm's answer text under `original_arm_result.answer` (see the raw `parity_results/` files); the decomposed arm's answer text is not recorded in the run record, so the side-by-side read this section names is a live re-run, not a document comparison.
 
@@ -73,11 +73,11 @@ All five arms completed without a decomposed-run degradation, so this read is av
 
 ### `q1`
 
-**Not yet recorded.** A human is required — answer substance is not mechanically checkable and no A/A floor is calibrated (MACH-02/MACH-03 deferred to Phase 6). To record it, add an entry to `human_findings.json`'s `answer_spotchecks` list naming `query_id='q1'`, the `arm` compared, a `judgment` (one of the three values this module's own `InvalidJudgmentError` enforces), `notes`, `recorded_by`, and `recorded_at`. Run instructions: `.planning/phases/03-lightrag-query-side/03-VALIDATION.md`'s Manual-Only Verifications table, "Human spot-check of answer substance" row.
+**Not yet recorded.** A human is required — answer substance is not mechanically checkable and no A/A floor is calibrated (MACH-02/MACH-03 deferred to Phase 6). To record it, add an entry to `human_findings.json`'s `answer_spotchecks` list naming `query_id='q1'`, the `arm` compared, a `judgment` (one of the three values this module's own `InvalidJudgmentError` enforces), `notes`, `recorded_by`, and `recorded_at`. Run instructions: `.planning/milestones/v1.0-phases/03-lightrag-query-side/03-VALIDATION.md`'s Manual-Only Verifications table, "Human spot-check of answer substance" row.
 
 ### `q2`
 
-**Not yet recorded.** A human is required — answer substance is not mechanically checkable and no A/A floor is calibrated (MACH-02/MACH-03 deferred to Phase 6). To record it, add an entry to `human_findings.json`'s `answer_spotchecks` list naming `query_id='q2'`, the `arm` compared, a `judgment` (one of the three values this module's own `InvalidJudgmentError` enforces), `notes`, `recorded_by`, and `recorded_at`. Run instructions: `.planning/phases/03-lightrag-query-side/03-VALIDATION.md`'s Manual-Only Verifications table, "Human spot-check of answer substance" row.
+**Not yet recorded.** A human is required — answer substance is not mechanically checkable and no A/A floor is calibrated (MACH-02/MACH-03 deferred to Phase 6). To record it, add an entry to `human_findings.json`'s `answer_spotchecks` list naming `query_id='q2'`, the `arm` compared, a `judgment` (one of the three values this module's own `InvalidJudgmentError` enforces), `notes`, `recorded_by`, and `recorded_at`. Run instructions: `.planning/milestones/v1.0-phases/03-lightrag-query-side/03-VALIDATION.md`'s Manual-Only Verifications table, "Human spot-check of answer substance" row.
 
 ## The `keywords` variance band
 
@@ -112,7 +112,7 @@ Criterion 3 requires this to ship as part of the parity evidence, which is why i
 
 ## What is not measured
 
-The A/A floor (MACH-02's eval bundle, MACH-03's bootstrap-resampled p95 calibration) is deferred to Phase 6's side-by-side run, per `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md` — this is the **second** deferral of the same pair of requirements (first Phase 2 to Phase 3, recorded in `.planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md`; now Phase 3 to Phase 6). Residual risk, in D-11's own words, not softened: **answer-level drift originating in `keywords` and `generate` stays unmeasured until a floor exists.** GATE-01's standing condition continues to hold regardless of this document's own findings: no promotion decision and no parity claim rides on an unmeasured comparison.
+The A/A floor (MACH-02's eval bundle, MACH-03's bootstrap-resampled p95 calibration) is deferred to Phase 6's side-by-side run, per `.planning/milestones/v1.0-phases/03-lightrag-query-side/03-GATE-AMENDMENT.md` — this is the **second** deferral of the same pair of requirements (first Phase 2 to Phase 3, recorded in `.planning/milestones/v1.0-phases/02-falsifier-gate/02-GATE-01-WAIVER.md`; now Phase 3 to Phase 6). Residual risk, in D-11's own words, not softened: **answer-level drift originating in `keywords` and `generate` stays unmeasured until a floor exists.** GATE-01's standing condition continues to hold regardless of this document's own findings: no promotion decision and no parity claim rides on an unmeasured comparison.
 
 Separately, and specific to this render: the retrieval-level comparison **has** run — all five arms are `completed` (see "What was compared" and "Per-arm retrieval-level comparison") — but the human answer-substance spot-check for q1/q2 is not yet recorded (see "Human spot-check of answer substance" above), and `hybrid`/`local`/`global` completed without a decomposed-run degradation but measured a real, non-empty entity/relation disagreement rather than an agreement (see the per-arm degradation notes and Verdict section) — no retrieval-level agreement claim is made for these arms at all. Neither gap is measured by this document; both are named here rather than left implicit.
 

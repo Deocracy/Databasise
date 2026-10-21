@@ -364,3 +364,29 @@ def test_main_check_results_refuses_a_malformed_file_with_one_line_and_exit_1(
     err = capsys.readouterr().err.strip().splitlines()
     assert code == 1
     assert len(err) == 1 and err[0].startswith("ParityRecordFormatError:")
+
+
+# --------------------------------------------------------------------------------------------- #
+# Task 3: every rendered and committed .planning path resolves
+# --------------------------------------------------------------------------------------------- #
+
+
+def test_every_planning_path_resolves():
+    evidence = _REPO_ROOT / "databasise" / "evidence"
+    files = [
+        evidence / "parity_report.py",
+        evidence / "DECLARED-DEVIATIONS.md",
+        evidence / "PARITY-EVIDENCE.md",
+        evidence / "FALSIFIER-5-EVIDENCE.md",
+    ]
+    checked = 0
+    missing = []
+    for file in files:
+        for match in re.findall(r"\.planning/[A-Za-z0-9_./-]*", file.read_text(encoding="utf-8")):
+            path = match.rstrip(".,;:")
+            checked += 1
+            if not (_REPO_ROOT / path).exists():
+                missing.append(f"{file.name}: {path}")
+
+    assert checked >= 10
+    assert sorted(set(missing)) == []

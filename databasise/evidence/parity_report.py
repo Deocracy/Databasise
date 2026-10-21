@@ -59,9 +59,9 @@ KEYWORD_VARIANCE_N = 5
 _DETERMINISM_SETTING = "cache-bypassed"
 _CONCURRENCY_SETTING = "sequential"
 
-_GATE_AMENDMENT_REF = ".planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md"
-_GATE_WAIVER_REF = ".planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md"
-_VALIDATION_REF = ".planning/phases/03-lightrag-query-side/03-VALIDATION.md"
+_GATE_AMENDMENT_REF = ".planning/milestones/v1.0-phases/03-lightrag-query-side/03-GATE-AMENDMENT.md"
+_GATE_WAIVER_REF = ".planning/milestones/v1.0-phases/02-falsifier-gate/02-GATE-01-WAIVER.md"
+_VALIDATION_REF = ".planning/milestones/v1.0-phases/03-lightrag-query-side/03-VALIDATION.md"
 
 # --------------------------------------------------------------------------------------------- #
 # Loading committed inputs
@@ -604,7 +604,7 @@ def _render_pending_causes_section(pending: list[DeclaredDeviation]) -> str:
     rows = [
         f"| {_escape_cell(d.arm)} | {_escape_cell(d.query_id)} | "
         f"{_escape_cell(d.description)} | PENDING — see "
-        "`.planning/phases/03-lightrag-query-side/03-UAT.md` |"
+        "`.planning/milestones/v1.0-phases/03-lightrag-query-side/03-UAT.md` |"
         for d in pending
     ]
     return (
@@ -619,7 +619,7 @@ def _render_pending_causes_section(pending: list[DeclaredDeviation]) -> str:
         "accepted and shown as such, not treated as owner-verified. Each excursion below is "
         "named here instead, distinct from — never merged into — the \"Named deviations\" "
         "table above, pending a recorded cause; the owner action is spelled out in "
-        "`.planning/phases/03-lightrag-query-side/03-UAT.md`.\n\n"
+        "`.planning/milestones/v1.0-phases/03-lightrag-query-side/03-UAT.md`.\n\n"
         + header
         + "\n".join(rows)
         + "\n"

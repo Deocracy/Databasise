@@ -12,8 +12,8 @@
 > 5) — **Falsifier 5 gate**
 
 Both amendment notes carried forward on that requirement — moved to Phase 3 per
-`.planning/phases/02-falsifier-gate/02-GATE-01-WAIVER.md`, then moved a second time to this phase
-per `.planning/phases/03-lightrag-query-side/03-GATE-AMENDMENT.md` — brought MACH-03 here, to Phase
+`.planning/milestones/v1.0-phases/02-falsifier-gate/02-GATE-01-WAIVER.md`, then moved a second time to this phase
+per `.planning/milestones/v1.0-phases/03-lightrag-query-side/03-GATE-AMENDMENT.md` — brought MACH-03 here, to Phase
 6's cross-modality run, as its point of first need.
 
 ## Status
@@ -89,7 +89,7 @@ not to proceed past Task 1 into a real calibration, and states plainly why.
 - **Falsifier 5's own ladder-halt consequence is not triggered by this document.** A Falsifier 5
   *failure* — a real comparison that ran and did not clear a pre-registered threshold — halts the
   ladder as a SELECTION.md-level reversal, per Phase 2's own record
-  (`.planning/phases/02-falsifier-gate/02-04-SUMMARY.md`: "A Falsifier 2 failure remains a halting,
+  (`.planning/milestones/v1.0-phases/02-falsifier-gate/02-04-SUMMARY.md`: "A Falsifier 2 failure remains a halting,
   SELECTION.md-level reversal"; Falsifier 5 is named alongside Falsifier 2 in the same waiver
   document as carrying the same halt consequence). This is not that case: no comparison ran, so no
   verdict — adverse or otherwise — exists to trigger it. The falsifier is **open**, not failed.
