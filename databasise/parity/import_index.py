@@ -44,6 +44,7 @@ store kind, not an accident of the schemas happening to match.
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from dataclasses import dataclass, field
@@ -707,8 +708,11 @@ def main(argv: list[str] | None = None) -> int:
     """
     import asyncio
 
-    argv = sys.argv[1:] if argv is None else argv
-    verify_only = "--verify" in argv
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--verify", action="store_true", help="verify only; do not import")
+    # D-05: parse before store_lock, so --help and a bad flag (exit 2) never import or write anything.
+    args = parser.parse_args(sys.argv[1:] if argv is None else argv)
+    verify_only = args.verify
 
     async def _run() -> VerificationResult:
         workspace = _import_workspace()
