@@ -405,11 +405,11 @@ Plans:
 - TOOL-18: codebase-memory-mcp stays registered or is removed (from LEDG-12); whether it keeps declaring mutates_store
 - TOOL-19: MCP tools keep the single 'args' input and generic output schema, or publish per-tool schemas (affects every MCP client)
 
-**Plans**: 2/19 plans executed
+**Plans**: 3/19 plans executed
 
 Plans:
 - [x] 15-01-PLAN.md — Wheel carries tools, bundles and fixtures; one version source; bounded mcp; import-boundary scan fixes (TOOL-01; wave 1)
-- [ ] 15-02-PLAN.md — Shared CLI helper (exit table, refuse, positive_int, named-arm check); inert --spend on six CLIs and the shared test edits (prerequisite for TOOL-04/05; wave 1)
+- [x] 15-02-PLAN.md — Shared CLI helper (exit table, refuse, positive_int, named-arm check); inert --spend on six CLIs and the shared test edits (prerequisite for TOOL-04/05; wave 1)
 - [ ] 15-03-PLAN.md — Admission enforced at registry load; record/part name match; field, kind and scope checks; granted WIRE-13 line (TOOL-16; wave 2)
 - [ ] 15-04-PLAN.md — codebase-memory-mcp adapter: tool-error mapping, launch timeout, read-only allowlist, §4 item shapes, lazy hashing, guard lock (TOOL-18; wave 1)
 - [ ] 15-05-PLAN.md — Bundle identity covers text and gold ids; sealed-open flag; split counts (TOOL-13; wave 1)
@@ -516,7 +516,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 12. HippoRAG Fixes | 14/14 | Complete    | 2026-10-19 |
 | 13. Selectors, Wiring & Runner | 13/13 | Complete    | 2026-10-20 |
 | 14. Promotion & Ledger | 11/11 | Complete    | 2026-10-21 |
-| 15. Offline Tooling & Packaging | 2/19 | In Progress | - |
+| 15. Offline Tooling & Packaging | 3/19 | In Progress | - |
 | 16. GUI Connectors | 0/TBD | Not started | - |
 | 17. GUI Mockup | 0/TBD | Not started | - |
 | 18. GUI Live | 0/TBD | Not started | - |
