@@ -58,8 +58,8 @@ TEXT_CHUNK_KIND = "text_chunk"
 class EvidenceRef(_StrictModel):
     """A machine-resolvable evidence reference (D-07). Carries only the store record identifier,
     the namespace it lives in, its ``ItemKind`` label, the run's own score, and the evidence tier
-    label — no instance hash, node position, or wiring identifier (T-04-07's mitigation, proven
-    over a real serialized envelope by 04-04's behavioral leak gate)."""
+    label — no instance hash, node position, or wiring identifier (proven over a real serialized
+    envelope by the behavioral leak gate)."""
 
     ref: str
     namespace: str

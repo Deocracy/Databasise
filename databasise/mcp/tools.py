@@ -157,16 +157,16 @@ class CompareToolArgs(_ToolArgs):
 
 
 class DeleteToolArgs(_ToolArgs):
-    """Carries the document id plus an optional §18.4 selector (06-10-PLAN.md Task 2) — the
-    identical shape ``databasise.seam.rest.DeleteRequest``/path-parameter pair carries."""
+    """Carries the document id plus an optional §18.4 selector — the identical shape
+    ``databasise.seam.rest.DeleteRequest``/path-parameter pair carries."""
 
     document_id: str
     selector: Selector | None = None
 
 
 class RetryToolArgs(_ToolArgs):
-    """11-08-PLAN.md (D-08): the id of an interrupted document plus an optional §18.4 selector,
-    the identical shape ``databasise.seam.rest.RetryRequest``/path-parameter pair carries."""
+    """The id of an interrupted document plus an optional §18.4 selector, the identical shape
+    ``databasise.seam.rest.RetryRequest``/path-parameter pair carries."""
 
     document_id: str = Field(description="The id of a document left interrupted by a timed-out ingest.")
     selector: Selector | None = Field(
@@ -178,7 +178,7 @@ class StatusToolArgs(_ToolArgs):
     """``scope`` selects which of ``Databasise``'s four bounded read methods this call reaches;
     ``job_id`` is required only for ``scope="job"`` and ``limit``/``offset`` are read only for
     ``scope`` in ``{"job", "corpus"}`` — enforced in ``databasise.mcp.server``, not here (this
-    module declares fields only, never behaviour). ``selector`` (12-09, D-13) is read only for
+    module declares fields only, never behaviour). ``selector`` is read only for
     ``scope`` in ``{"corpus", "counts"}`` and names which modality's documents are listed or
     counted; absent, the LightRAG corpus is."""
 
@@ -201,14 +201,13 @@ class ResolveToolArgs(_ToolArgs):
 
 
 class PromoteToolArgs(_ToolArgs):
-    """07-03-PLAN.md: carries the seam's own ``Databasise.promote()`` field vocabulary exactly —
+    """Carries the seam's own ``Databasise.promote()`` field vocabulary exactly —
     ``alias``, ``trace_ids``, ``change_origin`` and ``verb`` (defaulting to
     ``"operator-asserted"``), the identical shape ``databasise.seam.rest.PromoteRequest``
     deserializes into. ``verb`` is ``str``: a non-string verb is an argument validation error (SDK
     text, no refusal); a non-member string reaches the engine and returns
     ``UnrecognisedPromotionVerbError`` as bare JSON through ``mcp/server.py``'s ``call_tool``
-    override, carrying the same ``refusal_type`` name REST reports (D-09, 07-04-PLAN.md); no
-    validator here either."""
+    override, carrying the same ``refusal_type`` name REST reports; no validator here either."""
 
     alias: str
     trace_ids: list[str]
@@ -217,7 +216,7 @@ class PromoteToolArgs(_ToolArgs):
 
 
 class RollbackToolArgs(_ToolArgs):
-    """07-03-PLAN.md: carries ``Databasise.rollback()``'s own field vocabulary — ``version`` is
+    """Carries ``Databasise.rollback()``'s own field vocabulary — ``version`` is
     required with no default (D-05), the identical shape
     ``databasise.seam.rest.RollbackRequest`` deserializes into."""
 
@@ -228,7 +227,7 @@ class RollbackToolArgs(_ToolArgs):
 
 
 class RetireToolArgs(_ToolArgs):
-    """07-03-PLAN.md: carries ``Databasise.retire()``'s own field vocabulary — the identical shape
+    """Carries ``Databasise.retire()``'s own field vocabulary — the identical shape
     as ``RollbackToolArgs`` (D-07), and the identical shape
     ``databasise.seam.rest.RetireRequest`` deserializes into."""
 

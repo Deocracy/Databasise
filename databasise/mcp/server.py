@@ -15,10 +15,10 @@ type-annotated parameter —
 a single Pydantic model parameter becomes the tool's one argument, exactly the shape
 ``IngestToolArgs``/``QueryToolArgs``/etc. in ``databasise.mcp.tools`` are built for.
 ``await server.list_tools()`` and ``await server.call_tool(name, arguments)`` are both async and
-both confirmed live this session (``server.call_tool`` re-raises a tool's own ``ToolError``
-directly rather than ever swallowing it into a ``CallToolResult`` — that wrapping into
-``is_error=True`` happens one layer up, inside the wire-protocol handler this factory never calls
-directly).
+both confirmed live this session. ``call_tool`` raises a tool's ``ToolError`` rather than returning
+a ``CallToolResult``; the wrapping into ``is_error=True`` happens one layer up, in the
+wire-protocol handler this factory never calls directly. ``call_tool`` is overridden exactly once,
+below.
 
 **The refusal mapper (09-04-PLAN.md, SEAM-03, D-02).** One place maps every refusal:
 :class:`_DatabasiseServer` overrides ``MCPServer.call_tool``. The SDK wraps whatever a tool call
@@ -76,6 +76,7 @@ from databasise.mcp.tools import (
     StatusToolArgs,
 )
 from databasise.parts.registry import PartRegistry
+from databasise.seam.compare import COMPARE_RESPONSE_SHAPE_RULE
 from databasise.seam.corpus import checked_page
 from databasise.seam.engine import Databasise
 from databasise.seam.refusals import (
@@ -186,7 +187,7 @@ def create_server(
 ) -> MCPServer:
     """Builds one ``Databasise`` instance — the same object an in-process caller or the REST
     ``create_app`` would construct against the same ``store_root``/``workspace`` — and registers
-    the five tools as thin adapters over it. ``server.engine`` holds the constructed instance
+    every tool in ``databasise.mcp.tools.TOOL_NAMES`` (ten) as a thin adapter over it. ``server.engine`` holds the constructed instance
     directly (mirrors ``databasise.seam.rest``'s own ``app.state.engine``), reachable for a test's
     own identity assertion.
     """
@@ -194,72 +195,130 @@ def create_server(
     server = _DatabasiseServer(_ServerName)
     server.engine = engine
 
-    @server.tool(name="ingest")
+    @server.tool(
+        name="ingest",
+        description=(
+            "Add one document to the corpus. Pass the document as text, or as raw_base64 for a "
+            "binary file, with an optional document_id. An optional selector names which fitted "
+            "modality's index receives it. Returns the ingest job record."
+        ),
+    )
     async def ingest_tool(args: IngestToolArgs) -> dict[str, Any]:
         job = await engine.ingest(args.to_ingest_document(), args.selector)
         return job.model_dump()
 
-    @server.tool(name="query")
+    @server.tool(
+        name="query",
+        description=(
+            "Answer a query from the corpus. Requires query, the query object. An optional selector "
+            "chooses which fitted modality answers. Returns the answer envelope with its evidence "
+            "references and trace token."
+        ),
+    )
     async def query_tool(args: QueryToolArgs) -> dict[str, Any]:
         envelope = await engine.query(args.query, args.selector)
         return envelope.model_dump()
 
-    @server.tool(name="compare")
+    # API-08's comparison operation, a legitimate extra tool under §18.5: comparison is not
+    # expressible as a §18.4 selector (a selector picks one arm; this call fans out over N of them
+    # in one request), and registering a second modality added zero tools (see
+    # ``databasise.mcp.tools``'s module docstring). The published description carries
+    # ``COMPARE_RESPONSE_SHAPE_RULE`` verbatim (D-10), so it cannot drift from REST.
+    @server.tool(
+        name="compare",
+        description=(
+            "Run one query against several selectors in one call. Requires query and selectors. "
+            + COMPARE_RESPONSE_SHAPE_RULE
+        ),
+    )
     async def compare_tool(args: CompareToolArgs) -> dict[str, Any]:
-        """API-08's comparison operation (06-03-PLAN.md) — a legitimate sixth tool under §18.5:
-        comparison is not expressible as a §18.4 selector (a selector picks one arm; this call
-        fans out over N of them in one request), and the roster grows by one for this one
-        genuinely new operation, not by one name per modality — registering HippoRAG as a second
-        modality added zero tools (see ``databasise.mcp.tools``'s own module docstring).
-
-        One selector returns a single envelope; two or more return a map keyed by each selector's
-        rendered value (alias or harness string, capabilities joined with '+', or 'default'). A
-        consumer tells them apart by the number of selectors it sent, never by inspecting keys, so
-        a key named 'answer' cannot make a map look like an envelope. Keys are not prefixed. A key
-        collision is refused before any arm runs.
-        """
         result = await engine.compare(args.query, args.selectors)
         if isinstance(result, dict):
             return {key: envelope.model_dump() for key, envelope in result.items()}
         return result.model_dump()
 
-    @server.tool(name="delete")
+    @server.tool(
+        name="delete",
+        description=(
+            "Remove one document from the corpus. Requires document_id. An optional selector names "
+            "which fitted modality's index the delete reaches. Returns the delete outcome."
+        ),
+    )
     async def delete_tool(args: DeleteToolArgs) -> dict[str, Any]:
         outcome = await engine.delete_document(args.document_id, args.selector)
         return outcome.model_dump()
 
-    @server.tool(name="retry")
+    # Reaches the identical ``Databasise.retry_document()`` REST's retry route reaches (D-08).
+    @server.tool(
+        name="retry",
+        description=(
+            "Reprocess one document left interrupted by a timed-out ingest. Requires document_id. An "
+            "optional selector names which fitted modality's index the retry reaches. Returns the "
+            "ingest job record."
+        ),
+    )
     async def retry_tool(args: RetryToolArgs) -> dict[str, Any]:
-        """11-08 (D-08): the identical ``Databasise.retry_document()`` REST's retry route reaches."""
         job = await engine.retry_document(args.document_id, args.selector)
         return job.model_dump()
 
-    @server.tool(name="status")
+    @server.tool(
+        name="status",
+        description=(
+            "Read bounded status. Requires scope: 'job' (needs job_id; paged by limit and offset), "
+            "'corpus' (a paged document list), 'counts' (document counts) or 'health'. An optional "
+            "selector applies to 'corpus' and 'counts'. Returns the status record for that scope."
+        ),
+    )
     async def status_tool(args: StatusToolArgs) -> dict[str, Any]:
         handler = _STATUS_HANDLERS[args.scope]
         result = await handler(engine, args)
         return result.model_dump()
 
-    @server.tool(name="resolve")
+    @server.tool(
+        name="resolve",
+        description=(
+            "Follow a reference that query returned. Scope 'evidence' requires evidence_ref; scope "
+            "'trace' requires trace_reference, with an optional debug flag. Returns the resolved record."
+        ),
+    )
     async def resolve_tool(args: ResolveToolArgs) -> dict[str, Any]:
         handler = _RESOLVE_HANDLERS[args.scope]
         result = await handler(engine, args)
         return result
 
-    @server.tool(name="promote")
+    # Reaches the identical ``Databasise.promote()`` REST's ``POST /promote`` reaches. No per-tool
+    # try/except: ``_DatabasiseServer.call_tool`` maps every refusal generically via the
+    # ``SeamRefusalError`` base class.
+    @server.tool(
+        name="promote",
+        description=(
+            "Promote an alias to a new generation, recorded in the append-only generation history. "
+            "Requires alias and trace_ids. Optional change_origin and verb (default "
+            "'operator-asserted'). Returns the promotion outcome."
+        ),
+    )
     async def promote_tool(args: PromoteToolArgs) -> dict[str, Any]:
-        """07-03-PLAN.md: reaches the identical ``Databasise.promote()`` REST's ``POST /promote``
-        reaches — no per-tool try/except, ``_DatabasiseServer.call_tool`` already maps every Phase 7
-        refusal generically via the ``SeamRefusalError`` base class."""
         outcome = await engine.promote(args.alias, args.trace_ids, args.change_origin, verb=args.verb)
         return outcome.model_dump()
 
-    @server.tool(name="rollback")
+    @server.tool(
+        name="rollback",
+        description=(
+            "Return an alias to a named prior generation. Requires alias, version and trace_ids. "
+            "Optional change_origin. Returns the rollback outcome."
+        ),
+    )
     async def rollback_tool(args: RollbackToolArgs) -> dict[str, Any]:
         outcome = await engine.rollback(args.alias, args.version, args.trace_ids, args.change_origin)
         return outcome.model_dump()
 
-    @server.tool(name="retire")
+    @server.tool(
+        name="retire",
+        description=(
+            "Retire one generation of an alias so it can no longer be made active. Requires alias, "
+            "version and trace_ids. Optional change_origin. Returns the retirement outcome."
+        ),
+    )
     async def retire_tool(args: RetireToolArgs) -> dict[str, Any]:
         outcome = await engine.retire(args.alias, args.version, args.trace_ids, args.change_origin)
         return outcome.model_dump()
