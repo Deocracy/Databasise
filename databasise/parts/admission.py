@@ -13,6 +13,7 @@ house style: name exactly what was wrong, store the offending value on a named a
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -133,6 +134,21 @@ class AdmissionRecordPartMismatchError(RuntimeError):
         )
 
 
+class InvalidAdmissionFieldError(RuntimeError):
+    """A record field is outside what §8 allows: ``ttl_days`` (condition 8), a blank ``feed_tier``
+    or ``network_namespace``, or an ``environment_hash`` that is not ``sha256:`` plus 64 hex
+    digits."""
+
+    def __init__(self, part_name_at_version: str, *, field: str, value: Any, expected: str):
+        self.part_name_at_version = part_name_at_version
+        self.field = field
+        self.value = value
+        super().__init__(
+            f"admission record for {part_name_at_version!r} carries {field}={value!r}; "
+            f"expected {expected}"
+        )
+
+
 def validate_admission(part: "Part", record: AdmissionRecord) -> None:
     """The record-only half of §8 admission — everything checkable from ``record``/``part`` alone,
     with no dependency on a registry or a resolved wiring (see :func:`cross_check_conditions` for
@@ -143,7 +159,11 @@ def validate_admission(part: "Part", record: AdmissionRecord) -> None:
       with no duplicate, or any verdict's ``evidence`` is blank.
     - :class:`SelfReportedManifestError` — ``manifest_source`` is not the code-inspected constant.
     - :class:`MissingWallClockCeilingError` — ``wall_clock_ceiling_seconds`` is absent or <= 0.
-    - :class:`ForbiddenSharedScopeError` — the part is opaque and declares the shared scope.
+    - :class:`InvalidAdmissionFieldError` — ``ttl_days`` is not an int in 1..90 (a bool is
+      refused), ``feed_tier``/``network_namespace`` is blank, or ``environment_hash`` is not
+      ``sha256:`` plus 64 hex digits.
+    - :class:`ForbiddenSharedScopeError` — the part's ``kind`` is opaque and it declares the
+      shared scope.
     """
     if record.part_name_at_version != part.name_at_version:
         raise AdmissionRecordPartMismatchError(part.name_at_version, record.part_name_at_version)
@@ -170,7 +190,33 @@ def validate_admission(part: "Part", record: AdmissionRecord) -> None:
             record.wall_clock_ceiling_seconds, part_name_at_version=part.name_at_version
         )
 
-    if part.structural_depth == "opaque" and part.artifact_scope == "shared":
+    ttl_days = record.ttl_days
+    if isinstance(ttl_days, bool) or not isinstance(ttl_days, int) or not 1 <= ttl_days <= 90:
+        raise InvalidAdmissionFieldError(
+            part.name_at_version,
+            field="ttl_days",
+            value=ttl_days,
+            expected="an int from 1 to 90 days (§8 condition 8: approximately 90 days)",
+        )
+    for field in ("feed_tier", "network_namespace"):
+        value = getattr(record, field)
+        if not isinstance(value, str) or not value.strip():
+            raise InvalidAdmissionFieldError(
+                part.name_at_version, field=field, value=value, expected="a non-blank string"
+            )
+    if not isinstance(record.environment_hash, str) or not re.fullmatch(
+        r"sha256:[0-9a-f]{64}", record.environment_hash
+    ):
+        raise InvalidAdmissionFieldError(
+            part.name_at_version,
+            field="environment_hash",
+            value=record.environment_hash,
+            expected="'sha256:' followed by 64 lowercase hex digits",
+        )
+
+    # Keyed on ``kind``, not ``structural_depth`` (D-17): keying on depth would make the
+    # blast-radius parse-time rule for a non-opaque part with opaque depth unreachable.
+    if part.kind == "opaque" and part.artifact_scope == "shared":
         raise ForbiddenSharedScopeError(part.name_at_version, part.artifact_scope)
 
 
@@ -265,6 +311,7 @@ __all__ = [
     "AdmissionRecord",
     "AdmissionConditionMissingError",
     "AdmissionRecordPartMismatchError",
+    "InvalidAdmissionFieldError",
     "SelfReportedManifestError",
     "MissingWallClockCeilingError",
     "ForbiddenSharedScopeError",

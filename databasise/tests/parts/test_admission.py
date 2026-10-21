@@ -274,6 +274,73 @@ def test_tool16_2_a_record_for_part_a_attached_to_part_b_is_refused():
     assert "test/other@1.0.0" in str(caught) and "test/opaque-part@1.0.0" in str(caught)
 
 
+def _register_outcome(part):
+    try:
+        PartRegistry(seed_tracer_parts=False).register(part)
+    except Exception as exc:  # noqa: BLE001 - the type name is asserted by the caller
+        return exc
+    return None
+
+
+def test_tool16_3_opaque_kind_with_stage_depth_and_shared_scope_is_refused():
+    part = _opaque_part(
+        structural_depth="stage", artifact_scope="shared", admission=_valid_admission_record()
+    )
+    assert type(_register_outcome(part)).__name__ == "ForbiddenSharedScopeError"
+
+
+def test_tool16_4_an_unknown_effect_is_refused():
+    part = _opaque_part(kind="stage", structural_depth="stage", effects=["bogus"])
+    assert type(_register_outcome(part)).__name__ == "UnknownPartEffectError"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("kind", 7),
+        ("kind", ""),
+        ("kind", "Opaque"),
+        ("structural_depth", "deep"),
+        ("artifact_scope", "bogus"),
+    ],
+)
+def test_invalid_kind_depth_or_scope_is_refused_at_registration(field, value):
+    overrides = dict(kind="stage", structural_depth="stage", artifact_scope=None)
+    overrides[field] = value
+    caught = _register_outcome(_opaque_part(**overrides))
+    assert type(caught).__name__ == "InvalidPartFieldError"
+    assert getattr(caught, "part_name_at_version", None) == "test/opaque-part@1.0.0"
+    assert getattr(caught, "field", None) == field
+    assert getattr(caught, "value", None) == value
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("ttl_days", True),
+        ("ttl_days", 0),
+        ("ttl_days", 91),
+        ("ttl_days", "90"),
+        ("feed_tier", " "),
+        ("network_namespace", ""),
+        ("environment_hash", "sha256:xyz"),
+        ("environment_hash", "sha256:" + "a" * 64 + "\n"),
+    ],
+)
+def test_record_fields_are_validated(field, value):
+    part = _opaque_part(admission=_valid_admission_record(**{field: value}))
+    caught = _register_outcome(part)
+    assert type(caught).__name__ == "InvalidAdmissionFieldError"
+    assert getattr(caught, "field", None) == field
+    assert getattr(caught, "part_name_at_version", None) == "test/opaque-part@1.0.0"
+
+
+@pytest.mark.parametrize("ttl_days", [1, 90])
+def test_record_ttl_days_bounds_register(ttl_days):
+    part = _opaque_part(admission=_valid_admission_record(ttl_days=ttl_days))
+    assert _register_outcome(part) is None
+
+
 def test_tool16_5_default_registry_still_builds(tmp_path):
     registry = default_registry()
     assert registry.keys()

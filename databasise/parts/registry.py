@@ -19,7 +19,7 @@ import re
 from typing import Any, get_args
 
 from databasise.parts.admission import validate_admission
-from databasise.parts.schema import Effect, NodeContext, Part
+from databasise.parts.schema import ArtifactScope, Depth, Effect, NodeContext, Part
 
 
 class UnknownPartError(KeyError):
@@ -53,6 +53,18 @@ class UnknownPartEffectError(ValueError):
         super().__init__(
             f"part {name_at_version!r} declares effects outside the frozen Effect vocabulary: {effects}"
         )
+
+
+class InvalidPartFieldError(ValueError):
+    """Raised by ``PartRegistry.register`` for a ``structural_depth`` outside the ``Depth`` literal,
+    an ``artifact_scope`` outside the ``ArtifactScope`` literal, or a ``kind`` that is not a slug
+    matching ``^[a-z][a-z0-9-]*$`` (TOOL-16, D-17)."""
+
+    def __init__(self, name_at_version: str, *, field: str, value: Any):
+        self.part_name_at_version = name_at_version
+        self.field = field
+        self.value = value
+        super().__init__(f"part {name_at_version!r} declares an invalid {field}: {value!r}")
 
 
 class InvalidReadNamespaceTokenError(ValueError):
@@ -157,7 +169,9 @@ class PartRegistry:
         at run time. A declaration-only part (``body is None``) is exempt from both admission
         checks regardless of its ``kind``.
 
-        An effect outside the frozen ``Effect`` literal is refused (``UnknownPartEffectError``,
+        A ``structural_depth`` outside ``Depth``, an ``artifact_scope`` outside ``ArtifactScope``
+        and a ``kind`` that is not a ``^[a-z][a-z0-9-]*$`` slug are refused
+        (``InvalidPartFieldError``, TOOL-16). An effect outside the frozen ``Effect`` literal is refused (``UnknownPartEffectError``,
         WIRE-16), declaration-only parts included, so no registration can make a query member
         beyond that vocabulary consumable. Each ``reads_namespaces`` token is validated too
         (``InvalidReadNamespaceTokenError``, WIRE-01).
@@ -174,6 +188,12 @@ class PartRegistry:
         """
         if part.name_at_version in self._parts:
             raise DuplicatePartError(part.name_at_version)
+        if part.structural_depth not in get_args(Depth):
+            raise InvalidPartFieldError(part.name_at_version, field="structural_depth", value=part.structural_depth)
+        if part.artifact_scope is not None and part.artifact_scope not in get_args(ArtifactScope):
+            raise InvalidPartFieldError(part.name_at_version, field="artifact_scope", value=part.artifact_scope)
+        if not isinstance(part.kind, str) or not re.fullmatch(r"[a-z][a-z0-9-]*", part.kind):
+            raise InvalidPartFieldError(part.name_at_version, field="kind", value=part.kind)
         unknown = [effect for effect in part.effects if effect not in get_args(Effect)]
         if unknown:
             raise UnknownPartEffectError(part.name_at_version, unknown)
