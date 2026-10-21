@@ -49,7 +49,7 @@ from databasise.runner import scheduler as _scheduler
 from databasise.runner.scheduler import TouchRecorder
 from databasise.store_lock import StoreLockedError, store_lock
 from databasise.validator.parse import ParsedWiring, parse_wiring
-from databasise.wirings.resolve import resolve_arm
+from databasise.wirings.resolve import all_wirings
 
 _DEFAULT_QUERY = "storage-audit probe query"
 
@@ -175,8 +175,7 @@ async def run_audit(
     if registry is None:
         registry = default_registry()
 
-    resolved = resolve_arm(arm_name)
-    resolved = _run_arm._inject_query(resolved, query)
+    resolved = _run_arm.resolve_query_arm(arm_name, query)
     resolved = _run_arm._inject_token_allowance(resolved, token_allowance)
     parsed = parse_wiring(resolved, registry)
 
@@ -196,7 +195,9 @@ async def run_audit(
     try:
         # Phase 10 review WR-09 (D-04): clients resolve first and stores build inside the try, so
         # neither a clients failure nor a failed open leaves an opened store unfinalized.
-        stores = _run_arm._build_stores(resolved_store_root, resolved_workspace, into=stores)
+        stores = _run_arm._build_stores(
+            resolved_store_root, resolved_workspace, resolved, into=stores
+        )
         scheduled = await _scheduler.run_wiring(
             parsed,
             registry,
@@ -214,7 +215,12 @@ async def run_audit(
         return {"cycle": scheduled["cycle"], "rows": [], "violations": [], "partial": False}
 
     rows, violations = audit_run(parsed, touches)
-    return {"rows": rows, "violations": violations, "partial": scheduled["partial"]}
+    return {
+        "rows": rows,
+        "violations": violations,
+        "partial": scheduled["partial"],
+        "store_namespaces": dict(resolved.get("store_namespaces") or {}),
+    }
 
 
 def _render_row(row: AuditRow) -> str:
@@ -241,7 +247,7 @@ def main(argv: list[str] | None = None) -> int:
     clean-exit-0/violations-exit-1 convention (see module docstring).
     """
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--arm", required=True, choices=["naive", "bypass", "hybrid", "local", "global"])
+    parser.add_argument("--arm", required=True, choices=[name for name, _ in all_wirings()])
     parser.add_argument("--query", default=_DEFAULT_QUERY)
     parser.add_argument("--spend", action="store_true", default=False)  # inert until 15-13 flips the default
     args = parser.parse_args(argv)
@@ -253,6 +259,9 @@ def main(argv: list[str] | None = None) -> int:
         print(str(exc), file=sys.stderr)
         return 1
 
+    namespaces = result.get("store_namespaces")
+    if namespaces:
+        print("store_namespaces: " + " ".join(f"{k}={v}" for k, v in sorted(namespaces.items())))
     rows: list[AuditRow] = result["rows"]
     violations: list[Violation] = result["violations"]
 

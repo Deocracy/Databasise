@@ -433,3 +433,78 @@ def test_main_exits_1_and_prints_every_violation_when_any_exist(monkeypatch, cap
 
     assert status == 1
     assert "VIOLATION: x: store:mystery" in captured.out
+
+
+# --------------------------------------------------------------------------------------------- #
+# TOOL-08 (15-13): the hipporag arm, partial/cycle exits, the unreached state, estimate-only default
+# --------------------------------------------------------------------------------------------- #
+
+
+def _isolate_audit_paths(monkeypatch, tmp_path):
+    """Point every store/env default the audit and run_arm CLIs can reach at temp paths (D-24)."""
+    from databasise.parity import import_index
+    from databasise.parity import run_arm as run_arm_module
+
+    root = tmp_path / "audit_store_root"
+    absent_env = tmp_path / "absent.env.parity"
+    for module in (import_index, run_arm_module, storage_audit):
+        monkeypatch.setattr(module, "DEFAULT_STORE_ROOT", root)
+    monkeypatch.setattr(run_arm_module, "DEFAULT_V1_ENV_PARITY", absent_env)
+    monkeypatch.setattr(run_arm_module, "_parity_workspace", lambda: "tool08-audit")
+    return root, absent_env
+
+
+def test_tool08_storage_audit_audits_the_hipporag_arm(monkeypatch, tmp_path, capsys):
+    from databasise.parity import run_arm as run_arm_module
+
+    root, _ = _isolate_audit_paths(monkeypatch, tmp_path)
+    stub_env = tmp_path / "stub.env.parity"
+    stub_env.write_text("", encoding="utf-8")
+    monkeypatch.setattr(run_arm_module, "DEFAULT_V1_ENV_PARITY", stub_env)
+    monkeypatch.setattr(
+        run_arm_module,
+        "_build_clients",
+        lambda env: {"embedding": _StubEmbeddingClient([1.0, 0.0, 0.0]), "llm": _StubLLMClient()},
+    )
+
+    caught = None
+    status = None
+    try:
+        status = storage_audit.main(["--arm", "hipporag", "--spend"])
+    except BaseException as exc:  # argparse raises SystemExit before the fix
+        caught = exc
+    out = capsys.readouterr().out
+
+    assert caught is None, f"the hipporag arm was refused: {type(caught).__name__} {getattr(caught, 'code', None)}"
+    assert status in (0, 3)
+    assert "fact-score [" in out
+    assert "qa [" in out
+    assert "hipporag-" in out
+    for index_side_node in ("chunk-embed", "openie", "entity-fact-embed", "graph-augment-persist"):
+        assert f"{index_side_node} [" not in out
+
+
+def test_tool08_run_arm_accepts_hipporag(monkeypatch, tmp_path):
+    from databasise.parity import run_arm as run_arm_module
+
+    _isolate_audit_paths(monkeypatch, tmp_path)
+    calls: list[str] = []
+
+    async def recorder(arm_name, query, **kwargs):
+        calls.append(arm_name)
+        return {"run_record": {}, "provided": {}}
+
+    def no_clients(env):
+        raise AssertionError("no provider client may be built")
+
+    monkeypatch.setattr(run_arm_module, "run_arm", recorder)
+    monkeypatch.setattr(run_arm_module, "_build_clients", no_clients)
+
+    caught = None
+    try:
+        run_arm_module.main(["--arm", "hipporag", "--query", "q", "--spend"])
+    except BaseException as exc:
+        caught = exc
+
+    assert caught is None, f"run_arm refused hipporag: {type(caught).__name__} {getattr(caught, 'code', None)}"
+    assert calls == ["hipporag"]

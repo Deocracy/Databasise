@@ -60,7 +60,13 @@ from databasise.stores.graph import CozoGraphStore
 from databasise.stores.kv import SqliteKVStore
 from databasise.stores.vector import MultiNamespaceVectorStore
 from databasise.validator.parse import parse_wiring
-from databasise.wirings.resolve import resolve_arm
+from databasise.wirings.resolve import (
+    WIRING_NAMES,
+    all_wirings,
+    resolve_arm,
+    wiring_for_name,
+    without_recipe_only_nodes,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 DEFAULT_V1_ENV_PARITY = _REPO_ROOT / "v1" / ".env.parity"
@@ -134,6 +140,28 @@ def _inject_query(resolved: dict[str, Any], query: str) -> dict[str, Any]:
     return resolved
 
 
+def resolve_query_arm(arm_name: str, query: str) -> dict[str, Any]:
+    """The wiring one query run dispatches for ``arm_name``, stamped with ``query`` (TOOL-08, D-09).
+
+    A LightRAG arm keeps ``resolve_arm`` (its recipe-only ``embedder-index`` stays in the run, as the
+    audit's naive row set pins). Any other modality resolves through ``wiring_for_name`` and
+    ``without_recipe_only_nodes``, so HippoRAG's index nodes never dispatch or spend OpenIE tokens.
+    The query lands on the nodes the wiring's own ``consumes_query`` names, through the engine's
+    ``_inject_query`` (byte-identical to this module's for LightRAG); this module's ``_inject_query``
+    stays as is, because protected tests import it.
+    """
+    from databasise.seam.engine import _inject_query as engine_inject_query
+
+    if arm_name in WIRING_NAMES and arm_name != "lightrag":
+        resolved = wiring_for_name(arm_name)
+        if resolved is None:  # unreachable for a WIRING_NAMES member; refuse rather than assume
+            raise KeyError(arm_name)
+        resolved = without_recipe_only_nodes(resolved)
+    else:
+        resolved = resolve_arm(arm_name)
+    return engine_inject_query(resolved, query)
+
+
 # DEC-B (runner/scheduler.py): an absent config.token_allowance defaults to an allowance of 0, so
 # every node this arm dispatches that declares calls_llm/calls_rerank/calls_embedding would
 # budget-halt on its very first real token spent, truncating the run to whichever node(s)
@@ -184,8 +212,7 @@ async def run_arm(
     if registry is None:
         registry = default_registry()
 
-    resolved = resolve_arm(arm_name)
-    resolved = _inject_query(resolved, query)
+    resolved = resolve_query_arm(arm_name, query)
     resolved = _inject_token_allowance(resolved, token_allowance)
     parsed = parse_wiring(resolved, registry)
 
@@ -251,7 +278,7 @@ def main(argv: list[str] | None = None) -> int:
     import json
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--arm", required=True, choices=["naive", "bypass", "hybrid", "local", "global"])
+    parser.add_argument("--arm", required=True, choices=[name for name, _ in all_wirings()])
     parser.add_argument("--query", required=True)
     parser.add_argument("--spend", action="store_true", default=False)  # inert until 15-13 flips the default
     args = parser.parse_args(argv)
