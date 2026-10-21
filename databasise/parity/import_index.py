@@ -40,6 +40,14 @@ Cozo's schema is identical on both sides (``nodes {id: String => attrs: Json}``,
 ``pycozo`` client and reinserts them through ``CozoGraphStore.upsert_node``/``upsert_edge``, for
 the same read-and-reinsert reason as the vectors: consistency of import mechanism across every
 store kind, not an accident of the schemas happening to match.
+
+CLI (``python -m databasise.parity.import_index``; 15-09, D-03/D-05). Exit codes: 0 verified; 1 a named
+refusal (``MissingV1IndexError``, ``StoreLockedError``), printed by ``databasise.cli.refuse`` as one
+stderr line, or a verification that is not ``"verified"``; 2 bad arguments (argparse, before the store
+lock is taken). Every run prints ``workspace: <ws> (<source>)`` first: the workspace a launcher must use.
+``--v1-working-dir`` is a plain pass-through. Re-importing ``v1/.corpus_working_dir`` is not the
+sanctioned write path (the ``lightrag/v1-index-sync`` node is). The CLI needs a source checkout that
+holds the v1 index (D-01); a wheel install has neither ``v1/`` nor the parity corpus snapshot.
 """
 
 from __future__ import annotations
@@ -708,27 +716,36 @@ def main(argv: list[str] | None = None) -> int:
     """
     import asyncio
 
-    parser = argparse.ArgumentParser(description=__doc__)
+    from databasise.cli import refuse
+
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--verify", action="store_true", help="verify only; do not import")
+    # Defaults are None and resolved below, at call time, so a test patching the module attribute applies.
+    parser.add_argument("--v1-working-dir", type=Path, default=None, help="v1 index directory (default: DEFAULT_V1_WORKING_DIR)")
+    parser.add_argument("--store-root", type=Path, default=None, help="v2 store root (default: DEFAULT_STORE_ROOT)")
+    parser.add_argument("--workspace", default=None, help="v2 workspace (default: derived from the parity corpus snapshot)")
     # D-05: parse before store_lock, so --help and a bad flag (exit 2) never import or write anything.
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
-    verify_only = args.verify
+
+    v1_working_dir = DEFAULT_V1_WORKING_DIR if args.v1_working_dir is None else args.v1_working_dir
+    store_root = DEFAULT_STORE_ROOT if args.store_root is None else args.store_root
+    if args.workspace is None:
+        workspace = _import_workspace()
+        source = f"derived from parity corpus snapshot {load_snapshot().corpus_hash[:12]}"
+    else:
+        workspace, source = args.workspace, "--workspace"
+    print(f"workspace: {workspace} ({source})")
 
     async def _run() -> VerificationResult:
-        workspace = _import_workspace()
-        if not verify_only:
-            await import_v1_index(DEFAULT_V1_WORKING_DIR, DEFAULT_STORE_ROOT)
-        return await verify_import(DEFAULT_V1_WORKING_DIR, DEFAULT_STORE_ROOT, workspace)
+        if not args.verify:
+            await import_v1_index(v1_working_dir, store_root, workspace)
+        return await verify_import(v1_working_dir, store_root, workspace)
 
     try:
-        with store_lock(DEFAULT_STORE_ROOT):  # D-03: read at call time, one monkeypatch covers every CLI
+        with store_lock(store_root):  # D-03: read at call time, one monkeypatch covers every CLI
             result = asyncio.run(_run())
-    except MissingV1IndexError as exc:
-        print(str(exc))
-        return 1
-    except StoreLockedError as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
+    except (MissingV1IndexError, StoreLockedError) as exc:
+        return refuse(exc)
 
     if result.status == "verified":
         return 0

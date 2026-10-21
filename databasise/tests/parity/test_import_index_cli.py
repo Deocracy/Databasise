@@ -17,7 +17,7 @@ def _outcome(argv: list[str]) -> tuple[str, object]:
     """Run ``main(argv)`` and report ``(type name, value)`` of what it returned or raised."""
     try:
         return "returned", import_index.main(argv)
-    except BaseException as caught:  # SystemExit from argparse is the case under test
+    except BaseException as caught:  # noqa: BLE001 - SystemExit from argparse is the case under test
         return type(caught).__name__, getattr(caught, "code", None)
 
 
@@ -54,3 +54,57 @@ def test_a_misspelt_flag_exits_two_and_touches_nothing(recorders):
     assert (kind, code) == ("SystemExit", 2), f"--verfiy gave {kind} {code!r}, expected SystemExit 2"
     assert recorders["import"] == [] and recorders["verify"] == []
     assert not recorders["store"].exists(), "a bad flag took the store lock or wrote the store root"
+
+
+def test_paths_pass_through_and_the_workspace_prints(recorders, tmp_path, capsys):
+    a, b = tmp_path / "v1dir", tmp_path / "other_store"
+
+    code = _outcome(["--v1-working-dir", str(a), "--store-root", str(b), "--verify"])
+    out = capsys.readouterr().out
+
+    workspace = import_index._import_workspace()
+    assert code == ("returned", 0), f"expected a clean return of 0, got {code!r}"
+    assert recorders["import"] == [], "--verify must not import"
+    assert len(recorders["verify"]) == 1, "verify_import was not called exactly once"
+    seen = [str(x) for x in recorders["verify"][0][0]]
+    assert seen == [str(a), str(b), workspace], f"verify_import saw {seen!r}"
+    assert workspace in out and "derived from parity corpus snapshot" in out, out
+
+
+def test_an_explicit_workspace_is_used_and_labelled(recorders, tmp_path, capsys):
+    code = _outcome(["--workspace", "w1", "--store-root", str(tmp_path / "s"), "--verify"])
+    out = capsys.readouterr().out
+
+    assert code == ("returned", 0), f"expected a clean return of 0, got {code!r}"
+    assert len(recorders["verify"]) == 1
+    assert "w1" in [str(x) for x in recorders["verify"][0][0]]
+    assert "w1 (--workspace)" in out, out
+
+
+def test_a_full_run_passes_the_workspace_to_the_importer_too(recorders, tmp_path):
+    code = _outcome(["--workspace", "w2", "--store-root", str(tmp_path / "s")])
+
+    assert code == ("returned", 0), f"expected a clean return of 0, got {code!r}"
+    assert len(recorders["import"]) == 1
+    args, kwargs = recorders["import"][0]
+    assert "w2" in [str(x) for x in args] + [str(v) for v in kwargs.values()]
+
+
+def test_the_launcher_workspace_equals_the_derived_workspace():
+    from databasise import launcher
+
+    assert launcher.DEFAULT_WORKSPACE == import_index._import_workspace()
+
+
+def test_a_missing_v1_index_is_one_stderr_line(recorders, tmp_path, monkeypatch, capsys):
+    async def refusing_import(*args, **kwargs):
+        raise import_index.MissingV1IndexError(tmp_path / "nowhere")
+
+    monkeypatch.setattr(import_index, "import_v1_index", refusing_import)
+
+    code = _outcome(["--v1-working-dir", str(tmp_path / "nowhere"), "--store-root", str(tmp_path / "s")])
+    captured = capsys.readouterr()
+
+    assert code == ("returned", 1), f"expected a return of 1, got {code!r}"
+    lines = captured.err.strip().splitlines()
+    assert len(lines) == 1 and lines[0].startswith("MissingV1IndexError:"), captured.err
