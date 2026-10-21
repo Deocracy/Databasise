@@ -405,7 +405,7 @@ Plans:
 - TOOL-18: codebase-memory-mcp stays registered or is removed (from LEDG-12); whether it keeps declaring mutates_store
 - TOOL-19: MCP tools keep the single 'args' input and generic output schema, or publish per-tool schemas (affects every MCP client)
 
-**Plans**: 17/19 plans executed
+**Plans**: 18/19 plans executed
 
 Plans:
 - [x] 15-01-PLAN.md — Wheel carries tools, bundles and fixtures; one version source; bounded mcp; import-boundary scan fixes (TOOL-01; wave 1)
@@ -424,7 +424,7 @@ Plans:
 - [x] 15-14-PLAN.md — run_cross_modality: named-arm check, read-only preflight, partial records, queries hash, estimate-only (TOOL-09; wave 2)
 - [x] 15-15-PLAN.md — build_hipporag_index: estimate-only, empty-root build, chunk-count refusal (contributes to TOOL-05; wave 2)
 - [x] 15-16-PLAN.md — Calibration refusals, two-sided floor, judge parser, floors.db and the two-stage promotion gate (TOOL-12; wave 3)
-- [ ] 15-17-PLAN.md — Falsifier 2, F-07 and cross-modality records computed from results; one MODAL-05 value; docstring facts (TOOL-15, TOOL-20; wave 3)
+- [x] 15-17-PLAN.md — Falsifier 2, F-07 and cross-modality records computed from results; one MODAL-05 value; docstring facts (TOOL-15, TOOL-20; wave 3)
 - [ ] 15-18-PLAN.md — TOOL-04 and TOOL-05 row files, TOOL-17 confirmed, codebase map, STATE, offline gate (TOOL-04, TOOL-05, TOOL-17; wave 4)
 - [x] 15-19-PLAN.md — Owner grant for the protected WIRE-13 seam-events test (checkpoint; D-17; wave 1)
 
@@ -516,7 +516,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 12. HippoRAG Fixes | 14/14 | Complete    | 2026-10-19 |
 | 13. Selectors, Wiring & Runner | 13/13 | Complete    | 2026-10-20 |
 | 14. Promotion & Ledger | 11/11 | Complete    | 2026-10-21 |
-| 15. Offline Tooling & Packaging | 17/19 | In Progress | - |
+| 15. Offline Tooling & Packaging | 18/19 | In Progress | - |
 | 16. GUI Connectors | 0/TBD | Not started | - |
 | 17. GUI Mockup | 0/TBD | Not started | - |
 | 18. GUI Live | 0/TBD | Not started | - |
