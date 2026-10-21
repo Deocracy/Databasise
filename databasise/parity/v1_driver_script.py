@@ -39,9 +39,12 @@ criteria uses to confirm a pinned, deliberately distinctive keyword set actually
 retrieval rather than v1 silently extracting its own: pass a pinned pair no genuine extraction
 would produce, and confirm that exact pair comes back in ``hl_keywords_used``/``ll_keywords_used``.
 
-A malformed job, a v1-side query failure, or any other exception prints a traceback to stderr and
-exits 1 — the caller (``v1_arm.py``) treats any non-zero exit as a refusal carrying that stderr,
-never as an empty success.
+A v1 failure (``status == "failure"`` other than ``metadata.failure_reason == "no_results"``, which
+is an empty retrieval answered with v1's fail text) raises :class:`V1QueryFailedError`; ``main``
+prints ``V1QueryFailedError: <v1 message>`` to stderr and exits 1. A malformed job or any other
+exception prints a traceback to stderr and exits 1 — the caller (``v1_arm.py``) treats any non-zero
+exit as a refusal carrying that stderr, never as an empty success. The keyword fields are ``null``
+when v1's metadata carries no keywords.
 """
 
 from __future__ import annotations
@@ -58,6 +61,11 @@ from lightrag import LightRAG
 from lightrag.base import QueryParam
 from lightrag.llm.openai import openai_complete_if_cache, openai_embed
 from lightrag.utils import EmbeddingFunc
+
+
+class V1QueryFailedError(RuntimeError):
+    """v1's ``aquery_llm`` reported a failure that is not a legitimate empty retrieval (its
+    exception path: ``status == "failure"`` with ``metadata == {}``). Carries v1's message."""
 
 
 def _extra_body(env_var: str) -> dict[str, Any]:
@@ -128,6 +136,11 @@ async def _run(job: dict[str, Any]) -> dict[str, Any]:
         # exactly what v1 does, keyword extraction runs once, and the ids and the answer below come
         # from the same retrieval.
         response = await rag.aquery_llm(query.strip(), param)
+        metadata = response.get("metadata") or {}
+        # "no_results" is a legitimate empty retrieval: v1's own ``aquery`` returns its fail_response
+        # text for it. Any other failure is v1's exception path and is never an empty success (D-08).
+        if response.get("status") != "success" and metadata.get("failure_reason") != "no_results":
+            raise V1QueryFailedError(str(response.get("message") or "v1 reported a failure"))
         data = response.get("data") or {}
         chunk_ids = [
             str(c["chunk_id"]) for c in data.get("chunks", []) if c.get("chunk_id")
@@ -140,9 +153,14 @@ async def _run(job: dict[str, Any]) -> dict[str, Any]:
             for r in data.get("relationships", [])
             if r.get("src_id") and r.get("tgt_id")
         ]
-        used_keywords = (response.get("metadata") or {}).get("keywords") or {}
-        hl_keywords_used = [str(k) for k in (used_keywords.get("high_level") or hl_keywords)]
-        ll_keywords_used = [str(k) for k in (used_keywords.get("low_level") or ll_keywords)]
+        # None when v1 reports no keywords: never an echo of the caller's input (D-08).
+        used_keywords = metadata.get("keywords")
+        hl_keywords_used = (
+            None if used_keywords is None else [str(k) for k in used_keywords.get("high_level") or []]
+        )
+        ll_keywords_used = (
+            None if used_keywords is None else [str(k) for k in used_keywords.get("low_level") or []]
+        )
 
         llm_response = response.get("llm_response") or {}
         if llm_response.get("is_streaming"):
@@ -166,6 +184,9 @@ def main() -> int:
     try:
         job = json.loads(sys.stdin.read())
         result = asyncio.run(_run(job))
+    except V1QueryFailedError as exc:
+        print(f"V1QueryFailedError: {exc}", file=sys.stderr)
+        return 1
     except Exception:
         traceback.print_exc()
         return 1

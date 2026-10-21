@@ -104,3 +104,85 @@ def test_an_unpinned_hybrid_job_calls_aquery_llm_once(monkeypatch: pytest.Monkey
     assert rag.calls == ["aquery_llm"], rag.calls
     assert result["chunk_ids"] == ["c1", "c2"]
     assert result["answer"] == "ans"
+
+
+def _failure(metadata: dict[str, Any], message: str, content: str | None) -> dict[str, Any]:
+    return _response(status="failure", metadata=metadata, message=message, content=content)
+
+
+def test_a_v1_failure_exits_one_with_a_named_error(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    rag = _StubRag(_failure({}, "Query failed: boom", None))
+    driver = _load_driver(monkeypatch, rag)
+
+    caught: BaseException | None = None
+    try:
+        asyncio.run(driver._run(_job(tmp_path)))
+    except BaseException as exc:  # noqa: BLE001 - the type name is what is asserted
+        caught = exc
+    assert caught is not None, "a v1 failure came back as a result"
+    assert type(caught).__name__ == "V1QueryFailedError", type(caught).__name__
+    assert "boom" in str(caught)
+
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(_job(tmp_path))))
+    assert driver.main() == 1
+    assert "V1QueryFailedError:" in capsys.readouterr().err
+
+
+def test_no_results_is_an_empty_retrieval_with_the_fail_answer(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    rag = _StubRag(_failure({"failure_reason": "no_results", "mode": "hybrid"}, "none", "<fail text>"))
+    driver = _load_driver(monkeypatch, rag)
+
+    caught: BaseException | None = None
+    result: dict[str, Any] = {}
+    try:
+        result = asyncio.run(driver._run(_job(tmp_path)))
+    except BaseException as exc:  # noqa: BLE001
+        caught = exc
+
+    assert caught is None, repr(caught)
+    assert (result.get("chunk_ids"), result.get("entity_ids"), result.get("relation_ids")) == ([], [], [])
+    assert result.get("answer") == "<fail text>"
+
+
+def test_absent_keywords_are_none_not_an_echo(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    job = _job(tmp_path, hl_keywords=["caller-hl"], ll_keywords=["caller-ll"])
+
+    absent = asyncio.run(_load_driver(monkeypatch, _StubRag(_response()))._run(job))
+    assert absent.get("hl_keywords_used") is None, absent.get("hl_keywords_used")
+    assert absent.get("ll_keywords_used") is None, absent.get("ll_keywords_used")
+
+    empty = _response(metadata={"keywords": {"high_level": [], "low_level": []}})
+    present = asyncio.run(_load_driver(monkeypatch, _StubRag(empty))._run(job))
+    assert present.get("hl_keywords_used") == []
+    assert present.get("ll_keywords_used") == []
+
+    real = _response(metadata={"keywords": {"high_level": ["h"], "low_level": ["l"]}})
+    got = asyncio.run(_load_driver(monkeypatch, _StubRag(real))._run(job))
+    assert (got.get("hl_keywords_used"), got.get("ll_keywords_used")) == (["h"], ["l"])
+
+
+def test_v1_arm_result_accepts_none_keywords() -> None:
+    from databasise.parity.v1_arm import V1ArmResult
+
+    result = V1ArmResult(
+        chunk_ids=(),
+        entity_ids=(),
+        relation_ids=(),
+        answer="a",
+        hl_keywords_used=None,  # type: ignore[arg-type]
+        ll_keywords_used=None,  # type: ignore[arg-type]
+        wall_clock_seconds=0.0,
+    )
+    caught: BaseException | None = None
+    as_dict: dict[str, Any] = {}
+    try:
+        as_dict = result.to_dict()
+    except BaseException as exc:  # noqa: BLE001
+        caught = exc
+    assert caught is None, repr(caught)
+    assert as_dict["hl_keywords_used"] is None, as_dict["hl_keywords_used"]
+    assert as_dict["ll_keywords_used"] is None, as_dict["ll_keywords_used"]

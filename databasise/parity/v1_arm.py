@@ -77,8 +77,8 @@ class V1ArmResult:
     entity_ids: tuple[str, ...]
     relation_ids: tuple[str, ...]
     answer: str
-    hl_keywords_used: tuple[str, ...]
-    ll_keywords_used: tuple[str, ...]
+    hl_keywords_used: tuple[str, ...] | None
+    ll_keywords_used: tuple[str, ...] | None
     wall_clock_seconds: float
     instrumentation: str = _INSTRUMENTATION_MARKER
 
@@ -88,8 +88,8 @@ class V1ArmResult:
             "entity_ids": list(self.entity_ids),
             "relation_ids": list(self.relation_ids),
             "answer": self.answer,
-            "hl_keywords_used": list(self.hl_keywords_used),
-            "ll_keywords_used": list(self.ll_keywords_used),
+            "hl_keywords_used": None if self.hl_keywords_used is None else list(self.hl_keywords_used),
+            "ll_keywords_used": None if self.ll_keywords_used is None else list(self.ll_keywords_used),
             "wall_clock_seconds": self.wall_clock_seconds,
             "instrumentation": self.instrumentation,
         }
@@ -177,8 +177,8 @@ def run_v1_arm(
         entity_ids=tuple(payload["entity_ids"]),
         relation_ids=tuple(payload["relation_ids"]),
         answer=payload["answer"],
-        hl_keywords_used=tuple(payload["hl_keywords_used"]),
-        ll_keywords_used=tuple(payload["ll_keywords_used"]),
+        hl_keywords_used=None if payload["hl_keywords_used"] is None else tuple(payload["hl_keywords_used"]),
+        ll_keywords_used=None if payload["ll_keywords_used"] is None else tuple(payload["ll_keywords_used"]),
         wall_clock_seconds=wall_clock,
     )
 
