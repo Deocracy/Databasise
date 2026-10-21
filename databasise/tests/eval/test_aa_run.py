@@ -643,7 +643,10 @@ def test_main_spend_path_catches_confounded_pass_error_and_exits_1(monkeypatch, 
 # --------------------------------------------------------------------------------------------- #
 
 
-def _stub_spend_path(monkeypatch, tmp_path):
+_STUB_INSTANCE_HASH = f"sha256:{'c' * 64}"
+
+
+def _stub_spend_path(monkeypatch, tmp_path, *, instance_hash: str | None = _STUB_INSTANCE_HASH):
     seen = {"clients": 0, "calibrate": []}
 
     async def _calibrate(**kwargs):
@@ -651,7 +654,14 @@ def _stub_spend_path(monkeypatch, tmp_path):
 
         seen["calibrate"].append(kwargs["family_name"])
         identity = NullIdentity("bundle@v1", "T1", "m", "cache-bypassed", "sequential")
-        return CalibrationResult(identity=identity, floor=0.0, n_questions=3, n_resamples=10, seed=None)
+        return CalibrationResult(
+            identity=identity,
+            floor=0.25,
+            n_questions=3,
+            n_resamples=10,
+            seed=None,
+            wiring_instance_hash=instance_hash,
+        )
 
     def _build(env):
         seen["clients"] += 1
@@ -734,3 +744,45 @@ def test_both_eval_mains_print_the_shared_estimate_only_line(monkeypatch, capsys
     assert "mode: estimate-only" in capsys.readouterr().out.splitlines()
     assert corpus_ingest.main(["--limit", "1"]) == 0
     assert "mode: estimate-only" in capsys.readouterr().out.splitlines()
+
+
+# --------------------------------------------------------------------------------------------- #
+# 15-16 (TOOL-12, D-13) — --spend persists each family's floor under the eval store root
+# --------------------------------------------------------------------------------------------- #
+
+
+def _floor_store_class():
+    import importlib
+
+    try:
+        module = importlib.import_module("databasise.seam.floors_store")
+    except ImportError:
+        module = None
+    return getattr(module, "FloorStore", None)
+
+
+def test_spend_persists_one_floor_per_family(monkeypatch, tmp_path, capsys):
+    _stub_spend_path(monkeypatch, tmp_path)
+
+    outcome = aa_run.main(["--split", "dev", "--spend", "--family", GOLD_PASSAGE_FAMILY])
+
+    assert outcome == 0, capsys.readouterr().err
+    store_cls = _floor_store_class()
+    assert store_cls is not None, "databasise.seam.floors_store has no FloorStore"
+    rows = store_cls(tmp_path / "eval").lookup(_STUB_INSTANCE_HASH)
+    assert len(rows) == 1, rows
+    row = rows[0]
+    assert (row.bundle_at_v, row.tier, row.metric) == ("bundle@v1", "T1", "m")
+    assert (row.determinism_setting, row.concurrency_setting) == ("cache-bypassed", "sequential")
+    assert (row.floor, row.n_questions, row.n_resamples, row.seed) == (0.25, 3, 10, None)
+
+
+def test_a_result_without_a_hash_is_refused_by_name(monkeypatch, tmp_path, capsys):
+    _stub_spend_path(monkeypatch, tmp_path, instance_hash=None)
+
+    outcome = aa_run.main(["--split", "dev", "--spend", "--family", GOLD_PASSAGE_FAMILY])
+
+    assert outcome == 1
+    err_lines = [line for line in capsys.readouterr().err.splitlines() if line.strip()]
+    assert len(err_lines) == 1 and err_lines[0].startswith("UnkeyableFloorError:"), err_lines
+    assert not (tmp_path / "eval" / "floors.db").exists()

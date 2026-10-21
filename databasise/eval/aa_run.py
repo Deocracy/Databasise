@@ -9,6 +9,14 @@
 same selectors ``corpus_ingest --arm`` ingests with; without it the engine's default selector
 answers (11-02-PLAN.md, D-03 as corrected by 11-RESEARCH.md Q6).
 
+**Floors are persisted (TOOL-12, D-13).** With ``--spend``, each family's floor is written to
+``seam.floors_store.FloorStore(<eval store root>)`` (``floors.db``), keyed on the traces' own
+``wiring_instance_hash`` plus the five ``NullIdentity`` fields; a family whose passes carried no single
+hash is refused by name (:class:`UnkeyableFloorError`) and nothing is written. Two recorded limits: no
+production part reports ``cache_hit``, so a real run is refused with ``UnusableFloorError`` after both
+passes have spent and persists no floor yet; and only an engine started on the eval store root reads
+these floors.
+
 **Nothing here makes a live call by default.** Without ``--spend``, :func:`main` prints
 :func:`estimate_calls`' real, computed call-count projection and returns, having constructed no
 client, opened no store, and made no query — mirroring
@@ -59,6 +67,7 @@ import re
 import sys
 from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, replace
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -96,6 +105,7 @@ from databasise.parity.run_arm import (
 from databasise.parts.registry import default_registry
 from databasise.seam import Databasise
 from databasise.seam.evidence import CHUNKS_NAMESPACE, resolve_evidence_ref
+from databasise.seam.floors_store import FloorRow, FloorStore
 from databasise.seam.query import QueryObject
 from databasise.seam.selectors import Selector
 from databasise.seam.trace_store import TraceStore
@@ -175,6 +185,19 @@ class ConfoundedPassError(RuntimeError):
         super().__init__(
             f"run_one_pass: question {question_id!r} reported partial={partial!r} "
             f"degraded={degraded!r} — a confounded pass cannot calibrate a null"
+        )
+
+
+class UnkeyableFloorError(RuntimeError):
+    """A family's calibrated floor carries no ``wiring_instance_hash``: its passes' traces carried
+    none, or two distinct ones. The promotion gate looks floors up by the traces' own hash, so a
+    floor without exactly one could never be read for the arm it calibrates (TOOL-12, D-13)."""
+
+    def __init__(self, family_name: str) -> None:
+        self.family_name = family_name
+        super().__init__(
+            f"family {family_name!r}: the A/A passes carried no single wiring_instance_hash, so its "
+            "floor cannot be keyed to the arm it calibrates and is not persisted"
         )
 
 
@@ -622,6 +645,7 @@ def _refusals() -> tuple[type[BaseException], ...]:
         EmptyPairedDifferencesError,
         UnparseableJudgeVerdictError,
         UnusableFloorError,
+        UnkeyableFloorError,  # main's floor persistence: no single wiring_instance_hash
         ConfoundedPassError,  # run_one_pass's own confounded (partial/degraded) pass refusal
         EmptyEvalIndexError,  # the read-only probe, run by calibrate_family before the first pass
         cli.ArmSelectorMismatchError,
@@ -639,6 +663,32 @@ async def _calibrate_all(
         family_name: await calibrate_family(family_name=family_name, llm_client=clients.get("llm"), **common)
         for family_name in families
     }
+
+
+def _persist_floors(results_by_family: dict[str, CalibrationResult]) -> None:
+    """Write each family's floor to ``FloorStore(<eval store root, read at call time>)`` (TOOL-12,
+    D-13). Every family is checked before any is written, so a refusal persists nothing."""
+    for family_name, result in results_by_family.items():
+        if result.wiring_instance_hash is None:
+            raise UnkeyableFloorError(family_name)
+    store = FloorStore(_EVAL_INGEST_STORE_ROOT)
+    created_at = datetime.now(UTC).isoformat()
+    for result in results_by_family.values():
+        store.record(
+            FloorRow(
+                wiring_instance_hash=result.wiring_instance_hash,
+                bundle_at_v=result.identity.bundle_at_v,
+                tier=result.identity.tier,
+                metric=result.identity.metric,
+                determinism_setting=result.identity.determinism_setting,
+                concurrency_setting=result.identity.concurrency_setting,
+                floor=result.floor,
+                n_questions=int(result.n_questions),
+                n_resamples=result.n_resamples,
+                seed=result.seed,
+                created_at=created_at,
+            )
+        )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -706,6 +756,7 @@ def main(argv: list[str] | None = None) -> int:
                 index_probe=_eval_index_probe(args.arm),
             )
         )
+        _persist_floors(results_by_family)
     except _refusals() as exc:
         return cli.refuse(exc)
 
@@ -740,6 +791,7 @@ __all__ = [
     "NoMintedBundleError",
     "QuestionNotInBundleError",
     "SplitNotCalibratableError",
+    "UnkeyableFloorError",
     "UnparseableJudgeVerdictError",
     "calibrate_family",
     "estimate_calls",
