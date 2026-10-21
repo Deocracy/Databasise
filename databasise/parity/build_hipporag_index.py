@@ -50,8 +50,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from databasise.clients.builder import BUILDER_REFUSALS
+from databasise import cli
 from databasise.identity.canon import canonicalise
+from databasise.eval.corpus_ingest import estimate
 from databasise.parity import import_index
 from databasise.parity.corpus import load_snapshot
 from databasise.parity.run_arm import (
@@ -72,7 +73,7 @@ from databasise.parts_core.hipporag.entity_fact_embed import (
 )
 from databasise.runner import scheduler as _scheduler
 from databasise.runner.trace import RunRecord
-from databasise.store_lock import StoreLockedError, store_lock
+from databasise.store_lock import store_lock
 from databasise.seam.tokens import assemble_token_breakdown
 from databasise.validator.parse import parse_wiring
 from databasise.wirings.resolve import load_wiring
@@ -327,29 +328,29 @@ async def build_index(
 
 
 def main(argv: list[str] | None = None) -> int:
-    """``uv run python -m databasise.parity.build_hipporag_index`` — the exact invocation this
-    module's own docstring names. Exit codes: 0 on a verified build, 1 on any refusal (missing
-    env/key, missing LightRAG index, an empty/partial/degraded run) — mirrors
-    ``import_index.py``'s/``run_comparison.py``'s own "non-zero exit means something" convention.
+    """``uv run python -m databasise.parity.build_hipporag_index --spend`` — the exact invocation this
+    module's own docstring names. Without ``--spend`` it prints the ingest estimate and ``mode:
+    estimate-only`` and touches nothing (no lock, no client, no provider call, no write). Exit codes: 0
+    done or estimate-only; 1 a named refusal (one stderr line ``ClassName: message``); 2 bad arguments.
     """
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--spend", action="store_true", default=False)  # inert until a later plan flips the default
-    parser.parse_args(argv)
+    parser.add_argument("--spend", action="store_true", default=False)
+    args = parser.parse_args(argv)
+
+    snapshot = load_snapshot()
+    print(json.dumps(estimate(snapshot, limit=len(snapshot.documents), arm="hipporag").to_dict(), indent=2))
+    if not args.spend:
+        print("mode: estimate-only")
+        return cli.EXIT_OK
 
     try:
         with store_lock(import_index.DEFAULT_STORE_ROOT):  # D-03
             result = asyncio.run(build_index())
-    except (
-        StoreLockedError,
-        *BUILDER_REFUSALS,
-        MissingParityLightRAGIndexError,
-        HippoRAGIndexBuildRefusedError,
-    ) as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
+    except cli.offline_refusals(HippoRAGIndexBuildRefusedError) as exc:
+        return cli.refuse(exc)
 
     print(json.dumps(result.to_dict(), indent=2))
-    return 0
+    return cli.EXIT_OK
 
 
 if __name__ == "__main__":

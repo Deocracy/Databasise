@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 
 from databasise.clients.base import ChatResult, EmbeddingResult
+from databasise.parity import build_hipporag_index, import_index, run_arm
 from databasise.parity.build_hipporag_index import IndexBuildResult, build_index
 from databasise.parity.corpus import CorpusDocument, CorpusSnapshot
 from databasise.parity.run_arm import _inject_query as _run_arm_inject_query
@@ -177,3 +178,46 @@ def test_3_fact_score_has_empty_deps_and_run_arms_own_inject_query_never_stamps_
     for node_id in query_side_ids:
         config = resolved["nodes"][node_id].get("config") or {}
         assert "query" not in config
+
+
+# --------------------------------------------------------------------------------------------- #
+# 15-15 (TOOL-05, D-04): a bare call is estimate-only; --spend builds on an empty store root and
+# refuses a short chunk namespace. Not row tests: the row file is tests/test_dry_run_default.py.
+# --------------------------------------------------------------------------------------------- #
+
+
+def _forbid(label):
+    def _boom(*_args, **_kwargs):
+        raise AssertionError(f"{label} was reached")
+
+    return _boom
+
+
+def _absent_env(monkeypatch, tmp_path):
+    """D-24: no node here may reach the real env file."""
+    absent = tmp_path / "absent.env"
+    monkeypatch.setattr(run_arm, "DEFAULT_V1_ENV_PARITY", absent)
+    monkeypatch.setattr(build_hipporag_index, "DEFAULT_V1_ENV_PARITY", absent)
+    return absent
+
+
+def test_main_without_spend_is_estimate_only(tmp_path, monkeypatch, capsys):
+    store_root = tmp_path / "store"
+    monkeypatch.setattr(import_index, "DEFAULT_STORE_ROOT", store_root)
+    _absent_env(monkeypatch, tmp_path)
+    for name in ("store_lock", "_build_clients", "_load_env_file", "build_index"):
+        monkeypatch.setattr(build_hipporag_index, name, _forbid(name))
+
+    caught = None
+    returncode = None
+    try:
+        returncode = build_hipporag_index.main([])
+    except BaseException as exc:  # noqa: BLE001 - the pre-fix path raises from the forbidden stubs
+        caught = exc
+
+    out = capsys.readouterr().out
+    assert caught is None, f"main([]) raised {caught!r}"
+    assert returncode == 0
+    assert '"arm": "hipporag"' in out
+    assert out.rstrip().endswith("mode: estimate-only")
+    assert not store_root.exists()
