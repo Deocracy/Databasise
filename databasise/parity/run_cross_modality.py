@@ -28,10 +28,17 @@ not a content guarantee. The two arms' actual passages and scores may differ arb
 the point of architecture-comparison mode (RIG.md ``## §AA.4``); this harness's own summary states
 that explicitly so a reader of the numbers cannot mistake a retrieval difference for a defect.
 
-**Deferred (06-08-SUMMARY.md, owner decision `defer-and-record-blocked`).** This module is genuine,
-runnable code — not a stub — but has not been invoked for real in this environment: it requires
-Task 1's real HippoRAG index build to have completed first, and neither ran (spend not
-authorized). See ``databasise/evidence/CROSS-MODALITY-EVIDENCE.md`` for the honest record.
+**Real runs.** This module ran for real on 2026-09-10 against the Phase 3 parity corpus; the
+refused first attempt and the completed run are recorded in
+``databasise/evidence/CROSS-MODALITY-EVIDENCE.md`` ("Real run attempted - refused" and "Real
+run"). Phase 12 has changed the HippoRAG path since, so a HippoRAG store built before Phase 12 must
+be rebuilt (``databasise.parity.build_hipporag_index``) before a new run.
+
+**Offline CLI.** Needs a source checkout with the imported parity store and ``v1/.env.parity``;
+neither ships in the wheel. Without ``--spend`` it prints an estimate, ends on an estimate-only
+line and touches nothing. Exit codes: 0 done or estimate-only; 1 a named refusal (one stderr line ``ClassName: message``);
+2 bad arguments. A refusal for a partial or degraded arm keeps the per-query records collected so
+far in ``cross_modality.json``, marked ``"status": "refused"``.
 """
 
 from __future__ import annotations
@@ -41,12 +48,11 @@ import asyncio
 import hashlib
 import json
 import sys
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
 from databasise import cli
-from databasise.clients.builder import BUILDER_REFUSALS
 from databasise.identity.canon import canonicalise
 from databasise.namespaces import artifacts_overlap
 from databasise.parity import import_index
@@ -55,13 +61,14 @@ from databasise.parity.run_arm import (
     DEFAULT_V1_ENV_PARITY,
     _build_clients,
     _load_env_file,
+    estimate_arm,
 )
 from databasise.parts.registry import default_registry
 from databasise.seam import Databasise, QueryObject
 from databasise.seam.engine import _GRAPH_KIND, _TEXT_CHUNKS_KIND
 from databasise.seam.envelope import ResponseEnvelope
 from databasise.seam.selectors import Selector
-from databasise.store_lock import StoreLockedError, store_lock
+from databasise.store_lock import store_lock
 from databasise.stores.vector import VectorStoreCorruptedError, load_committed
 from databasise.wirings.resolve import load_wiring, resolve_arm
 
@@ -99,8 +106,23 @@ class OverlappingStoreDirectoriesError(RuntimeError):
 
 class DegradedCrossModalityRunError(RuntimeError):
     """Raised when either arm reports ``partial`` or ``degraded`` on any query — a confounded run
-    is refused rather than serialised as a clean comparison (this module's own docstring).
+    is refused rather than serialised as a clean comparison (this module's own docstring). Carries
+    the query id, the arm key and the record of every query run so far, the offending one included,
+    so :func:`main` can keep them on disk (TOOL-09).
     """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        query_id: str | None = None,
+        arm_key: str | None = None,
+        record: CrossModalityRecord | None = None,
+    ):
+        super().__init__(message)
+        self.query_id = query_id
+        self.arm_key = arm_key
+        self.record = record
 
 
 @dataclass(frozen=True)
@@ -170,14 +192,19 @@ class CrossModalityRecord:
     preflight: PreflightResult
     queries: list[CrossModalityQueryRecord]
     structural_comparability_note: str = _STRUCTURAL_COMPARABILITY_NOTE
+    # Set only when the caller supplied its own queries; the default run's record is unchanged.
+    queries_hash: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             "corpus_hash": self.corpus_hash,
             "preflight": self.preflight.to_dict(),
             "queries": [q.to_dict() for q in self.queries],
             "structural_comparability_note": self.structural_comparability_note,
         }
+        if self.queries_hash is not None:
+            payload["queries_hash"] = self.queries_hash
+        return payload
 
 
 # --------------------------------------------------------------------------------------------- #
@@ -327,9 +354,24 @@ async def run_cross_modality(
     )
 
     selected_queries = list(queries) if queries is not None else list(snapshot.queries)
+    corpus_hash, queries_hash = snapshot.corpus_hash, None
+    if queries is not None:
+        # The same json.dumps(sort_keys=True) form as CorpusSnapshot.queries_hash, over the queries
+        # actually run, so a custom list can never record the default corpus_hash.
+        queries_hash = hashlib.sha256(
+            json.dumps([asdict(q) for q in selected_queries], sort_keys=True).encode("utf-8")
+        ).hexdigest()
+        corpus_hash = hashlib.sha256((snapshot.corpus_hash + queries_hash).encode("utf-8")).hexdigest()
+
+    def record_of(done: list[CrossModalityQueryRecord]) -> CrossModalityRecord:
+        return CrossModalityRecord(
+            corpus_hash=corpus_hash,
+            preflight=preflight_result,
+            queries=list(done),
+            queries_hash=queries_hash,
+        )
 
     query_records: list[CrossModalityQueryRecord] = []
-    any_degraded = False
     for query in selected_queries:
         selectors = [Selector(capability=_LIGHTRAG_CAPABILITY), Selector(capability=_HIPPORAG_CAPABILITY)]
         result = await engine.compare(QueryObject(text=query.question), selectors)
@@ -341,27 +383,24 @@ async def run_cross_modality(
                 "engine.compare() returned a bare envelope for two selectors — expected a "
                 f"{{selector_key: envelope}} mapping (query_id={query.id!r})"
             )
-        arms: dict[str, ArmQueryResult] = {}
-        for key, envelope in result.items():
-            arm_result = _arm_result_from_envelope(key, envelope)
-            arms[key] = arm_result
-            if arm_result.partial or arm_result.degraded:
-                any_degraded = True
-        query_records.append(
-            CrossModalityQueryRecord(query_id=query.id, query=query.question, arms=arms)
-        )
+        arms = {key: _arm_result_from_envelope(key, envelope) for key, envelope in result.items()}
+        query_records.append(CrossModalityQueryRecord(query_id=query.id, query=query.question, arms=arms))
+        # A degraded but complete arm stays a refusal (15-RESEARCH Open Question 8): stop here and
+        # keep what was collected, the offending query included.
+        offending = next((key for key, arm in arms.items() if arm.partial or arm.degraded), None)
+        if offending is not None:
+            arm = arms[offending]
+            state = "partial" if arm.partial else "degraded"
+            why = arm.stop_reason if arm.partial else arm.degradation_reason
+            raise DegradedCrossModalityRunError(
+                f"arm {offending!r} reported {state} on query {query.id!r} ({why}) — refusing to "
+                "record a confounded run as a clean comparison; the records so far are kept",
+                query_id=query.id,
+                arm_key=offending,
+                record=record_of(query_records),
+            )
 
-    if any_degraded:
-        raise DegradedCrossModalityRunError(
-            "at least one arm reported partial or degraded on at least one query — refusing to "
-            "record a confounded run as a clean comparison"
-        )
-
-    return CrossModalityRecord(
-        corpus_hash=snapshot.corpus_hash,
-        preflight=preflight_result,
-        queries=query_records,
-    )
+    return record_of(query_records)
 
 
 # --------------------------------------------------------------------------------------------- #
@@ -391,36 +430,70 @@ def _render_human_summary(record: CrossModalityRecord) -> str:
     return "\n".join(lines)
 
 
+def _write_result(payload: dict[str, Any]) -> Path:
+    _RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    result_path = _RESULTS_DIR / "cross_modality.json"
+    result_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return result_path
+
+
+def _print_estimate() -> None:
+    """D-04: what a ``--spend`` run would do, from read-only facts. Takes no lock, builds no client,
+    writes nothing; the preflight runs only when the workspace directory already exists."""
+    snapshot = load_snapshot()
+    question = snapshot.queries[0].question if snapshot.queries else ""
+    print(f"queries: {len(snapshot.queries)} x 2 arms = {2 * len(snapshot.queries)} arm runs")
+    for arm in (_LIGHTRAG_ARM, _HIPPORAG_ARM):
+        print(json.dumps(estimate_arm(arm, question)))
+    store_root, workspace = import_index.DEFAULT_STORE_ROOT, import_index._import_workspace()
+    if (Path(store_root) / workspace).exists():
+        try:
+            print(f"preflight: {json.dumps(preflight(store_root=store_root, workspace=workspace).to_dict())}")
+        except (MissingArmIndexError, OverlappingStoreDirectoriesError) as exc:
+            print(f"preflight: refused - {exc}")
+    else:
+        print(f"preflight: skipped, no workspace directory at {Path(store_root) / workspace}")
+    print("mode: estimate-only")
+
+
 def main(argv: list[str] | None = None) -> int:
-    """``uv run python -m databasise.parity.run_cross_modality`` — the exact invocation this
-    module's own docstring names. Exit codes: 0 on a clean comparison, 1 on any pre-flight
-    refusal, a missing/misconfigured env, or a degraded/partial arm — mirrors
-    ``run_comparison.py``'s own "non-zero exit means something" convention.
+    """``uv run python -m databasise.parity.run_cross_modality --spend`` — the exact invocation this
+    module's own docstring names. Without ``--spend`` it prints an estimate and ``mode:
+    estimate-only`` and touches nothing. Exit codes: 0 done or estimate-only; 1 a named refusal (one
+    stderr line), including a degraded or partial arm, whose records so far are written to
+    ``cross_modality.json`` marked ``"status": "refused"``; 2 bad arguments.
     """
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--spend", action="store_true", default=False)  # inert until a later plan flips the default
-    parser.parse_args(argv)
+    parser.add_argument("--spend", action="store_true", default=False)
+    args = parser.parse_args(argv)
 
     try:
+        if not args.spend:
+            _print_estimate()
+            return cli.EXIT_OK
         with store_lock(import_index.DEFAULT_STORE_ROOT):  # D-03
             record = asyncio.run(run_cross_modality())
-    except (
-        StoreLockedError,
-        *BUILDER_REFUSALS,
+    except cli.offline_refusals(
+        cli.ArmSelectorMismatchError,
         MissingArmIndexError,
         OverlappingStoreDirectoriesError,
         DegradedCrossModalityRunError,
     ) as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
+        if isinstance(exc, DegradedCrossModalityRunError) and exc.record is not None:
+            _write_result(
+                {
+                    **exc.record.to_dict(),
+                    "status": "refused",
+                    "reason": str(exc),
+                    "query_id": exc.query_id,
+                    "arm_key": exc.arm_key,
+                }
+            )
+        return cli.refuse(exc)
 
     print(_render_human_summary(record))
-
-    _RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    result_path = _RESULTS_DIR / "cross_modality.json"
-    result_path.write_text(json.dumps(record.to_dict(), indent=2), encoding="utf-8")
-    print(f"\n[result] JSON result written to: {result_path}")
-    return 0
+    print(f"\n[result] JSON result written to: {_write_result(record.to_dict())}")
+    return cli.EXIT_OK
 
 
 if __name__ == "__main__":

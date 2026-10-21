@@ -23,6 +23,7 @@ against stubbed/fake data is correct and expected; fabricating evidence of a rea
 from __future__ import annotations
 
 import contextlib
+import json
 from pathlib import Path
 
 import numpy as np
@@ -247,3 +248,111 @@ async def test_tool09_preflight_leaves_the_store_root_listing_unchanged(store_ro
     before = _listing(store_root)
     cross_modality.preflight(store_root=store_root, workspace=_WORKSPACE)
     assert _listing(store_root) == before, "preflight changed a seeded store root"
+
+
+class _FakeEnvelope:
+    """The five attributes and the ``model_dump`` the record reads from a §18.2 envelope."""
+
+    def __init__(self, *, degraded: bool = False):
+        self.partial = False
+        self.degraded = degraded
+        self.stop_reason = None
+        self.degradation_reason = "stub degradation" if degraded else None
+
+    def model_dump(self):
+        return {"evidence": [{"id": "e1"}], "token_accounting": []}
+
+
+class _FakeEngine:
+    """Stands in for ``Databasise``: query ``degraded_at`` (1-based) degrades the second arm."""
+
+    calls = 0
+    degraded_at: int | None = None
+
+    def __init__(self, **kwargs):
+        pass
+
+    async def compare(self, query_object, selectors):
+        type(self).calls += 1
+        degraded = type(self).calls == type(self).degraded_at
+        return {"reads_vector": _FakeEnvelope(), "reads_graph+reads_kv": _FakeEnvelope(degraded=degraded)}
+
+
+def _stub_run(monkeypatch, tmp_path, *, degraded_at: int | None):
+    """Point every default the run reaches at a temp path and stub the engine, preflight and clients."""
+    env_file = tmp_path / "env"
+    env_file.write_text("", encoding="utf-8")
+    engine = type("Engine", (_FakeEngine,), {"calls": 0, "degraded_at": degraded_at})
+    monkeypatch.setattr(cross_modality, "DEFAULT_V1_ENV_PARITY", env_file)
+    monkeypatch.setattr(import_index, "DEFAULT_STORE_ROOT", tmp_path / "store")
+    monkeypatch.setattr(import_index, "_import_workspace", lambda: "w")
+    monkeypatch.setattr(cross_modality, "_RESULTS_DIR", tmp_path / "results")
+    monkeypatch.setattr(cross_modality, "_load_env_file", lambda path: {})
+    monkeypatch.setattr(cross_modality, "_build_clients", lambda env: {})
+    monkeypatch.setattr(
+        cross_modality,
+        "preflight",
+        lambda **kwargs: cross_modality.PreflightResult(True, "sha256:a", "sha256:b", False),
+    )
+    monkeypatch.setattr(cross_modality, "Databasise", engine)
+    return env_file
+
+
+def test_tool09_a_degraded_second_query_leaves_the_first_record_on_disk(tmp_path, monkeypatch, capsys):
+    from databasise.parity.corpus import load_snapshot
+
+    _stub_run(monkeypatch, tmp_path, degraded_at=2)
+    query_ids = [query.id for query in load_snapshot().queries]
+
+    caught = None
+    try:
+        code = cross_modality.main(["--spend"])
+    except BaseException as exc:  # noqa: BLE001
+        caught, code = exc, None
+    err = capsys.readouterr().err
+
+    assert caught is None, f"main raised {caught!r}"
+    assert code == 1
+    assert query_ids[1] in err and "reads_graph+reads_kv" in err, f"the refusal names no query and arm: {err!r}"
+    result_path = tmp_path / "results" / "cross_modality.json"
+    assert result_path.exists(), "a refused run left no cross_modality.json"
+    saved = json.loads(result_path.read_text(encoding="utf-8"))
+    assert saved.get("status") == "refused"
+    assert [record["query_id"] for record in saved["queries"]] == query_ids[:2]
+
+
+async def test_tool09_custom_queries_change_the_corpus_hash(tmp_path, monkeypatch):
+    from databasise.parity.corpus import CorpusQuery
+
+    env_file = _stub_run(monkeypatch, tmp_path, degraded_at=None)
+    run = {"store_root": tmp_path / "store", "workspace": "w", "clients": {}, "env_path": env_file}
+
+    default_record = await cross_modality.run_cross_modality(**run)
+    custom = [CorpusQuery(id="custom-1", question="Who?", answer="Them", gold_document_ids=("d1",))]
+    custom_record = await cross_modality.run_cross_modality(queries=custom, **run)
+
+    assert custom_record.corpus_hash != default_record.corpus_hash, "custom queries recorded the default corpus_hash"
+    assert getattr(custom_record, "queries_hash", None), "the record carries no queries_hash"
+    assert getattr(default_record, "queries_hash", None) is None
+
+
+def test_without_spend_the_cli_is_estimate_only(tmp_path, monkeypatch, capsys):
+    _stub_run(monkeypatch, tmp_path, degraded_at=None)
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("work started without --spend")
+
+    for name in ("store_lock", "_build_clients", "run_cross_modality"):
+        monkeypatch.setattr(cross_modality, name, forbidden)
+
+    caught = None
+    try:
+        code = cross_modality.main([])
+    except BaseException as exc:  # noqa: BLE001
+        caught, code = exc, None
+    out = capsys.readouterr().out
+
+    assert caught is None, f"main raised {caught!r}"
+    assert code == 0
+    assert "mode: estimate-only" in out
+    assert not (tmp_path / "results").exists() and not (tmp_path / "store").exists()
