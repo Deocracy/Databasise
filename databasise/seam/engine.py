@@ -271,6 +271,7 @@ from databasise.seam.refusals import (
     EmptyComparisonRequestError,
     EmptyNamespaceError,
     ForeignEngineRefusalError,
+    GateNotCalibratedError,
     GateVerbNotBuiltError,
     InvalidChangeOriginError,
     InvalidGuardDeclarationError,
@@ -2341,20 +2342,23 @@ class Databasise:
         (``mutation_id``), the mutation class, and the minted semver are all derived, never
         accepted as caller input (D-04/D-10/D-11).
 
-        Refusal order (D-09, amended 07-04-PLAN.md closing 07-REVIEW.md CR-01): a ``verb`` outside
-        :data:`~databasise.seam.promotion.PROMOTION_VERBS`'s six declared literals refuses first,
-        by name, before anything else runs — before the not-built check and before any trace-id
-        resolution. Then a gate-ladder verb not built in this milestone (``check``, ``preview``,
-        ``run``) refuses immediately, before anything else runs — there is nothing to resolve.
-        Then an ``alias`` that is empty or shaped like an instance hash refuses as
-        :class:`~databasise.seam.refusals.InvalidPromotionAliasError` (09-07, SEAM-12: no
-        ``Selector`` could name it), before ``change_origin`` and trace ids are looked at.
-        Otherwise: an invalid ``change_origin`` refuses; an empty, unknown, or disagreeing
-        ``trace_ids`` refuses (via :func:`~databasise.seam.promotion.resolve_single_arm`); the
-        mutation class is derived against the alias's prior active generation (if any); a
-        gate-adjudicated verb (``promote-next``, ``promote-now``) then refuses by posture — it
-        never appends a row in this milestone. Only the default ``"operator-asserted"`` verb
-        reaches ``Ledger.append()``.
+        Refusal order (D-09, amended 07-04-PLAN.md closing 07-REVIEW.md CR-01; 14-08-PLAN.md D-04,
+        D-07): a ``verb`` outside :data:`~databasise.seam.promotion.PROMOTION_VERBS`'s six declared
+        literals refuses first, by name. Then a gate-ladder verb not built in this milestone
+        (``check``, ``preview``, ``run``) refuses. Then a gate-adjudicated verb (``promote-next``,
+        ``promote-now``) refuses as :class:`~databasise.seam.refusals.GateNotCalibratedError`, the
+        same for every arm, before anything else is looked at and before any ``Ledger`` exists
+        (no ``ledger.db`` is created). Then the shared prologue
+        (:meth:`_resolve_operator_preconditions`): an ``alias`` that is empty or shaped like an
+        instance hash refuses as :class:`~databasise.seam.refusals.InvalidPromotionAliasError`
+        (09-07, SEAM-12), an invalid ``change_origin`` refuses, an unknown ``trace_ids`` entry
+        refuses, a partial trace refuses as :class:`~databasise.seam.refusals.PartialRunEvidenceError`
+        (D-03), and an empty or disagreeing ``trace_ids`` refuses (via
+        :func:`~databasise.seam.promotion.resolve_single_arm`). Last, an alias whose active row
+        names a wiring that no longer resolves refuses as
+        :class:`~databasise.seam.refusals.UnsatisfiableSelectorError` (D-05). Only the default
+        ``"operator-asserted"`` verb reaches ``Ledger.append()``; the per-class posture refusals
+        stay in code for TOOL-12 and are unreachable from here.
 
         One ``INSERT`` in one transaction **is** the atomic alias repoint (CONTRACT §6) — no
         second write, no transaction wrapper around two statements. ``Ledger`` stays synchronous by
@@ -2371,6 +2375,11 @@ class Databasise:
 
         if verb in _NOT_BUILT_VERBS:
             raise GateVerbNotBuiltError(verb=verb)
+
+        # LEDG-08 (D-04): no arm has a calibrated floor, so a gate verb is refused identically for
+        # every arm, before alias validation, trace resolution and any Ledger construction.
+        if verb in _GATE_VERBS:
+            raise GateNotCalibratedError(verb=verb)
 
         _resolved_records, arm_name, arm_instance_hashes = self._resolve_operator_preconditions(
             alias, trace_ids, change_origin, refuse_partial=True
@@ -2397,6 +2406,8 @@ class Databasise:
 
                 mutation_class = derive_mutation_class(new_resolved, prior_resolved)
 
+                # Unreachable until TOOL-12 lifts the up-front GateNotCalibratedError for an arm with
+                # a calibrated floor; the per-class posture refusals stay in code for that path.
                 if verb in _GATE_VERBS:
                     enforce_gate_verb_posture(verb, mutation_class)  # always raises
 

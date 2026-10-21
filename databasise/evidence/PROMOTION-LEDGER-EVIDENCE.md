@@ -28,7 +28,7 @@ collectible by pytest, so this table cannot drift from the code without failing 
 |---|---|---|---|
 | 1 | Every generation record carries `change_origin`/`promotion_provenance`, never defaulted; a semver is minted only at promotion; tombstoned losers are never lifted; the active pointer is a derived query | Holds | `tests/seam/test_promote.py::test_record_carries_change_origin_and_operator_asserted_provenance`, `tests/seam/test_promote.py::test_absent_change_origin_refuses_by_name`, `tests/seam/test_promote.py::test_first_promotion_mints_1_0_0`, `tests/seam/test_promote.py::test_no_path_mints_a_patch`, `tests/seam/test_retire.py::test_never_lifted_repromotion_is_a_new_generation`, `tests/ledger/test_ledger.py::test_3_active_pointer_is_computed_by_a_query_not_a_column` |
 | 2 | Owner promotes with `operator_asserted` provenance and non-empty `promotion_trace_ids`, no verdict/tier-of-decision; the ledger append is the decision, the alias repoint is atomic; rollback follows the same path | Holds | `tests/seam/test_promote.py::test_promote_appends_one_row_the_alias_selector_resolves`, `tests/seam/test_promote.py::test_empty_trace_ids_refuses_before_any_write`, `tests/seam/test_rollback.py::test_rollback_repoints_the_alias_to_the_named_generation`, `tests/seam/test_rollback.py::test_rollback_carries_no_verdict`, `tests/seam/test_operator_verb_concurrency.py::test_retire_vs_rollback_race_never_lets_a_rollback_outrun_a_tombstone`, `tests/seam/test_operator_verb_concurrency.py::test_six_concurrent_promotes_mint_six_distinct_versions_with_zero_exceptions`, `tests/ledger/test_ledger_generation_uniqueness.py::test_a_duplicate_non_null_alias_minted_version_pair_is_refused_by_the_database`, `tests/ledger/test_ledger_generation_uniqueness.py::test_reopening_a_database_carrying_the_old_plain_index_enforces_uniqueness` |
-| 3 | `promote-next`/`promote-now` stay unavailable for answer-level and index-side classes under the default posture, and the refusal names the posture | Holds | `tests/seam/test_promotion_posture.py::test_promote_next_refuses_at_answer_level_naming_the_posture`, `tests/seam/test_promotion_posture.py::test_promote_next_refuses_at_retrieval_side_naming_the_missing_floor`, `tests/seam/test_promotion_posture.py::test_no_gate_verb_appends_a_row`, `tests/seam/test_promotion_posture.py::test_an_unrecognised_verb_refuses_by_name_before_any_trace_resolution[promote_next_typo]`, `tests/seam/test_dual_transport.py::test_an_out_of_enum_verb_refuses_identically_across_three_transports` |
+| 3 | `promote-next`/`promote-now` stay unavailable for answer-level and index-side classes under the default posture, and the refusal names the posture | Holds, restated by Phase 14 (note below): `promote-next`/`promote-now` are refused up front with `GateNotCalibratedError` for every arm, before any ledger access, and the refusal names the verb, not a posture | `tests/seam/test_promotion_posture.py::test_gate_verbs_are_refused_up_front_for_every_arm`, `tests/seam/test_promotion_posture.py::test_a_gate_verb_with_an_invalid_alias_is_refused_as_not_calibrated`, `tests/seam/test_promotion_posture.py::test_a_retrieval_side_change_is_refused_up_front_and_appends_nothing`, `tests/seam/test_promotion_posture.py::test_no_gate_verb_appends_a_row`, `tests/seam/test_promotion_posture.py::test_an_unrecognised_verb_refuses_by_name_before_any_trace_resolution[promote_next_typo]`, `tests/seam/test_dual_transport.py::test_an_out_of_enum_verb_refuses_identically_across_three_transports` |
 
 Every row above is `[code-verified]`: read directly from `databasise/seam/engine.py`,
 `databasise/seam/promotion.py`, `databasise/ledger/ledger.py` and the cited test files, this
@@ -38,6 +38,20 @@ Criterion 3's verb-refusal architecture was completed in 07-04 after `07-VERIFIC
 partial (`07-REVIEW.md` CR-01): an out-of-enum `verb` string now refuses by name
 (`UnrecognisedPromotionVerbError`) before any trace-id resolution runs, on all three transports,
 rather than crashing with a bare `ValueError`.
+
+### Phase 14 restatement of criterion 3 (LEDG-08)
+
+The criterion-3 row above is restated, not rewritten. Until Phase 14 the gate verbs were refused per
+mutation class after the ledger had been opened (`MeasurementPostureRefusalError` for answer-level and
+index-side, `UncalibratedFloorRefusalError` for retrieval-side), so a refused gate verb created
+`ledger.db` on a fresh store root. Since Phase 14 `Databasise.promote` raises `GateNotCalibratedError`
+for `promote-next` and `promote-now` directly after the not-built check, for every arm and before
+alias validation, trace resolution and any `Ledger` construction: the same refusal on all six arms,
+no `ledger.db`, and the message carries the verb only. The per-class refusals and
+`_MEASUREMENT_POSTURE` stay in code for TOOL-12, which lifts the up-front refusal for an arm with a
+calibrated floor; they are unreachable from `promote` until then
+(`tests/seam/test_promotion_posture.py::test_gate_verbs_are_refused_up_front_for_every_arm`,
+`tests/seam/test_promotion_posture.py::test_the_gate_stays_refused_when_the_posture_constant_or_environment_changes`).
 
 ### G-07-1 correction — 2026-09-12
 

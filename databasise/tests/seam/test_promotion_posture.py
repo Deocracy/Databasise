@@ -1,24 +1,30 @@
-"""07-01-PLAN.md Task 3: the verb ladder and the posture refusal that keeps the gate-adjudicated
-path genuinely unreachable in this milestone (SC3, MACH-09).
+"""07-01-PLAN.md Task 3 / 14-08-PLAN.md Task 3 (LEDG-08, D-04): the verb ladder, and the up-front
+refusal that keeps the gate-adjudicated path genuinely unreachable (SC3, MACH-09).
+
+``promote-next`` and ``promote-now`` are refused as ``GateNotCalibratedError`` for every arm, before
+alias validation, trace resolution and any ledger access (so no ``ledger.db`` is created). The
+per-class posture refusals stay in code for TOOL-12 and are unreachable from ``promote``. Refusal
+types are compared by name, so the file collects at the phase base, where ``GateNotCalibratedError``
+does not exist yet.
 """
 
 from __future__ import annotations
 
 import typing
+from pathlib import Path
 
 import pytest
 
 from databasise.ledger.ledger import Ledger
 from databasise.seam.engine import Databasise
 from databasise.seam.promotion import _MEASUREMENT_POSTURE, PROMOTION_VERBS, MutationClass, PromotionVerb
-from databasise.seam.refusals import (
-    GateVerbNotBuiltError,
-    MeasurementPostureRefusalError,
-    UncalibratedFloorRefusalError,
-    UnrecognisedPromotionVerbError,
-)
+from databasise.seam.refusals import GateVerbNotBuiltError, UnrecognisedPromotionVerbError
 from databasise.seam.trace_store import TraceStore
 from databasise.wirings.resolve import all_wirings
+
+_ARM_NAMES = [name for name, _ in all_wirings()]
+_GATE_VERBS = ["promote-next", "promote-now"]
+_INVENTORY = Path(__file__).resolve().parents[3] / "docs" / "gui" / "API-INVENTORY.md"
 
 
 def _seed_trace(store_root, arm_name: str) -> str:
@@ -42,35 +48,81 @@ def _row_count(store_root) -> int:
     return Ledger(store_root)._conn.execute("SELECT COUNT(*) FROM ledger").fetchone()[0]
 
 
-async def test_promote_next_refuses_at_answer_level_naming_the_posture(store_root):
-    engine = _engine(store_root)
+def _no_ledger_files(store_root) -> bool:
+    return not any((store_root / name).exists() for name in ("ledger.db", "ledger.db-wal", "ledger.db-shm"))
+
+
+async def _refusal(engine, alias, trace_ids, verb, change_origin="human_edit"):
+    """The exception ``engine.promote`` raised, or ``None``."""
+    try:
+        await engine.promote(alias, trace_ids, change_origin, verb=verb)
+    except Exception as caught:  # noqa: BLE001 - the assertion is on the captured type
+        return caught
+    return None
+
+
+def _assert_gate_refusal(caught, verb) -> None:
+    assert type(caught).__name__ == "GateNotCalibratedError", f"{verb}: {type(caught).__name__}: {caught}"
+    assert caught.verb == verb
+
+
+@pytest.mark.parametrize("verb", _GATE_VERBS)
+@pytest.mark.parametrize("arm", _ARM_NAMES)
+async def test_gate_verbs_are_refused_up_front_for_every_arm(store_root, arm, verb):
+    """LEDG-08 (D-04): one refusal for every arm, before any ledger access."""
+    trace_id = _seed_trace(store_root, arm)
+
+    caught = await _refusal(_engine(store_root), "fresh-alias", [trace_id], verb)
+
+    _assert_gate_refusal(caught, verb)
+    # The message carries the verb and nothing else: rebuilding the refusal from the verb alone
+    # gives the same text, so no arm, class or posture can differ between arms.
+    assert str(caught) == str(type(caught)(verb=verb))
+    assert _no_ledger_files(store_root), "a refused gate verb created ledger.db"
+
+
+@pytest.mark.parametrize("verb", _GATE_VERBS)
+async def test_a_gate_verb_with_an_invalid_alias_is_refused_as_not_calibrated(store_root, verb):
+    """The documented order: the gate refusal comes before alias validation."""
+    caught = await _refusal(_engine(store_root), "", [_seed_trace(store_root, "naive")], verb)
+
+    _assert_gate_refusal(caught, verb)
+    assert _no_ledger_files(store_root)
+
+
+@pytest.mark.parametrize("verb", _GATE_VERBS)
+async def test_a_gate_verb_with_an_unresolvable_trace_is_refused_as_not_calibrated(store_root, verb):
+    caught = await _refusal(_engine(store_root), "fresh-alias", ["no-such-trace"], verb, change_origin=None)
+
+    _assert_gate_refusal(caught, verb)
+    assert _no_ledger_files(store_root)
+
+
+def test_the_inventory_states_the_gate_refusal():
+    text = _INVENTORY.read_text()
+    section = text[text.index("#### 3.5.1 POST /promote") : text.index("#### 3.5.2 POST /rollback")]
+
+    assert "GateNotCalibratedError" in section
+    assert "UncalibratedFloorRefusalError" not in section
+
+
+async def test_a_pure_answer_level_first_promotion_is_refused_up_front(store_root):
     # bypass's only node is "generate" -> a pure answer-level first promotion.
-    trace_id = _seed_trace(store_root, "bypass")
+    caught = await _refusal(_engine(store_root), "fresh-alias-answer", [_seed_trace(store_root, "bypass")], "promote-next")
 
-    with pytest.raises(MeasurementPostureRefusalError) as exc_info:
-        await engine.promote("fresh-alias-answer", [trace_id], "human_edit", verb="promote-next")
-
-    message = str(exc_info.value)
-    assert "answer-level" in message
-    assert "F3.2" in message
-    assert _row_count(store_root) == 0
+    _assert_gate_refusal(caught, "promote-next")
+    assert _no_ledger_files(store_root)
 
 
-async def test_promote_now_refuses_at_index_side_naming_the_posture(store_root):
-    engine = _engine(store_root)
+async def test_a_pure_index_side_first_promotion_is_refused_up_front(store_root):
     # naive includes embedder-index (an index-recipe node) -> a pure index-side first promotion.
-    trace_id = _seed_trace(store_root, "naive")
+    caught = await _refusal(_engine(store_root), "fresh-alias-index", [_seed_trace(store_root, "naive")], "promote-now")
 
-    with pytest.raises(MeasurementPostureRefusalError) as exc_info:
-        await engine.promote("fresh-alias-index", [trace_id], "human_edit", verb="promote-now")
-
-    message = str(exc_info.value)
-    assert "index-side" in message
-    assert "F3.2" in message
-    assert _row_count(store_root) == 0
+    _assert_gate_refusal(caught, "promote-now")
+    assert _no_ledger_files(store_root)
 
 
-async def test_promote_next_refuses_at_retrieval_side_naming_the_missing_floor(store_root):
+async def test_a_retrieval_side_change_is_refused_up_front_and_appends_nothing(store_root):
     engine = _engine(store_root)
     trace_hybrid = _seed_trace(store_root, "hybrid")
     trace_local = _seed_trace(store_root, "local")
@@ -79,14 +131,10 @@ async def test_promote_next_refuses_at_retrieval_side_naming_the_missing_floor(s
     await engine.promote("floor-alias", [trace_hybrid], "human_edit")
     before = _row_count(store_root)
 
-    # hybrid -> local differs only in retrieval nodes -> retrieval-side, on by default, but no
-    # calibrated A/A floor exists.
-    with pytest.raises(UncalibratedFloorRefusalError) as exc_info:
-        await engine.promote("floor-alias", [trace_local], "human_edit", verb="promote-next")
+    # hybrid -> local differs only in retrieval nodes (retrieval-side), yet the gate is still refused.
+    caught = await _refusal(engine, "floor-alias", [trace_local], "promote-next")
 
-    message = str(exc_info.value)
-    assert "retrieval-side" in message
-    assert "AA.2" in message
+    _assert_gate_refusal(caught, "promote-next")
     assert _row_count(store_root) == before
 
 
@@ -121,15 +169,17 @@ async def test_no_gate_verb_appends_a_row(store_root):
         ("promote-next", "floor-alias", trace_local),
     ]
     for verb, alias, trace_id in attempts:
-        with pytest.raises((GateVerbNotBuiltError, MeasurementPostureRefusalError, UncalibratedFloorRefusalError)):
-            await engine.promote(alias, [trace_id], "human_edit", verb=verb)
+        caught = await _refusal(engine, alias, [trace_id], verb)
+        assert type(caught).__name__ in {"GateVerbNotBuiltError", "GateNotCalibratedError"}, (
+            f"{verb}: {type(caught).__name__}: {caught}"
+        )
 
     assert _row_count(store_root) == before
 
 
-async def test_posture_is_not_flippable_at_runtime(store_root, monkeypatch):
-    """Every plausible flag name a future reader might wire the posture constant to — none of
-    them changes which class refuses (D-11)."""
+async def test_the_gate_stays_refused_when_the_posture_constant_or_environment_changes(store_root, monkeypatch):
+    """No plausible flag name changes the outcome (D-11), and flipping any class of the posture
+    constant does not lift the up-front refusal either: only TOOL-12 lifts it."""
     for env_name in (
         "DATABASISE_MEASUREMENT_POSTURE",
         "MEASUREMENT_POSTURE",
@@ -141,8 +191,12 @@ async def test_posture_is_not_flippable_at_runtime(store_root, monkeypatch):
     engine = _engine(store_root)
     trace_id = _seed_trace(store_root, "bypass")
 
-    with pytest.raises(MeasurementPostureRefusalError):
-        await engine.promote("fresh-alias-env", [trace_id], "human_edit", verb="promote-next")
+    for flipped in (True, False):
+        for mutation_class in _MEASUREMENT_POSTURE:
+            monkeypatch.setitem(_MEASUREMENT_POSTURE, mutation_class, flipped)
+        for verb in _GATE_VERBS:
+            _assert_gate_refusal(await _refusal(engine, "fresh-alias-env", [trace_id], verb), verb)
+    assert _no_ledger_files(store_root)
 
 
 def test_posture_constant_is_exactly_rig_f3_2():
