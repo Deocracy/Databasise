@@ -1,5 +1,5 @@
 {
-  "ledger_version": 710,
+  "ledger_version": 726,
   "frozen_at": null,
   "items": [
     {
@@ -1419,7 +1419,7 @@
     {
       "id": "LEDG-01",
       "text": "POST /promote, /rollback and /retire, and the MCP promote, rollback and retire tools, never return HTTP 500 or MCP UnexpectedToolError, and never raise AssertionError from promotion._arm_name_for_node_ids, when given a trace token from a partial run. A partial run is one whose RunRecord.nodes is a strict subset of every wiring's node set: for example, a LightRAG run with clients=None traced as ...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/seam/test_partial_run_evidence.py",
       "code_ref": "databasise/seam/promotion.py",
@@ -1433,7 +1433,7 @@
     {
       "id": "LEDG-02",
       "text": "promote() refuses with a named 422 refusal any trace whose resolved record has partial=true, and writes no ledger row. This includes a one-node bypass run whose only node failed with NodeExecutionError, because that run has a complete node set but partial=true. A trace with partial=false is still promoted as before.",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/seam/test_promote_refuses_partial.py",
       "code_ref": "databasise/seam/promotion.py",
@@ -1447,7 +1447,7 @@
     {
       "id": "LEDG-03",
       "text": "An alias whose active ledger row has mutation_id='hipporag' never produces HTTP 500 or MCP UnexpectedToolError. This applies to every selector-taking operation that uses {alias: <that alias>}: POST /query, /query/stream, /compare, /documents, /documents/upload, DELETE /documents/{id}, and the matching MCP tools. Each returns either a normal result or a named 422 refusal. An alias whose active r...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/seam/test_alias_resolution.py",
       "code_ref": "databasise/seam/selectors.py",
@@ -1461,7 +1461,7 @@
     {
       "id": "LEDG-04",
       "text": "retire(alias, V) returns 422 ActiveGenerationRetirementError and appends no tombstone when the alias's active record is a rollback whose targets_version equals V. The reproducing sequence is: promote naive -> 1.0.0, promote hybrid -> 2.0.0, rollback to 1.0.0 -> 3.0.0, retire 1.0.0. After the fix, an alias never keeps serving a wiring whose generation is tombstoned.",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/seam/test_retire_lineage.py",
       "code_ref": "databasise/seam/engine.py",
@@ -1475,7 +1475,7 @@
     {
       "id": "LEDG-05",
       "text": "promote, rollback and retire (engine, REST and MCP) refuse, with a named 422 refusal and no ledger row written, an empty alias and any alias value that the \u00a718.4 Selector refuses at construction. The refused values are those matched by selectors._no_instance_hash_shaped_values, which covers 64-hex values and 'sha256:'+64-hex values. As a result, every alias that has a ledger generation can be s...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/seam/test_operator_alias_validation.py",
       "code_ref": "databasise/seam/engine.py",
@@ -1489,7 +1489,7 @@
     {
       "id": "LEDG-06",
       "text": "Ledger connections are closed deterministically, and refused verbs leave the filesystem unchanged. (a) Ledger provides close() and context-manager use, and selectors._resolve_alias and every engine verb close their connection, so N alias-selected queries leave no open sqlite connection to ledger.db. (b) On a fresh store_root, a refused promote-next or promote-now, and a rollback or retire refus...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/ledger/test_ledger_lifecycle.py",
       "code_ref": "databasise/seam/engine.py",
@@ -1503,7 +1503,7 @@
     {
       "id": "LEDG-07",
       "text": "The ledger exposes an alias-keyed read, for example Ledger.history_for_alias(alias). It returns every row for that alias, oldest first. Each row includes id (the generation ordinal), created_at, minted_version, targets_version, record_kind and mutation_id. The existing arm-keyed history(mutation_id) is either removed or kept as test-only and documented as such.",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/ledger/test_ledger_history.py",
       "code_ref": "databasise/ledger/ledger.py",
@@ -1517,7 +1517,7 @@
     {
       "id": "LEDG-08",
       "text": "The gate verbs promote-next and promote-now are refused before any ledger access, with one named refusal stating that the gate is not calibrated. The refusal is the same for every arm and does not depend on the derived mutation class. docs/gui/API-INVENTORY.md section 3.5.1 states that refusal as the outcome of a first promotion; it currently states UncalibratedFloorRefusalError. Persisting a c...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/seam/test_promotion_posture.py::test_gate_verbs_are_refused_up_front_for_every_arm",
       "code_ref": "databasise/seam/engine.py",
@@ -1531,7 +1531,7 @@
     {
       "id": "LEDG-09",
       "text": "POST /trace/resolve and the MCP trace tool accept debug only as a JSON boolean. A debug value that is a string ('yes', 'true', '1') or a number returns a 422 validation error (MCP: a validation error) and does not return run_id, wiring_id, wiring_instance_hash, arm_id or nodes. Trace tokens and aliases are isolated according to the owner's tenancy decision G-35. Either trace.db and ledger.db ro...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/seam/test_trace_resolve_strict_flag.py",
       "code_ref": "databasise/seam/rest.py",
@@ -1545,7 +1545,7 @@
     {
       "id": "LEDG-10",
       "text": "Capability selection matches on the effects that the selected wiring actually exercises for the operation, not on the registered Part's maximal effects. On the query path, selector {capability:['writes_artifact']} does not select naive, and the capabilities writes_graph, writes_vector and writes_kv do not select hipporag. Capability selections on read-side effects return the same candidates as ...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/seam/test_capability_effects.py",
       "code_ref": "databasise/seam/selectors.py",
@@ -1559,7 +1559,7 @@
     {
       "id": "LEDG-11",
       "text": "Wiring validation rejects a wiring node whose kind differs from the registered Part.kind for its part reference. It raises a named validation error that names the node id, the wiring's kind and the part's kind. All shipped wirings still validate.",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/validator/test_node_kind.py",
       "code_ref": "databasise/validator/parse.py",
@@ -1573,7 +1573,7 @@
     {
       "id": "LEDG-12",
       "text": "default_registry() contains no admitted part that no selector can reach. codebase-memory-mcp@0.1.0 is either made reachable, meaning its wiring is listed in WIRING_NAMES and all_wirings() and wiring_family({'wiring_id':'codebase-memory-mcp'}) returns a family, or it is removed from default_registry().",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/parts/test_registry_reachability.py",
       "code_ref": "databasise/parts/registry.py",
@@ -1587,7 +1587,7 @@
     {
       "id": "LEDG-13",
       "text": "The corpus wiring path layout is defined in one place. engine._corpus_wiring loads through wirings.resolve.load_wiring(family, variant='corpus-<operation>'). A family with no corpus wiring file still raises NoWritePathForModalityError (422), not FileNotFoundError.",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
       "test_ref": "databasise/tests/seam/test_corpus_wiring.py",
       "code_ref": "databasise/seam/engine.py",
@@ -1601,10 +1601,10 @@
     {
       "id": "LEDG-14",
       "text": "Registry, ledger and selector docstrings match current behaviour. The selectors.py module docstring (lines 32-36) and the _resolve_alias docstring no longer say the registry is empty or that every lookup refuses. The ledger.py scope fence (lines 17-21) no longer excludes change_origin and record_kind. The parts/registry.py docstrings no longer state a fixed part count or 'seven Phase-1 entries'...",
-      "status": "open",
+      "status": "done",
       "spec_ref": ".planning/REQUIREMENTS.md",
-      "test_ref": "",
-      "code_ref": "",
+      "test_ref": "databasise/tests/test_docstring_currency.py",
+      "code_ref": "databasise/parts/registry.py",
       "evidence": "",
       "owner": "",
       "phase": "14",
