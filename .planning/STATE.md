@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 15
 current_phase_name: Offline Tooling & Packaging
 status: executing
-stopped_at: Completed 15-17-PLAN.md
-last_updated: "2026-10-21T22:56:02.906Z"
+stopped_at: Completed 15-18-PLAN.md
+last_updated: "2026-10-21T23:34:55.763Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 14 complete, transitioned to Phase 15
-state_head: a0090bad1d86194464422104242f2b33292e8214
+state_head: fbaf30e3d12b32750863f5502f7ef41453cb20b7
 progress:
   total_phases: 11
   completed_phases: 7
   total_plans: 100
-  completed_plans: 99
+  completed_plans: 100
   percent: 64
 ---
 
@@ -152,6 +152,7 @@ Progress: [██████░░░░] 64% (4/11 phases)
 | Phase 15 P13 | 25min | 3 tasks | 3 files |
 | Phase 15 P14 | 30min | 3 tasks | 2 files |
 | Phase 15 P17 | 45min | 3 tasks | 14 files |
+| Phase 15 P18 | 75min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -257,6 +258,8 @@ Recent decisions affecting current work:
 - [Phase 15]: 15-08: human-findings validation runs inside load_human_findings so check_results, _collect_deviations and the spot-check renderer share one validator
 - [Phase 15]: 15-09: import_index parser defaults are None, resolved at call time so the store-lock test's module patch applies; non-verified result still exits 1
 - [Phase 15]: 15-12: v1_arm.main is estimate-only without --spend; only failure_reason no_results is an empty retrieval, every other v1 failure raises V1QueryFailedError
+- [Phase 15]: 15-18 (SC2): v1_arm.main gained the estimate-only default by planner decision; all nine spending CLIs now share it (D-04), and the TOOL-05 row text is read as covering every one of them
+- [Phase 15]: 15-18: the codebase-memory-mcp launch timeout bound is timeout + 4 s (SDK teardown), not the bare timeout (TOOL-18)
 
 ### Pending Todos
 
@@ -284,6 +287,7 @@ None yet.
 - [Phase 13] D-14: NodeTrace.cache_hit is null unless a part reports it, so eval/calibration.py now refuses real-engine A/A calibration (UnusableFloorError); this is TOOL-12's intent (Phase 15).
 - [Phase 14] Phase 16 text to amend before Phase 16 is planned (REQUIREMENTS.md not edited in Phase 14): CONN-09 preview refuses on partial only, not "partial or degraded", reports the gate reason as GateNotCalibratedError, and calls seam.promotion.refuse_partial_evidence (D-03, D-04); CONN-07 active uses Ledger.lineage (D-06); CONN-05 drops the claim that all five LightRAG arms share lightrag-base (each arm has its own wiring_id since Phase 13 D-03) and gives hipporag 14 full nodes (7 on the query run), not 13.
 - [Phase 14] D-01: a rollback or retire row may cite a partial or failed run's trace; the Phase 17/18 console should label such evidence.
+- [Phase 15] Recorded limits: (1) no project LICENSE while the wheel ships HotpotQA fixture text under CC BY-SA 4.0 (Deferred). (2) From an installed wheel, `remint --spend` and `.comparison_results` would write into site-packages; the estimate-only default and the source-checkout docstrings cover it. (3) The committed `parity_results/*.json` carry the old `run_count` meaning; re-running them needs spend. (4) The packaging test skips on a cold uv cache, and a skip is not a pass (it ran and passed in the 15-18 gate). (5) No production part reports `cache_hit`, so no real floor exists yet, and only an engine started on the eval store root reads floors (`aa_run --spend` is still refused with `UnusableFloorError` after both passes). (6) The cbm launch timeout bound is timeout + 4 s. (7) The TOOL-05 row text is read as covering every spending CLI. (8) The orchestrator still owes the ledger steps for TOOL-01..TOOL-20 (test_ref, record-fail --at, plant runs); no executor ran `scripts/ledger-amend.py`.
 - Cozo 0.7.6 is architecture-frozen with four known correctness bugs and no upstream fixes expected; relevant to STOR-01 and STOR-10 (Phase 10).
 
 ### Quick Tasks Completed
@@ -313,8 +317,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-21T22:56:02.462Z
-Stopped at: Completed 15-17-PLAN.md
+Last session: 2026-10-21T23:34:55.346Z
+Stopped at: Completed 15-18-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
