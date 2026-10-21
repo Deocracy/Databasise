@@ -35,10 +35,12 @@ from __future__ import annotations
 import argparse
 import asyncio
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
 from databasise.clients import CLIENT_EFFECT_TO_KEY
+from databasise import cli
 from databasise.clients.builder import BUILDER_REFUSALS
 from databasise.parity import import_index
 from databasise.parity import run_arm as _run_arm
@@ -46,7 +48,6 @@ from databasise.parity.import_index import DEFAULT_STORE_ROOT
 from databasise.parts.registry import PartRegistry, default_registry
 from databasise.parts_core import EFFECT_TO_STORE
 from databasise.runner import scheduler as _scheduler
-from databasise.runner.scheduler import TouchRecorder
 from databasise.store_lock import StoreLockedError, store_lock
 from databasise.validator.parse import ParsedWiring, parse_wiring
 from databasise.wirings.resolve import all_wirings
@@ -76,7 +77,7 @@ class AuditRow:
     component: str
     declared_effects: tuple[str, ...]
     touched: tuple[str, ...]
-    state: str  # "matched" | "no-touch" | "over-declared"
+    state: str  # "matched" | "no-touch" | "over-declared" | "unreached"
     unused_effects: tuple[str, ...]  # non-empty only when state == "over-declared"
 
 
@@ -104,7 +105,10 @@ def _handle_str(handle: tuple[str, str]) -> str:
 
 
 def audit_run(
-    parsed: ParsedWiring, touches: list[tuple[str, str, str]]
+    parsed: ParsedWiring,
+    touches: list[tuple[str, str, str]],
+    *,
+    statuses: Mapping[str, str] | None = None,
 ) -> tuple[list[AuditRow], list[Violation]]:
     """Cross-check every node in ``parsed.node_order`` against the touches a
     :data:`~databasise.runner.scheduler.TouchRecorder` collected during one real run.
@@ -116,6 +120,10 @@ def audit_run(
     touched is ``over-declared``, naming the unused ones. A touch outside the node's own declared
     handles cannot occur through the real scheduler path (proven separately, see module
     docstring) but is still checked for defensively and reported as a :class:`Violation`.
+
+    ``statuses`` maps node id to its trace status: a node the scheduler never dispatched
+    (``not-scheduled``, e.g. after a budget halt) is ``unreached`` whatever it declares — it did not
+    run, so "no touch" would misreport it as a node that ran and ignored its handles (D-09).
     """
     touched_by_node: dict[str, set[tuple[str, str]]] = {}
     for node_id, kind, key in touches:
@@ -132,7 +140,9 @@ def audit_run(
         for handle in sorted(undeclared):
             violations.append(Violation(node_id, _handle_str(handle)))
 
-        if not declared:
+        if statuses is not None and statuses.get(node_id) == "not-scheduled":
+            state, unused = "unreached", frozenset()
+        elif not declared:
             state, unused = "matched", frozenset()
         elif not touched:
             state, unused = "no-touch", frozenset()
@@ -214,11 +224,15 @@ async def run_audit(
     if "cycle" in scheduled:
         return {"cycle": scheduled["cycle"], "rows": [], "violations": [], "partial": False}
 
-    rows, violations = audit_run(parsed, touches)
+    statuses = {trace.node_id: trace.status for trace in scheduled["nodes"]}
+    rows, violations = audit_run(parsed, touches, statuses=statuses)
     return {
         "rows": rows,
         "violations": violations,
         "partial": scheduled["partial"],
+        "stop_reason": scheduled.get("stop_reason"),
+        "degraded": scheduled.get("degraded", False),
+        "degradation_reason": scheduled.get("degradation_reason"),
         "store_namespaces": dict(resolved.get("store_namespaces") or {}),
     }
 
@@ -232,12 +246,13 @@ def _render_row(row: AuditRow) -> str:
 
 
 def _render_summary(rows: list[AuditRow]) -> str:
-    counts = {"matched": 0, "no-touch": 0, "over-declared": 0}
+    counts = {"matched": 0, "no-touch": 0, "over-declared": 0, "unreached": 0}
     for row in rows:
         counts[row.state] += 1
     return (
         f"summary: {len(rows)} node(s) — matched={counts['matched']} "
-        f"no-touch={counts['no-touch']} over-declared={counts['over-declared']}"
+        f"no-touch={counts['no-touch']} over-declared={counts['over-declared']} "
+        f"unreached={counts['unreached']}"
     )
 
 
@@ -259,6 +274,10 @@ def main(argv: list[str] | None = None) -> int:
         print(str(exc), file=sys.stderr)
         return 1
 
+    if result.get("cycle"):
+        print(f"cycle: {result['cycle']}")
+        return cli.EXIT_INCONCLUSIVE
+
     namespaces = result.get("store_namespaces")
     if namespaces:
         print("store_namespaces: " + " ".join(f"{k}={v}" for k, v in sorted(namespaces.items())))
@@ -273,6 +292,11 @@ def main(argv: list[str] | None = None) -> int:
         for v in violations:
             print(f"VIOLATION: {v.node_id}: {v.reference}")
         return 1
+    if result.get("degraded"):
+        print(f"degraded: {result.get('degradation_reason')}")
+    if result.get("partial"):
+        print(f"partial: {result.get('stop_reason')}")
+        return cli.EXIT_INCONCLUSIVE
     return 0
 
 

@@ -385,7 +385,8 @@ async def test_naive_arm_audit_report_matches_the_summary_line(synthetic_naive_s
 # --------------------------------------------------------------------------------------------- #
 
 
-def test_main_prints_one_row_per_node_and_a_three_way_summary_line(monkeypatch, capsys):
+def test_main_prints_one_row_per_node_and_a_three_way_summary_line(monkeypatch, tmp_path, capsys):
+    _isolate_audit_paths(monkeypatch, tmp_path)
     fake_rows = [
         storage_audit.AuditRow(
             node_id="a", component="x@0.1.0", declared_effects=("reads_kv",),
@@ -406,7 +407,7 @@ def test_main_prints_one_row_per_node_and_a_three_way_summary_line(monkeypatch, 
 
     monkeypatch.setattr(storage_audit, "run_audit", fake_run_audit)
 
-    status = storage_audit.main(["--arm", "naive"])
+    status = storage_audit.main(["--arm", "naive", "--spend"])
     captured = capsys.readouterr()
 
     assert status == 0
@@ -418,7 +419,8 @@ def test_main_prints_one_row_per_node_and_a_three_way_summary_line(monkeypatch, 
     assert "over-declared=1" in captured.out
 
 
-def test_main_exits_1_and_prints_every_violation_when_any_exist(monkeypatch, capsys):
+def test_main_exits_1_and_prints_every_violation_when_any_exist(monkeypatch, tmp_path, capsys):
+    _isolate_audit_paths(monkeypatch, tmp_path)
     async def fake_run_audit(arm_name, query, **kwargs):
         return {
             "rows": [],
@@ -428,7 +430,7 @@ def test_main_exits_1_and_prints_every_violation_when_any_exist(monkeypatch, cap
 
     monkeypatch.setattr(storage_audit, "run_audit", fake_run_audit)
 
-    status = storage_audit.main(["--arm", "naive"])
+    status = storage_audit.main(["--arm", "naive", "--spend"])
     captured = capsys.readouterr()
 
     assert status == 1
@@ -457,7 +459,7 @@ def _isolate_audit_paths(monkeypatch, tmp_path):
 def test_tool08_storage_audit_audits_the_hipporag_arm(monkeypatch, tmp_path, capsys):
     from databasise.parity import run_arm as run_arm_module
 
-    root, _ = _isolate_audit_paths(monkeypatch, tmp_path)
+    _isolate_audit_paths(monkeypatch, tmp_path)
     stub_env = tmp_path / "stub.env.parity"
     stub_env.write_text("", encoding="utf-8")
     monkeypatch.setattr(run_arm_module, "DEFAULT_V1_ENV_PARITY", stub_env)
@@ -471,7 +473,7 @@ def test_tool08_storage_audit_audits_the_hipporag_arm(monkeypatch, tmp_path, cap
     status = None
     try:
         status = storage_audit.main(["--arm", "hipporag", "--spend"])
-    except BaseException as exc:  # argparse raises SystemExit before the fix
+    except BaseException as exc:  # noqa: BLE001 - argparse raises SystemExit before the fix
         caught = exc
     out = capsys.readouterr().out
 
@@ -503,8 +505,77 @@ def test_tool08_run_arm_accepts_hipporag(monkeypatch, tmp_path):
     caught = None
     try:
         run_arm_module.main(["--arm", "hipporag", "--query", "q", "--spend"])
-    except BaseException as exc:
+    except BaseException as exc:  # noqa: BLE001
         caught = exc
 
     assert caught is None, f"run_arm refused hipporag: {type(caught).__name__} {getattr(caught, 'code', None)}"
     assert calls == ["hipporag"]
+
+
+def _unreached_row(node_id: str):
+    return storage_audit.AuditRow(
+        node_id=node_id, component="x@0.1.0", declared_effects=("reads_kv",),
+        touched=(), state="unreached", unused_effects=(),
+    )
+
+
+def test_tool08_a_budget_halted_run_exits_three_and_marks_unreached_nodes(monkeypatch, tmp_path, capsys):
+    _isolate_audit_paths(monkeypatch, tmp_path)
+
+    async def fake_run_audit(arm_name, query, **kwargs):
+        return {
+            "rows": [_unreached_row("late-a"), _unreached_row("late-b")],
+            "violations": [],
+            "partial": True,
+            "stop_reason": "budget-halt",
+        }
+
+    monkeypatch.setattr(storage_audit, "run_audit", fake_run_audit)
+
+    caught = None
+    status = None
+    try:
+        status = storage_audit.main(["--arm", "naive", "--spend"])
+    except Exception as exc:  # noqa: BLE001 - the pre-fix summary raises KeyError on the new state
+        caught = exc
+    out = capsys.readouterr().out
+
+    assert caught is None, f"main raised {type(caught).__name__}: {caught}"
+    assert status == 3
+    assert "partial" in out
+    assert out.count("state=unreached") == 2
+    assert "unreached=2" in out
+
+
+def test_tool08_a_cyclic_wiring_exits_three_with_cycle(monkeypatch, tmp_path, capsys):
+    _isolate_audit_paths(monkeypatch, tmp_path)
+
+    async def fake_run_audit(arm_name, query, **kwargs):
+        return {"cycle": [["a", "b"]], "rows": [], "violations": [], "partial": False}
+
+    monkeypatch.setattr(storage_audit, "run_audit", fake_run_audit)
+
+    status = storage_audit.main(["--arm", "naive", "--spend"])
+    out = capsys.readouterr().out
+
+    assert status == 3
+    assert "cycle" in out
+
+
+def test_tool08_audit_run_marks_a_not_scheduled_node_unreached_never_no_touch():
+    parsed = _parsed({"ran": ["reads_kv"], "never-ran": ["reads_kv"]})
+    try:
+        rows, _ = storage_audit.audit_run(
+            parsed, [("ran", "store", "kv")], statuses={"ran": "completed", "never-ran": "not-scheduled"}
+        )
+    except TypeError as caught:
+        rows = None
+        assert rows is not None, f"audit_run takes no statuses: {caught}"
+    states = {row.node_id: row.state for row in rows}
+    assert states == {"ran": "matched", "never-ran": "unreached"}
+
+
+def test_audit_run_still_accepts_two_arguments():
+    rows, violations = storage_audit.audit_run(_parsed({"n1": ["reads_kv"]}), [])
+    assert violations == []
+    assert rows[0].state == "no-touch"
