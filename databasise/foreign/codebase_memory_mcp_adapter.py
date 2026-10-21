@@ -212,6 +212,9 @@ async def _run_with_session(binary: str | None, tool_name: str, timeout: float, 
     """Shared lifecycle for :func:`list_tools`/:func:`call_tool`: resolve the binary, launch it
     over stdio, complete the handshake, run ``call(session)`` under ``timeout``, and terminate —
     always, on both the success and the failure path (module docstring's ``stdio_client`` note).
+    A :class:`CbmToolCallError` or :class:`UntypedForeignItemError` raised by ``call`` is unwrapped
+    from anyio's exception group and re-raised under its own name; a timeout becomes
+    :class:`CbmToolTimeoutError`; everything else is a :class:`CbmTransportError`.
 
     Imports ``anyio``/``mcp`` lazily (module docstring's own note): only reaching this function —
     an actual call, never merely importing this module or registering the Part — requires the
@@ -246,6 +249,10 @@ async def _run_with_session(binary: str | None, tool_name: str, timeout: float, 
         raise
     except BaseException as exc:  # noqa: BLE001 — unwrapped and re-raised by name immediately below
         unwrapped = _unwrap(exc)
+        # A tool refusal raised inside `call` reaches here wrapped in anyio's exception group;
+        # re-raise it by its own name, never as a transport fault (TOOL-18, D-19).
+        if isinstance(unwrapped, (CbmToolCallError, UntypedForeignItemError)):
+            raise unwrapped from exc
         if isinstance(unwrapped, TimeoutError):
             raise CbmToolTimeoutError(tool_name, timeout) from exc
         raise CbmTransportError(
