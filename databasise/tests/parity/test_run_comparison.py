@@ -180,3 +180,44 @@ def test_an_inconclusive_record_exits_three(rig, monkeypatch):
     monkeypatch.setattr(rc, "_run_cli", _run_cli)
 
     assert _main(["--arm", "naive", "--spend"]) == 3
+
+
+# --------------------------------------------------------------------------------------------- #
+# Task 2: the preflight checks the v1 arm's own index, the guard runs first, run_count is true
+# --------------------------------------------------------------------------------------------- #
+
+
+async def test_the_preflight_sees_the_v1_working_dir_override(rig, tmp_path):
+    v1_dir = tmp_path / "v1dir"
+
+    await _compare(rig, v1_working_dir=v1_dir)
+
+    assert [call.get("v1_working_dir") for call in rig.verify_calls] == [v1_dir]
+    assert [call.get("working_dir") for call in rig.v1_calls] == [v1_dir]
+
+
+@pytest.mark.parametrize("runs", [0, 1])
+async def test_a_single_variance_run_is_refused_before_any_llm_call(rig, runs):
+    outcome = await _captured(_compare(rig, arm="hybrid", keyword_variance_runs=runs))
+
+    assert type(outcome).__name__ == "InsufficientVarianceRunsError"
+    assert rig.kw_calls == 0
+    assert rig.verify_calls == []
+    assert rig.v1_calls == []
+
+
+@pytest.mark.parametrize("arm", ["naive", "bypass"])
+async def test_a_completed_naive_or_bypass_record_has_a_non_zero_run_count(rig, arm):
+    record = await _compare(rig, arm=arm)
+
+    assert record.status == "completed"
+    assert record.run_count == 2  # the decomposed run and the v1 run
+
+
+async def test_decomposed_stores_are_built_from_the_resolved_wiring(rig):
+    await _compare(rig)
+
+    assert len(rig.build_calls) == 1
+    resolved = rig.build_calls[0]
+    assert isinstance(resolved, dict)
+    assert "nodes" in resolved

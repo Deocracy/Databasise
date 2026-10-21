@@ -106,6 +106,11 @@ _DEFAULT_KEYWORD_VARIANCE_RUNS = 5
 VerifyImportFn = Callable[..., Awaitable["import_index.VerificationResult"]]
 
 
+class InsufficientVarianceRunsError(ValueError):
+    """``keyword_variance_runs < 2``: refused up front, before the preflight and before any LLM call,
+    so the live pinning and band calls are never spent on a band that cannot be computed (TOOL-06)."""
+
+
 class SingleRunBandError(ValueError):
     """A variance band over fewer than two runs is not a band (criterion 2 / PITFALLS 2) — the
     harness refuses to compute one rather than reporting a zero-width band.
@@ -357,7 +362,7 @@ async def _run_decomposed_arm(
     stores: dict[str, Any] = {}
     try:
         # Phase 10 review WR-09 (D-04): built inside the try, so a failed open finalizes what opened.
-        stores = _build_stores(store_root, workspace, into=stores)
+        stores = _build_stores(store_root, workspace, resolved, into=stores)
         scheduled = await _scheduler.run_wiring(
             parsed,
             registry,
@@ -543,8 +548,14 @@ async def compare_arm_on_query(
     ``status="inconclusive"`` record with no comparison number if the index-identity precondition
     (plan 03-02's verifier) has not passed — this check runs first, before either arm is touched.
     """
+    if keyword_variance_runs < 2:
+        raise InsufficientVarianceRunsError(
+            f"keyword_variance_runs must be at least 2, got {keyword_variance_runs} — a single run is "
+            "not a variance band (criterion 2 / PITFALLS 2)"
+        )
     verify_fn = verify_fn or import_index.verify_import
-    verify_kwargs: dict[str, Any] = {}
+    resolved_v1_working_dir = v1_working_dir or DEFAULT_V1_WORKING_DIR
+    verify_kwargs: dict[str, Any] = {"v1_working_dir": resolved_v1_working_dir}
     if store_root is not None:
         verify_kwargs["store_root"] = store_root
     if workspace is not None:
@@ -627,7 +638,7 @@ async def compare_arm_on_query(
         ll_keywords=pinned_ll,
         interpreter=v1_interpreter,
         env_path=env_path,
-        working_dir=v1_working_dir or DEFAULT_V1_WORKING_DIR,
+        working_dir=resolved_v1_working_dir,
     )
 
     # A resolved arm with no chunk-source node (bypass: a single `generate` node, no retrieval at
@@ -661,7 +672,7 @@ async def compare_arm_on_query(
         corpus_hash=corpus_hash,
         determinism_setting=_DECOMPOSED_DETERMINISM_SETTING,
         concurrency_setting=_DECOMPOSED_CONCURRENCY_SETTING,
-        run_count=1 + keyword_variance_runs if has_keywords_node else 0,
+        run_count=2,  # the decomposed run and the v1 run; the band carries its own run_count
         pinned_keywords=pinned_keywords,
         keyword_variance_band=band,
         chunk_diff=chunk_diff,
