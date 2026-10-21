@@ -1,9 +1,9 @@
 """04-03-PLAN.md Task 2: the alias selector's read path against a real ``Ledger`` (D-12, FA-06).
 
 The "populated" cases below append a real ``LedgerRecord`` through ``Ledger.append`` and then
-resolve it — this is the test's own setup standing in for Phase 7's promote path, since Phase 7's
-real promote path does not exist yet. It is not evidence that promotion exists; it proves the read
-contract ``databasise/seam/selectors.py``'s module docstring names for Phase 7 to write to.
+resolve it. Promote, rollback and retire exist and write these rows; the tests append rows
+directly to isolate the read contract of ``databasise/seam/selectors.py``'s alias branch from the
+write verbs.
 """
 
 from __future__ import annotations

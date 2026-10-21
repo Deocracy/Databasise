@@ -83,15 +83,14 @@ class UnadmittedOpaquePartError(RuntimeError):
 
 class DeclarationOnlyPartError(RuntimeError):
     """Raised by :func:`dispatch` when a declaration-only Part (``body is None``) is dispatched.
-    D-04 ships these so Phase 2 has a registry to compute over without waiting on Phase 3 — a
-    ``None`` body MUST make the part un-executable, never a silent no-op.
+    A ``None`` body makes the part un-executable, never a silent no-op. No part in
+    :func:`default_registry` has one today; the refusal guards a registry built with such a part.
     """
 
     def __init__(self, name_at_version: str):
         self.name_at_version = name_at_version
         super().__init__(
-            f"{name_at_version!r} is a declaration-only Phase 1 entry with no body; "
-            "execution awaits its Phase 3 port"
+            f"{name_at_version!r} is a declaration-only part with no body; it cannot execute"
         )
 
 
@@ -134,8 +133,9 @@ class PartRegistry:
     """In-memory dict mapping ``name@version -> Part`` (D-13). Bare ``PartRegistry()`` keeps
     plan 01-02's tracer default (a passthrough and a kv-writer, unchanged — ``databasise``'s
     public ``run_wiring`` and the tracer fixture depend on it). Pass ``seed_tracer_parts=False``
-    for an empty registry, which is what :func:`default_registry` uses so it holds exactly
-    D-04's seven Phase-1 entries and nothing else.
+    for an empty registry, which is what :func:`default_registry` uses so it holds only the parts
+    it registers. ``keys()`` lists the contents; this docstring states no count, so it cannot go
+    stale when a part is added.
     """
 
     def __init__(self, *, seed_tracer_parts: bool = True) -> None:
@@ -197,9 +197,8 @@ class PartRegistry:
 
 async def dispatch(part: Part, ctx: NodeContext) -> Any:
     """Invoke ``part.body(ctx)``, refusing a declaration-only Part (``body is None``)
-    explicitly. This is the seam a later runner plan wires into the scheduler's own
-    node-dispatch call site (``databasise/runner/scheduler.py``, out of this plan's scope);
-    today it is exercised directly by ``tests/parts/test_registry.py``.
+    explicitly. ``databasise/runner/scheduler.py`` calls this for every node it runs, so the
+    refusal applies to every dispatched node.
     """
     if part.body is None:
         raise DeclarationOnlyPartError(part.name_at_version)
@@ -207,11 +206,10 @@ async def dispatch(part: Part, ctx: NodeContext) -> Any:
 
 
 def default_registry() -> PartRegistry:
-    """A registry preloaded with D-04's four executable ``parts_core`` reference parts, the two
-    remaining declaration-only Falsifier-2 wiring placeholders (03-08-PLAN.md Task 3 retired the
-    third, ``lightrag/query-side`` (version ``0.1.0``), once Phase 3 ported its real eighteen
-    positions), (03-04-PLAN.md Task 2 onward) the fifteen ported LightRAG parts, and
-    (06-01-PLAN.md) the tracer's five ported HippoRAG parts — no tracer-only parts.
+    """A registry preloaded with the ``parts_core`` reference parts, the parts of
+    ``parts_core/declared_only.py``, the ported LightRAG parts and the ported HippoRAG parts
+    (index-side and query-side) — no tracer-only parts. ``keys()`` on the result lists the
+    contents; no count is stated here.
     """
     # Local import: parts_core imports Part/Effect from parts.schema (not this module), so
     # importing it here keeps the registry/parts_core dependency direction one-way and obvious

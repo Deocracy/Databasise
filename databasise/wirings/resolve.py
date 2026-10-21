@@ -1,5 +1,10 @@
-"""Loads the committed LightRAG base wiring and applies a named arm's RFC 6902 patch, producing a
-plain resolved dict ready for ``databasise.validator.parse.parse_wiring`` (03-04-PLAN.md Task 2).
+"""Loads the committed wirings and resolves them to plain dicts ready for
+``databasise.validator.parse.parse_wiring``: the LightRAG base with a named arm's RFC 6902 patch
+applied (``resolve_arm``), every modality's base (``load_wiring``, over ``WIRING_NAMES``), the
+whole candidate pool the seam's selectors search (``all_wirings``), one wiring by name
+(``wiring_for_name``, which returns None on a miss), the query-run shape
+(``without_recipe_only_nodes``) and the modality a resolved wiring belongs to
+(``wiring_family``). Every arm and the base parse clean against ``default_registry()``.
 
 Uses ``jsonpatch`` (D-13) rather than a hand-written JSON-Pointer walker: CONTRACT depends on
 ``remove`` erroring on a missing target for its fail-closed subtraction guarantee — an arm patch
@@ -9,11 +14,8 @@ quietly wrong. ``jsonpatch.apply_patch`` already raises ``jsonpatch.JsonPatchCon
 ``remove`` whose target does not exist; this module does not swallow or reinterpret that.
 
 The base itself is also independently loadable with no arm applied (``load_base``) — CONTRACT
-requires the base be independently validatable. Note, though: parsing the *unpatched* base needs
-all fifteen new components registered (this plan's Task 2 only ports seven), so
-``parse_wiring(load_base(), default_registry())`` only clears cleanly once plan 03-06 lands. Until
-then, only the ``naive`` and ``bypass`` arms resolve to a fully-registered node set — every node
-either arm keeps is one of the seven this plan ports.
+requires the base be independently validatable; ``parse_wiring(load_base(), default_registry())``
+parses clean.
 """
 
 from __future__ import annotations
@@ -92,7 +94,7 @@ def _patch_path(arm_name: str) -> Path:
 
 def load_base() -> dict[str, Any]:
     """The committed base wiring, unpatched, as a plain dict — independently loadable per
-    CONTRACT (see module docstring for why it does not necessarily *parse* clean yet).
+    CONTRACT; it parses clean against ``default_registry()``.
     """
     return json.loads(_base_path().read_text(encoding="utf-8"))
 

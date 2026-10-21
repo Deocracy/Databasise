@@ -14,23 +14,23 @@ Append-only is enforced at the database level, not merely by omitting Python met
 ``BEFORE UPDATE``/``BEFORE DELETE`` triggers ``RAISE(ABORT, ...)`` for any mutation attempt
 against the ``ledger`` table, through any connection, not only through this module's own code.
 
-Scope fence (Phase 1 only stands the table and the projection up): this module does not implement
-the operator path, ``change_origin``, the tombstone-lifting prohibition, or the atomic alias
-repoint — those are MACH-07 and Phase 7's deliverables. Nothing in the runner calls ``append()``:
-running an arm MUST NOT append to the ledger (CONTRACT §6) — only a promotion does, and Phase 1
-does not exercise a real promotion.
+Scope: this module stores the table and the projections. The operator path lives in
+``databasise/seam/engine.py``: ``promote``, ``rollback`` and ``retire`` each append one row through
+``loop.run_in_executor``, and ``change_origin`` and ``record_kind`` are columns of that row. The
+runner never appends: running an arm MUST NOT append to the ledger (CONTRACT §6); only an operator
+verb does.
 
 **``alias`` column (04-03-PLAN.md checkpoint, answer ``dedicated-alias-column``).** A small,
 additive ``alias TEXT`` column, distinct from ``mutation_id``: the ledger is append-only, enforced
 by the ``BEFORE UPDATE``/``BEFORE DELETE`` triggers below, so a field carrying two meanings (a
 mutation's own identity, and a separate public handle a consumer might name) could never be
-disentangled once Phase 7 writes the first real row under whatever shape this module reads. The
-seam's alias selector (``databasise.seam.selectors._resolve_alias``) reads it via
-:meth:`Ledger.by_alias`, itself a derived projection exactly like :meth:`active_pointer` — never
-an independently-writable "current alias" column. The registry is empty until Phase 7's promote
-path appends the first row naming both ``alias`` (the promoted alias string) and ``mutation_id``
-(the identifier of the promoted wiring/arm) on the same record; every alias lookup against an
-empty or non-matching registry refuses, cleanly and identically, per D-12/FA-06.
+disentangled once real rows exist under whatever shape this module reads. The seam's alias
+selector (``databasise.seam.selectors._resolve_alias``) reads it via :meth:`Ledger.by_alias`,
+itself a derived projection exactly like :meth:`active_pointer` — never an independently-writable
+"current alias" column. ``promote``, ``rollback`` and ``retire`` write the rows, each naming both
+``alias`` (the promoted alias string) and ``mutation_id`` (the identifier of the wiring/arm) on
+the same record. A missing ``ledger.db`` and an alias with no row both refuse, cleanly and
+identically, per D-12/FA-06.
 
 **07-01-PLAN.md: four additive columns, each with exactly one meaning.** ``change_origin`` (NOT
 NULL — ``"human_edit"`` or ``"machine_mutation"``, CONTRACT §7) and ``record_kind`` (NOT NULL —
@@ -44,8 +44,8 @@ acts on**" and is non-``NULL`` exactly for ``record_kind`` in ``("rollback", "to
 Collapsing them into one column would make a tombstone's own version indistinguishable from a
 version it minted. No SQL default on either NOT NULL column — an absent value fails at the
 database, never falls back to a plausible string. All four columns land in the single ``CREATE
-TABLE IF NOT EXISTS`` column list, following the identical no-migration precedent the ``alias``
-column set: the table holds zero rows in every environment this milestone runs in.
+TABLE IF NOT EXISTS`` column list; the one later schema change, the unique index below, is applied
+by :meth:`Ledger._create_schema` on an existing file as well.
 
 **07-05-PLAN.md (G-07-1): ``(alias, minted_version)`` is now UNIQUE.** A minted semver is a
 published name under D-06/CONTRACT §0.4 and is never reused; previously this rule was enforced
@@ -74,13 +74,11 @@ repoint was always atomic, the *decision* to repoint is what G-07-1 closes).
 **WR-03, deliberate exception:** every method on ``Ledger`` is plain synchronous ``def`` — this
 module has no ``async def`` surface to dispatch off the event loop in the first place, unlike
 ``stores/kv.py``/``stores/lexical.py`` (own deliberate-exception notes) or ``stores/graph.py``
-(the one that does dispatch). That is deliberate, not an oversight: per the scope fence above,
-nothing in the live Phase 1 runner path calls ``append()`` at all, so there is no event-loop-
-blocking concern to fix yet. If a later phase's promotion path calls ``append()`` from inside an
-``async def`` body, offload it (``loop.run_in_executor``) at that call site then — mirroring
-``check_same_thread=False`` and cross-thread-safety concerns already noted in
-``stores/kv.py``'s own docstring — rather than making this module async pre-emptively for a
-caller that does not exist yet.
+(the one that does dispatch). That is deliberate, not an oversight: the runner never calls
+``append()``, and the three operator verbs in ``seam/engine.py`` call it from inside an
+``async def`` body by offloading the whole ledger span (open, guard reads, ``append()``, close) to
+one executor thread with ``loop.run_in_executor``, so the event loop never blocks. The offload
+lives at those call sites rather than in this module, which stays synchronous.
 """
 
 from __future__ import annotations
@@ -377,10 +375,10 @@ class Ledger:
         """The active pointer for ``alias`` — a projection over the ledger, computed by
         ``ORDER BY id DESC LIMIT 1`` keyed on the additive ``alias`` column, exactly like
         :meth:`active_pointer`'s own projection keyed on ``mutation_id``. Returns ``None`` when no
-        row names this alias — the seam's alias selector (``databasise.seam.selectors.
-        _resolve_alias``) is this method's only caller, and refuses identically whether the
-        registry holds no rows at all or holds rows naming a different alias (D-12/FA-06's
-        empty-registry-refuses-cleanly requirement).
+        row names this alias. The seam's alias selector (``databasise.seam.selectors.
+        _resolve_alias``) and the promote, rollback and retire verbs in ``seam/engine.py`` call it;
+        the selector refuses identically whether the table holds no rows at all or holds rows
+        naming a different alias (D-12/FA-06).
 
         07-01-PLAN.md: excludes ``record_kind = 'tombstone'`` rows — the active pointer derives
         from promotion and rollback generations only. A retirement record names a generation that
@@ -399,9 +397,9 @@ class Ledger:
         """07-01-PLAN.md: the latest record naming the ``(alias, version)`` generation, whether it
         is the record that minted that version (``minted_version == version``) or a later record
         acting on it (``targets_version == version``) — a rollback or a tombstone. Returns
-        ``None`` when this alias has no such generation. 07-02's tombstone and
-        unknown-version refusals are this method's only callers; it lands here, beside
-        :meth:`by_alias`/:meth:`active_pointer`, so the projection set stays in one module.
+        ``None`` when this alias has no such generation. The rollback and retire verbs in
+        ``seam/engine.py`` call it for their tombstone and unknown-version refusals; it lives
+        beside :meth:`by_alias`/:meth:`active_pointer`, so the projection set stays in one module.
         """
         cur = self._conn.execute(
             "SELECT * FROM ledger WHERE alias = ? AND (minted_version = ? OR targets_version = ?) "

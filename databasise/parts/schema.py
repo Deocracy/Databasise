@@ -10,11 +10,9 @@ wire time any behaviour a part did not declare in its effects[]").
 are the five *structural* kinds CONTRACT §2 names explicitly: ``fanout``, ``join``, ``fixpoint``,
 ``subgraph``, ``opaque``. CONTRACT §2 states the tagged sum's full membership is "the primitive
 part types plus five structural kinds" without ever freezing an authoritative list of the
-primitive part types — this module does not invent one. ``WiringNode.kind`` is typed as a plain
-``str`` rather than joined to this union: this tracer's two reference parts (``passthrough``,
-``kv-writer``) are primitive kinds, not structural ones, and a later plan is where the
-fanout/join/fixpoint/subgraph/opaque structural-kind dispatch actually gets built and where
-``NodeKind`` starts being consumed as more than a declared skeleton.
+primitive part types — this module does not invent one. ``NodeKind`` is defined here and no
+module consumes it. ``WiringNode.kind`` is a plain ``str``, not joined to this union: the
+validator compares it with ``Part.kind`` and reports a difference as ``kind-mismatch``.
 """
 
 from __future__ import annotations
@@ -118,8 +116,8 @@ class Part:
     effects (the registry's own capability row — CONTRACT §2's wire-time declaration), an
     optional upstream_ref lineage pointer (CONTRACT §7, D-14), and an optional executable body.
     ``body is None`` marks a declaration-only entry (D-04): schema plus effects[] only, with no
-    executable behaviour yet — a later plan's job is to dispatch such an entry as an explicit
-    refusal, never a silent no-op.
+    executable behaviour — ``registry.dispatch`` refuses such an entry explicitly, never a silent
+    no-op.
 
     ``artifact_scope`` is set only for a part that declares ``writes_artifact`` — CONTRACT §3's
     three-scope table (``shared``/``quarantined``/``self_storage``) — and stays ``None`` for a
