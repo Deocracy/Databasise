@@ -428,24 +428,25 @@ Do not raise these again.
 
 ## 5. Other API and entry surfaces
 
-Run Databasise CLIs as `cd databasise && uv run python -m <module>` (editable install required, OS-10).
+Run Databasise CLIs as `uv run python -m <module>` from the repository root (editable install required, OS-10). The eval CLIs and `tools.check_import_boundary` also run from an installed wheel; the parity CLIs need a source checkout (the imported store, `v1/.env.parity` and `v1/` do not ship in the wheel).
+
+Exit table for every offline CLI (D-03, `databasise.cli`): 0 done or estimate-only; 1 a named refusal, printed as one stderr line `ClassName: message`; 2 bad arguments (argparse only); 3 ran but inconclusive. Every CLI that can spend (`build_hipporag_index`, `remint`, `run_arm`, `storage_audit`, `run_comparison`, `run_cross_modality`, `v1_arm`, `corpus_ingest`, `aa_run`) is estimate-only without `--spend` (D-04): it prints its estimate and `mode: estimate-only`, builds no client, takes no lock and writes nothing.
 
 | Surface | Launch | What the console should do |
 |---|---|---|
 | REST `seam.rest:create_app` | No launcher (M-01) | Use. Write a launcher that defaults to `v1/.parity_v2_store`, workspace `shared-4fab18fef508b7bc3dda1cc2d8f12e36`, builds clients, adds CORS or serves same-origin |
-| MCP `mcp:create_server` (9 tools) | No launcher | Ignore for the console; it serves agent consumers |
-| All parity CLIs below | Default to `v1/.parity_v2_store`, the store the launcher serves | Any job button must pause engine calls on that store root first (G-36) |
-| `parity.run_comparison --arm X [--query id]` | CLI, exit 0/1/2, writes `databasise/parity/.comparison_results/<arm>.json` | Job button; validate query ids first (OS-04) |
-| `parity.storage_audit --arm X` | CLI, stdout only | Job button (LightRAG arms only) |
-| `parity.run_cross_modality` | CLI, writes `cross_modality.json` | Job button |
-| `parity.import_index --verify` | CLI | Use only with exactly `--verify`; any other argument runs a full import (OS-03) |
-| `parity.import_index` (import) | CLI, hard-coded paths | Guarded action; needs new arguments to import engine-ingested documents (M-04) |
+| MCP `mcp:create_server` (ten tools, `TOOL_NAMES`) | No launcher | Ignore for the console; it serves agent consumers |
+| All parity CLIs below | Default to `v1/.parity_v2_store`, the store the launcher serves | Any job button must pause engine calls on that store root first (G-36); a `--spend` run takes the store lock and refuses by name while a launcher holds it |
+| `parity.run_comparison --arm X [--query id] [--spend]` | CLI, estimate-only by default; exit 0/1/2/3 (3 = a query was inconclusive, 2 = bad arguments including an unknown query id); `--spend` writes `databasise/parity/.comparison_results/<arm>.json` | Job button; validate query ids first (OS-04) |
+| `parity.storage_audit --arm X [--spend]` | CLI, estimate-only by default; accepts every `all_wirings()` arm; stdout only; exit 3 when the run was partial or cyclic | Job button |
+| `parity.run_cross_modality [--spend]` | CLI, estimate-only by default; `--spend` writes `cross_modality.json` (marked `refused` when an arm was degraded) | Job button |
+| `parity.import_index [--verify] [--v1-working-dir P] [--store-root P] [--workspace W]` | CLI; prints the workspace it uses; without `--verify` it imports, then verifies; a bad flag exits 2 before anything is written | `--verify` is read-only; an import is a guarded action |
 | `evidence.parity_report --check-results` / re-render | CLI | Use `--check-results` (read-only); re-render overwrites committed files |
-| `evidence.falsifier2` | CLI, overwrites a committed file, always exit 0 | Show the probe table only |
-| `tools.check_import_boundary` | CLI, exit 0/1 | Dev check only |
-| `eval.corpus_ingest --limit N [--arm]` / `eval.aa_run` | CLI, estimate by default, `--spend` for real calls | Show the estimate forms only (G-34) |
-| `eval.remint`, `parity.build_hipporag_index` | CLI, spend on every run | Leave out, or require explicit spend confirmation |
-| `parity.run_arm`, `parity.v1_arm` | CLI | Ignore; `/query` covers it (run_arm bypasses the seam) |
+| `evidence.falsifier2` | CLI, overwrites a committed file, exit 1 when a probe did not behave as expected | Show the probe table only |
+| `tools.check_import_boundary` | CLI, exit 0/1; runs from an installed wheel (provenance check skipped, one stderr line) | Dev check only |
+| `eval.corpus_ingest --limit N [--arm] [--spend]` / `eval.aa_run [--spend]` | CLI, estimate-only by default; `--spend` for real calls; both stay inside the eval store root | Show the estimate forms only (G-34) |
+| `eval.remint [--spend]`, `parity.build_hipporag_index [--spend]` | CLI, estimate-only by default; `build_hipporag_index --spend` creates the workspace on an empty store root; `remint --spend` mints into `databasise/evidence/eval-bundles` (a source checkout only) | Leave out, or require explicit spend confirmation |
+| `parity.run_arm [--spend]`, `parity.v1_arm [--spend]` | CLI, estimate-only by default | Ignore; `/query` covers it (run_arm bypasses the seam) |
 | `parity.build_corpus_fixture` | CLI with network access | Ignore |
 | `databasise.run_wiring`, `evidence.f07_report` | Library only | Ignore |
 | `foreign/v1_corpus_driver_script.py`, `parity/v1_driver_script.py` | Subprocess targets under `v1/.venv/bin/python` | Not operator surfaces |
