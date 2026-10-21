@@ -47,6 +47,7 @@ attribution as a violation, inverting the rule into one that punishes the proven
 
 from __future__ import annotations
 
+import argparse
 import ast
 import importlib
 import inspect
@@ -65,17 +66,24 @@ _STORES_EXCLUDED_MODULES = frozenset({"__init__.py", "base.py"})
 # Leaf scripts that intentionally import v1's ``lightrag`` package because they run under v1's own
 # interpreter as a subprocess entry point, never as a Python import target of anything under
 # ``databasise/`` — see the module docstring's "Subprocess-entry-point exclusion" note. Named here
-# by filename (matched against ``Path.name``, mirroring the self-exclusion's resolved-path
-# comparison one directory up), so the exception stays a short, explicit, auditable list rather
-# than a silent gap in the scan.
-_SUBPROCESS_ENTRY_POINT_EXCLUSIONS = frozenset({"v1_driver_script.py", "v1_corpus_driver_script.py"})
+# by path relative to the scanned root and matched by resolved path (like the self-exclusion), so a
+# same-named file elsewhere is still scanned and the exception stays a short, explicit, auditable
+# list rather than a silent gap in the scan.
+_SUBPROCESS_ENTRY_POINT_EXCLUSIONS = (
+    Path("parity") / "v1_driver_script.py",
+    Path("foreign") / "v1_corpus_driver_script.py",
+)
+
+# A path whose parts (relative to the scanned root) start with "." or equal one of these is not part
+# of the package: virtualenvs, build output and installed distributions.
+_SKIPPED_DIR_NAMES = frozenset({"site-packages", "build", "dist"})
 
 
 @dataclass(frozen=True)
 class Violation:
     """One import-boundary or provenance defect: the file it was found in, its line number (1 for
-    a provenance defect, which has no single source line), the offending reference, and which of
-    the two checks (``"import-boundary"`` / ``"provenance"``) found it.
+    a provenance defect or an unparseable file's missing line), the offending reference, and which
+    check (``"import-boundary"`` / ``"provenance"`` / ``"unparseable"``) found it.
     """
 
     path: str
@@ -88,11 +96,12 @@ def _is_forbidden_module(name: str) -> bool:
     return any(name == root or name.startswith(f"{root}.") for root in _FORBIDDEN_IMPORT_ROOTS)
 
 
-def _dynamic_import_target(node: ast.Call) -> str | None:
-    """Return the string-literal first argument of an ``importlib.import_module(...)`` or
-    ``__import__(...)`` call, or ``None`` if ``node`` is not one of those two calls or its first
-    argument is not a string literal (a dynamically-computed argument cannot be checked
-    statically, and is out of this checker's scope).
+def _dynamic_import_target(node: ast.Call, import_module_names: frozenset[str] = frozenset()) -> str | None:
+    """Return the string-literal first argument of an ``importlib.import_module(...)``,
+    ``__import__(...)`` or ``import_module(...)`` call (the last when the file bound the name with
+    ``from importlib import import_module [as x]``; ``import_module_names`` holds those local names),
+    or ``None`` if ``node`` is none of those calls or its first argument is not a string literal (a
+    dynamically-computed argument cannot be checked statically, and is out of this checker's scope).
     """
     func = node.func
     is_import_module = (
@@ -101,7 +110,7 @@ def _dynamic_import_target(node: ast.Call) -> str | None:
         and isinstance(func.value, ast.Name)
         and func.value.id == "importlib"
     )
-    is_dunder_import = isinstance(func, ast.Name) and func.id == "__import__"
+    is_dunder_import = isinstance(func, ast.Name) and func.id in ({"__import__"} | import_module_names)
     if not (is_import_module or is_dunder_import):
         return None
     if not node.args:
@@ -116,9 +125,18 @@ def scan_file(path: Path) -> list[Violation]:
     """Walk ``path``'s AST, reporting every forbidden import (plain, from, aliased, dynamic) and
     every string literal reaching into the sibling ``v1/`` directory by relative filesystem path.
     """
-    source = path.read_text(encoding="utf-8")
-    tree = ast.parse(source, filename=str(path))
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except (SyntaxError, UnicodeDecodeError, ValueError) as exc:
+        return [Violation(str(path), getattr(exc, "lineno", None) or 1, f"{type(exc).__name__}: {exc}", "unparseable")]
     violations: list[Violation] = []
+    import_module_names = frozenset(
+        alias.asname or alias.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom) and node.module == "importlib"
+        for alias in node.names
+        if alias.name == "import_module"
+    )
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
@@ -129,7 +147,7 @@ def scan_file(path: Path) -> list[Violation]:
             if node.module and _is_forbidden_module(node.module):
                 violations.append(Violation(str(path), node.lineno, node.module, "import-boundary"))
         elif isinstance(node, ast.Call):
-            target = _dynamic_import_target(node)
+            target = _dynamic_import_target(node, import_module_names)
             if target is not None and _is_forbidden_module(target):
                 violations.append(Violation(str(path), node.lineno, target, "import-boundary"))
         elif (
@@ -143,15 +161,20 @@ def scan_file(path: Path) -> list[Violation]:
 
 
 def scan_tree(package_root: Path) -> list[Violation]:
-    """Scan every ``.py`` file under ``package_root``, excluding this checker's own source file
-    (compared by resolved path, not by name — see the module docstring).
+    """Scan every ``.py`` file under ``package_root``, excluding this checker's own source file and
+    the two subprocess entry points (compared by resolved path, not by name — see the module
+    docstring) and any path with a hidden, ``site-packages``, ``build`` or ``dist`` part relative to
+    ``package_root`` (never the absolute parts: a temp directory can sit under a hidden ancestor).
     """
     self_path = Path(__file__).resolve()
+    excluded = {(package_root / rel).resolve() for rel in _SUBPROCESS_ENTRY_POINT_EXCLUSIONS}
     violations: list[Violation] = []
     for path in sorted(package_root.rglob("*.py")):
-        if path.resolve() == self_path:
+        parts = path.relative_to(package_root).parts
+        if any(part.startswith(".") or part in _SKIPPED_DIR_NAMES for part in parts):
             continue
-        if path.name in _SUBPROCESS_ENTRY_POINT_EXCLUSIONS:
+        resolved = path.resolve()
+        if resolved == self_path or resolved in excluded:
             continue
         violations.extend(scan_file(path))
     return violations
@@ -186,16 +209,25 @@ def check_upstream_refs(package_root: Path, repo_root: Path) -> list[Violation]:
     return violations
 
 
+def _package_root() -> Path:
+    return Path(__file__).resolve().parent.parent
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run both checks over the real ``databasise/`` tree. Prints nothing and returns 0 when
-    clean; otherwise prints one line per violation (file, line, reference) and returns 1.
+    clean; otherwise prints one line per violation (file, line, reference) and returns 1. From an
+    installed wheel there is no ``v1/`` beside the package: the provenance check is skipped, one
+    stderr line says so, and the exit code follows the import-boundary result alone.
     """
-    del argv  # no arguments today; accepted for a stable CLI signature
-    package_root = Path(__file__).resolve().parent.parent
+    argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args(argv)
+    package_root = _package_root()
     repo_root = package_root.parent
 
     violations = scan_tree(package_root)
-    violations.extend(check_upstream_refs(package_root, repo_root))
+    if (repo_root / "v1").is_dir():
+        violations.extend(check_upstream_refs(package_root, repo_root))
+    else:
+        print("provenance not checked: no v1/ directory beside the package (installed wheel)", file=sys.stderr)
 
     if not violations:
         return 0

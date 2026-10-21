@@ -184,6 +184,95 @@ def test_10_a_synthetic_relative_path_reach_into_v1_under_parts_core_lightrag_is
     assert relative_v1_reference in violations[0].reference
 
 
+def test_12_a_virtualenv_site_packages_file_is_not_scanned(tmp_path):
+    pkg = tmp_path / "fixture_skipped_dirs"
+    for rel in (".venv/lib/site-packages", "build", "dist"):
+        (pkg / rel).mkdir(parents=True)
+        (pkg / rel / "x.py").write_text("import lightrag\n", encoding="utf-8")
+
+    violations = check_import_boundary.scan_tree(pkg)
+
+    assert violations == []
+
+
+def test_13_an_unparseable_file_is_a_named_violation_not_an_exception(tmp_path):
+    pkg = tmp_path / "fixture_unparseable"
+    pkg.mkdir()
+    bad = pkg / "bad.py"
+    bad.write_text("def broken(:\n", encoding="utf-8")
+
+    caught = None
+    violations = []
+    try:
+        violations = check_import_boundary.scan_tree(pkg)
+    except BaseException as exc:  # noqa: BLE001 - captured so the assertion below names the failure
+        caught = exc
+
+    assert caught is None, f"scan_tree raised {type(caught).__name__}"
+    assert len(violations) == 1
+    assert violations[0].kind == "unparseable"
+    assert violations[0].path == str(bad)
+
+
+def test_14_the_from_importlib_import_module_form_is_detected(tmp_path):
+    pkg = tmp_path / "fixture_import_module_names"
+    pkg.mkdir()
+    (pkg / "plain.py").write_text(
+        "from importlib import import_module\nimport_module('lightrag')\n", encoding="utf-8"
+    )
+    (pkg / "aliased.py").write_text(
+        "from importlib import import_module as im\nim('lightrag.kg')\n", encoding="utf-8"
+    )
+
+    violations = check_import_boundary.scan_tree(pkg)
+
+    assert {Path(v.path).name for v in violations} == {"plain.py", "aliased.py"}
+    assert len(violations) == 2
+    assert all(v.kind == "import-boundary" for v in violations)
+
+
+def test_15_a_file_sharing_an_excluded_driver_basename_elsewhere_is_scanned(tmp_path):
+    pkg = tmp_path / "fixture_driver_basename"
+    (pkg / "parity").mkdir(parents=True)
+    (pkg / "other").mkdir()
+    (pkg / "parity" / "v1_driver_script.py").write_text("import lightrag\n", encoding="utf-8")
+    elsewhere = pkg / "other" / "v1_driver_script.py"
+    elsewhere.write_text("import lightrag\n", encoding="utf-8")
+
+    violations = check_import_boundary.scan_tree(pkg)
+
+    assert [v.path for v in violations] == [str(elsewhere)]
+
+
+def test_16_main_parses_its_arguments(capsys):
+    outcomes = {}
+    for flag in ("--help", "--no-such-flag"):
+        try:
+            check_import_boundary.main([flag])
+            outcomes[flag] = None
+        except BaseException as exc:  # noqa: BLE001 - argparse raises SystemExit
+            outcomes[flag] = (type(exc).__name__, getattr(exc, "code", None))
+    capsys.readouterr()
+
+    assert outcomes == {"--help": ("SystemExit", 0), "--no-such-flag": ("SystemExit", 2)}
+
+
+def test_17_from_a_wheel_the_provenance_check_is_reported_unchecked(tmp_path, monkeypatch, capsys):
+    pkg = tmp_path / "installed_like_package"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    assert not (tmp_path / "v1").exists()
+    monkeypatch.setattr(check_import_boundary, "_package_root", lambda: pkg, raising=False)
+
+    status = check_import_boundary.main([])
+    captured = capsys.readouterr()
+
+    assert status == 0
+    assert captured.out == ""
+    lines = captured.err.splitlines()
+    assert len(lines) == 1 and "provenance" in lines[0] and "not checked" in lines[0], captured.err
+
+
 def test_11_v1_driver_script_is_pinned_as_a_leaf_never_importable_from_databasise():
     """``databasise/parity/v1_driver_script.py`` (plan 03-07) runs under the ``v1/`` interpreter
     and must stay a leaf subprocess entry point — never importing ``databasise`` or anything that
