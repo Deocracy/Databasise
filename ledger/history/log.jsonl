@@ -724,3 +724,4 @@
 {"v": 724, "ts": "2026-10-21T04:51:47Z", "op": "set-status", "id": "LEDG-12", "changes": {"status": ["open", "done"]}}
 {"v": 725, "ts": "2026-10-21T04:51:47Z", "op": "set-status", "id": "LEDG-13", "changes": {"status": ["open", "done"]}}
 {"v": 726, "ts": "2026-10-21T04:51:47Z", "op": "set-status", "id": "LEDG-14", "changes": {"status": ["open", "done"]}}
+{"v": 727, "ts": "2026-10-21T16:40:02Z", "op": "set-phase", "id": "", "changes": {"current_phase": ["14", "15"]}}
