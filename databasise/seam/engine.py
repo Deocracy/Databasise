@@ -2497,6 +2497,14 @@ class Databasise:
         exists anywhere in that mutation's history — a wiring retired once and later legitimately
         re-promoted must stay reachable under its own new generation.
 
+        14-09-PLAN.md (LEDG-04, D-06): the target's rollback lineage is checked too. A rollback
+        row serves the wiring of the version it targets, so when any version reached from the
+        target through :meth:`~databasise.ledger.ledger.Ledger.lineage` is tombstoned, the rollback
+        refuses as ``TombstonedGenerationError`` naming the requested ``version`` — otherwise the
+        alias would end up serving a retired generation. The check is by version, never by wiring
+        identity (RIG §PR.2: a re-promotion of a retired wiring is a new generation), and runs
+        inside the same ``BEGIN IMMEDIATE`` span as the append.
+
         The appended record's ``mutation_id``/``parent`` both name the target generation's own
         ``mutation_id`` — the wiring being returned to, read from the ledger, never named by the
         caller (RIG §PR.2's own instruction that the record name what it returns to).
@@ -2537,6 +2545,10 @@ class Databasise:
                     raise UnknownGenerationVersionError(alias=alias, version=version)
                 if target.record_kind == RECORD_KIND_TOMBSTONE:
                     raise TombstonedGenerationError(alias=alias, version=version)
+                for lineage_version in ledger.lineage(alias, version):
+                    lineage_state = ledger.generation_state(alias, lineage_version)
+                    if lineage_state is not None and lineage_state.record_kind == RECORD_KIND_TOMBSTONE:
+                        raise TombstonedGenerationError(alias=alias, version=version)
                 target_resolved = _wiring_for_row(target.mutation_id, alias=alias)
 
                 current_record = ledger.by_alias(alias)
@@ -2625,11 +2637,15 @@ class Databasise:
         silently appending a second tombstone — a no-op success is indistinguishable from a real
         retirement to the caller.
 
-        Then the active-generation guard: if the alias's own active generation
-        (``Ledger.by_alias(alias)``) is the target being retired, this refuses as
-        :class:`~databasise.seam.refusals.ActiveGenerationRetirementError` — retiring the
-        generation an alias currently derives from would leave the alias resolving to a wiring
-        just declared ineligible (CONTRACT §16.2 already refuses pins to tombstoned artifacts).
+        Then the active-generation guard (14-09-PLAN.md, LEDG-04, D-06): if the target is anywhere
+        in the rollback lineage of the alias's own active generation
+        (``version in Ledger.lineage(alias, Ledger.by_alias(alias).minted_version)``), this
+        refuses as :class:`~databasise.seam.refusals.ActiveGenerationRetirementError` — retiring a
+        generation the alias currently derives from, directly or through a chain of rollbacks,
+        would leave the alias resolving to a wiring just declared ineligible (CONTRACT §16.2
+        already refuses pins to tombstoned artifacts). The guard is by version, never by wiring
+        identity: a wiring re-promoted later is a new generation (RIG §PR.2), so its older
+        generation stays retirable.
         The alternative — ``by_alias`` walking backward to the most recent non-retired generation —
         would be a second alias-lifecycle mechanism CONTEXT.md states plainly is "not required and
         not asked for"; refusing is the smaller surface, and composes: roll back, then retire.
@@ -2679,7 +2695,7 @@ class Databasise:
                     raise TombstonedGenerationError(alias=alias, version=version)
 
                 active = ledger.by_alias(alias)
-                if active is not None and active.minted_version == version:
+                if active is not None and version in ledger.lineage(alias, active.minted_version):
                     raise ActiveGenerationRetirementError(alias=alias, version=version)
 
                 target_resolved = _wiring_for_row(target.mutation_id, alias=alias)

@@ -689,7 +689,9 @@ class TombstonedGenerationError(SeamRefusalError):
     from a real retirement to the caller). Checked by reading the *latest* record for the specific
     ``(alias, version)`` generation, never by scanning history for a tombstone anywhere — a wiring
     legitimately retired once and later re-promoted must stay promotable under its new generation.
-    Names only the caller's own ``alias``/``version``.
+    14-09-PLAN.md (LEDG-04): ``rollback`` also raises it when a version in the *target's* rollback
+    lineage (``Ledger.lineage``) is tombstoned, naming the requested ``version``, so an alias never
+    serves a tombstoned generation. Names only the caller's own ``alias``/``version``.
     """
 
     def __init__(self, *, alias: str, version: str):
@@ -703,8 +705,10 @@ class TombstonedGenerationError(SeamRefusalError):
 
 class ActiveGenerationRetirementError(SeamRefusalError):
     """Raised by ``Databasise.retire()`` (07-02-PLAN.md, D-07) when the named generation is
-    ``alias``'s own currently active generation (``Ledger.by_alias(alias).minted_version ==
-    version``). Retiring it would leave the alias resolving to a wiring just declared ineligible,
+    ``alias``'s own currently active generation or any version in its rollback lineage
+    (14-09-PLAN.md, LEDG-04: ``version in Ledger.lineage(alias,
+    Ledger.by_alias(alias).minted_version)``; by version, never by wiring identity). Retiring it
+    would leave the alias resolving to a wiring just declared ineligible,
     and CONTRACT §16.2 already refuses pins to tombstoned artifacts. The operator rolls back
     first, then retires — ``by_alias`` walking backward to the most recent non-retired generation
     would be a second alias-lifecycle mechanism CONTEXT.md states is "not required and not asked

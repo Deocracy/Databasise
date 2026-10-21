@@ -24,7 +24,11 @@ from pathlib import Path
 from databasise.ledger.ledger import Ledger
 from databasise.seam.engine import Databasise
 from databasise.seam.envelope import PromotionResult
-from databasise.seam.refusals import SeamRefusalError, TombstonedGenerationError
+from databasise.seam.refusals import (
+    ActiveGenerationRetirementError,
+    SeamRefusalError,
+    TombstonedGenerationError,
+)
 from databasise.seam.selectors import _resolve_alias
 from databasise.seam.trace_store import TraceStore
 from databasise.wirings.resolve import all_wirings, wiring_for_name
@@ -97,11 +101,15 @@ async def test_retire_vs_rollback_race_never_lets_a_rollback_outrun_a_tombstone(
             for outcome in results:
                 assert isinstance(outcome, (PromotionResult, SeamRefusalError)), outcome
 
-            # If one call refused, it refused as the already-shipped TombstonedGenerationError —
-            # never a bare sqlite3 exception and never a new refusal class.
+            # If one call refused, it refused by name, never as a bare sqlite3 exception: the
+            # rollback lost to a committed retire (TombstonedGenerationError), or the retire lost to
+            # a committed rollback, which makes the target part of the active lineage
+            # (ActiveGenerationRetirementError, 14-09 / LEDG-04).
             refusals = [r for r in results if isinstance(r, BaseException)]
             for refusal in refusals:
-                assert isinstance(refusal, TombstonedGenerationError), refusal
+                assert isinstance(
+                    refusal, (TombstonedGenerationError, ActiveGenerationRetirementError)
+                ), refusal
 
             # Row-order invariant: no ROLLBACK row targeting this generation may carry a ledger id
             # greater than a TOMBSTONE row also targeting it. A rollback landing after an
@@ -117,6 +125,16 @@ async def test_retire_vs_rollback_race_never_lets_a_rollback_outrun_a_tombstone(
                     "a rollback row committed after a tombstone naming the same generation "
                     f"(rows={rows})"
                 )
+
+            # The alias never ends active on a tombstoned generation: the active row is a rollback
+            # whose target is not tombstoned, or a promotion that is not tombstoned.
+            with Ledger(store_root) as ledger:
+                active = ledger.by_alias(_ALIAS)
+                for version in ledger.lineage(_ALIAS, active.minted_version):
+                    state = ledger.generation_state(_ALIAS, version)
+                    assert state.record_kind != "tombstone", (
+                        f"alias ended active on tombstoned {version} (rows={rows})"
+                    )
 
 
 async def test_six_concurrent_promotes_mint_six_distinct_versions_with_zero_exceptions():
