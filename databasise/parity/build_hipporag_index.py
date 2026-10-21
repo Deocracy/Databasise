@@ -4,10 +4,10 @@ shape: build, then verify, then report; never report a build that has not been v
 
 **Exact invocation (module docstring convention, mirroring ``build_corpus_fixture.py``):**
 
-    uv run python -m databasise.parity.build_hipporag_index
+    uv run python -m databasise.parity.build_hipporag_index --spend
 
-This is a one-time build tool checked in beside its own documentation — not a runtime dependency,
-not run by any test (mirrors ``build_corpus_fixture.py``'s own disposition). It loads the committed
+This is a build tool checked in beside its own documentation — not a runtime dependency; no test
+reaches a provider (every test uses client doubles). It loads the committed
 Phase 3 parity corpus snapshot (``databasise/tests/fixtures/corpus/``), resolves HippoRAG 2's
 ``corpus-ingest`` wiring (06-14-PLAN.md — not the base wiring: the base wiring carries six
 query-side positions with no query anywhere at index time, and dispatching them was the concrete
@@ -29,12 +29,17 @@ the entity and fact vector namespaces hold non-zero entry counts, and the run re
 ``partial=False``/``degraded=False``. Any failure is a refusal naming the specific check, never a
 warning attached to a returned result.
 
-**Deferred (06-08-SUMMARY.md, owner decision `defer-and-record-blocked`).** This module is genuine,
-runnable code — not a stub — but has not been invoked for real in this environment: one real
-invocation requires live credentials from ``v1/.env.parity`` (``qwen/qwen3.7-flash`` extraction,
-``qwen/qwen3-embedding-8b`` embedding) and was not authorized during this plan's execution. See
-``databasise/evidence/CROSS-MODALITY-EVIDENCE.md`` for the honest record of why, and the entry
-criterion for the deferred run.
+**Real runs.** This module has been invoked for real: a first attempt was refused and a second
+completed, both recorded on 2026-09-10 in ``databasise/evidence/CROSS-MODALITY-EVIDENCE.md`` (sections
+"Real run attempted - refused" and "Real run"). Phase 12 changed the HippoRAG path since, so a HippoRAG
+store built before Phase 12 must be rebuilt. The CLI needs a source checkout: it reads the committed
+corpus fixture and ``v1/.env.parity``, neither of which ships in the wheel.
+
+Without ``--spend`` the CLI prints the ingest estimate and ``mode: estimate-only`` and touches nothing.
+With ``--spend`` it takes the store lock, builds into ``store_root/workspace`` (created when the store
+root is empty) and refuses a build whose ``hipporag-chunks`` vector count is zero or differs from the
+chunk count the same chunking yields. Exit codes: 0 done or estimate-only; 1 a named refusal (one
+stderr line ``ClassName: message``); 2 bad arguments.
 """
 
 from __future__ import annotations
@@ -67,6 +72,11 @@ from databasise.parity.run_arm import (
     _load_env_file,
 )
 from databasise.parts.registry import PartRegistry, default_registry
+from databasise.parts_core.hipporag.chunk_embed import (
+    _DEFAULT_CHUNK_OVERLAP,
+    _DEFAULT_CHUNK_SIZE,
+    _split_into_chunks,
+)
 from databasise.parts_core.hipporag.entity_fact_embed import (
     CHUNK_VERTEX_PREFIX,
     ENTITY_VERTEX_PREFIX,
@@ -87,20 +97,6 @@ _ENTITIES_NAMESPACE = "hipporag-entities"
 _FACTS_NAMESPACE = "hipporag-facts"
 
 
-class MissingParityLightRAGIndexError(RuntimeError):
-    """Raised when the Phase 3 v1-built LightRAG index is not present at ``store_root/workspace``
-    — Task 1's own ``<precondition>``, the same condition ``run_comparison.py`` already asserts
-    before any measured run, named rather than left to surface as a confusing empty-store result.
-    """
-
-    def __init__(self, expected_path: Path):
-        self.expected_path = expected_path
-        super().__init__(
-            f"the Phase 3 v1-built LightRAG index is not present at {expected_path} — run "
-            "databasise.parity.import_index first (03-02-PLAN.md Task 3)"
-        )
-
-
 class HippoRAGIndexBuildRefusedError(RuntimeError):
     """Raised when the post-build verification finds a partial/degraded run, a cyclic wiring, or
     an empty namespace — a silently-empty extraction pass looks built but retrieves nothing, the
@@ -108,6 +104,19 @@ class HippoRAGIndexBuildRefusedError(RuntimeError):
     returned result: refusing to construct :class:`IndexBuildResult` at all is what makes "verify
     before reporting success" a real refusal rather than a caveat.
     """
+
+
+class ChunkCountMismatchError(HippoRAGIndexBuildRefusedError):
+    """The ``hipporag-chunks`` vector count is zero or differs from the chunk count the same
+    chunking yields for the corpus — an index that looks built but cannot retrieve a passage."""
+
+    def __init__(self, *, found: int, expected: int):
+        self.found = found
+        self.expected = expected
+        super().__init__(
+            f"vector namespace {_CHUNKS_NAMESPACE!r} holds {found} chunk vectors, expected {expected} "
+            "from the corpus chunking — refusing to report a build"
+        )
 
 
 @dataclass(frozen=True)
@@ -163,21 +172,23 @@ def _inject_documents(resolved: dict[str, Any], documents: list[dict[str, Any]])
     return resolved
 
 
-def _assert_preconditions(
-    *, env_path: Path, store_root: Path, workspace: str
-) -> dict[str, Any]:
-    """Task 1's own ``<precondition>``: ``v1/.env.parity`` exists and carries every key
-    ``_build_clients`` requires, and the Phase 3 v1-built LightRAG index is present at
-    ``store_root/workspace``. Asserts both before any node is dispatched, naming the missing key
-    or the missing store directory on failure. Returns the real clients built from the verified
-    env, so the caller never constructs them twice.
+def _assert_preconditions(*, env_path: Path) -> dict[str, Any]:
+    """``v1/.env.parity`` exists and carries every key ``_build_clients`` requires. Asserts it before
+    any node is dispatched, naming the missing key on failure. Returns the real clients built from the
+    verified env, so the caller never constructs them twice. The store root may be empty: the build
+    creates ``store_root/workspace`` itself (D-21).
     """
-    env = _load_env_file(env_path)
-    clients = _build_clients(env)
-    lightrag_dir = Path(store_root) / workspace
-    if not lightrag_dir.exists():
-        raise MissingParityLightRAGIndexError(lightrag_dir)
-    return clients
+    return _build_clients(_load_env_file(env_path))
+
+
+def _expected_chunk_count(resolved: dict[str, Any], documents: list[dict[str, Any]]) -> int:
+    """Chunks the build's own chunk node emits for ``documents``: the same splitter and the node's
+    own ``chunk_size``/``chunk_overlap`` config, so the post-build check compares like with like."""
+    chunk_node = (resolved.get("recipe") or {}).get("chunker", "chunk-embed")
+    config = (resolved.get("nodes", {}).get(chunk_node) or {}).get("config") or {}
+    size = int(config.get("chunk_size", _DEFAULT_CHUNK_SIZE))
+    overlap = int(config.get("chunk_overlap", _DEFAULT_CHUNK_OVERLAP))
+    return sum(len(_split_into_chunks(str(doc.get("text", "")), size, overlap)) for doc in documents)
 
 
 async def build_index(
@@ -192,9 +203,9 @@ async def build_index(
     """Build, verify, and report — never report a build this function has not itself verified.
 
     ``clients``/``store_root``/``workspace`` are override points for tests, mirroring
-    ``run_arm.run_arm``'s own convention: passing them bypasses real-client construction and the
-    real-LightRAG-index precondition check entirely, so a test can exercise this function's build
-    logic against a synthetic store and a stub client double.
+    ``run_arm.run_arm``'s own convention: passing ``clients`` bypasses real-client construction, so a
+    test can exercise this function's build logic against a synthetic store and a stub client
+    double. ``store_root/workspace`` is created when absent (an empty store root builds).
     """
     if registry is None:
         registry = default_registry()
@@ -204,20 +215,18 @@ async def build_index(
 
     resolved_clients = clients
     if resolved_clients is None:
-        resolved_clients = _assert_preconditions(
-            env_path=env_path or DEFAULT_V1_ENV_PARITY,
-            store_root=resolved_store_root,
-            workspace=resolved_workspace,
-        )
+        resolved_clients = _assert_preconditions(env_path=env_path or DEFAULT_V1_ENV_PARITY)
 
     snapshot = load_snapshot()
     documents = [{"document_id": doc.id, "text": doc.text} for doc in snapshot.documents]
 
     resolved = load_wiring("hipporag", variant=_INDEX_WIRING_VARIANT)
+    expected_chunks = _expected_chunk_count(resolved, documents)
     resolved = _inject_documents(resolved, documents)
     resolved = _inject_token_allowance(resolved, token_allowance)
     parsed = parse_wiring(resolved, registry)
 
+    (Path(resolved_store_root) / resolved_workspace).mkdir(parents=True, exist_ok=True)
     stores: dict[str, Any] = {}
     try:
         # Phase 10 review WR-09 (D-04): built inside the try, so a failed open finalizes what opened.
@@ -289,6 +298,9 @@ async def build_index(
     finally:
         for store in stores.values():
             await store.finalize()
+
+    if chunk_vector_count == 0 or chunk_vector_count != expected_chunks:
+        raise ChunkCountMismatchError(found=chunk_vector_count, expected=expected_chunks)
 
     failures: list[str] = []
     if graph_node_count == 0:

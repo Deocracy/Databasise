@@ -221,3 +221,65 @@ def test_main_without_spend_is_estimate_only(tmp_path, monkeypatch, capsys):
     assert '"arm": "hipporag"' in out
     assert out.rstrip().endswith("mode: estimate-only")
     assert not store_root.exists()
+
+
+
+def test_spend_on_an_empty_store_root_builds(tmp_path, monkeypatch, capsys):
+    store_root = tmp_path / "store"
+    store_root.mkdir()
+    monkeypatch.setattr(import_index, "DEFAULT_STORE_ROOT", store_root)
+    monkeypatch.setattr(build_hipporag_index, "load_snapshot", _synthetic_snapshot)
+    monkeypatch.setattr(import_index, "load_snapshot", _synthetic_snapshot)
+    env_file = tmp_path / "stub.env"
+    env_file.write_text("", encoding="utf-8")
+    monkeypatch.setattr(run_arm, "DEFAULT_V1_ENV_PARITY", env_file)
+    monkeypatch.setattr(build_hipporag_index, "DEFAULT_V1_ENV_PARITY", env_file)
+    clients = {"embedding": _RefusingOnEmptyBatchEmbeddingClient(), "llm": _StubOpenIEChatClient()}
+    monkeypatch.setattr(build_hipporag_index, "_load_env_file", lambda path: {})
+    monkeypatch.setattr(build_hipporag_index, "_build_clients", lambda env: clients)
+
+    caught = None
+    returncode = None
+    try:
+        returncode = build_hipporag_index.main(["--spend"])
+    except BaseException as exc:  # noqa: BLE001
+        caught = exc
+
+    captured = capsys.readouterr()
+    assert caught is None, f"main(['--spend']) raised {caught!r}"
+    assert returncode == 0, captured.err
+    assert (store_root / import_index._import_workspace()).is_dir()
+
+
+def test_an_empty_chunk_namespace_is_a_named_refusal(tmp_path, monkeypatch):
+    from databasise.parts.registry import default_registry
+    from databasise.parts_core.hipporag.chunk_embed import _split_into_chunks
+
+    monkeypatch.setattr(build_hipporag_index, "load_snapshot", _synthetic_snapshot)
+
+    async def _chunk_embed_that_writes_nothing(ctx):
+        records = [
+            {"chunk_id": f"{doc['document_id']}:{ordinal}", "document_id": doc["document_id"], "ordinal": ordinal, "text": piece}
+            for doc in ctx.config.get("documents") or []
+            for ordinal, piece in enumerate(_split_into_chunks(doc["text"], 1200, 100))
+        ]
+        return {"chunks": records}
+
+    registry = default_registry()
+    # The Part objects are shared module-level singletons: monkeypatch restores the real body.
+    monkeypatch.setattr(registry.get("hipporag/chunker-embedder@0.1.0"), "body", _chunk_embed_that_writes_nothing)
+    clients = {"embedding": _RefusingOnEmptyBatchEmbeddingClient(), "llm": _StubOpenIEChatClient()}
+
+    import asyncio
+
+    caught = None
+    try:
+        asyncio.run(
+            build_index(registry=registry, clients=clients, store_root=tmp_path, workspace="w")
+        )
+    except BaseException as exc:  # noqa: BLE001
+        caught = exc
+
+    assert caught is not None, "a build with no chunk vectors was reported as built"
+    assert type(caught).__name__ == "ChunkCountMismatchError", repr(caught)
+    assert (getattr(caught, "found", None), getattr(caught, "expected", None)) == (0, 3)
