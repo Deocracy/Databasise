@@ -25,9 +25,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from databasise.namespaces import artifacts_overlap
 from databasise.parity import import_index
+from databasise.parity import run_cross_modality as cross_modality
 from databasise.parity.run_cross_modality import (
     _HIPPORAG_VECTOR_NAMESPACES,
     _LIGHTRAG_VECTOR_NAMESPACES,
@@ -146,3 +146,59 @@ async def test_cross_read_negative_control_against_synthetic_seeded_stores(store
 
     for store in (*lightrag_stores.values(), *hipporag_stores.values()):
         await store.finalize()
+
+
+# --------------------------------------------------------------------------------------------- #
+# TOOL-09 (15-14): the run names the arms it compares, refuses an unusable workspace without
+# touching it, keeps a refused run's records, records its queries, and is estimate-only by default.
+# Names this plan adds are resolved with getattr so the file collects and fails by assertion on
+# the phase base.
+# --------------------------------------------------------------------------------------------- #
+
+class _ClientsBuilt(RuntimeError):
+    """Sentinel: the run got as far as building provider clients."""
+
+
+async def _aoutcome(awaitable) -> BaseException | None:
+    try:
+        await awaitable
+    except BaseException as caught:  # noqa: BLE001
+        return caught
+    return None
+
+
+async def test_tool09_a_selector_resolving_to_another_arm_is_refused_before_clients(tmp_path, monkeypatch):
+    from databasise.seam import selectors
+    from databasise.wirings.resolve import wiring_for_name
+
+    real = selectors.resolve_selector
+    other_arm = wiring_for_name("local")
+    hipporag_capability = list(cross_modality._HIPPORAG_CAPABILITY)
+
+    def fake(selector, *, registry, store_root=None):
+        if selector is not None and selector.capability == hipporag_capability:
+            return other_arm
+        return real(selector, registry=registry, store_root=store_root)
+
+    calls: list[str] = []
+
+    def build_clients(env):
+        calls.append("clients")
+        raise _ClientsBuilt("clients were built")
+
+    def fake_preflight(**kwargs):
+        calls.append("preflight")
+
+    env_file = tmp_path / "env"
+    env_file.write_text("", encoding="utf-8")
+    monkeypatch.setattr(selectors, "resolve_selector", fake)
+    monkeypatch.setattr(cross_modality, "_build_clients", build_clients)
+    monkeypatch.setattr(cross_modality, "preflight", fake_preflight)
+    monkeypatch.setattr(cross_modality, "_load_env_file", lambda path: {})
+
+    caught = await _aoutcome(
+        cross_modality.run_cross_modality(store_root=tmp_path / "store", workspace="w", env_path=env_file)
+    )
+
+    assert type(caught).__name__ == "ArmSelectorMismatchError", f"run raised {caught!r}"
+    assert calls == [], f"the run went on to {calls} before refusing the mismatched selector"

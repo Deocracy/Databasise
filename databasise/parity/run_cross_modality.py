@@ -45,6 +45,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from databasise import cli
 from databasise.clients.builder import BUILDER_REFUSALS
 from databasise.identity.canon import canonicalise
 from databasise.namespaces import artifacts_overlap
@@ -65,6 +66,7 @@ from databasise.stores.vector import FaissVectorStore
 from databasise.wirings.resolve import load_wiring, resolve_arm
 
 _LIGHTRAG_ARM = "naive"
+_HIPPORAG_ARM = "hipporag"
 _LIGHTRAG_CAPABILITY = ["reads_vector"]
 _HIPPORAG_CAPABILITY = ["reads_graph", "reads_kv"]
 
@@ -299,6 +301,12 @@ async def run_cross_modality(
     ``clients``/``store_root``/``workspace``/``queries`` are override points for tests, mirroring
     ``run_arm.run_arm``'s own convention.
     """
+    registry = default_registry()
+    # D-10: before any store read or client, prove each capability selector still picks the arm the
+    # record names. The selectors themselves stay capability selectors (§18.4).
+    cli.check_named_arm(Selector(capability=_LIGHTRAG_CAPABILITY), arm_id=_LIGHTRAG_ARM, registry=registry)
+    cli.check_named_arm(Selector(capability=_HIPPORAG_CAPABILITY), arm_id=_HIPPORAG_ARM, registry=registry)
+
     snapshot = load_snapshot()
     resolved_store_root = store_root if store_root is not None else import_index.DEFAULT_STORE_ROOT
     resolved_workspace = workspace if workspace is not None else import_index._import_workspace()
@@ -313,7 +321,7 @@ async def run_cross_modality(
     engine = Databasise(
         store_root=resolved_store_root,
         workspace=resolved_workspace,
-        registry=default_registry(),
+        registry=registry,
         clients=resolved_clients,
     )
 
