@@ -1,0 +1,10 @@
+{
+  "id": "WIRE-13",
+  "plants": [
+    {
+      "file": "databasise/seam/engine.py",
+      "find": "        if part is None or \"mutates_store\" not in part.effects:",
+      "replace": "        if True or part is None or \"mutates_store\" not in part.effects:"
+    }
+  ]
+}
