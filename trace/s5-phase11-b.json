@@ -2,14 +2,14 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase11-b",
-  "ledger_version": 678,
+  "ledger_version": 705,
   "artifacts": {
     "databasise/eval/aa_run.py": "c5af816bf078348e033f48a4b3ac29aac95c63e20c1d532ffe380305628ee71c",
     "databasise/foreign/v1_corpus_driver_script.py": "c62a9a5b204ded0a99e5a29fcb0acd2739700997624114571935b0c832727efe",
     "databasise/parts_core/lightrag/assemble.py": "352bd232fc76eade0ac77406667060a30492a3d9539a10149967bf8d7ba6d5a1",
     "databasise/parts_core/lightrag/entity_hydrate_expand.py": "bccb2eb6c3948ff0c8c1c265ddeb554b282de4549ddd569cd904691363a91e7b",
     "databasise/parts_core/lightrag/full_ingest.py": "b705a20b35fd32a17ed731e447c928f51cbb6b33a5ce6dec45a357f8ab014f03",
-    "databasise/seam/engine.py": "5df1ef88807233562bf9794bb389fba9eeea8221e2ba3054eda84e43abec48aa"
+    "databasise/seam/engine.py": "59798449ae4ea1b18107e9162f62ec842ed39d2542aa01d1212a2cefeef9b5c2"
   },
   "checker": {
     "harness": "claude-code",
@@ -32,7 +32,7 @@
     {
       "id": "LRAG-13",
       "status": "present",
-      "where": "databasise/seam/engine.py:1957",
+      "where": "databasise/seam/engine.py:1970",
       "quote": "Probes every ``(kind, namespace)`` in ``_HEALTH_PROBES`` read-only (Phase 10 D-14, STOR-04):"
     },
     {
@@ -44,7 +44,7 @@
     {
       "id": "LRAG-16",
       "status": "present",
-      "where": "databasise/seam/engine.py:432",
+      "where": "databasise/seam/engine.py:425",
       "quote": "raise EmptyNamespaceError(store_kind=\"vector\")"
     },
     {
@@ -62,7 +62,7 @@
     {
       "id": "LRAG-19",
       "status": "present",
-      "where": "databasise/seam/engine.py:2084",
+      "where": "databasise/seam/engine.py:2097",
       "quote": "run_resolved = _without_recipe_only_nodes(resolved)"
     },
     {
@@ -74,7 +74,7 @@
     {
       "id": "LRAG-14",
       "status": "present",
-      "where": "databasise/seam/engine.py:2030",
+      "where": "databasise/seam/engine.py:2043",
       "quote": "            all(v == \"ok\" for v in stores.values())"
     }
   ],

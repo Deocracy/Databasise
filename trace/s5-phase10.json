@@ -2,11 +2,11 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase10",
-  "ledger_version": 678,
+  "ledger_version": 705,
   "artifacts": {
     "databasise/namespaces.py": "5e0e2eece8649d6c91bc788bc05dfb667b038c656626a9cf30f8847059b4e46d",
     "databasise/parts_core/__init__.py": "bb0a19aed6adf402c795260aaef5acafe394c5c1e4577bc32aa28ab8e929b754",
-    "databasise/seam/engine.py": "5df1ef88807233562bf9794bb389fba9eeea8221e2ba3054eda84e43abec48aa",
+    "databasise/seam/engine.py": "59798449ae4ea1b18107e9162f62ec842ed39d2542aa01d1212a2cefeef9b5c2",
     "databasise/stores/graph.py": "1554cb09ed791bea5c2dfe545d738e8bf47d26b81e5f1c6891b8a80694d5a2fa",
     "databasise/stores/kv.py": "f74974527f4d41d012dc7c525c23b735492dfbaefc9bdfc4ec3b88e14d2ecb79",
     "databasise/stores/probes.py": "f43c8fea433221723dd7e06f89175c60991762abbcb8e3b1f87bf86da70dbfde",
@@ -29,19 +29,19 @@
     {
       "id": "STOR-02",
       "status": "present",
-      "where": "databasise/seam/engine.py:1459",
+      "where": "databasise/seam/engine.py:1472",
       "quote": "stores = _build_stores(self.store_root, self.workspace, resolved, into=stores, operation=\"ingest\")"
     },
     {
       "id": "STOR-03",
       "status": "present",
-      "where": "databasise/seam/engine.py:2234",
+      "where": "databasise/seam/engine.py:2247",
       "quote": "vector = MultiNamespaceVectorStore(workspace=self.workspace, store_root=self.store_root)"
     },
     {
       "id": "STOR-04",
       "status": "present",
-      "where": "databasise/seam/engine.py:1979",
+      "where": "databasise/seam/engine.py:1992",
       "quote": "lambda: {f\"{kind}:{namespace}\": _probe(kind, namespace) for kind, namespace in _HEALTH_PROBES}"
     },
     {
@@ -53,7 +53,7 @@
     {
       "id": "STOR-06",
       "status": "present",
-      "where": "databasise/seam/engine.py:1500",
+      "where": "databasise/seam/engine.py:1513",
       "quote": "await _drop_pending(stores, self.store_root)"
     },
     {

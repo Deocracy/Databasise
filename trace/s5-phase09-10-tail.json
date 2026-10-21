@@ -2,9 +2,9 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase09-10-tail",
-  "ledger_version": 678,
+  "ledger_version": 705,
   "artifacts": {
-    "databasise/seam/rest.py": "d77ad6bf91a8d93d617b18828d5516466eb768936603079432b88b57f5ed4840",
+    "databasise/seam/rest.py": "0abba36fabbfc8f40044d39b85fa4c0c7b4922cd6823d7cdeaf42ed3aea3c69d",
     "databasise/stores/vector.py": "912c3e2f69b9fd53e508492babd5e3c9ae758de88ff9433c34729709734c79cf"
   },
   "checker": {

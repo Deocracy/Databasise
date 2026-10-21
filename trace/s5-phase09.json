@@ -2,17 +2,17 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase09",
-  "ledger_version": 678,
+  "ledger_version": 705,
   "artifacts": {
     "databasise/mcp/server.py": "3ef83f9eb3b55236110e1b483e77be99ff51bbe977b794081482a101dca7d6c5",
     "databasise/seam/compare.py": "8f6d19a32dccbcd6cbaf605c398d2334b86f1500d8598ddb43cafe62ad880095",
     "databasise/seam/corpus.py": "b360c0dbdc02f4659079a90f81a68366d74c55ab99d13334795dfedae02226ec",
-    "databasise/seam/engine.py": "5df1ef88807233562bf9794bb389fba9eeea8221e2ba3054eda84e43abec48aa",
+    "databasise/seam/engine.py": "59798449ae4ea1b18107e9162f62ec842ed39d2542aa01d1212a2cefeef9b5c2",
     "databasise/seam/evidence.py": "4234e690e03ab49309a1e28255a9d7c685e23c9fb1db4e04c228614e86780c9d",
     "databasise/seam/query.py": "b1452596cc6c0aa44290c1198e487d5ce51ff61a4ede6841bc1f8d8fef7850aa",
-    "databasise/seam/refusals.py": "aa2c5b1fcc04f7fccac1d924a162176048b64a0cbc58fec68e556382451635b2",
-    "databasise/seam/rest.py": "d77ad6bf91a8d93d617b18828d5516466eb768936603079432b88b57f5ed4840",
-    "databasise/seam/selectors.py": "94bea57a073332c9b0984b314bf8a5503d360ccdbe19022c9de635d2595aaa8a"
+    "databasise/seam/refusals.py": "66d1e009e512000f8ddb2c9140d79b00a05bb1e93a2630df13377def7e354581",
+    "databasise/seam/rest.py": "0abba36fabbfc8f40044d39b85fa4c0c7b4922cd6823d7cdeaf42ed3aea3c69d",
+    "databasise/seam/selectors.py": "d6d04c2db923d6b3dc8e9b69f25fcc835373030978e4fb17d59688dad6c25f9a"
   },
   "checker": {
     "harness": "claude-code",
@@ -53,7 +53,7 @@
     {
       "id": "SEAM-06",
       "status": "present",
-      "where": "databasise/seam/engine.py:747",
+      "where": "databasise/seam/engine.py:741",
       "quote": "async def _corpus_op_or_refuse(op: str, payload: dict[str, Any], operation: str, working_dir: Path) -> Any:"
     },
     {
@@ -77,19 +77,19 @@
     {
       "id": "SEAM-10",
       "status": "present",
-      "where": "databasise/seam/selectors.py:270",
+      "where": "databasise/seam/selectors.py:272",
       "quote": "raise EmptyCapabilitySelectorError()"
     },
     {
       "id": "SEAM-11",
       "status": "present",
-      "where": "databasise/seam/engine.py:1256",
+      "where": "databasise/seam/engine.py:1269",
       "quote": "keys = comparison_keys(selectors)"
     },
     {
       "id": "SEAM-12",
       "status": "present",
-      "where": "databasise/seam/engine.py:2347",
+      "where": "databasise/seam/engine.py:2309",
       "quote": "if alias == \"\" or _INSTANCE_HASH_PATTERN.match(alias):"
     },
     {
@@ -101,7 +101,7 @@
     {
       "id": "SEAM-14",
       "status": "present",
-      "where": "databasise/seam/refusals.py:957",
+      "where": "databasise/seam/refusals.py:994",
       "quote": "\"NoRawUploadPathForModalityError\","
     },
     {

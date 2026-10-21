@@ -2,12 +2,12 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase13-a",
-  "ledger_version": 678,
+  "ledger_version": 705,
   "artifacts": {
     "databasise/runner/guards.py": "ad8d41377eb0e000f482273c1dc7b1bad1477c6ef79a6ced51ae04e09a332e59",
-    "databasise/seam/engine.py": "5df1ef88807233562bf9794bb389fba9eeea8221e2ba3054eda84e43abec48aa",
+    "databasise/seam/engine.py": "59798449ae4ea1b18107e9162f62ec842ed39d2542aa01d1212a2cefeef9b5c2",
     "databasise/seam/envelope.py": "dd72b3906239887d258922352dcaeb978a5dda4cf5e9119ac3e677000e665e55",
-    "databasise/seam/selectors.py": "94bea57a073332c9b0984b314bf8a5503d360ccdbe19022c9de635d2595aaa8a",
+    "databasise/seam/selectors.py": "d6d04c2db923d6b3dc8e9b69f25fcc835373030978e4fb17d59688dad6c25f9a",
     "databasise/validator/errors.py": "501336d034b5711ec592c718150a7ee0234a8a6c2e603e5008b58abf37d8c6be",
     "databasise/validator/execution_mode.py": "8d9fbd51c38756f7dda72880d73cb77372973d5220d9030b737aca3711d8201c",
     "databasise/validator/parse.py": "38ae94947933a067864f8e43029e44f30791053e9abc24f0d244ad15d7e811b6",
@@ -34,19 +34,19 @@
     {
       "id": "WIRE-03",
       "status": "present",
-      "where": "databasise/seam/engine.py:2209",
+      "where": "databasise/seam/engine.py:2222",
       "quote": "                stop_reason=node_free_reason(record.stop_reason, low_entropy),"
     },
     {
       "id": "WIRE-04",
       "status": "present",
-      "where": "databasise/seam/engine.py:1089",
+      "where": "databasise/seam/engine.py:1083",
       "quote": "    depth_label: Depth | None = None"
     },
     {
       "id": "WIRE-05",
       "status": "present",
-      "where": "databasise/seam/engine.py:680",
+      "where": "databasise/seam/engine.py:673",
       "quote": "        raise InvalidGuardDeclarationError(node_id=exc.node_id) from exc"
     },
     {
