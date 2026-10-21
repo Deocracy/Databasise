@@ -493,8 +493,10 @@ class MutableStoreComparisonExcludedError(SeamRefusalError):
     degenerate-width rule). ``query()`` is not a comparison and never raises this.
 
     Currently unreachable with the query candidates: no wiring in ``all_wirings()`` declares
-    ``mutates_store``. It is exercised only by ``tests/seam/test_mutable_store_exclusion.py``,
-    which adds the codebase-memory-mcp wiring to the candidate pool.
+    ``mutates_store``, and the codebase-memory-mcp part is not in ``default_registry()``. It is
+    exercised only by ``tests/seam/test_mutable_store_exclusion.py``, which registers the
+    codebase-memory-mcp part with ``registry=`` and adds its fixture wiring
+    (``tests/fixtures/codebase-memory-mcp.json``) to the candidate pool.
     """
 
     def __init__(self, *, component: str) -> None:
