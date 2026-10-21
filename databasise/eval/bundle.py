@@ -33,14 +33,22 @@ entry naming the reader and the reason. ``sealed`` is not readable at all except
 :func:`open_sealed`, which requires a stated opening event, unconditionally mints a new bundle
 version (bypassing :func:`mint_bundle`'s own content-hash dedup — the partition it drew from is no
 longer sealed once touched, regardless of whether the six content members themselves changed), and
-appends its own usage entry to that new version before returning the sealed content.
+appends its own usage entry to both the opened version and the new one before returning the sealed
+content. A loaded :class:`EvalBundle` reports ``sealed_opened`` from that log, so :func:`mint_bundle`
+never hands back an opened version as if unopened.
+
+**Versions before and after 15-05 (TOOL-13, D-14).** ``bundle@v1`` keeps its old-scheme
+``content_hash`` (question ids and gold answers only) and records no ``split_counts``; its realised
+counts, dev 17 / holdout 9 / sealed 4, are stated in ``databasise/evidence/EVAL-BUNDLE-V1.md``. Newly
+minted versions hash the question text and gold document ids too and record ``split_counts``. Dedup
+recomputes each stored version's hash from its own content, so v1 still matches unchanged input.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -151,6 +159,10 @@ class EvalBundle:
     splits: dict[str, BundleSplit]
     split_proportions: dict[str, float]
     target_families: tuple[TargetFamily, TargetFamily]
+    # Derived from the version's usage log on load, never serialised: True once a sealed_open entry exists.
+    sealed_opened: bool = False
+    # Realised size of each split; None for bundle@v1, which predates the field (15-05, D-14).
+    split_counts: dict[str, int] | None = None
 
 
 @dataclass(frozen=True)
@@ -287,7 +299,7 @@ def _bundle_to_json_body(bundle_content: dict[str, Any]) -> bytes:
 
 
 def _bundle_to_json_dict(bundle: EvalBundle) -> dict[str, Any]:
-    return {
+    data: dict[str, Any] = {
         "version": bundle.version,
         "content_hash": bundle.content_hash,
         "questions": [{"id": q.id, "text": q.text} for q in bundle.questions],
@@ -303,6 +315,9 @@ def _bundle_to_json_dict(bundle: EvalBundle) -> dict[str, Any]:
             {"name": tf.name, "tier": tf.tier, "targets": tf.targets} for tf in bundle.target_families
         ],
     }
+    if bundle.split_counts is not None:  # absent for bundle@v1; a copy of it must not gain the key
+        data["split_counts"] = dict(bundle.split_counts)
+    return data
 
 
 def _bundle_from_json_dict(data: dict[str, Any]) -> EvalBundle:
@@ -328,6 +343,7 @@ def _bundle_from_json_dict(data: dict[str, Any]) -> EvalBundle:
         },
         split_proportions=dict(data["split_proportions"]),
         target_families=(families[0], families[1]),
+        split_counts=dict(data["split_counts"]) if data.get("split_counts") is not None else None,
     )
 
 
@@ -436,6 +452,7 @@ def mint_bundle(
         "concurrency_setting": concurrency_setting,
         "splits": splits,
         "split_proportions": dict(_SPLIT_PROPORTIONS),
+        "split_counts": {name: len(ids) for name, ids in splits.items()},
         "target_families": target_families,
     }
     version = f"bundle@v{_next_version_number(bundle_root)}"
@@ -461,7 +478,8 @@ def load_bundle(bundle_root: Path, version: str) -> EvalBundle:
         raise BundleDriftError(version, expected_checksum, actual_checksum)
 
     data = json.loads(body.decode("utf-8"))
-    return _bundle_from_json_dict(data)
+    opened = any(e.get("kind") == "sealed_open" for e in _load_usage_entries(bundle_root, version))
+    return replace(_bundle_from_json_dict(data), sealed_opened=opened)
 
 
 # --------------------------------------------------------------------------------------------- #
@@ -530,10 +548,12 @@ def open_sealed(bundle_root: Path, version: str, *, event: str) -> SealedOpening
     bundle_content = _bundle_to_json_dict(old_bundle)
     bundle_content.pop("version", None)
     new_version = f"bundle@v{_next_version_number(bundle_root)}"
-    new_bundle = _write_version(bundle_root, new_version, bundle_content)
-    _append_usage_entry(bundle_root, new_version, {"kind": "sealed_open", "event": event})
+    _write_version(bundle_root, new_version, bundle_content)
+    # Both versions: a remint dedups to the source, which must not look unopened afterwards.
+    for opened_version in (version, new_version):
+        _append_usage_entry(bundle_root, opened_version, {"kind": "sealed_open", "event": event})
 
-    return SealedOpening(bundle=new_bundle, sealed_question_ids=sealed_ids)
+    return SealedOpening(bundle=load_bundle(bundle_root, new_version), sealed_question_ids=sealed_ids)
 
 
 __all__ = [

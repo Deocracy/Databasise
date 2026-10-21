@@ -398,3 +398,52 @@ def test_the_committed_v1_still_dedups_for_the_unchanged_fixture(tmp_path, eval_
 
     assert again.version == "bundle@v1"
     assert not (root / "bundle@v2").exists(), "an unchanged fixture minted a spurious bundle@v2"
+
+
+# --------------------------------------------------------------------------------------------- #
+# 15-05 (TOOL-13, D-14): sealed-open traces, the opened flag, split counts, v1's documented counts
+# --------------------------------------------------------------------------------------------- #
+
+
+def _usage_entries(root: Path, version: str) -> list[dict]:
+    text = (root / version / "usage.jsonl").read_text(encoding="utf-8")
+    return [json.loads(line) for line in text.splitlines() if line.strip()]
+
+
+def test_open_sealed_logs_on_the_source_version_too(bundle_root, eval_snapshot):
+    v1 = _mint(bundle_root, eval_snapshot)
+
+    open_sealed(bundle_root, v1.version, event="e")
+
+    source_kinds = [e.get("kind") for e in _usage_entries(bundle_root, v1.version)]
+    assert source_kinds.count("sealed_open") == 1, f"source version usage kinds: {source_kinds}"
+
+
+def test_reminting_after_open_sealed_returns_a_version_flagged_opened(bundle_root, eval_snapshot):
+    v1 = _mint(bundle_root, eval_snapshot)
+    open_sealed(bundle_root, v1.version, event="e")
+
+    again = _mint(bundle_root, eval_snapshot)
+
+    assert getattr(again, "sealed_opened", None) is True, (
+        f"re-mint returned {again.version} without an opened flag"
+    )
+
+
+def test_a_new_bundle_json_records_split_counts(bundle_root, eval_snapshot):
+    v1 = _mint(bundle_root, eval_snapshot)
+
+    data = json.loads((bundle_root / v1.version / "bundle.json").read_text(encoding="utf-8"))
+
+    expected = {name: len(split.question_ids) for name, split in v1.splits.items()}
+    assert data.get("split_counts") == expected
+
+
+def test_the_v1_evidence_doc_states_the_realised_split_counts():
+    text = _evidence_text("EVAL-BUNDLE-V1.md")
+    paragraphs = [p for p in re.split(r"\n\s*\n", text) if not p.lstrip().startswith("|")]
+    notes = [p for p in paragraphs if "content_hash" in p]
+
+    assert notes, "no paragraph outside the findings table mentions v1's content_hash scheme"
+    counts = re.compile(r"dev\D{0,40}\b17\b\D+holdout\D{0,40}\b9\b\D+sealed\D{0,40}\b4\b", re.DOTALL)
+    assert any(counts.search(p) for p in notes), "no note states the realised dev 17 / holdout 9 / sealed 4"

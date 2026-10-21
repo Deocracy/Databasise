@@ -30,6 +30,14 @@ id (`databasise.eval.bundle._assign_split`), so a remint from the same snapshot 
 reproduces the identical assignment — proven by `tests/eval/test_bundle_versioning.py`'s negative
 control (Test 7).
 
+**Note (2026-10-21, 15-05 / TOOL-13).** `bundle@v1`'s realised splits are `dev` 17, `holdout` 9 and
+`sealed` 4 questions, against the target proportions 0.6 / 0.2 / 0.2 that `_assign_split` aims at.
+`bundle.json` of `bundle@v1` records no `split_counts` and is not rewritten (a minted version is never
+edited in place); versions minted after this note record them. Its `content_hash` predates the scheme
+that also covers question text and gold document ids: it hashes question ids and gold answers only.
+`mint_bundle` therefore recomputes each stored version's hash from that version's own content instead
+of comparing the stored field, and an unchanged fixture still dedups to `bundle@v1`.
+
 ## Findings — both §EV.2 target families, real minted values
 
 | Target family | `§4` evidence tier | Cost band, by reference to `## §CM` | Real content this bundle carries |
