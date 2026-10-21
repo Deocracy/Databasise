@@ -263,6 +263,8 @@ None yet.
 - [Phase 12] All HIPP test files are now protected test_refs. HippoRAG stores built before Phase 12 (no doc: manifest, ordinal-only chunk ids, no per-chunk co-occurrence map) must be rebuilt.
 - [Phase 12] D-21: degraded now covers fired guards and the empty-PPR dense stand-in, so parity/run_cross_modality.py and eval A/A refuse a HippoRAG arm that took a fallback; real-provider qa quality/cost and the D-08 unparseable_response rate are TESTING-PLAN §2 items.
 - [Phase 13] D-14: NodeTrace.cache_hit is null unless a part reports it, so eval/calibration.py now refuses real-engine A/A calibration (UnusableFloorError); this is TOOL-12's intent (Phase 15).
+- [Phase 14] Phase 16 text to amend before Phase 16 is planned (REQUIREMENTS.md not edited in Phase 14): CONN-09 preview refuses on partial only, not "partial or degraded", reports the gate reason as GateNotCalibratedError, and calls seam.promotion.refuse_partial_evidence (D-03, D-04); CONN-07 active uses Ledger.lineage (D-06); CONN-05 drops the claim that all five LightRAG arms share lightrag-base (each arm has its own wiring_id since Phase 13 D-03) and gives hipporag 14 full nodes (7 on the query run), not 13.
+- [Phase 14] D-01: a rollback or retire row may cite a partial or failed run's trace; the Phase 17/18 console should label such evidence.
 - Cozo 0.7.6 is architecture-frozen with four known correctness bugs and no upstream fixes expected; relevant to STOR-01 and STOR-10 (Phase 10).
 
 ### Quick Tasks Completed
