@@ -55,9 +55,10 @@ import argparse
 import asyncio
 import functools
 import json
+import re
 import sys
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -116,6 +117,8 @@ VERDICT_SCORES: dict[str, float] = {
     "PARTIAL": 0.5,
     "INCORRECT": 0.0,
 }
+
+_VERDICT_PATTERN = re.compile(r"\b(CORRECT|PARTIAL|INCORRECT)\b")
 
 _DEFAULT_FAMILIES: tuple[str, ...] = (GOLD_PASSAGE_FAMILY, ANSWER_LEVEL_FAMILY)
 _UNCALIBRATABLE_SPLITS: tuple[str, ...] = ("holdout", "sealed")
@@ -219,6 +222,8 @@ class PassResult:
 
     scores: dict[str, float]
     node_traces: tuple[Any, ...]
+    # Distinct ``wiring_instance_hash`` values the pass's trace records carried (15-16, D-13).
+    wiring_instance_hashes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -312,10 +317,10 @@ async def score_answer_level(
 ) -> float:
     """The `T0` `answer_level` leg: format the committed judge prompt with the three named
     placeholders, make exactly one ``llm_client.chat`` call, and map the returned verdict to a
-    number via :data:`VERDICT_SCORES`. Matches the verdict as the first whole word of the
-    stripped, upper-cased response — a judge that appends a sentence still parses — with no
-    fuzzier recovery attempted: a prompt that says "and nothing else" is entitled to be taken at
-    its word. No retry, no fallback model, no cache. Raises
+    number via :data:`VERDICT_SCORES`. Matches the first whole-word CORRECT, PARTIAL or INCORRECT
+    in the upper-cased response — ``CORRECT.``, ``**CORRECT**``, ``Verdict: CORRECT`` and a verdict
+    followed by a dash or a sentence all parse (TOOL-12) — with no fuzzier recovery attempted.
+    No retry, no fallback model, no cache. Raises
     :class:`UnparseableJudgeVerdictError` on a miss, carrying the raw (unstripped) response text.
     """
     prompt = prompt_template.format(
@@ -323,12 +328,10 @@ async def score_answer_level(
     )
     result = await llm_client.chat([{"role": "user", "content": prompt}])
 
-    stripped = result.text.strip()
-    words = stripped.split()
-    verdict = words[0].upper() if words else ""
-    if verdict not in VERDICT_SCORES:
+    match = _VERDICT_PATTERN.search(result.text.upper())
+    if match is None:
         raise UnparseableJudgeVerdictError(result.text)
-    return VERDICT_SCORES[verdict]
+    return VERDICT_SCORES[match.group(1)]
 
 
 # --------------------------------------------------------------------------------------------- #
@@ -413,6 +416,7 @@ async def run_one_pass(
     trace_store = TraceStore(engine.store_root)
     scores: dict[str, float] = {}
     node_traces: list[Any] = []
+    instance_hashes: set[str] = set()
 
     for question_id in sorted(question_ids):
         question = question_by_id.get(question_id)
@@ -445,8 +449,12 @@ async def run_one_pass(
         if envelope.trace_token is not None:
             record = trace_store.resolve(envelope.trace_token)
             node_traces.extend(record.get("nodes", []))
+            if record.get("wiring_instance_hash"):  # a stub engine's records carry none
+                instance_hashes.add(str(record["wiring_instance_hash"]))
 
-    return PassResult(scores=scores, node_traces=tuple(node_traces))
+    return PassResult(
+        scores=scores, node_traces=tuple(node_traces), wiring_instance_hashes=tuple(sorted(instance_hashes))
+    )
 
 
 # --------------------------------------------------------------------------------------------- #
@@ -518,7 +526,7 @@ async def calibrate_family(
     if n_resamples is not None:
         kwargs["n_resamples"] = n_resamples
 
-    return calibrate_aa_floor(
+    result = calibrate_aa_floor(
         diffs,
         identity=identity,
         run_a_nodes=run_a.node_traces,
@@ -526,6 +534,9 @@ async def calibrate_family(
         seed=seed,
         **kwargs,
     )
+    # A floor is keyable only when both passes saw exactly one instance hash (TOOL-12, D-13).
+    seen_hashes = set(run_a.wiring_instance_hashes) | set(run_b.wiring_instance_hashes)
+    return replace(result, wiring_instance_hash=next(iter(seen_hashes)) if len(seen_hashes) == 1 else None)
 
 
 # --------------------------------------------------------------------------------------------- #

@@ -215,3 +215,61 @@ def test_calibrate_aa_floor_negative_control_wide_spread_is_strictly_wider_than_
 
     assert wide_result.floor > near_zero_result.floor
     assert near_zero_result.floor == pytest.approx(0.0, abs=1e-9)
+
+
+# --------------------------------------------------------------------------------------------- #
+# 15-16 (TOOL-12, D-13): empty passes are refused, and the floor is two-sided
+# --------------------------------------------------------------------------------------------- #
+
+
+def _outcome(call):
+    try:
+        return call()
+    except BaseException as caught:  # noqa: BLE001 - the assertions are on the captured type
+        return caught
+
+
+def test_empty_node_lists_are_refused():
+    caught = _outcome(
+        lambda: calibrate_aa_floor([0.1, 0.2], identity=_IDENTITY, run_a_nodes=[], run_b_nodes=[])
+    )
+
+    assert type(caught).__name__ == "UnusableFloorError", repr(caught)
+    assert "yielded no node traces" in str(caught)
+
+
+def test_one_empty_pass_is_refused_even_when_the_other_has_nodes():
+    caught = _outcome(
+        lambda: calibrate_aa_floor(
+            [0.1, 0.2], identity=_IDENTITY, run_a_nodes=_bypassed_nodes("a"), run_b_nodes=[]
+        )
+    )
+
+    assert type(caught).__name__ == "UnusableFloorError", repr(caught)
+    assert "run_b" in str(caught)
+
+
+def test_a_part_that_omits_cache_hit_is_refused():
+    from databasise.runner.scheduler import _body_report
+
+    _tokens, cache_hit = _body_report({"answer": "no cache flag reported"})
+    assert cache_hit is None
+    omitted = [{"node_id": "generate", "cache_hit": cache_hit}]
+
+    caught = _outcome(
+        lambda: calibrate_aa_floor([0.1, 0.2], identity=_IDENTITY, run_a_nodes=omitted, run_b_nodes=omitted)
+    )
+
+    assert type(caught).__name__ == "UnusableFloorError", repr(caught)
+    assert "unknown cache-bypass status" in str(caught)
+
+
+@pytest.mark.parametrize("shift", [-0.1, 0.1])
+def test_a_one_directional_shift_gives_a_non_negative_floor(shift):
+    run_a = {f"q{i}": 0.5 + 0.01 * i for i in range(10)}
+    run_b = {qid: score + shift for qid, score in run_a.items()}
+
+    result = _calibrate(paired_differences(run_a, run_b, "recall@k"), seed=3)
+
+    assert result.floor >= 0, result.floor
+    assert result.floor == pytest.approx(abs(shift))

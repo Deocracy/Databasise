@@ -256,6 +256,56 @@ async def test_score_answer_level_formats_prompt_and_maps_verdicts():
 
 
 # --------------------------------------------------------------------------------------------- #
+# 15-16 (TOOL-12): the first whole-word verdict parses, however the judge dresses it
+# --------------------------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize(
+    ("response", "expected"),
+    [
+        ("CORRECT.", 1.0),
+        ("**CORRECT**", 1.0),
+        ("Verdict: CORRECT", 1.0),
+        ("CORRECT—the answer matches", 1.0),
+        ("INCORRECT", 0.0),
+        ("**Partial**", 0.5),
+    ],
+)
+async def test_the_four_verdict_shapes_parse_to_correct(response, expected):
+    async def _score():
+        return await score_answer_level(
+            llm_client=_RecordingLLMClient(response),
+            prompt_template="{question} {gold_answer} {candidate_answer}",
+            question_text="q",
+            gold_answer="g",
+            candidate_answer="c",
+        )
+
+    try:
+        outcome = await _score()
+    except BaseException as caught:  # noqa: BLE001 - the assertion is on the captured value
+        outcome = caught
+
+    assert outcome == expected, f"{response!r}: {outcome!r}"
+
+
+async def test_maybe_stays_an_unparseable_verdict():
+    client = _RecordingLLMClient("MAYBE")
+    try:
+        outcome = await score_answer_level(
+            llm_client=client,
+            prompt_template="{question} {gold_answer} {candidate_answer}",
+            question_text="q",
+            gold_answer="g",
+            candidate_answer="c",
+        )
+    except BaseException as caught:  # noqa: BLE001
+        outcome = caught
+
+    assert type(outcome).__name__ == "UnparseableJudgeVerdictError", repr(outcome)
+
+
+# --------------------------------------------------------------------------------------------- #
 # Test 5 — an unparseable verdict refuses by name, never a default score
 # --------------------------------------------------------------------------------------------- #
 
@@ -403,6 +453,94 @@ async def test_calibrate_family_is_reproducible_under_a_fixed_seed(tmp_path):
         seed=42,
     )
     assert first.floor == second.floor
+
+
+# --------------------------------------------------------------------------------------------- #
+# 15-16 (TOOL-12, D-13) — a pass records the traces' own wiring_instance_hash; a floor is only
+# keyable when both passes saw exactly one
+# --------------------------------------------------------------------------------------------- #
+
+
+class _HashedStubEngine(_StubEngine):
+    """Like ``_StubEngine`` but each trace record carries a ``wiring_instance_hash``; ``hashes`` is
+    cycled per query so a test can make two distinct hashes appear."""
+
+    def __init__(self, store_root: Path, hashes: list[str]) -> None:
+        super().__init__(store_root)
+        self._hashes = hashes
+
+    async def query(self, query_object: QueryObject, selector=None):
+        self.query_calls.append(query_object.text)
+        instance_hash = self._hashes[(len(self.query_calls) - 1) % len(self._hashes)]
+        token = self._trace_store.persist(
+            {"wiring_instance_hash": instance_hash, "nodes": [{"node_id": "stub-node", "cache_hit": False}]}
+        )
+        return ResponseEnvelope(
+            answer="a stub answer", evidence=[], trace_token=token, depth_label="stage", partial=False, degraded=False
+        )
+
+
+def _recorded_hashes(result):
+    return getattr(result, "wiring_instance_hashes", None)
+
+
+async def test_a_pass_records_the_traces_wiring_instance_hash(tmp_path):
+    bundle = _make_bundle()
+    instance_hash = f"sha256:{'e' * 64}"
+
+    hashed = await run_one_pass(
+        engine=_HashedStubEngine(tmp_path / "h", [instance_hash]),
+        bundle=bundle,
+        question_ids=("q1", "q2"),
+        family_name=GOLD_PASSAGE_FAMILY,
+        vector_store=_StubVectorStore({}),
+    )
+    plain = await run_one_pass(
+        engine=_StubEngine(tmp_path / "p"),
+        bundle=bundle,
+        question_ids=("q1", "q2"),
+        family_name=GOLD_PASSAGE_FAMILY,
+        vector_store=_StubVectorStore({}),
+    )
+
+    assert _recorded_hashes(hashed) == (instance_hash,), _recorded_hashes(hashed)
+    assert _recorded_hashes(plain) == (), _recorded_hashes(plain)
+
+
+async def test_calibrate_family_keys_the_result_to_the_single_hash_both_passes_saw(tmp_path):
+    instance_hash = f"sha256:{'e' * 64}"
+
+    keyed = await calibrate_family(
+        engine=_HashedStubEngine(tmp_path / "one", [instance_hash]),
+        bundle=_make_bundle(),
+        split_name="dev",
+        family_name=GOLD_PASSAGE_FAMILY,
+        vector_store=_StubVectorStore({}),
+        n_resamples=50,
+        seed=1,
+    )
+    mixed = await calibrate_family(
+        engine=_HashedStubEngine(tmp_path / "two", [instance_hash, f"sha256:{'f' * 64}"]),
+        bundle=_make_bundle(),
+        split_name="dev",
+        family_name=GOLD_PASSAGE_FAMILY,
+        vector_store=_StubVectorStore({}),
+        n_resamples=50,
+        seed=1,
+    )
+    unhashed = await calibrate_family(
+        engine=_StubEngine(tmp_path / "none"),
+        bundle=_make_bundle(),
+        split_name="dev",
+        family_name=GOLD_PASSAGE_FAMILY,
+        vector_store=_StubVectorStore({}),
+        n_resamples=50,
+        seed=1,
+    )
+
+    assert getattr(keyed, "wiring_instance_hash", "missing") == instance_hash
+    assert getattr(mixed, "wiring_instance_hash", "missing") is None
+    assert getattr(unhashed, "wiring_instance_hash", "missing") is None
 
 
 # --------------------------------------------------------------------------------------------- #

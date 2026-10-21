@@ -158,6 +158,8 @@ class CalibrationResult:
     n_questions: int
     n_resamples: int
     seed: int | None
+    # The traces' own wiring_instance_hash both passes saw, when exactly one; None otherwise (15-16).
+    wiring_instance_hash: str | None = None
 
     def clears_floor(self, delta: float) -> bool:
         """True only for a delta strictly above the floor — a delta landing exactly on the p95
@@ -264,8 +266,20 @@ def calibrate_aa_floor(
     """§AA.1's procedure: verify the §AA.2 cache-bypass precondition first (pre-flight, before any
     number is trusted — D-02's pattern), then bootstrap-resample ``paired_diffs`` with replacement
     via ``scipy.stats.bootstrap(paired=True, method="percentile")`` and take the resampled
-    distribution's p95 as the calibrated floor.
+    distribution's two-sided bound as the calibrated floor.
+
+    A pass that yielded no node traces refuses (:class:`UnusableFloorError`) before the bypass
+    check: an empty list has nothing to verify, so it would otherwise pass as "bypassed". The floor
+    is ``max(abs(ci.low), abs(ci.high))`` so a systematic one-directional A/A shift (run B always
+    below run A) cannot give a negative floor that any non-negative delta would clear.
     """
+    run_a_nodes, run_b_nodes = list(run_a_nodes), list(run_b_nodes)
+    for label, nodes in (("run_a", run_a_nodes), ("run_b", run_b_nodes)):
+        if not nodes:
+            raise UnusableFloorError(
+                f"{label} yielded no node traces — §AA.2's cache-bypass precondition cannot be "
+                "established from zero nodes, so no floor is calibrated from this pass"
+            )
     _verify_cache_bypassed(run_a_nodes, run_b_nodes)
 
     diffs = np.asarray(paired_diffs, dtype=float)
@@ -281,7 +295,8 @@ def calibrate_aa_floor(
         confidence_level=_FLOOR_CONFIDENCE_LEVEL,
         random_state=seed,
     )
-    floor = float(result.confidence_interval.high)
+    interval = result.confidence_interval
+    floor = float(max(abs(interval.low), abs(interval.high)))
 
     return CalibrationResult(
         identity=identity,
