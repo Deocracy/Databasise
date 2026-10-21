@@ -188,3 +188,94 @@ def test_importing_databasise_spawns_no_child_process_or_listening_socket():
     )
     assert result.returncode == 0, f"stdout={result.stdout}\nstderr={result.stderr}"
     assert result.stdout.strip() == "OK"
+
+
+def _recording_registry(calls: list):
+    from databasise.parts.registry import PartRegistry
+    from databasise.parts.schema import Part
+
+    async def _body(ctx):
+        calls.append(ctx.node_id)
+        return {"node_id": ctx.node_id, "inputs": dict(ctx.inputs)}
+
+    registry = PartRegistry(seed_tracer_parts=False)
+    registry.register(
+        Part(
+            name_at_version="test/recorder@1.0.0",
+            kind="recorder",
+            structural_depth="stage",
+            effects=[],
+            upstream_ref=None,
+            body=_body,
+        )
+    )
+    return registry
+
+
+def _recorder_wiring() -> dict:
+    return {
+        "wiring_version": "1",
+        "nodes": {
+            "only": {"component": "test/recorder@1.0.0", "kind": "recorder", "deps": []},
+        },
+        "recipe": {},
+        "harnesses": [],
+        "provides": ["only"],
+    }
+
+
+async def test_a_top_level_integer_outside_int64_runs_no_node(store_root):
+    """TOOL-10 (D-11): the wiring is canonicalised before any node is dispatched."""
+    import databasise
+
+    calls: list = []
+    wiring_doc = _recorder_wiring()
+    wiring_doc["extra"] = 2**70
+
+    caught = None
+    try:
+        await databasise.run_wiring(
+            wiring_doc,
+            registry=_recording_registry(calls),
+            store_root=store_root,
+            determinism_setting="cache-bypassed",
+            concurrency_setting="sequential",
+        )
+    except BaseException as exc:  # noqa: BLE001 - the outcome is asserted below
+        caught = exc
+
+    assert caught is not None and type(caught).__name__ == "CanonicalisationError", repr(caught)
+    assert calls == []
+
+
+async def test_a_scheduler_exception_still_finalizes_the_kv_store(store_root, monkeypatch):
+    """TOOL-10: a scheduler failure closes the kv store exactly once."""
+    import databasise
+    from databasise.stores.kv import SqliteKVStore
+
+    finalized = []
+    real_finalize = SqliteKVStore.finalize
+
+    async def _spy(self):
+        finalized.append(self)
+        await real_finalize(self)
+
+    async def _boom(*_args, **_kwargs):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(SqliteKVStore, "finalize", _spy)
+    monkeypatch.setattr(databasise._scheduler, "run_wiring", _boom)
+
+    caught = None
+    try:
+        await databasise.run_wiring(
+            _load_fixture(),
+            store_root=store_root,
+            determinism_setting="cache-bypassed",
+            concurrency_setting="sequential",
+        )
+    except BaseException as exc:  # noqa: BLE001 - the outcome is asserted below
+        caught = exc
+
+    assert isinstance(caught, RuntimeError), repr(caught)
+    assert len(finalized) == 1

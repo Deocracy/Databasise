@@ -8,9 +8,9 @@ run-level fields this module owns (``run_id``, ``wiring_id``, ``wiring_instance_
 ``arm_id``, ``arm_execution_order``) before returning the schema-valid run-record dict — a dict
 carrying exactly the internal identities (``wiring_id``, ``wiring_instance_hash``, every node's
 ``node_id``/``instance_hash``) that §18.2 forbids a consumer from receiving. The consumer-facing
-seam is ``databasise.seam.Databasise``; this function stays importable because Phase 3's parity
-harness (``databasise/parity/run_arm.py``) calls it directly and must keep working, but a
-consumer reaching it directly bypasses the redaction the seam exists to provide.
+seam is ``databasise.seam.Databasise``; this function stays importable for in-process callers
+and tests (``databasise/parity/run_arm.py`` does not call it), but a consumer reaching it
+directly bypasses the redaction the seam exists to provide.
 
 **Honesty fields, composer-threaded (01-10-PLAN.md Task 1).** ``partial``, ``degraded``,
 ``stop_reason`` and ``degradation_reason`` are threaded straight from ``scheduler.run_wiring``'s
@@ -59,14 +59,17 @@ async def run_wiring(
     **Machine-internal (D-02).** This returns an un-redacted run record carrying exactly the
     internal identities (``wiring_id``, ``wiring_instance_hash``, every node's
     ``node_id``/``instance_hash``) §18.2 forbids a consumer from receiving. The consumer-facing
-    seam is ``databasise.seam.Databasise`` — call that, not this, unless you are Phase 3's parity
-    harness.
+    seam is ``databasise.seam.Databasise`` — call that, not this, unless you are an in-process
+    machine test.
 
     ``clients`` (D-06) is forwarded straight through to ``_scheduler.run_wiring`` unchanged — a
     real LLM/embedding/rerank wiring for a parity run is plan 03-02's job and belongs in the
     harness, not in this composer's hardcoded tracer-namespace ``stores`` assembly below, which is
     deliberately left untouched.
     """
+    # TOOL-10 (D-11): a wiring that cannot be canonicalised must dispatch no node, so hash first.
+    wiring_bytes = canonicalise(wiring_doc)
+
     if registry is None:
         registry = PartRegistry()
 
@@ -101,7 +104,6 @@ async def run_wiring(
         for store in stores.values():
             await store.finalize()
 
-    wiring_bytes = canonicalise(wiring_doc)
     wiring_instance_hash = f"sha256:{hashlib.sha256(wiring_bytes).hexdigest()}"
     wiring_id = wiring_doc.get("wiring_id") or (
         f"wiring:{hashlib.sha256(wiring_bytes).hexdigest()[:16]}"
