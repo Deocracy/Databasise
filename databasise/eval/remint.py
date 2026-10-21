@@ -154,17 +154,16 @@ def main(argv: list[str] | None = None) -> int:
         env = _load_env_file(DEFAULT_V1_ENV_PARITY)
         clients = _build_clients(env)
         judge_instance = asyncio.run(resolve_judge_identity(clients["llm"]))
-    except refusals as exc:
+        bundle = remint(
+            snapshot,
+            _COMMITTED_BUNDLE_ROOT,
+            judge_instance=judge_instance,
+            judge_prompt_hash=judge_prompt_hash,
+            determinism_setting=_DETERMINISM_SETTING,
+            concurrency_setting=_CONCURRENCY_SETTING,
+        )
+    except refusals as exc:  # mint_bundle's BundleDriftError and MissingTargetFamilyError end here too
         return cli.refuse(exc)
-
-    bundle = remint(
-        snapshot,
-        _COMMITTED_BUNDLE_ROOT,
-        judge_instance=judge_instance,
-        judge_prompt_hash=judge_prompt_hash,
-        determinism_setting=_DETERMINISM_SETTING,
-        concurrency_setting=_CONCURRENCY_SETTING,
-    )
 
     print(json.dumps({"version": bundle.version, "judge_instance": bundle.judge_instance}, indent=2))
     return 0
