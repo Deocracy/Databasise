@@ -197,24 +197,31 @@ def _next_version_number(bundle_root: Path) -> int:
 def _compute_content_hash(
     *,
     question_ids: list[str],
+    question_texts: dict[str, str],
     gold_answers: dict[str, str],
+    gold_document_ids: dict[str, list[str]],
     judge_instance: str,
     judge_prompt_hash: str,
     corpus_snapshot_hash: str,
     determinism_setting: str,
     concurrency_setting: str,
 ) -> str:
-    """SHA-256 over the JCS canonicalisation of exactly §EV.1's five invalidating inputs: the
-    question set, the gold answers, the judge instance/prompt hash, the corpus snapshot hash, and
-    the determinism/concurrency setting pair. Two calls with identical inputs MUST return the
-    identical hash; two calls differing in any one input MUST return different hashes (Test 7's
-    negative control) — a comparator that ignores one of these inputs would pass the "differ"
-    half of that control by accident but never the "identical" half consistently, so both
-    directions are exercised.
+    """SHA-256 over the JCS canonicalisation of §EV.1's five invalidating inputs: the question set
+    (ids and text), the gold answers and gold document ids, the judge instance/prompt hash, the
+    corpus snapshot hash, and the determinism/concurrency setting pair. Two calls with identical
+    inputs MUST return the identical hash; two calls differing in any one input MUST return
+    different hashes (Test 7's negative control) — a comparator that ignores one of these inputs
+    would pass the "differ" half of that control by accident but never the "identical" half
+    consistently, so both directions are exercised.
+
+    The text and the gold ids joined the payload in 15-05 (TOOL-13, D-14); ``bundle@v1``'s stored
+    ``content_hash`` predates that, which is why dedup recomputes (:func:`_recomputed_content_hash`).
     """
     payload = {
         "question_ids": sorted(question_ids),
+        "question_texts": dict(sorted(question_texts.items())),
         "gold_answers": dict(sorted(gold_answers.items())),
+        "gold_document_ids": {k: sorted(v) for k, v in sorted(gold_document_ids.items())},
         "judge_instance": judge_instance,
         "judge_prompt_hash": judge_prompt_hash,
         "corpus_snapshot_hash": corpus_snapshot_hash,
@@ -224,11 +231,30 @@ def _compute_content_hash(
     return hashlib.sha256(canonicalise(payload)).hexdigest()
 
 
+def _recomputed_content_hash(bundle: EvalBundle) -> str:
+    """The current-scheme hash of ``bundle``'s own stored content. Dedup compares against this, never
+    against the stored ``content_hash`` field: ``bundle@v1`` stores an old-scheme hash, but its
+    stored text and gold ids recompute to the new-scheme value, so unchanged input still dedups to it.
+    """
+    gold_passage = next(tf for tf in bundle.target_families if tf.name == GOLD_PASSAGE_FAMILY)
+    return _compute_content_hash(
+        question_ids=[q.id for q in bundle.questions],
+        question_texts={q.id: q.text for q in bundle.questions},
+        gold_answers=bundle.gold_answers,
+        gold_document_ids={k: list(v) for k, v in gold_passage.targets.items()},
+        judge_instance=bundle.judge_instance,
+        judge_prompt_hash=bundle.judge_prompt_hash,
+        corpus_snapshot_hash=bundle.corpus_snapshot_hash,
+        determinism_setting=bundle.determinism_setting,
+        concurrency_setting=bundle.concurrency_setting,
+    )
+
+
 def _find_version_by_content_hash(bundle_root: Path, content_hash: str) -> str | None:
     for number in _list_version_numbers(bundle_root):
         version = f"bundle@v{number}"
         bundle = load_bundle(bundle_root, version)
-        if bundle.content_hash == content_hash:
+        if _recomputed_content_hash(bundle) == content_hash:
             return version
     return None
 
@@ -362,7 +388,9 @@ def mint_bundle(
 
     content_hash = _compute_content_hash(
         question_ids=question_ids,
+        question_texts={q.id: q.text for q in questions},
         gold_answers=gold_answers,
+        gold_document_ids={q.id: list(q.gold_document_ids) for q in snapshot.queries},
         judge_instance=judge_instance,
         judge_prompt_hash=judge_prompt_hash,
         corpus_snapshot_hash=snapshot.corpus_hash,

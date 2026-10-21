@@ -344,3 +344,57 @@ def test_eval_bundle_v1_evidence_doc_limits_name_the_absent_corpus_and_absent_aa
     limits = _section(text, r"^## Method and limits")
     assert "owner" in limits.lower() and "corpus" in limits.lower()
     assert "A/A" in limits
+
+
+# --------------------------------------------------------------------------------------------- #
+# 15-05 (TOOL-13, D-14): the content hash covers question text and gold ids, and the committed
+# bundle@v1 (old-scheme hash) still dedups for the unchanged fixture
+# --------------------------------------------------------------------------------------------- #
+
+
+def _first_query_changed(snapshot, **changes):
+    queries = tuple(
+        dataclasses.replace(q, **changes) if i == 0 else q for i, q in enumerate(snapshot.queries)
+    )
+    return dataclasses.replace(snapshot, queries=queries)
+
+
+def test_editing_one_question_text_mints_a_new_version_and_hash(bundle_root, eval_snapshot):
+    first = _mint(bundle_root, eval_snapshot)
+    edited = _first_query_changed(eval_snapshot, question=eval_snapshot.queries[0].question + " (edited)")
+
+    second = _mint(bundle_root, edited)
+
+    assert second.version != first.version, "an edited question text reused the old bundle version"
+    assert second.content_hash != first.content_hash
+
+
+def test_editing_one_gold_document_id_mints_a_new_version_and_hash(bundle_root, eval_snapshot):
+    first = _mint(bundle_root, eval_snapshot)
+    gold = eval_snapshot.queries[0].gold_document_ids
+    edited = _first_query_changed(eval_snapshot, gold_document_ids=("edited-gold-id", *gold[1:]))
+
+    second = _mint(bundle_root, edited)
+
+    assert second.version != first.version, "an edited gold document id reused the old bundle version"
+    assert second.content_hash != first.content_hash
+
+
+def test_the_committed_v1_still_dedups_for_the_unchanged_fixture(tmp_path, eval_snapshot):
+    import shutil
+
+    root = tmp_path / "eval-bundles"
+    shutil.copytree(_COMMITTED_BUNDLE_ROOT, root)
+    v1 = load_bundle(root, "bundle@v1")
+
+    again = mint_bundle(
+        eval_snapshot,
+        root,
+        judge_instance=v1.judge_instance,
+        judge_prompt_hash=v1.judge_prompt_hash,
+        determinism_setting=v1.determinism_setting,
+        concurrency_setting=v1.concurrency_setting,
+    )
+
+    assert again.version == "bundle@v1"
+    assert not (root / "bundle@v2").exists(), "an unchanged fixture minted a spurious bundle@v2"
