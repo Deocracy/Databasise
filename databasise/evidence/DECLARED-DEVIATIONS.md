@@ -21,7 +21,7 @@ Not a measured excursion (`_collect_deviations()` only picks up a `symmetric_dif
 
 ## Outstanding — CONTRACT §5 cause not yet recorded
 
-18 measured excursion(s) below have no `declared_causes` entry in `human_findings.json` yet. `render_deviations_markdown()`'s own all-or-nothing refusal on an unreasoned deviation is 03-10-PLAN.md's own tested CONTRACT §5 behaviour and is not weakened here — this section exists precisely because that refusal is correct and must not be worked around by fabricating a cause. An executor cannot author these on the owner's behalf (CONTRACT §5 requires human reasoning), so each is named here instead, distinct from — never merged into — the "Named deviations" table above, pending the exact owner action `.planning/phases/03-lightrag-query-side/03-UAT.md` spells out.
+18 measured excursion(s) below have no `declared_causes` entry in `human_findings.json` yet. `render_deviations_markdown()`'s own all-or-nothing refusal on an unreasoned deviation is 03-10-PLAN.md's own tested CONTRACT §5 behaviour and is not weakened here — this section exists precisely because that refusal is correct and must not be worked around by fabricating a cause. CONTRACT §5 (line 308) requires a decomposition to name its declared deviations explicitly; an entry in `declared_causes` does that, and records who recorded it (`recorded_by`) — an AI-recorded cause is accepted and shown as such, not treated as owner-verified. Each excursion below is named here instead, distinct from — never merged into — the "Named deviations" table above, pending a recorded cause; the owner action is spelled out in `.planning/phases/03-lightrag-query-side/03-UAT.md`.
 
 | arm | query | measured difference | cause |
 |---|---|---|---|

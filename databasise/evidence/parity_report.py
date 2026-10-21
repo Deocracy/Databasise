@@ -404,11 +404,17 @@ class DeclaredDeviation:
     recorded_at: str = ""
 
 
-def render_deviations_markdown(deviations: list[DeclaredDeviation]) -> str:
+def render_deviations_markdown(
+    deviations: list[DeclaredDeviation], pending: list[DeclaredDeviation] | None = None
+) -> str:
     """Render ``DECLARED-DEVIATIONS.md``. Raises :class:`UnreasonedDeviationError` before
     rendering anything if any entry's cause is empty or generic — the whole render fails rather
     than emitting a document with one bad row, so a bad cause can never slip into a committed
     document silently.
+
+    ``pending`` are the measured excursions that have no recorded cause yet (rendered separately
+    by :func:`_render_pending_causes_section`); they are passed here only so that the
+    "Zero declared deviations" statement is never printed while an excursion is outstanding.
     """
     for deviation in deviations:
         cause_norm = deviation.cause.strip().lower()
@@ -433,7 +439,13 @@ def render_deviations_markdown(deviations: list[DeclaredDeviation]) -> str:
         ),
     ]
 
-    if not deviations:
+    if not deviations and pending:
+        sections.append(
+            "## Named deviations\n\n"
+            f"No measured excursion has a recorded cause yet; the {len(pending)} outstanding "
+            "excursion(s) are listed under \"Outstanding\" below.\n"
+        )
+    elif not deviations:
         state = _run_state()
         if state == "inconclusive":
             sections.append(
@@ -499,11 +511,13 @@ def _render_pending_causes_section(pending: list[DeclaredDeviation]) -> str:
         "`human_findings.json` yet. `render_deviations_markdown()`'s own all-or-nothing refusal "
         "on an unreasoned deviation is 03-10-PLAN.md's own tested CONTRACT §5 behaviour and is "
         "not weakened here — this section exists precisely because that refusal is correct and "
-        "must not be worked around by fabricating a cause. An executor cannot author these on "
-        "the owner's behalf (CONTRACT §5 requires human reasoning), so each is named here "
-        "instead, distinct from — never merged into — the \"Named deviations\" table above, "
-        "pending the exact owner action "
-        "`.planning/phases/03-lightrag-query-side/03-UAT.md` spells out.\n\n"
+        "must not be worked around by fabricating a cause. CONTRACT §5 (line 308) requires a "
+        "decomposition to name its declared deviations explicitly; an entry in `declared_causes` "
+        "does that, and records who recorded it (`recorded_by`) — an AI-recorded cause is "
+        "accepted and shown as such, not treated as owner-verified. Each excursion below is "
+        "named here instead, distinct from — never merged into — the \"Named deviations\" "
+        "table above, pending a recorded cause; the owner action is spelled out in "
+        "`.planning/phases/03-lightrag-query-side/03-UAT.md`.\n\n"
         + header
         + "\n".join(rows)
         + "\n"
@@ -529,7 +543,7 @@ def render_deviations_document(deviations: list[DeclaredDeviation]) -> str:
     """
     pending = [d for d in deviations if d.cause.strip().lower() in _GENERIC_CAUSES]
     reasoned = [d for d in deviations if d.cause.strip().lower() not in _GENERIC_CAUSES]
-    return render_deviations_markdown(reasoned) + _render_pending_causes_section(pending)
+    return render_deviations_markdown(reasoned, pending) + _render_pending_causes_section(pending)
 
 
 def _render_known_design_deviation() -> str:
