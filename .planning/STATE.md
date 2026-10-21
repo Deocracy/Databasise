@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 15
 current_phase_name: Offline Tooling & Packaging
 status: executing
-stopped_at: Completed 15-11-PLAN.md
-last_updated: "2026-10-21T21:42:11.573Z"
+stopped_at: Completed 15-12-PLAN.md
+last_updated: "2026-10-21T21:49:43.442Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 14 complete, transitioned to Phase 15
-state_head: dd2f5f1923225493bd94165de32942f55f660bd7
+state_head: 1f0d91e6dffe0ba9a4379b42dc73315a923a2def
 progress:
   total_phases: 11
   completed_phases: 7
   total_plans: 100
-  completed_plans: 93
+  completed_plans: 94
   percent: 64
 ---
 
@@ -148,6 +148,7 @@ Progress: [██████░░░░] 64% (4/11 phases)
 | Phase 15 P09 | 20min | 3 tasks | 3 files |
 | Phase 15 P10 | 60min | 3 tasks | 8 files |
 | Phase 15 P11 | 25min | 3 tasks | 2 files |
+| Phase 15 P12 | 20min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -252,6 +253,7 @@ Recent decisions affecting current work:
 - [Phase 14]: 14-07: codebase-memory-mcp@0.1.0 leaves default_registry() (37 entries); registered only by probe_registry() and by tests; F-07 records it as catalogued, not registered
 - [Phase 15]: 15-08: human-findings validation runs inside load_human_findings so check_results, _collect_deviations and the spot-check renderer share one validator
 - [Phase 15]: 15-09: import_index parser defaults are None, resolved at call time so the store-lock test's module patch applies; non-verified result still exits 1
+- [Phase 15]: 15-12: v1_arm.main is estimate-only without --spend; only failure_reason no_results is an empty retrieval, every other v1 failure raises V1QueryFailedError
 
 ### Pending Todos
 
@@ -308,8 +310,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-21T21:42:11.183Z
-Stopped at: Completed 15-11-PLAN.md
+Last session: 2026-10-21T21:49:43.038Z
+Stopped at: Completed 15-12-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
