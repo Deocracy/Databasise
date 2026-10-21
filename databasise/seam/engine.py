@@ -2392,11 +2392,10 @@ class Databasise:
             sqlite3's own cross-thread-use refusal, since ``Ledger`` itself stays synchronous by
             deliberate exception. Every ledger touch this promotion needs — reading the prior
             active generation, minting the version off it, and appending — happens in this one
-            offloaded call, so the read and the write are never split across two threads.
+            offloaded call, so the read and the write are never split across two threads. The
+            ledger is closed on this thread before the closure returns (LEDG-06, D-08).
             """
-            ledger = Ledger(self.store_root)
-
-            with ledger.transaction():
+            with Ledger(self.store_root) as ledger, ledger.transaction():
                 prior_record = ledger.by_alias(alias)
                 prior_resolved = (
                     _wiring_for_row(prior_record.mutation_id, alias=alias)
@@ -2535,11 +2534,16 @@ class Databasise:
             ``_promote_sync``: every ledger touch this rollback needs (reading the target
             generation, reading the alias's current active generation, minting the version, and
             appending) happens in this one offloaded call, never split across the calling
-            event-loop thread and the executor thread.
+            event-loop thread and the executor thread. The ledger is opened read-only
+            (``Ledger.open_existing``): a store with no ``ledger.db`` has no such generation, so
+            the verb refuses as ``UnknownGenerationVersionError`` and creates no file (LEDG-06,
+            D-08); an opened ledger is closed on this thread before the closure returns.
             """
-            ledger = Ledger(self.store_root)
+            opened = Ledger.open_existing(self.store_root)
+            if opened is None:
+                raise UnknownGenerationVersionError(alias=alias, version=version)
 
-            with ledger.transaction():
+            with opened as ledger, ledger.transaction():
                 target = ledger.generation_state(alias, version)
                 if target is None:
                     raise UnknownGenerationVersionError(alias=alias, version=version)
@@ -2683,11 +2687,14 @@ class Databasise:
             """Runs entirely on the executor thread, mirroring ``_promote_sync``/
             ``_rollback_sync``: reading the target generation, reading the alias's active
             generation for the guard and the class derivation, and appending, all in one offloaded
-            call.
+            call. Opened with ``Ledger.open_existing`` and closed on this thread, exactly as
+            ``_rollback_sync`` does (LEDG-06, D-08).
             """
-            ledger = Ledger(self.store_root)
+            opened = Ledger.open_existing(self.store_root)
+            if opened is None:
+                raise UnknownGenerationVersionError(alias=alias, version=version)
 
-            with ledger.transaction():
+            with opened as ledger, ledger.transaction():
                 target = ledger.generation_state(alias, version)
                 if target is None:
                     raise UnknownGenerationVersionError(alias=alias, version=version)
