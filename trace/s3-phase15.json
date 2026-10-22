@@ -4,7 +4,7 @@
   "part": "phase15",
   "ledger_version": 796,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "ef97dd51122f213f09a1434e5f18a566b0ca839d287a3f778cc58b8ca0c743be"
+    ".planning/REQUIREMENTS.md": "5eef59fbfe7ad256c2ae8f2c28fd07c1c526bfa044a4221f923e47190559a343"
   },
   "checker": {
     "harness": "claude-code",
