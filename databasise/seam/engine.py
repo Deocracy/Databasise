@@ -198,6 +198,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Sequen
 from pathlib import Path
 from typing import Any
 
+from databasise import __version__
 from databasise.clients import CLIENT_EFFECT_TO_KEY
 from databasise.foreign import CorpusOpBusyError, run_corpus_op
 from databasise.foreign.v1_corpus_adapter import (
@@ -310,6 +311,12 @@ from databasise.validator.parse import ParsedWiring, parse_wiring
 from databasise.wirings.resolve import load_wiring, wiring_family, wiring_for_name, without_recipe_only_nodes
 
 logger = logging.getLogger(__name__)
+
+
+def _client_presence(clients: dict[str, Any] | None) -> dict[str, bool]:
+    """Which of the llm/embedding/rerank clients were configured: key presence only, never a truth
+    test or a call on a client object. Shared by ``health()`` and ``info()``."""
+    return {key: key in (clients or {}) for key in CLIENT_EFFECT_TO_KEY.values()}
 
 
 def _foreign_fault(
@@ -2057,9 +2064,21 @@ class Databasise:
             status="ok" if overall_ok else "degraded",
             stores=stores,
             engine=engine_report,
-            clients={key: key in clients for key in CLIENT_EFFECT_TO_KEY.values()},
+            clients=_client_presence(clients),
             engine_reason="; ".join(reasons) or None,
         )
+
+    # ---- Phase 16 operator read methods (appended in plan order) ----
+
+    async def info(self) -> dict[str, Any]:
+        """Version, workspace and client presence for the operator console (16-01, CONN-04). Reads no
+        store and calls no provider. ``clients`` means *configured at startup*, never *reachable*: it
+        is key presence in ``self.clients``, so no client object is touched."""
+        return {
+            "version": __version__,
+            "workspace": self.workspace,
+            "clients": _client_presence(self.clients),
+        }
 
     async def _execute(
         self,

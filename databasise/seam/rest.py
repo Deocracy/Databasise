@@ -354,11 +354,15 @@ def create_app(
     registry: PartRegistry | None = None,
     clients: dict[str, Any] | None = None,
     cors_origins: Sequence[str] = (),
+    operator: bool = False,
 ) -> FastAPI:
     """The application factory (D-17): builds one ``Databasise`` instance — the same object an
     in-process caller would construct against the same ``store_root``/``workspace`` — and wires
     every endpoint as a thin adapter over it. A test builds an app against a ``tmp_path`` store
     root and stub ``clients`` exactly as an in-process test would.
+
+    ``operator=True`` additionally mounts the operator read routes from
+    ``databasise.seam.operator_rest``; without it none of them exists (16-01, D-01).
     """
     engine = Databasise(store_root=store_root, workspace=workspace, registry=registry, clients=clients)
     app = FastAPI(title="databasise", version=__version__)
@@ -532,6 +536,12 @@ def create_app(
     @app.post("/retire")
     async def post_retire(body: RetireRequest) -> PromotionResult:
         return await engine.retire(body.alias, body.version, body.trace_ids, body.change_origin)
+
+    if operator:
+        # Lazy: the default app object and its OpenAPI stay exactly as they were (D-01).
+        from databasise.seam.operator_rest import add_operator_routes
+
+        add_operator_routes(app, engine)
 
     return app
 
