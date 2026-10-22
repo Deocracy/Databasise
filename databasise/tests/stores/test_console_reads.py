@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from databasise.stores import probes
+from databasise.stores.graph import CozoGraphStore
 from databasise.stores.vector import FaissVectorStore, load_committed
 
 
@@ -35,3 +37,35 @@ async def test_list_ids_never_reconstructs(store_root, monkeypatch):
     missing = FaissVectorStore(namespace="never", workspace="ws", store_root=store_root)
     assert list_ids(missing, 0, 10) == ([], 0)
     assert not (store_root / "ws" / "never").exists()
+
+
+async def test_one_degree_query_per_page(store_root, monkeypatch):
+    page = getattr(probes, "graph_node_page", None)
+    assert callable(page), "probes has no graph_node_page (CONN-11)"
+
+    writer = CozoGraphStore("g", "ws", store_root)
+    for node in ["a1", "a2", "a3", "b1", "lonely"]:
+        await writer.upsert_node(node, {})
+    for src, tgt in [("a1", "a2"), ("a1", "a3"), ("a1", "b1"), ("a2", "b1"), ("a3", "a3")]:
+        await writer.upsert_edge(src, tgt, {})
+    await writer.index_done_callback()
+    await writer.finalize()
+
+    scripts: list[str] = []
+    real = probes._run_immutable
+
+    def _recorder(client, script, params):
+        scripts.append(script)
+        return real(client, script, params)
+
+    def _forbidden(*args, **kwargs):
+        raise AssertionError("the graph node page used CozoGraphStore")
+
+    monkeypatch.setattr(probes, "_run_immutable", _recorder)
+    monkeypatch.setattr(CozoGraphStore, "__init__", _forbidden)
+    monkeypatch.setattr(CozoGraphStore, "node_degree", _forbidden)
+
+    rows, total = page(store_root / "ws" / "g", "", 50, 0)
+    assert rows == [("a1", 3), ("a2", 2), ("a3", 2), ("b1", 2), ("lonely", 0)]
+    assert total == 5
+    assert len([s for s in scripts if "is_in" in s]) == 1, scripts

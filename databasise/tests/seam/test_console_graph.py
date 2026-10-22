@@ -83,3 +83,20 @@ async def test_graph_nodes_page_degrees_prefix_and_busy_409(tmp_path):
     assert busy.status_code == 409, (busy.status_code, busy.text)
     assert busy.json().get("refusal_type") == "StoreBusyError", busy.text
     assert busy.json().get("store_kind") == "graph", busy.text
+
+
+def test_graph_nodes_corrupted_graph_is_a_named_fault_and_openapi_declares_409(tmp_path):
+    root = tmp_path / "store"
+    graph_dir = root / "ws" / _NAMESPACE / "graph.cozo"
+    graph_dir.mkdir(parents=True)
+    app = _operator_app(root)
+    client = TestClient(app)
+
+    corrupted = client.post("/graph/nodes", json={})
+    assert corrupted.status_code == 502, (corrupted.status_code, corrupted.text)
+    assert corrupted.json().get("refusal_type") == "ForeignEngineRefusalError", corrupted.text
+    assert corrupted.json().get("failure_class") == "StoreCorrupted", corrupted.text
+    assert list(graph_dir.iterdir()) == [], "the read created files in a non-database directory"
+
+    declared = app.openapi()["paths"].get("/graph/nodes", {}).get("post", {}).get("responses", {})
+    assert {"409", "502", "503"} <= set(declared), sorted(declared)
