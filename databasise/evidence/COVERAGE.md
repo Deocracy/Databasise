@@ -117,6 +117,31 @@ than a silent disappearance. Every remaining row's reason is unchanged from Phas
 | promote / rollback / retire | **DISCHARGED** | Was `OPT-OUT` in Phase 4's table ("still Phase 7's own deliverable"). Discharged by 07-01/07-02/07-03 — see the promote/rollback/retire rows above. |
 | comparison-rig operations | OPT-OUT | Unchanged from Phase 4's record — the rig remains a peer client of this seam (§18.3), not an operation on it. |
 | a per-modality tool of any kind | **FORBIDDEN** | Unchanged from Phase 4's record — §18.5's invariance rule; not an opt-out a later phase may revisit. Enforced by `databasise/tests/mcp/test_tool_growth_invariant.py`'s growth test (05-07). |
+| operator instance info (`GET /info`) | REST-ONLY | Served only on the `--operator` REST surface (Phase 16 D-01). It has no MCP tool because the MCP launcher has no operator gate and a tool would reach every MCP session, stdio agents included (D-03). It is not a §18.4 selector variant. |
+| operator wiring list (`GET /wirings`) | REST-ONLY | Served only on the `--operator` REST surface (Phase 16 D-01). It has no MCP tool because the MCP launcher has no operator gate and a tool would reach every MCP session, stdio agents included (D-03). It is not a §18.4 selector variant. |
+| operator alias list (`GET /ledger/aliases`) | REST-ONLY | Served only on the `--operator` REST surface (Phase 16 D-01). It has no MCP tool because the MCP launcher has no operator gate and a tool would reach every MCP session, stdio agents included (D-03). It is not a §18.4 selector variant. |
+| operator ledger history (`POST /ledger/history`) | REST-ONLY | Served only on the `--operator` REST surface (Phase 16 D-01). It has no MCP tool because the MCP launcher has no operator gate and a tool would reach every MCP session, stdio agents included (D-03). It is not a §18.4 selector variant. |
+| operator trace list (`GET /traces`) | REST-ONLY | Served only on the `--operator` REST surface (Phase 16 D-01). It has no MCP tool because the MCP launcher has no operator gate and a tool would reach every MCP session, stdio agents included (D-03). It is not a §18.4 selector variant. |
+| promotion dry run (`POST /promote/preview`) | REST-ONLY | Served only on the `--operator` REST surface (Phase 16 D-01). It has no MCP tool because the MCP launcher has no operator gate and a tool would reach every MCP session, stdio agents included (D-03). It is not a §18.4 selector variant. |
+| operator chunk page (`POST /chunks`) | REST-ONLY | Served only on the `--operator` REST surface (Phase 16 D-01). It has no MCP tool because the MCP launcher has no operator gate and a tool would reach every MCP session, stdio agents included (D-03). It is not a §18.4 selector variant. |
+| operator graph node page (`POST /graph/nodes`) | REST-ONLY | Served only on the `--operator` REST surface (Phase 16 D-01). It has no MCP tool because the MCP launcher has no operator gate and a tool would reach every MCP session, stdio agents included (D-03). It is not a §18.4 selector variant. |
+| operator graph node detail (`POST /graph/node`) | REST-ONLY | Served only on the `--operator` REST surface (Phase 16 D-01). It has no MCP tool because the MCP launcher has no operator gate and a tool would reach every MCP session, stdio agents included (D-03). It is not a §18.4 selector variant. |
+| operator server log tail (`GET /log`) | REST-ONLY | Served only on the `--operator` REST surface and only with `--log-file` (Phase 16 D-01, D-18). It has no MCP tool because the MCP launcher has no operator gate and a tool would reach every MCP session, stdio agents included (D-03). It is not a §18.4 selector variant. |
+
+### Operator surface exceptions (Phase 16)
+
+The ten rows above are the whole operator surface; the §18.5 operations table and `TOOL_NAMES` (ten
+tools) are unchanged. The surface makes four recorded exceptions:
+
+- **D-02 (owner may override).** Wiring names, `wiring_id`, `arm`, `mutation_class` and aliases
+  appear only on the `--operator` surface, after the `debug=true` precedent on `/trace/resolve`.
+  §18.4's no-wiring-as-input rule holds: every corpus and graph route takes a selector.
+- **D-09.** `GET /ledger/aliases` relaxes the `selectors.py:281-302` no-enumeration rule on the
+  operator surface only. The selector's own identical refusal is unchanged.
+- **D-10.** `GET /traces` lists trace tokens, and `POST /ledger/history` returns
+  `promotion_trace_ids`. Loopback binding, the `--operator` flag, the Origin guard and CORS mitigate it.
+- **D-19 (owner may override).** `GET /log`, behind `--operator --log-file`, narrows Phase 9 D-04.
+  Refusal and fault bodies stay free of causes.
 
 ### Authentication and transport hardening
 
