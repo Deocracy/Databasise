@@ -451,7 +451,7 @@ Plans:
 - CONN-13: where the store-busy fields live (recommended: GET /info)
 - CONN-14 (open questions 1 and 5): a localhost-only flag-gated log tail, or the console reads the log out of band only
 
-**Plans**: 8/12 plans executed
+**Plans**: 9/12 plans executed
 
 Plans:
 - [x] 16-01-PLAN.md — tracer: `create_app(operator=True)` / `databasise-rest --operator`, `operator_rest.py`, GET /info, AST thin-adapter test (CONN-04; CONN-01 part)
@@ -462,7 +462,7 @@ Plans:
 - [x] 16-06-PLAN.md — POST /promote/preview sharing /promote's prologue and version plan (CONN-09)
 - [x] 16-07-PLAN.md — POST /chunks by selector via `FaissVectorStore.list_ids` (CONN-10)
 - [x] 16-08-PLAN.md — POST /graph/nodes with one batched degree query and 409 on a held graph (CONN-11)
-- [ ] 16-09-PLAN.md — POST /graph/node edge allowlist and `UnknownGraphNodeError` 422 (CONN-12)
+- [x] 16-09-PLAN.md — POST /graph/node edge allowlist and `UnknownGraphNodeError` 422 (CONN-12)
 - [ ] 16-10-PLAN.md — `write_in_flight` / `graph_busy` on GET /info (CONN-13)
 - [ ] 16-11-PLAN.md — GET /log behind `--operator --log-file`, uvicorn file logging (CONN-14)
 - [ ] 16-12-PLAN.md — COVERAGE.md REST-only rows and exceptions, docs fixes, full offline gate (CONN-01)
@@ -531,7 +531,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 13. Selectors, Wiring & Runner | 13/13 | Complete    | 2026-10-20 |
 | 14. Promotion & Ledger | 11/11 | Complete    | 2026-10-21 |
 | 15. Offline Tooling & Packaging | 19/19 | Complete    | 2026-10-22 |
-| 16. GUI Connectors | 8/12 | In Progress | - |
+| 16. GUI Connectors | 9/12 | In Progress | - |
 | 17. GUI Mockup | 0/TBD | Not started | - |
 | 18. GUI Live | 0/TBD | Not started | - |
 

@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 16
 current_phase_name: GUI Connectors
 status: executing
-stopped_at: Completed 16-08-PLAN.md
-last_updated: "2026-10-22T18:56:10.340Z"
+stopped_at: Completed 16-09-PLAN.md
+last_updated: "2026-10-22T19:02:17.693Z"
 last_activity: 2026-10-22
 last_activity_desc: Phase 15 complete, transitioned to Phase 16
-state_head: 6f6dcd8cb778bd687411125cb8e3a76643d26ffb
+state_head: ee80d626d16392925145429149436413d7706c1d
 progress:
   total_phases: 11
   completed_phases: 8
   total_plans: 112
-  completed_plans: 108
+  completed_plans: 109
   percent: 73
 ---
 
@@ -158,6 +158,7 @@ Progress: [███████░░░] 73% (4/11 phases)
 | Phase 16 P02 | 20min | 2 tasks | 4 files |
 | Phase 16 P06 | 25min | 2 tasks | 3 files |
 | Phase 16 P08 | 20min | 2 tasks | 5 files |
+| Phase 16 P09 | 20min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -266,6 +267,7 @@ Recent decisions affecting current work:
 - [Phase 15]: 15-18 (SC2): v1_arm.main gained the estimate-only default by planner decision; all nine spending CLIs now share it (D-04), and the TOOL-05 row text is read as covering every one of them
 - [Phase 15]: 15-18: the codebase-memory-mcp launch timeout bound is timeout + 4 s (SDK teardown), not the bare timeout (TOOL-18)
 - [Phase 16]: 16-01: --operator off loopback is a parser.error before the store lock; build_app reads the flag with getattr
+- [Phase 16]: 16-09: UnknownGraphNodeError is 422 and stays out of _NOT_FOUND_REFUSALS; a selected graph with no graph.cozo is that refusal on /graph/node while /graph/nodes answers total 0
 
 ### Pending Todos
 
@@ -324,8 +326,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-22T18:56:09.869Z
-Stopped at: Completed 16-08-PLAN.md
+Last session: 2026-10-22T19:02:17.219Z
+Stopped at: Completed 16-09-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
