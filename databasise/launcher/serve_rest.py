@@ -132,6 +132,14 @@ def main(argv: list[str] | None = None) -> int:
     except InvalidCorsOriginError as exc:
         parser.error(str(exc))
     check_engine_arguments(parser, args)
+    # 16-REVIEW-A WR-03: uvicorn's dictConfig would raise a traceback after the store lock is taken.
+    # A missing parent, a directory, '' (Path('.')) and an unwritable path all fail this open.
+    if args.log_file is not None:
+        try:
+            with open(args.log_file, "a", encoding="utf-8"):
+                pass
+        except OSError as exc:
+            return refuse(OSError(f"--log-file {args.log_file} cannot be opened for append: {exc.strerror}"))
     try:
         fd, clients = open_engine(args)
     except LAUNCH_REFUSALS as exc:
