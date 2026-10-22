@@ -8,7 +8,7 @@ on one path are serialized, and the last release closes the client. An open that
 path held by another OS process) raises ``GraphStoreBusyError``. In-process only, matching
 EMBED-01's no-external-server claim.
 
-Cozo 0.7.6 (pinned exactly in ``pyproject.toml``) is architecture-frozen: it ships four known
+Cozo 0.7.6 (pinned exactly in ``pyproject.toml``) is architecture-frozen: it ships five known
 correctness bugs with no upstream fix expected. The query-shape constraints below are permanent
 mitigations, not temporary workarounds — see
 ``databasise/tests/stores/test_graph_frozen_bugs.py`` for the non-skippable regression suite that
@@ -18,6 +18,9 @@ binds them to this adapter, not merely to the original v1 class:
     #253    JSON key-order loss                       -> consume Json columns as dict, never rely
                                                           on key order
     #275    wrong DataValue types on round-trip        -> assert types explicitly on every read
+    (no #)  starts_with on a key column becomes a key-range scan with an exclusive lower bound, so
+            the key equal to the prefix is dropped     -> bind it first: ``x = id, starts_with(x, $p)``
+            (stores/probes.py ``graph_node_page``; regression in tests/stores/test_graph_read_review_c.py)
 
 Deferred-write contract, reproduced from the v1 docstring verbatim as a design constraint (not
 merely as prose): Cozo commits each ``:put``/``:rm`` immediately in its own transaction, but this

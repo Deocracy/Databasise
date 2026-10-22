@@ -147,16 +147,17 @@ def graph_node_page(
             raise GraphStoreCorruptedError("graph.cozo is not a Cozo RocksDB database")
     key, shared = _ClientRegistry.acquire(db_path)
     try:
+        # x = id stops Cozo pushing starts_with into a key-range scan that drops the key equal to $p
         ids = [
             r[0]
             for r in _run_immutable(
                 shared.client,
-                "?[id] := *nodes{id}, starts_with(id, $p) :order id :limit $l :offset $o",
+                "?[id] := *nodes{id}, x = id, starts_with(x, $p) :order id :limit $l :offset $o",
                 {"p": prefix, "l": limit, "o": offset},
             )
         ]
         # shortcut: O(N) count, no count() (Cozo #244); add a counter relation if graphs exceed ~10^6 nodes
-        total = len(_run_immutable(shared.client, "?[id] := *nodes{id}, starts_with(id, $p)", {"p": prefix}))
+        total = len(_run_immutable(shared.client, "?[id] := *nodes{id}, x = id, starts_with(x, $p)", {"p": prefix}))
         rows = _run_immutable(
             shared.client,
             "?[src, tgt] := *edges{src, tgt}, is_in(src, $ids)\n?[src, tgt] := *edges{src, tgt}, is_in(tgt, $ids)",
