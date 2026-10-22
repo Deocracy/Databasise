@@ -35,7 +35,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from databasise.cli import refuse
+from databasise.cli import InstalledPackageWriteError, refuse, write_committed_documents
 
 RESULTS_DIR = Path(__file__).resolve().parent / "parity_results"
 EVIDENCE_PATH = Path(__file__).resolve().parent / "PARITY-EVIDENCE.md"
@@ -1700,7 +1700,13 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         return _run(args)
-    except (ParityRecordFormatError, UnreasonedDeviationError, InvalidJudgmentError) as exc:
+    except (
+        ParityRecordFormatError,
+        UnreasonedDeviationError,
+        InvalidJudgmentError,
+        InstalledPackageWriteError,
+        OSError,
+    ) as exc:
         return refuse(exc)
 
 
@@ -1732,8 +1738,7 @@ def _run(args: argparse.Namespace) -> int:
     # Both texts render before either is written, so a refusal leaves neither document half-updated.
     deviations_text = render_deviations_document(_collect_deviations())
     evidence_text = render_markdown()
-    DEVIATIONS_PATH.write_text(deviations_text, encoding="utf-8")
-    EVIDENCE_PATH.write_text(evidence_text, encoding="utf-8")
+    write_committed_documents((DEVIATIONS_PATH, deviations_text), (EVIDENCE_PATH, evidence_text))
 
     print(evidence_text)
     return 0

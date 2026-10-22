@@ -29,6 +29,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from databasise.cli import InstalledPackageWriteError, refuse, write_committed_documents
 from databasise.parts.registry import PartRegistry, default_registry
 from databasise.parts.schema import Part
 from databasise.validator.blast_radius import blast_radius_violations
@@ -112,6 +113,11 @@ class BoundaryRow:
     boundary_class: str
     between: str
     rationale: str
+
+
+class MalformedBoundaryKnobError(ValueError):
+    """A named wiring's ``boundary_knobs`` entry is not an object carrying both ``between`` and
+    ``rationale`` (C-WR-04)."""
 
 
 def load_wiring(stem: str) -> dict[str, Any]:
@@ -420,11 +426,16 @@ def enumerate_boundaries(evidence: WiringEvidence, parsed: ParsedWiring) -> tupl
 
     doc = load_wiring(evidence.stem)
     for i, knob in enumerate(doc.get("boundary_knobs", [])):
+        if not isinstance(knob, dict):
+            raise MalformedBoundaryKnobError(
+                f"{evidence.stem}'s boundary_knobs[{i}] must be an object with 'between' and "
+                "'rationale'"
+            )
         between = knob.get("between")
         rationale = knob.get("rationale")
         if between is None or rationale is None:
             missing = [key for key in ("between", "rationale") if knob.get(key) is None]
-            raise ValueError(
+            raise MalformedBoundaryKnobError(
                 f"{evidence.stem}'s boundary_knobs[{i}] is missing required key(s) "
                 f"{missing}: every boundary_knobs entry must declare both 'between' and "
                 "'rationale'"
@@ -643,10 +654,15 @@ def render_markdown() -> str:
 
 def main(argv: list[str] | None = None) -> int:
     """Write the rendered document; exit 1 when Falsifier 2 fired (a probe did not behave as
-    expected, or a named wiring carries a validator violation)."""
+    expected, or a named wiring carries a validator violation). A named refusal (a malformed
+    ``boundary_knobs`` entry, an installed-package target, an OS read or write error) prints one
+    stderr line and returns 1, writing nothing (D-03)."""
     argparse.ArgumentParser(description=__doc__).parse_args(argv)
-    text = render_markdown()
-    EVIDENCE_PATH.write_text(text, encoding="utf-8")
+    try:
+        text = render_markdown()
+        write_committed_documents((EVIDENCE_PATH, text))
+    except (MalformedBoundaryKnobError, InstalledPackageWriteError, OSError) as exc:
+        return refuse(exc)
     print(text)
     return 1 if failing_probes() or failing_wirings() else 0
 

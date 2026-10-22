@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from pathlib import Path
 from typing import Any, TextIO
 
 EXIT_OK = 0
@@ -81,6 +82,23 @@ def offline_refusals(*extra: type[BaseException]) -> tuple[type[BaseException], 
         httpx.HTTPError,
         *extra,
     )
+
+
+class InstalledPackageWriteError(RuntimeError):
+    """An evidence renderer refuses to overwrite its committed document inside an installed package
+    (C-WR-03): the documents are source-checkout records, never site-packages state."""
+
+
+def write_committed_documents(*documents: tuple[Path, str]) -> None:
+    """Write each ``(path, text)``, after checking that no path lies in an installed package, so a
+    refusal writes none of them."""
+    for path, _text in documents:
+        if {"site-packages", "dist-packages"} & set(path.resolve().parts):
+            raise InstalledPackageWriteError(
+                f"{path} is inside an installed package; run this renderer from a source checkout"
+            )
+    for path, text in documents:
+        path.write_text(text, encoding="utf-8")
 
 
 def positive_int(text: str) -> int:

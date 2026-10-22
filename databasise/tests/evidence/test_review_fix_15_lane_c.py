@@ -8,7 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from databasise.evidence import falsifier2, parity_report
+from databasise import cli
+from databasise.evidence import f07_report, falsifier2, parity_report
 
 
 @pytest.fixture
@@ -210,3 +211,105 @@ def test_a_mixed_render_names_the_inconclusive_arm_causes(parity_copy: Path) -> 
     assert f"`hybrid` storage audit: {_AUDIT_REASON}" in text
     for phrase in _FALSE_CAUSES:
         assert phrase not in text, phrase
+
+
+# --------------------------------------------------------------------------------------------- #
+# C-WR-03 (no write into an installed package) and C-WR-04 (named refusals, D-03)
+# --------------------------------------------------------------------------------------------- #
+
+
+def _one_refusal_line(capsys, name: str) -> None:
+    err = capsys.readouterr().err.strip().splitlines()
+    assert len(err) == 1 and err[0].startswith(f"{name}: "), err
+
+
+def test_write_committed_documents_refuses_an_installed_package_and_writes_nothing(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "checkout" / "A.md"
+    installed = tmp_path / "lib" / "site-packages" / "databasise" / "evidence" / "B.md"
+    source.parent.mkdir(parents=True)
+    installed.parent.mkdir(parents=True)
+
+    with pytest.raises(cli.InstalledPackageWriteError):
+        cli.write_committed_documents((source, "a"), (installed, "b"))
+    assert not source.exists() and not installed.exists()
+
+    cli.write_committed_documents((source, "a"))
+    assert source.read_text(encoding="utf-8") == "a"
+
+
+@pytest.fixture
+def installed_dir(tmp_path: Path) -> Path:
+    path = tmp_path / "lib" / "site-packages" / "databasise" / "evidence"
+    path.mkdir(parents=True)
+    return path
+
+
+def test_f07_report_refuses_to_write_into_an_installed_package(
+    installed_dir: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    target = installed_dir / "F-07-MUTABLE-STORE-DISPOSITION.md"
+    monkeypatch.setattr(f07_report, "EVIDENCE_PATH", target)
+
+    assert f07_report.main([]) == 1
+    _one_refusal_line(capsys, "InstalledPackageWriteError")
+    assert not target.exists()
+
+
+def test_f07_report_maps_an_os_write_error_to_one_line(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    monkeypatch.setattr(f07_report, "EVIDENCE_PATH", tmp_path / "missing-dir" / "F-07.md")
+
+    assert f07_report.main([]) == 1
+    _one_refusal_line(capsys, "FileNotFoundError")
+
+
+def test_f07_report_refuses_an_unreasoned_mutates_store_part_by_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    target = tmp_path / "F-07.md"
+    monkeypatch.setattr(f07_report, "EVIDENCE_PATH", target)
+    # D-16: rendering from probe_registry() raises (its codebase-memory-mcp part has no reason).
+    monkeypatch.setattr(f07_report, "default_registry", falsifier2.probe_registry)
+
+    with pytest.raises(ValueError):  # still a ValueError for library callers
+        f07_report.render_f07_record(falsifier2.probe_registry())
+    assert f07_report.main([]) == 1
+    _one_refusal_line(capsys, "UnreasonedMutableStoreError")
+    assert not target.exists()
+
+
+def test_falsifier2_refuses_a_malformed_boundary_knob_by_name(wirings_copy: Path, capsys) -> None:
+    path = wirings_copy / "w2-codebase-memory-mcp.json"
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    doc["boundary_knobs"][0].pop("rationale")
+    path.write_text(json.dumps(doc), encoding="utf-8")
+
+    assert falsifier2.main([]) == 1
+    _one_refusal_line(capsys, "MalformedBoundaryKnobError")
+    assert not falsifier2.EVIDENCE_PATH.exists()
+
+
+def test_falsifier2_refuses_to_write_into_an_installed_package(
+    installed_dir: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    target = installed_dir / "FALSIFIER-2-EVIDENCE.md"
+    monkeypatch.setattr(falsifier2, "EVIDENCE_PATH", target)
+
+    assert falsifier2.main([]) == 1
+    _one_refusal_line(capsys, "InstalledPackageWriteError")
+    assert not target.exists()
+
+
+def test_parity_report_refuses_to_write_into_an_installed_package(
+    parity_copy: Path, installed_dir: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    target = installed_dir / "PARITY-EVIDENCE.md"
+    monkeypatch.setattr(parity_report, "EVIDENCE_PATH", target)
+
+    assert parity_report.main([]) == 1
+    _one_refusal_line(capsys, "InstalledPackageWriteError")
+    assert not target.exists()
+    assert not parity_report.DEVIATIONS_PATH.exists()

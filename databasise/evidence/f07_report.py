@@ -17,6 +17,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from databasise.cli import InstalledPackageWriteError, refuse, write_committed_documents
 from databasise.parts.registry import PartRegistry, default_registry
 
 EVIDENCE_PATH = Path(__file__).resolve().parent / "F-07-MUTABLE-STORE-DISPOSITION.md"
@@ -144,6 +145,11 @@ _CATALOGUED_NOT_BUILT: tuple[_DispositionRow, ...] = (
 )
 
 
+class UnreasonedMutableStoreError(ValueError):
+    """A registered part declares ``mutates_store`` but this module names no disposition reason
+    for it (D-16: rendering from ``probe_registry()`` raises this)."""
+
+
 def _live_mutates_store_rows(registry: PartRegistry) -> list[_DispositionRow]:
     """Every ``Part`` in ``registry`` whose ``effects`` contain ``mutates_store`` — computed from
     the registry itself, never a hand list. Raises rather than silently omitting a row for a
@@ -157,7 +163,7 @@ def _live_mutates_store_rows(registry: PartRegistry) -> list[_DispositionRow]:
             continue
         reason = _KNOWN_REASONS.get(part.name_at_version)
         if reason is None:
-            raise ValueError(
+            raise UnreasonedMutableStoreError(
                 f"{part.name_at_version!r} declares mutates_store but has no named disposition "
                 "reason in databasise/evidence/f07_report.py -- extend _KNOWN_REASONS before "
                 "regenerating F-07-MUTABLE-STORE-DISPOSITION.md; a component discovered by the "
@@ -323,10 +329,15 @@ byte-identically by design.
 
 def main(argv: list[str] | None = None) -> int:
     """``python -m databasise.evidence.f07_report`` renders the record from ``default_registry()``
-    and writes ``F-07-MUTABLE-STORE-DISPOSITION.md``."""
+    and writes ``F-07-MUTABLE-STORE-DISPOSITION.md``. A named refusal (an unreasoned
+    ``mutates_store`` part, an installed-package target, an OS write error) prints one stderr line
+    and returns 1, writing nothing (D-03)."""
     argparse.ArgumentParser(description=__doc__).parse_args(argv)
-    text = render_f07_record(default_registry())
-    EVIDENCE_PATH.write_text(text, encoding="utf-8")
+    try:
+        text = render_f07_record(default_registry())
+        write_committed_documents((EVIDENCE_PATH, text))
+    except (UnreasonedMutableStoreError, InstalledPackageWriteError, OSError) as exc:
+        return refuse(exc)
     print(text)
     return 0
 
@@ -336,6 +347,7 @@ __all__ = [
     "DISPOSITION_SNAPSHOT_RESET_DEFINED",
     "EVIDENCE_PATH",
     "MODAL_05_STATEMENT",
+    "UnreasonedMutableStoreError",
     "main",
     "render_f07_record",
 ]
