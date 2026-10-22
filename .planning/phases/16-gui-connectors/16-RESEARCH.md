@@ -771,16 +771,19 @@ Test-data recipes (no provider spend):
 | A10 | `deque(file, maxlen=N)` is fast enough | Standard Stack | Full scan per call; acceptable at console log sizes; `shortcut:` comment |
 | A11 | httpx `ASGITransport` same-loop pattern works for CONN-13 | Supporting stack | Fall back to an engine-level `await engine.info()` only |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `UnsatisfiableSelectorError` from `_wiring_for_row` be an outcome or an input refusal in preview?**
    - Known: it is unreachable today (all arms resolve). D-12 lists neither.
    - Recommendation: outcome (`promotable: false`), since the caller's input is well-formed. A planner may leave it propagating; no test can reach it.
+   - RESOLVED: 16-06 lets it propagate unchanged.
 2. **`tombstoned` for the tombstone row itself.**
    - Known: tombstone rows have `minted_version` None and a `targets_version`.
    - Recommendation: `tombstoned = (r.minted_version or r.targets_version) in tombstoned_versions` and `active = r.minted_version in active_set`. The CONN-07 test pins only V1, V2 and V3.
+   - RESOLVED: 16-04 uses this projection.
 3. **Does `--log-file` without `--operator` still write the file?**
    - Recommendation: yes (log file written, route not mounted). D-18 gates only the route.
+   - RESOLVED: 16-11 writes the file; the route needs both flags.
 
 ## Environment Availability
 
