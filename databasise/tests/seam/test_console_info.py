@@ -16,11 +16,13 @@ import pytest
 pytest.importorskip("fastapi")
 
 import databasise
+import databasise.seam.engine as engine_module
 import httpx
 from databasise.clients.builder import build_clients
 from databasise.seam.corpus import IngestDocument
 from databasise.seam.rest import create_app
 from databasise.seam.selectors import Selector
+from databasise.stores.graph import CozoGraphStore
 from fastapi.testclient import TestClient
 from seam.test_hipporag_write_path import (
     _DOCUMENT_TEXT,
@@ -131,3 +133,25 @@ async def test_store_busy_fields_are_true_during_an_ingest(tmp_path):
     body = await _get_info(app)
     assert body.get("write_in_flight") is False, body
     assert body.get("graph_busy") is False, body
+
+
+async def test_write_in_flight_follows_the_v1_gate_and_graph_busy_follows_the_workspace(tmp_path):
+    """16-10 (CONN-13, D-17): the v1 gate alone raises ``write_in_flight``; a graph open in another
+    workspace leaves ``graph_busy`` false; releasing the gate clears the flag."""
+    app = _operator_app(tmp_path)
+    engine = app.state.engine
+    gate = engine_module._gate_for(engine._v1_working_dir())
+    assert gate.acquire(blocking=False)
+    try:
+        body = await _get_info(app)
+        assert body.get("write_in_flight") is True, body
+        assert body.get("graph_busy") is False, body
+    finally:
+        gate.release()
+    elsewhere = CozoGraphStore("chunk_entity_relation", "elsewhere", engine.store_root)
+    try:
+        body = await _get_info(app)
+        assert body.get("write_in_flight") is False, body
+        assert body.get("graph_busy") is False, body
+    finally:
+        await elsewhere.finalize()

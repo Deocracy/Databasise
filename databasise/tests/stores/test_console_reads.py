@@ -4,8 +4,11 @@ added by later plans). A console read must not rebuild what it only lists.
 
 from __future__ import annotations
 
+import os
+
 import numpy as np
 
+from databasise.stores import graph as graph_module
 from databasise.stores import probes
 from databasise.stores.graph import CozoGraphStore
 from databasise.stores.vector import FaissVectorStore, load_committed
@@ -69,3 +72,26 @@ async def test_one_degree_query_per_page(store_root, monkeypatch):
     assert rows == [("a1", 3), ("a2", 2), ("a3", 2), ("b1", 2), ("lonely", 0)]
     assert total == 5
     assert len([s for s in scripts if "is_in" in s]) == 1, scripts
+
+
+async def test_held_graph_paths_sees_an_open_store_under_a_symlinked_root(tmp_path):
+    """16-10 (CONN-13, D-17): the registry keys are resolved paths, so a store opened through a
+    symlinked root is found by a resolved-workspace prefix and by no other workspace's prefix."""
+    held = getattr(graph_module, "held_graph_paths", None)
+    assert callable(held), "stores.graph has no held_graph_paths (CONN-13)"
+
+    real = tmp_path / "real"
+    real.mkdir()
+    link = tmp_path / "link"
+    link.symlink_to(real)
+    prefix = str((link / "ws").resolve()) + os.sep
+    other = str((link / "other").resolve()) + os.sep
+
+    store = CozoGraphStore("chunk_entity_relation", "ws", link)
+    try:
+        assert held(prefix), "an open store under a symlinked root was not seen"
+        assert held(other) == []
+    finally:
+        await store.finalize()
+    assert held(prefix) == []
+    assert held(other) == []
