@@ -717,7 +717,7 @@ These fail today.
   - Test: A TestClient test runs promote V1, promote V2, then rollback to V1 (minting V3). It asserts that V1 has `active: true` (rollback target), that V3 is the active row, that V2 has `active: false`, and that no record has a `mutation_id` key. It asserts `limit=0` → 422 `PageBoundsError` and `limit=101` → `PageSizeExceededError`. The test fails before the route exists and passes after.
   - Defects: contract/D-09, seam-engine/ENG-10, registry-ledger/D12
   - Decided in Phase 16 CONTEXT D-10 (2026-10-22): `promotion_trace_ids` are returned behind `--operator`, mitigated by loopback bind, the Origin guard and CORS.
-- [ ] **CONN-08**: GET /traces?limit&offset returns `{items: [{trace_reference, created_at, partial, degraded, stop_reason}], total, next_offset}`, newest first, through a new `TraceStore` list method. It returns the stored `created_at`, takes `limit` 1..100 and `offset >= 0`, and makes `next_offset` null on the last page. `stop_reason` passes through the same `node_free_reason` scrub as POST /trace/resolve. Trace bodies, node lists, wiring ids and instance hashes are not returned; those stay behind POST /trace/resolve. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*
+- [x] **CONN-08**: GET /traces?limit&offset returns `{items: [{trace_reference, created_at, partial, degraded, stop_reason}], total, next_offset}`, newest first, through a new `TraceStore` list method. It returns the stored `created_at`, takes `limit` 1..100 and `offset >= 0`, and makes `next_offset` null on the last page. `stop_reason` passes through the same `node_free_reason` scrub as POST /trace/resolve. Trace bodies, node lists, wiring ids and instance hashes are not returned; those stay behind POST /trace/resolve. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*
   - Test: A TestClient test runs three queries with stub clients. It asserts three items newest first, each `trace_reference` resolving through /trace/resolve, and `partial` matching the envelope. It asserts paging with `limit=2` yields `next_offset=2`, then null, and `limit=0` → 422. The test fails before the route exists and passes after.
   - Defects: rest-live/REST-13
   - Decided in Phase 16 CONTEXT D-10, D-11 (2026-10-22): trace tokens are listed behind `--operator` on a loopback-only app, and one store root is one workspace, so the list has no workspace filter.
@@ -973,7 +973,7 @@ These fail today.
 | CONN-05 | Phase 16 | Complete |
 | CONN-06 | Phase 16 | Complete |
 | CONN-07 | Phase 16 | Complete |
-| CONN-08 | Phase 16 | Pending |
+| CONN-08 | Phase 16 | Complete |
 | CONN-09 | Phase 16 | Pending |
 | CONN-10 | Phase 16 | Pending |
 | CONN-11 | Phase 16 | Pending |
