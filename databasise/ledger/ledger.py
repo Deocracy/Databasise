@@ -495,6 +495,16 @@ class Ledger:
         )
         return [self._row_to_record(r) for r in cur.fetchall()]
 
+    def aliases(self) -> list[LedgerEntry]:
+        """The active row of every alias, ordered by alias: :meth:`by_alias`'s active-row rule (the
+        latest non-tombstone row) applied to each alias in one SELECT. The operator console's alias
+        listing reads it."""
+        cur = self._conn.execute(
+            "SELECT * FROM ledger WHERE id IN (SELECT MAX(id) FROM ledger "
+            "WHERE alias IS NOT NULL AND record_kind != 'tombstone' GROUP BY alias) ORDER BY alias"
+        )
+        return [self._row_to_record(r, cls=LedgerEntry) for r in cur.fetchall()]
+
     def history_for_alias(self, alias: str) -> list[LedgerEntry]:
         """Every row for ``alias``, oldest first, rollbacks and tombstones included. Each entry
         carries the row's ``id`` (the generation ordinal) and ``created_at``. Phase 16's

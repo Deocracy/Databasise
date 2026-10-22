@@ -2117,6 +2117,35 @@ class Databasise:
             )
         return rows
 
+    async def ledger_aliases(self) -> list[dict[str, Any]]:
+        """One row per alias for the operator console (16-04, CONN-06, D-09): the alias, its active
+        version and the generation ordinal and time of the row that made it active. This enumerates
+        aliases on the ``--operator`` surface only; the capability selector's refusal, identical for
+        an empty ledger and an unknown alias, is unchanged. The read opens ``ledger.db`` read-only on
+        a worker thread and closes it before returning, and creates nothing: a store root with no
+        ledger gives ``[]``."""
+
+        def _read() -> list[dict[str, Any]]:
+            handle = Ledger.open_existing(self.store_root, read_only=True)
+            if handle is None:
+                return []
+            with handle:
+                return [
+                    {
+                        "alias": e.alias,
+                        "active_version": e.minted_version,
+                        "record_kind": e.record_kind,
+                        "generation_ordinal": e.id,
+                        "created_at": e.created_at,
+                    }
+                    for e in handle.aliases()
+                ]
+
+        try:
+            return await asyncio.to_thread(_read)
+        except sqlite3.Error as exc:
+            raise _foreign_fault("ledger_aliases", exc, failure_class="StoreFault") from exc
+
     async def _execute(
         self,
         query_object: QueryObject,

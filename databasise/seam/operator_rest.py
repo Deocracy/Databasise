@@ -14,6 +14,18 @@ from typing import Any
 
 from fastapi import FastAPI
 
+from databasise.seam.rest import _FAULT_RESPONSES, RefusalBody
+
+# Store-reading operator routes: the machine faults plus a busy store. A new dict, so the shared
+# _FAULT_RESPONSES that the seam routes use is never mutated.
+_OPERATOR_STORE_RESPONSES: dict[int | str, dict[str, Any]] = {
+    **_FAULT_RESPONSES,
+    409: {
+        "model": RefusalBody,
+        "description": "Store busy: the store is held by another process (StoreBusyError)",
+    },
+}
+
 
 def add_operator_routes(app: FastAPI, engine: Any) -> None:
     """Adds the operator routes to ``app``, each a thin adapter over ``engine``. New routes are
@@ -28,3 +40,8 @@ def add_operator_routes(app: FastAPI, engine: Any) -> None:
     async def get_wirings() -> list[dict[str, Any]]:
         """One row per wiring: node count, default arm and selector reachability."""
         return await engine.wirings()
+
+    @app.get("/ledger/aliases", responses=_OPERATOR_STORE_RESPONSES)
+    async def get_ledger_aliases() -> list[dict[str, Any]]:
+        """One row per alias: its active version, record kind, generation ordinal and time."""
+        return await engine.ledger_aliases()
