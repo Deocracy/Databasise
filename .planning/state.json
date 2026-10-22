@@ -41,7 +41,7 @@
     {
       "number": "15",
       "name": "Offline Tooling & Packaging",
-      "status": "in_progress"
+      "status": "complete"
     },
     {
       "number": "16",
@@ -61,8 +61,8 @@
   ],
   "next": {
     "command": "/gsd-progress --next",
-    "label": "Advance to the next step",
-    "reason": "Phase 8 of 11 · 64% · executing"
+    "label": "Advance to the next step (plan phase 16)",
+    "reason": "Phase 9 of 11 — needs a plan"
   },
-  "updated_at": "2026-10-21T19:37:13.410Z"
+  "updated_at": "2026-10-22T16:16:50.969Z"
 }

@@ -138,6 +138,11 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 | v1.1 Phase 14: every all_wirings() name resolves as an alias, HippoRAG included; a row that cannot be resolved is a named 422, and promote repairs it with a MAJOR bump | An alias is a stable handle (§18.4); the ledger is append-only, so a broken alias must be repairable | ✓ Good (owner-confirmed always-MAJOR) |
 | v1.1 Phase 14: retire and rollback guard by version through the rollback lineage; consumer alias reads are query-only and never migrate | An alias never serves a tombstoned generation; a read never writes (CONTRACT §6) | ✓ Good (owner-confirmed D-08 narrowing) |
 | v1.1 Phase 14: one store_root is one tenant; codebase-memory-mcp is unregistered (probe registry only) | The launcher locks per store_root; no consumer reaches the part | ✓ Good |
+| v1.1 Phase 15: every offline CLI is estimate-only unless `--spend`, and exits 0 ok / 1 named failure (one stderr line) / 2 bad argument / 3 inconclusive | A bare call must never spend tokens, take a lock or write; a refusal must never be a traceback after a paid call | ✓ Good (verified; installed-wheel run passed) |
+| v1.1 Phase 15: the wheel ships tools, eval bundles and fixtures; `mcp<3`; one version source | The offline CLIs must run from a non-editable install | ✓ Good |
+| v1.1 Phase 15: A/A floors persist in `floors.db` keyed on `wiring_instance_hash`; the promotion gate lifts in two stages with no new refusal class | A floor applies only to the wiring instance it was measured on | — Pending (no production part reports `cache_hit`, so no real floor exists yet) |
+| v1.1 Phase 15: the v1 arm makes one `aquery_llm` call per job; `no_results` is an empty retrieval, not a failure | The ids and the answer must come from the same retrieval | ✓ Good (not yet run against real v1) |
+| v1.1 Phase 15: opaque-part admission runs at load; shared scope is refused on `kind` only | Admission checked only at registration let later edits through | ✓ Good |
 | Close the operator verbs' check-then-act races with one `BEGIN IMMEDIATE` span per verb plus a UNIQUE `(alias, minted_version)` index | A guard read and the append it gates must commit together or the guard goes stale under concurrency; the schema constraint backstops it independently of any Python read path | ✓ Held (G-07-1 closed; 40/40 concurrency runs, full suite green) |
 
 ## Evolution
@@ -158,4 +163,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-21 after Phase 14*
+*Last updated: 2026-10-22 after Phase 15*

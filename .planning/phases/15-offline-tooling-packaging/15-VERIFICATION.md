@@ -1,7 +1,7 @@
 ---
 phase: 15-offline-tooling-packaging
 verified: 2026-10-22T00:00:00Z
-status: human_needed
+status: passed
 score: 24/25 must-haves verified
 covered_files:
   - ".planning/phases/15-offline-tooling-packaging/15-01-PLAN.md"
@@ -230,8 +230,9 @@ No failed truth, no missing or stub artifact, no unwired key link, no debt marke
 | 2. A-ITER2-WR-03 | Open: owner decision. |
 | 3. TOOL-13 bundle@v1 reading | Open: owner acceptance. |
 | 4. D-24 limits | Recorded limits, carried to the milestone. |
-| 5. lock-checks | Open: owner command. |
-| 6. Full offline gate | Reported by the orchestrator in the phase close. |
+| 5. lock-checks | **Done.** The owner ran lock-checks at 39b25cc; WIRE-13 was re-recorded on the granted check (ledger v795). The ledger completion gate exits 0 (5f5df3f). |
+| Status | Set to `passed` by the orchestrator. Items 1, 5 and 6 are resolved, and the verifier found no gaps. Items 2 and 3 are owner decisions on a recorded residual and on how a requirement is read; neither is a missing behaviour, and both stay open in 15-REVIEW-DISPOSITION.md and STATE.md. Item 4 lists D-24 limits that are carried to the milestone audit. |
+| 6. Full offline gate | **Passed** at 5f5df3f: `pytest -q -rs` 2979 passed, 4 deselected; `python -m pytest -q -rs` 2979 passed, 4 deselected. |
 
 ---
 

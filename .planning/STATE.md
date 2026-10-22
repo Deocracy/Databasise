@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Engine Fixes + Operator Console
-current_phase: 15
-current_phase_name: Offline Tooling & Packaging
-status: executing
-stopped_at: Completed 15-18-PLAN.md
-last_updated: "2026-10-21T23:34:55.763Z"
-last_activity: 2026-10-21
-last_activity_desc: Phase 14 complete, transitioned to Phase 15
-state_head: fbaf30e3d12b32750863f5502f7ef41453cb20b7
+current_phase: 16
+current_phase_name: GUI Connectors
+status: planning
+stopped_at: Phase 15 complete, ready to plan Phase 16
+last_updated: "2026-10-22T16:16:50.956Z"
+last_activity: 2026-10-22
+last_activity_desc: Phase 15 complete, transitioned to Phase 16
+state_head: 5f5df3f3b8e3b06f58f5094f0d79f0a622a93d5c
 progress:
   total_phases: 11
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 100
   completed_plans: 100
-  percent: 64
+  percent: 73
 ---
 
 # Project State
@@ -25,16 +25,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-19 after Phase 12)
 
 **Core value:** Modalities are swappable without consumers noticing — LightRAG and HippoRAG 2 both live behind one unchanging §18 envelope, comparable side-by-side on the rig.
-**Current focus:** Phase 15 — Offline Tooling & Packaging
+**Current focus:** Phase 16 — GUI Connectors
 
 ## Current Position
 
-Phase: 15 (Offline Tooling & Packaging) — READY TO EXECUTE
+Phase: 16 — GUI Connectors
 Plan: Not started
-Status: Ready to execute
-Last activity: 2026-10-21 — Phase 14 complete, transitioned to Phase 15
+Status: Ready to plan
+Last activity: 2026-10-22 — Phase 15 complete, transitioned to Phase 16
 
-Progress: [██████░░░░] 64% (4/11 phases)
+Progress: [███████░░░] 73% (4/11 phases)
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Progress: [██████░░░░] 64% (4/11 phases)
 | 12 | 14 | - | - |
 | 13 | 13 | - | - |
 | 14 | 11 | - | - |
+| 15 | 19 | - | - |
 
 **Recent Trend:**
 
@@ -287,7 +288,8 @@ None yet.
 - [Phase 13] D-14: NodeTrace.cache_hit is null unless a part reports it, so eval/calibration.py now refuses real-engine A/A calibration (UnusableFloorError); this is TOOL-12's intent (Phase 15).
 - [Phase 14] Phase 16 text to amend before Phase 16 is planned (REQUIREMENTS.md not edited in Phase 14): CONN-09 preview refuses on partial only, not "partial or degraded", reports the gate reason as GateNotCalibratedError, and calls seam.promotion.refuse_partial_evidence (D-03, D-04); CONN-07 active uses Ledger.lineage (D-06); CONN-05 drops the claim that all five LightRAG arms share lightrag-base (each arm has its own wiring_id since Phase 13 D-03) and gives hipporag 14 full nodes (7 on the query run), not 13.
 - [Phase 14] D-01: a rollback or retire row may cite a partial or failed run's trace; the Phase 17/18 console should label such evidence.
-- [Phase 15] Recorded limits: (1) no project LICENSE while the wheel ships HotpotQA fixture text under CC BY-SA 4.0 (Deferred). (2) From an installed wheel, `remint --spend` and `.comparison_results` would write into site-packages; the estimate-only default and the source-checkout docstrings cover it. (3) The committed `parity_results/*.json` carry the old `run_count` meaning; re-running them needs spend. (4) The packaging test skips on a cold uv cache, and a skip is not a pass (it ran and passed in the 15-18 gate). (5) No production part reports `cache_hit`, so no real floor exists yet, and only an engine started on the eval store root reads floors (`aa_run --spend` is still refused with `UnusableFloorError` after both passes). (6) The cbm launch timeout bound is timeout + 4 s. (7) The TOOL-05 row text is read as covering every spending CLI. (8) The orchestrator still owes the ledger steps for TOOL-01..TOOL-20 (test_ref, record-fail --at, plant runs); no executor ran `scripts/ledger-amend.py`.
+- [Phase 15] Recorded limits: (1) no project LICENSE while the wheel ships HotpotQA fixture text under CC BY-SA 4.0 (Deferred). (2) From an installed wheel, `remint --spend` and `.comparison_results` would write into site-packages; the estimate-only default and the source-checkout docstrings cover it. (3) The committed `parity_results/*.json` carry the old `run_count` meaning; re-running them needs spend. (4) The packaging test skips on a cold uv cache, and a skip is not a pass (it ran and passed in the 15-18 gate). (5) No production part reports `cache_hit`, so no real floor exists yet, and only an engine started on the eval store root reads floors (`aa_run --spend` is still refused with `UnusableFloorError` after both passes). (6) The cbm launch timeout bound is timeout + 4 s. (7) The TOOL-05 row text is read as covering every spending CLI. (8) Done 2026-10-22: the TOOL-01..20 ledger steps, the WIRE-13 plant (1/1 killed) and its re-record, owner lock-checks at 39b25cc. Since B-WR-04, `aa_run --spend` is refused after one question, not after both passes.
+- [Phase 15] Owner decisions open: (a) A-ITER2-WR-03: HippoRAG builds refused before eef7173 carry no unverified marker and still pass the cross-modality preflight. Options: grant an edit to the TOOL-09 node `test_tool09_preflight_leaves_the_store_root_listing_unchanged` so preflight checks all three HippoRAG namespaces, rebuild the workspace (paid), or accept as residual. (b) TOOL-13 reading: bundle@v1's 17/9/4 split counts are in EVAL-BUNDLE-V1.md, not in bundle.json; new mints record `split_counts`. (c) B-WR-07 narrowed: `mint_bundle`'s dedup return still hands back an opened version (flagged), because protected TOOL-13 pins it. The judge-verdict parser (B-CR-01), the Falsifier-2 verdict (C-CR-01) and the v1 status-less fail handling have not been checked against real replies.
 - Cozo 0.7.6 is architecture-frozen with four known correctness bugs and no upstream fixes expected; relevant to STOR-01 and STOR-10 (Phase 10).
 
 ### Quick Tasks Completed
@@ -318,7 +320,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 ## Session Continuity
 
 Last session: 2026-10-21T23:34:55.346Z
-Stopped at: Completed 15-18-PLAN.md
+Stopped at: Phase 15 complete, ready to plan Phase 16
 Resume file: None
 
 ## Operator Next Steps
