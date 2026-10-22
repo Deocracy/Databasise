@@ -25,6 +25,99 @@ def _operator_app(store_root, workspace="preview"):
     return create_app(store_root=store_root, workspace=workspace, clients=None, operator=True)
 
 
+def _persist(store_root, arm_id: str, **flags) -> str:
+    """A trace record that names ``arm_id`` directly (Phase 13 D-03), with ``flags`` such as ``partial``."""
+    from databasise.seam.trace_store import TraceStore
+
+    record = {
+        "run_id": f"fake-run-{arm_id}",
+        "wiring_id": f"wiring-{arm_id}",
+        "wiring_instance_hash": "sha256:" + "1" * 64,
+        "arm_id": arm_id,
+        "nodes": [],
+        **flags,
+    }
+    return TraceStore(store_root).persist(record)
+
+
+def _body(trace_ids, alias="p", change_origin="human_edit", **extra) -> dict:
+    return {"alias": alias, "trace_ids": trace_ids, "change_origin": change_origin, **extra}
+
+
+# Each case builds its /promote body against a fresh root. The outcome is whatever /promote does.
+_CASES = {
+    "unrecognised-verb": lambda r: _body([_seed_trace(r, "naive")], verb="bogus"),
+    "verb-check": lambda r: _body([_seed_trace(r, "naive")], verb="check"),
+    "verb-preview": lambda r: _body([_seed_trace(r, "naive")], verb="preview"),
+    "verb-run": lambda r: _body([_seed_trace(r, "naive")], verb="run"),
+    "promote-next-no-floor-known-trace": lambda r: _body([_seed_trace(r, "naive")], verb="promote-next"),
+    "promote-next-no-floor-unknown-trace": lambda r: _body(["no-such-trace"], verb="promote-next"),
+    "empty-alias": lambda r: _body([_seed_trace(r, "naive")], alias=""),
+    "hash-shaped-alias": lambda r: _body([_seed_trace(r, "naive")], alias="sha256:" + "a" * 64),
+    "invalid-change-origin": lambda r: _body([_seed_trace(r, "naive")], change_origin="nope"),
+    "no-trace-ids": lambda r: _body([]),
+    "unknown-trace": lambda r: _body(["no-such-trace"]),
+    "disagreeing-arms": lambda r: _body([_seed_trace(r, "naive"), _seed_trace(r, "local")]),
+    "partial-trace": lambda r: _body([_persist(r, "naive", partial=True)]),
+    "degraded-complete-trace": lambda r: _body([_persist(r, "naive", degraded=True)]),
+    "complete-hipporag-trace": lambda r: _body([_persist(r, "hipporag")]),
+    "complete-naive-trace": lambda r: _body([_seed_trace(r, "naive")]),
+}
+_OUTCOMES = {
+    "PartialRunEvidenceError",
+    "GateNotCalibratedError",
+    "GateVerbNotBuiltError",
+    "MeasurementPostureRefusalError",
+}
+
+
+@pytest.mark.parametrize("case", sorted(_CASES))
+def test_preview_and_promote_agree_on_every_body(store_root, case):
+    client = TestClient(_operator_app(store_root))
+    body = _CASES[case](store_root)
+
+    preview = client.post("/promote/preview", json=body)
+    promote = client.post("/promote", json=body)
+
+    if promote.status_code == 200:
+        assert preview.status_code == 200, (preview.status_code, preview.text)
+        assert preview.json().get("promotable") is True, preview.json()
+        assert preview.json().get("next_version") == promote.json()["version"], (preview.json(), promote.json())
+        assert preview.json().get("arm") and preview.json().get("mutation_class"), preview.json()
+    elif promote.json().get("refusal_type") in _OUTCOMES:
+        assert preview.status_code == 200, (preview.status_code, preview.text)
+        assert preview.json().get("promotable") is False, preview.json()
+        assert preview.json().get("reason") == promote.json()["refusal_type"], (preview.json(), promote.json())
+        assert preview.json().get("next_version") is None, preview.json()
+    else:
+        assert preview.status_code == promote.status_code, (preview.status_code, preview.text, promote.text)
+        assert preview.json().get("refusal_type") == promote.json().get("refusal_type"), (preview.text, promote.text)
+
+
+def test_preview_writes_no_ledger_row(store_root):
+    from databasise.ledger.ledger import Ledger
+
+    client = TestClient(_operator_app(store_root))
+    first = client.post("/promote", json=_body([_seed_trace(store_root, "naive")]))
+    assert first.status_code == 200, (first.status_code, first.text)
+
+    def _rows() -> int:
+        handle = Ledger.open_existing(store_root, read_only=True)
+        assert handle is not None
+        with handle:
+            return len(handle.history_for_alias("p"))
+
+    before = _rows()
+    body = _body([_seed_trace(store_root, "hybrid")])
+    preview = client.post("/promote/preview", json=body)
+    assert preview.status_code == 200, (preview.status_code, preview.text)
+    assert _rows() == before, "a preview appended a ledger row"
+    minted = client.post("/promote", json=body)
+    assert minted.status_code == 200, (minted.status_code, minted.text)
+    assert preview.json()["next_version"] == minted.json()["version"], (preview.json(), minted.json())
+    assert _rows() == before + 1
+
+
 def _ledger_files(store_root) -> list[str]:
     return sorted(p.name for p in store_root.iterdir() if p.name.startswith("ledger.db"))
 
