@@ -168,9 +168,11 @@ class Ledger:
 
         ``read_only=True`` (``_resolve_alias``, CONTRACT §6: a read must not write): a
         ``PRAGMA query_only`` connection with no journal-mode change, no schema step, no migration
-        and no commit. Its close does not checkpoint the WAL into ``ledger.db`` when this Python's
-        ``sqlite3`` has ``SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE`` (without it, closing the last
-        connection still checkpoints). SQLite's hot-journal recovery, after a writer crashed in
+        and no commit. When a ``ledger.db-wal`` exists at the open, its close does not checkpoint
+        the WAL into ``ledger.db`` when this Python's ``sqlite3`` has
+        ``SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE`` (without it, closing the last connection still
+        checkpoints). When none exists, the close checkpoint is kept, so the ``-wal`` and ``-shm``
+        files the read creates are removed again and a clean file is left as it was. SQLite's hot-journal recovery, after a writer crashed in
         rollback-journal mode, can still write the file; neither changes the logical content.
         A file with no ``ledger`` table (a zero-byte file included) also gives ``None``,
         so the caller refuses it exactly as it refuses an absent file. Only the read methods are
@@ -188,9 +190,14 @@ class Ledger:
         # statement on this connection just the same. query_only does not stop the WAL checkpoint
         # SQLite runs when the last connection closes, so that is disabled here (14-REVIEW-ITER2
         # WR-02); a Python whose sqlite3 lacks the constant keeps the close checkpoint.
+        # 16-REVIEW-B WR-01: the first read of a WAL file creates -wal and -shm, and a no-checkpoint
+        # close leaves them. With no -wal before the open, the WAL is the empty one this read made,
+        # so the close checkpoint is kept: it deletes both files and copies no frame unless a writer
+        # committed during the read and closed first (the copy that writer's own close would make).
+        wal_existed = db_path.with_name("ledger.db-wal").exists()
         self._conn = sqlite3.connect(db_path)
         try:
-            if hasattr(sqlite3, "SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE"):
+            if wal_existed and hasattr(sqlite3, "SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE"):
                 self._conn.setconfig(sqlite3.SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE, True)
             self._conn.execute("PRAGMA query_only = ON")
             self._conn.row_factory = sqlite3.Row
