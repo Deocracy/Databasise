@@ -222,6 +222,17 @@ The review's open info items (15-REVIEW-DISPOSITION.md: A-IN, B-IN, C-IN and the
 
 No failed truth, no missing or stub artifact, no unwired key link, no debt marker. Every TOOL requirement has delivering code at HEAD and a covering test that passes. The status is `human_needed` because SC1's run from an installed wheel is not exercised by any test and could not be run by the verifier, and because of the owner items above (A-ITER2-WR-03, the TOOL-13 bundle@v1 reading, lock-checks) and the D-24 limits.
 
+### Human Verification Resolution (orchestrator, 2026-10-22)
+
+| Item | Result |
+|------|--------|
+| 1. Installed-wheel run | **Passed.** The orchestrator ran it from a script outside the repo (scratchpad `wheelcheck/run.sh`). It copied `databasise/` with `shutil.copytree`, built the wheel with `uv build --offline --wheel` (`databasise-0.1.0-py3-none-any.whl`), installed it into a fresh `uv venv` with `uv pip install --offline`, and ran `-I -m` from an empty temp directory. The package imported from the venv's `site-packages/databasise`. `aa_run --split dev` printed the estimate and `mode: estimate-only`, exit 0. `remint --help` printed usage with `--spend`, exit 0. `check_import_boundary` printed `provenance not checked: no v1/ directory beside the package (installed wheel)`, exit 0. SC1 is verified. |
+| 2. A-ITER2-WR-03 | Open: owner decision. |
+| 3. TOOL-13 bundle@v1 reading | Open: owner acceptance. |
+| 4. D-24 limits | Recorded limits, carried to the milestone. |
+| 5. lock-checks | Open: owner command. |
+| 6. Full offline gate | Reported by the orchestrator in the phase close. |
+
 ---
 
 _Verified: 2026-10-22_
