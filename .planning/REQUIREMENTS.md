@@ -467,18 +467,18 @@
 
 ### Offline tooling and packaging (F8)
 
-- [ ] **TOOL-01**: A non-editable wheel built from databasise/pyproject.toml contains the databasise.tools package (check_import_boundary.py), evidence/eval-bundles/** and the tests/fixtures corpus read by eval.corpus_ingest and parity.corpus. As a result, `python -m databasise.eval.aa_run --help`, `python -m databasise.eval.remint --help` and `python -m databasise.tools.check_import_boundary` run from that wheel. The version string has one source, databasise.__version__, which rest.py passes to FastAPI(version=...). The mcp extra is bounded `mcp>=2.2.0,<3`. check_import_boundary.scan_tree skips .venv, site-packages and other non-package directories. It reports an unparseable file as a named violation instead of crashing, and it flags `from importlib import import_module; import_module('lightrag')`. Subprocess entry-point exclusions match by resolved path, as the module docstring states, not by bare filename.
+- [x] **TOOL-01**: A non-editable wheel built from databasise/pyproject.toml contains the databasise.tools package (check_import_boundary.py), evidence/eval-bundles/** and the tests/fixtures corpus read by eval.corpus_ingest and parity.corpus. As a result, `python -m databasise.eval.aa_run --help`, `python -m databasise.eval.remint --help` and `python -m databasise.tools.check_import_boundary` run from that wheel. The version string has one source, databasise.__version__, which rest.py passes to FastAPI(version=...). The mcp extra is bounded `mcp>=2.2.0,<3`. check_import_boundary.scan_tree skips .venv, site-packages and other non-package directories. It reports an unparseable file as a named violation instead of crashing, and it flags `from importlib import import_module; import_module('lightrag')`. Subprocess entry-point exclusions match by resolved path, as the module docstring states, not by bare filename.
   - Test: databasise/tests/test_packaging.py builds the wheel into a temp dir. It asserts that databasise/tools/check_import_boundary.py, an evidence/eval-bundles file and a tests/fixtures corpus file are in the RECORD. It asserts create_app().version == databasise.__version__ and that the mcp requirement has an upper bound. databasise/tests/test_import_boundary.py adds four cases. (1) A temp tree with .venv/lib/site-packages/x.py importing lightrag yields no violation. (2) A file with invalid syntax yields a violation, not an exception. (3) The from-import import_module('lightrag') form is detected. (4) A file in another directory that shares the basename of an excluded entry point is still scanned. All four fail on the current tree.
   - Defects: mcp-clients/D15, other-surfaces/OS-10, mcp-clients/D13
   - Owner decision first: Whether the fixture corpus and eval bundles ship as package data, or the offline CLIs are declared source-checkout-only. In the second case the wheel must exclude those CLIs explicitly.
-- [ ] **TOOL-02**: `python -m databasise.parity.import_index` parses its arguments with argparse. `--help` prints usage and exits 0. An unknown argument such as `--verfiy` exits 2. Neither writes anything under the store root. The CLI accepts `--v1-working-dir`, `--store-root` and `--workspace` (default: the derived workspace), so v1/.corpus_working_dir can be imported. Every run prints the derived workspace string that a launcher must pass to the engine; it is currently shared-4fab18fef508b7bc3dda1cc2d8f12e36.
+- [x] **TOOL-02**: `python -m databasise.parity.import_index` parses its arguments with argparse. `--help` prints usage and exits 0. An unknown argument such as `--verfiy` exits 2. Neither writes anything under the store root. The CLI accepts `--v1-working-dir`, `--store-root` and `--workspace` (default: the derived workspace), so v1/.corpus_working_dir can be imported. Every run prints the derived workspace string that a launcher must pass to the engine; it is currently shared-4fab18fef508b7bc3dda1cc2d8f12e36.
   - Test: databasise/tests/parity/test_import_index_cli.py monkeypatches import_v1_index to a recorder. main(['--help']) raises SystemExit 0 and main(['--verfiy']) raises SystemExit 2. In both cases the recorder is never called and the store root mtime is unchanged. main(['--v1-working-dir', tmp, '--store-root', tmp2, '--verify']) passes those paths through, and stdout contains the derived workspace. These fail today because argv is checked only for the literal '--verify'.
   - Defects: other-surfaces/OS-03, parity-b/P-B12, parity-b/P-B13
   - Owner decision first: M-04 LightRAG write path: whether re-import from v1/.corpus_working_dir is the sanctioned way to make REST-ingested LightRAG documents queryable. M-01 launcher: how the workspace string reaches the launcher.
-- [ ] **TOOL-03**: verify_import returns a graph-topology violation, not 'verified', when the v1 Cozo graph exists and the v2 graph namespace is absent. A missing v2 store is reported with a dedicated assertion value 'precondition' instead of 'chunk-text'; 'precondition' is added to the Violation.assertion Literal.
+- [x] **TOOL-03**: verify_import returns a graph-topology violation, not 'verified', when the v1 Cozo graph exists and the v2 graph namespace is absent. A missing v2 store is reported with a dedicated assertion value 'precondition' instead of 'chunk-text'; 'precondition' is added to the Violation.assertion Literal.
   - Test: databasise/tests/parity/test_import_verification.py adds two cases over a tmp store. (a) Import, delete the v2 chunk_entity_relation graph dir, then verify: status != 'verified' and a violation has assertion == 'graph-topology'. (b) An empty store root gives status 'refused' with assertion == 'precondition'. Both fail today.
   - Defects: parity-b/P-B1, parity-b/P-B11
-- [ ] **TOOL-04**: The offline CLIs parity.run_arm, parity.storage_audit, parity.run_comparison, parity.run_cross_modality, eval.aa_run and eval.remint each map named configuration, input and provider failures to one stderr line and exit 1 with no traceback. The failures covered are:
+- [x] **TOOL-04**: The offline CLIs parity.run_arm, parity.storage_audit, parity.run_comparison, parity.run_cross_modality, eval.aa_run and eval.remint each map named configuration, input and provider failures to one stderr line and exit 1 with no traceback. The failures covered are:
 - MissingParityEnvKeyError and UnparseableProviderRoutingError.
 - Seam refusals (SeamRefusalError subclasses).
 - FileNotFoundError and BundleDriftError, raised before spend.
@@ -490,7 +490,7 @@ Invalid numeric options such as `--n-resamples 0` are rejected at parse time wit
 
   - Test: databasise/tests/test_cli_refusals.py is parametrised over the six CLI main functions and the errors each can raise. It injects each named error from the client builder or loader via monkeypatch and asserts SystemExit code 1 and a single stderr line containing the error class name. aa_run with --n-resamples 0 exits 2 before any client is built. A fake client whose transport binds to the loop of first use completes a two-family aa_run --spend run. remint's bundle root path is unchanged. Each error case fails on at least one CLI today.
   - Defects: other-surfaces/OS-06, parity-b/P-B7, parity-a/PAR-07, eval/EVAL-07, eval/EVAL-09, eval/EVAL-11
-- [ ] **TOOL-05**: parity.build_hipporag_index and eval.remint default to an estimate-only dry run. The dry run makes no LLM or embedding call and exits 0 with the estimate. Live spend happens only with `--spend`. build_hipporag_index no longer refuses when store_root/workspace lacks a LightRAG import; it creates the workspace dir. Its post-build check fails with a named error when the hipporag-chunks vector count is zero or differs from the computed chunk count.
+- [x] **TOOL-05**: parity.build_hipporag_index and eval.remint default to an estimate-only dry run. The dry run makes no LLM or embedding call and exits 0 with the estimate. Live spend happens only with `--spend`. build_hipporag_index no longer refuses when store_root/workspace lacks a LightRAG import; it creates the workspace dir. Its post-build check fails with a named error when the hipporag-chunks vector count is zero or differs from the computed chunk count.
   - Test: databasise/tests/parity/test_build_hipporag_index.py and databasise/tests/eval/test_remint.py cover three cases:
 - main([]) with counting fake clients records 0 calls.
 - main(['--spend']) on an empty tmp store root (no LightRAG dir) builds.
@@ -499,7 +499,7 @@ Invalid numeric options such as `--n-resamples 0` are rejected at parse time wit
 All three fail today: both CLIs spend immediately, the build refuses without the LightRAG dir, and the chunk count is not checked.
 
   - Defects: other-surfaces/OS-12, parity-b/P-B10
-- [ ] **TOOL-06**: parity.run_comparison changes as follows:
+- [x] **TOOL-06**: parity.run_comparison changes as follows:
 - A decomposed run that is partial, degraded or cyclic produces a record with status 'inconclusive', a reason naming partial, degraded or cycle, and no diff. It is never 'completed', and the existing status Literal is kept.
 - The index-identity pre-flight verifies the same v1_working_dir that the v1 arm runs against.
 - keyword_variance_runs < 2 is rejected before any LLM call.
@@ -517,7 +517,7 @@ All three fail today: both CLIs spend immediately, the build refuses without the
 All fail today.
 
   - Defects: parity-a/PAR-01, parity-a/PAR-02, parity-a/PAR-08, parity-a/PAR-09, other-surfaces/OS-04
-- [ ] **TOOL-07**: v1_driver_script and v1_arm change as follows:
+- [x] **TOOL-07**: v1_driver_script and v1_arm change as follows:
 - v1_driver_script exits 1 with a named error when v1 aquery_data returns a non-success status, instead of returning an empty success.
 - hl_keywords_used and ll_keywords_used are null when v1's metadata.keywords is absent, instead of echoing the caller's input.
 - In local, global, hybrid or mix mode with no pinned keywords, the keywords extracted by aquery_data are pinned into the answer call, so extraction runs once.
@@ -534,7 +534,7 @@ All fail today.
 
   - Defects: parity-b/P-B2, parity-b/P-B3, parity-b/P-B4, parity-b/P-B5, parity-b/P-B14
   - Owner decision first: G-27 v1 answer fidelity: whether the v1 arm may generate its answer from the aquery_data context (one execution) or must call v1 aquery unchanged. Also whether IN-01 (a missing .env.parity treated as empty) is reversed.
-- [ ] **TOOL-08**: parity.storage_audit exits non-zero and prints 'partial' or 'cycle' when run_audit returns a partial run or a cyclic wiring. Nodes that were never dispatched are reported as 'unreached', not 'no-touch'. parity.storage_audit and parity.run_arm accept `--arm hipporag`, resolve it through the wiring loader and build stores from the resolved wiring, so HippoRAG store_namespaces are audited. The redundant in-function `import json` in run_arm.main is removed.
+- [x] **TOOL-08**: parity.storage_audit exits non-zero and prints 'partial' or 'cycle' when run_audit returns a partial run or a cyclic wiring. Nodes that were never dispatched are reported as 'unreached', not 'no-touch'. parity.storage_audit and parity.run_arm accept `--arm hipporag`, resolve it through the wiring loader and build stores from the resolved wiring, so HippoRAG store_namespaces are audited. The redundant in-function `import json` in run_arm.main is removed.
   - Test: databasise/tests/parity/test_storage_audit.py:
 - A fake budget-halted run returns exit != 0, and undispatched nodes show 'unreached'.
 - A cyclic wiring returns exit != 0 with 'cycle'.
@@ -544,7 +544,7 @@ All fail today.
 All fail today.
 
   - Defects: parity-b/P-B6, parity-b/P-B8, parity-a/PAR-12
-- [ ] **TOOL-09**: parity.run_cross_modality changes as follows:
+- [x] **TOOL-09**: parity.run_cross_modality changes as follows:
 - Preflight refuses when the LightRAG chunks namespace has zero vectors, so a HippoRAG-only workspace no longer passes.
 - Preflight creates no directory or file under the store root. It uses read-only existence and count checks and does not open Cozo.
 - The run refuses before spending when the wiring resolved from each arm's selector does not match the wiring whose recipe hash is recorded.
@@ -561,14 +561,14 @@ All fail today.
 
   - Defects: parity-a/PAR-03, parity-a/PAR-04, parity-a/PAR-05, parity-a/PAR-06, parity-a/PAR-11
   - Owner decision first: M-08 hybrid/global selection: whether cross-modality arms are named explicitly (by wiring id) instead of chosen by capability selector.
-- [ ] **TOOL-10**: databasise.run_wiring canonicalises the wiring document before executing it, so a wiring containing an integer outside int64 raises CanonicalisationError with zero nodes run. It finalizes every store in a finally block, so a scheduler exception still finalizes the SqliteKVStore.
+- [x] **TOOL-10**: databasise.run_wiring canonicalises the wiring document before executing it, so a wiring containing an integer outside int64 raises CanonicalisationError with zero nodes run. It finalizes every store in a finally block, so a scheduler exception still finalizes the SqliteKVStore.
   - Test: databasise/tests/test_tracer_end_to_end.py adds two cases. A wiring with 2**70 in its config raises CanonicalisationError, and a recording part body is never invoked. A monkeypatched scheduler.run_wiring that raises still leads to SqliteKVStore.finalize being called (checked with a spy). Both fail today.
   - Defects: mcp-clients/D14
 - [x] **TOOL-11**: eval.corpus_ingest --arm lightrag writes into the eval store (v1/.eval_corpus_store) and never into v1/.corpus_working_dir; otherwise it refuses with a named error. The _EVAL_INGEST_STORE_ROOT comment states where each arm writes. eval.aa_run takes `--arm` and queries the same arm the ingest populated. It refuses when that arm's index is empty instead of scoring an empty index as floor 0.0. score_gold_passage maps LightRAG chunk evidence to document ids, or refuses with a named error, instead of raising KeyError on record['document_id'].
   - Test: databasise/tests/eval/test_corpus_ingest.py uses a spy to assert that the working_dir passed to run_corpus_op for the lightrag arm lies under the eval store root, and that the mtime of v1/.corpus_working_dir is unchanged. databasise/tests/eval/test_aa_run.py asserts that --arm is parsed and forwarded to the QueryObject selector, that an empty index raises a named refusal, and that gold_passage scoring over LightRAG-shaped metadata (no document_id key) returns a score or a named refusal. All fail today.
   - Defects: eval/EVAL-01, eval/EVAL-02, eval/EVAL-08
   - Owner decision first: M-04 LightRAG write path: eval ingest depends on how LightRAG ingest reaches the v2 stores. G-34: whether eval ingest may touch the live corpus at all.
-- [ ] **TOOL-12**: eval.calibration refuses calibration when a pass yields no node traces, or when any trace node has an unreported cache status. To make the second check reachable, the scheduler's _body_report records cache_hit as None, not False, when a part does not report it. The floor is two-sided (an absolute or symmetric bound), so a systematic one-directional A/A shift cannot produce a negative floor. The judge verdict parser accepts 'CORRECT.', '**CORRECT**', 'Verdict: CORRECT' and 'CORRECT—'. A calibrated floor is persisted under the store root, and the promotion gate reads it through the CalibrationResult.floor_for / StaleNullError path instead of always raising UncalibratedFloorRefusalError.
+- [x] **TOOL-12**: eval.calibration refuses calibration when a pass yields no node traces, or when any trace node has an unreported cache status. To make the second check reachable, the scheduler's _body_report records cache_hit as None, not False, when a part does not report it. The floor is two-sided (an absolute or symmetric bound), so a systematic one-directional A/A shift cannot produce a negative floor. The judge verdict parser accepts 'CORRECT.', '**CORRECT**', 'Verdict: CORRECT' and 'CORRECT—'. A calibrated floor is persisted under the store root, and the promotion gate reads it through the CalibrationResult.floor_for / StaleNullError path instead of always raising UncalibratedFloorRefusalError.
   - Test: databasise/tests/eval/test_calibration.py:
 - Empty node lists give a refusal.
 - A scheduler trace from a part that omits cache_hit carries None, and calibration refuses.
@@ -580,7 +580,7 @@ All fail today.
 
   - Defects: eval/EVAL-03, eval/EVAL-06, eval/EVAL-10, eval/EVAL-12
   - Owner decision first: G-19 floor store and gate verbs: where floors are persisted, their staleness key, and whether gate verbs stay disabled until then (EVAL-10). The scheduler's cache_hit None change crosses into the runner and must be coordinated with the phase that owns M-06.
-- [ ] **TOOL-13**: eval.bundle changes as follows:
+- [x] **TOOL-13**: eval.bundle changes as follows:
 - open_sealed appends a 'sealed_open' usage entry to the source version as well as to the new one.
 - mint_bundle never returns a version whose sealed split has been opened as if it were unopened.
 - The version content hash includes question text and gold_document_ids, so editing either one mints a new version.
@@ -593,7 +593,7 @@ All fail today.
 All fail today.
 
   - Defects: eval/EVAL-04, eval/EVAL-05, eval/EVAL-13
-- [ ] **TOOL-14**: evidence.parity_report renders only states it reads:
+- [x] **TOOL-14**: evidence.parity_report renders only states it reads:
 - When no excursion has a cause, the deviations document does not print 'Zero declared deviations' and lists the pending excursions.
 - Run state 'mixed' gets its own text, with no 'every arm reports a refusal' text.
 - The naive verdict, the corpus size, the '(pending measurement)' heading and the 'non-empty on every query' claim are computed from parity_results and checked per query.
@@ -618,11 +618,11 @@ All fail today.
 
   - Defects: evidence-pkg/EV-01, evidence-pkg/EV-02, evidence-pkg/EV-03, evidence-pkg/EV-04, evidence-pkg/EV-05, evidence-pkg/EV-06, evidence-pkg/EV-07, evidence-pkg/EV-08, other-surfaces/OS-08
   - Owner decision first: EV-02: whether AI-recorded causes in human_findings.json are accepted (shown with recorded_by) or refused by the renderer as not human-authored.
-- [ ] **TOOL-15**: evidence.falsifier2's verdict paragraph and the exit status of main() are computed from evaluate_probe results. Any 'DID NOT FIRE' or 'UNEXPECTED VIOLATION' row yields a 'Falsifier 2 fired' verdict and exit 1. evidence.f07_report gains a main() that writes F-07-MUTABLE-STORE-DISPOSITION.md and derives the excluded component names from the registered mutates_store parts. The F-07 verdict no longer claims the exclusion is enforced in a reachable comparison path. The F-07 record and the CROSS-MODALITY-EVIDENCE.md title, Status section and body all state the same MODAL-05 status.
+- [x] **TOOL-15**: evidence.falsifier2's verdict paragraph and the exit status of main() are computed from evaluate_probe results. Any 'DID NOT FIRE' or 'UNEXPECTED VIOLATION' row yields a 'Falsifier 2 fired' verdict and exit 1. evidence.f07_report gains a main() that writes F-07-MUTABLE-STORE-DISPOSITION.md and derives the excluded component names from the registered mutates_store parts. The F-07 verdict no longer claims the exclusion is enforced in a reachable comparison path. The F-07 record and the CROSS-MODALITY-EVIDENCE.md title, Status section and body all state the same MODAL-05 status.
   - Test: databasise/tests/evidence/test_falsifier2_verdict.py monkeypatches one probe so that it does not fire. The rendered text then does not contain 'Falsifier 2 did not fire', does contain 'Falsifier 2 fired', and main() exits 1. databasise/tests/evidence/test_f07_record.py checks three things: f07_report.main exists and regenerates the committed file byte-identically; a third fake mutates_store part appears in the verdict; the verdict has no 'enforced as an explicit refusal' claim. databasise/tests/evidence/test_cross_modality_record.py checks that the title, Status and body MODAL-05 statements agree. All fail today.
   - Defects: evidence-pkg/EV-09, other-surfaces/OS-05, evidence-pkg/EV-11, evidence-pkg/EV-12, evidence-pkg/EV-13
   - Owner decision first: MODAL-05 status: the owner confirms whether MODAL-05 is discharged (2026-09-10 run) or remains unproven, so both records can state one value. The F-07 excluded set depends on TOOL-18's decision about the codebase-memory-mcp part's mutates_store declaration.
-- [ ] **TOOL-16**: Once all parts and wirings are loaded (in default_registry(), or at Databasise construction), cross_check_conditions (§8 conditions 7, 10 and 11) runs for every registered opaque part against each wiring whose provides node resolves to that part. A violation refuses with AdmissionConditionMissingError. register() alone cannot run these checks, because conditions 7 and 11 need the full registry and a resolved wiring. validate_admission refuses a record whose part_name_at_version differs from the part's, and it validates ttl_days, feed_tier, network_namespace and environment_hash. A part with kind='opaque' and artifact_scope='shared' is refused with ForbiddenSharedScopeError regardless of structural_depth. Part effects outside the 17-member Effect literal, and invalid kind, structural_depth or artifact_scope values, are refused at registration.
+- [x] **TOOL-16**: Once all parts and wirings are loaded (in default_registry(), or at Databasise construction), cross_check_conditions (§8 conditions 7, 10 and 11) runs for every registered opaque part against each wiring whose provides node resolves to that part. A violation refuses with AdmissionConditionMissingError. register() alone cannot run these checks, because conditions 7 and 11 need the full registry and a resolved wiring. validate_admission refuses a record whose part_name_at_version differs from the part's, and it validates ttl_days, feed_tier, network_namespace and environment_hash. A part with kind='opaque' and artifact_scope='shared' is refused with ForbiddenSharedScopeError regardless of structural_depth. Part effects outside the 17-member Effect literal, and invalid kind, structural_depth or artifact_scope values, are refused at registration.
   - Test: databasise/tests/parts/test_admission.py adds five cases:
 - A registry containing an opaque part plus a part that declares an 'as_of' effect is refused with AdmissionConditionMissingError when the registry is built.
 - An admission record for part A attached to part B raises.
@@ -633,7 +633,7 @@ All fail today.
 All fail today except the last.
 
   - Defects: registry-ledger/D1, registry-ledger/D2, registry-ledger/D3, registry-ledger/D4
-- [ ] **TOOL-17**: The artifact registry is either wired into the runner or removed. If it is kept:
+- [x] **TOOL-17**: The artifact registry is either wired into the runner or removed. If it is kept:
 - write_artifact is called for the parts that declare writes_artifact (lightrag/full-ingest, lightrag/embedder-index, hipporag/graph-materializer), so a run produces registry rows.
 - register() keys idempotency on (content_hash, namespace, scope, producer_instance_hash).
 - register() refuses any effect other than writes_artifact.
@@ -650,7 +650,7 @@ All fail today. If the registry is removed instead, the modules and their tests 
 
   - Defects: registry-ledger/D5, registry-ledger/D6, registry-ledger/D7, registry-ledger/D8, registry-ledger/D19
   - Owner decision first: D5: wire the artifact registry into the runner (the second blast-radius call site, §16.1 discovery), or delete registry_artifact/ and stores/blob.py.
-- [ ] **TOOL-18**: The codebase-memory-mcp adapter and part change as follows:
+- [x] **TOOL-18**: The codebase-memory-mcp adapter and part change as follows:
 - A tool-level refusal reaches the caller as CbmToolCallError, not CbmTransportError.
 - The wall-clock timeout covers process launch and session.initialize().
 - The tool name is checked against a read-only allowlist before call_tool, so delete_project, index_repository and manage_adr are refused without being executed.
@@ -670,11 +670,11 @@ All fail today.
 
   - Defects: foreign/FOR-01, foreign/FOR-02, foreign/FOR-11, parts-lightrag/PC-13, foreign/FOR-12, foreign/FOR-13, parts-lightrag/PC-14
   - Owner decision first: Whether the codebase-memory-mcp part stays registered (unreachable from every served wiring, F-07 exclusion) or is removed from default_registry. Whether it keeps declaring mutates_store, which determines whether F-07 (TOOL-15) still lists it as excluded.
-- [ ] **TOOL-19**: Each of the nine MCP tools in TOOL_NAMES publishes a non-empty usage description with no internal plan references (no 'PLAN.md', 'Phase 7' or '_refusal_mapped'). The mcp package docstring, the tools.py and create_server docstrings and tests/mcp/test_dual_transport_parity.py state nine tools or reference TOOL_NAMES. The PartRegistry docstring, the falsifier2.probe_registry docstring and the rendered falsifier2 text describe default_registry() without a fixed part count, replacing 'D-04's seven entries' and 'Phase-1 entries'.
+- [x] **TOOL-19**: Each of the nine MCP tools in TOOL_NAMES publishes a non-empty usage description with no internal plan references (no 'PLAN.md', 'Phase 7' or '_refusal_mapped'). The mcp package docstring, the tools.py and create_server docstrings and tests/mcp/test_dual_transport_parity.py state nine tools or reference TOOL_NAMES. The PartRegistry docstring, the falsifier2.probe_registry docstring and the rendered falsifier2 text describe default_registry() without a fixed part count, replacing 'D-04's seven entries' and 'Phase-1 entries'.
   - Test: databasise/tests/mcp/test_tool_descriptions.py lists the tools from create_server(). Every description is non-empty and matches none of the plan-reference patterns. A text test asserts that no 'five tools' or 'five intention-level' string remains in databasise/mcp/ or in the dual-transport test. It also asserts that no 'seven entries', 'seven Phase-1' or 'Phase-1 entries' string remains in parts/registry.py, evidence/falsifier2.py or the regenerated FALSIFIER-2-EVIDENCE.md. These fail today: 7 descriptions are empty and the counts are stale.
   - Defects: mcp-live/MCP-07, mcp-clients/D4, mcp-live/MCP-08, tests/T-14, contract/D-14, other-surfaces/OS-09, doc-audit-5/D10, evidence-pkg/EV-10
   - Owner decision first: Whether MCP tools keep the single required 'args' input property and the generic object output_schema, or publish per-tool parameter and output schemas. This choice affects every MCP client.
-- [ ] **TOOL-20**: Module and data docstrings state current facts:
+- [x] **TOOL-20**: Module and data docstrings state current facts:
 - build_hipporag_index.py and run_cross_modality.py no longer say the module 'has not been invoked for real'; real runs were recorded on 2026-09-10.
 - run_cross_modality no longer points to CROSS-MODALITY-EVIDENCE.md as BLOCKED.
 - The Findings rows of CROSS-MODALITY-EVIDENCE.md (lines 27-31: no hipporag-* namespace, build never invoked) are marked as superseded by the 2026-09-10 section.
@@ -946,26 +946,26 @@ These fail today.
 | LEDG-12 | Phase 14 | Complete |
 | LEDG-13 | Phase 14 | Complete |
 | LEDG-14 | Phase 14 | Complete |
-| TOOL-01 | Phase 15 | Pending |
-| TOOL-02 | Phase 15 | Pending |
-| TOOL-03 | Phase 15 | Pending |
-| TOOL-04 | Phase 15 | Pending |
-| TOOL-05 | Phase 15 | Pending |
-| TOOL-06 | Phase 15 | Pending |
-| TOOL-07 | Phase 15 | Pending |
-| TOOL-08 | Phase 15 | Pending |
-| TOOL-09 | Phase 15 | Pending |
-| TOOL-10 | Phase 15 | Pending |
+| TOOL-01 | Phase 15 | Complete |
+| TOOL-02 | Phase 15 | Complete |
+| TOOL-03 | Phase 15 | Complete |
+| TOOL-04 | Phase 15 | Complete |
+| TOOL-05 | Phase 15 | Complete |
+| TOOL-06 | Phase 15 | Complete |
+| TOOL-07 | Phase 15 | Complete |
+| TOOL-08 | Phase 15 | Complete |
+| TOOL-09 | Phase 15 | Complete |
+| TOOL-10 | Phase 15 | Complete |
 | TOOL-11 | Phase 15 | Complete |
-| TOOL-12 | Phase 15 | Pending |
-| TOOL-13 | Phase 15 | Pending |
-| TOOL-14 | Phase 15 | Pending |
-| TOOL-15 | Phase 15 | Pending |
-| TOOL-16 | Phase 15 | Pending |
-| TOOL-17 | Phase 15 | Pending |
-| TOOL-18 | Phase 15 | Pending |
-| TOOL-19 | Phase 15 | Pending |
-| TOOL-20 | Phase 15 | Pending |
+| TOOL-12 | Phase 15 | Complete |
+| TOOL-13 | Phase 15 | Complete |
+| TOOL-14 | Phase 15 | Complete |
+| TOOL-15 | Phase 15 | Complete |
+| TOOL-16 | Phase 15 | Complete |
+| TOOL-17 | Phase 15 | Complete |
+| TOOL-18 | Phase 15 | Complete |
+| TOOL-19 | Phase 15 | Complete |
+| TOOL-20 | Phase 15 | Complete |
 | CONN-01 | Phase 16 | Pending |
 | CONN-02 | Phase 16 | Pending |
 | CONN-03 | Phase 16 | Pending |
