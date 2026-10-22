@@ -135,6 +135,9 @@ VERDICT_SCORES: dict[str, float] = {
 # "not correct", "Partially correct" and an echoed option list never parse (B-CR-01).
 _VERDICT_PATTERN = re.compile(r"^\W*(?:VERDICT\W*:\W*)?(CORRECT|PARTIAL|INCORRECT)\b")
 _VERDICT_WORD = re.compile(r"\b(CORRECT|PARTIAL|INCORRECT)\b")
+# The prompt's option lines ("- PARTIAL — <definition>"); an echo of the chosen verdict's own
+# definition is not a second verdict, though PARTIAL's says "correct" (B-ITER2-WR-01).
+_OPTION_LINE = re.compile(r"(?m)^-\s*(CORRECT|PARTIAL|INCORRECT)\s+\W+\s+(.+?)\W*$")
 
 _DEFAULT_FAMILIES: tuple[str, ...] = (GOLD_PASSAGE_FAMILY, ANSWER_LEVEL_FAMILY)
 _UNCALIBRATABLE_SPLITS: tuple[str, ...] = ("holdout", "sealed")
@@ -359,9 +362,11 @@ async def score_answer_level(
     placeholders, make exactly one ``llm_client.chat`` call, and map the returned verdict to a
     number via :data:`VERDICT_SCORES`. The upper-cased response must open with CORRECT, PARTIAL or
     INCORRECT, after leading punctuation or markdown and at most one ``Verdict:`` label, and must
-    name no second distinct verdict word — ``CORRECT.``, ``**CORRECT**``, ``Verdict: CORRECT`` and a
-    verdict followed by a dash or a sentence all parse (TOOL-12); ``not correct``, ``Partially
-    correct`` and an echoed option list do not (B-CR-01). No fuzzier recovery, no retry, no fallback
+    name no second distinct verdict word — ``CORRECT.``, ``**CORRECT**``, ``Verdict: CORRECT``, a
+    verdict followed by a dash or a sentence, and a verdict followed by its own definition from the
+    prompt's option list (PARTIAL's says "correct") all parse (TOOL-12, B-ITER2-WR-01); ``not
+    correct``, ``Partially correct``, an echoed option list and a second verdict anywhere else
+    (``CORRECT, not INCORRECT``) do not (B-CR-01). No fuzzier recovery, no retry, no fallback
     model, no cache. Raises
     :class:`UnparseableJudgeVerdictError` on a miss, carrying the raw (unstripped) response text.
     """
@@ -370,8 +375,12 @@ async def score_answer_level(
     )
     result = await llm_client.chat([{"role": "user", "content": prompt}])
 
-    text_upper = result.text.upper()
+    text_upper = " ".join(result.text.upper().split())
     match = _VERDICT_PATTERN.match(text_upper)
+    if match is not None:
+        for verdict, definition in _OPTION_LINE.findall(prompt_template.upper()):
+            if verdict == match.group(1):
+                text_upper = text_upper.replace(" ".join(definition.split()), "")
     if match is None or len(set(_VERDICT_WORD.findall(text_upper))) != 1:
         raise UnparseableJudgeVerdictError(result.text)
     return VERDICT_SCORES[match.group(1)]
