@@ -2425,18 +2425,25 @@ class Databasise:
         CONN-14, D-18, D-19), as ``{lines: [str]}``; empty when no log file was configured or it does
         not exist yet. Each line passes through ``redact_secrets`` and the URL scrub on read. Refusal
         and fault bodies stay free of causes (Phase 9 D-04); this tail is the one exception, off by
-        default and served only on a loopback ``--operator`` launch with ``--log-file``."""
+        default and served only on a loopback ``--operator`` launch with ``--log-file``. A log that
+        cannot be read, or that is removed between the existence check and the open, is the
+        ``StoreFault`` fault (16-REVIEW-B WR-04)."""
         path = self.log_path
-        if path is None or not Path(path).is_file():
+        if path is None:
             return {"lines": []}
 
         def _tail() -> list[str]:
+            if not Path(path).is_file():
+                return []
             # shortcut: full read per call, use a seek-from-end tail if the log exceeds ~10^7 lines
             with open(path, encoding="utf-8", errors="replace") as handle:
                 tail = deque(handle, maxlen=limit)
             return [_URL_RE.sub("<url>", redact_secrets(line.rstrip("\r\n"))) for line in tail]
 
-        return {"lines": await asyncio.to_thread(_tail)}
+        try:
+            return {"lines": await asyncio.to_thread(_tail)}
+        except OSError as exc:
+            raise _foreign_fault("log_tail", exc, failure_class="StoreFault") from exc
 
     async def _execute(
         self,

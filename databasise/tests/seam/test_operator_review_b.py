@@ -7,6 +7,7 @@ import os
 import sqlite3
 from pathlib import Path
 
+import databasise.seam.engine as engine_module
 import pytest
 from databasise.ledger.ledger import Ledger, LedgerRecord
 from databasise.seam.corpus import Page
@@ -125,3 +126,31 @@ def test_a_corrupted_ledger_row_is_a_502(tmp_path: Path) -> None:
     for response in (client.get("/ledger/aliases"), client.post("/ledger/history", json={"alias": "a"})):
         assert response.status_code == 502
         assert "StoreCorrupted" in response.text
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root reads a mode-000 file")
+def test_an_unreadable_log_is_a_502(tmp_path: Path) -> None:
+    # WR-04 (and lane A WR-02): PermissionError from open() escaped GET /log as a bare 500
+    log = tmp_path / "server.log"
+    log.write_text("line\n")
+    log.chmod(0)
+    try:
+        response = _operator_client(tmp_path, log).get("/log")
+    finally:
+        log.chmod(0o600)
+    assert response.status_code == 502
+    assert "StoreFault" in response.text
+
+
+def test_a_log_removed_before_the_open_is_a_502(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # WR-04: logrotate moving the file between is_file() and open() raised FileNotFoundError (500)
+    log = tmp_path / "server.log"
+    log.write_text("line\n")
+
+    def _gone(*_args: object, **_kwargs: object) -> None:
+        raise FileNotFoundError(str(log))
+
+    monkeypatch.setattr(engine_module, "open", _gone, raising=False)
+    response = _operator_client(tmp_path, log).get("/log")
+    assert response.status_code == 502
+    assert "StoreFault" in response.text
