@@ -675,8 +675,9 @@ async def verify_import(
     v1_chunks = _v1_text_chunks(v1_working_dir)
     try:
         v2_rows, _ = list_kv_prefix(Path(store_root) / workspace / _TEXT_CHUNKS_KIND, "", limit=-1, offset=0)
-    except sqlite3.OperationalError as exc:
-        # A-ITER2-WR-01: e.g. a -wal with frames but no -shm; a read-only verify can neither replay nor list it.
+    except sqlite3.DatabaseError as exc:
+        # A-ITER2-WR-01, ITER3-A-WR-01: a -wal without its -shm (OperationalError) or a file that is not a
+        # database (DatabaseError); a read-only verify can neither replay nor list it.
         return VerificationResult(
             status="refused",
             violations=(Violation(assertion="precondition", detail=f"v2 text_chunks KV is unreadable read-only: {exc}"),),
