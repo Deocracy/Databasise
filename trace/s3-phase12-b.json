@@ -4,7 +4,7 @@
   "part": "phase12-b",
   "ledger_version": 796,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "7fa944abaa11a0e46ea0536087c7a206d17a3197c450f330ba8c76210c4b6de8"
+    ".planning/REQUIREMENTS.md": "e8675696f4680e9209964d0e1725b922bd0d402e560a7ee4a437ef855ab9eb96"
   },
   "checker": {
     "harness": "claude-code",
