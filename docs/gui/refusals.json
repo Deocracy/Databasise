@@ -1,0 +1,406 @@
+[
+  {
+    "refusal_type": "ActiveGenerationRetirementError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "alias",
+      "version"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "AmbiguousAnswerPositionError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "AmbiguousIngestPayloadError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "set_members"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "DisagreeingPromotionTraceIdsError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "trace_ids"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "DocumentNotInterruptedError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "document_id",
+      "status"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "DuplicateComparisonKeyError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "key"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "DuplicateDocumentIdError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "document_id"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "EmptyCapabilitySelectorError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "EmptyComparisonRequestError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "EmptyIngestDocumentError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "member"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "EmptyNamespaceError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "store_kind"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "EmptyPromotionTraceIdsError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "alias"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "EmptyQueryObjectError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "query_object"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "ForbiddenSelectorInputError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "member_name",
+      "value"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "ForeignEngineRefusalError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "failure_class",
+      "operation"
+    ],
+    "http_status": 502
+  },
+  {
+    "refusal_type": "GateNotCalibratedError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "verb"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "GateVerbNotBuiltError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "verb"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "InvalidChangeOriginError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "change_origin"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "InvalidDocumentIdError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "document_id"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "InvalidEvidenceNamespaceError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "namespace"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "InvalidGuardDeclarationError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "InvalidNodeSettingError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "setting"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "InvalidPromotionAliasError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "alias"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "MalformedBase64PayloadError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "field"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "MalformedSelectorPayloadError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "field"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "MeasurementPostureRefusalError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "mutation_class",
+      "verb"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "MissingScopeArgumentError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "argument",
+      "scope",
+      "tool"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "MultiMemberSelectorError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "set_members"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "MutableStoreComparisonExcludedError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "component"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "NoRawUploadPathForModalityError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "operation"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "NoWritePathForModalityError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "operation"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "NonFiniteNumberError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "field"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "OversizedDocumentError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "actual_bytes",
+      "limit_bytes"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "PageBoundsError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "limit",
+      "offset"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "PageSizeExceededError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "limit",
+      "requested"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "PartialRunEvidenceError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "trace_ids"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "StoreBusyError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "store_kind"
+    ],
+    "http_status": 409
+  },
+  {
+    "refusal_type": "TombstonedGenerationError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "alias",
+      "version"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "UnbudgetableParticipantError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "UncalibratedFloorRefusalError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "mutation_class",
+      "verb"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "UnconsumableQueryMemberError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "member_name"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "UnknownDocumentError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "document_id"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "UnknownGenerationVersionError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "alias",
+      "version"
+    ],
+    "http_status": 404
+  },
+  {
+    "refusal_type": "UnknownJobError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "job_id"
+    ],
+    "http_status": 404
+  },
+  {
+    "refusal_type": "UnknownTraceReferenceError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "trace_reference"
+    ],
+    "http_status": 404
+  },
+  {
+    "refusal_type": "UnparseableWiringError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "violations"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "UnrecognisedPromotionVerbError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "verb"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "UnresolvableEvidenceReferenceError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "ref"
+    ],
+    "http_status": 404
+  },
+  {
+    "refusal_type": "UnsatisfiableSelectorError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "requested",
+      "selector_kind"
+    ],
+    "http_status": 422
+  },
+  {
+    "refusal_type": "UnsupportedUploadTypeError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "suffix"
+    ],
+    "http_status": 422
+  }
+]
