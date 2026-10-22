@@ -54,3 +54,28 @@ def test_import_index_refuses_a_locked_v1_graph_by_name(tmp_path, capsys):
         holder.close()
     err = capsys.readouterr().err.strip()
     assert err.startswith("V1IndexLockedError: ") and "\n" not in err
+
+
+def test_import_index_exits_3_on_an_inconclusive_verification(tmp_path, capsys):
+    """WR-05: a comparison that ran and found a chunk-text difference is D-03's inconclusive, exit 3."""
+    from databasise.parity import import_index
+
+    (tmp_path / "store" / "ws").mkdir(parents=True)
+    argv = ["--verify", "--store-root", str(tmp_path / "store"), "--workspace", "ws",
+            "--v1-working-dir", str(_v1_dir_with_one_chunk(tmp_path))]
+    assert import_index.main(argv) == 3
+    out = capsys.readouterr()
+    assert "[inconclusive] chunk-text: " in out.out and out.err == ""
+
+
+def test_import_index_refused_verification_is_one_stderr_line(tmp_path, capsys):
+    """WR-05: a "refused" (precondition) verification prints one D-03 stderr line and exits 1."""
+    from databasise.parity import import_index
+
+    (tmp_path / "store" / "ws").mkdir(parents=True)
+    argv = ["--verify", "--store-root", str(tmp_path / "store"), "--workspace", "ws",
+            "--v1-working-dir", str(tmp_path / "no-such-v1")]
+    assert import_index.main(argv) == 1
+    out = capsys.readouterr()
+    assert out.err.count("\n") == 1 and out.err.startswith("ImportPreconditionError: no v1 index found at ")
+    assert "[refused]" not in out.out

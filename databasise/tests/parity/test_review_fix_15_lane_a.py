@@ -140,7 +140,7 @@ def test_import_index_verify_on_a_missing_store_root_writes_nothing(tmp_path, ca
     argv = ["--verify", "--store-root", str(typo), "--workspace", "ws", "--v1-working-dir", str(_v1_dir_with_one_chunk(tmp_path))]
     assert import_index.main(argv) == 1
     assert not typo.exists()
-    assert "[refused] precondition" in capsys.readouterr().out
+    assert capsys.readouterr().err.startswith("ImportPreconditionError: no imported v2 store found")  # A-ITER2-WR-05
 
 
 def test_a_refused_hipporag_build_leaves_the_unverified_marker(tmp_path, monkeypatch):

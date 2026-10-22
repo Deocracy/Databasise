@@ -44,8 +44,9 @@ store kind, not an accident of the schemas happening to match.
 CLI (``python -m databasise.parity.import_index``; 15-09, D-03/D-05). Exit codes: 0 verified; 1 a named
 refusal (``MissingV1IndexError``, ``V1IndexLockedError`` or any ``databasise.cli.offline_refusals`` class, among them
 ``StoreLockedError``, ``CorpusDriftError`` and ``VectorStoreCorruptedError``), printed by ``databasise.cli.refuse`` as one
-stderr line, or a verification that is not ``"verified"``; 2 bad arguments (argparse, before the store
-lock is taken). Every run prints ``workspace: <ws> (<source>)`` first: the workspace a launcher must use.
+stderr line, or a ``"refused"`` verification, printed the same way as ``ImportPreconditionError``; 2 bad
+arguments (argparse, before the store lock is taken); 3 an ``"inconclusive"`` verification, one stdout
+line per violation. Every run prints ``workspace: <ws> (<source>)`` first: the workspace a launcher must use.
 ``--v1-working-dir`` is a plain pass-through. Re-importing ``v1/.corpus_working_dir`` is not the
 sanctioned write path (the ``lightrag/v1-index-sync`` node is). The CLI needs a source checkout that
 holds the v1 index (D-01); a wheel install has neither ``v1/`` nor the parity corpus snapshot.
@@ -120,6 +121,10 @@ class V1IndexLockedError(RuntimeError):
     def __init__(self, db_path: Path):
         self.db_path = db_path
         super().__init__(f"v1 graph {db_path} is locked by another process; retry once it is released")
+
+
+class ImportPreconditionError(RuntimeError):
+    """The CLI's name for a ``"refused"`` verification: a store the comparison could not start on."""
 
 
 def _open_v1_cozo(db_path: Path) -> Any:
@@ -759,11 +764,11 @@ async def verify_import(
 
 def main(argv: list[str] | None = None) -> int:
     """Import (unless ``--verify`` is passed) then verify v1's index against the v2 namespace
-    layout, printing one line per violation and returning 1 on anything but ``"verified"``.
+    layout. Returns 0 verified, 1 refused (one stderr line), 3 inconclusive (one line per violation).
     """
     import asyncio
 
-    from databasise.cli import offline_refusals, refuse
+    from databasise.cli import EXIT_INCONCLUSIVE, EXIT_OK, offline_refusals, refuse
 
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--verify", action="store_true", help="verify only; do not import")
@@ -803,14 +808,18 @@ def main(argv: list[str] | None = None) -> int:
         return refuse(exc)
 
     if result.status == "verified":
-        return 0
+        return EXIT_OK
+    if result.status == "refused":
+        # A-ITER2-WR-05: a precondition refusal is a D-03 named refusal: one stderr line, exit 1.
+        detail = "; ".join(v.detail for v in result.violations) or "no comparison could be made"
+        return refuse(ImportPreconditionError(detail))
 
     for v in result.violations:
         suffix = f" (id={v.offending_id})" if v.offending_id else ""
         print(f"[{result.status}] {v.assertion}: {v.detail}{suffix}")
     if not result.violations:
         print(f"[{result.status}] no comparison could be made")
-    return 1
+    return EXIT_INCONCLUSIVE  # D-03: the comparison ran and found differences
 
 
 if __name__ == "__main__":
