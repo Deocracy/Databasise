@@ -295,7 +295,7 @@ def main(argv: list[str] | None = None) -> int:
     Needs a source checkout with the imported parity store (``v1/.parity_v2_store``) and
     ``v1/.env.parity``; neither ships in the wheel. Without ``--spend`` it prints an estimate and
     ``mode: estimate-only`` and touches nothing. Exit codes: 0 done or estimate-only; 1 a named
-    refusal (one stderr line); 2 bad arguments.
+    refusal (one stderr line); 2 bad arguments; 3 the run was cyclic, partial or degraded.
     """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--arm", required=True, choices=[name for name, _ in all_wirings()])
@@ -314,6 +314,11 @@ def main(argv: list[str] | None = None) -> int:
         return cli.refuse(exc)
 
     print(json.dumps(result, indent=2, default=str))
+    # D-03 code 3 (as in storage_audit and run_comparison): a cyclic, partial or degraded run ran
+    # but proves nothing, so a script checking the exit code never reads it as success.
+    record = result.get("run_record") or {}
+    if "cycle" in result or record.get("partial") or record.get("degraded"):
+        return cli.EXIT_INCONCLUSIVE
     return cli.EXIT_OK
 
 

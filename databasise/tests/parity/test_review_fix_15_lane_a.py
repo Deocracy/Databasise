@@ -168,6 +168,27 @@ def test_cross_modality_preflight_refuses_an_unverified_hipporag_build(tmp_path,
         rcm.preflight(store_root=tmp_path, workspace="ws")
 
 
+@pytest.mark.parametrize(
+    ("result", "code"),
+    [
+        ({"cycle": ["a", "b"]}, 3),
+        ({"run_record": {"partial": True, "degraded": False}, "provided": {}}, 3),
+        ({"run_record": {"partial": False, "degraded": True}, "provided": {}}, 3),
+        ({"run_record": {"partial": False, "degraded": False}, "provided": {}}, 0),
+    ],
+)
+def test_run_arm_exit_code_reports_an_inconclusive_run(result, code, tmp_path, monkeypatch):
+    """A-WR-08: a cyclic, partial or degraded run exits 3 (D-03), a complete one 0."""
+    from databasise.parity import import_index, run_arm
+
+    async def _fake_run_arm(arm, query):
+        return result
+
+    monkeypatch.setattr(import_index, "DEFAULT_STORE_ROOT", tmp_path)
+    monkeypatch.setattr(run_arm, "run_arm", _fake_run_arm)
+    assert run_arm.main(["--arm", "naive", "--query", "q", "--spend"]) == code
+
+
 def test_v1_arm_subprocess_error_names_the_driver_failure_line():
     """A-WR-03: the message carries the driver's last non-log line, not v1's start-up INFO lines."""
     from databasise.parity.v1_arm import V1ArmSubprocessError
