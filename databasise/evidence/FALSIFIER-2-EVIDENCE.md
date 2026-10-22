@@ -26,6 +26,10 @@ Resolved against `probe_registry()` (15 node(s)).
 | keywords | lightrag/keyword-extractor@0.1.0 | rewriter | stage | stage | in-process | calls_llm | — | n/a |
 | rerank | lightrag/reranker-cross-encoder@0.1.0 | ranker-reranker | stage | stage | in-process | calls_rerank | — | n/a |
 
+**Validator violations:** none.
+
+**Cycles:** none.
+
 **Divergence from declared structural_depth:**
 
 No node's computed `effective_depth` diverges from its part's own `structural_depth`.
@@ -75,6 +79,10 @@ Resolved against `probe_registry()` (3 node(s)).
 | cbm | codebase-memory-mcp@0.1.0 | opaque | opaque | opaque | subprocess | fs, mutates_store, self_storage | self_storage | n/a |
 | normalise | parts-core/passthrough@1.0.0 | passthrough | stage | opaque | in-process | — | — | n/a |
 
+**Validator violations:** none.
+
+**Cycles:** none.
+
 **Divergence from declared structural_depth:**
 
 Nodes whose computed `effective_depth` diverges from their part's own `structural_depth` (the taint rule overriding a declared depth): answer, normalise.
@@ -113,6 +121,10 @@ Resolved against `probe_registry()` (16 node(s)).
 | join-relations | lightrag/join-roundrobin@0.1.0 | join | stage | opaque | in-process | — | — | n/a |
 | keywords | lightrag/keyword-extractor@0.1.0 | rewriter | stage | opaque | in-process | calls_llm | — | n/a |
 | rerank | lightrag/reranker-cross-encoder@0.1.0 | ranker-reranker | stage | opaque | in-process | calls_rerank | — | n/a |
+
+**Validator violations:** none.
+
+**Cycles:** none.
 
 **Divergence from declared structural_depth:**
 

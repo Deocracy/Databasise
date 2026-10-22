@@ -321,14 +321,26 @@ def evaluate_wiring(stem: str) -> WiringEvidence:
     node, iterating in ``parsed.node_order`` (sorted node id) order for a deterministic render.
     """
     doc, parsed = _parse(stem)
-    depth_map = effective_depth(parsed)
-    blast_violations = blast_radius_violations(parsed, depth_map)
+    rows = []
+    raw_nodes = doc.get("nodes") if isinstance(doc, dict) else None
+    resolved = set(parsed.parts)
+    # A node dropped by parse_wiring (a self-declared field, an unknown component) or a dep on one
+    # leaves the graph uncomputable: report the wiring's violations and compute no rows (C-CR-01).
+    computable = (
+        isinstance(raw_nodes, dict)
+        and resolved == set(raw_nodes)
+        and all(set(deps) <= resolved for deps in parsed.deps.values())
+    )
+    if computable:
+        depth_map = effective_depth(parsed)
+        blast_violations = blast_radius_violations(parsed, depth_map)
+    else:
+        depth_map, blast_violations = {}, []
     refused_node_ids = {
         v.pointer.split("/")[2] for v in blast_violations if v.code == CODE_BLAST_RADIUS_REFUSAL
     }
 
-    rows = []
-    for node_id in parsed.node_order:
+    for node_id in parsed.node_order if computable else ():
         node = parsed.nodes[node_id]
         part = parsed.parts[node_id]
         if node_id in refused_node_ids:
@@ -373,9 +385,13 @@ def enumerate_boundaries(evidence: WiringEvidence, parsed: ParsedWiring) -> tupl
     rows: list[BoundaryRow] = []
 
     for node_id in parsed.node_order:
-        consumer_part = parsed.parts[node_id]
+        consumer_part = parsed.parts.get(node_id)
+        if consumer_part is None:
+            continue  # unresolved node: reported as a violation, no edge to enumerate (C-CR-01)
         for dep in parsed.deps[node_id]:
-            producer_part = parsed.parts[dep]
+            producer_part = parsed.parts.get(dep)
+            if producer_part is None:
+                continue
             between = f"{dep} -> {node_id}"
             diff = set(producer_part.effects) ^ set(consumer_part.effects)
             if diff:
@@ -450,6 +466,19 @@ def _render_node_table(rows: tuple[NodeRow, ...]) -> str:
     return header + "\n".join(lines) + "\n"
 
 
+def _render_violations(evidence: WiringEvidence) -> str:
+    """The validator's own violation and cycle report for one wiring, as read (C-CR-01)."""
+    if evidence.violations:
+        listed = "\n".join(
+            f"- `{v.code}` at `{v.pointer}`: {_escape_cell(v.message)}" for v in evidence.violations
+        )
+        text = f"**Validator violations:** {len(evidence.violations)}.\n\n{listed}\n"
+    else:
+        text = "**Validator violations:** none.\n"
+    cycles = "; ".join(" -> ".join(cycle) for cycle in evidence.cycles) or "none"
+    return f"{text}\n**Cycles:** {cycles}.\n"
+
+
 def _render_divergence(rows: tuple[NodeRow, ...]) -> str:
     diverged = [row.node_id for row in rows if row.effective_depth != row.structural_depth]
     if not diverged:
@@ -498,6 +527,11 @@ def failing_probes() -> tuple[str, ...]:
     )
 
 
+def failing_wirings() -> tuple[str, ...]:
+    """Stems of the named wirings the validator reports any violation on (C-CR-01)."""
+    return tuple(stem for stem in NAMED_WIRINGS if evaluate_wiring(stem).violations)
+
+
 def _render_probe_table() -> str:
     header = (
         "| probe_id | wiring shape | expected code | observed code | verdict |\n"
@@ -543,6 +577,7 @@ def render_markdown() -> str:
             f"Resolved against `probe_registry()` ({len(evidence.rows)} node(s)).\n"
         )
         sections.append(_render_node_table(evidence.rows))
+        sections.append(_render_violations(evidence))
         sections.append("**Divergence from declared structural_depth:**\n")
         sections.append(_render_divergence(evidence.rows))
 
@@ -571,12 +606,24 @@ def render_markdown() -> str:
     sections.append("## Falsifier 2 verdict\n")
     sections.append(f'SELECTION.md\'s `## Falsifiers` list, item 2: "{_FALSIFIER_2_TEXT}"\n')
     failing = failing_probes()
-    if failing:
+    failing_named = failing_wirings()
+    if failing or failing_named:
+        reasons = []
+        if failing_named:
+            reasons.append(
+                "A named wiring carries validator violations "
+                f"({', '.join(f'`{stem}`' for stem in failing_named)}; listed in its section "
+                "above), so its depth is not shown to compute from wiring and registry alone."
+            )
+        if failing:
+            reasons.append(
+                "A probe did not behave as expected "
+                f"({', '.join(f'`{probe_id}`' for probe_id in failing)}): a refusal that stopped "
+                "firing, or a control that fired."
+            )
         sections.append(
-            "**Result: Falsifier 2 fired.** A probe did not behave as expected "
-            f"({', '.join(f'`{probe_id}`' for probe_id in failing)}): a refusal that stopped "
-            "firing, or a control that fired. The no-self-declaration computation is not "
-            "demonstrated by this run, and D4's brake is not shown to hold.\n"
+            f"**Result: Falsifier 2 fired.** {' '.join(reasons)} The no-self-declaration "
+            "computation is not demonstrated by this run, and D4's brake is not shown to hold.\n"
         )
     else:
         sections.append(
@@ -595,12 +642,13 @@ def render_markdown() -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Write the rendered document; exit 1 when any probe did not behave as expected."""
+    """Write the rendered document; exit 1 when Falsifier 2 fired (a probe did not behave as
+    expected, or a named wiring carries a validator violation)."""
     argparse.ArgumentParser(description=__doc__).parse_args(argv)
     text = render_markdown()
     EVIDENCE_PATH.write_text(text, encoding="utf-8")
     print(text)
-    return 1 if failing_probes() else 0
+    return 1 if failing_probes() or failing_wirings() else 0
 
 
 if __name__ == "__main__":
