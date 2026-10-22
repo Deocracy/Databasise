@@ -130,3 +130,22 @@ New tests are in the unprotected lane C file `databasise/tests/evidence/test_rev
 No fix contradicts D-01..D-24. CR-01 restores D-16 ("render only states they read") and keeps D-07's per-record inconclusive cause. WR-01 follows D-03: a named class, one stderr line, exit 1, and no bare `ValueError`. No CLI ran with `--spend`, and no env file was read.
 
 _Fixer: Claude (gsd-code-fixer), lane C iteration 2_
+
+## Iteration 3
+
+**Source reviews:** 15-REVIEW-ITER3-A.md (WR-01), 15-REVIEW-ITER3-B.md (WR-01), 15-REVIEW-ITER3-C.md (WR-01, WR-02). **Fixed at:** 2026-10-21. Findings in scope: 4. Fixed: 4. Not fixed: 0. Needs owner grant: 0. A-WR-02 (the HippoRAG preflight residual) is owner-gated and was left alone, as directed. The Info findings were out of scope.
+
+All edits and commits were made in the main checkout, with no worktree. Every test run used `databasise/.venv/bin/python -m pytest -q <paths> -p no:cacheprovider` from the repository root, in the main checkout. Final run: `tests/parity`, `tests/evidence`, `test_docstring_currency.py` and `test_cli_refusals.py`: 437 passed, 3 deselected. No protected test failed, and no protected test was edited. A fresh `parity_report.render_markdown()` is still byte-identical to the committed `PARITY-EVIDENCE.md`, because every committed arm is fully completed and the fully-completed wording is unchanged.
+
+New tests: `databasise/tests/parity/test_review_fix_15_iter3_lane_a.py` (P3, a new file that no requirement row names) and the unprotected lane C file `databasise/tests/evidence/test_review_fix_15_lane_c.py` (C).
+
+| Finding | Status | Commit | Covering test | Reason / notes |
+|---|---|---|---|---|
+| ITER3-A-WR-01 | fixed | 057da4a | P3::test_verify_import_refuses_a_kv_file_that_is_not_a_database (4 KiB random `kv.sqlite3`) | `verify_import` now catches `sqlite3.DatabaseError`, the parent of `OperationalError`, around `list_kv_prefix`. A `-wal` without its `-shm` and a file that is not a database both return `refused` with a `precondition` violation, and nothing is written (D-04, D-06). |
+| ITER3-B-WR-01 | fixed | 5c5a1d6 | none (documentation) | `docs/gui/API-INVENTORY.md` now states: promote's 502 `ForeignEngineRefusalError {operation: "promote", failure_class: "StoreFault"}` for a `floors.db` read fault in stage 1 or 2 (13ecfa8); the fresh-mint `SealedPartitionOpenedError` refusal in the `eval.remint` and `eval.bundle` rows (2d3138b); and, in the `eval.aa_run` row, that a verdict followed by its own option-line definition parses (7806e4e). |
+| ITER3-C-WR-01 | fixed: requires human verification | 17ce530 | C::test_a_mixed_arm_s_verdict_line_speaks_only_for_its_completed_records | `_arm_verdict_line` checks `_arm_state(arm)`. For an arm that is not fully completed, every branch says "`<arm>`'s completed record(s) measured / ran with no decomposed-run degradation" instead of "`<arm>` completed". The clean branch says "an exact retrieval-level agreement on those records only, not for the arm" instead of "a validated exact retrieval-level agreement". The line then names the arm's unfinished record and audit causes through `_inconclusive_causes((arm,))`. The mixed-state opening now reads "an outcome only for each arm's completed records". `_arm_degraded` stays completed-only. Fully-completed arms render exactly as before, so the committed document does not change (D-16). This rewrites rendered verdict prose, so a human should check the wording. |
+| ITER3-C-WR-02 | fixed | afdf521 | C::test_falsifier2_refuses_a_named_wiring_that_is_not_a_json_object_by_name (`[]`, `"x"`, non-UTF-8 bytes, for w1 and w2), C::test_falsifier2_refuses_boundary_knobs_that_are_not_a_list_by_name | `load_wiring` also turns a `UnicodeDecodeError`, and a top level that is not a JSON object, into `MalformedWiringDocumentError`. A `boundary_knobs` value that is not a list is `MalformedBoundaryKnobError`. Both classes are already in `main()`'s named tuple, so each case is one stderr line and exit 1 (D-03), with no bare `ValueError` caught. The w3 import-time residual (ITER3-C IN-01) is unchanged. |
+
+No fix contradicts D-01..D-24. A-WR-01 and C-WR-02 follow D-03: named classes, one stderr line, exit 1, and no new lock, write or provider call (D-04). C-WR-01 follows D-16: render only the states it reads. No CLI ran with `--spend`, no `-m live` test ran, and no env file was read.
+
+_Fixer: Claude (gsd-code-fixer), iteration 3_
