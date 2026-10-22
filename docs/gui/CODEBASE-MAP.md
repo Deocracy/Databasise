@@ -199,7 +199,7 @@ Abbreviations used in the reachability columns:
 | `evidence/__init__.py` | Package marker | none | none |
 | `evidence/falsifier2.py` | CLI; overwrites `FALSIFIER-2-EVIDENCE.md` (558-561) | none | Show probe table, not verdict text (D-N24) |
 | `evidence/parity_report.py` | CLI; renders `PARITY-EVIDENCE.md`, `DECLARED-DEVIATIONS.md`; `--check-results` read-only (1398-1433) | none | Parity dashboard data source |
-| `evidence/f07_report.py` | Library only; renders F-07 record (142-277) | none | none |
+| `evidence/f07_report.py` | CLI; overwrites `F-07-MUTABLE-STORE-DISPOSITION.md` (`main()`); renders the F-07 record from `default_registry()` | none | none |
 | `evidence/wirings/*.json`, `parity_results/*.json`, `eval-bundles/`, `human_findings.json`, `*.md` | Evidence inputs and records | none | `eval-bundles/bundle@v1/bundle.json` holds gold answers and all split ids: never serve it |
 | `eval/__init__.py` | Docstring only | none | none |
 | `eval/bundle.py` | Bundle mint/load/holdout/sealed (337-508) | none | Bundle metadata view (redacted) |
@@ -428,7 +428,7 @@ Do not raise these again.
 
 ## 5. Other API and entry surfaces
 
-Run Databasise CLIs as `uv run python -m <module>` from the repository root (editable install required, OS-10). The eval CLIs and `tools.check_import_boundary` also run from an installed wheel; the parity CLIs need a source checkout (the imported store, `v1/.env.parity` and `v1/` do not ship in the wheel).
+Run Databasise CLIs as `databasise/.venv/bin/python -m databasise.<module>` from the repository root (for example `databasise/.venv/bin/python -m databasise.evidence.parity_report --check-results`), or as `uv run python -m databasise.<module>` from inside `databasise/`. The repository root has no `pyproject.toml`, so a bare `uv run` there runs an interpreter without the project's dependencies. The module names in the table below omit the `databasise.` prefix. Editable install required (OS-10). The eval CLIs and `tools.check_import_boundary` also run from an installed wheel; the parity CLIs need a source checkout (the imported store, `v1/.env.parity` and `v1/` do not ship in the wheel).
 
 Exit table for every offline CLI (D-03, `databasise.cli`): 0 done or estimate-only; 1 a named refusal, printed as one stderr line `ClassName: message`; 2 bad arguments (argparse only); 3 ran but inconclusive. Every CLI that can spend (`build_hipporag_index`, `remint`, `run_arm`, `storage_audit`, `run_comparison`, `run_cross_modality`, `v1_arm`, `corpus_ingest`, `aa_run`) is estimate-only without `--spend` (D-04): it prints its estimate and `mode: estimate-only`, builds no client, takes no lock and writes nothing.
 
@@ -442,13 +442,14 @@ Exit table for every offline CLI (D-03, `databasise.cli`): 0 done or estimate-on
 | `parity.run_cross_modality [--spend]` | CLI, estimate-only by default; `--spend` writes `cross_modality.json` (marked `refused` when an arm was degraded) | Job button |
 | `parity.import_index [--verify] [--v1-working-dir P] [--store-root P] [--workspace W]` | CLI; prints the workspace it uses; without `--verify` it imports, then verifies; a bad flag exits 2 before anything is written | `--verify` is read-only; an import is a guarded action |
 | `evidence.parity_report --check-results` / re-render | CLI | Use `--check-results` (read-only); re-render overwrites committed files |
-| `evidence.falsifier2` | CLI, overwrites a committed file, exit 1 when a probe did not behave as expected | Show the probe table only |
+| `evidence.falsifier2` | CLI, overwrites a committed file, exit 1 when a probe did not behave as expected or a named wiring carries a validator violation | Show the probe table only |
 | `tools.check_import_boundary` | CLI, exit 0/1; runs from an installed wheel (provenance check skipped, one stderr line) | Dev check only |
 | `eval.corpus_ingest --limit N [--arm] [--spend]` / `eval.aa_run [--spend]` | CLI, estimate-only by default; `--spend` for real calls; both stay inside the eval store root | Show the estimate forms only (G-34) |
 | `eval.remint [--spend]`, `parity.build_hipporag_index [--spend]` | CLI, estimate-only by default; `build_hipporag_index --spend` creates the workspace on an empty store root; `remint --spend` mints into `databasise/evidence/eval-bundles` (a source checkout only) | Leave out, or require explicit spend confirmation |
 | `parity.run_arm [--spend]`, `parity.v1_arm [--spend]` | CLI, estimate-only by default | Ignore; `/query` covers it (run_arm bypasses the seam) |
 | `parity.build_corpus_fixture` | CLI with network access | Ignore |
-| `databasise.run_wiring`, `evidence.f07_report` | Library only | Ignore |
+| `evidence.f07_report` | CLI, overwrites a committed file (`F-07-MUTABLE-STORE-DISPOSITION.md`), exit 0; exit 1 on a named refusal, including a target inside an installed package | Ignore |
+| `databasise.run_wiring` | Library only | Ignore |
 | `foreign/v1_corpus_driver_script.py`, `parity/v1_driver_script.py` | Subprocess targets under `v1/.venv/bin/python` | Not operator surfaces |
 | `v1/scripts/run_parity_ingest.py` | Documented as run once (`run_parity_ingest.py:11-21`) | Root of the parity data chain (ingest, import, HippoRAG build, comparisons, report); do not offer as a button |
 | v1 `lightrag-server` (port 9621) and `lightrag-gunicorn`, other v1 `[project.scripts]` (`v1/pyproject.toml:162-168`) | v1 | Ignore |
