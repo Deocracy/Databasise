@@ -720,7 +720,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--arm", choices=list(_ARM_CHOICES), default=None)
     args = parser.parse_args(argv)
 
-    families = tuple(args.family) if args.family else _DEFAULT_FAMILIES
+    # A repeated --family runs once: the estimate keys by name, so a duplicate would double the spend (B-WR-01).
+    families = tuple(dict.fromkeys(args.family)) if args.family else _DEFAULT_FAMILIES
     selector = _ARM_SELECTORS[args.arm] if args.arm else None
 
     try:

@@ -61,3 +61,26 @@ def test_judge_verdict_refuses_a_negated_or_echoed_verdict(text):
     """B-CR-01: a negation, a partial word or an echoed option list never scores as a verdict."""
     with pytest.raises(aa_run.UnparseableJudgeVerdictError):
         _score(text)
+
+
+def _stub_spend_path(monkeypatch, tmp_path):
+    """Patch every client, engine and store constructor on aa_run's --spend path to a stub."""
+    monkeypatch.setattr(aa_run, "_EVAL_INGEST_STORE_ROOT", tmp_path / "eval-store")
+    monkeypatch.setattr(aa_run, "_load_env_file", lambda path: {})
+    monkeypatch.setattr(aa_run, "_build_clients", lambda env: {})
+    monkeypatch.setattr(aa_run, "Databasise", lambda **kwargs: SimpleNamespace(store_root=tmp_path))
+    monkeypatch.setattr(aa_run, "MultiNamespaceVectorStore", lambda **kwargs: None)
+
+
+def test_a_repeated_family_is_estimated_and_run_once(monkeypatch, tmp_path, capsys):
+    """B-WR-01: `--family X --family X` runs X once, matching the estimate."""
+    _stub_spend_path(monkeypatch, tmp_path)
+    seen: list[tuple[str, ...]] = []
+
+    async def record_families(*, families, **kwargs):
+        seen.append(tuple(families))
+        raise aa_run.NoMintedBundleError("stop after recording the families")
+
+    monkeypatch.setattr(aa_run, "_calibrate_all", record_families)
+    assert aa_run.main(["--family", "answer_level", "--family", "answer_level", "--spend"]) == 1
+    assert seen == [("answer_level",)]
