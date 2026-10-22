@@ -36,7 +36,9 @@ longer sealed once touched, regardless of whether the six content members themse
 appends its own usage entry to both the opened version and the new one before returning the sealed
 content. A loaded :class:`EvalBundle` reports ``sealed_opened`` from that log, so :func:`mint_bundle`
 never hands back an opened version as if unopened; :func:`open_sealed` refuses an opened version
-and ``eval.remint`` refuses a mint that resolves to one (:class:`SealedPartitionOpenedError`).
+and ``eval.remint`` refuses a mint that resolves to one (:class:`SealedPartitionOpenedError`). A
+fresh mint whose sealed split holds a question id that an opened version's sealed split holds is
+refused the same way, because splits depend on the question id alone.
 Opening also mints a new highest version, so every floor persisted against the previous highest
 version is stale at the promotion gate.
 
@@ -107,16 +109,17 @@ class CorruptUsageLogError(RuntimeError):
 
 class SealedPartitionOpenedError(RuntimeError):
     """A version whose sealed partition was already opened (its ``usage.jsonl`` records
-    ``sealed_open``) was about to be used as if sealed: by :func:`open_sealed` a second time, or by
-    ``eval.remint`` as the result of a mint. RIG §EV.1: a touched partition is no longer sealed, and
-    a fresh mint of the same questions would only re-label them sealed, so a sealed bundle needs a
-    changed question set (B-WR-07)."""
+    ``sealed_open``) was about to be used as if sealed: by :func:`open_sealed` a second time, by
+    ``eval.remint`` as the result of a mint, or by :func:`mint_bundle` as the source of a fresh
+    version's sealed ids. RIG §EV.1: a touched partition is no longer sealed, and a fresh mint of the
+    same questions would only re-label them sealed, so a sealed bundle needs sealed question ids that
+    no opened version holds (B-WR-07, 15-REVIEW-ITER2 B-WR-03)."""
 
     def __init__(self, version: str) -> None:
         self.version = version
         super().__init__(
             f"{version!r}'s sealed partition has already been opened (usage.jsonl records sealed_open), "
-            "so it is not sealed; change the question set to mint a sealed bundle"
+            "so it is not sealed; a sealed bundle needs sealed question ids that no opened version holds"
         )
 
 
@@ -460,6 +463,13 @@ def mint_bundle(
         "split assignment must partition the full question set (RIG §EV.1)"
     )
     assert len(set(all_assigned)) == len(all_assigned), "splits must be pairwise disjoint"
+
+    # Splits depend on the id alone, so a changed judge, prompt, corpus or setting would re-seal
+    # already-opened questions in a fresh version (15-REVIEW-ITER2 B-WR-03, RIG §EV.1).
+    for number in _list_version_numbers(bundle_root):
+        prior = load_bundle(bundle_root, f"bundle@v{number}")
+        if prior.sealed_opened and set(prior.splits["sealed"].question_ids) & set(splits["sealed"]):
+            raise SealedPartitionOpenedError(prior.version)
 
     target_families = [
         {

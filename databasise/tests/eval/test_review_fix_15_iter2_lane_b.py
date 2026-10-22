@@ -123,3 +123,32 @@ def test_a_floors_db_fault_in_stage_2_is_a_store_fault_refusal(tmp_path):
     with pytest.raises(ForeignEngineRefusalError) as excinfo:
         engine._refuse_gate_verb("promote-next", "alias", resolved, ["h1"])
     assert (excinfo.value.operation, excinfo.value.failure_class) == ("promote", "StoreFault")
+
+
+def test_a_changed_judge_never_re_seals_opened_questions(tmp_path):
+    """B-ITER2-WR-03: after open_sealed, a fresh mint (new judge_instance) that would re-seal the opened ids refuses."""
+    import hashlib
+
+    from databasise.eval import remint
+    from databasise.eval.bundle import SealedPartitionOpenedError, _list_version_numbers, mint_bundle, open_sealed
+    from databasise.parity.corpus import load_snapshot
+
+    root = tmp_path / "eval-bundles"
+    snapshot = load_snapshot(remint.CORPUS_DIR)
+    settings = dict(
+        judge_prompt_hash=hashlib.sha256(remint._JUDGE_PROMPT_PATH.read_bytes()).hexdigest(),
+        determinism_setting=remint._DETERMINISM_SETTING,
+        concurrency_setting=remint._CONCURRENCY_SETTING,
+    )
+    first = mint_bundle(snapshot, root, judge_instance="judge@1", **settings)
+    assert first.splits["sealed"].question_ids
+    open_sealed(root, first.version, event="test opening")
+    versions_before = _list_version_numbers(root)
+    with pytest.raises(SealedPartitionOpenedError):
+        mint_bundle(snapshot, root, judge_instance="judge@2", **settings)
+    assert _list_version_numbers(root) == versions_before  # nothing written
+
+    # An unopened root still mints fresh for a changed judge.
+    other = tmp_path / "other-bundles"
+    mint_bundle(snapshot, other, judge_instance="judge@1", **settings)
+    assert not mint_bundle(snapshot, other, judge_instance="judge@2", **settings).sealed_opened
