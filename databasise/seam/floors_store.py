@@ -61,28 +61,48 @@ class FloorStore:
                 astuple(row),
             )
 
+    def _connect_read_only(self) -> sqlite3.Connection:
+        """A connection that creates no file (B-WR-02), in ``stores.probes.list_kv_prefix``'s pattern:
+        plain ``mode=ro`` on a WAL database creates ``-shm``/``-wal``, so the file opens ``immutable``
+        unless a live writer's ``-wal`` and ``-shm`` both exist (then ``mode=ro`` creates neither and
+        sees its committed rows). A ``-wal`` with frames but no ``-shm`` is refused, never read short."""
+        db_path = self._path.resolve()
+        wal, shm = db_path.with_name("floors.db-wal"), db_path.with_name("floors.db-shm")
+        try:
+            wal_has_frames = wal.stat().st_size > 0
+        except FileNotFoundError:
+            wal_has_frames = False
+        if wal_has_frames and not shm.exists():
+            raise sqlite3.OperationalError("floors.db-wal holds frames but floors.db-shm is missing")
+        live = wal.exists() and shm.exists()
+        return sqlite3.connect(db_path.as_uri() + ("?mode=ro" if live else "?mode=ro&immutable=1"), uri=True)
+
     def any_floor(self) -> bool:
         """True when ``floors.db`` exists and holds a row. Opens read-only and creates nothing."""
         if not self._path.is_file():
             return False
-        with contextlib.closing(sqlite3.connect(f"{self._path.resolve().as_uri()}?mode=ro", uri=True)) as conn:
+        with contextlib.closing(self._connect_read_only()) as conn:
             try:
                 return conn.execute("SELECT 1 FROM floors LIMIT 1").fetchone() is not None
-            except sqlite3.OperationalError:  # file exists but no table yet
+            except sqlite3.OperationalError as exc:
+                if "no such table" not in str(exc).lower():
+                    raise  # a locked, unreadable or failing file is not "no floor"
                 return False
 
     def lookup(self, wiring_instance_hash: str) -> list[FloorRow]:
         """Every row recorded for ``wiring_instance_hash``; ``[]`` when none or the file is absent."""
         if not self._path.is_file():
             return []
-        with contextlib.closing(sqlite3.connect(f"{self._path.resolve().as_uri()}?mode=ro", uri=True)) as conn:
+        with contextlib.closing(self._connect_read_only()) as conn:
             try:
                 rows = conn.execute(
                     f"SELECT {', '.join(_FIELD_NAMES)} FROM floors WHERE wiring_instance_hash = ? "
                     "ORDER BY bundle_at_v, tier, metric",
                     (wiring_instance_hash,),
                 ).fetchall()
-            except sqlite3.OperationalError:
+            except sqlite3.OperationalError as exc:
+                if "no such table" not in str(exc).lower():
+                    raise
                 return []
         return [FloorRow(*row) for row in rows]
 

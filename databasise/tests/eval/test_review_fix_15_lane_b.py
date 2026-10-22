@@ -84,3 +84,63 @@ def test_a_repeated_family_is_estimated_and_run_once(monkeypatch, tmp_path, caps
     monkeypatch.setattr(aa_run, "_calibrate_all", record_families)
     assert aa_run.main(["--family", "answer_level", "--family", "answer_level", "--spend"]) == 1
     assert seen == [("answer_level",)]
+
+
+def _floor_row(**overrides):
+    from databasise.seam.floors_store import FloorRow
+
+    fields = dict(
+        wiring_instance_hash="h1",
+        bundle_at_v="bundle@v1",
+        tier="T1",
+        metric="gold_passage_recall",
+        determinism_setting="d",
+        concurrency_setting="c",
+        floor=0.1,
+        n_questions=3,
+        n_resamples=10,
+        seed=1,
+        created_at="2026-10-21T00:00:00+00:00",
+    )
+    return FloorRow(**{**fields, **overrides})
+
+
+def test_floor_store_reads_create_no_side_files(tmp_path):
+    """B-WR-02: any_floor and lookup on a WAL floors.db leave only floors.db behind."""
+    from databasise.seam.floors_store import FloorStore
+
+    store = FloorStore(tmp_path)
+    store.record(_floor_row())
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["floors.db"]
+    assert store.any_floor() is True
+    assert store.lookup("h1") == [_floor_row()]
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["floors.db"]
+
+
+def test_floor_store_reads_a_floor_in_a_read_only_directory(tmp_path):
+    """B-WR-02: an open failure is never read as "no floor"; a read-only root still reads its floor."""
+    from databasise.seam.floors_store import FloorStore
+
+    store = FloorStore(tmp_path)
+    store.record(_floor_row())
+    tmp_path.chmod(0o555)
+    try:
+        assert store.any_floor() is True
+        assert len(store.lookup("h1")) == 1
+    finally:
+        tmp_path.chmod(0o755)
+
+
+def test_floor_store_refuses_a_wal_without_its_shm(tmp_path):
+    """B-WR-02: a fault other than a missing table propagates instead of returning "no floor"."""
+    import sqlite3
+
+    from databasise.seam.floors_store import FloorStore
+
+    store = FloorStore(tmp_path)
+    store.record(_floor_row())
+    (tmp_path / "floors.db-wal").write_bytes(b"\0" * 64)
+    with pytest.raises(sqlite3.OperationalError):
+        store.any_floor()
+    with pytest.raises(sqlite3.OperationalError):
+        store.lookup("h1")
