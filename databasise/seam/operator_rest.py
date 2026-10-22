@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 
 from databasise.seam.corpus import checked_page
 from databasise.seam.rest import _FAULT_RESPONSES, RefusalBody, _RequestModel
@@ -59,3 +59,8 @@ def add_operator_routes(app: FastAPI, engine: Any) -> None:
     async def post_ledger_history(body: LedgerHistoryRequest) -> dict[str, Any]:
         """One page of an alias's ledger rows with active and tombstoned flags."""
         return await engine.ledger_history(body.alias, checked_page(body.limit, body.offset))
+
+    @app.get("/traces", responses=_OPERATOR_STORE_RESPONSES)
+    async def get_traces(limit: int = Query(default=50), offset: int = Query(default=0)) -> dict[str, Any]:
+        """One page of recent traces, newest first: token, time, partial, degraded and stop reason."""
+        return await engine.list_traces(checked_page(limit, offset))

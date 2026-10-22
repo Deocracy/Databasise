@@ -2189,6 +2189,31 @@ class Databasise:
         except sqlite3.Error as exc:
             raise _foreign_fault("ledger_history", exc, failure_class="StoreFault") from exc
 
+    async def list_traces(self, page: Page) -> dict[str, Any]:
+        """One page of recent traces, newest first, for the operator console's trace picker (16-05,
+        CONN-08, D-13b). One store root is one workspace, so there is no workspace filter (D-11).
+        Trace tokens are listed on the ``--operator`` surface only (D-10); no trace body, node list,
+        wiring id or instance hash is returned. Read-only."""
+        try:
+            rows, total = self._trace_store.list_page(page.limit, page.offset)
+        except sqlite3.Error as exc:
+            raise _foreign_fault("list_traces", exc, failure_class="StoreFault") from exc
+        end = page.offset + page.limit
+        return {
+            "items": [
+                {
+                    "trace_reference": token,
+                    "created_at": created_at,
+                    "partial": bool(rec.get("partial")),
+                    "degraded": bool(rec.get("degraded")),
+                    "stop_reason": rec.get("stop_reason"),
+                }
+                for token, created_at, rec in rows
+            ],
+            "total": total,
+            "next_offset": end if end < total else None,
+        }
+
     async def _execute(
         self,
         query_object: QueryObject,
