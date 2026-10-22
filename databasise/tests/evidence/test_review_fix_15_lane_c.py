@@ -246,6 +246,38 @@ def test_a_degraded_inconclusive_record_does_not_rewrite_the_arm_s_completed_exc
     assert f"`hybrid`/`q2`: {_DEGRADED_REASON}" in parity_report.render_markdown()
 
 
+def test_a_mixed_arm_s_verdict_line_speaks_only_for_its_completed_records(parity_copy: Path) -> None:
+    """ITER3-C-WR-01 (D-16): q1 clean, q2 a D-07 degraded inconclusive record; the line must not
+    say the arm completed, nor claim an arm-wide exact agreement."""
+
+    def clean_q1_degrade_q2(records):
+        for record in records:
+            if record["query_id"] == "q1":
+                for name in ("chunk_diff", "entity_diff", "relation_diff"):
+                    record[name] = {**(record.get(name) or {}), "symmetric_difference": []}
+            else:
+                record.update(
+                    status="inconclusive",
+                    inconclusive_reason=_DEGRADED_REASON,
+                    chunk_diff=None,
+                    entity_diff=None,
+                    relation_diff=None,
+                    decomposed_run_record={"degraded": True, "degradation_reason": "NodeExecutionError"},
+                )
+
+    _rewrite(parity_copy / "parity_results" / "hybrid-comparison.json", clean_q1_degrade_q2)
+
+    assert parity_report._arm_state("hybrid") == "mixed"
+    verdict = parity_report._arm_verdict_line("hybrid")
+    assert "a validated exact retrieval-level agreement" not in verdict
+    assert "`hybrid` completed" not in verdict
+    assert "`hybrid`'s completed record(s) measured" in verdict
+    assert f"did not complete: `hybrid`/`q2`: {_DEGRADED_REASON}" in verdict
+    text = parity_report._render_verdict()
+    assert "an outcome only for each arm's completed records" in text
+    assert "an outcome only for the arms that completed" not in text
+
+
 # --------------------------------------------------------------------------------------------- #
 # C-WR-03 (no write into an installed package) and C-WR-04 (named refusals, D-03)
 # --------------------------------------------------------------------------------------------- #

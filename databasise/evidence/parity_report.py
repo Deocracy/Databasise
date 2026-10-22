@@ -1574,9 +1574,22 @@ def _arm_verdict_line(arm: str) -> str:
     queries = ", ".join(f"`{r.get('query_id', '?')}`" for r in records)
     degraded, reason = _arm_degraded(arm)
     arm_excursions = _arm_excursion_summary(arm)
+    # ITER3-C-WR-01: a mixed arm's line speaks for its completed records only and names the rest.
+    unfinished = _arm_state(arm) != "completed"
+    measured = f"`{arm}`'s completed record(s) measured" if unfinished else f"`{arm}` completed and measured"
+    clean = (
+        f"`{arm}`'s completed record(s) ran with no decomposed-run degradation"
+        if unfinished
+        else f"`{arm}` completed with no decomposed-run degradation"
+    )
+    scope = (
+        f" Its other record(s) or storage audit did not complete: {_inconclusive_causes((arm,))}."
+        if unfinished
+        else ""
+    )
     if degraded:
         return (
-            f"`{arm}` completed and measured `{fields}` `symmetric_difference=[]` on {queries} "
+            f"{measured} `{fields}` `symmetric_difference=[]` on {queries} "
             f"— but **this is not read as exact retrieval-level agreement.** `{arm}`'s "
             f"decomposed run degraded before completing a real retrieval ({reason} — see the "
             "per-arm degradation note in \"Per-arm retrieval-level comparison\"), and the "
@@ -1585,15 +1598,21 @@ def _arm_verdict_line(arm: str) -> str:
             "not a validated match over non-trivial content — a live defect this comparison "
             "surfaced, not evidence of parity. Fixing that defect is out of this plan's "
             "scope; recorded here so the verdict does not overstate what this arm actually "
-            "showed.\n"
+            f"showed.{scope}\n"
         )
     if arm_excursions:
         return (
-            f"`{arm}` completed with no decomposed-run degradation, but **this is not read "
+            f"{clean}, but **this is not read "
             "as exact retrieval-level agreement either.** Both sides retrieved real, "
             f"non-trivial content, and the two disagree: {arm_excursions} A completed run "
             "with a real disagreement is a genuine excursion, not a crash and not a match. "
-            f"{_arm_cause_sentence(arm)}\n"
+            f"{_arm_cause_sentence(arm)}{scope}\n"
+        )
+    if unfinished:
+        return (
+            f"{measured} `{fields}` `symmetric_difference=[]` on {queries} and ran with no "
+            "decomposed-run degradation — an exact retrieval-level agreement on those records "
+            f"only, not for the arm.{scope}\n"
         )
     return (
         f"`{arm}` completed and measured `{fields}` `symmetric_difference=[]` on {queries}, "
@@ -1623,7 +1642,7 @@ def _render_verdict() -> str:
         opening = (
             "**Mixed run state: no single parity verdict is recorded.** "
             f"Per arm, {_state_summary()}. An arm that did not complete has no retrieval-level "
-            "outcome at all; the lines below state an outcome only for the arms that completed.\n"
+            "outcome at all; the lines below state an outcome only for each arm's completed records.\n"
         )
     elif degraded_arms:
         opening = (
