@@ -23,3 +23,8 @@ def add_operator_routes(app: FastAPI, engine: Any) -> None:
     async def get_info() -> dict[str, Any]:
         """Version, workspace and which model clients were configured at startup."""
         return await engine.info()
+
+    @app.get("/wirings")
+    async def get_wirings() -> list[dict[str, Any]]:
+        """One row per wiring: node count, default arm and selector reachability."""
+        return await engine.wirings()

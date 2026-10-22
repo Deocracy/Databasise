@@ -297,6 +297,8 @@ from databasise.seam.refusals import (
 from databasise.seam.selectors import (
     _INSTANCE_HASH_PATTERN,
     Selector,
+    _capability_tokens,
+    _is_default_eligible,
     _wiring_effects,
     resolve_selector,
 )
@@ -308,7 +310,13 @@ from databasise.stores.probes import list_kv_prefix, probe_graph, probe_kv, prob
 from databasise.stores.vector import MultiNamespaceVectorStore, VectorStoreCorruptedError, load_committed
 from databasise.validator.errors import CODE_CYCLIC_WIRING
 from databasise.validator.parse import ParsedWiring, parse_wiring
-from databasise.wirings.resolve import load_wiring, wiring_family, wiring_for_name, without_recipe_only_nodes
+from databasise.wirings.resolve import (
+    all_wirings,
+    load_wiring,
+    wiring_family,
+    wiring_for_name,
+    without_recipe_only_nodes,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -2079,6 +2087,35 @@ class Databasise:
             "workspace": self.workspace,
             "clients": _client_presence(self.clients),
         }
+
+    async def wirings(self) -> list[dict[str, Any]]:
+        """One row per ``all_wirings()`` arm for the operator console (16-03, CONN-05, D-06). Rows are
+        keyed on ``name`` because the five LightRAG arms share one ``title``. ``node_count`` is the full
+        wiring; ``effects`` and ``reachable`` are over the query-run copy. ``reachable`` is computed by
+        resolving a capability selector built from the arm's own tokens, so it follows the selector
+        rules. These names and ids are on the ``--operator`` surface only (D-02). Calls no provider."""
+        default_id = resolve_selector(None, registry=self.registry)["wiring_id"]
+        rows: list[dict[str, Any]] = []
+        for name, wiring in all_wirings():
+            run = without_recipe_only_nodes(wiring)
+            selector = Selector(capability=sorted(_capability_tokens(run, self.registry)))
+            reached = resolve_selector(selector, registry=self.registry)["wiring_id"]
+            rows.append(
+                {
+                    "name": name,
+                    "wiring_id": wiring["wiring_id"],
+                    "wiring_version": wiring["wiring_version"],
+                    "title": wiring["title"],
+                    "node_count": len(wiring["nodes"]),
+                    "effects": sorted(_wiring_effects(run, self.registry)),
+                    "provides": wiring.get("provides") or [],
+                    "harnesses": wiring.get("harnesses") or [],
+                    "default_eligible": _is_default_eligible(wiring, self.registry),
+                    "is_default": wiring["wiring_id"] == default_id,
+                    "reachable": reached == wiring["wiring_id"],
+                }
+            )
+        return rows
 
     async def _execute(
         self,
