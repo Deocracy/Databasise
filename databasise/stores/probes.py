@@ -155,13 +155,17 @@ def list_kv_prefix(
     live = wal.exists() and shm.exists()
     uri = db_path.as_uri() + ("?mode=ro" if live else "?mode=ro&immutable=1")
     conn = sqlite3.connect(uri, uri=True, timeout=0.1)
-    # Every key >= prefix and < prefix with its last character incremented starts with prefix.
-    upper = prefix[:-1] + chr(ord(prefix[-1]) + 1)
+    # Every key >= prefix and < prefix with its last character incremented starts with prefix; an
+    # empty prefix matches every key.
+    if prefix:
+        where, bounds = "WHERE id >= ? AND id < ?", (prefix, prefix[:-1] + chr(ord(prefix[-1]) + 1))
+    else:
+        where, bounds = "", ()
     try:
-        total = conn.execute("SELECT COUNT(*) FROM kv WHERE id >= ? AND id < ?", (prefix, upper)).fetchone()[0]
+        total = conn.execute(f"SELECT COUNT(*) FROM kv {where}", bounds).fetchone()[0]
         rows = conn.execute(
-            "SELECT id, value FROM kv WHERE id >= ? AND id < ? ORDER BY id LIMIT ? OFFSET ?",
-            (prefix, upper, limit, offset),
+            f"SELECT id, value FROM kv {where} ORDER BY id LIMIT ? OFFSET ?",
+            (*bounds, limit, offset),
         ).fetchall()
     except sqlite3.OperationalError as exc:
         if "no such table" in str(exc).lower():

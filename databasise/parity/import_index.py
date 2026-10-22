@@ -53,6 +53,7 @@ holds the v1 index (D-01); a wheel install has neither ``v1/`` nor the parity co
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import sys
 from dataclasses import dataclass, field
@@ -66,6 +67,7 @@ from databasise.parity.corpus import load_snapshot
 from databasise.store_lock import StoreLockedError, store_lock
 from databasise.stores.graph import CozoGraphStore, _ClientRegistry
 from databasise.stores.kv import SqliteKVStore
+from databasise.stores.probes import list_kv_prefix
 from databasise.stores.vector import FaissVectorStore, MultiNamespaceVectorStore
 
 try:
@@ -634,31 +636,30 @@ async def verify_import(
 
     violations: list[Violation] = []
 
-    # (a) chunk text byte-identical, v1 KV vs v2 KV, per chunk id.
+    # (a) chunk text byte-identical, v1 KV vs v2 KV, per chunk id. Read-only: a SqliteKVStore would
+    # create the namespace and its table, and reset the journal mode (A-WR-04).
     v1_chunks = _v1_text_chunks(v1_working_dir)
-    v2_store = SqliteKVStore(namespace=_TEXT_CHUNKS_KIND, workspace=workspace, store_root=store_root)
-    try:
-        for chunk_id, v1_record in sorted(v1_chunks.items()):
-            v2_record = await v2_store.get_by_id(chunk_id)
-            if v2_record is None:
-                violations.append(
-                    Violation(
-                        assertion="chunk-text",
-                        detail=f"chunk id {chunk_id!r} present in v1's KV but missing from v2's KV",
-                        offending_id=chunk_id,
-                    )
+    v2_rows, _ = list_kv_prefix(Path(store_root) / workspace / _TEXT_CHUNKS_KIND, "", limit=-1, offset=0)
+    v2_chunks = dict(v2_rows)
+    for chunk_id, v1_record in sorted(v1_chunks.items()):
+        v2_record = v2_chunks.get(chunk_id)
+        if v2_record is None:
+            violations.append(
+                Violation(
+                    assertion="chunk-text",
+                    detail=f"chunk id {chunk_id!r} present in v1's KV but missing from v2's KV",
+                    offending_id=chunk_id,
                 )
-                continue
-            if v2_record.get("content") != v1_record.get("content"):
-                violations.append(
-                    Violation(
-                        assertion="chunk-text",
-                        detail=f"chunk id {chunk_id!r} content differs between v1's KV and v2's KV",
-                        offending_id=chunk_id,
-                    )
+            )
+            continue
+        if v2_record.get("content") != v1_record.get("content"):
+            violations.append(
+                Violation(
+                    assertion="chunk-text",
+                    detail=f"chunk id {chunk_id!r} content differs between v1's KV and v2's KV",
+                    offending_id=chunk_id,
                 )
-    finally:
-        await v2_store.finalize()
+            )
 
     # (b) vector sets equal within tolerance, per vector kind, naming the offending id.
     for kind in _VECTOR_KINDS:
@@ -749,8 +750,14 @@ def main(argv: list[str] | None = None) -> int:
             await import_v1_index(v1_working_dir, store_root, workspace)
         return await verify_import(v1_working_dir, store_root, workspace)
 
+    # A-WR-04: --verify is a read path; on a missing store root it takes no lock (which would create
+    # the root and .engine.lock) and verify_import refuses with its precondition violation.
+    if args.verify and not Path(store_root).is_dir():
+        lock = contextlib.nullcontext()
+    else:
+        lock = store_lock(store_root)  # D-03: read at call time, one monkeypatch covers every CLI
     try:
-        with store_lock(store_root):  # D-03: read at call time, one monkeypatch covers every CLI
+        with lock:
             result = asyncio.run(_run())
     except (MissingV1IndexError, StoreLockedError) as exc:
         return refuse(exc)
