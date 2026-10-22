@@ -38,7 +38,9 @@ corpus fixture and ``v1/.env.parity``, neither of which ships in the wheel.
 Without ``--spend`` the CLI prints the ingest estimate and ``mode: estimate-only`` and touches nothing.
 With ``--spend`` it takes the store lock, builds into ``store_root/workspace`` (created when the store
 root is empty) and refuses a build whose ``hipporag-chunks`` vector count is zero or differs from the
-chunk count the same chunking yields. Exit codes: 0 done or estimate-only; 1 a named refusal (one
+chunk count the same chunking yields. Until a build passes verification its workspace carries
+``.hipporag-build-unverified.json``, which ``run_cross_modality``'s preflight refuses, so a refused
+build that stays on disk is never queried. Exit codes: 0 done or estimate-only; 1 a named refusal (one
 stderr line ``ClassName: message``); 2 bad arguments.
 """
 
@@ -95,6 +97,13 @@ _INDEX_WIRING_VARIANT = "corpus-ingest"
 _CHUNKS_NAMESPACE = "hipporag-chunks"
 _ENTITIES_NAMESPACE = "hipporag-entities"
 _FACTS_NAMESPACE = "hipporag-facts"
+_UNVERIFIED_BUILD_MARKER = ".hipporag-build-unverified.json"
+
+
+def unverified_build_marker(store_root: Path, workspace: str) -> Path:
+    """Present while a build into ``store_root/workspace`` has not passed :func:`build_index`'s
+    verification: written before any store opens, removed only after every check passes."""
+    return Path(store_root) / workspace / _UNVERIFIED_BUILD_MARKER
 
 
 class HippoRAGIndexBuildRefusedError(RuntimeError):
@@ -227,6 +236,10 @@ async def build_index(
     parsed = parse_wiring(resolved, registry)
 
     (Path(resolved_store_root) / resolved_workspace).mkdir(parents=True, exist_ok=True)
+    # A-WR-06: the stores commit before verification, so a refused or crashed build stays on disk.
+    # The marker is removed only once verification passes; run_cross_modality's preflight refuses it.
+    marker = unverified_build_marker(resolved_store_root, resolved_workspace)
+    marker.write_text(json.dumps({"corpus_hash": snapshot.corpus_hash}) + "\n", encoding="utf-8")
     stores: dict[str, Any] = {}
     try:
         # Phase 10 review WR-09 (D-04): built inside the try, so a failed open finalizes what opened.
@@ -324,6 +337,7 @@ async def build_index(
 
     token_spend = [entry.model_dump() for entry in assemble_token_breakdown(record.nodes)]
 
+    marker.unlink(missing_ok=True)
     return IndexBuildResult(
         corpus_hash=snapshot.corpus_hash,
         workspace=resolved_workspace,

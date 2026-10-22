@@ -143,6 +143,31 @@ def test_import_index_verify_on_a_missing_store_root_writes_nothing(tmp_path, ca
     assert "[refused] precondition" in capsys.readouterr().out
 
 
+def test_a_refused_hipporag_build_leaves_the_unverified_marker(tmp_path, monkeypatch):
+    """A-WR-06: a build its own verification refuses is marked on disk as unverified."""
+    from databasise.parity import build_hipporag_index as bhi
+
+    async def _cyclic(*args, **kwargs):
+        return {"cycle": ["a", "b"]}
+
+    monkeypatch.setattr(bhi._scheduler, "run_wiring", _cyclic)
+    with pytest.raises(bhi.HippoRAGIndexBuildRefusedError):
+        asyncio.run(bhi.build_index(store_root=tmp_path, workspace="ws", clients={}))
+    assert bhi.unverified_build_marker(tmp_path, "ws").is_file()
+
+
+def test_cross_modality_preflight_refuses_an_unverified_hipporag_build(tmp_path, monkeypatch):
+    """A-WR-06: preflight refuses an index its builder did not verify, even when its chunks exist."""
+    from databasise.parity import build_hipporag_index as bhi
+    from databasise.parity import run_cross_modality as rcm
+
+    monkeypatch.setattr(rcm, "_require_namespace", lambda *args, **kwargs: None)
+    (tmp_path / "ws").mkdir()
+    bhi.unverified_build_marker(tmp_path, "ws").write_text("{}", encoding="utf-8")
+    with pytest.raises(rcm.MissingArmIndexError, match="did not pass its builder's verification"):
+        rcm.preflight(store_root=tmp_path, workspace="ws")
+
+
 def test_v1_arm_subprocess_error_names_the_driver_failure_line():
     """A-WR-03: the message carries the driver's last non-log line, not v1's start-up INFO lines."""
     from databasise.parity.v1_arm import V1ArmSubprocessError

@@ -56,6 +56,7 @@ from databasise import cli
 from databasise.identity.canon import canonicalise
 from databasise.namespaces import artifacts_overlap
 from databasise.parity import import_index
+from databasise.parity.build_hipporag_index import unverified_build_marker
 from databasise.parity.corpus import CorpusQuery, load_snapshot
 from databasise.parity.run_arm import (
     DEFAULT_V1_ENV_PARITY,
@@ -269,6 +270,13 @@ def preflight(*, store_root: Path, workspace: str) -> PreflightResult:
     _require_namespace(
         store_root, workspace, "hipporag-chunks", "databasise.parity.build_hipporag_index (06-08-PLAN.md Task 1)"
     )
+    marker = unverified_build_marker(store_root, workspace)
+    if marker.exists():
+        # A-WR-06: the builder refused (or never finished verifying) this index; its stores stay on disk.
+        raise MissingArmIndexError(
+            f"the HippoRAG index at {Path(store_root) / workspace} did not pass its builder's verification "
+            f"({marker.name} is present) - rerun databasise.parity.build_hipporag_index --spend"
+        )
 
     lightrag_dirs = _resolved_store_dirs(
         store_root, workspace, lightrag_resolved, _LIGHTRAG_VECTOR_NAMESPACES
