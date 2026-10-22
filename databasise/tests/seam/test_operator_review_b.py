@@ -154,3 +154,16 @@ def test_a_log_removed_before_the_open_is_a_502(tmp_path: Path, monkeypatch: pyt
     response = _operator_client(tmp_path, log).get("/log")
     assert response.status_code == 502
     assert "StoreFault" in response.text
+
+
+def test_each_log_line_is_capped_and_still_redacted(tmp_path: Path) -> None:
+    # WR-05: deque(handle) held and returned each line whole, however long
+    cap = engine_module._LOG_LINE_CAP
+    log = tmp_path / "server.log"
+    secret = "sk-" + "x" * 40
+    log.write_text("a\n" + "y" * (cap - 11) + " " + secret + "z" * 10 * cap + "\n" + "b" * cap + "\nlast")
+    engine = Databasise(store_root=tmp_path, workspace="ws", log_path=log)
+    lines = asyncio.run(engine.log_tail(10))["lines"]
+    assert lines[0] == "a"
+    assert lines[1] == "y" * (cap - 11) + " sk-[REDACTED]…[truncated]"  # cut 10 chars into the key
+    assert lines[2:] == ["b" * cap, "last"]

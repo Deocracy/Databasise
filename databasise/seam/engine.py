@@ -411,6 +411,9 @@ _DOCS_FORMAT_PENDING_PARSE = "pending_parse"
 _TEXT_CHUNKS_KIND = "text_chunks"
 _GRAPH_KIND = "chunk_entity_relation"
 
+# 16-REVIEW-B WR-05: the per-line cap of the operator log tail, in characters.
+_LOG_LINE_CAP = 4096
+
 # Every namespace of every shipped wiring, probed by health() (Phase 10 D-14). kv/graph come from the
 # wirings' store_namespaces, vector from the part modules' *_NAMESPACE constants; test_health_probe.py
 # fails if either drifts (research Pitfall 19).
@@ -2427,18 +2430,33 @@ class Databasise:
         and fault bodies stay free of causes (Phase 9 D-04); this tail is the one exception, off by
         default and served only on a loopback ``--operator`` launch with ``--log-file``. A log that
         cannot be read, or that is removed between the existence check and the open, is the
-        ``StoreFault`` fault (16-REVIEW-B WR-04)."""
+        ``StoreFault`` fault (16-REVIEW-B WR-04). Each line is capped at ``_LOG_LINE_CAP``
+        characters and no longer line is held in memory: a longer one is cut there, redacted, and
+        ends in ``…[truncated]`` (16-REVIEW-B WR-05). The cut comes before the redaction, and the
+        secret patterns have no minimum length, so a secret cut at the cap is still masked."""
         path = self.log_path
         if path is None:
             return {"lines": []}
+
+        def _capped(handle: Any) -> Iterator[tuple[str, bool]]:
+            while piece := handle.readline(_LOG_LINE_CAP + 1):
+                line = piece.rstrip("\r\n")
+                if len(line) <= _LOG_LINE_CAP:
+                    yield line, False
+                    continue
+                while piece and not piece.endswith("\n"):  # skip the rest of the long line
+                    piece = handle.readline(_LOG_LINE_CAP + 1)
+                yield line[:_LOG_LINE_CAP], True
 
         def _tail() -> list[str]:
             if not Path(path).is_file():
                 return []
             # shortcut: full read per call, use a seek-from-end tail if the log exceeds ~10^7 lines
             with open(path, encoding="utf-8", errors="replace") as handle:
-                tail = deque(handle, maxlen=limit)
-            return [_URL_RE.sub("<url>", redact_secrets(line.rstrip("\r\n"))) for line in tail]
+                tail = deque(_capped(handle), maxlen=limit)
+            return [
+                _URL_RE.sub("<url>", redact_secrets(line)) + ("…[truncated]" if cut else "") for line, cut in tail
+            ]
 
         try:
             return {"lines": await asyncio.to_thread(_tail)}
