@@ -113,3 +113,20 @@ New tests are in a new file that no ledger row names: `databasise/tests/eval/tes
 No fix contradicts D-01..D-24. WR-02 follows D-13 (no new refusal class; a store fault is the existing StoreFault). WR-03 follows D-03 and D-14: the existing named class, one stderr line and exit 1 through `remint`, and the TOOL-13 hash is unchanged. WR-01 keeps TOOL-12's verdict forms and adds no fallback. No CLI ran with `--spend`, and no env file was read.
 
 _Fixer: Claude (gsd-code-fixer), lane B iteration 2_
+
+## Iteration 2 — Lane C
+
+**Source review:** .planning/phases/15-offline-tooling-packaging/15-REVIEW-ITER2-C.md. **Fixed at:** 2026-10-21. Findings in scope: 2 (CR-01, WR-01). Fixed: 2. Not fixed: 0. Needs owner grant: 0. The Info findings IN-01 to IN-03 were out of scope.
+
+All edits and commits were made in the main checkout, with no worktree, on top of lane B iteration 2. Every test run used `databasise/.venv/bin/python -m pytest -q <paths> -p no:cacheprovider` in the main checkout. After CR-01: `databasise/tests/evidence`, 123 passed. After WR-01: `databasise/tests/evidence`, 125 passed, then `test_docstring_currency.py` and `test_cli_refusals.py`, 80 passed. No protected test failed, and no protected test was edited.
+
+New tests are in the unprotected lane C file `databasise/tests/evidence/test_review_fix_15_lane_c.py` (C).
+
+| Finding | Status | Commit | Covering test | Reason / notes |
+|---|---|---|---|---|
+| C-ITER2-CR-01 | fixed | 4a57dca | C::test_a_degraded_inconclusive_record_does_not_rewrite_the_arm_s_completed_excursion (fails on the 72cf2c1 filter, checked), C::test_an_all_inconclusive_render_names_the_recorded_causes (assertion updated to `(False, "")`) | The review's fix was taken: `_arm_degraded` reads `status == "completed"` records only again, and keeps the `or {}` null guard. Every caller (`_arm_verdict_line`, `_render_known_design_deviation`, `_render_spotcheck_arm_guidance`, the storage-audit, "not measured" and Verdict sections) describes completed records. A D-07 degraded record is `inconclusive`, and `_inconclusive_causes()` already renders its cause per record. No separate degraded-inconclusive helper was added, because no section needs one: an arm with an inconclusive record is already named as unfinished by `_arm_state`. The new test makes hybrid q2 a D-07 degraded inconclusive record next to q1's completed excursion. It checks that the verdict line states q1's excursion and not `symmetric_difference=[]`, that the design-deviation section states a measured excursion and not "degraded before completing a real retrieval", that the spot-check guidance names `hybrid` once and does not cite `original_arm_result.answer`, and that the q2 cause still renders. The committed records are all completed and not degraded, so `PARITY-EVIDENCE.md` renders the same and was not re-rendered. |
+| C-ITER2-WR-01 | fixed | e6e381f | C::test_falsifier2_refuses_a_named_wiring_that_is_not_json_by_name (w1 and w2) | `falsifier2.load_wiring` raises the new `MalformedWiringDocumentError(ValueError)` (path and decode error) from `json.JSONDecodeError`, and `main()` adds it to its named `except` tuple. No bare `ValueError` is caught (D-03). Residual, as already recorded for C-WR-03: a malformed `w3` raises the same named class at import time, while `PROBES` is built, which is outside `main()`. |
+
+No fix contradicts D-01..D-24. CR-01 restores D-16 ("render only states they read") and keeps D-07's per-record inconclusive cause. WR-01 follows D-03: a named class, one stderr line, exit 1, and no bare `ValueError`. No CLI ran with `--spend`, and no env file was read.
+
+_Fixer: Claude (gsd-code-fixer), lane C iteration 2_
