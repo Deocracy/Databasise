@@ -106,6 +106,16 @@ class LimitExceedsCorpusError(ValueError):
         )
 
 
+class NonPositiveLimitError(ValueError):
+    """Raised by :func:`estimate` when ``limit`` is zero or negative. Python slicing would turn a
+    negative ``limit`` into "all but the last ``|limit|`` documents", so it is refused, never sliced.
+    """
+
+    def __init__(self, *, requested: int):
+        self.requested = requested
+        super().__init__(f"requested limit {requested} is not a positive document count")
+
+
 @dataclass(frozen=True)
 class IngestEstimate:
     """A real, computed projection for the first ``limit`` eval-corpus documents — never an
@@ -141,6 +151,9 @@ def estimate(snapshot: CorpusSnapshot, *, limit: int, arm: str) -> IngestEstimat
     exceeds ``snapshot``'s own document count — before any byte is summed.
     """
     available = len(snapshot.documents)
+    if limit < 1:
+        # A negative slice bound would ingest all but |limit| documents; zero ingests nothing.
+        raise NonPositiveLimitError(requested=limit)
     if limit > available:
         raise LimitExceedsCorpusError(requested=limit, available=available)
 
@@ -205,13 +218,13 @@ def main(argv: list[str] | None = None) -> int:
     ``ClassName: message``), 2 on bad arguments (D-03).
     """
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--limit", type=int, required=True)
+    parser.add_argument("--limit", type=cli.positive_int, required=True)
     parser.add_argument("--arm", choices=list(_ARM_CHOICES), default="lightrag")
     parser.add_argument("--spend", action="store_true", default=False)
     args = parser.parse_args(argv)
 
     refusals = cli.offline_refusals(
-        LimitExceedsCorpusError, ForeignEngineRefusalError, NoWritePathForModalityError, cli.ArmSelectorMismatchError
+        LimitExceedsCorpusError, NonPositiveLimitError, ForeignEngineRefusalError, NoWritePathForModalityError, cli.ArmSelectorMismatchError
     )
     try:
         snapshot = load_snapshot(CORPUS_DIR)
@@ -254,6 +267,7 @@ __all__ = [
     "CORPUS_DIR",
     "IngestEstimate",
     "LimitExceedsCorpusError",
+    "NonPositiveLimitError",
     "estimate",
     "ingest_documents",
     "main",
