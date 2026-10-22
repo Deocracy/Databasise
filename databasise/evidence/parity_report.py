@@ -230,16 +230,19 @@ def _inconclusive_causes(arms: tuple[str, ...] = ARMS) -> str:
 
 
 def _arm_degraded(arm: str) -> tuple[bool, str]:
-    """Whether any comparison record for ``arm`` reports ``decomposed_run_record.degraded``: a
-    completed record, or an inconclusive one that D-07 wrote with its decomposed run record
-    (C-WR-02) — read fresh from the committed records on every call, per
+    """Whether any completed comparison record for ``arm`` reports
+    ``decomposed_run_record.degraded`` — read fresh from the committed records on every call, per
     this module's own no-hardcoded-run-state rule (03-10-PLAN.md Task 2; 03-10 fix cycle, finding
-    2). Returns the first degradation reason found, or ``""`` when none of the arm's
+    2). Returns the first degradation reason found, or ``""`` when none of the arm's completed
     records degraded. A clean re-run of a currently-degraded arm flips this to ``(False, "")``
     with no code change — every prose section that reads it follows automatically.
+
+    Completed records only (C-ITER2-CR-01): every caller describes the arm's completed records.
+    Since 15 D-07 a degraded run is written as an ``inconclusive`` record, whose cause
+    ``_inconclusive_causes()`` already renders per record.
     """
     for record in load_comparison(arm):
-        if record.get("status") not in ("completed", "inconclusive"):
+        if record.get("status") != "completed":
             continue
         drr = record.get("decomposed_run_record") or {}
         if drr.get("degraded"):

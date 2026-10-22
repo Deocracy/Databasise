@@ -191,7 +191,8 @@ def test_an_all_inconclusive_render_names_the_recorded_causes(parity_copy: Path,
     _rewrite(parity_copy / "human_findings.json", lambda d: d.update(declared_causes=[]))
 
     assert parity_report._run_state() == "inconclusive"
-    assert parity_report._arm_degraded("hybrid") == (True, "NodeExecutionError at entity-lookup")
+    # C-ITER2-CR-01: an inconclusive record's degradation is a recorded cause, not a degraded arm.
+    assert parity_report._arm_degraded("hybrid") == (False, "")
     assert parity_report.main([]) == 0
     text = parity_report.EVIDENCE_PATH.read_text(encoding="utf-8")
     assert f"`hybrid`/`q1`: {_DEGRADED_REASON}" in text
@@ -211,6 +212,38 @@ def test_a_mixed_render_names_the_inconclusive_arm_causes(parity_copy: Path) -> 
     assert f"`hybrid` storage audit: {_AUDIT_REASON}" in text
     for phrase in _FALSE_CAUSES:
         assert phrase not in text, phrase
+
+
+def test_a_degraded_inconclusive_record_does_not_rewrite_the_arm_s_completed_excursion(
+    parity_copy: Path,
+) -> None:
+    """C-ITER2-CR-01: hybrid's q1 completed with a real excursion; only q2 degraded (D-07)."""
+
+    def degrade_q2(records):
+        record = next(r for r in records if r["query_id"] == "q2")
+        record.update(
+            status="inconclusive",
+            inconclusive_reason=_DEGRADED_REASON,
+            original_arm_result=None,
+            chunk_diff=None,
+            entity_diff=None,
+            relation_diff=None,
+            decomposed_run_record={"degraded": True, "degradation_reason": "NodeExecutionError"},
+        )
+
+    _rewrite(parity_copy / "parity_results" / "hybrid-comparison.json", degrade_q2)
+
+    assert parity_report._arm_degraded("hybrid") == (False, "")
+    verdict = parity_report._arm_verdict_line("hybrid")
+    assert "the two disagree: `q1`: chunk_diff=2" in verdict
+    assert "symmetric_difference=[]" not in verdict
+    deviation = parity_report._render_known_design_deviation()
+    assert "degraded before completing a real retrieval" not in deviation
+    assert "surfaces as a measured excursion" in deviation
+    guidance = parity_report._render_spotcheck_arm_guidance()
+    assert "original_arm_result.answer" not in guidance
+    assert guidance.count("`hybrid`") == 1
+    assert f"`hybrid`/`q2`: {_DEGRADED_REASON}" in parity_report.render_markdown()
 
 
 # --------------------------------------------------------------------------------------------- #
