@@ -40,7 +40,9 @@ retrieval rather than v1 silently extracting its own: pass a pinned pair no genu
 would produce, and confirm that exact pair comes back in ``hl_keywords_used``/``ll_keywords_used``.
 
 A v1 failure (``status == "failure"`` other than ``metadata.failure_reason == "no_results"``, which
-is an empty retrieval answered with v1's fail text) raises :class:`V1QueryFailedError`; ``main``
+is an empty retrieval answered with v1's fail text) raises :class:`V1QueryFailedError`. A response
+with no ``status`` at all (v1 answered ``fail_response`` with no ``raw_data``) is an empty retrieval
+too, reported as empty ids plus that answer, exactly what v1's ``aquery`` returns; ``main``
 prints ``V1QueryFailedError: <v1 message>`` to stderr and exits 1. A malformed job or any other
 exception prints a traceback to stderr and exits 1 — the caller (``v1_arm.py``) treats any non-zero
 exit as a refusal carrying that stderr, never as an empty success. The keyword fields are ``null``
@@ -64,8 +66,9 @@ from lightrag.utils import EmbeddingFunc
 
 
 class V1QueryFailedError(RuntimeError):
-    """v1's ``aquery_llm`` reported a failure that is not a legitimate empty retrieval (its
-    exception path: ``status == "failure"`` with ``metadata == {}``). Carries v1's message."""
+    """v1's ``aquery_llm`` reported a failure that is not a legitimate empty retrieval: a
+    ``status == "failure"`` whose ``metadata.failure_reason`` is not ``"no_results"`` (v1's
+    exception path returns ``metadata == {}``). Carries v1's message."""
 
 
 def _extra_body(env_var: str) -> dict[str, Any]:
@@ -138,8 +141,9 @@ async def _run(job: dict[str, Any]) -> dict[str, Any]:
         response = await rag.aquery_llm(query.strip(), param)
         metadata = response.get("metadata") or {}
         # "no_results" is a legitimate empty retrieval: v1's own ``aquery`` returns its fail_response
-        # text for it. Any other failure is v1's exception path and is never an empty success (D-08).
-        if response.get("status") != "success" and metadata.get("failure_reason") != "no_results":
+        # text for it. A dict with no status is v1's fail_response answer with no raw_data (also an
+        # empty retrieval). Only a "failure" status otherwise is v1's exception path (D-08).
+        if response.get("status") == "failure" and metadata.get("failure_reason") != "no_results":
             raise V1QueryFailedError(str(response.get("message") or "v1 reported a failure"))
         data = response.get("data") or {}
         chunk_ids = [
