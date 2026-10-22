@@ -363,13 +363,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--spend", action="store_true", default=False)
     args = parser.parse_args(argv)
 
-    snapshot = load_snapshot()
-    print(json.dumps(estimate(snapshot, limit=len(snapshot.documents), arm="hipporag").to_dict(), indent=2))
-    if not args.spend:
-        print("mode: estimate-only")
-        return cli.EXIT_OK
+    try:  # A-WR-09: a drifted or missing corpus refuses by name on the estimate path too
+        snapshot = load_snapshot()
+        print(json.dumps(estimate(snapshot, limit=len(snapshot.documents), arm="hipporag").to_dict(), indent=2))
+        if not args.spend:
+            print("mode: estimate-only")
+            return cli.EXIT_OK
 
-    try:
         with store_lock(import_index.DEFAULT_STORE_ROOT):  # D-03
             result = asyncio.run(build_index())
     except cli.offline_refusals(HippoRAGIndexBuildRefusedError) as exc:

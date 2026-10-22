@@ -42,7 +42,8 @@ the same read-and-reinsert reason as the vectors: consistency of import mechanis
 store kind, not an accident of the schemas happening to match.
 
 CLI (``python -m databasise.parity.import_index``; 15-09, D-03/D-05). Exit codes: 0 verified; 1 a named
-refusal (``MissingV1IndexError``, ``StoreLockedError``), printed by ``databasise.cli.refuse`` as one
+refusal (``MissingV1IndexError`` or any ``databasise.cli.offline_refusals`` class, among them
+``StoreLockedError``, ``CorpusDriftError`` and ``VectorStoreCorruptedError``), printed by ``databasise.cli.refuse`` as one
 stderr line, or a verification that is not ``"verified"``; 2 bad arguments (argparse, before the store
 lock is taken). Every run prints ``workspace: <ws> (<source>)`` first: the workspace a launcher must use.
 ``--v1-working-dir`` is a plain pass-through. Re-importing ``v1/.corpus_working_dir`` is not the
@@ -736,7 +737,7 @@ def main(argv: list[str] | None = None) -> int:
     """
     import asyncio
 
-    from databasise.cli import refuse
+    from databasise.cli import offline_refusals, refuse
 
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--verify", action="store_true", help="verify only; do not import")
@@ -749,28 +750,30 @@ def main(argv: list[str] | None = None) -> int:
 
     v1_working_dir = DEFAULT_V1_WORKING_DIR if args.v1_working_dir is None else args.v1_working_dir
     store_root = DEFAULT_STORE_ROOT if args.store_root is None else args.store_root
-    if args.workspace is None:
-        workspace = _import_workspace()
-        source = f"derived from parity corpus snapshot {load_snapshot().corpus_hash[:12]}"
-    else:
-        workspace, source = args.workspace, "--workspace"
-    print(f"workspace: {workspace} ({source})")
 
-    async def _run() -> VerificationResult:
+    async def _run(workspace: str) -> VerificationResult:
         if not args.verify:
             await import_v1_index(v1_working_dir, store_root, workspace)
         return await verify_import(v1_working_dir, store_root, workspace)
 
-    # A-WR-04: --verify is a read path; on a missing store root it takes no lock (which would create
-    # the root and .engine.lock) and verify_import refuses with its precondition violation.
-    if args.verify and not Path(store_root).is_dir():
-        lock = contextlib.nullcontext()
-    else:
-        lock = store_lock(store_root)  # D-03: read at call time, one monkeypatch covers every CLI
+    # A-WR-09: the snapshot read sits inside the handler, so a drifted or missing corpus refuses by name.
     try:
+        if args.workspace is None:
+            workspace = _import_workspace()
+            source = f"derived from parity corpus snapshot {load_snapshot().corpus_hash[:12]}"
+        else:
+            workspace, source = args.workspace, "--workspace"
+        print(f"workspace: {workspace} ({source})")
+
+        # A-WR-04: --verify is a read path; on a missing store root it takes no lock (which would create
+        # the root and .engine.lock) and verify_import refuses with its precondition violation.
+        if args.verify and not Path(store_root).is_dir():
+            lock = contextlib.nullcontext()
+        else:
+            lock = store_lock(store_root)  # D-03: read at call time, one monkeypatch covers every CLI
         with lock:
-            result = asyncio.run(_run())
-    except (MissingV1IndexError, StoreLockedError) as exc:
+            result = asyncio.run(_run(workspace))
+    except offline_refusals(MissingV1IndexError) as exc:
         return refuse(exc)
 
     if result.status == "verified":

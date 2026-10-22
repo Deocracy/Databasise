@@ -189,6 +189,43 @@ def test_run_arm_exit_code_reports_an_inconclusive_run(result, code, tmp_path, m
     assert run_arm.main(["--arm", "naive", "--query", "q", "--spend"]) == code
 
 
+def _drifted(*args, **kwargs):
+    from databasise.parity.corpus import CorpusDriftError
+
+    raise CorpusDriftError("document d1 digest mismatch")
+
+
+def test_import_index_refuses_a_drifted_snapshot_by_name(tmp_path, monkeypatch, capsys):
+    """A-WR-09: the snapshot read runs inside the refusal handler, so drift is one line and exit 1."""
+    from databasise.parity import import_index
+
+    monkeypatch.setattr(import_index, "_import_workspace", _drifted)
+    assert import_index.main(["--verify", "--store-root", str(tmp_path)]) == 1
+    assert capsys.readouterr().err.strip() == "CorpusDriftError: document d1 digest mismatch"
+
+
+def test_import_index_refuses_a_corrupted_vector_store_by_name(tmp_path, monkeypatch, capsys):
+    """A-WR-09: a VectorStoreCorruptedError from the run is a named refusal, not a traceback."""
+    from databasise.parity import import_index
+    from databasise.stores.vector import VectorStoreCorruptedError
+
+    async def _corrupt(*args, **kwargs):
+        raise VectorStoreCorruptedError(tmp_path / "vector.faiss", "sha256:a", "sha256:b")
+
+    monkeypatch.setattr(import_index, "verify_import", _corrupt)
+    assert import_index.main(["--verify", "--store-root", str(tmp_path), "--workspace", "ws"]) == 1
+    assert capsys.readouterr().err.strip().startswith("VectorStoreCorruptedError: ")
+
+
+def test_build_hipporag_index_estimate_refuses_a_drifted_snapshot_by_name(monkeypatch, capsys):
+    """A-WR-09: the estimate-only path refuses drift by name instead of a traceback."""
+    from databasise.parity import build_hipporag_index as bhi
+
+    monkeypatch.setattr(bhi, "load_snapshot", _drifted)
+    assert bhi.main([]) == 1
+    assert capsys.readouterr().err.strip() == "CorpusDriftError: document d1 digest mismatch"
+
+
 def test_v1_arm_subprocess_error_names_the_driver_failure_line():
     """A-WR-03: the message carries the driver's last non-log line, not v1's start-up INFO lines."""
     from databasise.parity.v1_arm import V1ArmSubprocessError
