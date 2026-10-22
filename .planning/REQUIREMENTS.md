@@ -692,7 +692,7 @@ These fail today.
 
 ### GUI connectors
 
-- [ ] **CONN-01**: Every operator read route in CONN-04 to CONN-14 is served from the launcher's process and reuses the single `Databasise` on `app.state.engine` (no second engine, trace-store connection or registry). Each route body only deserializes the request, awaits one `Databasise` method and returns. It does not read the ledger, trace store, registry or stores directly, and it does not call `ResponseEnvelope`, `resolve_selector` or the redact exports. The thin-adapter AST test covers every module that defines these routes. The routes are mounted only under `create_app(operator=True)` (launcher `databasise-rest --operator`); without it each is a 404. Each new engine operation is REST-only: it gets no MCP tool and is recorded in COVERAGE.md's deliberately-absent table. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*
+- [x] **CONN-01**: Every operator read route in CONN-04 to CONN-14 is served from the launcher's process and reuses the single `Databasise` on `app.state.engine` (no second engine, trace-store connection or registry). Each route body only deserializes the request, awaits one `Databasise` method and returns. It does not read the ledger, trace store, registry or stores directly, and it does not call `ResponseEnvelope`, `resolve_selector` or the redact exports. The thin-adapter AST test covers every module that defines these routes. The routes are mounted only under `create_app(operator=True)` (launcher `databasise-rest --operator`); without it each is a 404. Each new engine operation is REST-only: it gets no MCP tool and is recorded in COVERAGE.md's deliberately-absent table. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*
   - Test: A new AST test over `seam/operator_rest.py` requires each route body to be exactly `return await engine.<method>(...)` and bans direct ledger, trace-store, registry and store names; a `Ledger(...)` mutant makes it fail, and the shipped module passes. The call-ban test at tests/seam/test_rest_transport.py:202 is parametrized over both rest.py and operator_rest.py. test_tool_growth_invariant.py passes with a deliberately-absent COVERAGE.md row for each new operation.
   - Defects: mcp-live/MCP-09, tests/T-01, doc-audit-5/D11
   - Decided in Phase 16 CONTEXT D-01, D-03 (2026-10-22): the routes go on the §18 app behind `--operator` (option a), and every new operation is REST-only.
@@ -966,7 +966,7 @@ These fail today.
 | TOOL-18 | Phase 15 | Complete |
 | TOOL-19 | Phase 15 | Complete |
 | TOOL-20 | Phase 15 | Complete |
-| CONN-01 | Phase 16 | Pending |
+| CONN-01 | Phase 16 | Complete |
 | CONN-02 | Phase 16 | Complete |
 | CONN-03 | Phase 16 | Complete |
 | CONN-04 | Phase 16 | Complete |
