@@ -240,3 +240,29 @@ def test_calibration_stops_at_the_first_question_a_bypass_check_refuses(cache_hi
             )
         )
     assert (engine.queries, judge.calls) == (1, 0)
+
+
+def _copied_bundle_root(tmp_path):
+    import shutil
+
+    root = tmp_path / "eval-bundles"
+    shutil.copytree(aa_run._COMMITTED_BUNDLE_ROOT, root)
+    return root
+
+
+def test_a_truncated_usage_line_is_a_named_refusal(monkeypatch, tmp_path, capsys):
+    """B-WR-06: a cut-short usage.jsonl append refuses by name, and aa_run's estimate exits 1 with one line."""
+    from databasise.eval.bundle import CorruptUsageLogError, load_bundle
+
+    root = _copied_bundle_root(tmp_path)
+    version = aa_run._default_bundle_version(root)
+    with (root / version / "usage.jsonl").open("a", encoding="utf-8") as f:
+        f.write('{"kind": "holdout_re')
+    with pytest.raises(CorruptUsageLogError, match="is not JSON"):
+        load_bundle(root, version)
+
+    monkeypatch.setattr(aa_run, "_COMMITTED_BUNDLE_ROOT", root)
+    assert aa_run.main([]) == 1
+    err_lines = capsys.readouterr().err.strip().splitlines()
+    assert len(err_lines) == 1
+    assert err_lines[0].startswith("CorruptUsageLogError: ")

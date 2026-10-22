@@ -50,7 +50,7 @@ def offline_refusals(*extra: type[BaseException]) -> tuple[type[BaseException], 
         ModelIdentityMissingError,
     )
     from databasise.clients.rerank import RerankResponseError
-    from databasise.eval.bundle import BundleDriftError, MissingTargetFamilyError
+    from databasise.eval.bundle import BundleDriftError, CorruptUsageLogError, MissingTargetFamilyError
     from databasise.parity.corpus import CorpusDriftError
     from databasise.seam.refusals import SeamRefusalError
     from databasise.store_lock import StoreLockedError
@@ -68,6 +68,7 @@ def offline_refusals(*extra: type[BaseException]) -> tuple[type[BaseException], 
         SeamRefusalError,
         FileNotFoundError,
         BundleDriftError,
+        CorruptUsageLogError,
         CorpusDriftError,
         MissingTargetFamilyError,
         openai.OpenAIError,

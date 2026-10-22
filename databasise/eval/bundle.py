@@ -87,6 +87,21 @@ class BundleDriftError(RuntimeError):
         )
 
 
+class CorruptUsageLogError(RuntimeError):
+    """A line of a version's ``usage.jsonl`` is not JSON (for example an append cut short by a crash
+    or a full disk). The log is outside ``bundle.sha256``, so this is refused by name rather than
+    read past: a skipped line could be the ``sealed_open`` entry (B-WR-06)."""
+
+    def __init__(self, version: str, path: Path, line_number: int) -> None:
+        self.version = version
+        self.path = path
+        self.line_number = line_number
+        super().__init__(
+            f"bundle {version!r}: line {line_number} of {path} is not JSON; repair or remove that line "
+            "before the version is loaded again"
+        )
+
+
 class MissingTargetFamilyError(ValueError):
     """Raised by :func:`mint_bundle` when one or more questions in the source snapshot carry no
     ``gold_document_ids`` — §EV.2's both-target-families rule enforced at mint time rather than
@@ -502,8 +517,15 @@ def _load_usage_entries(bundle_root: Path, version: str) -> list[dict[str, Any]]
     path = _usage_path(bundle_root, version)
     if not path.exists():
         return []
-    lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
-    return [json.loads(line) for line in lines]
+    entries: list[dict[str, Any]] = []
+    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            entries.append(json.loads(line))
+        except json.JSONDecodeError as exc:
+            raise CorruptUsageLogError(version, path, number) from exc
+    return entries
 
 
 def record_holdout_use(bundle_root: Path, version: str, *, reader: str, reason: str) -> None:
@@ -565,6 +587,7 @@ __all__ = [
     "BundleEditInPlaceError",
     "BundleQuestion",
     "BundleSplit",
+    "CorruptUsageLogError",
     "EvalBundle",
     "HoldoutUsageRequiredError",
     "MissingSealedEventError",
