@@ -12,6 +12,7 @@ from databasise.launcher import (
     add_engine_arguments,
     bracketed,
     check_engine_arguments,
+    is_loopback_host,
     open_engine,
     refuse,
 )
@@ -27,6 +28,11 @@ def build_parser() -> argparse.ArgumentParser:
         dest="cors_origin",
         default=None,
         help="allow browser calls from this exact scheme://host:port origin (repeatable, never '*'; D-12)",
+    )
+    parser.add_argument(
+        "--operator",
+        action="store_true",
+        help="mount the operator read routes (wiring names, aliases, trace tokens); loopback --host only",
     )
     return parser
 
@@ -45,6 +51,7 @@ def build_app(args: argparse.Namespace, clients: dict[str, Any] | None):
         workspace=args.workspace,
         clients=clients,
         cors_origins=args.cors_origin or (),
+        operator=getattr(args, "operator", False),  # getattr: protected tests may hand-build a Namespace
     )
     # DNS-rebinding guard, launcher-only so create_app keeps accepting any Host. Starlette compares the
     # Host header up to its first ":", so ports are moot and every bracketed IPv6 literal reduces to "[";
@@ -75,6 +82,11 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(
             "--workers must be 1: one engine process per store root holds the store lock "
             "<store_root>/.engine.lock (G-36)"
+        )
+    if args.operator and not is_loopback_host(args.host):
+        parser.error(
+            "--operator needs a loopback --host, even with --allow-remote-unauthenticated: the operator "
+            "routes expose wiring names and trace tokens"
         )
     from databasise.seam.rest import InvalidCorsOriginError, validate_cors_origin
 

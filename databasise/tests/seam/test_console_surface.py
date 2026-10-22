@@ -21,6 +21,7 @@ import pytest
 
 pytest.importorskip("fastapi")
 
+from databasise.launcher.serve_rest import build_app, build_parser, main
 from databasise.seam import redact as redact_module
 from databasise.seam.rest import create_app
 from fastapi.testclient import TestClient
@@ -161,3 +162,33 @@ def test_operator_routes_are_thin_adapters_and_absent_without_the_flag(tmp_path)
         response = client.request(method, path, json={} if method == "POST" else None)
         assert response.status_code == 404, f"{method} {path} answered {response.status_code} without the flag"
         assert path not in openapi_paths, f"{path} is in the default app's OpenAPI"
+
+
+def _launcher_args(tmp_path, *extra):
+    return build_parser().parse_args(["--no-clients", "--store-root", str(tmp_path), "--workspace", "ws", *extra])
+
+
+def test_the_launcher_operator_flag_mounts_the_routes_only_when_given(tmp_path):
+    assert "--operator" in build_parser().format_help(), "databasise-rest has no --operator flag (CONN-01)"
+    with_flag = build_app(_launcher_args(tmp_path / "on", "--operator"), None)
+    assert TestClient(with_flag, base_url="http://127.0.0.1").get("/info").status_code == 200
+    without_flag = build_app(_launcher_args(tmp_path / "off"), None)
+    assert TestClient(without_flag, base_url="http://127.0.0.1").get("/info").status_code == 404
+
+
+def test_operator_with_a_remote_host_is_refused_before_the_store_lock(tmp_path, capsys):
+    assert "--operator" in build_parser().format_help(), "databasise-rest has no --operator flag (CONN-01)"
+    root = tmp_path / "root"
+    caught: BaseException | None = None
+    try:
+        main([
+            "--operator", "--host", "192.168.1.5", "--allow-remote-unauthenticated", "--no-clients",
+            "--store-root", str(root),
+        ])
+    except BaseException as exc:  # SystemExit from parser.error
+        caught = exc
+    stderr = capsys.readouterr().err
+    assert isinstance(caught, SystemExit) and caught.code == 2, caught
+    assert "--operator" in stderr and "loopback" in stderr, stderr
+    assert "unrecognized arguments" not in stderr, stderr
+    assert not (root / ".engine.lock").exists(), "the store lock was taken before the refusal"

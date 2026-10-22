@@ -16,6 +16,7 @@ run over a real REST response body.
 from __future__ import annotations
 
 import ast
+import importlib
 import inspect
 import json
 
@@ -199,8 +200,9 @@ def test_databasise_and_databasise_seam_are_importable_with_no_web_framework_pre
                 )
 
 
-def test_rest_module_calls_no_selector_resolution_redaction_or_envelope_assembly_function():
-    """D-17's structural half: `rest.py` may hold `Selector`/`ResponseEnvelope` as type
+@pytest.mark.parametrize("module_name", ["databasise.seam.rest", "databasise.seam.operator_rest"])
+def test_rest_module_calls_no_selector_resolution_redaction_or_envelope_assembly_function(module_name):
+    """D-17's structural half (16-01, D-04: run over `operator_rest.py` as well): `rest.py` may hold `Selector`/`ResponseEnvelope` as type
     annotations (it must, to deserialize/serialize) but must never itself *call* the functions
     that resolve a selector, redact a run record, or assemble an envelope — those calls happen
     exactly once, inside `databasise.seam.engine`. The forbidden name set is read off the
@@ -210,14 +212,14 @@ def test_rest_module_calls_no_selector_resolution_redaction_or_envelope_assembly
     ``called_names`` is imported from ``databasise.tests._ast_helpers`` (05-07-PLAN.md Task 2,
     action D) — the same function object ``test_tool_growth_invariant.py`` imports for the
     identical proof over ``databasise/mcp/``, never a second, independently maintained copy."""
-    called = called_names(inspect.getsource(rest_module))
+    called = called_names(inspect.getsource(importlib.import_module(module_name)))
 
     forbidden = {"ResponseEnvelope"}
     forbidden.update(name for name in selectors_module.__all__ if name != "Selector")
     forbidden.update(redact_module.__all__)
 
     overlap = called & forbidden
-    assert not overlap, f"databasise/seam/rest.py calls forbidden seam-logic function(s): {overlap}"
+    assert not overlap, f"{module_name} calls forbidden seam-logic function(s): {overlap}"
 
 
 # --------------------------------------------------------------------------------------------- #
