@@ -4,7 +4,7 @@
   "part": "phase10-a",
   "ledger_version": 796,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "e8675696f4680e9209964d0e1725b922bd0d402e560a7ee4a437ef855ab9eb96"
+    ".planning/REQUIREMENTS.md": "ef97dd51122f213f09a1434e5f18a566b0ca839d287a3f778cc58b8ca0c743be"
   },
   "checker": {
     "harness": "claude-code",
