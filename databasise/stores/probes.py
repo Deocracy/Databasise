@@ -156,17 +156,16 @@ def graph_node_page(
     try:
         if not _has_graph_relations(shared.client):
             return [], 0
-        # x = id stops Cozo pushing starts_with into a key-range scan that drops the key equal to $p
-        ids = [
+        # x = id stops Cozo pushing starts_with into a key-range scan that drops the key equal to $p.
+        # One statement gives the page and the total, so they agree (16-REVIEW-B WR-02).
+        # shortcut: O(N) ids per page, no count() (Cozo #244); add a counter relation if graphs exceed ~10^6 nodes
+        matching = [
             r[0]
             for r in _run_immutable(
-                shared.client,
-                "?[id] := *nodes{id}, x = id, starts_with(x, $p) :order id :limit $l :offset $o",
-                {"p": prefix, "l": limit, "o": offset},
+                shared.client, "?[id] := *nodes{id}, x = id, starts_with(x, $p) :order id", {"p": prefix}
             )
         ]
-        # shortcut: O(N) count, no count() (Cozo #244); add a counter relation if graphs exceed ~10^6 nodes
-        total = len(_run_immutable(shared.client, "?[id] := *nodes{id}, x = id, starts_with(x, $p)", {"p": prefix}))
+        ids, total = matching[offset : offset + limit], len(matching)
         rows = _run_immutable(
             shared.client,
             "?[src, tgt] := *edges{src, tgt}, is_in(src, $ids)\n?[src, tgt] := *edges{src, tgt}, is_in(tgt, $ids)",
@@ -187,7 +186,9 @@ def graph_node_edges(
 ) -> tuple[bool, int, list[dict[str, Any]]]:
     """Phase 16 D-15/D-16 (CONN-12): ``(found, degree, edges)`` for one graph node. Opens the graph as
     :func:`graph_node_page` does. ``(False, 0, [])`` is a missing ``graph.cozo`` or an id that is not a
-    node. ``degree`` is the unpaged incident-edge count (a self-loop counts once). Each edge is
+    node. ``degree`` is the unpaged incident-edge count (a self-loop counts once). It and the edge page
+    are two statements: pycozo 0.7.6 has no read snapshot (a ``multi_transact(False)`` sees a write
+    committed after it began), so a write between them can shift ``degree`` by that write. Each edge is
     projected to ``{src, tgt, edge_types, weight}`` and nothing else, so extracted description text and
     per-chunk maps stay behind the seam (D-16)."""
     db_path = Path(dir_path) / "graph.cozo"

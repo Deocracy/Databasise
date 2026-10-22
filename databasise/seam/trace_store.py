@@ -102,13 +102,19 @@ class TraceStore:
 
     def list_page(self, limit: int, offset: int) -> tuple[list[tuple[str, str, dict[str, Any]]], int]:
         """One page of ``(token, created_at, run_record)`` newest first, plus the total row count
-        (16-05, CONN-08). Read-only; the operator trace list is the only caller."""
+        (16-05, CONN-08). Read-only; the operator trace list is the only caller. The page and the
+        count run in one read transaction, so ``total`` counts the rows the page saw (16-REVIEW-B
+        WR-02)."""
         # shortcut: full sort per page (created_at has no index), add an index if traces exceed ~10^5
-        rows = self._conn.execute(
-            "SELECT token, created_at, run_record FROM traces ORDER BY created_at DESC, rowid DESC LIMIT ? OFFSET ?",
-            (limit, offset),
-        ).fetchall()
-        total = self._conn.execute("SELECT COUNT(*) FROM traces").fetchone()[0]
+        self._conn.execute("BEGIN")
+        try:
+            rows = self._conn.execute(
+                "SELECT token, created_at, run_record FROM traces ORDER BY created_at DESC, rowid DESC LIMIT ? OFFSET ?",
+                (limit, offset),
+            ).fetchall()
+            total = self._conn.execute("SELECT COUNT(*) FROM traces").fetchone()[0]
+        finally:
+            self._conn.rollback()
         return [(r["token"], r["created_at"], json.loads(r["run_record"])) for r in rows], total
 
 

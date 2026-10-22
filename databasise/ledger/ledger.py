@@ -283,6 +283,17 @@ class Ledger:
         else:
             self._conn.commit()
 
+    @contextlib.contextmanager
+    def snapshot(self) -> Iterator[None]:
+        """One deferred read transaction around several reads, so they see one WAL snapshot and a
+        promote or rollback cannot commit between them (16-REVIEW-B WR-02). Allowed on the
+        ``read_only`` handle; always rolled back, so it writes nothing."""
+        self._conn.execute("BEGIN")
+        try:
+            yield
+        finally:
+            self._conn.rollback()
+
     def _create_schema(self) -> None:
         self._conn.execute(
             """

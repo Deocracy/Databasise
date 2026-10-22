@@ -2205,7 +2205,7 @@ class Databasise:
             handle = Ledger.open_existing(self.store_root, read_only=True)
             if handle is None:
                 return {"records": [], "total": 0, "next_offset": None}
-            with handle:
+            with handle, handle.snapshot():
                 rows = handle.history_for_alias(alias)
                 head = handle.by_alias(alias)
                 active = set(handle.lineage(alias, head.minted_version)) if head is not None else set()
