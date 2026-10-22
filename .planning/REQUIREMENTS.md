@@ -735,11 +735,11 @@ These fail today.
   - Test: A TestClient test on a tmp Cozo graph asserts the edges of a known node, paging over edges, and `edge_types` on a HippoRAG edge. For an unknown id it asserts 422 with `refusal_type == "UnknownGraphNodeError"`, not 500. The CONN-02 catalogue test then requires the new type. The test fails before the route exists and passes after.
   - Defects: parts-hipporag/HIPPO-14, stores/ST-08
   - Decided in Phase 16 CONTEXT D-16 (2026-10-22): API-06 holds; the route returns references plus the `edge_types`/`weight` allowlist, and the dereference call is deferred to the Phase 17 mockup.
-- [ ] **CONN-13**: The console can read a store-busy status without opening any store or running the v1 subprocess. GET /info carries the fields `write_in_flight: bool` and `graph_busy: bool`, where `write_in_flight` is true while any ingest or delete runs and `graph_busy` is true while any call in this process holds a graph store; `graph_busy` does not see out-of-process holders, so the console labels it "in use", not "locked". The fields are keyed by store role, never by namespace name, and the read returns while an ingest is in progress. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*
+- [x] **CONN-13**: The console can read a store-busy status without opening any store or running the v1 subprocess. GET /info carries the fields `write_in_flight: bool` and `graph_busy: bool`, where `write_in_flight` is true while any ingest or delete runs and `graph_busy` is true while any call in this process holds a graph store; `graph_busy` does not see out-of-process holders, so the console labels it "in use", not "locked". The fields are keyed by store role, never by namespace name, and the read returns while an ingest is in progress. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*
   - Test: A test starts an ingest whose stub node blocks on an event. While the ingest is blocked it reads the status route and asserts `write_in_flight: true` and `graph_busy: true`, within 1 s and without a lock error. It releases the event and asserts both false. The test fails before the fields exist and passes after. It depends on the engine graph-lock fix (G-01) that tracks open handles.
   - Defects: stores/ST-10, doc-audit-1/D6, doc-audit-5/D4, stores/ST-11
   - Decided in Phase 16 CONTEXT D-17 (2026-10-22): the fields go on GET /info, read from the write gates and the graph client registry without acquiring any lock.
-- [ ] **CONN-14**: GET /log?limit=N (1..1000) returns `{lines: [str]}`: the last N lines of the server log file the launcher writes, so the console's 500 state can show the exception text that today exists only in the uvicorn log. The route is mounted only when the launcher is started with both `--operator` and `--log-file PATH`. Without either it returns 404, and `limit` outside 1..1000 returns 422. This narrows Phase 9 D-04: refusal and fault bodies stay free of stderr and causes, and the off-by-default, loopback-only log route is the one allowed exception. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*
+- [x] **CONN-14**: GET /log?limit=N (1..1000) returns `{lines: [str]}`: the last N lines of the server log file the launcher writes, so the console's 500 state can show the exception text that today exists only in the uvicorn log. The route is mounted only when the launcher is started with both `--operator` and `--log-file PATH`. Without either it returns 404, and `limit` outside 1..1000 returns 422. This narrows Phase 9 D-04: refusal and fault bodies stay free of stderr and causes, and the off-by-default, loopback-only log route is the one allowed exception. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*
   - Test: A TestClient test builds the app with `--operator`, `--log-file` and a tmp log file of 1200 lines, then asserts `limit=10` returns the last 10 lines and `limit=0` returns 422. Built without either flag, the app returns 404 for GET /log. The test fails before the route exists and passes after. It depends on the RUN launcher writing the log file.
   - Decided in Phase 16 CONTEXT D-18, D-19 (2026-10-22): a loopback-only tail behind `--operator --log-file` is accepted (owner may override D-19); the log holds paths and tracebacks, never env values.
 
@@ -978,8 +978,8 @@ These fail today.
 | CONN-10 | Phase 16 | Complete |
 | CONN-11 | Phase 16 | Complete |
 | CONN-12 | Phase 16 | Complete |
-| CONN-13 | Phase 16 | Pending |
-| CONN-14 | Phase 16 | Pending |
+| CONN-13 | Phase 16 | Complete |
+| CONN-14 | Phase 16 | Complete |
 | GUI-01 | Phase 17 | Pending |
 | GUI-02 | Phase 17 | Pending |
 | GUI-03 | Phase 17 | Pending |
