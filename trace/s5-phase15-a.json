@@ -1,0 +1,88 @@
+{
+  "bak_trace": 1,
+  "step": "S5",
+  "part": "phase15-a",
+  "ledger_version": 793,
+  "artifacts": {
+    "databasise/pyproject.toml": "f32b798390c4ed4a7a0e18e00688508f232281fbe0831c958bf51a0b6b3196ed",
+    "databasise/__init__.py": "3d4ebf302809158d3e3d25d107bff9f971dee2d5415e5b9f7468e3e23e3632f2",
+    "databasise/tools/check_import_boundary.py": "8426b2f5d726df673656bfcba573cba62306c5a54e6abfdb531f91cba9224fef",
+    "databasise/parity/import_index.py": "f771dff8e34f00cc998eaf799487c35611c63af067330f9ed4fe9949529bfe47",
+    "databasise/cli.py": "063af7ec63d4c7d66430eb36e4da2b611d179ea1014cbe9a9684a085e23b159b",
+    "databasise/parity/build_hipporag_index.py": "caee50ec4aa9bee699bdfc008e721e6a0592dcad5d5ac61cc860557a8dbd4954",
+    "databasise/parity/run_comparison.py": "2a124cd69656b9778f2ea586535617dce388d564535ede20d6cadaf07d689c73",
+    "databasise/parity/v1_driver_script.py": "8723fdd88980eb5be4a479eb05844aff48221db41970112be32fa55240857d3b",
+    "databasise/parity/v1_arm.py": "4950849ec8b147b0c4d4305895ccd0ae6c5124260d0cdf892c514b46047fb793",
+    "databasise/parity/storage_audit.py": "7054e62590f1fb884af43931eccce869d502f283df1c392cef9b574d4c62c45c",
+    "databasise/parity/run_arm.py": "33c9a7836e6d0ed7427d45725103f6f7fe205521e8a3a15f58ca82583892938e",
+    "databasise/parity/run_cross_modality.py": "6887b8712272c76fe1c9a2c7a9cae2f5b59a9270bcfe67d5e56634bf92d84626"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "claude-opus-5-5",
+    "session": "32d1701b-4256-409c-a5a7-e305cc822f40"
+  },
+  "items": [
+    {
+      "id": "TOOL-01",
+      "status": "present",
+      "where": "databasise/pyproject.toml:174",
+      "quote": "\"databasise\" = [\"evidence/eval-bundles/**/*\", \"tests/fixtures/corpus/**/*\", \"tests/fixtures/eval-corpus/**/*\"]"
+    },
+    {
+      "id": "TOOL-02",
+      "status": "present",
+      "where": "databasise/parity/import_index.py:781",
+      "quote": "args = parser.parse_args(sys.argv[1:] if argv is None else argv)"
+    },
+    {
+      "id": "TOOL-03",
+      "status": "present",
+      "where": "databasise/parity/import_index.py:715",
+      "quote": "if v1_graph is not None and v2_graph is None:"
+    },
+    {
+      "id": "TOOL-04",
+      "status": "present",
+      "where": "databasise/cli.py:41",
+      "quote": "def offline_refusals(*extra: type[BaseException]) -> tuple[type[BaseException], ...]:"
+    },
+    {
+      "id": "TOOL-05",
+      "status": "present",
+      "where": "databasise/parity/build_hipporag_index.py:315",
+      "quote": "if chunk_vector_count == 0 or chunk_vector_count != expected_chunks:"
+    },
+    {
+      "id": "TOOL-06",
+      "status": "present",
+      "where": "databasise/parity/run_comparison.py:550",
+      "quote": "if keyword_variance_runs < 2:"
+    },
+    {
+      "id": "TOOL-07",
+      "status": "present",
+      "where": "databasise/parity/v1_driver_script.py:146",
+      "quote": "if response.get(\"status\") == \"failure\" and metadata.get(\"failure_reason\") != \"no_results\":"
+    },
+    {
+      "id": "TOOL-08",
+      "status": "present",
+      "where": "databasise/parity/storage_audit.py:270",
+      "quote": "parser.add_argument(\"--arm\", required=True, choices=[name for name, _ in all_wirings()])"
+    },
+    {
+      "id": "TOOL-09",
+      "status": "present",
+      "where": "databasise/parity/run_cross_modality.py:269",
+      "quote": "_require_namespace(store_root, workspace, \"chunks\", \"databasise.parity.import_index (03-02-PLAN.md Task 3)\")"
+    },
+    {
+      "id": "TOOL-10",
+      "status": "present",
+      "where": "databasise/__init__.py:71",
+      "quote": "wiring_bytes = canonicalise(wiring_doc)"
+    }
+  ],
+  "extra": []
+}

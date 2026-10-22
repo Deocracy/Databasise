@@ -2,14 +2,14 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase11-b",
-  "ledger_version": 726,
+  "ledger_version": 793,
   "artifacts": {
-    "databasise/eval/aa_run.py": "c5af816bf078348e033f48a4b3ac29aac95c63e20c1d532ffe380305628ee71c",
+    "databasise/eval/aa_run.py": "cf7fd10e2d368a5aa77894c1102b4f9fb877450a86178552e3f111da243f5e20",
     "databasise/foreign/v1_corpus_driver_script.py": "c62a9a5b204ded0a99e5a29fcb0acd2739700997624114571935b0c832727efe",
     "databasise/parts_core/lightrag/assemble.py": "352bd232fc76eade0ac77406667060a30492a3d9539a10149967bf8d7ba6d5a1",
     "databasise/parts_core/lightrag/entity_hydrate_expand.py": "bccb2eb6c3948ff0c8c1c265ddeb554b282de4549ddd569cd904691363a91e7b",
     "databasise/parts_core/lightrag/full_ingest.py": "b705a20b35fd32a17ed731e447c928f51cbb6b33a5ce6dec45a357f8ab014f03",
-    "databasise/seam/engine.py": "385aea2a6e1600e035624f70b2b919ee82f6e6b1e053ae5a93a79b1edc17ba16"
+    "databasise/seam/engine.py": "427635ca0cb6ef694282374255929ed90aeb86100349324aed68293bc0014fa7"
   },
   "checker": {
     "harness": "claude-code",
@@ -32,19 +32,19 @@
     {
       "id": "LRAG-13",
       "status": "present",
-      "where": "databasise/seam/engine.py:1971",
+      "where": "databasise/seam/engine.py:1978",
       "quote": "Probes every ``(kind, namespace)`` in ``_HEALTH_PROBES`` read-only (Phase 10 D-14, STOR-04):"
     },
     {
       "id": "LRAG-15",
       "status": "present",
-      "where": "databasise/eval/aa_run.py:574",
+      "where": "databasise/eval/aa_run.py:782",
       "quote": "store_root=_EVAL_INGEST_STORE_ROOT,"
     },
     {
       "id": "LRAG-16",
       "status": "present",
-      "where": "databasise/seam/engine.py:425",
+      "where": "databasise/seam/engine.py:427",
       "quote": "raise EmptyNamespaceError(store_kind=\"vector\")"
     },
     {
@@ -62,7 +62,7 @@
     {
       "id": "LRAG-19",
       "status": "present",
-      "where": "databasise/seam/engine.py:2098",
+      "where": "databasise/seam/engine.py:2105",
       "quote": "run_resolved = _without_recipe_only_nodes(resolved)"
     },
     {
@@ -74,7 +74,7 @@
     {
       "id": "LRAG-14",
       "status": "present",
-      "where": "databasise/seam/engine.py:2044",
+      "where": "databasise/seam/engine.py:2051",
       "quote": "            all(v == \"ok\" for v in stores.values())"
     }
   ],

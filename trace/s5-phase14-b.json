@@ -2,12 +2,12 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase14-b",
-  "ledger_version": 726,
+  "ledger_version": 793,
   "artifacts": {
-    "databasise/parts/registry.py": "8364d40d988afb94a58e3582f5a18108a9dce65308d0d8937ba3f9ecf1301b20",
-    "databasise/parts_core/declared_only.py": "91c1c2e11dd30e54170dce00817384f8376875e036b847decdd63d67e0e2e210",
-    "databasise/seam/engine.py": "385aea2a6e1600e035624f70b2b919ee82f6e6b1e053ae5a93a79b1edc17ba16",
-    "databasise/seam/rest.py": "0abba36fabbfc8f40044d39b85fa4c0c7b4922cd6823d7cdeaf42ed3aea3c69d",
+    "databasise/parts/registry.py": "7afc5fea40108a45cdac0dad729986aabbe039db59537432663c7f3a592c7dca",
+    "databasise/parts_core/declared_only.py": "602ce81ddd4e664a3a17c5cf5035db8a288d821ff62b4cfaf36be273ff9195f9",
+    "databasise/seam/engine.py": "427635ca0cb6ef694282374255929ed90aeb86100349324aed68293bc0014fa7",
+    "databasise/seam/rest.py": "3d7e559fa49bf969dc6ab4d470545e811e48c58e446ac60a8fd2bb28bc997995",
     "databasise/seam/selectors.py": "d4eb92f604f3a852a054f3fb2aae2e9c4b40d8790c7ef625b36df408a21e532b",
     "databasise/validator/parse.py": "38ae94947933a067864f8e43029e44f30791053e9abc24f0d244ad15d7e811b6"
   },
@@ -20,13 +20,13 @@
     {
       "id": "LEDG-08",
       "status": "present",
-      "where": "databasise/seam/engine.py:2385",
+      "where": "databasise/seam/engine.py:2477",
       "quote": "            raise GateNotCalibratedError(verb=verb)"
     },
     {
       "id": "LEDG-09",
       "status": "present",
-      "where": "databasise/seam/rest.py:214",
+      "where": "databasise/seam/rest.py:215",
       "quote": "    debug: StrictBool = False"
     },
     {
@@ -44,19 +44,19 @@
     {
       "id": "LEDG-12",
       "status": "present",
-      "where": "databasise/parts_core/declared_only.py:134",
+      "where": "databasise/parts_core/declared_only.py:149",
       "quote": "DECLARED_ONLY_PARTS: tuple[Part, ...] = (*LIGHTRAG_CORPUS_PARTS,)"
     },
     {
       "id": "LEDG-13",
       "status": "present",
-      "where": "databasise/seam/engine.py:690",
+      "where": "databasise/seam/engine.py:692",
       "quote": "        return load_wiring(family, variant=f\"corpus-{operation}\")"
     },
     {
       "id": "LEDG-14",
       "status": "present",
-      "where": "databasise/parts/registry.py:137",
+      "where": "databasise/parts/registry.py:149",
       "quote": "    it registers. ``keys()`` lists the contents; this docstring states no count, so it cannot go"
     }
   ],

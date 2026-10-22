@@ -2,7 +2,7 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase12-a",
-  "ledger_version": 726,
+  "ledger_version": 793,
   "artifacts": {
     "databasise/parts_core/hipporag/entity_fact_embed.py": "eade98c9ea33630064b838aecebecc6e34d9adc7f26b1fdcd6cfe20689f4f9b9",
     "databasise/parts_core/hipporag/fact_edges.py": "0427766e1a2cc89f830f2bc1ad9f5937dfcb93f2f3d99cf8964136af708669f4",
@@ -12,8 +12,8 @@
     "databasise/parts_core/hipporag/ppr.py": "03876910feb001321596a4184e3185f626510da9fa4e7e78edf5952ab4d15c93",
     "databasise/parts_core/hipporag/reset_vector_join.py": "abaf30075404e10d5ae412c9e03fb963a51fc619f3c33e6c1ca8242c8130632b",
     "databasise/parts_core/hipporag/synonymy_edges.py": "561c35007788a744fa08094d488c5c4ac87a4091653d656b3f71bab71fed5ea2",
-    "databasise/seam/engine.py": "385aea2a6e1600e035624f70b2b919ee82f6e6b1e053ae5a93a79b1edc17ba16",
-    "databasise/seam/refusals.py": "ba10c8a24792e76b4534c04abe75e22702fcea801f3e035a697efb580e2d5bef",
+    "databasise/seam/engine.py": "427635ca0cb6ef694282374255929ed90aeb86100349324aed68293bc0014fa7",
+    "databasise/seam/refusals.py": "231025f581260ce9dc5d96bac0a629500fb903aea44f5817c651eaa5dfd8961a",
     "databasise/stores/vector.py": "912c3e2f69b9fd53e508492babd5e3c9ae758de88ff9433c34729709734c79cf",
     "databasise/wirings/hipporag/base.json": "7320e65861aa5583892fdab014ebc1c6917a38001cdfdaaf42116263b0d09e71"
   },
@@ -38,13 +38,13 @@
     {
       "id": "HIPP-03",
       "status": "present",
-      "where": "databasise/seam/engine.py:1514",
+      "where": "databasise/seam/engine.py:1521",
       "quote": "await _drop_pending(stores, self.store_root)"
     },
     {
       "id": "HIPP-04",
       "status": "present",
-      "where": "databasise/seam/engine.py:945",
+      "where": "databasise/seam/engine.py:947",
       "quote": "raise _foreign_fault(operation, node_exception, node_id=failed_node_id) from node_exception"
     },
     {

@@ -2,22 +2,22 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase08",
-  "ledger_version": 441,
+  "ledger_version": 793,
   "artifacts": {
-    "databasise/tests/mcp/test_tool_growth_invariant.py": "7ff75acdd1b0a3d04afd2c46109088d9ef1c40015ea1ea0a2e0596252d527e46",
     "databasise/clients/openai_compat.py": "a66b6f6c9c1be27afc776cd0c03a516130d0d0fbeeba572090f54bb513681ea5",
-    "databasise/foreign/_mcp_sdk_guard.py": "2396b7929691db0b08be940881c73ce3d12d313ada0bad5dd3a63c8541da122c",
+    "databasise/foreign/_mcp_sdk_guard.py": "ebcde30b8bb758ad62ec973ed6338e7c355f523ab86532334865254c663b3b0f",
+    "databasise/launcher/serve_rest.py": "d8689eb424181dcbcae3960b6c6641f40fa57bc19f333f1f7f74e36118c3e88d",
     "databasise/tests/clients/test_build_clients.py": "6876a653ba62f9a70de106dfcd0edd7d867e930eb85c81b11c4ca39bc1ef4228",
     "databasise/tests/launcher/test_launchers.py": "a0c3249eece6dbbfc45c146952d22705857e0f87f5a99f80ac650ecef0b503d4",
-    "databasise/launcher/serve_rest.py": "d8689eb424181dcbcae3960b6c6641f40fa57bc19f333f1f7f74e36118c3e88d",
-    "databasise/tests/seam/test_rest_cors.py": "35644f98fb7eff3735886e917ebf48091e78ce52da933ab6be8a259e24e74ac4",
+    "databasise/tests/mcp/test_tool_growth_invariant.py": "7ff75acdd1b0a3d04afd2c46109088d9ef1c40015ea1ea0a2e0596252d527e46",
     "databasise/tests/seam/test_rest_corpus_endpoints.py": "f521988d4f87facda2bd25cef767055a90b14afee46b2614ab6c6e01b776ff7b",
+    "databasise/tests/seam/test_rest_cors.py": "35644f98fb7eff3735886e917ebf48091e78ce52da933ab6be8a259e24e74ac4",
     "databasise/tests/test_check_offline_suite.py": "9dec78e4cdf17505f65859073db701f13023d4a5a61f29fd60beae5482958b17"
   },
   "checker": {
     "harness": "claude-code",
-    "model": "sonnet",
-    "session": "trace-2026-10-18"
+    "model": "claude-opus-5-5",
+    "session": "32d1701b-4256-409c-a5a7-e305cc822f40"
   },
   "items": [
     {
@@ -41,7 +41,7 @@
     {
       "id": "RUN-04",
       "status": "present",
-      "where": "databasise/foreign/_mcp_sdk_guard.py:87",
+      "where": "databasise/foreign/_mcp_sdk_guard.py:92",
       "quote": "stripped = [entry for entry in sys.path if not _resolves_inside_project(entry)]"
     },
     {

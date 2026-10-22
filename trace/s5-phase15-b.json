@@ -1,0 +1,87 @@
+{
+  "bak_trace": 1,
+  "step": "S5",
+  "part": "phase15-b",
+  "ledger_version": 793,
+  "artifacts": {
+    "databasise/eval/aa_run.py": "cf7fd10e2d368a5aa77894c1102b4f9fb877450a86178552e3f111da243f5e20",
+    "databasise/seam/engine.py": "427635ca0cb6ef694282374255929ed90aeb86100349324aed68293bc0014fa7",
+    "databasise/eval/bundle.py": "0719b398a0ff98174579176819138c44f10d33ef34078e006b1ccb5936373c1d",
+    "databasise/evidence/parity_report.py": "0619a2326dd24dbf73aff62cdc5e35d040b00de047ad120ef6b2e5901257cd50",
+    "databasise/evidence/falsifier2.py": "300f48d3521de18388cb3b64986f6923ae200642e180ade6a29a867bf880dd87",
+    "databasise/evidence/f07_report.py": "a75f12a57aefe226c94b78cfe2e18e62ce8a01f18ff7d9d068ad35ec46654b7e",
+    "databasise/parts/admission.py": "4734dd95e8680445c68d1d3be1d576e258998a100d1c3784266e878fc5ed5ded",
+    "databasise/pyproject.toml": "f32b798390c4ed4a7a0e18e00688508f232281fbe0831c958bf51a0b6b3196ed",
+    "databasise/foreign/codebase_memory_mcp_adapter.py": "16d9657f40d5d6a804fc084fd66ce9561f7df00998e9d247654557e255ce849b",
+    "databasise/mcp/server.py": "aa21517b6d807b771c5f2e0b8b482db01a1dff364c30fbd79043302a237c29c9",
+    "databasise/evidence/__init__.py": "e3590dab5354c4175b9e6807597e0c278cdd7b01e139cf2c578d3a3cb015c932"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "claude-opus-5-5",
+    "session": "32d1701b-4256-409c-a5a7-e305cc822f40"
+  },
+  "items": [
+    {
+      "id": "TOOL-11",
+      "status": "present",
+      "where": "databasise/eval/aa_run.py:755",
+      "quote": "parser.add_argument(\"--arm\", choices=list(_ARM_CHOICES), default=None)"
+    },
+    {
+      "id": "TOOL-12",
+      "status": "present",
+      "where": "databasise/seam/engine.py:2388",
+      "quote": "floor_rows = self._floors.lookup(instance_hash)"
+    },
+    {
+      "id": "TOOL-13",
+      "status": "present",
+      "where": "databasise/eval/bundle.py:606",
+      "quote": "_append_usage_entry(bundle_root, opened_version, {\"kind\": \"sealed_open\", \"event\": event})"
+    },
+    {
+      "id": "TOOL-14",
+      "status": "present",
+      "where": "databasise/evidence/parity_report.py:1022",
+      "quote": "def _escape_cell(value: str) -> str:"
+    },
+    {
+      "id": "TOOL-15",
+      "status": "present",
+      "where": "databasise/evidence/falsifier2.py:696",
+      "quote": "return 1 if failing_probes() or failing_wirings() else 0"
+    },
+    {
+      "id": "TOOL-16",
+      "status": "present",
+      "where": "databasise/parts/admission.py:274",
+      "quote": "def admit_registry(registry: Any) -> None:"
+    },
+    {
+      "id": "TOOL-17",
+      "status": "present",
+      "where": "databasise/pyproject.toml:135",
+      "quote": "\"databasise.stores\","
+    },
+    {
+      "id": "TOOL-18",
+      "status": "present",
+      "where": "databasise/foreign/codebase_memory_mcp_adapter.py:309",
+      "quote": "if name not in _ALLOWED_TOOLS:"
+    },
+    {
+      "id": "TOOL-19",
+      "status": "present",
+      "where": "databasise/mcp/server.py:213",
+      "quote": "\"Answer a query from the corpus. Requires query, the query object. An optional selector \""
+    },
+    {
+      "id": "TOOL-20",
+      "status": "present",
+      "where": "databasise/evidence/__init__.py:12",
+      "quote": "- ``f07_report.py`` (``python -m databasise.evidence.f07_report``) renders"
+    }
+  ],
+  "extra": []
+}

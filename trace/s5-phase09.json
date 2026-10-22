@@ -2,16 +2,16 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase09",
-  "ledger_version": 726,
+  "ledger_version": 793,
   "artifacts": {
-    "databasise/mcp/server.py": "3ef83f9eb3b55236110e1b483e77be99ff51bbe977b794081482a101dca7d6c5",
+    "databasise/mcp/server.py": "aa21517b6d807b771c5f2e0b8b482db01a1dff364c30fbd79043302a237c29c9",
     "databasise/seam/compare.py": "8f6d19a32dccbcd6cbaf605c398d2334b86f1500d8598ddb43cafe62ad880095",
     "databasise/seam/corpus.py": "b360c0dbdc02f4659079a90f81a68366d74c55ab99d13334795dfedae02226ec",
-    "databasise/seam/engine.py": "385aea2a6e1600e035624f70b2b919ee82f6e6b1e053ae5a93a79b1edc17ba16",
-    "databasise/seam/evidence.py": "4234e690e03ab49309a1e28255a9d7c685e23c9fb1db4e04c228614e86780c9d",
+    "databasise/seam/engine.py": "427635ca0cb6ef694282374255929ed90aeb86100349324aed68293bc0014fa7",
+    "databasise/seam/evidence.py": "d51422787b6ddda3906f7bb7f28addfeb813979ee78c67a19685d8d61c2c5ddf",
     "databasise/seam/query.py": "b1452596cc6c0aa44290c1198e487d5ce51ff61a4ede6841bc1f8d8fef7850aa",
-    "databasise/seam/refusals.py": "ba10c8a24792e76b4534c04abe75e22702fcea801f3e035a697efb580e2d5bef",
-    "databasise/seam/rest.py": "0abba36fabbfc8f40044d39b85fa4c0c7b4922cd6823d7cdeaf42ed3aea3c69d",
+    "databasise/seam/refusals.py": "231025f581260ce9dc5d96bac0a629500fb903aea44f5817c651eaa5dfd8961a",
+    "databasise/seam/rest.py": "3d7e559fa49bf969dc6ab4d470545e811e48c58e446ac60a8fd2bb28bc997995",
     "databasise/seam/selectors.py": "d4eb92f604f3a852a054f3fb2aae2e9c4b40d8790c7ef625b36df408a21e532b"
   },
   "checker": {
@@ -29,31 +29,31 @@
     {
       "id": "SEAM-02",
       "status": "present",
-      "where": "databasise/seam/rest.py:299",
+      "where": "databasise/seam/rest.py:300",
       "quote": "refusal = refusal_from_errors(exc.errors())"
     },
     {
       "id": "SEAM-03",
       "status": "present",
-      "where": "databasise/mcp/server.py:127",
+      "where": "databasise/mcp/server.py:128",
       "quote": "raise RefusalToolError(json.dumps(refusal_body(refusal))) from exc"
     },
     {
       "id": "SEAM-04",
       "status": "present",
-      "where": "databasise/seam/rest.py:154",
+      "where": "databasise/seam/rest.py:155",
       "quote": "return 404 if isinstance(exc, _NOT_FOUND_REFUSALS) else 422"
     },
     {
       "id": "SEAM-05",
       "status": "present",
-      "where": "databasise/seam/rest.py:153",
+      "where": "databasise/seam/rest.py:154",
       "quote": "return 503 if exc.failure_class in _ENGINE_UNAVAILABLE else 502"
     },
     {
       "id": "SEAM-06",
       "status": "present",
-      "where": "databasise/seam/engine.py:741",
+      "where": "databasise/seam/engine.py:743",
       "quote": "async def _corpus_op_or_refuse(op: str, payload: dict[str, Any], operation: str, working_dir: Path) -> Any:"
     },
     {
@@ -83,25 +83,25 @@
     {
       "id": "SEAM-11",
       "status": "present",
-      "where": "databasise/seam/engine.py:1270",
+      "where": "databasise/seam/engine.py:1277",
       "quote": "keys = comparison_keys(selectors)"
     },
     {
       "id": "SEAM-12",
       "status": "present",
-      "where": "databasise/seam/engine.py:2310",
+      "where": "databasise/seam/engine.py:2317",
       "quote": "if alias == \"\" or _INSTANCE_HASH_PATTERN.match(alias):"
     },
     {
       "id": "SEAM-13",
       "status": "present",
-      "where": "databasise/seam/rest.py:321",
+      "where": "databasise/seam/rest.py:322",
       "quote": "    if raw is None or raw.strip() in (\"\", \"null\"):"
     },
     {
       "id": "SEAM-14",
       "status": "present",
-      "where": "databasise/seam/refusals.py:996",
+      "where": "databasise/seam/refusals.py:997",
       "quote": "\"NoRawUploadPathForModalityError\","
     },
     {

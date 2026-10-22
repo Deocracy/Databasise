@@ -2,7 +2,7 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase12-b",
-  "ledger_version": 726,
+  "ledger_version": 793,
   "artifacts": {
     "databasise/parts_core/hipporag/assemble_result.py": "b0ba6e93b9864682cfa25f55ff9d282458a1c9b8f7276bc4ff0d941c25404a2f",
     "databasise/parts_core/hipporag/chunk_embed.py": "8e89539e4b92118c98784fa19cdd79d2f60b600f4a3d2da1f21138f6f05d3c63",
@@ -11,9 +11,9 @@
     "databasise/parts_core/hipporag/qa.py": "bfc87eb7903adc54d27bebe1487da07141d15a83673abe003b519bef20f6563a",
     "databasise/runner/scheduler.py": "a6737354ce01be2fae5685af7912b6f2884d9a69ca7e48d37bd5fdd33f19c238",
     "databasise/runner/trace.py": "e3c8a06d35a74ab3ee217b0c476f5616e8fa5582ba09a9316fe2d9f3030456e2",
-    "databasise/seam/engine.py": "385aea2a6e1600e035624f70b2b919ee82f6e6b1e053ae5a93a79b1edc17ba16",
+    "databasise/seam/engine.py": "427635ca0cb6ef694282374255929ed90aeb86100349324aed68293bc0014fa7",
     "databasise/seam/selectors.py": "d4eb92f604f3a852a054f3fb2aae2e9c4b40d8790c7ef625b36df408a21e532b",
-    "databasise/stores/probes.py": "f43c8fea433221723dd7e06f89175c60991762abbcb8e3b1f87bf86da70dbfde",
+    "databasise/stores/probes.py": "f24a7fed9f06ef06fa8ff0756cf8fb856f74fea4087b7a86e7024aa500f9ce85",
     "databasise/wirings/hipporag/base.json": "7320e65861aa5583892fdab014ebc1c6917a38001cdfdaaf42116263b0d09e71",
     "databasise/wirings/hipporag/corpus-ingest.json": "265d6c2a460dd5ff5ecb514b3db8deeda012ac554d70c388f9119a06d9d537d2",
     "databasise/wirings/resolve.py": "69ef9ba309137218309d7ddc56a885fb8486923b35225c949b3f6217a81690f5"
@@ -45,7 +45,7 @@
     {
       "id": "HIPP-15",
       "status": "present",
-      "where": "databasise/seam/engine.py:1828",
+      "where": "databasise/seam/engine.py:1835",
       "quote": "        if row is not None and row.family == \"hipporag\":"
     },
     {

@@ -1,0 +1,85 @@
+{
+  "bak_trace": 1,
+  "step": "S4",
+  "part": "phase15-b",
+  "ledger_version": 793,
+  "artifacts": {
+    ".planning/phases/15-offline-tooling-packaging/15-03-PLAN.md": "e750c0ca864ae01d90107e1b9482967a416d2d0ee27e6be02a2685f24bb6e445",
+    ".planning/phases/15-offline-tooling-packaging/15-04-PLAN.md": "9651bba86aeb88faa9cb833958bb69cc6ea35f488b6fca6f9708b3d54d2588e2",
+    ".planning/phases/15-offline-tooling-packaging/15-05-PLAN.md": "a282c43fa8d4dff52f5df97bea89f55e6d0ef8b40df1806ffd571923ad246885",
+    ".planning/phases/15-offline-tooling-packaging/15-07-PLAN.md": "dd6c521fa52fbd5825f6453a27194574aa960c1445f0ad30ad8d1b5d994ed60d",
+    ".planning/phases/15-offline-tooling-packaging/15-08-PLAN.md": "35a7db978adf63a4fed20e61f7bf0e677b6284dd8bd382b711dbb943ed9c7ffa",
+    ".planning/phases/15-offline-tooling-packaging/15-10-PLAN.md": "9713fe98116d0168acda6a3c1ccabaca27b014a1fcce9116bfc659b3d39c8c0e",
+    ".planning/phases/15-offline-tooling-packaging/15-16-PLAN.md": "7fcc33bbfc7db7bd1e502ab59a429668a264ddf52285cc753398ba028915b9c7",
+    ".planning/phases/15-offline-tooling-packaging/15-17-PLAN.md": "563d11e8ad6a2977768d967b97e535ed21f3a8fc027f07d096ab166517871235",
+    ".planning/phases/15-offline-tooling-packaging/15-18-PLAN.md": "78f17f8a50694263c2971ee33740e80d1965d4ec8fa2a17deea00e4fedfca081"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "claude-opus-5-5",
+    "session": "32d1701b-4256-409c-a5a7-e305cc822f40"
+  },
+  "items": [
+    {
+      "id": "TOOL-11",
+      "status": "present",
+      "where": ".planning/phases/15-offline-tooling-packaging/15-10-PLAN.md:30",
+      "quote": "score_gold_passage maps LightRAG chunk evidence through document_id or full_doc_id, and refuses a record carrying neither with GoldPassageMappingError, never KeyError (TOOL-11)"
+    },
+    {
+      "id": "TOOL-12",
+      "status": "present",
+      "where": ".planning/phases/15-offline-tooling-packaging/15-16-PLAN.md:35",
+      "quote": "so 'CORRECT.', '**CORRECT**', 'Verdict: CORRECT' and 'CORRECT\u2014' parse; no match stays UnparseableJudgeVerdictError (TOOL-12)"
+    },
+    {
+      "id": "TOOL-13",
+      "status": "present",
+      "where": ".planning/phases/15-offline-tooling-packaging/15-05-PLAN.md:22",
+      "quote": "so editing one question's text or one gold id mints a new version with a different content_hash (TOOL-13, D-14)"
+    },
+    {
+      "id": "TOOL-14",
+      "status": "present",
+      "where": ".planning/phases/15-offline-tooling-packaging/15-08-PLAN.md:25",
+      "quote": "When no excursion has a cause, the deviations document does not print the zero-deviations heading and lists the pending excursions (TOOL-14)"
+    },
+    {
+      "id": "TOOL-15",
+      "status": "present",
+      "where": ".planning/phases/15-offline-tooling-packaging/15-17-PLAN.md:31",
+      "quote": "any 'DID NOT FIRE' or 'UNEXPECTED VIOLATION' row yields a 'Falsifier 2 fired' verdict and exit 1"
+    },
+    {
+      "id": "TOOL-16",
+      "status": "present",
+      "where": ".planning/phases/15-offline-tooling-packaging/15-03-PLAN.md:24",
+      "quote": "any violation raises AdmissionConditionMissingError (TOOL-16, D-17)"
+    },
+    {
+      "id": "TOOL-17",
+      "status": "present",
+      "where": ".planning/phases/15-offline-tooling-packaging/15-18-PLAN.md:27",
+      "quote": "TOOL-17 is met by removal: databasise/tests/test_removed_stores_absent.py passes; no plan code is written for it (D-20)"
+    },
+    {
+      "id": "TOOL-18",
+      "status": "present",
+      "where": ".planning/phases/15-offline-tooling-packaging/15-04-PLAN.md:26",
+      "quote": "A tool-level error from the MCP server reaches the caller of call_tool as CbmToolCallError, never CbmTransportError"
+    },
+    {
+      "id": "TOOL-19",
+      "status": "present",
+      "where": ".planning/phases/15-offline-tooling-packaging/15-07-PLAN.md:25",
+      "quote": "Every one of the ten tools in TOOL_NAMES, listed from create_server().list_tools(), publishes a non-empty description"
+    },
+    {
+      "id": "TOOL-20",
+      "status": "present",
+      "where": ".planning/phases/15-offline-tooling-packaging/15-17-PLAN.md:35",
+      "quote": "The CROSS-MODALITY-EVIDENCE.md Findings row that says the build was never invoked is marked superseded by the 2026-09-10 section inside the single row"
+    }
+  ],
+  "extra": []
+}
