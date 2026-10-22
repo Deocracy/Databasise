@@ -56,6 +56,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import sqlite3
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -649,7 +650,14 @@ async def verify_import(
     # (a) chunk text byte-identical, v1 KV vs v2 KV, per chunk id. Read-only: a SqliteKVStore would
     # create the namespace and its table, and reset the journal mode (A-WR-04).
     v1_chunks = _v1_text_chunks(v1_working_dir)
-    v2_rows, _ = list_kv_prefix(Path(store_root) / workspace / _TEXT_CHUNKS_KIND, "", limit=-1, offset=0)
+    try:
+        v2_rows, _ = list_kv_prefix(Path(store_root) / workspace / _TEXT_CHUNKS_KIND, "", limit=-1, offset=0)
+    except sqlite3.OperationalError as exc:
+        # A-ITER2-WR-01: e.g. a -wal with frames but no -shm; a read-only verify can neither replay nor list it.
+        return VerificationResult(
+            status="refused",
+            violations=(Violation(assertion="precondition", detail=f"v2 text_chunks KV is unreadable read-only: {exc}"),),
+        )
     v2_chunks = dict(v2_rows)
     for chunk_id, v1_record in sorted(v1_chunks.items()):
         v2_record = v2_chunks.get(chunk_id)
