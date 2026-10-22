@@ -67,3 +67,29 @@ def test_wirings_lists_six_reachable_rows_matching_the_fixture(tmp_path):
     fixture = json.loads(_FIXTURE.read_text(encoding="utf-8"))["reachable"]
     assert {name: row.get("reachable") for name, row in by_name.items()} == fixture
     assert all(row.get("reachable") is True for row in rows)
+
+
+def test_reachable_is_computed_from_selector_resolution(tmp_path, monkeypatch):
+    from databasise.seam import engine as engine_module
+
+    real = engine_module.resolve_selector
+
+    def naive_for_every_capability(selector, **kw):
+        if selector is not None and selector.capability is not None:
+            return real(None, **kw)
+        return real(selector, **kw)
+
+    monkeypatch.setattr(engine_module, "resolve_selector", naive_for_every_capability)
+    reachable = {row.get("name"): row.get("reachable") for row in _wirings(_operator_app(tmp_path))}
+    assert reachable == {name: name == "naive" for name in _NODE_COUNTS}, reachable
+
+
+def test_an_injected_codebase_memory_mcp_part_adds_no_wirings_row(tmp_path):
+    from databasise.parts.registry import default_registry
+    from databasise.parts_core.declared_only import CODEBASE_MEMORY_MCP_PART
+
+    registry = default_registry()
+    registry.register(CODEBASE_MEMORY_MCP_PART)
+    rows = _wirings(_operator_app(tmp_path, registry=registry))
+    assert {row.get("name") for row in rows} == set(_NODE_COUNTS), [row.get("name") for row in rows]
+    assert "codebase-memory" not in json.dumps(rows)
