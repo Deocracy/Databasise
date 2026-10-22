@@ -13,9 +13,9 @@ answers (11-02-PLAN.md, D-03 as corrected by 11-RESEARCH.md Q6).
 ``seam.floors_store.FloorStore(<eval store root>)`` (``floors.db``), keyed on the traces' own
 ``wiring_instance_hash`` plus the five ``NullIdentity`` fields; a family whose passes carried no single
 hash is refused by name (:class:`UnkeyableFloorError`) and nothing is written. Two recorded limits: no
-production part reports ``cache_hit``, so a real run is refused with ``UnusableFloorError`` after both
-passes have spent and persists no floor yet; and only an engine started on the eval store root reads
-these floors.
+production part reports ``cache_hit``, so a real run is refused with ``UnusableFloorError`` after the
+first question of the first pass (one engine query, no judge call) and persists no floor yet; and only
+an engine started on the eval store root reads these floors.
 
 **Nothing here makes a live call by default.** Without ``--spend``, :func:`main` prints
 :func:`estimate_calls`' real, computed call-count projection and returns, having constructed no
@@ -86,6 +86,7 @@ from databasise.eval.calibration import (
     NullIdentity,
     UnpairedScoresError,
     UnusableFloorError,
+    _verify_cache_bypassed,
     calibrate_aa_floor,
     paired_differences,
 )
@@ -433,6 +434,7 @@ async def run_one_pass(
     llm_client: Any = None,
     vector_store: Any = None,
     selector: Selector | None = None,
+    node_check: Callable[[Sequence[Any]], None] | None = None,
 ) -> PassResult:
     """Run ``engine`` once over ``question_ids`` (in sorted order), scoring each returned envelope
     with whichever of the two per-question scorers matches ``family_name``. Refuses (``ValueError``,
@@ -447,7 +449,8 @@ async def run_one_pass(
     ``PassResult.node_traces`` — the §AA.2 precondition input.
 
     ``selector`` (11-02-PLAN.md, D-03/Q6) goes to every ``engine.query`` call; ``None`` keeps the
-    engine's default selector.
+    engine's default selector. ``node_check``, when given, is called with each question's resolved
+    nodes before that question is scored, and raises to stop the pass there (B-WR-04).
     """
     _check_family_covers_questions(bundle, family_name, question_ids)
 
@@ -473,6 +476,15 @@ async def run_one_pass(
         if envelope.partial or envelope.degraded:
             raise ConfoundedPassError(question_id, partial=envelope.partial, degraded=envelope.degraded)
 
+        # Before the judge call, so a pass the bypass check will refuse stops at its first question (B-WR-04).
+        if envelope.trace_token is not None:
+            record = trace_store.resolve(envelope.trace_token)
+            if node_check is not None:
+                node_check(record.get("nodes", []))
+            node_traces.extend(record.get("nodes", []))
+            if record.get("wiring_instance_hash"):  # a stub engine's records carry none
+                instance_hashes.add(str(record["wiring_instance_hash"]))
+
         if family_name == GOLD_PASSAGE_FAMILY:
             score = score_gold_passage(
                 envelope, gold_document_ids=family.targets[question_id], vector_store=vector_store
@@ -487,12 +499,6 @@ async def run_one_pass(
             )
 
         scores[question_id] = score
-
-        if envelope.trace_token is not None:
-            record = trace_store.resolve(envelope.trace_token)
-            node_traces.extend(record.get("nodes", []))
-            if record.get("wiring_instance_hash"):  # a stub engine's records carry none
-                instance_hashes.add(str(record["wiring_instance_hash"]))
 
     return PassResult(
         scores=scores, node_traces=tuple(node_traces), wiring_instance_hashes=tuple(sorted(instance_hashes))
@@ -541,6 +547,9 @@ async def calibrate_family(
         llm_client=llm_client,
         vector_store=vector_store,
         selector=selector,
+        # §AA.2 per question, with calibrate_aa_floor's own refusal text: no production part reports
+        # cache_hit, so a real run stops at run_a's first question, not after both passes (B-WR-04).
+        node_check=lambda nodes: _verify_cache_bypassed(nodes, ()),
     )
     run_b = await run_one_pass(
         engine=engine,
@@ -550,6 +559,7 @@ async def calibrate_family(
         llm_client=llm_client,
         vector_store=vector_store,
         selector=selector,
+        node_check=lambda nodes: _verify_cache_bypassed((), nodes),
     )
 
     metric = _METRIC_BY_FAMILY[family_name]

@@ -197,3 +197,46 @@ def test_aa_run_prints_its_result_before_a_persist_refusal(unkeyable, monkeypatc
     assert len(err_lines) == 1
     expected = "UnkeyableFloorError: " if unkeyable else "FloorPersistError: "
     assert err_lines[0].startswith(expected)
+
+
+class _CountingEngine:
+    def __init__(self, store_root):
+        self.store_root = store_root
+        self.queries = 0
+
+    async def query(self, query_object, selector=None):
+        self.queries += 1
+        return SimpleNamespace(partial=False, degraded=False, trace_token="t", evidence=[], answer="a")
+
+
+class _CountingJudge:
+    calls = 0
+
+    async def chat(self, messages):
+        self.calls += 1
+        return SimpleNamespace(text="CORRECT")
+
+
+@pytest.mark.parametrize("cache_hit", [None, True])
+def test_calibration_stops_at_the_first_question_a_bypass_check_refuses(cache_hit, monkeypatch, tmp_path):
+    """B-WR-04: a node without a verified cache bypass refuses before any judge call or second query."""
+    from databasise.eval.bundle import load_bundle
+    from databasise.eval.calibration import UnusableFloorError
+
+    class _Traces:
+        def __init__(self, root):
+            pass
+
+        def resolve(self, token):
+            return {"nodes": [{"node_id": "n1", "cache_hit": cache_hit}], "wiring_instance_hash": "h1"}
+
+    monkeypatch.setattr(aa_run, "TraceStore", _Traces)
+    bundle = load_bundle(aa_run._COMMITTED_BUNDLE_ROOT, aa_run._default_bundle_version(aa_run._COMMITTED_BUNDLE_ROOT))
+    engine, judge = _CountingEngine(tmp_path), _CountingJudge()
+    with pytest.raises(UnusableFloorError, match="run_a node 'n1'"):
+        asyncio.run(
+            aa_run.calibrate_family(
+                engine=engine, bundle=bundle, split_name="dev", family_name="answer_level", llm_client=judge
+            )
+        )
+    assert (engine.queries, judge.calls) == (1, 0)
