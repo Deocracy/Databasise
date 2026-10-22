@@ -21,6 +21,7 @@ from databasise.seam.rest import (
     RefusalBody,
     _RequestModel,
 )
+from databasise.seam.selectors import Selector
 
 # Store-reading operator routes: the machine faults plus a busy store. A new dict, so the shared
 # _FAULT_RESPONSES that the seam routes use is never mutated.
@@ -37,6 +38,15 @@ class LedgerHistoryRequest(_RequestModel):
     """Body of POST /ledger/history: the alias and the page bounds, checked by ``checked_page``."""
 
     alias: str
+    limit: int = 50
+    offset: int = 0
+
+
+class ChunksRequest(_RequestModel):
+    """Body of POST /chunks: which modality (the selector) and the page bounds, checked by
+    ``checked_page``."""
+
+    selector: Selector | None = None
     limit: int = 50
     offset: int = 0
 
@@ -81,3 +91,8 @@ def add_operator_routes(app: FastAPI, engine: Any) -> None:
     )
     async def post_promote_preview(body: PromoteRequest) -> dict[str, Any]:
         return await engine.preview_promotion(body.alias, body.trace_ids, body.change_origin, verb=body.verb)
+
+    @app.post("/chunks", responses=_OPERATOR_STORE_RESPONSES)
+    async def post_chunks(body: ChunksRequest) -> dict[str, Any]:
+        """One page of chunk references for the selected modality; each opens via /evidence/resolve."""
+        return await engine.chunk_page(body.selector, checked_page(body.limit, body.offset))

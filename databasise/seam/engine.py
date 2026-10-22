@@ -241,6 +241,7 @@ from databasise.seam.jobs_store import JobFamilyStore
 from databasise.seam.evidence import (
     CHUNKS_NAMESPACE,
     EvidenceRef,
+    TEXT_CHUNK_KIND,
     MalformedEvidenceItemError,
     mint_evidence_refs,
     resolve_evidence_ref,
@@ -308,7 +309,12 @@ from databasise.seam.trace_store import TraceStore
 from databasise.stores.graph import CozoGraphStore, GraphStoreBusyError
 from databasise.stores.kv import SqliteKVStore
 from databasise.stores.probes import list_kv_prefix, probe_graph, probe_kv, probe_vector
-from databasise.stores.vector import MultiNamespaceVectorStore, VectorStoreCorruptedError, load_committed
+from databasise.stores.vector import (
+    FaissVectorStore,
+    MultiNamespaceVectorStore,
+    VectorStoreCorruptedError,
+    load_committed,
+)
 from databasise.validator.errors import CODE_CYCLIC_WIRING
 from databasise.validator.parse import ParsedWiring, parse_wiring
 from databasise.wirings.resolve import (
@@ -2299,6 +2305,32 @@ class Databasise:
             "next_version": next_version,
             "promotable": reason is None,
             "reason": reason,
+        }
+
+    async def chunk_page(self, selector: Selector | None, page: Page) -> dict[str, Any]:
+        """One page of chunk references for the operator console's chunk browser (16-07, CONN-10,
+        D-14), as ``{refs, total, next_offset}``. The namespace is the ``evidence_position`` namespace
+        of the base wiring of the family the selector resolves to, so the bypass arm lists its own
+        family's chunks and a request never names a namespace. References carry no chunk text (§18.2);
+        each opens through :meth:`resolve_evidence`. The read never builds the graph or KV stores: it
+        pages the vector namespace's committed ids and creates nothing, so a namespace never
+        populated gives an empty page. A corrupted namespace is the ``StoreCorrupted`` fault."""
+        resolved = resolve_selector(selector, registry=self.registry, store_root=self.store_root)
+        namespace = load_wiring(wiring_family(resolved))["evidence_position"]["namespace"]
+
+        def _read() -> tuple[list[str], int]:
+            store = FaissVectorStore(namespace=namespace, workspace=self.workspace, store_root=self.store_root)
+            return store.list_ids(page.offset, page.limit)
+
+        try:
+            ids, total = await asyncio.to_thread(_read)
+        except VectorStoreCorruptedError as exc:
+            raise _foreign_fault("chunk_page", exc, failure_class="StoreCorrupted") from exc
+        end = page.offset + page.limit
+        return {
+            "refs": mint_evidence_refs([{"id": i} for i in ids], namespace=namespace, kind=TEXT_CHUNK_KIND),
+            "total": total,
+            "next_offset": end if end < total else None,
         }
 
     async def _execute(

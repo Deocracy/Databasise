@@ -290,6 +290,14 @@ class FaissVectorStore(StorageNameSpace):
         self._loaded_signature: _Signature | None = None
         self._read_committed()
 
+    def list_ids(self, offset: int, limit: int) -> tuple[list[str], int]:
+        """One page of the committed record ids in sorted order, and the total count (16-07, CONN-10).
+        It reads the committed snapshot's entry map only: it never reconstructs a vector and never
+        creates the namespace directory, so a never-populated namespace gives ``([], 0)``."""
+        snapshot = load_committed(self._dir)
+        ids = sorted(snapshot.entries) if snapshot is not None else []
+        return ids[offset : offset + limit], len(ids)
+
     def _committed_signature(self) -> tuple[tuple[int, int, int], ...] | None:
         """``(st_ino, st_mtime_ns, st_size)`` of the committed pair, or ``None`` when absent.
         ``os.replace`` changes the inode, so any other writer's commit changes it."""
