@@ -2146,6 +2146,49 @@ class Databasise:
         except sqlite3.Error as exc:
             raise _foreign_fault("ledger_aliases", exc, failure_class="StoreFault") from exc
 
+    async def ledger_history(self, alias: str, page: Page) -> dict[str, Any]:
+        """One page of an alias's ledger rows, oldest first, for the operator console (16-04,
+        CONN-07, D-10, D-13a). ``active`` is membership in the rollback lineage of the alias's active
+        version; ``tombstoned`` is membership in the set of versions a tombstone row targets.
+        ``promotion_trace_ids`` are returned here and only on the ``--operator`` surface (D-10);
+        ``mutation_id``, ``parent`` and ``arm_instance_hashes`` are never returned. Read-only like
+        :meth:`ledger_aliases`: an unknown alias, or a store root with no ledger, gives an empty page
+        and creates no file."""
+
+        def _read() -> dict[str, Any]:
+            handle = Ledger.open_existing(self.store_root, read_only=True)
+            if handle is None:
+                return {"records": [], "total": 0, "next_offset": None}
+            with handle:
+                rows = handle.history_for_alias(alias)
+                head = handle.by_alias(alias)
+                active = set(handle.lineage(alias, head.minted_version)) if head is not None else set()
+                tombstoned = {r.targets_version for r in rows if r.record_kind == RECORD_KIND_TOMBSTONE}
+            end = page.offset + page.limit
+            return {
+                "records": [
+                    {
+                        "generation_ordinal": r.id,
+                        "created_at": r.created_at,
+                        "record_kind": r.record_kind,
+                        "minted_version": r.minted_version,
+                        "targets_version": r.targets_version,
+                        "change_origin": r.change_origin,
+                        "promotion_trace_ids": r.promotion_trace_ids,
+                        "active": r.minted_version in active,
+                        "tombstoned": (r.minted_version or r.targets_version) in tombstoned,
+                    }
+                    for r in rows[page.offset : end]
+                ],
+                "total": len(rows),
+                "next_offset": end if end < len(rows) else None,
+            }
+
+        try:
+            return await asyncio.to_thread(_read)
+        except sqlite3.Error as exc:
+            raise _foreign_fault("ledger_history", exc, failure_class="StoreFault") from exc
+
     async def _execute(
         self,
         query_object: QueryObject,

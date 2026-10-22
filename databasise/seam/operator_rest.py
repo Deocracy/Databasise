@@ -14,7 +14,8 @@ from typing import Any
 
 from fastapi import FastAPI
 
-from databasise.seam.rest import _FAULT_RESPONSES, RefusalBody
+from databasise.seam.corpus import checked_page
+from databasise.seam.rest import _FAULT_RESPONSES, RefusalBody, _RequestModel
 
 # Store-reading operator routes: the machine faults plus a busy store. A new dict, so the shared
 # _FAULT_RESPONSES that the seam routes use is never mutated.
@@ -25,6 +26,14 @@ _OPERATOR_STORE_RESPONSES: dict[int | str, dict[str, Any]] = {
         "description": "Store busy: the store is held by another process (StoreBusyError)",
     },
 }
+
+
+class LedgerHistoryRequest(_RequestModel):
+    """Body of POST /ledger/history: the alias and the page bounds, checked by ``checked_page``."""
+
+    alias: str
+    limit: int = 50
+    offset: int = 0
 
 
 def add_operator_routes(app: FastAPI, engine: Any) -> None:
@@ -45,3 +54,8 @@ def add_operator_routes(app: FastAPI, engine: Any) -> None:
     async def get_ledger_aliases() -> list[dict[str, Any]]:
         """One row per alias: its active version, record kind, generation ordinal and time."""
         return await engine.ledger_aliases()
+
+    @app.post("/ledger/history", responses=_OPERATOR_STORE_RESPONSES)
+    async def post_ledger_history(body: LedgerHistoryRequest) -> dict[str, Any]:
+        """One page of an alias's ledger rows with active and tombstoned flags."""
+        return await engine.ledger_history(body.alias, checked_page(body.limit, body.offset))
