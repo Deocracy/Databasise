@@ -1,0 +1,137 @@
+{
+  "bak_trace": 1,
+  "step": "S3",
+  "part": "phase15",
+  "ledger_version": 793,
+  "artifacts": {
+    ".planning/REQUIREMENTS.md": "9b10bcc410e1a6ed31d156ca2de6e4e443a5ffe16ccad6e253366cdbadab9fb6"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "claude-opus-5-5",
+    "session": "32d1701b-4256-409c-a5a7-e305cc822f40"
+  },
+  "items": [
+    {
+      "id": "TOOL-01",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:470",
+      "quote": "- [x] **TOOL-01**: A non-editable wheel built from databasise/pyproject.toml contains the databasise.tools package (check_import_boundary.py), evidence/eval-bundles/** and the tests/fixtures corpus read by eval.corpus_ingest and parity.corpus. As a result, `python -m databasise.eval.aa_run --help`, `python -m databasise.eval.remint --help` and `python -m databasise.tools.check_import_boundary` run from that wheel. The version string has one source, databasise.__version__, which rest.py passes to FastAPI(version=...). The mcp extra is bounded `mcp>=2.2.0,<3`. check_import_boundary.scan_tree skips .venv, site-packages and other non-package directories. It reports an unparseable file as a named violation instead of crashing, and it flags `from importlib import import_module; import_module('lightrag')`. Subprocess entry-point exclusions match by resolved path, as the module docstring states, not by bare filename."
+    },
+    {
+      "id": "TOOL-02",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:474",
+      "quote": "- [x] **TOOL-02**: `python -m databasise.parity.import_index` parses its arguments with argparse. `--help` prints usage and exits 0. An unknown argument such as `--verfiy` exits 2. Neither writes anything under the store root. The CLI accepts `--v1-working-dir`, `--store-root` and `--workspace` (default: the derived workspace), so v1/.corpus_working_dir can be imported. Every run prints the derived workspace string that a launcher must pass to the engine; it is currently shared-4fab18fef508b7bc3dda1cc2d8f12e36."
+    },
+    {
+      "id": "TOOL-03",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:478",
+      "quote": "- [x] **TOOL-03**: verify_import returns a graph-topology violation, not 'verified', when the v1 Cozo graph exists and the v2 graph namespace is absent. A missing v2 store is reported with a dedicated assertion value 'precondition' instead of 'chunk-text'; 'precondition' is added to the Violation.assertion Literal."
+    },
+    {
+      "id": "TOOL-04",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:481",
+      "quote": "- [x] **TOOL-04**: The offline CLIs parity.run_arm, parity.storage_audit, parity.run_comparison, parity.run_cross_modality, eval.aa_run and eval.remint each map named configuration, input and provider failures to one stderr line and exit 1 with no traceback. The failures covered are:"
+    },
+    {
+      "id": "TOOL-05",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:493",
+      "quote": "- [x] **TOOL-05**: parity.build_hipporag_index and eval.remint default to an estimate-only dry run. The dry run makes no LLM or embedding call and exits 0 with the estimate. Live spend happens only with `--spend`. build_hipporag_index no longer refuses when store_root/workspace lacks a LightRAG import; it creates the workspace dir. Its post-build check fails with a named error when the hipporag-chunks vector count is zero or differs from the computed chunk count."
+    },
+    {
+      "id": "TOOL-06",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:502",
+      "quote": "- [x] **TOOL-06**: parity.run_comparison changes as follows:"
+    },
+    {
+      "id": "TOOL-07",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:520",
+      "quote": "- [x] **TOOL-07**: v1_driver_script and v1_arm change as follows:"
+    },
+    {
+      "id": "TOOL-08",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:537",
+      "quote": "- [x] **TOOL-08**: parity.storage_audit exits non-zero and prints 'partial' or 'cycle' when run_audit returns a partial run or a cyclic wiring. Nodes that were never dispatched are reported as 'unreached', not 'no-touch'. parity.storage_audit and parity.run_arm accept `--arm hipporag`, resolve it through the wiring loader and build stores from the resolved wiring, so HippoRAG store_namespaces are audited. The redundant in-function `import json` in run_arm.main is removed."
+    },
+    {
+      "id": "TOOL-09",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:547",
+      "quote": "- [x] **TOOL-09**: parity.run_cross_modality changes as follows:"
+    },
+    {
+      "id": "TOOL-10",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:564",
+      "quote": "- [x] **TOOL-10**: databasise.run_wiring canonicalises the wiring document before executing it, so a wiring containing an integer outside int64 raises CanonicalisationError with zero nodes run. It finalizes every store in a finally block, so a scheduler exception still finalizes the SqliteKVStore."
+    },
+    {
+      "id": "TOOL-11",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:567",
+      "quote": "- [x] **TOOL-11**: eval.corpus_ingest --arm lightrag writes into the eval store (v1/.eval_corpus_store) and never into v1/.corpus_working_dir; otherwise it refuses with a named error. The _EVAL_INGEST_STORE_ROOT comment states where each arm writes. eval.aa_run takes `--arm` and queries the same arm the ingest populated. It refuses when that arm's index is empty instead of scoring an empty index as floor 0.0. score_gold_passage maps LightRAG chunk evidence to document ids, or refuses with a named error, instead of raising KeyError on record['document_id']."
+    },
+    {
+      "id": "TOOL-12",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:571",
+      "quote": "- [x] **TOOL-12**: eval.calibration refuses calibration when a pass yields no node traces, or when any trace node has an unreported cache status. To make the second check reachable, the scheduler's _body_report records cache_hit as None, not False, when a part does not report it. The floor is two-sided (an absolute or symmetric bound), so a systematic one-directional A/A shift cannot produce a negative floor. The judge verdict parser accepts 'CORRECT.', '**CORRECT**', 'Verdict: CORRECT' and 'CORRECT\u2014'. A calibrated floor is persisted under the store root, and the promotion gate reads it through the CalibrationResult.floor_for / StaleNullError path instead of always raising UncalibratedFloorRefusalError."
+    },
+    {
+      "id": "TOOL-13",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:583",
+      "quote": "- [x] **TOOL-13**: eval.bundle changes as follows:"
+    },
+    {
+      "id": "TOOL-14",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:596",
+      "quote": "- [x] **TOOL-14**: evidence.parity_report renders only states it reads:"
+    },
+    {
+      "id": "TOOL-15",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:621",
+      "quote": "- [x] **TOOL-15**: evidence.falsifier2's verdict paragraph and the exit status of main() are computed from evaluate_probe results. Any 'DID NOT FIRE' or 'UNEXPECTED VIOLATION' row yields a 'Falsifier 2 fired' verdict and exit 1. evidence.f07_report gains a main() that writes F-07-MUTABLE-STORE-DISPOSITION.md and derives the excluded component names from the registered mutates_store parts. The F-07 verdict no longer claims the exclusion is enforced in a reachable comparison path. The F-07 record and the CROSS-MODALITY-EVIDENCE.md title, Status section and body all state the same MODAL-05 status."
+    },
+    {
+      "id": "TOOL-16",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:625",
+      "quote": "- [x] **TOOL-16**: Once all parts and wirings are loaded (in default_registry(), or at Databasise construction), cross_check_conditions (\u00a78 conditions 7, 10 and 11) runs for every registered opaque part against each wiring whose provides node resolves to that part. A violation refuses with AdmissionConditionMissingError. register() alone cannot run these checks, because conditions 7 and 11 need the full registry and a resolved wiring. validate_admission refuses a record whose part_name_at_version differs from the part's, and it validates ttl_days, feed_tier, network_namespace and environment_hash. A part with kind='opaque' and artifact_scope='shared' is refused with ForbiddenSharedScopeError regardless of structural_depth. Part effects outside the 17-member Effect literal, and invalid kind, structural_depth or artifact_scope values, are refused at registration."
+    },
+    {
+      "id": "TOOL-17",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:636",
+      "quote": "- [x] **TOOL-17**: The artifact registry is either wired into the runner or removed. If it is kept:"
+    },
+    {
+      "id": "TOOL-18",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:653",
+      "quote": "- [x] **TOOL-18**: The codebase-memory-mcp adapter and part change as follows:"
+    },
+    {
+      "id": "TOOL-19",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:673",
+      "quote": "- [x] **TOOL-19**: Each of the nine MCP tools in TOOL_NAMES publishes a non-empty usage description with no internal plan references (no 'PLAN.md', 'Phase 7' or '_refusal_mapped'). The mcp package docstring, the tools.py and create_server docstrings and tests/mcp/test_dual_transport_parity.py state nine tools or reference TOOL_NAMES. The PartRegistry docstring, the falsifier2.probe_registry docstring and the rendered falsifier2 text describe default_registry() without a fixed part count, replacing 'D-04's seven entries' and 'Phase-1 entries'."
+    },
+    {
+      "id": "TOOL-20",
+      "status": "present",
+      "where": ".planning/REQUIREMENTS.md:677",
+      "quote": "- [x] **TOOL-20**: Module and data docstrings state current facts:"
+    }
+  ],
+  "extra": []
+}

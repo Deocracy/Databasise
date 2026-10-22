@@ -2,9 +2,9 @@
   "bak_trace": 1,
   "step": "S3",
   "part": "phase12-b",
-  "ledger_version": 726,
+  "ledger_version": 793,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "ee17957ab3cd0e30f012330e30d3280e1c5cd2bd33b6eaa2b0a48164966eba15"
+    ".planning/REQUIREMENTS.md": "9b10bcc410e1a6ed31d156ca2de6e4e443a5ffe16ccad6e253366cdbadab9fb6"
   },
   "checker": {
     "harness": "claude-code",
