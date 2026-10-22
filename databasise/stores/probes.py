@@ -129,6 +129,13 @@ def _run_immutable(client: Any, script: str, params: dict[str, Any]) -> list[lis
     return _cozo_rows(client.run(script, params, True))
 
 
+def _has_graph_relations(client: Any) -> bool:
+    """False for a RocksDB database whose ``nodes``/``edges`` relations were never created (a crash
+    between the client open and ``_ensure_relations``). That graph reads as empty, matching
+    :func:`probe_graph`'s ``ok``; nothing is created (Phase 16 review C WR-02)."""
+    return {"nodes", "edges"} <= {r[0] for r in _run_immutable(client, "::relations", {})}
+
+
 def graph_node_page(
     dir_path: Path, prefix: str, limit: int, offset: int
 ) -> tuple[list[tuple[str, int]], int]:
@@ -147,6 +154,8 @@ def graph_node_page(
             raise GraphStoreCorruptedError("graph.cozo is not a Cozo RocksDB database")
     key, shared = _ClientRegistry.acquire(db_path)
     try:
+        if not _has_graph_relations(shared.client):
+            return [], 0
         # x = id stops Cozo pushing starts_with into a key-range scan that drops the key equal to $p
         ids = [
             r[0]
@@ -190,6 +199,8 @@ def graph_node_edges(
             raise GraphStoreCorruptedError("graph.cozo is not a Cozo RocksDB database")
     key, shared = _ClientRegistry.acquire(db_path)
     try:
+        if not _has_graph_relations(shared.client):
+            return False, 0, []
         if not _run_immutable(shared.client, "?[id] := *nodes{id}, id = $id", {"id": node_id}):
             return False, 0, []
         degree = len(
