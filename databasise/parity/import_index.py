@@ -620,6 +620,15 @@ async def verify_import(
     if workspace is None:
         workspace = _import_workspace()
 
+    if not Path(v1_working_dir).exists():
+        # A-WR-05: with no v1 index every comparison below would run over nothing and pass.
+        return VerificationResult(
+            status="refused",
+            violations=(
+                Violation(assertion="precondition", detail=f"no v1 index found at {v1_working_dir}"),
+            ),
+        )
+
     if not (Path(store_root) / workspace).exists():
         return VerificationResult(
             status="refused",
@@ -678,6 +687,8 @@ async def verify_import(
                 detail=f"v1 has a graph but v2's {_GRAPH_KIND} namespace is absent under {Path(store_root) / workspace}",
             )
         )
+    if v1_graph is None and v2_graph is not None:
+        violations.append(Violation(assertion="graph-topology", detail="v2 has a graph but v1 has none"))
     if v1_graph is not None and v2_graph is not None:
         v1_nodes, v1_edges = v1_graph
         v2_nodes, v2_edges = v2_graph

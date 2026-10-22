@@ -107,6 +107,31 @@ def test_verify_import_reads_v2_chunk_text_without_rewriting_the_store(tmp_path)
     assert sorted(p.name for p in (store_root / "ws" / "text_chunks").iterdir()) == before
 
 
+def test_verify_import_refuses_a_missing_v1_index(tmp_path):
+    """A-WR-05: a typo'd --v1-working-dir over an empty v2 workspace is refused, never verified."""
+    from databasise.parity.import_index import verify_import
+
+    store_root = tmp_path / "store"
+    (store_root / "ws").mkdir(parents=True)
+    result = asyncio.run(verify_import(tmp_path / "no-such-v1", store_root, "ws"))
+    assert result.status == "refused"
+    assert [v.assertion for v in result.violations] == ["precondition"]
+
+
+def test_verify_import_flags_a_v2_graph_with_no_v1_graph(tmp_path, monkeypatch):
+    """A-WR-05: the reverse of D-06 (v2 graph present, v1 graph absent) is a graph-topology violation."""
+    from databasise.parity import import_index
+
+    store_root = tmp_path / "store"
+    (store_root / "ws").mkdir(parents=True)
+    v1_dir = tmp_path / "v1"
+    v1_dir.mkdir()
+    monkeypatch.setattr(import_index, "_v2_graph", lambda root, ws: ({"a"}, set()))
+    result = asyncio.run(import_index.verify_import(v1_dir, store_root, "ws"))
+    assert result.status == "inconclusive"
+    assert [v.assertion for v in result.violations] == ["graph-topology"]
+
+
 def test_import_index_verify_on_a_missing_store_root_writes_nothing(tmp_path, capsys):
     """A-WR-04: --verify --store-root <typo> takes no lock, so it creates no root or .engine.lock."""
     from databasise.parity import import_index
