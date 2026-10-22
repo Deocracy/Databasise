@@ -1,0 +1,1 @@
+No external API integration: Phase 16 adds the product's own operator REST read routes over its embedded stores (ledger.db, trace.db, Faiss, Cozo) and calls no third-party API, SDK or service; the REST-only record for those routes lives in databasise/evidence/COVERAGE.md (plan 16-12).
