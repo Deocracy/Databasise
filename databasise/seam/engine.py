@@ -2191,6 +2191,8 @@ class Databasise:
             return await asyncio.to_thread(_read)
         except sqlite3.Error as exc:
             raise _foreign_fault("ledger_aliases", exc, failure_class="StoreFault") from exc
+        except json.JSONDecodeError as exc:  # a corrupted JSON column (16-REVIEW-B WR-03)
+            raise _foreign_fault("ledger_aliases", exc, failure_class="StoreCorrupted") from exc
 
     async def ledger_history(self, alias: str, page: Page) -> dict[str, Any]:
         """One page of an alias's ledger rows, oldest first, for the operator console (16-04,
@@ -2234,6 +2236,8 @@ class Databasise:
             return await asyncio.to_thread(_read)
         except sqlite3.Error as exc:
             raise _foreign_fault("ledger_history", exc, failure_class="StoreFault") from exc
+        except json.JSONDecodeError as exc:  # a corrupted JSON column (16-REVIEW-B WR-03)
+            raise _foreign_fault("ledger_history", exc, failure_class="StoreCorrupted") from exc
 
     async def list_traces(self, page: Page) -> dict[str, Any]:
         """One page of recent traces, newest first, for the operator console's trace picker (16-05,
@@ -2244,6 +2248,8 @@ class Databasise:
             rows, total = self._trace_store.list_page(page.limit, page.offset)
         except sqlite3.Error as exc:
             raise _foreign_fault("list_traces", exc, failure_class="StoreFault") from exc
+        except ValueError as exc:  # a corrupted run_record row (16-REVIEW-B WR-03)
+            raise _foreign_fault("list_traces", exc, failure_class="StoreCorrupted") from exc
         end = page.offset + page.limit
         return {
             "items": [
@@ -2319,6 +2325,8 @@ class Databasise:
                 mutation_class, version = await asyncio.to_thread(_plan)
             except sqlite3.Error as exc:
                 raise _foreign_fault("preview_promotion", exc, failure_class="StoreFault") from exc
+            except json.JSONDecodeError as exc:  # a corrupted JSON column (16-REVIEW-B WR-03)
+                raise _foreign_fault("preview_promotion", exc, failure_class="StoreCorrupted") from exc
             except SeamRefusalError:
                 if reason is None:
                     raise

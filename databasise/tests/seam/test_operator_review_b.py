@@ -11,7 +11,9 @@ import pytest
 from databasise.ledger.ledger import Ledger, LedgerRecord
 from databasise.seam.corpus import Page
 from databasise.seam.engine import Databasise
+from databasise.seam.rest import create_app
 from databasise.seam.trace_store import TraceStore
+from fastapi.testclient import TestClient
 
 
 def _record(alias: str, version: str, mutation_id: str = "m1") -> LedgerRecord:
@@ -95,3 +97,31 @@ def test_trace_page_and_total_read_one_snapshot(tmp_path: Path) -> None:
     engine._trace_store._conn = _WriteBetween(engine._trace_store._conn, tmp_path)
     page = asyncio.run(engine.list_traces(Page(limit=10, offset=0)))
     assert (len(page["items"]), page["total"]) == (1, 1)
+
+
+def _operator_client(root: Path, log_path: Path | None = None) -> TestClient:
+    return TestClient(create_app(store_root=root, workspace="ws", operator=True, log_path=log_path))
+
+
+@pytest.mark.parametrize("bad", ["{not json", "[]"])
+def test_a_corrupted_trace_row_is_a_502(tmp_path: Path, bad: str) -> None:
+    # WR-03 (and lane A WR-01): json.loads or rec.get escaped GET /traces as a bare 500
+    client = _operator_client(tmp_path)
+    with sqlite3.connect(tmp_path / "trace.db") as conn:
+        conn.execute("INSERT INTO traces VALUES ('t', ?, '2026-01-01')", (bad,))
+    response = client.get("/traces")
+    assert response.status_code == 502
+    assert "StoreCorrupted" in response.text
+
+
+def test_a_corrupted_ledger_row_is_a_502(tmp_path: Path) -> None:
+    # WR-03: _row_to_record's json.loads escaped the ledger reads as a bare 500
+    _seed_ledger(tmp_path)
+    with sqlite3.connect(tmp_path / "ledger.db") as conn:
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(ledger)") if r[1] != "id"]
+        picks = ["'{bad'" if c == "arm_instance_hashes" else "'2.0.0'" if c == "minted_version" else c for c in cols]
+        conn.execute(f"INSERT INTO ledger ({', '.join(cols)}) SELECT {', '.join(picks)} FROM ledger")
+    client = _operator_client(tmp_path)
+    for response in (client.get("/ledger/aliases"), client.post("/ledger/history", json={"alias": "a"})):
+        assert response.status_code == 502
+        assert "StoreCorrupted" in response.text

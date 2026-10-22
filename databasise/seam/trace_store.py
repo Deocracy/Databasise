@@ -104,7 +104,7 @@ class TraceStore:
         """One page of ``(token, created_at, run_record)`` newest first, plus the total row count
         (16-05, CONN-08). Read-only; the operator trace list is the only caller. The page and the
         count run in one read transaction, so ``total`` counts the rows the page saw (16-REVIEW-B
-        WR-02)."""
+        WR-02). A row that is not a JSON object raises ``ValueError`` (16-REVIEW-B WR-03)."""
         # shortcut: full sort per page (created_at has no index), add an index if traces exceed ~10^5
         self._conn.execute("BEGIN")
         try:
@@ -115,7 +115,10 @@ class TraceStore:
             total = self._conn.execute("SELECT COUNT(*) FROM traces").fetchone()[0]
         finally:
             self._conn.rollback()
-        return [(r["token"], r["created_at"], json.loads(r["run_record"])) for r in rows], total
+        records = [json.loads(r["run_record"]) for r in rows]  # a bad row raises JSONDecodeError (ValueError)
+        if not all(isinstance(rec, dict) for rec in records):
+            raise ValueError("trace.db holds a run_record that is not a JSON object")
+        return [(r["token"], r["created_at"], rec) for r, rec in zip(rows, records, strict=True)], total
 
 
 __all__ = ["TraceStore", "UnknownTraceReferenceError"]
