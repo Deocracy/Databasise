@@ -935,7 +935,7 @@ def _render_answer_spotcheck() -> str:
             query_id=raw["query_id"],
             arm=raw["arm"],
             judgment=raw["judgment"],
-            notes=raw.get("notes", ""),
+            notes=raw.get("notes") or "",
             recorded_by=raw.get("recorded_by", ""),
             recorded_at=raw.get("recorded_at", ""),
         )
@@ -1695,7 +1695,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         return _run(args)
-    except ParityRecordFormatError as exc:
+    except (ParityRecordFormatError, UnreasonedDeviationError, InvalidJudgmentError) as exc:
         return refuse(exc)
 
 
@@ -1719,11 +1719,15 @@ def _run(args: argparse.Namespace) -> int:
             print(f"parity_results/ provenance check: clean ({len(ARMS)} arms)")
         return 0
 
-    deviations = _collect_deviations()
-    deviations_text = render_deviations_document(deviations)
-    DEVIATIONS_PATH.write_text(deviations_text, encoding="utf-8")
-
+    # C-WR-01: the render reads the same records --check-results checks, so a record that check
+    # refuses is refused here by name, before either document is rendered.
+    violations = check_results()
+    if violations:
+        raise ParityRecordFormatError("; ".join(map(str, violations)))
+    # Both texts render before either is written, so a refusal leaves neither document half-updated.
+    deviations_text = render_deviations_document(_collect_deviations())
     evidence_text = render_markdown()
+    DEVIATIONS_PATH.write_text(deviations_text, encoding="utf-8")
     EVIDENCE_PATH.write_text(evidence_text, encoding="utf-8")
 
     print(evidence_text)
