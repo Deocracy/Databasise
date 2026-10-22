@@ -64,6 +64,7 @@ import asyncio
 import contextlib
 import json
 import threading
+from collections.abc import Collection
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -176,11 +177,17 @@ class _ClientRegistry:
             entry.client.close()
 
 
-def held_graph_paths(prefix: str) -> list[str]:
+def held_graph_paths(prefix: str, own: Collection[str] = ()) -> list[str]:
     """Sorted resolved paths of the graph clients this process holds under ``prefix`` (16-10, D-17).
     A snapshot of in-process holders only: it opens no client, takes no lock, and cannot see another
-    process. ``list()`` copies the keys in one step, so a concurrent acquire or release is harmless."""
-    return sorted(key for key in list(_ClientRegistry._entries) if key.startswith(prefix))
+    process. ``list()`` copies the entries in one step, so a concurrent acquire or release is harmless.
+    ``own`` is the caller's own long-lived references, one per key: a key in it is listed only while
+    something else holds it too (16-REVIEW-C WR-01, the operator engine's held graph client)."""
+    return sorted(
+        key
+        for key, entry in list(_ClientRegistry._entries.items())
+        if key.startswith(prefix) and entry.refcount > (key in own)
+    )
 
 
 class CozoGraphStore(StorageNameSpace):

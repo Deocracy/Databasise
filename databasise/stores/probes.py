@@ -136,6 +136,21 @@ def _has_graph_relations(client: Any) -> bool:
     return {"nodes", "edges"} <= {r[0] for r in _run_immutable(client, "::relations", {})}
 
 
+def acquire_graph(dir_path: Path) -> tuple[str, Any] | None:
+    """One :class:`_ClientRegistry` reference to ``dir_path``'s graph, opened as :func:`probe_graph`
+    opens it: ``None`` for a missing ``graph.cozo`` (nothing is created), :class:`GraphStoreCorruptedError`
+    for a directory without the RocksDB marker (never opened), ``GraphStoreBusyError`` for a held graph.
+    The caller releases the returned key."""
+    db_path = Path(dir_path) / "graph.cozo"
+    if not db_path.exists():
+        return None
+    key = str(db_path.resolve())
+    with _ClientRegistry._lock:
+        if key not in _ClientRegistry._entries and not _rocksdb_marker_present(db_path):
+            raise GraphStoreCorruptedError("graph.cozo is not a Cozo RocksDB database")
+    return _ClientRegistry.acquire(db_path)
+
+
 def graph_node_page(
     dir_path: Path, prefix: str, limit: int, offset: int
 ) -> tuple[list[tuple[str, int]], int]:
@@ -145,14 +160,10 @@ def graph_node_page(
     :class:`GraphStoreCorruptedError` before any open, and a held graph raises ``GraphStoreBusyError``.
     It never constructs ``CozoGraphStore``. Degrees come from one batched edge query per page, counted
     here with ``{src, tgt}`` so a self-loop counts once (Cozo ``count()`` is avoided, bug #244)."""
-    db_path = Path(dir_path) / "graph.cozo"
-    if not db_path.exists():
+    held = acquire_graph(dir_path)
+    if held is None:
         return [], 0
-    key = str(db_path.resolve())
-    with _ClientRegistry._lock:
-        if key not in _ClientRegistry._entries and not _rocksdb_marker_present(db_path):
-            raise GraphStoreCorruptedError("graph.cozo is not a Cozo RocksDB database")
-    key, shared = _ClientRegistry.acquire(db_path)
+    key, shared = held
     try:
         if not _has_graph_relations(shared.client):
             return [], 0
@@ -191,14 +202,10 @@ def graph_node_edges(
     committed after it began), so a write between them can shift ``degree`` by that write. Each edge is
     projected to ``{src, tgt, edge_types, weight}`` and nothing else, so extracted description text and
     per-chunk maps stay behind the seam (D-16)."""
-    db_path = Path(dir_path) / "graph.cozo"
-    if not db_path.exists():
+    held = acquire_graph(dir_path)
+    if held is None:
         return False, 0, []
-    key = str(db_path.resolve())
-    with _ClientRegistry._lock:
-        if key not in _ClientRegistry._entries and not _rocksdb_marker_present(db_path):
-            raise GraphStoreCorruptedError("graph.cozo is not a Cozo RocksDB database")
-    key, shared = _ClientRegistry.acquire(db_path)
+    key, shared = held
     try:
         if not _has_graph_relations(shared.client):
             return False, 0, []

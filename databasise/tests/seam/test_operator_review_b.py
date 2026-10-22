@@ -14,6 +14,7 @@ from databasise.seam.corpus import Page
 from databasise.seam.engine import Databasise
 from databasise.seam.rest import create_app
 from databasise.seam.trace_store import TraceStore
+from databasise.stores.graph import CozoGraphStore, _ClientRegistry
 from fastapi.testclient import TestClient
 
 
@@ -167,3 +168,34 @@ def test_each_log_line_is_capped_and_still_redacted(tmp_path: Path) -> None:
     assert lines[0] == "a"
     assert lines[1] == "y" * (cap - 11) + " sk-[REDACTED]…[truncated]"  # cut 10 chars into the key
     assert lines[2:] == ["b" * cap, "last"]
+
+
+def test_repeated_graph_reads_do_not_grow_the_rocksdb_files(tmp_path: Path) -> None:
+    # Lane C WR-01: each read opened RocksDB afresh and left a LOG.old and a WAL file in data/
+    engine = Databasise(store_root=tmp_path, workspace="ws")
+    graph_dir = engine._graph_dir(None)
+
+    async def _seed() -> None:
+        store = CozoGraphStore(graph_dir.name, "ws", tmp_path)
+        await store.upsert_node("a", {})
+        await store.index_done_callback()
+        await store.finalize()
+
+    asyncio.run(_seed())
+    data = graph_dir / "graph.cozo" / "data"
+    try:
+        assert asyncio.run(engine.graph_nodes(None, "", Page(limit=10, offset=0)))["total"] == 1
+        after_first = sorted(os.listdir(data))
+        for _ in range(20):
+            asyncio.run(engine.graph_nodes(None, "", Page(limit=10, offset=0)))
+            asyncio.run(engine.graph_node(None, "a", Page(limit=10, offset=0)))
+        assert sorted(os.listdir(data)) == after_first
+        assert asyncio.run(engine.info())["graph_busy"] is False  # the engine's own reference is not busy
+        key, _shared = _ClientRegistry.acquire(graph_dir / "graph.cozo")  # a second holder, as ingest
+        try:
+            assert asyncio.run(engine.info())["graph_busy"] is True
+        finally:
+            _ClientRegistry.release(key)
+    finally:
+        for key in engine._graph_holds:
+            _ClientRegistry.release(key)

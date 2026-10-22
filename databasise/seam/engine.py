@@ -314,6 +314,7 @@ from databasise.stores.kv import SqliteKVStore
 from databasise.stores.probes import (
     GraphStoreCorruptedError,
     _is_store_error,
+    acquire_graph,
     graph_node_edges,
     graph_node_page,
     list_kv_prefix,
@@ -1222,6 +1223,10 @@ class Databasise:
         self._jobs = JobFamilyStore(self.store_root)
         # 15-16 (TOOL-12, D-13): calibrated A/A floors; floors.db is created by aa_run, not here.
         self._floors = FloorStore(self.store_root)
+        # 16-REVIEW-C WR-01: registry keys of the graphs the operator graph reads hold open (see
+        # _hold_graph); taken lazily, never by a non-operator call.
+        self._graph_holds: set[str] = set()
+        self._graph_holds_lock = threading.Lock()
 
     def _v1_working_dir(self) -> Path:
         """11-01 (D-01, LRAG-01): the one v1 working dir this engine's LightRAG corpus ops use.
@@ -2122,14 +2127,16 @@ class Databasise:
         is key presence in ``self.clients``, so no client object is touched. 16-10 (CONN-13, D-17):
         ``write_in_flight`` is whether the v1 or the HippoRAG write gate is held; ``graph_busy`` is
         whether this process holds a graph client under this workspace. ``graph_busy`` means in use
-        in this process: a holder in another process is not seen. Neither read takes a lock."""
+        in this process: a holder in another process is not seen. The client this engine keeps open
+        for its own graph reads (:meth:`_hold_graph`) does not count; any other holder does, a write
+        or a concurrent read alike. Neither read takes a lock."""
         workspace_prefix = str((self.store_root / self.workspace).resolve()) + os.sep
         return {
             "version": __version__,
             "workspace": self.workspace,
             "clients": _client_presence(self.clients),
             "write_in_flight": self._write_in_flight(),
-            "graph_busy": bool(held_graph_paths(workspace_prefix)),
+            "graph_busy": bool(held_graph_paths(workspace_prefix, own=self._graph_holds)),
         }
 
     def _write_in_flight(self) -> bool:
@@ -2377,16 +2384,38 @@ class Databasise:
         namespace = (resolved.get("store_namespaces") or {}).get("graph", _GRAPH_KIND)
         return self.store_root / self.workspace / namespace
 
+    def _hold_graph(self, graph_dir: Path) -> None:
+        """16-REVIEW-C WR-01: take one registry reference to ``graph_dir``'s graph on the first operator
+        graph read and keep it for this engine's life, so later reads reuse the open client. Each
+        RocksDB open leaves a ``LOG.old`` and a WAL file in ``graph.cozo/data/`` that nothing deletes
+        (200 reads made 401 files). The engine has no close path, so the reference lasts as long as the
+        engine; the launcher's store lock already keeps every other process off the store root. Ingest's
+        own acquire and release are refcounted on top of it. Opens as the reads do: a missing graph is
+        not held (it is created by a write, and the next read holds it), and a corrupted or busy one
+        raises as they do. Runs on the worker thread."""
+        with self._graph_holds_lock:
+            if str((graph_dir / "graph.cozo").resolve()) in self._graph_holds:
+                return
+            held = acquire_graph(graph_dir)
+            if held is not None:
+                self._graph_holds.add(held[0])
+
     async def graph_nodes(self, selector: Selector | None, prefix: str, page: Page) -> dict[str, Any]:
         """One page of graph nodes for the operator console's graph browser (16-08, CONN-11, D-15), as
         ``{nodes: [{id, degree}], total, next_offset}``, ordered by id and filtered by an id prefix. The
         graph namespace comes from the resolved wiring only (§18.4). The read opens no
         ``CozoGraphStore``: a graph held by another holder is ``StoreBusyError(store_kind="graph")``
         (409) as in ``_build_stores``, and a graph directory that is not a database, or a pycozo store
-        error, is the ``StoreCorrupted`` fault."""
+        error, is the ``StoreCorrupted`` fault. The first read keeps the graph client open for later
+        reads (:meth:`_hold_graph`)."""
         graph_dir = self._graph_dir(selector)
+
+        def _read() -> tuple[list[tuple[str, int]], int]:
+            self._hold_graph(graph_dir)
+            return graph_node_page(graph_dir, prefix, page.limit, page.offset)
+
         try:
-            rows, total = await asyncio.to_thread(graph_node_page, graph_dir, prefix, page.limit, page.offset)
+            rows, total = await asyncio.to_thread(_read)
         except GraphStoreBusyError as exc:
             logger.warning("graph store busy", exc_info=exc)
             raise StoreBusyError(store_kind="graph") from None
@@ -2407,10 +2436,13 @@ class Databasise:
         stored lexicographic order, and carry only the allowlisted attrs. Busy and corrupted graphs map
         as in :meth:`graph_nodes`."""
         graph_dir = self._graph_dir(selector)
+
+        def _read() -> tuple[bool, int, list[dict[str, Any]]]:
+            self._hold_graph(graph_dir)
+            return graph_node_edges(graph_dir, node_id, page.limit, page.offset)
+
         try:
-            found, degree, edges = await asyncio.to_thread(
-                graph_node_edges, graph_dir, node_id, page.limit, page.offset
-            )
+            found, degree, edges = await asyncio.to_thread(_read)
         except GraphStoreBusyError as exc:
             logger.warning("graph store busy", exc_info=exc)
             raise StoreBusyError(store_kind="graph") from None

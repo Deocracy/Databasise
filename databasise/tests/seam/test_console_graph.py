@@ -76,6 +76,10 @@ async def test_graph_nodes_page_degrees_prefix_and_busy_409(tmp_path):
     import pycozo
 
     path = root / "ws" / _NAMESPACE / "graph.cozo"
+    from databasise.stores.graph import _ClientRegistry
+    for key in client.app.state.engine._graph_holds:
+        _ClientRegistry.release(key)
+    client.app.state.engine._graph_holds.clear()
     held = pycozo.Client("rocksdb", str(path.resolve()), dataframe=False)
     try:
         busy = client.post("/graph/nodes", json={})
