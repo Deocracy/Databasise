@@ -61,6 +61,16 @@ class GraphNodesRequest(_RequestModel):
     offset: int = 0
 
 
+class GraphNodeRequest(_RequestModel):
+    """Body of POST /graph/node: which modality (the selector), the node to open and the edge page
+    bounds, checked by ``checked_page``."""
+
+    selector: Selector | None = None
+    node_id: str
+    limit: int = 50
+    offset: int = 0
+
+
 def add_operator_routes(app: FastAPI, engine: Any) -> None:
     """Adds the operator routes to ``app``, each a thin adapter over ``engine``. New routes are
     appended at the end of this function, one awaited engine call per route body."""
@@ -111,3 +121,8 @@ def add_operator_routes(app: FastAPI, engine: Any) -> None:
     async def post_graph_nodes(body: GraphNodesRequest) -> dict[str, Any]:
         """One page of graph nodes with degrees for the selected modality, optionally by id prefix."""
         return await engine.graph_nodes(body.selector, body.prefix, checked_page(body.limit, body.offset))
+
+    @app.post("/graph/node", responses=_OPERATOR_STORE_RESPONSES)
+    async def post_graph_node(body: GraphNodeRequest) -> dict[str, Any]:
+        """One graph node's edges as references plus the edge_types/weight allowlist, paged."""
+        return await engine.graph_node(body.selector, body.node_id, checked_page(body.limit, body.offset))

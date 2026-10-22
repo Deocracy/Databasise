@@ -311,6 +311,7 @@ from databasise.stores.kv import SqliteKVStore
 from databasise.stores.probes import (
     GraphStoreCorruptedError,
     _is_store_error,
+    graph_node_edges,
     graph_node_page,
     list_kv_prefix,
     probe_graph,
@@ -2372,6 +2373,26 @@ class Databasise:
             "total": total,
             "next_offset": end if end < total else None,
         }
+
+    async def graph_node(self, selector: Selector | None, node_id: str, page: Page) -> dict[str, Any]:
+        """One graph node's edges for the operator console's node view (16-09, CONN-12, D-15, D-16), as
+        ``{id, degree, edges: [{src, tgt, edge_types, weight}], next_offset}``. Edges are undirected, in
+        stored lexicographic order, and carry only the allowlisted attrs. Busy and corrupted graphs map
+        as in :meth:`graph_nodes`."""
+        graph_dir = self._graph_dir(selector)
+        try:
+            found, degree, edges = await asyncio.to_thread(
+                graph_node_edges, graph_dir, node_id, page.limit, page.offset
+            )
+        except GraphStoreBusyError as exc:
+            logger.warning("graph store busy", exc_info=exc)
+            raise StoreBusyError(store_kind="graph") from None
+        except Exception as exc:
+            if not (isinstance(exc, GraphStoreCorruptedError) or _is_store_error(exc)):
+                raise
+            raise _foreign_fault("graph_node", exc, failure_class="StoreCorrupted") from exc
+        end = page.offset + page.limit
+        return {"id": node_id, "degree": degree, "edges": edges, "next_offset": end if end < degree else None}
 
     async def _execute(
         self,

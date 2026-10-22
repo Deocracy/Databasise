@@ -21,7 +21,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Literal
 
-from databasise.stores.graph import GraphStoreBusyError, _ClientRegistry, _cozo_rows
+from databasise.stores.graph import GraphStoreBusyError, _attrs_to_dict, _ClientRegistry, _cozo_rows
 from databasise.stores.vector import VectorStoreCorruptedError, load_committed
 
 ProbeState = Literal["ok", "absent", "corrupted", "busy"]
@@ -170,6 +170,42 @@ def graph_node_page(
             if node in degree:
                 degree[node] += 1
     return [(i, degree[i]) for i in ids], total
+
+
+def graph_node_edges(
+    dir_path: Path, node_id: str, limit: int, offset: int
+) -> tuple[bool, int, list[dict[str, Any]]]:
+    """Phase 16 D-15/D-16 (CONN-12): ``(found, degree, edges)`` for one graph node. Opens the graph as
+    :func:`graph_node_page` does. ``(False, 0, [])`` is a missing ``graph.cozo`` or an id that is not a
+    node. ``degree`` is the unpaged incident-edge count (a self-loop counts once). Each edge is
+    projected to ``{src, tgt, edge_types, weight}`` and nothing else, so extracted description text and
+    per-chunk maps stay behind the seam (D-16)."""
+    db_path = Path(dir_path) / "graph.cozo"
+    if not db_path.exists():
+        return False, 0, []
+    key = str(db_path.resolve())
+    with _ClientRegistry._lock:
+        if key not in _ClientRegistry._entries and not _rocksdb_marker_present(db_path):
+            raise GraphStoreCorruptedError("graph.cozo is not a Cozo RocksDB database")
+    key, shared = _ClientRegistry.acquire(db_path)
+    try:
+        if not _run_immutable(shared.client, "?[id] := *nodes{id}, id = $id", {"id": node_id}):
+            return False, 0, []
+        degree = len(
+            _run_immutable(shared.client, "?[src, tgt] := *edges{src, tgt}, src = $id or tgt = $id", {"id": node_id})
+        )
+        rows = _run_immutable(
+            shared.client,
+            "?[src, tgt, attrs] := *edges{src, tgt, attrs}, src = $id or tgt = $id :order src, tgt :limit $l :offset $o",
+            {"id": node_id, "l": limit, "o": offset},
+        )
+    finally:
+        _ClientRegistry.release(key)
+    edges = []
+    for src, tgt, raw in rows:
+        attrs = _attrs_to_dict(raw)
+        edges.append({"src": src, "tgt": tgt, "edge_types": attrs.get("edge_types"), "weight": attrs.get("weight")})
+    return True, degree, edges
 
 
 def probe_vector(dir_path: Path) -> ProbeState:
