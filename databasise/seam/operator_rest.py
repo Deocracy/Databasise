@@ -23,7 +23,8 @@ from databasise.seam.rest import (
 )
 from databasise.seam.selectors import Selector
 
-# Store-reading operator routes: the machine faults plus a busy store. A new dict, so the shared
+# The two graph routes: the machine faults plus a busy store. The other store-reading routes raise no
+# StoreBusyError and declare _FAULT_RESPONSES alone (16-REVIEW-A WR-04). A new dict, so the shared
 # _FAULT_RESPONSES that the seam routes use is never mutated.
 _OPERATOR_STORE_RESPONSES: dict[int | str, dict[str, Any]] = {
     **_FAULT_RESPONSES,
@@ -86,24 +87,24 @@ def add_operator_routes(app: FastAPI, engine: Any, *, log: bool = False) -> None
         """One row per wiring: node count, default arm and selector reachability."""
         return await engine.wirings()
 
-    @app.get("/ledger/aliases", responses=_OPERATOR_STORE_RESPONSES)
+    @app.get("/ledger/aliases", responses=_FAULT_RESPONSES)
     async def get_ledger_aliases() -> list[dict[str, Any]]:
         """One row per alias: its active version, record kind, generation ordinal and time."""
         return await engine.ledger_aliases()
 
-    @app.post("/ledger/history", responses=_OPERATOR_STORE_RESPONSES)
+    @app.post("/ledger/history", responses=_FAULT_RESPONSES)
     async def post_ledger_history(body: LedgerHistoryRequest) -> dict[str, Any]:
         """One page of an alias's ledger rows with active and tombstoned flags."""
         return await engine.ledger_history(body.alias, checked_page(body.limit, body.offset))
 
-    @app.get("/traces", responses=_OPERATOR_STORE_RESPONSES)
+    @app.get("/traces", responses=_FAULT_RESPONSES)
     async def get_traces(limit: int = Query(default=50), offset: int = Query(default=0)) -> dict[str, Any]:
         """One page of recent traces, newest first: token, time, partial, degraded and stop reason."""
         return await engine.list_traces(checked_page(limit, offset))
 
     @app.post(
         "/promote/preview",
-        responses=_OPERATOR_STORE_RESPONSES,
+        responses=_FAULT_RESPONSES,
         description=(
             "A dry run of POST /promote: the arm, mutation class and next version, and whether it is "
             "promotable with a named reason. Writes nothing. It is not the unbuilt ladder verb "
@@ -113,7 +114,7 @@ def add_operator_routes(app: FastAPI, engine: Any, *, log: bool = False) -> None
     async def post_promote_preview(body: PromoteRequest) -> dict[str, Any]:
         return await engine.preview_promotion(body.alias, body.trace_ids, body.change_origin, verb=body.verb)
 
-    @app.post("/chunks", responses=_OPERATOR_STORE_RESPONSES)
+    @app.post("/chunks", responses=_FAULT_RESPONSES)
     async def post_chunks(body: ChunksRequest) -> dict[str, Any]:
         """One page of chunk references for the selected modality; each opens via /evidence/resolve."""
         return await engine.chunk_page(body.selector, checked_page(body.limit, body.offset))
@@ -132,7 +133,7 @@ def add_operator_routes(app: FastAPI, engine: Any, *, log: bool = False) -> None
 
         @app.get(
             "/log",
-            responses=_OPERATOR_STORE_RESPONSES,
+            responses=_FAULT_RESPONSES,
             description=(
                 "The last N lines of the server log file (limit 1..1000, default 100), each redacted "
                 "of secrets and URLs. This narrows Phase 9 D-04 (refusal and fault bodies stay free of "
