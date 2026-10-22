@@ -195,6 +195,7 @@ import time
 import traceback
 import uuid
 import weakref
+from collections import deque
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Sequence
 from pathlib import Path
 from typing import Any
@@ -1199,9 +1200,11 @@ class Databasise:
         workspace: str,
         registry: PartRegistry | None = None,
         clients: dict[str, Any] | None = None,
+        log_path: str | Path | None = None,
     ) -> None:
         self.store_root = Path(store_root)
         self.workspace = workspace
+        self.log_path = log_path  # 16-11 (D-18): the launcher's log file, read only by log_tail
         if registry is not None:
             # D-17: a None registry already went through default_registry(), which admits.
             admit_registry(registry)
@@ -2408,6 +2411,24 @@ class Databasise:
             raise UnknownGraphNodeError(node_id=node_id)
         end = page.offset + page.limit
         return {"id": node_id, "degree": degree, "edges": edges, "next_offset": end if end < degree else None}
+
+    async def log_tail(self, limit: int) -> dict[str, Any]:
+        """The last ``limit`` lines of the launcher's log file for the operator console (16-11,
+        CONN-14, D-18, D-19), as ``{lines: [str]}``; empty when no log file was configured or it does
+        not exist yet. Each line passes through ``redact_secrets`` and the URL scrub on read. Refusal
+        and fault bodies stay free of causes (Phase 9 D-04); this tail is the one exception, off by
+        default and served only on a loopback ``--operator`` launch with ``--log-file``."""
+        path = self.log_path
+        if path is None or not Path(path).is_file():
+            return {"lines": []}
+
+        def _tail() -> list[str]:
+            # shortcut: full read per call, use a seek-from-end tail if the log exceeds ~10^7 lines
+            with open(path, encoding="utf-8", errors="replace") as handle:
+                tail = deque(handle, maxlen=limit)
+            return [_URL_RE.sub("<url>", redact_secrets(line.rstrip("\r\n"))) for line in tail]
+
+        return {"lines": await asyncio.to_thread(_tail)}
 
     async def _execute(
         self,

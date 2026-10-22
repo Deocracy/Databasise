@@ -355,6 +355,7 @@ def create_app(
     clients: dict[str, Any] | None = None,
     cors_origins: Sequence[str] = (),
     operator: bool = False,
+    log_path: str | Path | None = None,
 ) -> FastAPI:
     """The application factory (D-17): builds one ``Databasise`` instance — the same object an
     in-process caller would construct against the same ``store_root``/``workspace`` — and wires
@@ -362,9 +363,13 @@ def create_app(
     root and stub ``clients`` exactly as an in-process test would.
 
     ``operator=True`` additionally mounts the operator read routes from
-    ``databasise.seam.operator_rest``; without it none of them exists (16-01, D-01).
+    ``databasise.seam.operator_rest``; without it none of them exists (16-01, D-01). ``log_path``
+    (16-11, D-18) names the launcher's log file; GET /log is mounted only when ``operator`` is true
+    and ``log_path`` is given.
     """
-    engine = Databasise(store_root=store_root, workspace=workspace, registry=registry, clients=clients)
+    engine = Databasise(
+        store_root=store_root, workspace=workspace, registry=registry, clients=clients, log_path=log_path
+    )
     app = FastAPI(title="databasise", version=__version__)
     app.state.engine = engine
     app.add_exception_handler(SeamRefusalError, _refusal_response)
@@ -541,7 +546,7 @@ def create_app(
         # Lazy: the default app object and its OpenAPI stay exactly as they were (D-01).
         from databasise.seam.operator_rest import add_operator_routes
 
-        add_operator_routes(app, engine)
+        add_operator_routes(app, engine, log=log_path is not None)
 
     return app
 

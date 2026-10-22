@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from pathlib import Path
 from typing import Any
 
 from databasise.launcher import (
@@ -34,6 +35,16 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="mount the operator read routes (wiring names, aliases, trace tokens); loopback --host only",
     )
+    parser.add_argument(
+        "--log-file",
+        type=Path,
+        dest="log_file",
+        default=None,
+        help=(
+            "write the server log, with its paths and tracebacks, to PATH; GET /log serves its tail "
+            "and needs --operator too (D-18, D-19)"
+        ),
+    )
     return parser
 
 
@@ -52,6 +63,7 @@ def build_app(args: argparse.Namespace, clients: dict[str, Any] | None):
         clients=clients,
         cors_origins=args.cors_origin or (),
         operator=getattr(args, "operator", False),  # getattr: protected tests may hand-build a Namespace
+        log_path=getattr(args, "log_file", None),
     )
     # DNS-rebinding guard, launcher-only so create_app keeps accepting any Host. Starlette compares the
     # Host header up to its first ":", so ports are moot and every bracketed IPv6 literal reduces to "[";

@@ -71,9 +71,10 @@ class GraphNodeRequest(_RequestModel):
     offset: int = 0
 
 
-def add_operator_routes(app: FastAPI, engine: Any) -> None:
+def add_operator_routes(app: FastAPI, engine: Any, *, log: bool = False) -> None:
     """Adds the operator routes to ``app``, each a thin adapter over ``engine``. New routes are
-    appended at the end of this function, one awaited engine call per route body."""
+    appended at the end of this function, one awaited engine call per route body. ``log`` mounts
+    GET /log (16-11, D-18); ``create_app`` sets it when a log file was given."""
 
     @app.get("/info")
     async def get_info() -> dict[str, Any]:
@@ -126,3 +127,18 @@ def add_operator_routes(app: FastAPI, engine: Any) -> None:
     async def post_graph_node(body: GraphNodeRequest) -> dict[str, Any]:
         """One graph node's edges as references plus the edge_types/weight allowlist, paged."""
         return await engine.graph_node(body.selector, body.node_id, checked_page(body.limit, body.offset))
+
+    if log:
+
+        @app.get(
+            "/log",
+            responses=_OPERATOR_STORE_RESPONSES,
+            description=(
+                "The last N lines of the server log file (limit 1..1000, default 100), each redacted "
+                "of secrets and URLs. This narrows Phase 9 D-04 (refusal and fault bodies stay free of "
+                "causes) in one place: the log carries paths and tracebacks, and is served only on a "
+                "loopback --operator launch with --log-file (D-19)."
+            ),
+        )
+        async def get_log(limit: int = Query(default=100, ge=1, le=1000)) -> dict[str, Any]:
+            return await engine.log_tail(limit)
