@@ -696,10 +696,10 @@ These fail today.
   - Test: A new AST test over `seam/operator_rest.py` requires each route body to be exactly `return await engine.<method>(...)` and bans direct ledger, trace-store, registry and store names; a `Ledger(...)` mutant makes it fail, and the shipped module passes. The call-ban test at tests/seam/test_rest_transport.py:202 is parametrized over both rest.py and operator_rest.py. test_tool_growth_invariant.py passes with a deliberately-absent COVERAGE.md row for each new operation.
   - Defects: mcp-live/MCP-09, tests/T-01, doc-audit-5/D11
   - Decided in Phase 16 CONTEXT D-01, D-03 (2026-10-22): the routes go on the §18 app behind `--operator` (option a), and every new operation is REST-only.
-- [ ] **CONN-02**: The repo holds a machine-readable refusal catalogue, a static JSON file under docs/gui/. For every `SeamRefusalError` subclass reachable at runtime (50 today, all in `refusals.__all__`) it gives `refusal_type`, the module that defines it, the attribute keys of the body that `refusal_body` builds, and `http_status`. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*
+- [x] **CONN-02**: The repo holds a machine-readable refusal catalogue, a static JSON file under docs/gui/. For every `SeamRefusalError` subclass reachable at runtime (50 today, all in `refusals.__all__`) it gives `refusal_type`, the module that defines it, the attribute keys of the body that `refusal_body` builds, and `http_status`. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*
   - Test: A test walks `SeamRefusalError.__subclasses__()` recursively after importing the seam package. It fails when the catalogue file is missing, when it lacks a runtime subclass or names one that does not exist, or when an entry's attribute keys or `http_status` differ from what `refusal_body` and `rest._status_for` give for a constructed instance. It passes once the file is generated.
   - Defects: seam-rest/SEAM-20, contract/D-16, seam-rest/SEAM-21, seam-rest/SEAM-14
-- [ ] **CONN-03**: The repo holds a checked-in selector-resolution fixture. For each selector form the console offers (no selector/default, each single effect from the 17-member vocabulary as a capability, the namespace tokens `reads_vector:entities`, `reads_vector:relationships` and both together, harness, and an alias promoted from each reachable arm), it records the wiring name the selector resolves to, that wiring's node_count, and the outcome: resolved, or the refusal type. A per-wiring `reachable` flag is true for all six arms. `capability: []` is listed as refused with `EmptyCapabilitySelectorError`. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*
+- [x] **CONN-03**: The repo holds a checked-in selector-resolution fixture. For each selector form the console offers (no selector/default, each single effect from the 17-member vocabulary as a capability, the namespace tokens `reads_vector:entities`, `reads_vector:relationships` and both together, harness, and an alias promoted from each reachable arm), it records the wiring name the selector resolves to, that wiring's node_count, and the outcome: resolved, or the refusal type. A per-wiring `reachable` flag is true for all six arms. `capability: []` is listed as refused with `EmptyCapabilitySelectorError`. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*
   - Test: A test calls `resolve_selector` for every fixture row against `default_registry()`. It fails on any mismatch in wiring name, node_count or refusal type, and it fails when a wiring in `all_wirings()` has no `reachable` entry. It passes against the current tie-break.
   - Defects: seam-rest/SEAM-03, registry-ledger/D15, contract/D-08
 - [x] **CONN-04**: GET /info returns 200 with `{version, workspace, clients: {llm: bool, embedding: bool, rerank: bool}}`. `version` is read from `databasise.__version__`, not from a literal. `clients` reports only which keys are present in the engine's clients dict and makes no network call. The body never contains `store_root`, base URLs, model names, API keys or client objects. `rerank` is true only when the RERANK_* settings are configured. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*
@@ -967,8 +967,8 @@ These fail today.
 | TOOL-19 | Phase 15 | Complete |
 | TOOL-20 | Phase 15 | Complete |
 | CONN-01 | Phase 16 | Pending |
-| CONN-02 | Phase 16 | Pending |
-| CONN-03 | Phase 16 | Pending |
+| CONN-02 | Phase 16 | Complete |
+| CONN-03 | Phase 16 | Complete |
 | CONN-04 | Phase 16 | Complete |
 | CONN-05 | Phase 16 | Pending |
 | CONN-06 | Phase 16 | Pending |

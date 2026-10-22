@@ -451,11 +451,11 @@ Plans:
 - CONN-13: where the store-busy fields live (recommended: GET /info)
 - CONN-14 (open questions 1 and 5): a localhost-only flag-gated log tail, or the console reads the log out of band only
 
-**Plans**: 1/12 plans executed
+**Plans**: 2/12 plans executed
 
 Plans:
 - [x] 16-01-PLAN.md — tracer: `create_app(operator=True)` / `databasise-rest --operator`, `operator_rest.py`, GET /info, AST thin-adapter test (CONN-04; CONN-01 part)
-- [ ] 16-02-PLAN.md — generated refusal catalogue and selector-resolution fixture with sync tests (CONN-02, CONN-03)
+- [x] 16-02-PLAN.md — generated refusal catalogue and selector-resolution fixture with sync tests (CONN-02, CONN-03)
 - [ ] 16-03-PLAN.md — GET /wirings with node counts, default and reachability (CONN-05)
 - [ ] 16-04-PLAN.md — GET /ledger/aliases and POST /ledger/history, read-only (CONN-06, CONN-07)
 - [ ] 16-05-PLAN.md — GET /traces newest first with the shared reason scrub (CONN-08)
@@ -531,7 +531,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 13. Selectors, Wiring & Runner | 13/13 | Complete    | 2026-10-20 |
 | 14. Promotion & Ledger | 11/11 | Complete    | 2026-10-21 |
 | 15. Offline Tooling & Packaging | 19/19 | Complete    | 2026-10-22 |
-| 16. GUI Connectors | 1/12 | In Progress | - |
+| 16. GUI Connectors | 2/12 | In Progress | - |
 | 17. GUI Mockup | 0/TBD | Not started | - |
 | 18. GUI Live | 0/TBD | Not started | - |
 
