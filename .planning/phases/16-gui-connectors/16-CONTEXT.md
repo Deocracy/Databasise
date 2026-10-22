@@ -150,7 +150,7 @@ Covered requirements: CONN-01 through CONN-14.
     - `GateNotCalibratedError`
     - `GateVerbNotBuiltError`
     - `MeasurementPostureRefusalError`
-  - **Input refusals still raise 422:**
+  - **Input refusals still raise (422, except `UnknownTraceReferenceError`, which is 404 per SEAM-04):**
     - `UnknownTraceReferenceError`
     - `InvalidPromotionAliasError`
     - `InvalidChangeOriginError`
