@@ -1,0 +1,283 @@
+{
+  "rows": [
+    {
+      "selector": null,
+      "wiring": "naive",
+      "node_count": 7,
+      "outcome": "resolved"
+    },
+    {
+      "selector": {
+        "capability": [
+          "reads_kv"
+        ]
+      },
+      "wiring": "naive",
+      "node_count": 7,
+      "outcome": "resolved"
+    },
+    {
+      "selector": {
+        "capability": [
+          "reads_vector"
+        ]
+      },
+      "wiring": "naive",
+      "node_count": 7,
+      "outcome": "resolved"
+    },
+    {
+      "selector": {
+        "capability": [
+          "reads_graph"
+        ]
+      },
+      "wiring": "hipporag",
+      "node_count": 14,
+      "outcome": "resolved"
+    },
+    {
+      "selector": {
+        "capability": [
+          "reads_lexical"
+        ]
+      },
+      "wiring": null,
+      "node_count": null,
+      "outcome": "UnsatisfiableSelectorError"
+    },
+    {
+      "selector": {
+        "capability": [
+          "reads_blob"
+        ]
+      },
+      "wiring": null,
+      "node_count": null,
+      "outcome": "UnsatisfiableSelectorError"
+    },
+    {
+      "selector": {
+        "capability": [
+          "writes_artifact"
+        ]
+      },
+      "wiring": null,
+      "node_count": null,
+      "outcome": "UnsatisfiableSelectorError"
+    },
+    {
+      "selector": {
+        "capability": [
+          "calls_llm"
+        ]
+      },
+      "wiring": "bypass",
+      "node_count": 1,
+      "outcome": "resolved"
+    },
+    {
+      "selector": {
+        "capability": [
+          "calls_rerank"
+        ]
+      },
+      "wiring": "naive",
+      "node_count": 7,
+      "outcome": "resolved"
+    },
+    {
+      "selector": {
+        "capability": [
+          "calls_embedding"
+        ]
+      },
+      "wiring": "naive",
+      "node_count": 7,
+      "outcome": "resolved"
+    },
+    {
+      "selector": {
+        "capability": [
+          "net"
+        ]
+      },
+      "wiring": null,
+      "node_count": null,
+      "outcome": "UnsatisfiableSelectorError"
+    },
+    {
+      "selector": {
+        "capability": [
+          "fs"
+        ]
+      },
+      "wiring": null,
+      "node_count": null,
+      "outcome": "UnsatisfiableSelectorError"
+    },
+    {
+      "selector": {
+        "capability": [
+          "self_storage"
+        ]
+      },
+      "wiring": null,
+      "node_count": null,
+      "outcome": "UnsatisfiableSelectorError"
+    },
+    {
+      "selector": {
+        "capability": [
+          "mutates_store"
+        ]
+      },
+      "wiring": null,
+      "node_count": null,
+      "outcome": "UnsatisfiableSelectorError"
+    },
+    {
+      "selector": {
+        "capability": [
+          "writes_kv"
+        ]
+      },
+      "wiring": null,
+      "node_count": null,
+      "outcome": "UnsatisfiableSelectorError"
+    },
+    {
+      "selector": {
+        "capability": [
+          "writes_vector"
+        ]
+      },
+      "wiring": null,
+      "node_count": null,
+      "outcome": "UnsatisfiableSelectorError"
+    },
+    {
+      "selector": {
+        "capability": [
+          "writes_graph"
+        ]
+      },
+      "wiring": null,
+      "node_count": null,
+      "outcome": "UnsatisfiableSelectorError"
+    },
+    {
+      "selector": {
+        "capability": [
+          "writes_lexical"
+        ]
+      },
+      "wiring": null,
+      "node_count": null,
+      "outcome": "UnsatisfiableSelectorError"
+    },
+    {
+      "selector": {
+        "capability": [
+          "reads_vector:entities"
+        ]
+      },
+      "wiring": "local",
+      "node_count": 15,
+      "outcome": "resolved"
+    },
+    {
+      "selector": {
+        "capability": [
+          "reads_vector:relationships"
+        ]
+      },
+      "wiring": "global",
+      "node_count": 15,
+      "outcome": "resolved"
+    },
+    {
+      "selector": {
+        "capability": [
+          "reads_vector:entities",
+          "reads_vector:relationships"
+        ]
+      },
+      "wiring": "hybrid",
+      "node_count": 17,
+      "outcome": "resolved"
+    },
+    {
+      "selector": {
+        "capability": []
+      },
+      "wiring": null,
+      "node_count": null,
+      "outcome": "EmptyCapabilitySelectorError"
+    },
+    {
+      "selector": {
+        "harness": "hotpotqa"
+      },
+      "wiring": null,
+      "node_count": null,
+      "outcome": "UnsatisfiableSelectorError"
+    },
+    {
+      "selector": {
+        "alias": "fixture-naive"
+      },
+      "wiring": "naive",
+      "node_count": 7,
+      "outcome": "resolved"
+    },
+    {
+      "selector": {
+        "alias": "fixture-bypass"
+      },
+      "wiring": "bypass",
+      "node_count": 1,
+      "outcome": "resolved"
+    },
+    {
+      "selector": {
+        "alias": "fixture-hybrid"
+      },
+      "wiring": "hybrid",
+      "node_count": 17,
+      "outcome": "resolved"
+    },
+    {
+      "selector": {
+        "alias": "fixture-local"
+      },
+      "wiring": "local",
+      "node_count": 15,
+      "outcome": "resolved"
+    },
+    {
+      "selector": {
+        "alias": "fixture-global"
+      },
+      "wiring": "global",
+      "node_count": 15,
+      "outcome": "resolved"
+    },
+    {
+      "selector": {
+        "alias": "fixture-hipporag"
+      },
+      "wiring": "hipporag",
+      "node_count": 14,
+      "outcome": "resolved"
+    }
+  ],
+  "reachable": {
+    "naive": true,
+    "bypass": true,
+    "hybrid": true,
+    "local": true,
+    "global": true,
+    "hipporag": true
+  }
+}
