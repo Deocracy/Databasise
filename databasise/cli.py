@@ -23,13 +23,17 @@ EXIT_INCONCLUSIVE = 3
 _MAX_REFUSAL_CHARS = 500
 
 
-def refuse(exc: BaseException, *, stream: TextIO | None = None) -> int:
-    """Print ``ClassName: message`` as exactly one line (whitespace collapsed, at most 500 characters
-    of message, the class name never doubled) and return :data:`EXIT_REFUSED`."""
+def refusal_line(exc: BaseException) -> str:
+    """``ClassName: message`` as exactly one line (whitespace collapsed, at most 500 characters of
+    message, the class name never doubled)."""
     text = re.sub(r"\s+", " ", str(exc)).strip()[:_MAX_REFUSAL_CHARS]
     name = type(exc).__name__
-    line = text if text.startswith(f"{name}:") else f"{name}: {text}"
-    print(line, file=stream or sys.stderr)
+    return text if text.startswith(f"{name}:") else f"{name}: {text}"
+
+
+def refuse(exc: BaseException, *, stream: TextIO | None = None) -> int:
+    """Print :func:`refusal_line` to stderr and return :data:`EXIT_REFUSED`."""
+    print(refusal_line(exc), file=stream or sys.stderr)
     return EXIT_REFUSED
 
 

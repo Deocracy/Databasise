@@ -724,7 +724,8 @@ def _refusals() -> tuple[type[BaseException], ...]:
     return cli.offline_refusals(MissingV1InterpreterError, V1ArmSubprocessError)
 
 
-async def _run_cli(arm_name: str, query_ids: list[str] | None) -> tuple[list[ComparisonRecord], bool]:
+async def _run_cli(arm_name: str, query_ids: list[str] | None) -> tuple[list[ComparisonRecord], str | None]:
+    """The completed records, plus the refusal line that stopped the run (``None`` when none did)."""
     snapshot: CorpusSnapshot = load_snapshot()
     queries = snapshot.queries
     if query_ids:
@@ -732,7 +733,7 @@ async def _run_cli(arm_name: str, query_ids: list[str] | None) -> tuple[list[Com
         queries = tuple(q for q in queries if q.id in wanted)
 
     records: list[ComparisonRecord] = []
-    had_error = False
+    refusal: str | None = None
     for query in queries:
         try:
             record = await compare_arm_on_query(
@@ -741,10 +742,10 @@ async def _run_cli(arm_name: str, query_ids: list[str] | None) -> tuple[list[Com
         except _refusals() as exc:
             # A missing key, interpreter or subprocess failure holds for every query: one line, then stop.
             cli.refuse(exc)
-            had_error = True
+            refusal = f"{cli.refusal_line(exc)} (at query {query.id!r})"
             break
         records.append(record)
-    return records, had_error
+    return records, refusal
 
 
 def _print_projection(arm_name: str, queries: tuple[Any, ...]) -> None:
@@ -793,7 +794,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         with store_lock(import_index.DEFAULT_STORE_ROOT):  # D-03
-            records, had_error = asyncio.run(_run_cli(args.arm, args.query_ids))
+            records, refusal = asyncio.run(_run_cli(args.arm, args.query_ids))
     except _refusals() as exc:
         return cli.refuse(exc)
 
@@ -801,13 +802,16 @@ def main(argv: list[str] | None = None) -> int:
 
     if records:  # an empty list would overwrite the committed results with nothing
         _RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+        payload: Any = [r.to_dict() for r in records]
         result_path = _RESULTS_DIR / f"{args.arm}.json"
-        result_path.write_text(
-            json.dumps([r.to_dict() for r in records], indent=2, default=str), encoding="utf-8"
-        )
+        if refusal:
+            # A-WR-10: a run stopped by a refusal never replaces the last complete result, and says so.
+            payload = {"status": "refused", "reason": refusal, "records": payload}
+            result_path = _RESULTS_DIR / f"{args.arm}.refused.json"
+        result_path.write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
         print(f"\n[result] JSON result written to: {result_path}")
 
-    if had_error:
+    if refusal:
         return cli.EXIT_REFUSED
     if any(r.status == "inconclusive" for r in records):
         return cli.EXIT_INCONCLUSIVE

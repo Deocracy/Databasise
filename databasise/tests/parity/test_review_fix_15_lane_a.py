@@ -226,6 +226,41 @@ def test_build_hipporag_index_estimate_refuses_a_drifted_snapshot_by_name(monkey
     assert capsys.readouterr().err.strip() == "CorpusDriftError: document d1 digest mismatch"
 
 
+def test_a_refused_comparison_run_never_overwrites_the_last_complete_result(tmp_path, monkeypatch, capsys):
+    """A-WR-10: a run stopped at query k writes <arm>.refused.json with the refusal, not <arm>.json."""
+    from databasise.parity import import_index, run_comparison
+    from databasise.parity.corpus import load_snapshot
+    from databasise.parity.v1_arm import V1ArmSubprocessError
+
+    snapshot = load_snapshot()
+    first, second = snapshot.queries[0], snapshot.queries[1]
+    calls = []
+
+    async def _compare(arm_name, query_id, query_text, *, corpus_hash):
+        calls.append(query_id)
+        if query_id == second.id:
+            raise V1ArmSubprocessError(1, "V1QueryFailedError: boom")
+        return types.SimpleNamespace(to_dict=lambda: {"status": "completed", "query_id": query_id}, status="completed",
+                                     query_id=query_id, arm=arm_name, inconclusive_reason=None,
+                                     determinism_setting="d", concurrency_setting="c", pinned_keywords=None,
+                                     keyword_variance_band=None, chunk_diff=None, retrieval_note=None)
+
+    results = tmp_path / "results"
+    results.mkdir()
+    complete = results / "naive.json"
+    complete.write_text('["the last complete result"]', encoding="utf-8")
+    monkeypatch.setattr(run_comparison, "_RESULTS_DIR", results)
+    monkeypatch.setattr(import_index, "DEFAULT_STORE_ROOT", tmp_path / "store")
+    monkeypatch.setattr(run_comparison, "compare_arm_on_query", _compare)
+    argv = ["--arm", "naive", "--query", first.id, "--query", second.id, "--spend"]
+    assert run_comparison.main(argv) == 1
+    assert complete.read_text(encoding="utf-8") == '["the last complete result"]'
+    refused = json.loads((results / "naive.refused.json").read_text(encoding="utf-8"))
+    assert refused["status"] == "refused"
+    assert refused["reason"].startswith("V1ArmSubprocessError: ") and repr(second.id) in refused["reason"]
+    assert [r["query_id"] for r in refused["records"]] == [first.id]
+
+
 def test_v1_arm_subprocess_error_names_the_driver_failure_line():
     """A-WR-03: the message carries the driver's last non-log line, not v1's start-up INFO lines."""
     from databasise.parity.v1_arm import V1ArmSubprocessError
