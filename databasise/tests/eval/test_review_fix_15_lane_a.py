@@ -59,6 +59,24 @@ def test_remint_spend_client_refusal_is_one_line_and_exit_1(monkeypatch, capsys)
     assert err_lines[0].startswith("MissingCompletionContentError: ")
 
 
+@pytest.mark.parametrize("module_name", ["corpus_ingest", "aa_run"])
+def test_eval_spend_paths_take_the_store_lock(module_name, tmp_path, monkeypatch, capsys):
+    """A-WR-07: a --spend run on a held eval store root refuses with StoreLockedError and writes nothing."""
+    from databasise.eval import aa_run
+    from databasise.store_lock import store_lock
+
+    module = {"corpus_ingest": corpus_ingest, "aa_run": aa_run}[module_name]
+    root = tmp_path / "eval-store"
+    monkeypatch.setattr(module, "_EVAL_INGEST_STORE_ROOT", root)
+    monkeypatch.setattr(module, "_load_env_file", lambda path: {})
+    monkeypatch.setattr(module, "_build_clients", lambda env: {})
+    argv = ["--limit", "1", "--spend"] if module_name == "corpus_ingest" else ["--family", "gold_passage", "--spend"]
+    with store_lock(root):
+        assert module.main(argv) == 1
+    assert capsys.readouterr().err.strip().startswith("StoreLockedError: ")
+    assert sorted(p.name for p in root.iterdir()) == [".engine.lock"]
+
+
 @pytest.mark.parametrize("limit", ["-5", "0"])
 def test_corpus_ingest_limit_below_one_exits_2(limit, capsys):
     """A-CR-01: a negative --limit would slice to all but |limit| documents; argparse refuses it."""

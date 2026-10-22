@@ -56,6 +56,7 @@ from databasise.seam import Databasise
 from databasise.seam.corpus import IngestDocument, IngestJob
 from databasise.seam.refusals import ForeignEngineRefusalError, NoWritePathForModalityError
 from databasise.seam.selectors import Selector
+from databasise.store_lock import store_lock
 
 # The same directory bundle@v1's own corpus_snapshot_hash was minted from
 # (databasise/evidence/EVAL-BUNDLE-V1.md's findings table).
@@ -245,12 +246,13 @@ def main(argv: list[str] | None = None) -> int:
         )
         env = _load_env_file(DEFAULT_V1_ENV_PARITY)
         clients = _build_clients(env)
-        engine = Databasise(
-            store_root=_EVAL_INGEST_STORE_ROOT,
-            workspace=_EVAL_INGEST_WORKSPACE,
-            clients=clients,
-        )
-        jobs = asyncio.run(ingest_documents(engine, snapshot, limit=args.limit, arm=args.arm))
+        with store_lock(_EVAL_INGEST_STORE_ROOT):  # D-03, RUN-07: one engine process per store root
+            engine = Databasise(
+                store_root=_EVAL_INGEST_STORE_ROOT,
+                workspace=_EVAL_INGEST_WORKSPACE,
+                clients=clients,
+            )
+            jobs = asyncio.run(ingest_documents(engine, snapshot, limit=args.limit, arm=args.arm))
     except refusals as exc:
         return cli.refuse(exc)
 

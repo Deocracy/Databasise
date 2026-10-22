@@ -109,6 +109,7 @@ from databasise.seam.floors_store import FloorRow, FloorStore
 from databasise.seam.query import QueryObject
 from databasise.seam.selectors import Selector
 from databasise.seam.trace_store import TraceStore
+from databasise.store_lock import store_lock
 from databasise.stores.vector import MultiNamespaceVectorStore, load_committed
 
 # NullIdentity.metric — stable, declared once, never inlined at a call site.
@@ -734,29 +735,30 @@ def main(argv: list[str] | None = None) -> int:
             cli.check_named_arm(selector, arm_id=_ARM_WIRING_NAMES[args.arm], registry=default_registry())
         env = _load_env_file(DEFAULT_V1_ENV_PARITY)
         clients = _build_clients(env)
-        engine = Databasise(
-            store_root=_EVAL_INGEST_STORE_ROOT,
-            workspace=_EVAL_INGEST_WORKSPACE,
-            clients=clients,
-        )
-        vector_store = MultiNamespaceVectorStore(
-            workspace=_EVAL_INGEST_WORKSPACE, store_root=_EVAL_INGEST_STORE_ROOT
-        )
-        results_by_family = asyncio.run(
-            _calibrate_all(
-                families=families,
+        with store_lock(_EVAL_INGEST_STORE_ROOT):  # D-03, RUN-07: one engine process per store root
+            engine = Databasise(
+                store_root=_EVAL_INGEST_STORE_ROOT,
+                workspace=_EVAL_INGEST_WORKSPACE,
                 clients=clients,
-                engine=engine,
-                bundle=bundle,
-                split_name=args.split,
-                vector_store=vector_store,
-                n_resamples=args.n_resamples,
-                seed=args.seed,
-                selector=selector,
-                index_probe=_eval_index_probe(args.arm),
             )
-        )
-        _persist_floors(results_by_family)
+            vector_store = MultiNamespaceVectorStore(
+                workspace=_EVAL_INGEST_WORKSPACE, store_root=_EVAL_INGEST_STORE_ROOT
+            )
+            results_by_family = asyncio.run(
+                _calibrate_all(
+                    families=families,
+                    clients=clients,
+                    engine=engine,
+                    bundle=bundle,
+                    split_name=args.split,
+                    vector_store=vector_store,
+                    n_resamples=args.n_resamples,
+                    seed=args.seed,
+                    selector=selector,
+                    index_probe=_eval_index_probe(args.arm),
+                )
+            )
+            _persist_floors(results_by_family)
     except _refusals() as exc:
         return cli.refuse(exc)
 

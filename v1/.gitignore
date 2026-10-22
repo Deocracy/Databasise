@@ -29,6 +29,9 @@ venv/
 # override working_dir with a tmp_path, so this directory is only ever created by real production
 # use.
 .corpus_working_dir/
+# The eval-corpus store (databasise/eval/corpus_ingest.py's _EVAL_INGEST_STORE_ROOT), written by
+# corpus_ingest --spend and aa_run --spend, including the .engine.lock both take — a build artifact.
+.eval_corpus_store/
 
 # Generated Docker Compose files (output of setup wizard)
 docker-compose.*.yml
