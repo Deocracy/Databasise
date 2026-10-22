@@ -87,6 +87,30 @@ def build_app(args: argparse.Namespace, clients: dict[str, Any] | None):
     return app
 
 
+def log_config_for(path: str | Path) -> dict[str, Any]:
+    """uvicorn's default ``LOGGING_CONFIG`` plus a file handler on ``uvicorn``, ``uvicorn.access`` and
+    root (16-11, D-18). ``uvicorn`` and ``uvicorn.access`` do not propagate, so a root-only handler
+    would miss the 500 tracebacks; ``disable_existing_loggers`` stays false because the engine logger
+    is created at import, before uvicorn applies this config (16-RESEARCH Verified Point 1)."""
+    import copy
+
+    from uvicorn.config import LOGGING_CONFIG
+
+    config = copy.deepcopy(LOGGING_CONFIG)
+    config["disable_existing_loggers"] = False
+    config["formatters"]["file"] = {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"}
+    config["handlers"]["file"] = {
+        "class": "logging.FileHandler",
+        "filename": str(path),
+        "encoding": "utf-8",
+        "formatter": "file",
+    }
+    config["loggers"]["uvicorn"]["handlers"].append("file")
+    config["loggers"]["uvicorn.access"]["handlers"].append("file")
+    config["root"] = {"handlers": ["file"], "level": "INFO"}
+    return config
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -115,7 +139,9 @@ def main(argv: list[str] | None = None) -> int:
     try:
         import uvicorn
 
-        uvicorn.run(build_app(args, clients), host=args.host, port=args.port, workers=1)
+        # No log_config kwarg without --log-file: log_config=None would switch uvicorn's own logging off.
+        log_kwargs = {} if args.log_file is None else {"log_config": log_config_for(args.log_file)}
+        uvicorn.run(build_app(args, clients), host=args.host, port=args.port, workers=1, **log_kwargs)
     finally:
         os.close(fd)
     return 0

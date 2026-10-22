@@ -123,7 +123,7 @@ def test_a_real_operator_launch_writes_lines_that_get_log_returns(tmp_path):
                 "--operator", "--log-file", str(log),
                 "--no-clients", "--store-root", str(tmp_path / "store"),
                 "--workspace", "w", "--port", str(port),
-            ],  # fmt: skip
+            ],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=err_file,
