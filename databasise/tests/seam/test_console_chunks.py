@@ -66,3 +66,31 @@ def test_chunks_page_lists_the_selected_modalitys_refs(tmp_path):
     assert empty.status_code == 200, (empty.status_code, empty.text)
     assert empty.json() == {"refs": [], "total": 0, "next_offset": None}
     assert not (root / "ws" / "chunks").exists()
+
+
+def test_chunks_read_builds_no_store_and_refuses_by_name(synthetic_naive_store, monkeypatch):
+    import databasise.seam.engine as engine_module
+
+    def _forbidden(*args, **kwargs):
+        raise AssertionError("the chunk read called _build_stores")
+
+    monkeypatch.setattr(engine_module, "_build_stores", _forbidden)
+    root, workspace = synthetic_naive_store["store_root"], synthetic_naive_store["workspace"]
+    client = TestClient(create_app(store_root=root, workspace=workspace, operator=True))
+
+    listed = client.post("/chunks", json={"selector": None})
+    assert listed.status_code == 200, (listed.status_code, listed.text)
+    refs = listed.json().get("refs")
+    assert [(r.get("ref"), r.get("namespace")) for r in refs or []] == [("chunk-1", "chunks")], listed.text
+
+    too_big = client.post("/chunks", json={"selector": None, "limit": 101})
+    assert too_big.status_code == 422, (too_big.status_code, too_big.text)
+    assert too_big.json().get("refusal_type") == "PageSizeExceededError", too_big.text
+
+    malformed = client.post("/chunks", json={"selector": {"alias": 5}})
+    assert malformed.status_code == 422, (malformed.status_code, malformed.text)
+
+    (root / workspace / "chunks" / "vector.faiss").write_bytes(b"not a faiss index")
+    corrupted = client.post("/chunks", json={"selector": None})
+    assert corrupted.status_code == 502, (corrupted.status_code, corrupted.text)
+    assert corrupted.json().get("failure_class") == "StoreCorrupted", corrupted.text
