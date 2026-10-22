@@ -278,6 +278,29 @@ def test_a_mixed_arm_s_verdict_line_speaks_only_for_its_completed_records(parity
     assert "an outcome only for the arms that completed" not in text
 
 
+def test_a_mixed_arm_with_no_retrieval_does_not_say_it_completed(parity_copy: Path) -> None:
+    """ITER4-WR-01 (D-16): q1 completed with no diffs (the bypass shape), q2 a D-07 degraded
+    inconclusive record; the no-retrieval line must not say the arm completed."""
+
+    def no_diffs_q1_degrade_q2(records):
+        for record in records:
+            for name in ("chunk_diff", "entity_diff", "relation_diff"):
+                record[name] = None
+            if record["query_id"] != "q1":
+                record.update(
+                    status="inconclusive",
+                    inconclusive_reason=_DEGRADED_REASON,
+                    decomposed_run_record={"degraded": True, "degradation_reason": "NodeExecutionError"},
+                )
+
+    _rewrite(parity_copy / "parity_results" / "hybrid-comparison.json", no_diffs_q1_degrade_q2)
+
+    assert parity_report._arm_state("hybrid") == "mixed"
+    verdict = parity_report._arm_verdict_line("hybrid")
+    assert "`hybrid` completed" not in verdict
+    assert f"did not complete: `hybrid`/`q2`: {_DEGRADED_REASON}" in verdict
+
+
 # --------------------------------------------------------------------------------------------- #
 # C-WR-03 (no write into an installed package) and C-WR-04 (named refusals, D-03)
 # --------------------------------------------------------------------------------------------- #
@@ -388,6 +411,22 @@ def test_falsifier2_refuses_boundary_knobs_that_are_not_a_list_by_name(wirings_c
     path = wirings_copy / "w2-codebase-memory-mcp.json"
     doc = json.loads(path.read_text(encoding="utf-8"))
     doc["boundary_knobs"] = 5
+    path.write_text(json.dumps(doc), encoding="utf-8")
+
+    assert falsifier2.main([]) == 1
+    _one_refusal_line(capsys, "MalformedBoundaryKnobError")
+    assert not falsifier2.EVIDENCE_PATH.exists()
+
+
+@pytest.mark.parametrize("key", ["between", "rationale", "boundary_id"])
+def test_falsifier2_refuses_a_knob_field_that_is_not_a_string_by_name(
+    wirings_copy: Path, key: str, capsys
+) -> None:
+    """ITER4-WR-02 (D-03): a non-string knob field is MalformedBoundaryKnobError, not an
+    AttributeError traceback from the table renderer."""
+    path = wirings_copy / "w2-codebase-memory-mcp.json"
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    doc["boundary_knobs"][0][key] = 5
     path.write_text(json.dumps(doc), encoding="utf-8")
 
     assert falsifier2.main([]) == 1

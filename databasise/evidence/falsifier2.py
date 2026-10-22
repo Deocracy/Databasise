@@ -457,6 +457,12 @@ def enumerate_boundaries(evidence: WiringEvidence, parsed: ParsedWiring) -> tupl
                 f"{missing}: every boundary_knobs entry must declare both 'between' and "
                 "'rationale'"
             )
+        bad = [key for key in ("between", "rationale", "boundary_id")
+               if key in knob and not isinstance(knob[key], str)]
+        if bad:
+            raise MalformedBoundaryKnobError(
+                f"{evidence.stem}'s boundary_knobs[{i}] field(s) {bad} must be strings"
+            )
         rows.append(
             BoundaryRow(
                 boundary_id=knob.get("boundary_id", f"{evidence.stem}-knob-{i}"),
