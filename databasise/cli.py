@@ -39,13 +39,27 @@ def offline_refusals(*extra: type[BaseException]) -> tuple[type[BaseException], 
     import openai
 
     from databasise.clients.builder import BUILDER_REFUSALS
+    from databasise.clients.openai_compat import (
+        EmbeddingBatchMismatchError,
+        EmptyChoicesError,
+        MissingCompletionContentError,
+        ModelIdentityMissingError,
+    )
+    from databasise.clients.rerank import RerankResponseError
     from databasise.eval.bundle import BundleDriftError, MissingTargetFamilyError
     from databasise.parity.corpus import CorpusDriftError
     from databasise.seam.refusals import SeamRefusalError
     from databasise.store_lock import StoreLockedError
+    from databasise.stores.vector import VectorStoreCorruptedError
 
     return (
         *BUILDER_REFUSALS,
+        ModelIdentityMissingError,
+        EmptyChoicesError,
+        MissingCompletionContentError,
+        EmbeddingBatchMismatchError,
+        RerankResponseError,
+        VectorStoreCorruptedError,
         StoreLockedError,
         SeamRefusalError,
         FileNotFoundError,

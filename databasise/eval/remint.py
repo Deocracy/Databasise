@@ -37,6 +37,7 @@ from pathlib import Path
 from typing import Any
 
 from databasise import cli
+from databasise.clients.openai_compat import ModelIdentityMissingError
 from databasise.eval.bundle import EvalBundle, mint_bundle
 from databasise.eval.corpus_ingest import CORPUS_DIR
 from databasise.parity.corpus import CorpusSnapshot, load_snapshot
@@ -79,7 +80,11 @@ async def resolve_judge_identity(chat_client: Any) -> str:
     the only function in this module that would touch the network, and only when handed a real
     client.
     """
-    result = await chat_client.chat(_MINIMAL_JUDGE_PROBE_MESSAGES)
+    # The real client refuses a model-less response inside chat(); surface it as this module's refusal.
+    try:
+        result = await chat_client.chat(_MINIMAL_JUDGE_PROBE_MESSAGES)
+    except ModelIdentityMissingError as exc:
+        raise UnresolvedJudgeIdentityError() from exc
     identity = result.resolved_model_identity
     if not identity:
         raise UnresolvedJudgeIdentityError()
