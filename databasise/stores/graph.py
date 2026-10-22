@@ -173,6 +173,13 @@ class _ClientRegistry:
             entry.client.close()
 
 
+def held_graph_paths(prefix: str) -> list[str]:
+    """Sorted resolved paths of the graph clients this process holds under ``prefix`` (16-10, D-17).
+    A snapshot of in-process holders only: it opens no client, takes no lock, and cannot see another
+    process. ``list()`` copies the keys in one step, so a concurrent acquire or release is harmless."""
+    return sorted(key for key in list(_ClientRegistry._entries) if key.startswith(prefix))
+
+
 class CozoGraphStore(StorageNameSpace):
     """Embedded Cozo (RocksDB) graph store, one database file per namespace directory."""
 

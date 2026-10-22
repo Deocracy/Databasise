@@ -187,6 +187,7 @@ import contextlib
 import hashlib
 import json
 import logging
+import os
 import sqlite3
 import sys
 import threading
@@ -307,7 +308,7 @@ from databasise.seam.selectors import (
 )
 from databasise.seam.tokens import TokenBreakdownEntry, assemble_token_breakdown
 from databasise.seam.trace_store import TraceStore
-from databasise.stores.graph import CozoGraphStore, GraphStoreBusyError
+from databasise.stores.graph import CozoGraphStore, GraphStoreBusyError, held_graph_paths
 from databasise.stores.kv import SqliteKVStore
 from databasise.stores.probes import (
     GraphStoreCorruptedError,
@@ -2112,12 +2113,23 @@ class Databasise:
     async def info(self) -> dict[str, Any]:
         """Version, workspace and client presence for the operator console (16-01, CONN-04). Reads no
         store and calls no provider. ``clients`` means *configured at startup*, never *reachable*: it
-        is key presence in ``self.clients``, so no client object is touched."""
+        is key presence in ``self.clients``, so no client object is touched. 16-10 (CONN-13, D-17):
+        ``write_in_flight`` is whether the v1 or the HippoRAG write gate is held; ``graph_busy`` is
+        whether this process holds a graph client under this workspace. ``graph_busy`` means in use
+        in this process: a holder in another process is not seen. Neither read takes a lock."""
+        workspace_prefix = str((self.store_root / self.workspace).resolve()) + os.sep
         return {
             "version": __version__,
             "workspace": self.workspace,
             "clients": _client_presence(self.clients),
+            "write_in_flight": self._write_in_flight(),
+            "graph_busy": bool(held_graph_paths(workspace_prefix)),
         }
+
+    def _write_in_flight(self) -> bool:
+        """16-10 (D-17): whether either write gate is held. ``.locked()`` on both, never acquired;
+        ``_write_gate_held`` stays v1-only because the interrupted-document logic depends on that."""
+        return _gate_for(self._v1_working_dir()).locked() or _gate_for(self._hipporag_gate_path()).locked()
 
     async def wirings(self) -> list[dict[str, Any]]:
         """One row per ``all_wirings()`` arm for the operator console (16-03, CONN-05, D-06). Rows are
