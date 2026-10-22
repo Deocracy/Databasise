@@ -2,16 +2,16 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase09",
-  "ledger_version": 793,
+  "ledger_version": 843,
   "artifacts": {
     "databasise/mcp/server.py": "aa21517b6d807b771c5f2e0b8b482db01a1dff364c30fbd79043302a237c29c9",
     "databasise/seam/compare.py": "8f6d19a32dccbcd6cbaf605c398d2334b86f1500d8598ddb43cafe62ad880095",
     "databasise/seam/corpus.py": "b360c0dbdc02f4659079a90f81a68366d74c55ab99d13334795dfedae02226ec",
-    "databasise/seam/engine.py": "427635ca0cb6ef694282374255929ed90aeb86100349324aed68293bc0014fa7",
+    "databasise/seam/engine.py": "0931e6098b0cc06e073ee876bc891241b84b54179a476ae342018a1861598dd3",
     "databasise/seam/evidence.py": "d51422787b6ddda3906f7bb7f28addfeb813979ee78c67a19685d8d61c2c5ddf",
     "databasise/seam/query.py": "b1452596cc6c0aa44290c1198e487d5ce51ff61a4ede6841bc1f8d8fef7850aa",
-    "databasise/seam/refusals.py": "231025f581260ce9dc5d96bac0a629500fb903aea44f5817c651eaa5dfd8961a",
-    "databasise/seam/rest.py": "3d7e559fa49bf969dc6ab4d470545e811e48c58e446ac60a8fd2bb28bc997995",
+    "databasise/seam/refusals.py": "28f1d3ffe122c2e078a319afc1da4bb44dc2f462d929d052f5e121381400906b",
+    "databasise/seam/rest.py": "84be8c28be5e7a7b56c260e5993662a244d10ae93463b0503bb9c5bd047af9a6",
     "databasise/seam/selectors.py": "d4eb92f604f3a852a054f3fb2aae2e9c4b40d8790c7ef625b36df408a21e532b"
   },
   "checker": {
@@ -53,7 +53,7 @@
     {
       "id": "SEAM-06",
       "status": "present",
-      "where": "databasise/seam/engine.py:743",
+      "where": "databasise/seam/engine.py:795",
       "quote": "async def _corpus_op_or_refuse(op: str, payload: dict[str, Any], operation: str, working_dir: Path) -> Any:"
     },
     {
@@ -83,13 +83,13 @@
     {
       "id": "SEAM-11",
       "status": "present",
-      "where": "databasise/seam/engine.py:1277",
+      "where": "databasise/seam/engine.py:1335",
       "quote": "keys = comparison_keys(selectors)"
     },
     {
       "id": "SEAM-12",
       "status": "present",
-      "where": "databasise/seam/engine.py:2317",
+      "where": "databasise/seam/engine.py:2744",
       "quote": "if alias == \"\" or _INSTANCE_HASH_PATTERN.match(alias):"
     },
     {
@@ -101,7 +101,7 @@
     {
       "id": "SEAM-14",
       "status": "present",
-      "where": "databasise/seam/refusals.py:997",
+      "where": "databasise/seam/refusals.py:1009",
       "quote": "\"NoRawUploadPathForModalityError\","
     },
     {

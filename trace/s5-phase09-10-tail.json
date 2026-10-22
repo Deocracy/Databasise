@@ -2,10 +2,10 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase09-10-tail",
-  "ledger_version": 793,
+  "ledger_version": 843,
   "artifacts": {
-    "databasise/seam/rest.py": "3d7e559fa49bf969dc6ab4d470545e811e48c58e446ac60a8fd2bb28bc997995",
-    "databasise/stores/vector.py": "912c3e2f69b9fd53e508492babd5e3c9ae758de88ff9433c34729709734c79cf"
+    "databasise/seam/rest.py": "84be8c28be5e7a7b56c260e5993662a244d10ae93463b0503bb9c5bd047af9a6",
+    "databasise/stores/vector.py": "02bdac6f478fed33562c1d3e0430fde2ecf7a88140828becf54aed144f00e42a"
   },
   "checker": {
     "harness": "claude-code",
@@ -22,7 +22,7 @@
     {
       "id": "STOR-16",
       "status": "present",
-      "where": "databasise/stores/vector.py:345",
+      "where": "databasise/stores/vector.py:353",
       "quote": "raise ReservedMetadataKeyError(list(reserved))"
     }
   ],

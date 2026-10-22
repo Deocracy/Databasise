@@ -2,13 +2,13 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase13-b",
-  "ledger_version": 793,
+  "ledger_version": 843,
   "artifacts": {
     "databasise/identity/env.py": "c6883fa7b8d3374add603d784348039bc3886e0a83bd38c184ada79d85ca6676",
     "databasise/parts/registry.py": "7afc5fea40108a45cdac0dad729986aabbe039db59537432663c7f3a592c7dca",
     "databasise/runner/scheduler.py": "a6737354ce01be2fae5685af7912b6f2884d9a69ca7e48d37bd5fdd33f19c238",
     "databasise/runner/trace.py": "e3c8a06d35a74ab3ee217b0c476f5616e8fa5582ba09a9316fe2d9f3030456e2",
-    "databasise/seam/engine.py": "427635ca0cb6ef694282374255929ed90aeb86100349324aed68293bc0014fa7"
+    "databasise/seam/engine.py": "0931e6098b0cc06e073ee876bc891241b84b54179a476ae342018a1861598dd3"
   },
   "checker": {
     "harness": "claude-code",
@@ -31,19 +31,19 @@
     {
       "id": "WIRE-12",
       "status": "present",
-      "where": "databasise/seam/engine.py:2144",
+      "where": "databasise/seam/engine.py:2578",
       "quote": "            wiring_id=wiring_id,"
     },
     {
       "id": "WIRE-13",
       "status": "present",
-      "where": "databasise/seam/engine.py:1043",
+      "where": "databasise/seam/engine.py:1095",
       "quote": "            outcome = \"failed\""
     },
     {
       "id": "WIRE-14",
       "status": "present",
-      "where": "databasise/seam/engine.py:2206",
+      "where": "databasise/seam/engine.py:2640",
       "quote": "                    raise MalformedEvidenceItemError("
     },
     {
@@ -61,7 +61,7 @@
     {
       "id": "WIRE-17",
       "status": "present",
-      "where": "databasise/seam/engine.py:694",
+      "where": "databasise/seam/engine.py:746",
       "quote": "        raise NoWritePathForModalityError(operation=operation)"
     },
     {

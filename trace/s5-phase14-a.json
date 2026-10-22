@@ -2,10 +2,10 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase14-a",
-  "ledger_version": 793,
+  "ledger_version": 843,
   "artifacts": {
-    "databasise/ledger/ledger.py": "c8bdd91e34122a75e5344c7c4303f12d19ddb631c1b8e9b90c0a12c40928ed64",
-    "databasise/seam/engine.py": "427635ca0cb6ef694282374255929ed90aeb86100349324aed68293bc0014fa7",
+    "databasise/ledger/ledger.py": "045c68acf57cb2a9715937f1fcfa5cc11b77cf14b77491cd045a727010b970bf",
+    "databasise/seam/engine.py": "0931e6098b0cc06e073ee876bc891241b84b54179a476ae342018a1861598dd3",
     "databasise/seam/promotion.py": "31a89d76077d9b490f481c0f2286df786273fe8fb8da259f768f9c7b0ab1b06f",
     "databasise/seam/selectors.py": "d4eb92f604f3a852a054f3fb2aae2e9c4b40d8790c7ef625b36df408a21e532b"
   },
@@ -36,25 +36,25 @@
     {
       "id": "LEDG-04",
       "status": "present",
-      "where": "databasise/seam/engine.py:2802",
+      "where": "databasise/seam/engine.py:3257",
       "quote": "                    raise ActiveGenerationRetirementError(alias=alias, version=version)"
     },
     {
       "id": "LEDG-05",
       "status": "present",
-      "where": "databasise/seam/engine.py:2317",
+      "where": "databasise/seam/engine.py:2744",
       "quote": "        if alias == \"\" or _INSTANCE_HASH_PATTERN.match(alias):"
     },
     {
       "id": "LEDG-06",
       "status": "present",
-      "where": "databasise/ledger/ledger.py:208",
+      "where": "databasise/ledger/ledger.py:215",
       "quote": "    def close(self) -> None:"
     },
     {
       "id": "LEDG-07",
       "status": "present",
-      "where": "databasise/ledger/ledger.py:498",
+      "where": "databasise/ledger/ledger.py:541",
       "quote": "    def history_for_alias(self, alias: str) -> list[LedgerEntry]:"
     }
   ],

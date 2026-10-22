@@ -2,14 +2,14 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase11-a",
-  "ledger_version": 793,
+  "ledger_version": 843,
   "artifacts": {
     "databasise/foreign/v1_corpus_adapter.py": "f613e05f0813847784263fe7e98a4b364f64571249ced1783c0c4854479aed14",
     "databasise/foreign/v1_corpus_driver_script.py": "c62a9a5b204ded0a99e5a29fcb0acd2739700997624114571935b0c832727efe",
     "databasise/parts_core/declared_only.py": "602ce81ddd4e664a3a17c5cf5035db8a288d821ff62b4cfaf36be273ff9195f9",
     "databasise/parts_core/lightrag/full_delete.py": "ae6920ee853375c827e2724761723f5dc32dd904d5777d166e820afab762fe84",
     "databasise/seam/corpus.py": "b360c0dbdc02f4659079a90f81a68366d74c55ab99d13334795dfedae02226ec",
-    "databasise/seam/engine.py": "427635ca0cb6ef694282374255929ed90aeb86100349324aed68293bc0014fa7"
+    "databasise/seam/engine.py": "0931e6098b0cc06e073ee876bc891241b84b54179a476ae342018a1861598dd3"
   },
   "checker": {
     "harness": "claude-code",
@@ -20,7 +20,7 @@
     {
       "id": "LRAG-01",
       "status": "present",
-      "where": "databasise/seam/engine.py:1176",
+      "where": "databasise/seam/engine.py:1234",
       "quote": "return self.store_root / self.workspace / \"lightrag-v1\""
     },
     {
@@ -38,7 +38,7 @@
     {
       "id": "LRAG-04",
       "status": "present",
-      "where": "databasise/seam/engine.py:816",
+      "where": "databasise/seam/engine.py:868",
       "quote": "if not gate.acquire(blocking=False):"
     },
     {
@@ -56,7 +56,7 @@
     {
       "id": "LRAG-07",
       "status": "present",
-      "where": "databasise/seam/engine.py:1633",
+      "where": "databasise/seam/engine.py:1691",
       "quote": "async def retry_document(self, document_id: str, selector: Selector | None = None) -> IngestJob:"
     },
     {
@@ -68,7 +68,7 @@
     {
       "id": "LRAG-09",
       "status": "present",
-      "where": "databasise/seam/engine.py:1197",
+      "where": "databasise/seam/engine.py:1255",
       "quote": "return self.store_root / self.workspace / \"corpus-inbox\""
     },
     {

@@ -2,10 +2,10 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase13-a",
-  "ledger_version": 793,
+  "ledger_version": 843,
   "artifacts": {
     "databasise/runner/guards.py": "ad8d41377eb0e000f482273c1dc7b1bad1477c6ef79a6ced51ae04e09a332e59",
-    "databasise/seam/engine.py": "427635ca0cb6ef694282374255929ed90aeb86100349324aed68293bc0014fa7",
+    "databasise/seam/engine.py": "0931e6098b0cc06e073ee876bc891241b84b54179a476ae342018a1861598dd3",
     "databasise/seam/envelope.py": "dd72b3906239887d258922352dcaeb978a5dda4cf5e9119ac3e677000e665e55",
     "databasise/seam/selectors.py": "d4eb92f604f3a852a054f3fb2aae2e9c4b40d8790c7ef625b36df408a21e532b",
     "databasise/validator/errors.py": "501336d034b5711ec592c718150a7ee0234a8a6c2e603e5008b58abf37d8c6be",
@@ -34,19 +34,19 @@
     {
       "id": "WIRE-03",
       "status": "present",
-      "where": "databasise/seam/engine.py:2230",
+      "where": "databasise/seam/engine.py:2664",
       "quote": "                stop_reason=node_free_reason(record.stop_reason, low_entropy),"
     },
     {
       "id": "WIRE-04",
       "status": "present",
-      "where": "databasise/seam/engine.py:1085",
+      "where": "databasise/seam/engine.py:1137",
       "quote": "    depth_label: Depth | None = None"
     },
     {
       "id": "WIRE-05",
       "status": "present",
-      "where": "databasise/seam/engine.py:675",
+      "where": "databasise/seam/engine.py:727",
       "quote": "        raise InvalidGuardDeclarationError(node_id=exc.node_id) from exc"
     },
     {

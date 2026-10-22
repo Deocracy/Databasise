@@ -2,11 +2,11 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase08",
-  "ledger_version": 793,
+  "ledger_version": 843,
   "artifacts": {
     "databasise/clients/openai_compat.py": "a66b6f6c9c1be27afc776cd0c03a516130d0d0fbeeba572090f54bb513681ea5",
     "databasise/foreign/_mcp_sdk_guard.py": "ebcde30b8bb758ad62ec973ed6338e7c355f523ab86532334865254c663b3b0f",
-    "databasise/launcher/serve_rest.py": "d8689eb424181dcbcae3960b6c6641f40fa57bc19f333f1f7f74e36118c3e88d",
+    "databasise/launcher/serve_rest.py": "e5e9a1abb35c582e0ac85311bceed1ee9494432a80bc422f754fb0dd35e42cf2",
     "databasise/tests/clients/test_build_clients.py": "6876a653ba62f9a70de106dfcd0edd7d867e930eb85c81b11c4ca39bc1ef4228",
     "databasise/tests/launcher/test_launchers.py": "a0c3249eece6dbbfc45c146952d22705857e0f87f5a99f80ac650ecef0b503d4",
     "databasise/tests/mcp/test_tool_growth_invariant.py": "7ff75acdd1b0a3d04afd2c46109088d9ef1c40015ea1ea0a2e0596252d527e46",
@@ -59,7 +59,7 @@
     {
       "id": "RUN-07",
       "status": "present",
-      "where": "databasise/launcher/serve_rest.py:76",
+      "where": "databasise/launcher/serve_rest.py:119",
       "quote": "\"--workers must be 1: one engine process per store root holds the store lock \""
     },
     {

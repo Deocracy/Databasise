@@ -1,0 +1,60 @@
+{
+  "bak_trace": 1,
+  "step": "S5",
+  "part": "phase16-b",
+  "ledger_version": 843,
+  "artifacts": {
+    "databasise/seam/operator_rest.py": "01d0bc763a140c39ff25db2263730cff9ca5868d0b886062931ed2bfdc52847e",
+    "databasise/seam/engine.py": "0931e6098b0cc06e073ee876bc891241b84b54179a476ae342018a1861598dd3"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "claude-opus-5-5",
+    "session": "32d1701b-4256-409c-a5a7-e305cc822f40"
+  },
+  "items": [
+    {
+      "id": "CONN-08",
+      "status": "present",
+      "where": "databasise/seam/operator_rest.py:103",
+      "quote": "        return await engine.list_traces(checked_page(limit, offset))"
+    },
+    {
+      "id": "CONN-09",
+      "status": "present",
+      "where": "databasise/seam/operator_rest.py:115",
+      "quote": "        return await engine.preview_promotion(body.alias, body.trace_ids, body.change_origin, verb=body.verb)"
+    },
+    {
+      "id": "CONN-10",
+      "status": "present",
+      "where": "databasise/seam/engine.py:2366",
+      "quote": "            return store.list_ids(page.offset, page.limit)"
+    },
+    {
+      "id": "CONN-11",
+      "status": "present",
+      "where": "databasise/seam/engine.py:2415",
+      "quote": "            return graph_node_page(graph_dir, prefix, page.limit, page.offset)"
+    },
+    {
+      "id": "CONN-12",
+      "status": "present",
+      "where": "databasise/seam/engine.py:2454",
+      "quote": "            raise UnknownGraphNodeError(node_id=node_id)"
+    },
+    {
+      "id": "CONN-13",
+      "status": "present",
+      "where": "databasise/seam/engine.py:2139",
+      "quote": "            \"graph_busy\": bool(held_graph_paths(workspace_prefix, own=self._graph_holds)),"
+    },
+    {
+      "id": "CONN-14",
+      "status": "present",
+      "where": "databasise/seam/operator_rest.py:145",
+      "quote": "            return await engine.log_tail(limit)"
+    }
+  ],
+  "extra": []
+}

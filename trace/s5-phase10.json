@@ -2,15 +2,15 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase10",
-  "ledger_version": 793,
+  "ledger_version": 843,
   "artifacts": {
     "databasise/namespaces.py": "5e0e2eece8649d6c91bc788bc05dfb667b038c656626a9cf30f8847059b4e46d",
-    "databasise/parts_core/__init__.py": "bb0a19aed6adf402c795260aaef5acafe394c5c1e4577bc32aa28ab8e929b754",
-    "databasise/seam/engine.py": "427635ca0cb6ef694282374255929ed90aeb86100349324aed68293bc0014fa7",
-    "databasise/stores/graph.py": "1554cb09ed791bea5c2dfe545d738e8bf47d26b81e5f1c6891b8a80694d5a2fa",
+    "databasise/parts_core/__init__.py": "1a80a7abf16ded70660c0f75679141ab3b1f285826e9724260b4eb84a85baeff",
+    "databasise/seam/engine.py": "0931e6098b0cc06e073ee876bc891241b84b54179a476ae342018a1861598dd3",
+    "databasise/stores/graph.py": "042f09db8452b84aa2dcb4e34a6d8f76f1fa90d2b8dba6b7538015fa5c348ef6",
     "databasise/stores/kv.py": "f74974527f4d41d012dc7c525c23b735492dfbaefc9bdfc4ec3b88e14d2ecb79",
-    "databasise/stores/probes.py": "f24a7fed9f06ef06fa8ff0756cf8fb856f74fea4087b7a86e7024aa500f9ce85",
-    "databasise/stores/vector.py": "912c3e2f69b9fd53e508492babd5e3c9ae758de88ff9433c34729709734c79cf",
+    "databasise/stores/probes.py": "b32caa0fc6914d6b1cdaa0e2d344b2a71c7e27aa122c14608d8865b4e719d611",
+    "databasise/stores/vector.py": "02bdac6f478fed33562c1d3e0430fde2ecf7a88140828becf54aed144f00e42a",
     "databasise/tests/test_removed_stores_absent.py": "6a812a3ef4a2a86b9492f9de297622d0aef23591b0d15ef880067de06cf39a70",
     "databasise/validator/parse.py": "38ae94947933a067864f8e43029e44f30791053e9abc24f0d244ad15d7e811b6"
   },
@@ -23,43 +23,43 @@
     {
       "id": "STOR-01",
       "status": "present",
-      "where": "databasise/stores/graph.py:155",
+      "where": "databasise/stores/graph.py:159",
       "quote": "raise GraphStoreBusyError() from exc"
     },
     {
       "id": "STOR-02",
       "status": "present",
-      "where": "databasise/seam/engine.py:1480",
+      "where": "databasise/seam/engine.py:1538",
       "quote": "stores = _build_stores(self.store_root, self.workspace, resolved, into=stores, operation=\"ingest\")"
     },
     {
       "id": "STOR-03",
       "status": "present",
-      "where": "databasise/seam/engine.py:2255",
+      "where": "databasise/seam/engine.py:2689",
       "quote": "vector = MultiNamespaceVectorStore(workspace=self.workspace, store_root=self.store_root)"
     },
     {
       "id": "STOR-04",
       "status": "present",
-      "where": "databasise/seam/engine.py:2000",
+      "where": "databasise/seam/engine.py:2058",
       "quote": "lambda: {f\"{kind}:{namespace}\": _probe(kind, namespace) for kind, namespace in _HEALTH_PROBES}"
     },
     {
       "id": "STOR-05",
       "status": "present",
-      "where": "databasise/parts_core/__init__.py:146",
+      "where": "databasise/parts_core/__init__.py:147",
       "quote": "elif mode == \"r\" and name not in _READ_ALLOWLIST[kind]:"
     },
     {
       "id": "STOR-06",
       "status": "present",
-      "where": "databasise/seam/engine.py:1521",
+      "where": "databasise/seam/engine.py:1579",
       "quote": "await _drop_pending(stores, self.store_root)"
     },
     {
       "id": "STOR-07",
       "status": "present",
-      "where": "databasise/stores/vector.py:366",
+      "where": "databasise/stores/vector.py:374",
       "quote": "self._pending_deletes.add(doc_id)"
     },
     {
@@ -71,13 +71,13 @@
     {
       "id": "STOR-09",
       "status": "present",
-      "where": "databasise/stores/vector.py:381",
+      "where": "databasise/stores/vector.py:389",
       "quote": "raise InvalidTopKError(top_k)"
     },
     {
       "id": "STOR-10",
       "status": "present",
-      "where": "databasise/stores/graph.py:449",
+      "where": "databasise/stores/graph.py:466",
       "quote": "\"?[src, tgt] := *edges{src, tgt}, src = $id or tgt = $id :rm edges {src, tgt}\","
     },
     {

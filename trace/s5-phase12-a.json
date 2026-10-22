@@ -2,7 +2,7 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase12-a",
-  "ledger_version": 793,
+  "ledger_version": 843,
   "artifacts": {
     "databasise/parts_core/hipporag/entity_fact_embed.py": "eade98c9ea33630064b838aecebecc6e34d9adc7f26b1fdcd6cfe20689f4f9b9",
     "databasise/parts_core/hipporag/fact_edges.py": "0427766e1a2cc89f830f2bc1ad9f5937dfcb93f2f3d99cf8964136af708669f4",
@@ -12,9 +12,9 @@
     "databasise/parts_core/hipporag/ppr.py": "03876910feb001321596a4184e3185f626510da9fa4e7e78edf5952ab4d15c93",
     "databasise/parts_core/hipporag/reset_vector_join.py": "abaf30075404e10d5ae412c9e03fb963a51fc619f3c33e6c1ca8242c8130632b",
     "databasise/parts_core/hipporag/synonymy_edges.py": "561c35007788a744fa08094d488c5c4ac87a4091653d656b3f71bab71fed5ea2",
-    "databasise/seam/engine.py": "427635ca0cb6ef694282374255929ed90aeb86100349324aed68293bc0014fa7",
-    "databasise/seam/refusals.py": "231025f581260ce9dc5d96bac0a629500fb903aea44f5817c651eaa5dfd8961a",
-    "databasise/stores/vector.py": "912c3e2f69b9fd53e508492babd5e3c9ae758de88ff9433c34729709734c79cf",
+    "databasise/seam/engine.py": "0931e6098b0cc06e073ee876bc891241b84b54179a476ae342018a1861598dd3",
+    "databasise/seam/refusals.py": "28f1d3ffe122c2e078a319afc1da4bb44dc2f462d929d052f5e121381400906b",
+    "databasise/stores/vector.py": "02bdac6f478fed33562c1d3e0430fde2ecf7a88140828becf54aed144f00e42a",
     "databasise/wirings/hipporag/base.json": "7320e65861aa5583892fdab014ebc1c6917a38001cdfdaaf42116263b0d09e71"
   },
   "checker": {
@@ -38,13 +38,13 @@
     {
       "id": "HIPP-03",
       "status": "present",
-      "where": "databasise/seam/engine.py:1521",
+      "where": "databasise/seam/engine.py:1579",
       "quote": "await _drop_pending(stores, self.store_root)"
     },
     {
       "id": "HIPP-04",
       "status": "present",
-      "where": "databasise/seam/engine.py:947",
+      "where": "databasise/seam/engine.py:999",
       "quote": "raise _foreign_fault(operation, node_exception, node_id=failed_node_id) from node_exception"
     },
     {

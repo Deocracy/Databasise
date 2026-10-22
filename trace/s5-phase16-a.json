@@ -1,0 +1,64 @@
+{
+  "bak_trace": 1,
+  "step": "S5",
+  "part": "phase16-a",
+  "ledger_version": 843,
+  "artifacts": {
+    "databasise/seam/operator_rest.py": "01d0bc763a140c39ff25db2263730cff9ca5868d0b886062931ed2bfdc52847e",
+    "databasise/seam/rest.py": "84be8c28be5e7a7b56c260e5993662a244d10ae93463b0503bb9c5bd047af9a6",
+    "databasise/seam/engine.py": "0931e6098b0cc06e073ee876bc891241b84b54179a476ae342018a1861598dd3",
+    "databasise/ledger/ledger.py": "045c68acf57cb2a9715937f1fcfa5cc11b77cf14b77491cd045a727010b970bf",
+    "docs/gui/refusals.json": "5466648f8ab96bf96eb46c123f015fe14d5535920a1ea74433aa19efa593a5fc",
+    "databasise/tests/fixtures/selector-resolution.json": "5fcdcc5cdb4d73b3ab65eb28bae60d1840389e3f69a3a8fb7c4af009434ce65c"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "claude-opus-5-5",
+    "session": "32d1701b-4256-409c-a5a7-e305cc822f40"
+  },
+  "items": [
+    {
+      "id": "CONN-01",
+      "status": "present",
+      "where": "databasise/seam/rest.py:549",
+      "quote": "        add_operator_routes(app, engine, log=log_path is not None)"
+    },
+    {
+      "id": "CONN-02",
+      "status": "present",
+      "where": "docs/gui/refusals.json:3",
+      "quote": "    \"refusal_type\": \"ActiveGenerationRetirementError\","
+    },
+    {
+      "id": "CONN-03",
+      "status": "present",
+      "where": "databasise/tests/fixtures/selector-resolution.json:216",
+      "quote": "      \"outcome\": \"EmptyCapabilitySelectorError\""
+    },
+    {
+      "id": "CONN-04",
+      "status": "present",
+      "where": "databasise/seam/engine.py:2135",
+      "quote": "            \"version\": __version__,"
+    },
+    {
+      "id": "CONN-05",
+      "status": "present",
+      "where": "databasise/seam/operator_rest.py:88",
+      "quote": "        return await engine.wirings()"
+    },
+    {
+      "id": "CONN-06",
+      "status": "present",
+      "where": "databasise/ledger/ledger.py:531",
+      "quote": "    def aliases(self) -> list[LedgerEntry]:"
+    },
+    {
+      "id": "CONN-07",
+      "status": "present",
+      "where": "databasise/seam/operator_rest.py:98",
+      "quote": "        return await engine.ledger_history(body.alias, checked_page(body.limit, body.offset))"
+    }
+  ],
+  "extra": []
+}
