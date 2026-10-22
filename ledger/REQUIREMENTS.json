@@ -1,5 +1,5 @@
 {
-  "ledger_version": 793,
+  "ledger_version": 795,
   "frozen_at": null,
   "items": [
     {
@@ -2374,7 +2374,7 @@
   "mockup_freeze": null,
   "scope_lock": null,
   "check_locks": {
-    "commit": "7350e682156b59086820a57ece358cb29f4a5347",
+    "commit": "39b25cc608fd3e894b81e4f9f6f3d50e833daf5b",
     "files": {
       "databasise/tests/seam/test_run01_coverage_crosscheck.py": "3da3eb8683a6556bf3e29bde7ec7d19257bcf6371a55245b5be90450985e9258",
       "databasise/tests/clients/test_openai_compat.py": "1e342492d32774e047de1dd616030f4de8aaca7faf98d51449fd608505e1774f",
@@ -2454,7 +2454,7 @@
       "databasise/tests/runner/test_trace_completeness.py": "40e1d9e9f2a18ac0b3b27ab84f6b35aa82be5c18f0557f36de8173537ee01540",
       "databasise/tests/runner/test_node_trace_fields.py": "31af736a9f658c0a0cfbe915be9adb4068e0699c5a7528f42f13200d8efd73f5",
       "databasise/tests/seam/test_run_record_identity.py": "177d7d74faaba0b2489a67279b949675430e78c8be71eb5031134ef96c230b81",
-      "databasise/tests/seam/test_seam_events.py": "3f1c7651051230da696971a22a4469d4ef04b7ccfdea4cf9f898c69cfcd9b1b1",
+      "databasise/tests/seam/test_seam_events.py": "fe197551ab45f50ddded28c28ba18f4f6265c0a5e04e49a66777f366efcf3419",
       "databasise/tests/seam/test_engine_internals.py": "2fbfa7a0b8db62097238e63dcea41a2909d8a0e98c5531e99530d5f08c5f1cd6",
       "databasise/tests/identity/test_env.py": "76f9c075202d529bde376bcf9f83aff57bd1fc4820af48361b7b4f7ca2ceeb61",
       "databasise/tests/seam/test_advanced_query_members.py": "95d50e3b07ceb792d6f7bfe2e9bd0ee65c1b184de71a9e283fea2bf8977bc30e",
@@ -2473,7 +2473,26 @@
       "databasise/tests/validator/test_node_kind.py": "8d914797d264734f6327c8a327c159ae1ca5b07bec3ed9bd72e0a61434592b58",
       "databasise/tests/parts/test_registry_reachability.py": "2b2e414f3ef38942c7dcb18d4bc34e00389a82112856c5f6a406241892e72fac",
       "databasise/tests/seam/test_corpus_wiring.py": "d692d509a1f95da2310c618c95d55ac1d652f3156fe9e439701d7469e5b38a70",
-      "databasise/tests/test_docstring_currency.py": "c303272a649a96e0c6456a43819838ec054c3d32cd5cccafec9e43346d563c48"
+      "databasise/tests/test_docstring_currency.py": "c303272a649a96e0c6456a43819838ec054c3d32cd5cccafec9e43346d563c48",
+      "databasise/tests/test_packaging.py": "c71ea87f8ed5eb9c9b12c64d2190599c2b5abee662145965f58e9a53992b9f97",
+      "databasise/tests/parity/test_import_index_cli.py": "79aa08c9f9fb37eed45481113599a2ab278ef503d028ef1b4ba79a2f0da39d47",
+      "databasise/tests/parity/test_import_verification.py": "66f29fb7963ce4140eaf1887876d1da0db9ea7d0394b6bf9386c99a4b9194705",
+      "databasise/tests/test_cli_refusals.py": "feb25d79e188847f2e9d409a75203e37b6c7c998a05d8c24d41b9b9f3458426b",
+      "databasise/tests/test_dry_run_default.py": "a6dec41c48fb7affa0bcd7007829ab6f571ef6f8f4c1753ebdf285abb1a1d2e0",
+      "databasise/tests/parity/test_run_comparison.py": "7306ba9fa2d62e585a56d86432dabc713fe91d29051a91acfbec412d1ef5a828",
+      "databasise/tests/parity/test_v1_driver_script.py": "0c2dcacfb765752e1f49e2609ce100e5acc9510e64c86945602e24af10649577",
+      "databasise/tests/parity/test_storage_audit.py": "54b4dadb5fcb2c4c5f50e402634e0f4c63aa1394ff7191b57c203aea2ba0398d",
+      "databasise/tests/parity/test_cross_modality_isolation.py": "64442653176e91fb64134327435e1e0a3d7a59b7eff0cad6f07501683b526764",
+      "databasise/tests/test_tracer_end_to_end.py": "f1a9e2cc3478bd02aef6c0eee2476c5e9619bf17b1114c416adc16de7adf9a19",
+      "databasise/tests/eval/test_eval_store_boundary.py": "0c88fd09f6eb379a5b28fe604f99735f30be34f94aa41c3d0b321502c6d3d910",
+      "databasise/tests/seam/test_promotion_floor.py": "b4d8e3baad8f4433bb621806e3b0a462ff1b653c3bd03362338c7b66901c250b",
+      "databasise/tests/eval/test_bundle_versioning.py": "63190f7024866bb61aec128a66044151a5d710d3215c0f0ee5e287031b9802c2",
+      "databasise/tests/evidence/test_parity_report_render.py": "f1ac79220dc228b997beefcd5271b9acfea28f2b5c583f1fdedf2e1090fbf398",
+      "databasise/tests/evidence/test_falsifier2_verdict.py": "567b4f4fd33f628cf0d81a052d2f38cf02f532e6f759473b12b45e335c78c06a",
+      "databasise/tests/parts/test_admission.py": "72aaa8a90b2169453570ad9196f0d8c5eac7f3b53be7bcb0aa32a59629bd7bcd",
+      "databasise/tests/foreign/test_cbm_adapter.py": "e28797725818ef4403ec73ee4f6c0cd1c68a4aaffc373092a92ce74020a4f6cc",
+      "databasise/tests/mcp/test_tool_descriptions.py": "0a520614d16bd5e451aecdf84b881b96e3a51c468012a88ee08d20938ac0af65",
+      "databasise/tests/evidence/test_docstring_facts.py": "68b72738c9d5a2adbb56f3853308e4bc8afbffaba77c30225f25533b7f5bcf0f"
     }
   },
   "trace": {
@@ -2488,12 +2507,7 @@
     "owner_wait_h": 24
   },
   "check_guard": [],
-  "check_edit_grants": {
-    "databasise/tests/seam/test_seam_events.py": {
-      "reason": "Phase 15 TOOL-16 (D-17): admission records must name the part they are attached to; test_an_ingest_with_a_mutating_part_returns_one_seam_event attaches dataclasses.replace(<full-ingest admission record>, part_name_at_version='test/seam-events-mutator@1.0.0') instead of the unmodified full-ingest record; its assertions are unchanged",
-      "granted_at": 730
-    }
-  },
+  "check_edit_grants": {},
   "notify_cmd": null,
   "check_baseline": 606
 }
