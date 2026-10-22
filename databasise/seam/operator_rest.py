@@ -15,7 +15,12 @@ from typing import Any
 from fastapi import FastAPI, Query
 
 from databasise.seam.corpus import checked_page
-from databasise.seam.rest import _FAULT_RESPONSES, RefusalBody, _RequestModel
+from databasise.seam.rest import (
+    _FAULT_RESPONSES,
+    PromoteRequest,
+    RefusalBody,
+    _RequestModel,
+)
 
 # Store-reading operator routes: the machine faults plus a busy store. A new dict, so the shared
 # _FAULT_RESPONSES that the seam routes use is never mutated.
@@ -64,3 +69,15 @@ def add_operator_routes(app: FastAPI, engine: Any) -> None:
     async def get_traces(limit: int = Query(default=50), offset: int = Query(default=0)) -> dict[str, Any]:
         """One page of recent traces, newest first: token, time, partial, degraded and stop reason."""
         return await engine.list_traces(checked_page(limit, offset))
+
+    @app.post(
+        "/promote/preview",
+        responses=_OPERATOR_STORE_RESPONSES,
+        description=(
+            "A dry run of POST /promote: the arm, mutation class and next version, and whether it is "
+            "promotable with a named reason. Writes nothing. It is not the unbuilt ladder verb "
+            "'preview'. next_version holds only if no ledger write lands before the promotion."
+        ),
+    )
+    async def post_promote_preview(body: PromoteRequest) -> dict[str, Any]:
+        return await engine.preview_promotion(body.alias, body.trace_ids, body.change_origin, verb=body.verb)

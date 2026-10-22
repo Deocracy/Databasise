@@ -283,6 +283,7 @@ from databasise.seam.refusals import (
     MutableStoreComparisonExcludedError,
     NoRawUploadPathForModalityError,
     NoWritePathForModalityError,
+    PartialRunEvidenceError,
     SeamRefusalError,
     StoreBusyError,
     TombstonedGenerationError,
@@ -2228,6 +2229,78 @@ class Databasise:
             "next_offset": end if end < total else None,
         }
 
+    async def preview_promotion(
+        self,
+        alias: str,
+        trace_ids: list[str],
+        change_origin: str | None,
+        *,
+        verb: str = "operator-asserted",
+    ) -> dict[str, Any]:
+        """A dry run of :meth:`promote` for the operator console (16-06, CONN-09, D-12): the arm, the
+        mutation class, the version a promotion would mint and whether it is promotable, as
+        ``{arm, mutation_class, next_version, promotable, reason}``. It writes nothing: no ledger row,
+        and no ``ledger.db`` on a store root that has none. It runs :meth:`_promotion_prologue` and
+        :meth:`_plan_promotion`, the same code :meth:`promote` runs, so the refusal order is the same.
+        The outcome refusals ``PartialRunEvidenceError``, ``GateNotCalibratedError``,
+        ``GateVerbNotBuiltError`` and ``MeasurementPostureRefusalError`` answer ``promotable=False``
+        with ``reason`` set to the type name; every other refusal propagates exactly as it does from
+        :meth:`promote`. In that case ``arm`` and ``mutation_class`` are filled when they can be
+        identified and ``next_version`` is ``None``.
+
+        ``next_version`` is the version :meth:`promote` mints only if no ledger write lands in between:
+        the preview reads through a read-only handle outside ``BEGIN IMMEDIATE``. ``arm`` and
+        ``mutation_class`` are operator-surface fields (D-02). This is not the unbuilt section 5
+        ladder verb ``preview`` (``promotion.py``), which :meth:`promote` still refuses by name."""
+        reason: str | None = None
+        arm_name: str | None = None
+        new_resolved: dict[str, Any] | None = None
+        try:
+            arm_name, new_resolved, _hashes = self._promotion_prologue(alias, trace_ids, change_origin, verb)
+        except (
+            PartialRunEvidenceError,
+            GateNotCalibratedError,
+            GateVerbNotBuiltError,
+            MeasurementPostureRefusalError,
+        ) as exc:
+            reason = type(exc).__name__
+            arm_name = None
+            try:  # best effort: name the arm and class a refused promotion would have had
+                _records, arm_name, _hashes = self._resolve_operator_preconditions(alias, trace_ids, change_origin)
+                new_resolved = _wiring_for_row(arm_name, alias=alias)
+            except SeamRefusalError:
+                arm_name = None
+                new_resolved = None
+
+        def _plan() -> tuple[str, str]:
+            handle = Ledger.open_existing(self.store_root, read_only=True)
+            if handle is None:
+                _prior, mutation_class, version = self._plan_promotion(None, alias, new_resolved)
+            else:
+                with handle:
+                    _prior, mutation_class, version = self._plan_promotion(handle, alias, new_resolved)
+            return mutation_class, version
+
+        mutation_class: str | None = None
+        next_version: str | None = None
+        if new_resolved is not None:
+            try:
+                mutation_class, version = await asyncio.to_thread(_plan)
+            except sqlite3.Error as exc:
+                raise _foreign_fault("preview_promotion", exc, failure_class="StoreFault") from exc
+            except SeamRefusalError:
+                if reason is None:
+                    raise
+            else:
+                next_version = version if reason is None else None
+        return {
+            "arm": arm_name,
+            "mutation_class": mutation_class,
+            "next_version": next_version,
+            "promotable": reason is None,
+            "reason": reason,
+        }
+
     async def _execute(
         self,
         query_object: QueryObject,
@@ -2570,6 +2643,71 @@ class Databasise:
             raise GateVerbNotBuiltError(verb=verb)
         raise MeasurementPostureRefusalError(verb=verb, mutation_class=mutation_class)
 
+    def _promotion_prologue(
+        self,
+        alias: str,
+        trace_ids: list[str],
+        change_origin: str | None,
+        verb: str,
+    ) -> tuple[str, dict[str, Any], list[str]]:
+        """The refusals :meth:`promote` runs before it opens a ``Ledger`` (16-06, D-12), extracted
+        verbatim so :meth:`preview_promotion` shares their order by construction: the verb checks, the
+        stage-1 floor check, :meth:`_resolve_operator_preconditions` with ``refuse_partial=True``, the
+        arm's wiring, and for a gate verb stage 2 (:meth:`_refuse_gate_verb`, which always raises).
+        Returns ``(arm_name, new_resolved, arm_instance_hashes)``."""
+        if verb not in PROMOTION_VERBS:
+            raise UnrecognisedPromotionVerbError(verb=verb)
+
+        if verb in _NOT_BUILT_VERBS:
+            raise GateVerbNotBuiltError(verb=verb)
+
+        # LEDG-08 (D-04) / TOOL-12 stage 1: with no persisted floor at all a gate verb is refused
+        # identically for every arm, before alias validation, trace resolution and any Ledger.
+        if verb in _GATE_VERBS:
+            try:
+                has_floor = self._floors.any_floor()
+            except sqlite3.Error as exc:  # a floors.db fault is not "no floor" (B-ITER2-WR-02)
+                raise _foreign_fault("promote", exc, failure_class="StoreFault") from exc
+            if not has_floor:
+                raise GateNotCalibratedError(verb=verb)
+
+        _resolved_records, arm_name, arm_instance_hashes = self._resolve_operator_preconditions(
+            alias, trace_ids, change_origin, refuse_partial=True
+        )
+        new_resolved = _wiring_for_row(arm_name, alias=alias)
+
+        if verb in _GATE_VERBS:
+            self._refuse_gate_verb(verb, alias, new_resolved, arm_instance_hashes)  # always raises
+
+        return arm_name, new_resolved, arm_instance_hashes
+
+    def _plan_promotion(
+        self,
+        ledger: Ledger | None,
+        alias: str,
+        new_resolved: dict[str, Any],
+    ) -> tuple[Any, str, str]:
+        """The reads that decide a promotion (16-06, D-12), shared by :meth:`promote` and
+        :meth:`preview_promotion`: the alias's active row, the mutation class derived against it, and
+        the version the mint rule gives. ``ledger`` is ``None`` when the store root has no ledger yet,
+        which reads as a first promotion. Returns ``(prior_record, mutation_class, minted_version)``.
+        Writes nothing."""
+        prior_record = ledger.by_alias(alias) if ledger is not None else None
+        # 14-REVIEW A-WR-02: a prior row naming a wiring that no longer resolves has no
+        # comparable surface, so it classes and mints against None (a MAJOR bump), and
+        # prior_version still comes from the row. This is what lets promote repair it.
+        prior_resolved = wiring_for_name(prior_record.mutation_id) if prior_record is not None else None
+
+        mutation_class = derive_mutation_class(new_resolved, prior_resolved)
+
+        prior_version = prior_record.minted_version if prior_record is not None else None
+        prior_surface = (
+            declared_surface(prior_resolved, self.registry) if prior_resolved is not None else None
+        )
+        new_surface = declared_surface(new_resolved, self.registry)
+        minted_version = mint_version(prior_version, prior_surface, new_surface)
+        return prior_record, mutation_class, minted_version
+
     async def promote(
         self,
         alias: str,
@@ -2620,29 +2758,9 @@ class Databasise:
         The gate-verb and not-built refusal branches raising inside that span are correct: they
         are refusals, they write nothing, and the context manager rolls back an empty transaction.
         """
-        if verb not in PROMOTION_VERBS:
-            raise UnrecognisedPromotionVerbError(verb=verb)
-
-        if verb in _NOT_BUILT_VERBS:
-            raise GateVerbNotBuiltError(verb=verb)
-
-        # LEDG-08 (D-04) / TOOL-12 stage 1: with no persisted floor at all a gate verb is refused
-        # identically for every arm, before alias validation, trace resolution and any Ledger.
-        if verb in _GATE_VERBS:
-            try:
-                has_floor = self._floors.any_floor()
-            except sqlite3.Error as exc:  # a floors.db fault is not "no floor" (B-ITER2-WR-02)
-                raise _foreign_fault("promote", exc, failure_class="StoreFault") from exc
-            if not has_floor:
-                raise GateNotCalibratedError(verb=verb)
-
-        _resolved_records, arm_name, arm_instance_hashes = self._resolve_operator_preconditions(
-            alias, trace_ids, change_origin, refuse_partial=True
+        arm_name, new_resolved, arm_instance_hashes = self._promotion_prologue(
+            alias, trace_ids, change_origin, verb
         )
-        new_resolved = _wiring_for_row(arm_name, alias=alias)
-
-        if verb in _GATE_VERBS:
-            self._refuse_gate_verb(verb, alias, new_resolved, arm_instance_hashes)  # always raises
 
         def _promote_sync() -> tuple[str, int]:
             """Runs entirely on the executor thread: opening ``Ledger`` here (rather than on the
@@ -2654,15 +2772,9 @@ class Databasise:
             ledger is closed on this thread before the closure returns (LEDG-06, D-08).
             """
             with Ledger(self.store_root) as ledger, ledger.transaction():
-                prior_record = ledger.by_alias(alias)
-                # 14-REVIEW A-WR-02: a prior row naming a wiring that no longer resolves has no
-                # comparable surface, so it classes and mints against None (a MAJOR bump), and
-                # prior_version still comes from the row. This is what lets promote repair it.
-                prior_resolved = (
-                    wiring_for_name(prior_record.mutation_id) if prior_record is not None else None
+                prior_record, mutation_class, minted_version = self._plan_promotion(
+                    ledger, alias, new_resolved
                 )
-
-                mutation_class = derive_mutation_class(new_resolved, prior_resolved)
 
                 # A gate verb never reaches this closure: promote() raises in _refuse_gate_verb first.
                 if verb != "operator-asserted":
@@ -2674,17 +2786,6 @@ class Databasise:
                     # added without a matching branch here refuses by name instead of falling
                     # through into a ledger append (07-04-PLAN.md, closing 07-REVIEW.md CR-01).
                     raise UnrecognisedPromotionVerbError(verb=verb)
-
-                prior_version = (
-                    prior_record.minted_version if prior_record is not None else None
-                )
-                prior_surface = (
-                    declared_surface(prior_resolved, self.registry)
-                    if prior_resolved is not None
-                    else None
-                )
-                new_surface = declared_surface(new_resolved, self.registry)
-                minted_version = mint_version(prior_version, prior_surface, new_surface)
 
                 ledger_record = LedgerRecord(
                     mutation_id=arm_name,
