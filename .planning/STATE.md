@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 16
 current_phase_name: GUI Connectors
 status: executing
-stopped_at: Phase 15 complete, ready to plan Phase 16
-last_updated: "2026-10-22T18:10:09.654Z"
+stopped_at: Completed 16-01-PLAN.md
+last_updated: "2026-10-22T18:16:50.517Z"
 last_activity: 2026-10-22
 last_activity_desc: Phase 15 complete, transitioned to Phase 16
-state_head: cfeef8e1f6edc1dab4d7fb259774d01ced8ef40f
+state_head: f0979a1890767ea99d894875bc942b098997fb25
 progress:
   total_phases: 11
   completed_phases: 8
   total_plans: 112
-  completed_plans: 100
+  completed_plans: 101
   percent: 73
 ---
 
@@ -154,6 +154,7 @@ Progress: [███████░░░] 73% (4/11 phases)
 | Phase 15 P14 | 30min | 3 tasks | 2 files |
 | Phase 15 P17 | 45min | 3 tasks | 14 files |
 | Phase 15 P18 | 75min | 3 tasks | 5 files |
+| Phase 16 P01 | 35min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -261,6 +262,7 @@ Recent decisions affecting current work:
 - [Phase 15]: 15-12: v1_arm.main is estimate-only without --spend; only failure_reason no_results is an empty retrieval, every other v1 failure raises V1QueryFailedError
 - [Phase 15]: 15-18 (SC2): v1_arm.main gained the estimate-only default by planner decision; all nine spending CLIs now share it (D-04), and the TOOL-05 row text is read as covering every one of them
 - [Phase 15]: 15-18: the codebase-memory-mcp launch timeout bound is timeout + 4 s (SDK teardown), not the bare timeout (TOOL-18)
+- [Phase 16]: 16-01: --operator off loopback is a parser.error before the store lock; build_app reads the flag with getattr
 
 ### Pending Todos
 
@@ -319,8 +321,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-21T23:34:55.346Z
-Stopped at: Phase 15 complete, ready to plan Phase 16
+Last session: 2026-10-22T18:16:50.067Z
+Stopped at: Completed 16-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
