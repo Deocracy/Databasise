@@ -64,3 +64,33 @@ def test_traces_list_newest_first_with_paging(synthetic_naive_store):
     bad = client.get("/traces", params={"limit": 0})
     assert bad.status_code == 422, (bad.status_code, bad.text)
     assert "PageBoundsError" in bad.text, bad.text
+
+
+def test_trace_list_scrubs_stop_reason_like_trace_resolve(synthetic_naive_store):
+    from databasise.seam.trace_store import TraceStore
+
+    store_root = synthetic_naive_store["store_root"]
+    node_id = "chunk-vector"
+    token = TraceStore(store_root).persist(
+        {
+            "run_id": "fake-run-scrub",
+            "wiring_id": "wiring-scrub",
+            "wiring_instance_hash": "sha256:" + "1" * 64,
+            "arm_id": "seam",
+            "nodes": [{"node_id": node_id, "instance_hash": "sha256:" + "2" * 64}],
+            "partial": True,
+            "stop_reason": f"node '{node_id}': upstream refused",
+        }
+    )
+    client = TestClient(_operator_app(synthetic_naive_store))
+
+    listed = client.get("/traces")
+    assert listed.status_code == 200, (listed.status_code, listed.text)
+    items = [i for i in listed.json().get("items") or [] if i.get("trace_reference") == token]
+    assert len(items) == 1, listed.text
+    resolved = client.post("/trace/resolve", json={"trace_reference": token})
+    assert resolved.status_code == 200, (resolved.status_code, resolved.text)
+
+    assert items[0]["partial"] is True, items[0]
+    assert node_id not in str(items[0]["stop_reason"]), items[0]
+    assert items[0]["stop_reason"] == resolved.json()["stop_reason"], (items[0], resolved.json())
