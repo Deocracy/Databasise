@@ -121,17 +121,22 @@ class MalformedBoundaryKnobError(ValueError):
 
 
 class MalformedWiringDocumentError(ValueError):
-    """A named wiring document under ``WIRINGS_DIR`` is not valid JSON (C-ITER2-WR-01)."""
+    """A named wiring document under ``WIRINGS_DIR`` is not valid UTF-8 JSON, or its top level is
+    not a JSON object (C-ITER2-WR-01, ITER3-C-WR-02)."""
 
 
 def load_wiring(stem: str) -> dict[str, Any]:
     """Load one committed wiring document by its file stem (no ``.json`` suffix). Raises
-    :class:`MalformedWiringDocumentError` when the file is not valid JSON."""
+    :class:`MalformedWiringDocumentError` when the file is not valid UTF-8 JSON or its top level
+    is not an object."""
     path = WIRINGS_DIR / f"{stem}.json"
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         raise MalformedWiringDocumentError(f"{path}: {exc}") from exc
+    if not isinstance(doc, dict):
+        raise MalformedWiringDocumentError(f"{path}: top level must be a JSON object")
+    return doc
 
 
 # Two probe-only parts backing the b-family blast-radius probes below. Neither is registered into
@@ -434,7 +439,10 @@ def enumerate_boundaries(evidence: WiringEvidence, parsed: ParsedWiring) -> tupl
             )
 
     doc = load_wiring(evidence.stem)
-    for i, knob in enumerate(doc.get("boundary_knobs", [])):
+    knobs = doc.get("boundary_knobs", [])
+    if not isinstance(knobs, list):
+        raise MalformedBoundaryKnobError(f"{evidence.stem}'s boundary_knobs must be a list")
+    for i, knob in enumerate(knobs):
         if not isinstance(knob, dict):
             raise MalformedBoundaryKnobError(
                 f"{evidence.stem}'s boundary_knobs[{i}] must be an object with 'between' and "

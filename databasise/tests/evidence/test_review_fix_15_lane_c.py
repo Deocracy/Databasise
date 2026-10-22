@@ -369,6 +369,32 @@ def test_falsifier2_refuses_a_named_wiring_that_is_not_json_by_name(
     assert not falsifier2.EVIDENCE_PATH.exists()
 
 
+@pytest.mark.parametrize("stem", ["w1-lightrag-query-side", "w2-codebase-memory-mcp"])
+@pytest.mark.parametrize("content", [b"[]", b'"x"', b"\xff\xfe{}"], ids=["list", "string", "not-utf8"])
+def test_falsifier2_refuses_a_named_wiring_that_is_not_a_json_object_by_name(
+    wirings_copy: Path, stem: str, content: bytes, capsys
+) -> None:
+    """ITER3-C-WR-02 (D-03): valid JSON that is not an object, or bytes that are not UTF-8, is one
+    stderr line and exit 1, not an AttributeError or UnicodeDecodeError traceback."""
+    (wirings_copy / f"{stem}.json").write_bytes(content)
+
+    assert falsifier2.main([]) == 1
+    _one_refusal_line(capsys, "MalformedWiringDocumentError")
+    assert not falsifier2.EVIDENCE_PATH.exists()
+
+
+def test_falsifier2_refuses_boundary_knobs_that_are_not_a_list_by_name(wirings_copy: Path, capsys) -> None:
+    """ITER3-C-WR-02 (D-03): ``boundary_knobs: 5`` is MalformedBoundaryKnobError, not a TypeError."""
+    path = wirings_copy / "w2-codebase-memory-mcp.json"
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    doc["boundary_knobs"] = 5
+    path.write_text(json.dumps(doc), encoding="utf-8")
+
+    assert falsifier2.main([]) == 1
+    _one_refusal_line(capsys, "MalformedBoundaryKnobError")
+    assert not falsifier2.EVIDENCE_PATH.exists()
+
+
 def test_falsifier2_refuses_to_write_into_an_installed_package(
     installed_dir: Path, monkeypatch: pytest.MonkeyPatch, capsys
 ) -> None:
