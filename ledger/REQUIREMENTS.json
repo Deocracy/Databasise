@@ -1,5 +1,5 @@
 {
-  "ledger_version": 843,
+  "ledger_version": 844,
   "frozen_at": null,
   "items": [
     {
@@ -2374,7 +2374,7 @@
   "mockup_freeze": null,
   "scope_lock": null,
   "check_locks": {
-    "commit": "39b25cc608fd3e894b81e4f9f6f3d50e833daf5b",
+    "commit": "8f50e51d71b3037ae2aea911a31cfb6f3518af2d",
     "files": {
       "databasise/tests/seam/test_run01_coverage_crosscheck.py": "3da3eb8683a6556bf3e29bde7ec7d19257bcf6371a55245b5be90450985e9258",
       "databasise/tests/clients/test_openai_compat.py": "1e342492d32774e047de1dd616030f4de8aaca7faf98d51449fd608505e1774f",
@@ -2492,7 +2492,18 @@
       "databasise/tests/parts/test_admission.py": "72aaa8a90b2169453570ad9196f0d8c5eac7f3b53be7bcb0aa32a59629bd7bcd",
       "databasise/tests/foreign/test_cbm_adapter.py": "e28797725818ef4403ec73ee4f6c0cd1c68a4aaffc373092a92ce74020a4f6cc",
       "databasise/tests/mcp/test_tool_descriptions.py": "0a520614d16bd5e451aecdf84b881b96e3a51c468012a88ee08d20938ac0af65",
-      "databasise/tests/evidence/test_docstring_facts.py": "68b72738c9d5a2adbb56f3853308e4bc8afbffaba77c30225f25533b7f5bcf0f"
+      "databasise/tests/evidence/test_docstring_facts.py": "68b72738c9d5a2adbb56f3853308e4bc8afbffaba77c30225f25533b7f5bcf0f",
+      "databasise/tests/seam/test_console_surface.py": "ff9f02cc5e08dbc56235023d446edb39ac62181b8d541b0a0348f26707cbdb80",
+      "databasise/tests/seam/test_refusal_catalogue_file.py": "3867024ad1ad28db0ca57e5cb29969d40c58d4d4751246a89fe527cb08f4484e",
+      "databasise/tests/seam/test_selector_resolution_fixture.py": "f3eeb1c98d7345068768538d476db22ce09d6e9eaaf1bb696e90267a78089331",
+      "databasise/tests/seam/test_console_info.py": "316fef4e85a09f0aafdfd4b5a0f138fb278562df4bad0e18840e4ac972a846e5",
+      "databasise/tests/seam/test_console_wirings.py": "c499eeb0d5b0e460bbc4e523099501af132e8f82f1f2dbfc3029671844122083",
+      "databasise/tests/seam/test_console_ledger.py": "ca5cca6b1a96bd8049ac4b2ccfc73d76f9b2159c27118e4a7d79a7c96e223d3f",
+      "databasise/tests/seam/test_console_traces.py": "753636546fc347ff89e79b76a52a4a6d620d699470db31d742532795e7930a7a",
+      "databasise/tests/seam/test_console_preview.py": "5afcc0d37c85fedd3a216e2857d119a63a38fb2f2c249d73cd4f7b5862b322a3",
+      "databasise/tests/seam/test_console_chunks.py": "7478f4a1f161896a30231637bd0e13f92bc8661b4de9f226274e934bfe1e5f39",
+      "databasise/tests/seam/test_console_graph.py": "12970f67939a9322a7401cbede5d540f31bd52145ba59c0e5f151b2b5925153a",
+      "databasise/tests/seam/test_console_log.py": "2b1426fd41b20aa08d6b51acb2142d8166d92848f1a873bf41b73c6a305ba56c"
     }
   },
   "trace": {
@@ -2507,12 +2518,7 @@
     "owner_wait_h": 24
   },
   "check_guard": [],
-  "check_edit_grants": {
-    "databasise/tests/seam/test_console_graph.py": {
-      "reason": "16 review C-WR-01 (D-15): the operator engine keeps one graph client open so reads stop leaving RocksDB WAL files; before its raw pycozo.Client holder at line 79, release the engine's held reference (3 inserted lines)",
-      "granted_at": 839
-    }
-  },
+  "check_edit_grants": {},
   "notify_cmd": null,
   "check_baseline": 606
 }
