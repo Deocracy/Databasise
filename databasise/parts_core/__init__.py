@@ -97,6 +97,7 @@ _ENGINE_ONLY: frozenset[str] = frozenset(
         "prepare",
         "commit_prepared",
         "abort_prepared",
+        "list_ids",  # the operator chunk page (16-07) pages ids through the engine; a part has iter_vectors
     }
 )
 
