@@ -1,0 +1,10 @@
+{
+  "id": "CONN-11",
+  "plants": [
+    {
+      "file": "databasise/stores/probes.py",
+      "find": "        for node in {src, tgt}:\n            if node in degree:\n                degree[node] += 1",
+      "replace": "        for node in (src, tgt):\n            if node in degree:\n                degree[node] += 1"
+    }
+  ]
+}

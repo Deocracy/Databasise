@@ -1,0 +1,10 @@
+{
+  "id": "CONN-12",
+  "plants": [
+    {
+      "file": "databasise/seam/engine.py",
+      "find": "            raise UnknownGraphNodeError(node_id=node_id)",
+      "replace": "            raise KeyError(node_id)"
+    }
+  ]
+}

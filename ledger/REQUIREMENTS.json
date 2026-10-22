@@ -1,5 +1,5 @@
 {
-  "ledger_version": 838,
+  "ledger_version": 843,
   "frozen_at": null,
   "items": [
     {
@@ -2507,7 +2507,12 @@
     "owner_wait_h": 24
   },
   "check_guard": [],
-  "check_edit_grants": {},
+  "check_edit_grants": {
+    "databasise/tests/seam/test_console_graph.py": {
+      "reason": "16 review C-WR-01 (D-15): the operator engine keeps one graph client open so reads stop leaving RocksDB WAL files; before its raw pycozo.Client holder at line 79, release the engine's held reference (3 inserted lines)",
+      "granted_at": 839
+    }
+  },
   "notify_cmd": null,
   "check_baseline": 606
 }
