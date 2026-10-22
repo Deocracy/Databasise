@@ -42,7 +42,7 @@ the same read-and-reinsert reason as the vectors: consistency of import mechanis
 store kind, not an accident of the schemas happening to match.
 
 CLI (``python -m databasise.parity.import_index``; 15-09, D-03/D-05). Exit codes: 0 verified; 1 a named
-refusal (``MissingV1IndexError`` or any ``databasise.cli.offline_refusals`` class, among them
+refusal (``MissingV1IndexError``, ``V1IndexLockedError`` or any ``databasise.cli.offline_refusals`` class, among them
 ``StoreLockedError``, ``CorpusDriftError`` and ``VectorStoreCorruptedError``), printed by ``databasise.cli.refuse`` as one
 stderr line, or a verification that is not ``"verified"``; 2 bad arguments (argparse, before the store
 lock is taken). Every run prints ``workspace: <ws> (<source>)`` first: the workspace a launcher must use.
@@ -67,7 +67,7 @@ import numpy as np
 from databasise.namespaces import derive_namespace
 from databasise.parity.corpus import load_snapshot
 from databasise.store_lock import StoreLockedError, store_lock
-from databasise.stores.graph import CozoGraphStore, _ClientRegistry
+from databasise.stores.graph import CozoGraphStore, _ClientRegistry, _is_lock_error
 from databasise.stores.kv import SqliteKVStore
 from databasise.stores.probes import list_kv_prefix
 from databasise.stores.vector import FaissVectorStore, MultiNamespaceVectorStore
@@ -111,6 +111,24 @@ class MissingV1IndexError(RuntimeError):
             f"v1 index directory not found at {expected_path} — run "
             "v1/scripts/run_parity_ingest.py first (03-02-PLAN.md Task 2)"
         )
+
+
+class V1IndexLockedError(RuntimeError):
+    """A-ITER2-WR-02: another process (a v1 server, the v1 driver subprocess) holds v1's Cozo RocksDB
+    lock, so the v1 graph cannot be read."""
+
+    def __init__(self, db_path: Path):
+        self.db_path = db_path
+        super().__init__(f"v1 graph {db_path} is locked by another process; retry once it is released")
+
+
+def _open_v1_cozo(db_path: Path) -> Any:
+    try:
+        return CozoClient("rocksdb", str(db_path), dataframe=False)
+    except Exception as exc:
+        if _is_lock_error(exc):
+            raise V1IndexLockedError(db_path) from exc
+        raise
 
 
 @dataclass(frozen=True)
@@ -250,7 +268,7 @@ def _read_graph(
         return {}, {}
     # Closed in finally: a client left open holds the RocksDB lock and the next v1 driver
     # subprocess on this dir would fail to open it.
-    v1_client = CozoClient("rocksdb", str(db_path), dataframe=False)
+    v1_client = _open_v1_cozo(db_path)
     try:
         node_rows = _cozo_rows(v1_client.run("?[id, attrs] := *nodes{id, attrs}", {}))
         edge_rows = _cozo_rows(v1_client.run("?[src, tgt, attrs] := *edges{src, tgt, attrs}", {}))
@@ -582,7 +600,7 @@ def _v1_graph(v1_working_dir: Path) -> tuple[set[str], set[tuple[str, str]]] | N
     db_path = v1_working_dir / f"cozo_graph_{_GRAPH_KIND}.db"
     if not db_path.exists():
         return None
-    client = CozoClient("rocksdb", str(db_path))
+    client = _open_v1_cozo(db_path)
     try:
         node_rows = _cozo_rows(client.run("?[id] := *nodes{id}", {}))
         edge_rows = _cozo_rows(client.run("?[src, tgt] := *edges{src, tgt}", {}))
@@ -781,7 +799,7 @@ def main(argv: list[str] | None = None) -> int:
             lock = store_lock(store_root)  # D-03: read at call time, one monkeypatch covers every CLI
         with lock:
             result = asyncio.run(_run(workspace))
-    except offline_refusals(MissingV1IndexError) as exc:
+    except offline_refusals(MissingV1IndexError, V1IndexLockedError) as exc:
         return refuse(exc)
 
     if result.status == "verified":

@@ -36,3 +36,21 @@ def test_verify_import_refuses_a_wal_without_its_shm(tmp_path):
     assert result.status == "refused"
     assert [v.assertion for v in result.violations] == ["precondition"]
     assert "kv.sqlite3-shm is missing" in result.violations[0].detail
+
+
+def test_import_index_refuses_a_locked_v1_graph_by_name(tmp_path, capsys):
+    """WR-02: a v1 Cozo graph whose RocksDB lock is held elsewhere is one stderr line and exit 1."""
+    from pycozo.client import Client
+
+    from databasise.parity import import_index
+
+    v1_dir = _v1_dir_with_one_chunk(tmp_path)
+    holder = Client("rocksdb", str(v1_dir / "cozo_graph_chunk_entity_relation.db"), dataframe=False)
+    try:
+        (tmp_path / "store" / "ws").mkdir(parents=True)
+        argv = ["--verify", "--store-root", str(tmp_path / "store"), "--workspace", "ws", "--v1-working-dir", str(v1_dir)]
+        assert import_index.main(argv) == 1
+    finally:
+        holder.close()
+    err = capsys.readouterr().err.strip()
+    assert err.startswith("V1IndexLockedError: ") and "\n" not in err

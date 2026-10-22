@@ -721,7 +721,7 @@ def _render_human_summary(records: list[ComparisonRecord]) -> str:
 
 
 def _refusals() -> tuple[type[BaseException], ...]:
-    return cli.offline_refusals(MissingV1InterpreterError, V1ArmSubprocessError)
+    return cli.offline_refusals(MissingV1InterpreterError, V1ArmSubprocessError, import_index.V1IndexLockedError)
 
 
 async def _run_cli(arm_name: str, query_ids: list[str] | None) -> tuple[list[ComparisonRecord], str | None]:
