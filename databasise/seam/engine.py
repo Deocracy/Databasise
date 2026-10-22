@@ -479,6 +479,20 @@ _NON_DEBUG_TRACE_FIELDS = frozenset(
 )
 
 
+def _scrub_reasons(record: dict[str, Any], public: dict[str, Any]) -> dict[str, Any]:
+    """Applies ``node_free_reason`` to every reason field in ``public`` and returns it (mutated), using
+    the low-entropy identities of the stored ``record``. The one scrub both ``resolve_trace`` and
+    ``list_traces`` call (16-05, D-13b)."""
+    # D-05: a record stored before reasons were closed codes may carry free text naming a node.
+    try:
+        low_entropy = forbidden_identities(record)[1]
+    except (KeyError, TypeError):  # a stored record of an older shape: the log line loses a detail
+        low_entropy = set()
+    for key in REASON_VALUE_KEYS & public.keys():
+        public[key] = node_free_reason(public[key], low_entropy)
+    return public
+
+
 def _next_offset(page: Page, documents: list[Any], total: int) -> int | None:
     """SEAM-08: ``offset + len(documents)`` when that is below ``total`` and the page returned rows,
     else ``None``. A driver page with zero rows below ``total`` is ``None``, never the same offset
@@ -2206,7 +2220,7 @@ class Databasise:
                     "created_at": created_at,
                     "partial": bool(rec.get("partial")),
                     "degraded": bool(rec.get("degraded")),
-                    "stop_reason": rec.get("stop_reason"),
+                    **_scrub_reasons(rec, {"stop_reason": rec.get("stop_reason")}),
                 }
                 for token, created_at, rec in rows
             ],
@@ -2427,14 +2441,7 @@ class Databasise:
         if debug:
             return record
         public = {key: value for key, value in record.items() if key in _NON_DEBUG_TRACE_FIELDS}
-        # D-05: a record stored before reasons were closed codes may carry free text naming a node.
-        try:
-            low_entropy = forbidden_identities(record)[1]
-        except (KeyError, TypeError):  # a stored record of an older shape: the log line loses a detail
-            low_entropy = set()
-        for key in REASON_VALUE_KEYS & public.keys():
-            public[key] = node_free_reason(public[key], low_entropy)
-        return public
+        return _scrub_reasons(record, public)
 
     def _resolve_operator_preconditions(
         self,
