@@ -138,3 +138,75 @@ def test_parity_report_renders_a_spotcheck_with_null_notes(parity_copy: Path, ca
     assert "**Judgment: `match`** (arm `naive`" in parity_report.EVIDENCE_PATH.read_text(
         encoding="utf-8"
     )
+
+
+# --------------------------------------------------------------------------------------------- #
+# parity_report (C-WR-02): inconclusive prose names the causes it reads
+# --------------------------------------------------------------------------------------------- #
+
+_DEGRADED_REASON = "degraded: NodeExecutionError at entity-lookup"
+_AUDIT_REASON = "partial: the audit run stopped at entity-lookup"
+
+
+def _make_d07_inconclusive(root: Path, arm: str) -> None:
+    """Rewrite one arm the way 15 D-07's run_comparison writes a degraded decomposed run."""
+
+    def edit(records):
+        for record in records:
+            record.update(
+                status="inconclusive",
+                inconclusive_reason=_DEGRADED_REASON,
+                chunk_diff=None,
+                entity_diff=None,
+                relation_diff=None,
+                keyword_variance_band=None,
+                decomposed_run_record={
+                    **(record.get("decomposed_run_record") or {}),
+                    "degraded": True,
+                    "degradation_reason": "NodeExecutionError at entity-lookup",
+                },
+            )
+
+    _rewrite(root / "parity_results" / f"{arm}-comparison.json", edit)
+    _rewrite(
+        root / "parity_results" / f"{arm}-storage-audit.json",
+        lambda audit: audit.update(status="inconclusive", reason=_AUDIT_REASON),
+    )
+
+
+_FALSE_CAUSES = (
+    "are all absent",
+    "MissingParityEnvError",
+    "reports an environment-precondition refusal",
+    "stopped at a precondition",
+    "failed against",
+)
+
+
+def test_an_all_inconclusive_render_names_the_recorded_causes(parity_copy: Path, capsys) -> None:
+    for arm in parity_report.ARMS:
+        _make_d07_inconclusive(parity_copy, arm)
+    # No completed excursion is left, so the committed causes would be orphans.
+    _rewrite(parity_copy / "human_findings.json", lambda d: d.update(declared_causes=[]))
+
+    assert parity_report._run_state() == "inconclusive"
+    assert parity_report._arm_degraded("hybrid") == (True, "NodeExecutionError at entity-lookup")
+    assert parity_report.main([]) == 0
+    text = parity_report.EVIDENCE_PATH.read_text(encoding="utf-8")
+    assert f"`hybrid`/`q1`: {_DEGRADED_REASON}" in text
+    assert f"`hybrid` storage audit: {_AUDIT_REASON}" in text
+    for phrase in _FALSE_CAUSES:
+        assert phrase not in text, phrase
+    deviations = parity_report.DEVIATIONS_PATH.read_text(encoding="utf-8")
+    assert "v1/.env.parity" not in deviations
+
+
+def test_a_mixed_render_names_the_inconclusive_arm_causes(parity_copy: Path) -> None:
+    _make_d07_inconclusive(parity_copy, "hybrid")
+
+    assert parity_report._run_state() == "mixed"
+    text = parity_report.render_markdown()
+    assert f"`hybrid`/`q2`: {_DEGRADED_REASON}" in text
+    assert f"`hybrid` storage audit: {_AUDIT_REASON}" in text
+    for phrase in _FALSE_CAUSES:
+        assert phrase not in text, phrase

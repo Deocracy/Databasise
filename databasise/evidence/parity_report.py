@@ -118,10 +118,8 @@ def load_comparison(arm: str) -> list[dict[str, Any]]:
 
 
 def load_storage_audit(arm: str) -> dict[str, Any]:
-    """Load the committed storage-audit result for one arm. Today every committed file records
-    an environment-precondition refusal (see module docstring and 03-09-SUMMARY.md); once a real
-    run lands, this same loader reads whatever shape ``databasise.parity.storage_audit`` writes.
-    """
+    """Load the committed storage-audit result for one arm, in whatever shape
+    ``databasise.parity.storage_audit`` wrote it."""
     return _load_json(RESULTS_DIR / f"{arm}-storage-audit.json")
 
 
@@ -214,18 +212,36 @@ def _spotcheck_gap() -> str:
     return "the human answer-substance spot-check is recorded for every query"
 
 
+def _inconclusive_causes(arms: tuple[str, ...] = ARMS) -> str:
+    """Every non-completed comparison record's ``inconclusive_reason`` and every non-completed
+    storage audit's ``reason``, as recorded, for ``arms`` (C-WR-02: prose names the cause it reads,
+    never an assumed precondition). ``""`` when every record and audit completed."""
+    causes = []
+    for arm in arms:
+        for record in load_comparison(arm):
+            if record.get("status") != "completed":
+                reason = record.get("inconclusive_reason") or "no reason recorded"
+                causes.append(f"`{arm}`/`{record.get('query_id', '?')}`: {_escape_cell(str(reason))}")
+        audit = load_storage_audit(arm)
+        if audit.get("status") != "completed":
+            reason = audit.get("reason") or "no reason recorded"
+            causes.append(f"`{arm}` storage audit: {_escape_cell(str(reason))}")
+    return "; ".join(causes)
+
+
 def _arm_degraded(arm: str) -> tuple[bool, str]:
-    """Whether any completed comparison record for ``arm`` reports
-    ``decomposed_run_record.degraded`` — read fresh from the committed records on every call, per
+    """Whether any comparison record for ``arm`` reports ``decomposed_run_record.degraded``: a
+    completed record, or an inconclusive one that D-07 wrote with its decomposed run record
+    (C-WR-02) — read fresh from the committed records on every call, per
     this module's own no-hardcoded-run-state rule (03-10-PLAN.md Task 2; 03-10 fix cycle, finding
-    2). Returns the first degradation reason found, or ``""`` when none of the arm's completed
+    2). Returns the first degradation reason found, or ``""`` when none of the arm's
     records degraded. A clean re-run of a currently-degraded arm flips this to ``(False, "")``
     with no code change — every prose section that reads it follows automatically.
     """
     for record in load_comparison(arm):
-        if record.get("status") != "completed":
+        if record.get("status") not in ("completed", "inconclusive"):
             continue
-        drr = record.get("decomposed_run_record", {})
+        drr = record.get("decomposed_run_record") or {}
         if drr.get("degraded"):
             return True, drr.get("degradation_reason") or drr.get("stop_reason") or ""
     return False, ""
@@ -544,9 +560,9 @@ def render_deviations_markdown(
                 "No excursion is recorded in this document. This is a stated zero, not an absent "
                 "file — and, as of this render, it reflects that **no completed comparison run has "
                 "occurred**: every arm's committed result under `parity_results/` carries "
-                "`status=\"inconclusive\"` (the index-identity precondition and/or the "
-                "`v1/.env.parity` precondition failed on this machine — see `PARITY-EVIDENCE.md`'s "
-                "\"What was compared\" section). A stated zero here should therefore be read as "
+                "`status=\"inconclusive\"` (each record's own recorded cause is listed in "
+                "`PARITY-EVIDENCE.md`'s \"What was compared\" section). A stated zero here should "
+                "therefore be read as "
                 "\"nothing has been measured yet,\" not as \"the comparison ran and found no "
                 "excursions.\" Re-running `parity_report.py` after a real comparison lands will "
                 "populate this section with either named entries or an updated zero statement that "
@@ -1022,13 +1038,13 @@ def _render_what_was_compared() -> str:
         one_index_trailing = (
             "and gated on every comparison run by plan 03-02's index-identity verifier "
             "(`databasise.parity.import_index.verify_import`) — the precondition the completed "
-            "records passed and the inconclusive records failed against (see below).\n"
+            "records passed (see below for each inconclusive record's recorded cause).\n"
         )
     else:
         one_index_trailing = (
             "and gated on every comparison run by plan 03-02's index-identity verifier "
-            "(`databasise.parity.import_index.verify_import`) — the same precondition this "
-            "document's own recorded runs failed against (see below).\n"
+            "(`databasise.parity.import_index.verify_import`); no recorded run completed — see "
+            "below for each one's recorded cause.\n"
         )
 
     completed_records = [
@@ -1079,7 +1095,7 @@ def _render_what_was_compared() -> str:
     else:
         pinned_models_clause = (
             "No comparison run recorded in this document reached the point of resolving these "
-            "identities live (see \"What is not measured\" and the precondition state below); "
+            "identities live (see \"What is not measured\" and the run state below); "
             "the pins themselves are config, not a claim about what ran.\n"
         )
 
@@ -1096,10 +1112,9 @@ def _render_what_was_compared() -> str:
     if mixed:
         run_state_bullet = (
             f"- **Run state (this render)**: mixed — {_state_summary()}. The completed records "
-            f"ran against corpus hash {corpus_hash}; each inconclusive record stopped at a "
-            "precondition and carries no comparison number (its `inconclusive_reason` is in "
-            "\"Per-arm retrieval-level comparison\" below), so no statement here covers the "
-            "arms that did not complete.\n"
+            f"ran against corpus hash {corpus_hash}; each inconclusive record carries no "
+            f"comparison number. Recorded causes: {_inconclusive_causes()}. No statement here "
+            "covers the arms that did not complete.\n"
         )
     elif completed:
         run_state_bullet = (
@@ -1114,17 +1129,11 @@ def _render_what_was_compared() -> str:
         )
     else:
         run_state_bullet = (
-            "- **Environment precondition state on this machine (this render)**: `v1/.venv`, "
-            "`v1/.parity_working_dir`, `v1/.parity_v2_store`, and `v1/.env.parity` are all "
-            "absent — gitignored, worktree-local build artifacts from a different execution "
-            "session (03-02's own real ingest run) that do not carry over to a freshly spawned "
-            "worktree. Every arm's comparison run below therefore stopped at the index-identity "
-            "precondition gate before either arm was touched, and every arm's storage-audit run "
-            "stopped at client construction before the scheduler ran a single node. Both are the "
-            "harness's own designed refusal behavior (D-02, this document's own governing "
-            "prohibition against emitting a pass/fail verdict on a failed precondition), not a "
-            "code defect. Rebuild steps and the exact re-run commands are listed in "
-            "03-09-SUMMARY.md's \"Next Phase Readiness\" section.\n"
+            "- **Run state (this render)**: no arm's comparison run or storage audit completed. "
+            "The harness records `inconclusive` instead of a pass or fail when a run cannot be "
+            "compared (D-02; a partial, degraded or cyclic decomposed run since 15 D-07). Each "
+            "record's own recorded cause, read from `parity_results/`: "
+            f"{_inconclusive_causes()}.\n"
         )
 
     lines = [
@@ -1377,21 +1386,18 @@ def _render_storage_audit() -> str:
             skipped = [arm for arm in ARMS if arm not in audited_arms]
             sections.append(
                 f"The run state is mixed: `{'`, `'.join(skipped)}` did not complete both its "
-                "comparison and its storage audit, so the counts above for "
-                "that arm (usually `matched=0 no-touch=0 over-declared=0`) record an audit that "
-                "stopped before the scheduler ran a node, read from that arm's committed "
-                "`<arm>-storage-audit.json` — not a claim that every node correctly touched "
-                "nothing.\n"
+                "comparison and its storage audit, so the counts above for that arm are read "
+                "from its committed `<arm>-storage-audit.json` as recorded, with these recorded "
+                f"causes: {_inconclusive_causes(tuple(skipped))} — not a claim that every node "
+                "correctly touched nothing.\n"
             )
     else:
         sections.append(
-            "Every arm above reports `matched=0 no-touch=0 over-declared=0` in this render — "
-            "none of the five audits reached the scheduler: "
-            "`databasise.parity.storage_audit.run_audit` builds clients from `v1/.env.parity` "
-            "before dispatching a single node, and that file is absent on this machine (see "
-            "\"What was compared\"). This is the audit's own `MissingParityEnvError` refusal, "
-            "captured verbatim in each arm's committed `{arm}-storage-audit.json` under "
-            "`parity_results/` — not a claim that every node correctly touched nothing.\n"
+            "None of the five storage audits and comparison runs completed in this render. The "
+            "counts above are what each committed `<arm>-storage-audit.json` under "
+            "`parity_results/` recorded, with these recorded causes: "
+            f"{_inconclusive_causes()} — not a claim that every node correctly touched "
+            "nothing.\n"
         )
     return "\n".join(sections)
 
@@ -1480,11 +1486,10 @@ def _render_not_measured() -> str:
         second_paragraph = (
             "Separately, and specific to this render: **no comparison in this document has "
             "actually run.** Every arm's retrieval-level diff, `keywords` variance band, and "
-            "storage-ownership audit are all `inconclusive` on this machine (see \"What was "
-            "compared\"). This document is correct and complete for that inconclusive outcome, "
-            "and is re-runnable to produce the real verdict once the owner rebuilds the v1 "
-            "environment — see 03-09-SUMMARY.md's \"Next Phase Readiness\" for the exact rebuild "
-            "and re-run commands.\n"
+            "storage-ownership audit are all `inconclusive` in the committed records (see \"What "
+            "was compared\" for each record's recorded cause). This document is correct and "
+            "complete for that inconclusive outcome, and is re-runnable to produce the real "
+            "verdict once a comparison run completes.\n"
         )
     return first_paragraph + second_paragraph
 
@@ -1599,15 +1604,15 @@ def _render_verdict() -> str:
         return (
             "## Verdict\n\n"
             "**No parity verdict is recorded by this document.** Every one of the five arms' "
-            "comparison runs and storage-ownership audits reports an environment-precondition "
-            "refusal — never a pass, never a fail, exactly as this document's own stated prohibition "
-            "requires (\"the parity harness must not emit a pass or fail verdict when the "
-            "index-identity preconditions failed; it must emit `inconclusive`\"). The harness code "
-            "itself, its provenance-checking (`--check-results`), and this rendering are proven "
-            "correct against the real refusal path in this session; the clean-pass path — an actual "
-            "retrieval-level comparison against the real imported index and live model endpoints — "
-            "awaits the owner rebuilding the v1 environment (`v1/README-PARITY.md`) and re-running "
-            "the exact commands 03-09-SUMMARY.md names.\n"
+            "comparison runs and storage-ownership audits reports `inconclusive` (the harness "
+            "writes it for an environment-precondition refusal or, since 15 D-07, for a partial, "
+            "degraded or cyclic decomposed run; each record's own cause follows) — never "
+            "a pass, never a fail, exactly as this document's own stated prohibition requires (\"the "
+            "parity harness must not emit a pass or fail verdict when the index-identity "
+            "preconditions failed; it must emit `inconclusive`\"). Recorded causes: "
+            f"{_inconclusive_causes()}. An actual retrieval-level comparison against the real "
+            "imported index and live model endpoints awaits a re-run that completes "
+            "(`v1/README-PARITY.md`).\n"
         )
 
     degraded_arms = [arm for arm in ARMS if _arm_degraded(arm)[0]]
