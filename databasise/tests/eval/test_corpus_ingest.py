@@ -28,6 +28,12 @@ from databasise.seam.corpus import IngestJob
 from databasise.stores.vector import MultiNamespaceVectorStore
 
 _WORKSPACE = "corpus-ingest-tracer-ws"
+
+
+@pytest.fixture(autouse=True)
+def _eval_store_root_in_tmp(tmp_path, monkeypatch):
+    """A-ITER2-WR-04: --spend cases lock and write under tmp_path, never the repo's v1/.eval_corpus_store."""
+    monkeypatch.setattr(corpus_ingest, "_EVAL_INGEST_STORE_ROOT", tmp_path / "eval-store-root")
 _QUERY_VECTOR = [1.0, 0.0, 0.0]
 _SUBJECT, _PREDICATE, _OBJECT = "Subject", "relates-to", "Object"
 

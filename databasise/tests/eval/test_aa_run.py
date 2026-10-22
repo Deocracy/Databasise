@@ -41,6 +41,16 @@ from databasise.seam.query import QueryObject
 from databasise.seam.trace_store import TraceStore
 
 
+@pytest.fixture(autouse=True)
+def _eval_store_root_in_tmp(tmp_path, monkeypatch):
+    """A-ITER2-WR-04: --spend cases lock and write under tmp_path, never the repo's v1/.eval_corpus_store."""
+    from databasise.eval import corpus_ingest
+
+    root = tmp_path / "eval-store-root"
+    monkeypatch.setattr(aa_run, "_EVAL_INGEST_STORE_ROOT", root)
+    monkeypatch.setattr(corpus_ingest, "_EVAL_INGEST_STORE_ROOT", root)
+
+
 # --------------------------------------------------------------------------------------------- #
 # Shared stubs
 # --------------------------------------------------------------------------------------------- #
