@@ -120,9 +120,18 @@ class MalformedBoundaryKnobError(ValueError):
     ``rationale`` (C-WR-04)."""
 
 
+class MalformedWiringDocumentError(ValueError):
+    """A named wiring document under ``WIRINGS_DIR`` is not valid JSON (C-ITER2-WR-01)."""
+
+
 def load_wiring(stem: str) -> dict[str, Any]:
-    """Load one committed wiring document by its file stem (no ``.json`` suffix)."""
-    return json.loads((WIRINGS_DIR / f"{stem}.json").read_text(encoding="utf-8"))
+    """Load one committed wiring document by its file stem (no ``.json`` suffix). Raises
+    :class:`MalformedWiringDocumentError` when the file is not valid JSON."""
+    path = WIRINGS_DIR / f"{stem}.json"
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise MalformedWiringDocumentError(f"{path}: {exc}") from exc
 
 
 # Two probe-only parts backing the b-family blast-radius probes below. Neither is registered into
@@ -655,13 +664,19 @@ def render_markdown() -> str:
 def main(argv: list[str] | None = None) -> int:
     """Write the rendered document; exit 1 when Falsifier 2 fired (a probe did not behave as
     expected, or a named wiring carries a validator violation). A named refusal (a malformed
-    ``boundary_knobs`` entry, an installed-package target, an OS read or write error) prints one
-    stderr line and returns 1, writing nothing (D-03)."""
+    ``boundary_knobs`` entry, a wiring document that is not valid JSON, an installed-package
+    target, an OS read or write error) prints one stderr line and returns 1, writing nothing
+    (D-03)."""
     argparse.ArgumentParser(description=__doc__).parse_args(argv)
     try:
         text = render_markdown()
         write_committed_documents((EVIDENCE_PATH, text))
-    except (MalformedBoundaryKnobError, InstalledPackageWriteError, OSError) as exc:
+    except (
+        MalformedBoundaryKnobError,
+        MalformedWiringDocumentError,
+        InstalledPackageWriteError,
+        OSError,
+    ) as exc:
         return refuse(exc)
     print(text)
     return 1 if failing_probes() or failing_wirings() else 0

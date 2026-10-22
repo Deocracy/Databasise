@@ -325,6 +325,18 @@ def test_falsifier2_refuses_a_malformed_boundary_knob_by_name(wirings_copy: Path
     assert not falsifier2.EVIDENCE_PATH.exists()
 
 
+@pytest.mark.parametrize("stem", ["w1-lightrag-query-side", "w2-codebase-memory-mcp"])
+def test_falsifier2_refuses_a_named_wiring_that_is_not_json_by_name(
+    wirings_copy: Path, stem: str, capsys
+) -> None:
+    """C-ITER2-WR-01 (D-03): one stderr line and exit 1, not a JSONDecodeError traceback."""
+    (wirings_copy / f"{stem}.json").write_text("{not json", encoding="utf-8")
+
+    assert falsifier2.main([]) == 1
+    _one_refusal_line(capsys, "MalformedWiringDocumentError")
+    assert not falsifier2.EVIDENCE_PATH.exists()
+
+
 def test_falsifier2_refuses_to_write_into_an_installed_package(
     installed_dir: Path, monkeypatch: pytest.MonkeyPatch, capsys
 ) -> None:
