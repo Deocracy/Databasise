@@ -731,7 +731,7 @@ These fail today.
 - [x] **CONN-11**: POST /graph/nodes with `{selector, prefix, limit, offset}` returns `{nodes: [{id, degree}], total, next_offset}`, sorted by id and filtered by an optional id prefix. The graph namespace comes from the selector's resolved wiring, never from a namespace name in the request (§18.4). Degrees for a page are computed in one batched store query, not one full-scan `node_degree` query per id. If the graph namespace is held by another process, the route returns 409 `StoreBusyError(store_kind="graph")`, not a 500. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*
   - Test: A TestClient test builds a small Cozo graph (5 nodes, known edges) under a tmp store root and asserts ids, degrees, `total`, the prefix filter and paging. A spy on the immutable graph query (`stores.probes._run_immutable`) asserts one degree query per page; no `CozoGraphStore` is built on this path (D-15). A test that holds the namespace with a raw `pycozo.Client("rocksdb", path)` asserts a 409 with `refusal_type == "StoreBusyError"`, not 500. The test fails before the route exists and passes after. The busy case depends on the engine graph-lock fix (G-01).
   - Defects: stores/ST-10, doc-audit-1/D6, doc-audit-5/D4, parts-lightrag/PC-18, stores/ST-08
-- [ ] **CONN-12**: POST /graph/node with `{selector, node_id, limit, offset}` returns `{id, degree, edges: [{src, tgt, edge_types, weight}], next_offset}`. Edges are stored undirected in lexicographic order, so the response carries no direction field. `edge_types` and `weight` are always present and null when the store has none; no other attrs are returned. An unknown `node_id` returns 422 (not 404) `UnknownGraphNodeError`, a new refusal added to the CONN-02 catalogue. The graph namespace comes from the selector's resolved wiring. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*
+- [x] **CONN-12**: POST /graph/node with `{selector, node_id, limit, offset}` returns `{id, degree, edges: [{src, tgt, edge_types, weight}], next_offset}`. Edges are stored undirected in lexicographic order, so the response carries no direction field. `edge_types` and `weight` are always present and null when the store has none; no other attrs are returned. An unknown `node_id` returns 422 (not 404) `UnknownGraphNodeError`, a new refusal added to the CONN-02 catalogue. The graph namespace comes from the selector's resolved wiring. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*
   - Test: A TestClient test on a tmp Cozo graph asserts the edges of a known node, paging over edges, and `edge_types` on a HippoRAG edge. For an unknown id it asserts 422 with `refusal_type == "UnknownGraphNodeError"`, not 500. The CONN-02 catalogue test then requires the new type. The test fails before the route exists and passes after.
   - Defects: parts-hipporag/HIPPO-14, stores/ST-08
   - Decided in Phase 16 CONTEXT D-16 (2026-10-22): API-06 holds; the route returns references plus the `edge_types`/`weight` allowlist, and the dereference call is deferred to the Phase 17 mockup.
@@ -977,7 +977,7 @@ These fail today.
 | CONN-09 | Phase 16 | Complete |
 | CONN-10 | Phase 16 | Complete |
 | CONN-11 | Phase 16 | Complete |
-| CONN-12 | Phase 16 | Pending |
+| CONN-12 | Phase 16 | Complete |
 | CONN-13 | Phase 16 | Pending |
 | CONN-14 | Phase 16 | Pending |
 | GUI-01 | Phase 17 | Pending |
