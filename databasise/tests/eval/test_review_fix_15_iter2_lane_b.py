@@ -63,3 +63,63 @@ def test_a_negated_or_second_verdict_is_still_refused_with_the_committed_prompt(
     """B-ITER2-WR-01: only the chosen verdict's own definition is exempt; any other verdict word refuses."""
     with pytest.raises(aa_run.UnparseableJudgeVerdictError):
         _score_with_committed_prompt(text)
+
+
+def _floor_row(**overrides):
+    from databasise.seam.floors_store import FloorRow
+
+    fields = dict(
+        wiring_instance_hash="h1",
+        bundle_at_v="bundle@v1",
+        tier="T1",
+        metric="gold_passage_recall",
+        determinism_setting="d",
+        concurrency_setting="c",
+        floor=0.1,
+        n_questions=3,
+        n_resamples=10,
+        seed=1,
+        created_at="2026-10-21T00:00:00+00:00",
+    )
+    return FloorRow(**{**fields, **overrides})
+
+
+class _LookupFaultFloors:
+    def any_floor(self):
+        return True
+
+    def lookup(self, wiring_instance_hash):
+        import sqlite3
+
+        raise sqlite3.OperationalError("disk I/O error")
+
+
+def test_a_floors_db_fault_in_stage_1_is_a_store_fault_refusal(tmp_path):
+    """B-ITER2-WR-02: a WAL without its SHM makes a gate verb a StoreFault refusal, not a raw sqlite error."""
+    from databasise.seam.engine import Databasise
+    from databasise.seam.floors_store import FloorStore
+    from databasise.seam.refusals import ForeignEngineRefusalError
+
+    FloorStore(tmp_path).record(_floor_row())
+    (tmp_path / "floors.db-wal").write_bytes(b"\0" * 64)
+    engine = Databasise(store_root=tmp_path, workspace="w")
+    for verb in ("promote-next", "promote-now"):
+        with pytest.raises(ForeignEngineRefusalError) as excinfo:
+            asyncio.run(engine.promote("alias", ["t"], "operator", verb=verb))
+        assert (excinfo.value.operation, excinfo.value.failure_class) == ("promote", "StoreFault")
+    assert not (tmp_path / "ledger.db").exists()
+
+
+def test_a_floors_db_fault_in_stage_2_is_a_store_fault_refusal(tmp_path):
+    """B-ITER2-WR-02: a lookup fault in _refuse_gate_verb is a StoreFault refusal, not GateNotCalibratedError."""
+    from databasise.seam.engine import Databasise
+    from databasise.seam.refusals import ForeignEngineRefusalError
+    from databasise.wirings.resolve import wiring_for_name
+
+    engine = Databasise(store_root=tmp_path, workspace="w")
+    engine._floors = _LookupFaultFloors()
+    resolved = wiring_for_name("naive")
+    assert resolved is not None
+    with pytest.raises(ForeignEngineRefusalError) as excinfo:
+        engine._refuse_gate_verb("promote-next", "alias", resolved, ["h1"])
+    assert (excinfo.value.operation, excinfo.value.failure_class) == ("promote", "StoreFault")

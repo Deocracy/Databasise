@@ -2384,7 +2384,11 @@ class Databasise:
             concurrency_setting=_CONCURRENCY_SETTING,
         )
         for instance_hash in arm_instance_hashes:
-            for row in self._floors.lookup(instance_hash):
+            try:
+                floor_rows = self._floors.lookup(instance_hash)
+            except sqlite3.Error as exc:  # a floors.db fault is not "no floor" (B-ITER2-WR-02)
+                raise _foreign_fault("promote", exc, failure_class="StoreFault") from exc
+            for row in floor_rows:
                 stored = CalibrationResult(
                     identity=NullIdentity(
                         row.bundle_at_v, row.tier, row.metric, row.determinism_setting, row.concurrency_setting
@@ -2426,7 +2430,9 @@ class Databasise:
         (``check``, ``preview``, ``run``) refuses. Then a gate-adjudicated verb (``promote-next``,
         ``promote-now``) refuses as :class:`~databasise.seam.refusals.GateNotCalibratedError` when
         ``floors.db`` holds no floor at all (TOOL-12 stage 1), the same for every arm, before anything
-        else is looked at and before any ``Ledger`` exists (no ``ledger.db`` is created). Then the
+        else is looked at and before any ``Ledger`` exists (no ``ledger.db`` is created); a sqlite
+        fault reading ``floors.db``, here or in stage 2, is ``ForeignEngineRefusalError`` with
+        ``failure_class="StoreFault"`` (15-REVIEW-ITER2 B-WR-02), never "no floor". Then the
         shared prologue
         (:meth:`_resolve_operator_preconditions`): an ``alias`` that is empty or shaped like an
         instance hash refuses as :class:`~databasise.seam.refusals.InvalidPromotionAliasError`
@@ -2462,8 +2468,13 @@ class Databasise:
 
         # LEDG-08 (D-04) / TOOL-12 stage 1: with no persisted floor at all a gate verb is refused
         # identically for every arm, before alias validation, trace resolution and any Ledger.
-        if verb in _GATE_VERBS and not self._floors.any_floor():
-            raise GateNotCalibratedError(verb=verb)
+        if verb in _GATE_VERBS:
+            try:
+                has_floor = self._floors.any_floor()
+            except sqlite3.Error as exc:  # a floors.db fault is not "no floor" (B-ITER2-WR-02)
+                raise _foreign_fault("promote", exc, failure_class="StoreFault") from exc
+            if not has_floor:
+                raise GateNotCalibratedError(verb=verb)
 
         _resolved_records, arm_name, arm_instance_hashes = self._resolve_operator_preconditions(
             alias, trace_ids, change_origin, refuse_partial=True
