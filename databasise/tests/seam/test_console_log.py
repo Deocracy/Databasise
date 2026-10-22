@@ -55,3 +55,97 @@ def test_log_tails_the_launcher_log_and_is_404_without_both_flags(tmp_path):
 
     assert _client(tmp_path / "no-file", "--operator").get("/log").status_code == 404
     assert _client(tmp_path / "no-operator", "--log-file", str(log)).get("/log").status_code == 404
+
+
+def test_log_file_flag_passes_a_file_log_config_only_when_given(tmp_path, monkeypatch):
+    assert callable(getattr(serve_rest, "log_config_for", None))
+    import uvicorn
+
+    seen: list[dict] = []
+    monkeypatch.setattr(uvicorn, "run", lambda *a, **kw: seen.append(kw))
+    log = tmp_path / "server.log"
+    base = ["--no-clients", "--store-root", str(tmp_path / "store"), "--operator"]
+    assert serve_rest.main([*base, "--log-file", str(log)]) == 0
+    config = seen[0]["log_config"]
+    assert config["handlers"]["file"]["filename"] == str(log)
+    assert "file" in config["loggers"]["uvicorn"]["handlers"]
+    assert "file" in config["loggers"]["uvicorn.access"]["handlers"]
+    assert "file" in config["root"]["handlers"]
+    assert config["disable_existing_loggers"] is False
+    assert serve_rest.main(base) == 0
+    assert "log_config" not in seen[1]
+
+
+def test_log_config_captures_engine_lines_and_tracebacks(tmp_path):
+    assert callable(getattr(serve_rest, "log_config_for", None))
+    log = tmp_path / "server.log"
+    code = (
+        "import logging, logging.config, sys\n"
+        "import databasise.seam.engine\n"  # the engine logger exists before dictConfig runs
+        "from databasise.launcher.serve_rest import log_config_for\n"
+        "logging.config.dictConfig(log_config_for(sys.argv[1]))\n"
+        "logging.getLogger('databasise.seam.engine').warning('engine line marker')\n"
+        "try:\n"
+        "    raise ValueError('boom marker')\n"
+        "except ValueError:\n"
+        "    logging.getLogger('uvicorn.error').exception('Exception in ASGI application')\n"
+        "logging.shutdown()\n"
+    )
+    done = subprocess.run(
+        [sys.executable, "-c", code, str(log)],
+        env={"PYTHONPATH": str(_REPO_ROOT), "PATH": "/usr/bin:/bin"},
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert done.returncode == 0, done.stderr
+    text = log.read_text(encoding="utf-8")
+    assert "engine line marker" in text
+    assert "Traceback" in text and "boom marker" in text
+
+
+def _free_port() -> int:
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
+
+
+def test_a_real_operator_launch_writes_lines_that_get_log_returns(tmp_path):
+    assert callable(getattr(serve_rest, "log_config_for", None))
+    log = tmp_path / "server.log"
+    port = _free_port()
+    err = tmp_path / "launch.err"
+    with open(err, "wb") as err_file:
+        proc = subprocess.Popen(
+            [
+                str(Path(sys.executable).parent / "databasise-rest"),
+                "--operator", "--log-file", str(log),
+                "--no-clients", "--store-root", str(tmp_path / "store"),
+                "--workspace", "w", "--port", str(port),
+            ],  # fmt: skip
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=err_file,
+        )
+    try:
+        deadline = time.monotonic() + 60
+        while True:
+            assert proc.poll() is None, f"launcher exited {proc.returncode}: {err.read_text()}"
+            assert time.monotonic() < deadline, "launcher did not become ready in time"
+            try:
+                httpx.get(f"http://127.0.0.1:{port}/openapi.json", timeout=2)
+                break
+            except httpx.HTTPError:
+                time.sleep(0.5)
+        assert httpx.get(f"http://127.0.0.1:{port}/info", timeout=10).status_code == 200
+        got = httpx.get(f"http://127.0.0.1:{port}/log", params={"limit": 50}, timeout=10)
+        assert got.status_code == 200
+        assert any("GET /info" in line for line in got.json()["lines"])
+    finally:
+        proc.terminate()
+        try:
+            proc.wait(15)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
