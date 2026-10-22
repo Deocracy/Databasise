@@ -38,7 +38,7 @@ from typing import Any
 
 from databasise import cli
 from databasise.clients.openai_compat import ModelIdentityMissingError
-from databasise.eval.bundle import EvalBundle, mint_bundle
+from databasise.eval.bundle import EvalBundle, SealedPartitionOpenedError, mint_bundle
 from databasise.eval.corpus_ingest import CORPUS_DIR
 from databasise.parity.corpus import CorpusSnapshot, load_snapshot
 from databasise.parity.run_arm import (
@@ -103,7 +103,8 @@ def remint(
     """A thin call-through to :func:`databasise.eval.bundle.mint_bundle`, returning the
     :class:`EvalBundle` it returns. Adds no versioning logic of its own: ``mint_bundle`` is already
     content-addressed over ``judge_instance``, so a changed identity mints the next version and an
-    unchanged one returns the already-minted version — do not add a redundant bump here.
+    unchanged one returns the already-minted version (flagged ``sealed_opened`` if its sealed
+    partition was opened; :func:`main` refuses that) — do not add a redundant bump here.
     """
     return mint_bundle(
         snapshot,
@@ -167,6 +168,8 @@ def main(argv: list[str] | None = None) -> int:
             determinism_setting=_DETERMINISM_SETTING,
             concurrency_setting=_CONCURRENCY_SETTING,
         )
+        if bundle.sealed_opened:  # unchanged input deduped to an opened version (B-WR-07)
+            raise SealedPartitionOpenedError(bundle.version)
     except refusals as exc:  # mint_bundle's BundleDriftError and MissingTargetFamilyError end here too
         return cli.refuse(exc)
 

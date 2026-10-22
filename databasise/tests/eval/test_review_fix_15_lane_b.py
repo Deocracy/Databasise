@@ -266,3 +266,41 @@ def test_a_truncated_usage_line_is_a_named_refusal(monkeypatch, tmp_path, capsys
     err_lines = capsys.readouterr().err.strip().splitlines()
     assert len(err_lines) == 1
     assert err_lines[0].startswith("CorruptUsageLogError: ")
+
+
+def test_an_opened_version_is_never_used_as_sealed(monkeypatch, tmp_path, capsys):
+    """B-WR-07: a second opening and a remint that resolves to an opened version are both refused."""
+    import hashlib
+
+    from databasise.eval import remint
+    from databasise.eval.bundle import SealedPartitionOpenedError, mint_bundle, open_sealed
+    from databasise.parity.corpus import load_snapshot
+
+    root = tmp_path / "eval-bundles"
+    snapshot = load_snapshot(remint.CORPUS_DIR)
+    settings = dict(
+        judge_instance="judge@1",
+        judge_prompt_hash=hashlib.sha256(remint._JUDGE_PROMPT_PATH.read_bytes()).hexdigest(),
+        determinism_setting=remint._DETERMINISM_SETTING,
+        concurrency_setting=remint._CONCURRENCY_SETTING,
+    )
+    first = mint_bundle(snapshot, root, **settings)
+    assert mint_bundle(snapshot, root, **settings).version == first.version  # unopened: dedup holds
+    opening = open_sealed(root, first.version, event="test opening")
+    for version in (first.version, opening.bundle.version):
+        with pytest.raises(SealedPartitionOpenedError):
+            open_sealed(root, version, event="second opening")
+    assert mint_bundle(snapshot, root, **settings).sealed_opened is True
+
+    async def judge_identity(llm):
+        return "judge@1"
+
+    monkeypatch.setattr(remint, "_COMMITTED_BUNDLE_ROOT", root)
+    monkeypatch.setattr(remint, "_load_env_file", lambda path: {})
+    monkeypatch.setattr(remint, "_build_clients", lambda env: {"llm": None})
+    monkeypatch.setattr(remint, "resolve_judge_identity", judge_identity)
+    capsys.readouterr()
+    assert remint.main(["--spend"]) == 1
+    err_lines = capsys.readouterr().err.strip().splitlines()
+    assert len(err_lines) == 1
+    assert err_lines[0].startswith("SealedPartitionOpenedError: ")

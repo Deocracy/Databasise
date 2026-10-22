@@ -35,7 +35,10 @@ version (bypassing :func:`mint_bundle`'s own content-hash dedup — the partitio
 longer sealed once touched, regardless of whether the six content members themselves changed), and
 appends its own usage entry to both the opened version and the new one before returning the sealed
 content. A loaded :class:`EvalBundle` reports ``sealed_opened`` from that log, so :func:`mint_bundle`
-never hands back an opened version as if unopened.
+never hands back an opened version as if unopened; :func:`open_sealed` refuses an opened version
+and ``eval.remint`` refuses a mint that resolves to one (:class:`SealedPartitionOpenedError`).
+Opening also mints a new highest version, so every floor persisted against the previous highest
+version is stale at the promotion gate.
 
 **Versions before and after 15-05 (TOOL-13, D-14).** ``bundle@v1`` keeps its old-scheme
 ``content_hash`` (question ids and gold answers only) and records no ``split_counts``; its realised
@@ -99,6 +102,21 @@ class CorruptUsageLogError(RuntimeError):
         super().__init__(
             f"bundle {version!r}: line {line_number} of {path} is not JSON; repair or remove that line "
             "before the version is loaded again"
+        )
+
+
+class SealedPartitionOpenedError(RuntimeError):
+    """A version whose sealed partition was already opened (its ``usage.jsonl`` records
+    ``sealed_open``) was about to be used as if sealed: by :func:`open_sealed` a second time, or by
+    ``eval.remint`` as the result of a mint. RIG §EV.1: a touched partition is no longer sealed, and
+    a fresh mint of the same questions would only re-label them sealed, so a sealed bundle needs a
+    changed question set (B-WR-07)."""
+
+    def __init__(self, version: str) -> None:
+        self.version = version
+        super().__init__(
+            f"{version!r}'s sealed partition has already been opened (usage.jsonl records sealed_open), "
+            "so it is not sealed; change the question set to mint a sealed bundle"
         )
 
 
@@ -565,6 +583,8 @@ def open_sealed(bundle_root: Path, version: str, *, event: str) -> SealedOpening
             "a sealed read that quietly succeeds is the one outcome sealing exists to prevent"
         )
     old_bundle = load_bundle(bundle_root, version)
+    if old_bundle.sealed_opened:  # a second opening would hand out seen questions as sealed (B-WR-07)
+        raise SealedPartitionOpenedError(version)
     sealed_ids = old_bundle.splits["sealed"].question_ids
 
     bundle_content = _bundle_to_json_dict(old_bundle)
@@ -593,6 +613,7 @@ __all__ = [
     "MissingSealedEventError",
     "MissingTargetFamilyError",
     "SealedOpening",
+    "SealedPartitionOpenedError",
     "TargetFamily",
     "load_bundle",
     "mint_bundle",
