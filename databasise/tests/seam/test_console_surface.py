@@ -16,6 +16,7 @@ import ast
 import importlib
 import importlib.util
 import inspect
+from pathlib import Path
 
 import pytest
 
@@ -174,6 +175,63 @@ def test_the_launcher_operator_flag_mounts_the_routes_only_when_given(tmp_path):
     assert TestClient(with_flag, base_url="http://127.0.0.1").get("/info").status_code == 200
     without_flag = build_app(_launcher_args(tmp_path / "off"), None)
     assert TestClient(without_flag, base_url="http://127.0.0.1").get("/info").status_code == 404
+
+
+_COVERAGE_MD = Path(__file__).resolve().parents[2] / "evidence" / "COVERAGE.md"
+_ABSENT_HEADER = "| operation | decision | reason |"
+
+
+def _absent_rows() -> list[list[str]]:
+    """Rows of COVERAGE.md's 'Operations deliberately absent' table, parsed like the growth test does."""
+    lines = _COVERAGE_MD.read_text(encoding="utf-8").splitlines()
+    start = next(i for i, line in enumerate(lines) if line.strip().startswith(_ABSENT_HEADER))
+    rows: list[list[str]] = []
+    for line in lines[start + 2 :]:
+        if not line.strip().startswith("|"):
+            break
+        rows.append([cell.strip() for cell in line.strip().strip("|").split("|")])
+    return rows
+
+
+def test_every_operator_operation_has_a_rest_only_absent_row():
+    from databasise.mcp.tools import TOOL_NAMES
+
+    rows = _absent_rows()
+    for method, path in _OPERATOR_PATHS:
+        route = f"`{method} {path}`"
+        matches = [row for row in rows if route in row[0]]
+        assert len(matches) == 1, f"{route}: {len(matches)} absent-table rows, expected exactly one (D-03)"
+        assert matches[0][1] == "REST-ONLY", f"{route}: decision is {matches[0][1]!r}, expected 'REST-ONLY'"
+    assert len(TOOL_NAMES) == 10, f"the MCP tool set grew to {len(TOOL_NAMES)} names (D-03)"
+
+
+def _route_pairs(app) -> set[tuple[str, str]]:
+    return {
+        (method, route.path)
+        for route in app.routes
+        for method in (getattr(route, "methods", None) or ())
+        if method not in {"HEAD", "OPTIONS"}
+    }
+
+
+def _operator_app(tmp_path, name: str, **extra):
+    """An app built with ``operator=True`` under its own store root. The 'log_path' assert keeps a base
+    without the parameter on AssertionError rather than TypeError."""
+    if extra:
+        assert "log_path" in inspect.signature(create_app).parameters, "create_app has no log_path (CONN-14)"
+    return create_app(store_root=tmp_path / name, workspace="ws", operator=True, **extra)
+
+
+def test_the_operator_app_mounts_exactly_the_operator_routes(tmp_path):
+    default = _route_pairs(create_app(store_root=tmp_path / "default", workspace="ws"))
+    assert not default & set(_OPERATOR_PATHS), "the default app mounts an operator route"
+
+    ten = {(m, p) for m, p in _OPERATOR_PATHS}
+    with_log = _route_pairs(_operator_app(tmp_path, "with_log", log_path=tmp_path / "server.log"))
+    assert with_log - default == ten, sorted(with_log - default)
+
+    without_log = _route_pairs(_operator_app(tmp_path, "without_log"))
+    assert without_log - default == ten - {("GET", "/log")}, sorted(without_log - default)
 
 
 def test_operator_with_a_remote_host_is_refused_before_the_store_lock(tmp_path, capsys):
