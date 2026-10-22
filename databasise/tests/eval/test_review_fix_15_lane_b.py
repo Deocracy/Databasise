@@ -144,3 +144,56 @@ def test_floor_store_refuses_a_wal_without_its_shm(tmp_path):
         store.any_floor()
     with pytest.raises(sqlite3.OperationalError):
         store.lookup("h1")
+
+
+def _calibration_result(metric: str, *, wiring_instance_hash: str | None = "h1"):
+    from databasise.eval.calibration import CalibrationResult, NullIdentity
+
+    identity = NullIdentity(
+        bundle_at_v="bundle@v1", tier="T1", metric=metric, determinism_setting="d", concurrency_setting="c"
+    )
+    return CalibrationResult(
+        identity=identity, floor=0.1, n_questions=3, n_resamples=10, seed=1, wiring_instance_hash=wiring_instance_hash
+    )
+
+
+def test_floor_store_record_many_writes_all_rows_or_none(tmp_path):
+    """B-WR-03: a failing row rolls back the rows before it."""
+    from databasise.seam.floors_store import FloorStore
+
+    store = FloorStore(tmp_path)
+    with pytest.raises(Exception):
+        store.record_many([_floor_row(), _floor_row(metric="m2", floor=object())])
+    assert store.lookup("h1") == []
+
+
+@pytest.mark.parametrize("unkeyable", [False, True])
+def test_aa_run_prints_its_result_before_a_persist_refusal(unkeyable, monkeypatch, tmp_path, capsys):
+    """B-WR-03: a refusal while persisting floors still prints the spent run's result, one stderr line, exit 1."""
+    import json
+    import sqlite3
+
+    from databasise.seam.floors_store import FloorStore
+
+    _stub_spend_path(monkeypatch, tmp_path)
+    results = {
+        "gold_passage": _calibration_result("gold_passage_recall"),
+        "answer_level": _calibration_result("answer_level_correctness", wiring_instance_hash=None if unkeyable else "h1"),
+    }
+
+    async def calibrated(**kwargs):
+        return results
+
+    def failing_write(self, rows):
+        raise sqlite3.OperationalError("disk I/O error")
+
+    monkeypatch.setattr(aa_run, "_calibrate_all", calibrated)
+    monkeypatch.setattr(FloorStore, "record_many", failing_write)
+    assert aa_run.main(["--spend"]) == 1
+    captured = capsys.readouterr()
+    printed = json.loads(captured.out[captured.out.rindex('{\n  "bundle_version"') :])
+    assert set(printed["results_by_family"]) == set(results)
+    err_lines = captured.err.strip().splitlines()
+    assert len(err_lines) == 1
+    expected = "UnkeyableFloorError: " if unkeyable else "FloorPersistError: "
+    assert err_lines[0].startswith(expected)

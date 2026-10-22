@@ -49,17 +49,22 @@ class FloorStore:
 
     def record(self, row: FloorRow) -> None:
         """Persist ``row``, replacing a row with the same key; creates ``floors.db`` on first call."""
+        self.record_many([row])
+
+    def record_many(self, rows: list[FloorRow]) -> None:
+        """Persist every row in one transaction, so a failure writes none of them (B-WR-03)."""
         self._path.parent.mkdir(parents=True, exist_ok=True)
         columns = ", ".join(_FIELD_NAMES)
-        with contextlib.closing(sqlite3.connect(self._path)) as conn, conn:
+        with contextlib.closing(sqlite3.connect(self._path)) as conn:
             conn.execute("PRAGMA journal_mode=WAL")
-            conn.execute(
-                f"CREATE TABLE IF NOT EXISTS floors ({columns}, PRIMARY KEY ({', '.join(_KEY_COLUMNS)}))"
-            )
-            conn.execute(
-                f"INSERT OR REPLACE INTO floors ({columns}) VALUES ({', '.join('?' * len(_FIELD_NAMES))})",
-                astuple(row),
-            )
+            with conn:
+                conn.execute(
+                    f"CREATE TABLE IF NOT EXISTS floors ({columns}, PRIMARY KEY ({', '.join(_KEY_COLUMNS)}))"
+                )
+                conn.executemany(
+                    f"INSERT OR REPLACE INTO floors ({columns}) VALUES ({', '.join('?' * len(_FIELD_NAMES))})",
+                    [astuple(row) for row in rows],
+                )
 
     def _connect_read_only(self) -> sqlite3.Connection:
         """A connection that creates no file (B-WR-02), in ``stores.probes.list_kv_prefix``'s pattern:

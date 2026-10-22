@@ -64,6 +64,7 @@ import asyncio
 import functools
 import json
 import re
+import sqlite3
 import sys
 from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, replace
@@ -202,6 +203,17 @@ class UnkeyableFloorError(RuntimeError):
         super().__init__(
             f"family {family_name!r}: the A/A passes carried no single wiring_instance_hash, so its "
             "floor cannot be keyed to the arm it calibrates and is not persisted"
+        )
+
+
+class FloorPersistError(RuntimeError):
+    """Writing the calibrated floors to ``floors.db`` failed with a sqlite or OS error. The run's
+    result was already printed, and the single transaction wrote no family's row (B-WR-03)."""
+
+    def __init__(self, location: Path, cause: BaseException) -> None:
+        self.location = location
+        super().__init__(
+            f"the floors printed above were not persisted to {location}: {type(cause).__name__}: {cause}"
         )
 
 
@@ -653,6 +665,7 @@ def _refusals() -> tuple[type[BaseException], ...]:
         UnparseableJudgeVerdictError,
         UnusableFloorError,
         UnkeyableFloorError,  # main's floor persistence: no single wiring_instance_hash
+        FloorPersistError,  # main's floor persistence: a sqlite or OS error writing floors.db
         ConfoundedPassError,  # run_one_pass's own confounded (partial/degraded) pass refusal
         EmptyEvalIndexError,  # the read-only probe, run by calibrate_family before the first pass
         cli.ArmSelectorMismatchError,
@@ -678,24 +691,27 @@ def _persist_floors(results_by_family: dict[str, CalibrationResult]) -> None:
     for family_name, result in results_by_family.items():
         if result.wiring_instance_hash is None:
             raise UnkeyableFloorError(family_name)
-    store = FloorStore(_EVAL_INGEST_STORE_ROOT)
     created_at = datetime.now(UTC).isoformat()
-    for result in results_by_family.values():
-        store.record(
-            FloorRow(
-                wiring_instance_hash=result.wiring_instance_hash,
-                bundle_at_v=result.identity.bundle_at_v,
-                tier=result.identity.tier,
-                metric=result.identity.metric,
-                determinism_setting=result.identity.determinism_setting,
-                concurrency_setting=result.identity.concurrency_setting,
-                floor=result.floor,
-                n_questions=int(result.n_questions),
-                n_resamples=result.n_resamples,
-                seed=result.seed,
-                created_at=created_at,
-            )
+    rows = [
+        FloorRow(
+            wiring_instance_hash=result.wiring_instance_hash,
+            bundle_at_v=result.identity.bundle_at_v,
+            tier=result.identity.tier,
+            metric=result.identity.metric,
+            determinism_setting=result.identity.determinism_setting,
+            concurrency_setting=result.identity.concurrency_setting,
+            floor=result.floor,
+            n_questions=int(result.n_questions),
+            n_resamples=result.n_resamples,
+            seed=result.seed,
+            created_at=created_at,
         )
+        for result in results_by_family.values()
+    ]
+    try:
+        FloorStore(_EVAL_INGEST_STORE_ROOT).record_many(rows)  # one transaction: all rows or none (B-WR-03)
+    except (sqlite3.Error, OSError) as exc:
+        raise FloorPersistError(Path(_EVAL_INGEST_STORE_ROOT) / "floors.db", exc) from exc
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -765,20 +781,19 @@ def main(argv: list[str] | None = None) -> int:
                     index_probe=_eval_index_probe(args.arm),
                 )
             )
+            result = AARunResult(
+                bundle_version=bundle.version,
+                split=args.split,
+                question_ids=tuple(bundle.splits[args.split].question_ids),
+                results_by_family=results_by_family,
+                n_resamples=next(iter(results_by_family.values())).n_resamples,
+                seed=args.seed,
+            )
+            # Printed before persisting, so a refusal at that step never loses a run that has spent (B-WR-03).
+            print(json.dumps(result.to_dict(), indent=2))
             _persist_floors(results_by_family)
     except _refusals() as exc:
         return cli.refuse(exc)
-
-    first_result = next(iter(results_by_family.values()))
-    result = AARunResult(
-        bundle_version=bundle.version,
-        split=args.split,
-        question_ids=tuple(bundle.splits[args.split].question_ids),
-        results_by_family=results_by_family,
-        n_resamples=first_result.n_resamples,
-        seed=args.seed,
-    )
-    print(json.dumps(result.to_dict(), indent=2))
     return 0
 
 
@@ -795,6 +810,7 @@ __all__ = [
     "PassResult",
     "EmptyEvalIndexError",
     "EmptyGoldDocumentIdsError",
+    "FloorPersistError",
     "GoldPassageMappingError",
     "MissingTargetFamilyCoverageError",
     "NoMintedBundleError",
