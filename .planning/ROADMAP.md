@@ -444,7 +444,7 @@ Plans:
 **Owner decisions to settle in discuss-phase**:
 
 - CONN-01/05 (open question 1): operator routes on the §18 app behind an explicit flag, or a separate operator app on its own localhost port (conflicts with §18.3 'no privileged client'); MCP tools plus COVERAGE.md rows, or REST-only
-- CONN-06 (open question 2): relax the no-enumeration decision D-12/FA-06 for an operator alias listing, or keep a client-side ledger log
+- CONN-06 (open question 2): relax the no-enumeration rule (selectors.py:281-302) for an operator alias listing, or keep a client-side ledger log
 - CONN-07/08 (open question 3): return promotion_trace_ids and list trace tokens on an unauthenticated localhost app, or keep traces client-side; open question 14: filter traces to the app's workspace or treat one store root as one workspace
 - CONN-09 (open question 12): HippoRAG trace previews follow whatever /promote does after LEDG-03
 - CONN-12 (open question 6): return node and edge attrs (overrides API-06) or references only with a separate dereference call
