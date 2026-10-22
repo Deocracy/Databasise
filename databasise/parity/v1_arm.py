@@ -70,10 +70,20 @@ class V1ArmSubprocessError(RuntimeError):
 
     def __init__(self, returncode: int, stderr: str):
         self.returncode = returncode
-        self.stderr = stderr
-        super().__init__(
-            f"v1 driver subprocess exited {returncode}: {stderr.strip()[:2000] or '(no stderr)'}"
-        )
+        self.stderr = stderr  # the full capture; the message names only the failure line
+        super().__init__(f"v1 driver subprocess exited {returncode}: {_failure_line(stderr)}")
+
+
+def _failure_line(stderr: str) -> str:
+    """The driver prints its named failure (or a traceback's exception) last, after v1's INFO log
+    lines, so the message is the last line that is not a v1 log line."""
+    lines = [line.strip() for line in stderr.splitlines() if line.strip()]
+    if not lines:
+        return "(no stderr)"
+    for line in reversed(lines):
+        if not line.startswith(("INFO:", "WARNING:", "DEBUG:")):
+            return line
+    return lines[-1]
 
 
 @dataclass(frozen=True)

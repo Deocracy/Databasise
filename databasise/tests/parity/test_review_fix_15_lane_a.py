@@ -69,3 +69,15 @@ def test_failure_status_with_empty_metadata_still_raises(driver, monkeypatch):
     monkeypatch.setattr(driver, "_build_rag", _fake_rag(response))
     with pytest.raises(driver.V1QueryFailedError, match="boom"):
         asyncio.run(driver._run(_job()))
+
+
+def test_v1_arm_subprocess_error_names_the_driver_failure_line():
+    """A-WR-03: the message carries the driver's last non-log line, not v1's start-up INFO lines."""
+    from databasise.parity.v1_arm import V1ArmSubprocessError
+
+    log = ["INFO: start-up line " + "x" * 300] * 10
+    stderr = "\n".join([*log, "ERROR: Query failed: boom", "V1QueryFailedError: boom"])
+    exc = V1ArmSubprocessError(1, stderr)
+    assert str(exc) == "v1 driver subprocess exited 1: V1QueryFailedError: boom"
+    assert exc.stderr == stderr
+    assert str(V1ArmSubprocessError(1, "  ")) == "v1 driver subprocess exited 1: (no stderr)"
