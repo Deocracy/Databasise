@@ -21,7 +21,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Literal
 
-from databasise.stores.graph import GraphStoreBusyError, _ClientRegistry
+from databasise.stores.graph import GraphStoreBusyError, _ClientRegistry, _cozo_rows
 from databasise.stores.vector import VectorStoreCorruptedError, load_committed
 
 ProbeState = Literal["ok", "absent", "corrupted", "busy"]
@@ -118,6 +118,58 @@ def probe_graph(dir_path: Path) -> ProbeState:
         return "corrupted"
     finally:
         _ClientRegistry.release(key)
+
+
+class GraphStoreCorruptedError(RuntimeError):
+    """``graph.cozo`` exists but is not a Cozo RocksDB database; the engine maps it to StoreCorrupted."""
+
+
+def _run_immutable(client: Any, script: str, params: dict[str, Any]) -> list[list]:
+    """The one query seam of the graph read path: an immutable run, rows normalised. Tests spy here."""
+    return _cozo_rows(client.run(script, params, True))
+
+
+def graph_node_page(
+    dir_path: Path, prefix: str, limit: int, offset: int
+) -> tuple[list[tuple[str, int]], int]:
+    """Phase 16 D-15 (CONN-11): ``(id, degree)`` for one page of graph nodes whose id starts with
+    ``prefix``, ordered by id, plus the number of such nodes. It follows :func:`probe_graph`: a missing
+    ``graph.cozo`` is ``([], 0)`` and creates nothing, a directory without the RocksDB marker raises
+    :class:`GraphStoreCorruptedError` before any open, and a held graph raises ``GraphStoreBusyError``.
+    It never constructs ``CozoGraphStore``. Degrees come from one batched edge query per page, counted
+    here with ``{src, tgt}`` so a self-loop counts once (Cozo ``count()`` is avoided, bug #244)."""
+    db_path = Path(dir_path) / "graph.cozo"
+    if not db_path.exists():
+        return [], 0
+    key = str(db_path.resolve())
+    with _ClientRegistry._lock:
+        if key not in _ClientRegistry._entries and not _rocksdb_marker_present(db_path):
+            raise GraphStoreCorruptedError("graph.cozo is not a Cozo RocksDB database")
+    key, shared = _ClientRegistry.acquire(db_path)
+    try:
+        ids = [
+            r[0]
+            for r in _run_immutable(
+                shared.client,
+                "?[id] := *nodes{id}, starts_with(id, $p) :order id :limit $l :offset $o",
+                {"p": prefix, "l": limit, "o": offset},
+            )
+        ]
+        # shortcut: O(N) count, no count() (Cozo #244); add a counter relation if graphs exceed ~10^6 nodes
+        total = len(_run_immutable(shared.client, "?[id] := *nodes{id}, starts_with(id, $p)", {"p": prefix}))
+        rows = _run_immutable(
+            shared.client,
+            "?[src, tgt] := *edges{src, tgt}, is_in(src, $ids)\n?[src, tgt] := *edges{src, tgt}, is_in(tgt, $ids)",
+            {"ids": ids},
+        )
+    finally:
+        _ClientRegistry.release(key)
+    degree = dict.fromkeys(ids, 0)
+    for src, tgt in rows:
+        for node in {src, tgt}:
+            if node in degree:
+                degree[node] += 1
+    return [(i, degree[i]) for i in ids], total
 
 
 def probe_vector(dir_path: Path) -> ProbeState:

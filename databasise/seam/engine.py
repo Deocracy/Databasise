@@ -308,7 +308,15 @@ from databasise.seam.tokens import TokenBreakdownEntry, assemble_token_breakdown
 from databasise.seam.trace_store import TraceStore
 from databasise.stores.graph import CozoGraphStore, GraphStoreBusyError
 from databasise.stores.kv import SqliteKVStore
-from databasise.stores.probes import list_kv_prefix, probe_graph, probe_kv, probe_vector
+from databasise.stores.probes import (
+    GraphStoreCorruptedError,
+    _is_store_error,
+    graph_node_page,
+    list_kv_prefix,
+    probe_graph,
+    probe_kv,
+    probe_vector,
+)
 from databasise.stores.vector import (
     FaissVectorStore,
     MultiNamespaceVectorStore,
@@ -2329,6 +2337,38 @@ class Databasise:
         end = page.offset + page.limit
         return {
             "refs": mint_evidence_refs([{"id": i} for i in ids], namespace=namespace, kind=TEXT_CHUNK_KIND),
+            "total": total,
+            "next_offset": end if end < total else None,
+        }
+
+    def _graph_dir(self, selector: Selector | None) -> Path:
+        """The graph namespace directory of the wiring a selector resolves to (16-08, D-15): the
+        namespace is the resolved wiring's ``store_namespaces.graph`` (the ``_build_stores`` rule),
+        never a request field (§18.4)."""
+        resolved = resolve_selector(selector, registry=self.registry, store_root=self.store_root)
+        namespace = (resolved.get("store_namespaces") or {}).get("graph", _GRAPH_KIND)
+        return self.store_root / self.workspace / namespace
+
+    async def graph_nodes(self, selector: Selector | None, prefix: str, page: Page) -> dict[str, Any]:
+        """One page of graph nodes for the operator console's graph browser (16-08, CONN-11, D-15), as
+        ``{nodes: [{id, degree}], total, next_offset}``, ordered by id and filtered by an id prefix. The
+        graph namespace comes from the resolved wiring only (§18.4). The read opens no
+        ``CozoGraphStore``: a graph held by another holder is ``StoreBusyError(store_kind="graph")``
+        (409) as in ``_build_stores``, and a graph directory that is not a database, or a pycozo store
+        error, is the ``StoreCorrupted`` fault."""
+        graph_dir = self._graph_dir(selector)
+        try:
+            rows, total = await asyncio.to_thread(graph_node_page, graph_dir, prefix, page.limit, page.offset)
+        except GraphStoreBusyError as exc:
+            logger.warning("graph store busy", exc_info=exc)
+            raise StoreBusyError(store_kind="graph") from None
+        except Exception as exc:
+            if not (isinstance(exc, GraphStoreCorruptedError) or _is_store_error(exc)):
+                raise
+            raise _foreign_fault("graph_nodes", exc, failure_class="StoreCorrupted") from exc
+        end = page.offset + page.limit
+        return {
+            "nodes": [{"id": node_id, "degree": degree} for node_id, degree in rows],
             "total": total,
             "next_offset": end if end < total else None,
         }

@@ -51,6 +51,16 @@ class ChunksRequest(_RequestModel):
     offset: int = 0
 
 
+class GraphNodesRequest(_RequestModel):
+    """Body of POST /graph/nodes: which modality (the selector), an optional id prefix and the page
+    bounds, checked by ``checked_page``."""
+
+    selector: Selector | None = None
+    prefix: str = ""
+    limit: int = 50
+    offset: int = 0
+
+
 def add_operator_routes(app: FastAPI, engine: Any) -> None:
     """Adds the operator routes to ``app``, each a thin adapter over ``engine``. New routes are
     appended at the end of this function, one awaited engine call per route body."""
@@ -96,3 +106,8 @@ def add_operator_routes(app: FastAPI, engine: Any) -> None:
     async def post_chunks(body: ChunksRequest) -> dict[str, Any]:
         """One page of chunk references for the selected modality; each opens via /evidence/resolve."""
         return await engine.chunk_page(body.selector, checked_page(body.limit, body.offset))
+
+    @app.post("/graph/nodes", responses=_OPERATOR_STORE_RESPONSES)
+    async def post_graph_nodes(body: GraphNodesRequest) -> dict[str, Any]:
+        """One page of graph nodes with degrees for the selected modality, optionally by id prefix."""
+        return await engine.graph_nodes(body.selector, body.prefix, checked_page(body.limit, body.offset))
