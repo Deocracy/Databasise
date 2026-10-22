@@ -129,7 +129,10 @@ VERDICT_SCORES: dict[str, float] = {
     "INCORRECT": 0.0,
 }
 
-_VERDICT_PATTERN = re.compile(r"\b(CORRECT|PARTIAL|INCORRECT)\b")
+# The verdict must open the reply, after markdown/punctuation and at most one "Verdict:" label;
+# "not correct", "Partially correct" and an echoed option list never parse (B-CR-01).
+_VERDICT_PATTERN = re.compile(r"^\W*(?:VERDICT\W*:\W*)?(CORRECT|PARTIAL|INCORRECT)\b")
+_VERDICT_WORD = re.compile(r"\b(CORRECT|PARTIAL|INCORRECT)\b")
 
 _DEFAULT_FAMILIES: tuple[str, ...] = (GOLD_PASSAGE_FAMILY, ANSWER_LEVEL_FAMILY)
 _UNCALIBRATABLE_SPLITS: tuple[str, ...] = ("holdout", "sealed")
@@ -341,10 +344,12 @@ async def score_answer_level(
 ) -> float:
     """The `T0` `answer_level` leg: format the committed judge prompt with the three named
     placeholders, make exactly one ``llm_client.chat`` call, and map the returned verdict to a
-    number via :data:`VERDICT_SCORES`. Matches the first whole-word CORRECT, PARTIAL or INCORRECT
-    in the upper-cased response — ``CORRECT.``, ``**CORRECT**``, ``Verdict: CORRECT`` and a verdict
-    followed by a dash or a sentence all parse (TOOL-12) — with no fuzzier recovery attempted.
-    No retry, no fallback model, no cache. Raises
+    number via :data:`VERDICT_SCORES`. The upper-cased response must open with CORRECT, PARTIAL or
+    INCORRECT, after leading punctuation or markdown and at most one ``Verdict:`` label, and must
+    name no second distinct verdict word — ``CORRECT.``, ``**CORRECT**``, ``Verdict: CORRECT`` and a
+    verdict followed by a dash or a sentence all parse (TOOL-12); ``not correct``, ``Partially
+    correct`` and an echoed option list do not (B-CR-01). No fuzzier recovery, no retry, no fallback
+    model, no cache. Raises
     :class:`UnparseableJudgeVerdictError` on a miss, carrying the raw (unstripped) response text.
     """
     prompt = prompt_template.format(
@@ -352,8 +357,9 @@ async def score_answer_level(
     )
     result = await llm_client.chat([{"role": "user", "content": prompt}])
 
-    match = _VERDICT_PATTERN.search(result.text.upper())
-    if match is None:
+    text_upper = result.text.upper()
+    match = _VERDICT_PATTERN.match(text_upper)
+    if match is None or len(set(_VERDICT_WORD.findall(text_upper))) != 1:
         raise UnparseableJudgeVerdictError(result.text)
     return VERDICT_SCORES[match.group(1)]
 
