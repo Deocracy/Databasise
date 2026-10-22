@@ -290,6 +290,7 @@ from databasise.seam.refusals import (
     TombstonedGenerationError,
     UnknownDocumentError,
     UnknownGenerationVersionError,
+    UnknownGraphNodeError,
     UnknownJobError,
     UnparseableWiringError,
     UnrecognisedPromotionVerbError,
@@ -2391,6 +2392,8 @@ class Databasise:
             if not (isinstance(exc, GraphStoreCorruptedError) or _is_store_error(exc)):
                 raise
             raise _foreign_fault("graph_node", exc, failure_class="StoreCorrupted") from exc
+        if not found:
+            raise UnknownGraphNodeError(node_id=node_id)
         end = page.offset + page.limit
         return {"id": node_id, "degree": degree, "edges": edges, "next_offset": end if end < degree else None}
 

@@ -347,6 +347,14 @@
     "http_status": 404
   },
   {
+    "refusal_type": "UnknownGraphNodeError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "node_id"
+    ],
+    "http_status": 422
+  },
+  {
     "refusal_type": "UnknownJobError",
     "module": "databasise.seam.refusals",
     "attribute_keys": [

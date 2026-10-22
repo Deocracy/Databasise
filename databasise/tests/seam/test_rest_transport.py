@@ -86,6 +86,7 @@ from databasise.seam.refusals import (
     UnconsumableQueryMemberError,
     UnknownDocumentError,
     UnknownGenerationVersionError,
+    UnknownGraphNodeError,
     UnknownJobError,
     UnparseableWiringError,
     UnrecognisedPromotionVerbError,
@@ -496,6 +497,7 @@ _REFUSAL_FACTORIES: dict[type[SeamRefusalError], object] = {
     InvalidGuardDeclarationError: lambda: InvalidGuardDeclarationError(node_id="some-node"),
     PartialRunEvidenceError: lambda: PartialRunEvidenceError(trace_ids=["trace-1"]),
     GateNotCalibratedError: lambda: GateNotCalibratedError(verb="promote-next"),
+    UnknownGraphNodeError: lambda: UnknownGraphNodeError(node_id="n1"),
 }
 
 

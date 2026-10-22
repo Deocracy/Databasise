@@ -628,6 +628,18 @@ class GateNotCalibratedError(SeamRefusalError):
         )
 
 
+class UnknownGraphNodeError(SeamRefusalError):
+    """Raised by ``Databasise.graph_node`` (16-09-PLAN.md, D-16) when the node id is not in the
+    selected graph, or the selected modality has no graph. REST answers 422, not 404: ``rest.py``
+    keeps 404 for the four lookups so it never discloses whether an internal identity exists. Names
+    only the caller's own ``node_id``.
+    """
+
+    def __init__(self, *, node_id: str):
+        self.node_id = node_id
+        super().__init__(f"UnknownGraphNodeError: node id {node_id!r} is not in the selected graph")
+
+
 class MeasurementPostureRefusalError(SeamRefusalError):
     """Raised by ``Databasise.promote()`` (07-01-PLAN.md, D-09/D-11) when ``promote-next`` or
     ``promote-now`` is called against a mutation classed ``answer-level`` or ``index-side`` —
@@ -1029,4 +1041,5 @@ __all__ = [
     "InvalidGuardDeclarationError",
     "PartialRunEvidenceError",
     "GateNotCalibratedError",
+    "UnknownGraphNodeError",
 ]
