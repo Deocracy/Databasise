@@ -1565,7 +1565,19 @@ def _arm_verdict_line(arm: str) -> str:
         for name in ("chunk_diff", "entity_diff", "relation_diff")
         if any(r.get(name) is not None for r in records)
     ]
+    # ITER3-C-WR-01: a mixed arm's line speaks for its completed records only and names the rest.
+    unfinished = _arm_state(arm) != "completed"
+    scope = (
+        f" Its other record(s) or storage audit did not complete: {_inconclusive_causes((arm,))}."
+        if unfinished
+        else ""
+    )
     if not measured_fields:
+        if unfinished:
+            return (
+                f"`{arm}`'s completed record(s) have no retrieval to compare (no chunk, entity or "
+                f"relation diff), so there is no retrieval-level outcome to state for them.{scope}\n"
+            )
         return (
             f"`{arm}` completed with no retrieval to compare (it has no chunk, entity or "
             "relation diff), so there is no retrieval-level outcome to state for it.\n"
@@ -1574,18 +1586,11 @@ def _arm_verdict_line(arm: str) -> str:
     queries = ", ".join(f"`{r.get('query_id', '?')}`" for r in records)
     degraded, reason = _arm_degraded(arm)
     arm_excursions = _arm_excursion_summary(arm)
-    # ITER3-C-WR-01: a mixed arm's line speaks for its completed records only and names the rest.
-    unfinished = _arm_state(arm) != "completed"
     measured = f"`{arm}`'s completed record(s) measured" if unfinished else f"`{arm}` completed and measured"
     clean = (
         f"`{arm}`'s completed record(s) ran with no decomposed-run degradation"
         if unfinished
         else f"`{arm}` completed with no decomposed-run degradation"
-    )
-    scope = (
-        f" Its other record(s) or storage audit did not complete: {_inconclusive_causes((arm,))}."
-        if unfinished
-        else ""
     )
     if degraded:
         return (
