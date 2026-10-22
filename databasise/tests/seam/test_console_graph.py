@@ -14,6 +14,7 @@ import pytest
 
 pytest.importorskip("fastapi")
 
+from databasise.seam import refusals, rest
 from databasise.seam.rest import create_app
 from databasise.stores.graph import CozoGraphStore
 from fastapi.testclient import TestClient
@@ -100,3 +101,94 @@ def test_graph_nodes_corrupted_graph_is_a_named_fault_and_openapi_declares_409(t
 
     declared = app.openapi()["paths"].get("/graph/nodes", {}).get("post", {}).get("responses", {})
     assert {"409", "502", "503"} <= set(declared), sorted(declared)
+
+
+# ---- 16-09 (CONN-12): POST /graph/node, one node's edges as references plus the allowlist ----
+
+_SECRET = "secret corpus text"
+_EDGE_KEYS = {"src", "tgt", "edge_types", "weight"}
+
+
+async def _build_graph_with_attrs(store_root, namespace, edges):
+    """A graph with the given ``(src, tgt, attrs)`` edges (16-08's ``_build_graph`` takes no attrs)."""
+    store = CozoGraphStore(namespace, "ws", store_root)
+    for src, tgt, attrs in edges:
+        await store.upsert_edge(src, tgt, attrs)
+    await store.index_done_callback()
+    await store.finalize()
+
+
+async def test_graph_node_lists_a_known_nodes_edges_with_paging(tmp_path):
+    root = tmp_path / "store"
+    root.mkdir()
+    client = TestClient(_operator_app(root))
+    await _build_graph_with_attrs(
+        root,
+        _NAMESPACE,
+        [
+            ("a1", "a2", {"weight": 2.0, "description": _SECRET}),
+            ("a1", "a3", {"weight": 1.0}),
+            ("a1", "b1", {"weight": 1.0}),
+            ("a2", "b1", {"weight": 1.0}),
+        ],
+    )
+
+    first = client.post("/graph/node", json={"selector": None, "node_id": "a1", "limit": 2, "offset": 0})
+    assert first.status_code == 200, (first.status_code, first.text)
+    body = first.json()
+    assert body.get("id") == "a1" and body.get("degree") == 3, body
+    edges = body.get("edges") or []
+    assert [(e.get("src"), e.get("tgt")) for e in edges] == [("a1", "a2"), ("a1", "a3")], body
+    assert all(set(e) == _EDGE_KEYS for e in edges), body
+    assert all(e["edge_types"] is None for e in edges), body
+    assert edges[0]["weight"] == 2.0, body
+    assert body.get("next_offset") == 2, body
+    assert _SECRET not in first.text, "edge description text crossed the seam"
+
+    last = client.post("/graph/node", json={"node_id": "a1", "limit": 2, "offset": 2})
+    assert last.status_code == 200, (last.status_code, last.text)
+    assert [(e.get("src"), e.get("tgt")) for e in last.json().get("edges") or []] == [("a1", "b1")], last.text
+    assert last.json().get("next_offset") is None, last.text
+
+
+async def test_graph_node_edges_and_unknown_node_422(tmp_path):
+    # CONN-12 row node: the new refusal exists, the allowlist holds for both families, 422 not 404.
+    assert getattr(refusals, "UnknownGraphNodeError", None) is not None, "refusals has no UnknownGraphNodeError (CONN-12)"
+    unknown_cls = refusals.UnknownGraphNodeError
+
+    root = tmp_path / "store"
+    root.mkdir()
+    client = TestClient(_operator_app(root))
+    await _build_graph_with_attrs(
+        root, _NAMESPACE, [("a1", "a2", {"weight": 2.0, "description": _SECRET}), ("a1", "a3", {"weight": 1.0})]
+    )
+    await _build_graph_with_attrs(
+        root,
+        "hipporag-graph",
+        [("e1", "e2", {"edge_types": ["synonymy"], "weight": 1.5, "cooccurrence_by_chunk": {"c1": 1}})],
+    )
+
+    lightrag = client.post("/graph/node", json={"node_id": "a1"})
+    assert lightrag.status_code == 200, (lightrag.status_code, lightrag.text)
+    assert [e.get("weight") for e in lightrag.json().get("edges") or []] == [2.0, 1.0], lightrag.text
+    assert _SECRET not in lightrag.text
+
+    hippo = client.post("/graph/node", json={"selector": {"capability": ["reads_graph"]}, "node_id": "e1"})
+    assert hippo.status_code == 200, (hippo.status_code, hippo.text)
+    (edge,) = hippo.json().get("edges") or [{}]
+    assert set(edge) == _EDGE_KEYS, hippo.text
+    assert edge.get("edge_types") == ["synonymy"] and edge.get("weight") == 1.5, hippo.text
+    assert "cooccurrence_by_chunk" not in hippo.text
+
+    unknown = client.post("/graph/node", json={"node_id": "nope"})
+    assert unknown.status_code == 422, (unknown.status_code, unknown.text)
+    assert unknown.json().get("refusal_type") == "UnknownGraphNodeError", unknown.text
+    assert unknown.json().get("node_id") == "nope", unknown.text
+
+    fresh = tmp_path / "fresh"
+    fresh.mkdir()
+    absent = TestClient(_operator_app(fresh)).post("/graph/node", json={"node_id": "nope"})
+    assert absent.status_code == 422, (absent.status_code, absent.text)
+    assert absent.json().get("refusal_type") == "UnknownGraphNodeError", absent.text
+
+    assert rest._status_for(unknown_cls(node_id="x")) == 422
