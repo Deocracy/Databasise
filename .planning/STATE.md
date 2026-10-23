@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Engine Fixes + Operator Console
-current_phase: 16
-current_phase_name: GUI Connectors
-status: executing
-stopped_at: Completed 16-12-PLAN.md
-last_updated: "2026-10-22T20:30:52.964Z"
+current_phase: 17
+current_phase_name: GUI Mockup
+status: planning
+stopped_at: Phase 16 complete, ready to plan Phase 17
+last_updated: "2026-10-23T02:34:18.250Z"
 last_activity: 2026-10-22
-last_activity_desc: Phase 15 complete, transitioned to Phase 16
-state_head: feb5d58f01dc6a04b2cb31d1854460f3158a2316
+last_activity_desc: Phase 16 complete, transitioned to Phase 17
+state_head: 39a6b9f59af6f3e2ac3bee91721085f1721632e6
 progress:
   total_phases: 11
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 112
   completed_plans: 112
-  percent: 73
+  percent: 82
 ---
 
 # Project State
@@ -25,16 +25,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-19 after Phase 12)
 
 **Core value:** Modalities are swappable without consumers noticing — LightRAG and HippoRAG 2 both live behind one unchanging §18 envelope, comparable side-by-side on the rig.
-**Current focus:** Phase 16 — GUI Connectors
+**Current focus:** Phase 17 — GUI Mockup
 
 ## Current Position
 
-Phase: 16 (GUI Connectors) — READY TO EXECUTE
+Phase: 17 — GUI Mockup
 Plan: Not started
-Status: Ready to execute
-Last activity: 2026-10-22 — Phase 15 complete, transitioned to Phase 16
+Status: Ready to plan
+Last activity: 2026-10-22 — Phase 16 complete, transitioned to Phase 17
 
-Progress: [███████░░░] 73% (4/11 phases)
+Progress: [████████░░] 82% (4/11 phases)
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [███████░░░] 73% (4/11 phases)
 | 13 | 13 | - | - |
 | 14 | 11 | - | - |
 | 15 | 19 | - | - |
+| 16 | 12 | - | - |
 
 **Recent Trend:**
 
@@ -299,6 +300,7 @@ None yet.
 - [Phase 14] D-01: a rollback or retire row may cite a partial or failed run's trace; the Phase 17/18 console should label such evidence.
 - [Phase 15] Recorded limits: (1) no project LICENSE while the wheel ships HotpotQA fixture text under CC BY-SA 4.0 (Deferred). (2) From an installed wheel, `remint --spend` and `.comparison_results` would write into site-packages; the estimate-only default and the source-checkout docstrings cover it. (3) The committed `parity_results/*.json` carry the old `run_count` meaning; re-running them needs spend. (4) The packaging test skips on a cold uv cache, and a skip is not a pass (it ran and passed in the 15-18 gate). (5) No production part reports `cache_hit`, so no real floor exists yet, and only an engine started on the eval store root reads floors (`aa_run --spend` is still refused with `UnusableFloorError` after both passes). (6) The cbm launch timeout bound is timeout + 4 s. (7) The TOOL-05 row text is read as covering every spending CLI. (8) Done 2026-10-22: the TOOL-01..20 ledger steps, the WIRE-13 plant (1/1 killed) and its re-record, owner lock-checks at 39b25cc. Since B-WR-04, `aa_run --spend` is refused after one question, not after both passes.
 - [Phase 15] Owner decisions open: (a) A-ITER2-WR-03: HippoRAG builds refused before eef7173 carry no unverified marker and still pass the cross-modality preflight. Options: grant an edit to the TOOL-09 node `test_tool09_preflight_leaves_the_store_root_listing_unchanged` so preflight checks all three HippoRAG namespaces, rebuild the workspace (paid), or accept as residual. (b) TOOL-13 reading: bundle@v1's 17/9/4 split counts are in EVAL-BUNDLE-V1.md, not in bundle.json; new mints record `split_counts`. (c) B-WR-07 narrowed: `mint_bundle`'s dedup return still hands back an opened version (flagged), because protected TOOL-13 pins it. The judge-verdict parser (B-CR-01), the Falsifier-2 verdict (C-CR-01) and the v1 status-less fail handling have not been checked against real replies.
+- [Phase 16] Open items: (a) the declared but never-raised 503 on the operator routes (amend the D-01 OpenAPI line to drop it); (b) `_build_stores` runs on the event loop and blocks every coroutine 0.3-2 s per write; move it to `asyncio.to_thread` (the Cozo open still holds the GIL); (c) about 14 graph clients stay open between tests, and the operator engine's graph hold has no close path; (d) graph_busy sees in-process holders only; (e) preview's next_version can go stale under a concurrent write; (f) graph_node_edges runs two statements because pycozo has no read snapshot. D-02 and D-19 are owner-may-override.
 - Cozo 0.7.6 is architecture-frozen with four known correctness bugs and no upstream fixes expected; relevant to STOR-01 and STOR-10 (Phase 10).
 
 ### Quick Tasks Completed
@@ -329,7 +331,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 ## Session Continuity
 
 Last session: 2026-10-22T20:30:52.476Z
-Stopped at: Completed 16-12-PLAN.md
+Stopped at: Phase 16 complete, ready to plan Phase 17
 Resume file: None
 
 ## Operator Next Steps

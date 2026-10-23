@@ -143,6 +143,10 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 | v1.1 Phase 15: A/A floors persist in `floors.db` keyed on `wiring_instance_hash`; the promotion gate lifts in two stages with no new refusal class | A floor applies only to the wiring instance it was measured on | — Pending (no production part reports `cache_hit`, so no real floor exists yet) |
 | v1.1 Phase 15: the v1 arm makes one `aquery_llm` call per job; `no_results` is an empty retrieval, not a failure | The ids and the answer must come from the same retrieval | ✓ Good (not yet run against real v1) |
 | v1.1 Phase 15: opaque-part admission runs at load; shared scope is refused on `kind` only | Admission checked only at registration let later edits through | ✓ Good |
+| v1.1 Phase 16: operator read routes mount on the §18 app only under `databasise-rest --operator` (loopback only), each a single awaited engine call, REST-only in COVERAGE.md | §18.3 forbids a privileged client; a process-wide flag treats every client alike | ✓ Good (verified 19/19) |
+| v1.1 Phase 16: wiring names (/wirings, preview arm and mutation_class) and alias enumeration are an operator-only §18.2 exception | The console needs them; the debug=true precedent already returns wiring ids | ✓ Good (owner may override D-02) |
+| v1.1 Phase 16: graph reads return references plus edge_types/weight only; unknown node 422, busy graph 409; an operator engine holds one graph client | API-06 and §18.2: no inline corpus content; RocksDB opens leave WAL files on every read | ✓ Good |
+| v1.1 Phase 16: GET /log needs both --operator and --log-file; refusal and fault bodies stay cause-free | Narrows Phase 9 D-04 to bodies so the console can show a 500's traceback | ✓ Good (owner may override D-19) |
 | Close the operator verbs' check-then-act races with one `BEGIN IMMEDIATE` span per verb plus a UNIQUE `(alias, minted_version)` index | A guard read and the append it gates must commit together or the guard goes stale under concurrency; the schema constraint backstops it independently of any Python read path | ✓ Held (G-07-1 closed; 40/40 concurrency runs, full suite green) |
 
 ## Evolution
@@ -163,4 +167,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-22 after Phase 15*
+*Last updated: 2026-10-23 after Phase 16*
