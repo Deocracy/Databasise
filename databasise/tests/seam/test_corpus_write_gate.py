@@ -38,12 +38,14 @@ from seam.test_hipporag_write_path import (
 
 
 class _FakeV1:
-    """A v1 stand-in: sleeps ``delay`` in the worker thread, then records the document as
-    processed with one text chunk in the working dir, as v1 commits it."""
+    """A v1 stand-in: sleeps ``delay`` (or, for an ingest, waits on ``barrier``) in the worker
+    thread, then records the document as processed with one text chunk in the working dir, as v1
+    commits it."""
 
-    def __init__(self, delay: float = 1.0, fail: bool = False):
+    def __init__(self, delay: float = 1.0, fail: bool = False, barrier: threading.Barrier | None = None):
         self.delay = delay
         self.fail = fail
+        self.barrier = barrier
         self.intervals: list[tuple[float, float]] = []
         self.events: list[str] = []
         self._lock = threading.Lock()
@@ -51,7 +53,10 @@ class _FakeV1:
     def ingest(self, _op, payload, *, working_dir=None, **_kwargs):
         start = time.monotonic()
         self.events.append("driver-start")
-        time.sleep(self.delay)
+        if self.barrier is not None:
+            self.barrier.wait()  # BrokenBarrierError on timeout: the two ingests never overlapped
+        else:
+            time.sleep(self.delay)
         if self.fail:
             raise RuntimeError("v1 exploded")
         working_dir = Path(working_dir)
@@ -199,6 +204,7 @@ def test_the_second_rest_post_is_a_409_naming_no_path(store_root, fake_v1):
 async def test_two_workspaces_of_one_store_root_write_side_by_side(store_root, fake_v1):
     one = Databasise(store_root=store_root, workspace="w1")
     two = Databasise(store_root=store_root, workspace="w2")
+    fake_v1.barrier = threading.Barrier(2, timeout=10)
 
     results = await asyncio.gather(one.ingest(_doc("a")), two.ingest(_doc("a")), return_exceptions=True)
 
