@@ -1,5 +1,5 @@
 {
-  "ledger_version": 844,
+  "ledger_version": 847,
   "frozen_at": null,
   "items": [
     {
@@ -2518,7 +2518,12 @@
     "owner_wait_h": 24
   },
   "check_guard": [],
-  "check_edit_grants": {},
+  "check_edit_grants": {
+    "databasise/tests/seam/test_corpus_write_gate.py": {
+      "reason": "16 gate flake: the fake v1's fixed 1 s sleep races a GIL-holding RocksDB open under machine load; replace it with a threading.Barrier(2, timeout=10) both fake calls wait on, so overlap is proven without depending on store-open latency",
+      "granted_at": 845
+    }
+  },
   "notify_cmd": null,
   "check_baseline": 606
 }

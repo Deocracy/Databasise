@@ -1,0 +1,10 @@
+{
+  "id": "LRAG-04",
+  "plants": [
+    {
+      "file": "databasise/seam/engine.py",
+      "find": "    if not gate.acquire(blocking=False):",
+      "replace": "    if False and not gate.acquire(blocking=False):"
+    }
+  ]
+}
