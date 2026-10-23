@@ -1,5 +1,5 @@
 {
-  "ledger_version": 847,
+  "ledger_version": 848,
   "frozen_at": null,
   "items": [
     {
@@ -2374,7 +2374,7 @@
   "mockup_freeze": null,
   "scope_lock": null,
   "check_locks": {
-    "commit": "8f50e51d71b3037ae2aea911a31cfb6f3518af2d",
+    "commit": "46a2f45b53c475ef5d0d2d4b01e13d5975bf6452",
     "files": {
       "databasise/tests/seam/test_run01_coverage_crosscheck.py": "3da3eb8683a6556bf3e29bde7ec7d19257bcf6371a55245b5be90450985e9258",
       "databasise/tests/clients/test_openai_compat.py": "1e342492d32774e047de1dd616030f4de8aaca7faf98d51449fd608505e1774f",
@@ -2419,7 +2419,7 @@
       "databasise/tests/seam/test_lightrag_working_dir.py": "145b2a55cf2a39c87cb999374be2d4e3fd82ba92144ba54a4f20fe78976a2ceb",
       "databasise/tests/seam/test_lightrag_corpus_path.py": "4f0ff3a2e9049344d37b99ecd33c0493768594f7b39f29fb1e1adc4a5f58c92e",
       "databasise/tests/seam/test_lightrag_ingest_mach11.py": "ed459b7f066d48d9f8b725cd5bf63a6762a2a7de669a29dd16178c73ec2f771b",
-      "databasise/tests/seam/test_corpus_write_gate.py": "95dbb0a1b728fe8b00acff6a49a0942ee3e5b8ee227de852635c979b34183172",
+      "databasise/tests/seam/test_corpus_write_gate.py": "fa6791f7a6526bbd16c12051729a2dc9e3e309a8259de39d38b0db1f8c6ba226",
       "databasise/tests/foreign/test_v1_corpus_adapter.py": "c5d6eca85acb243a727e405ee4de278462160159b237d7b7aebecd7056a3aad6",
       "databasise/tests/foreign/test_v1_not_configured.py": "806bc483faea514a58dea13d57d38b9cbd93457bb28bbc9ad471ec7bd1506b61",
       "databasise/tests/seam/test_interrupted_documents.py": "30d4235c1f4d5683ac847fcb3be44baca5c8111bf8d712542603a27c20fb66a4",
@@ -2518,12 +2518,7 @@
     "owner_wait_h": 24
   },
   "check_guard": [],
-  "check_edit_grants": {
-    "databasise/tests/seam/test_corpus_write_gate.py": {
-      "reason": "16 gate flake: the fake v1's fixed 1 s sleep races a GIL-holding RocksDB open under machine load; replace it with a threading.Barrier(2, timeout=10) both fake calls wait on, so overlap is proven without depending on store-open latency",
-      "granted_at": 845
-    }
-  },
+  "check_edit_grants": {},
   "notify_cmd": null,
   "check_baseline": 606
 }
