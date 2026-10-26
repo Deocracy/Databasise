@@ -517,23 +517,23 @@ The `--cmd` must contain the check path (`record-fail needs --cmd containing the
 | A6 | Full Playwright suite for 11 files runs in about a minute | Validation | Longer suite; keep the per-file quick command |
 | A7 | `nix-build '<nixpkgs>' -A playwright-driver.browsers` works as a normal user and substitutes from cache.nixos.org | Installation | Use `nix-store --realise` or ask the owner to add it to `configuration.nix` |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **How is D-12 step 3 satisfied?** (blocking for the last plan)
+1. **How is D-12 step 3 satisfied?** RESOLVED by CONTEXT D-13 (owner ruling 2026-10-25): option (b). Phase 17 records approval and sha256 in docs/gui/MOCKUP-APPROVAL.md; the first Phase 18 plan runs `freeze-variant`.
    - What we know: after `freeze-variant`, the completion gate runs `mockup-id-check.py`, which exits 1 for every frozen id absent from UI sources outside `mockups/`/`tests/`; no Phase 17 deliverable provides such a source (Pitfall 2).
    - What's unclear: whether the owner wants (a) to freeze at the end of Phase 17 and accept hard `mockup ...: missing from UI sources` lines in the gate until Phase 18 ports the ids, (b) to move the `freeze-variant` write to the start of Phase 18 (the sha256 is the same file), or (c) something else.
    - Recommendation: (b) keeps every gate clean and still satisfies LIVE-09; if the owner insists on (a), change D-12 step 3 to "run the check and record the expected exit 1 and its line count" so the plan does not assert something false.
 
-2. **Badge for fields that already exist on a non-operator route** (`corpus.health.clients`, `corpus.health.reasons`: both fields are on `GET /health`)
+2. **Badge for fields that already exist on a non-operator route** RESOLVED by CONTEXT D-14 (owner ruling 2026-10-25): `clients` and `reasons` are existing fields with no badge; GUI-09 text amended; busy chips take the `operator route` badge. (`corpus.health.clients`, `corpus.health.reasons`: both fields are on `GET /health`)
    - What we know: GUI-03 and GUI-09 text name "health reasons, client presence" as needs-backend fields; `GET /health` returns `clients` and `engine_reason` today; `write_in_flight`/`graph_busy` are operator-only on `GET /info`.
    - What's unclear: whether these two keep `data-needs-backend` (frozen text) or take the D-10 treatment for "route exists".
    - Recommendation: keep all ids unchanged. D-10 defines only two badge kinds, so this needs an owner ruling. Default if none is given: the `busy` chips (operator `GET /info`) get the `operator route` badge; `clients` and `reasons` lose `data-needs-backend` and the badge, but only in the same task that amends the GUI-03 and GUI-09 text in REQUIREMENTS.md (otherwise the frozen text and the markup disagree). The safe alternative is to leave both as `needs backend` and fix them in Phase 18 (LIVE-09 drops the badge once the route is in `/openapi.json`, which is already true for `/health`).
 
-3. **Where the 11 test nodes live and how many assertions each carries.**
+3. **Where the 11 test nodes live and how many assertions each carries.** RESOLVED by the plan split: one file per requirement under `databasise/tests/gui/`, written in full in Wave 0.
    - What we know: each row needs one distinct `path::node`; the REQUIREMENTS `Test:` bullets are single narratives.
    - Recommendation: one file per requirement under `databasise/tests/gui/`, the ledger node being the narrative test, extra focused tests in the same file for diagnosis. Fix the files fully in Wave 0.
 
-4. **API-INVENTORY drafts** (D-12 step 1) need the owner's wording for the new `POST /graph/node/attrs` row (request `{selector, node_id}`, response attrs map with allowlist question from Phase 16 D-16) and for corrections listed in Pitfall 8.
+4. **API-INVENTORY drafts** (D-12 step 1) RESOLVED as a named deferral: Phase 17 records `POST /graph/node/attrs` in API-INVENTORY §5.3 as *proposed*, with request `{selector, node_id}` and response `{id, attrs}`. The attribute allowlist is a server-side design decision deferred to the phase that builds the route (Phase 18 or later). Until then it follows the Phase 16 D-16 allowlist rule, and the §5.3 row says so in words. The owner reviews the wording at the 17-12 click-through checkpoint. need the owner's wording for the new `POST /graph/node/attrs` row (request `{selector, node_id}`, response attrs map with allowlist question from Phase 16 D-16) and for corrections listed in Pitfall 8.
 
 ## Environment Availability
 
