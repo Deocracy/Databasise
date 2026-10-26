@@ -489,21 +489,22 @@ Plans:
 - GUI-11: fixture shape follows open question 6 (attrs or references only, settled in Phase 16)
 - End of phase: the owner freezes a mockup variant (mockup_freeze) after recording new needs back into API-INVENTORY.md (required by LIVE-09)
 
-**Plans**: 12 plans
+**Plans**: 13 plans
 
 Plans:
-- [ ] 17-01-PLAN.md — tracer: Playwright 1.59.0 with nixpkgs browsers, fail-not-skip harness, `mockups/build.py` assembler, console shell, GUI-01 test; GUI-02 id walk and MOCK-IDS.json (GUI-01, GUI-02)
-- [ ] 17-02-PLAN.md — GAP-ROUTES.json with operator/missing kinds checked against the live route table, GUI-03 test, shell instance chip; REQUIREMENTS.md and UI-SPEC amendments D-05 to D-10, D-13, D-14 (GUI-03)
-- [ ] 17-03-PLAN.md — Wave 0 row checks for query mode, compare and the error shapes plus the refusal catalogue (GUI-04, GUI-05, GUI-06)
-- [ ] 17-04-PLAN.md — Wave 0 row checks for Evidence & Trace, Documents & Jobs, Corpus & Health, Ledger and the graph browser (GUI-07 to GUI-11)
-- [ ] 17-05-PLAN.md — Query mode, the shared selector picker and the four error shapes with one classifyResponse (GUI-04; GUI-06 on query)
-- [ ] 17-06-PLAN.md — Compare mode: key rules, cmp-3col, promotable HippoRAG column, narrow tabs (GUI-05)
-- [ ] 17-07-PLAN.md — Evidence Inspector and Trace Inspector with the Debug template (GUI-07)
-- [ ] 17-08-PLAN.md — Documents & Jobs: ingest pre-checks, upload, jobs drawer, Delete for every selector (GUI-08)
-- [ ] 17-09-PLAN.md — Corpus & Health: health panel, KPI tiles, corpus table with Retry, operator panels and catalogue (GUI-09)
-- [ ] 17-10-PLAN.md — Ledger: timeline rules, promote form and pre-flight, rollback and retire dialogs (GUI-10; GUI-06 row)
-- [ ] 17-11-PLAN.md — Graph/vector browser with Load attributes; every gap route badged (GUI-11; GUI-03 row)
-- [ ] 17-12-PLAN.md — API-INVENTORY drafts, all gates, owner file:// click-through, MOCKUP-APPROVAL.md with sha256; freeze left to Phase 18 per D-13 (all GUI rows)
+- [ ] 17-01-PLAN.md — tracer: Playwright 1.59.0 with nixpkgs browsers and the fail-not-skip harness; complete GUI-01, GUI-02 and build-stability tests committed as the GUI fail-first base (GUI-01, GUI-02)
+- [ ] 17-02-PLAN.md — tracer: `mockups/build.py` assembler and console shell pass GUI-01; base styles and MOCK-IDS.json pass GUI-02 (GUI-01, GUI-02)
+- [ ] 17-03-PLAN.md — GAP-ROUTES.json with operator/missing kinds checked against the live route table, GUI-03 test, shell instance chip; REQUIREMENTS.md and UI-SPEC amendments D-03, D-05 to D-10, D-13, D-14 (GUI-03)
+- [ ] 17-04-PLAN.md — Wave 0 row checks for query mode, compare and the error shapes plus the refusal catalogue (GUI-04, GUI-05, GUI-06)
+- [ ] 17-05-PLAN.md — Wave 0 row checks for Evidence & Trace, Documents & Jobs, Corpus & Health, Ledger and the graph browser (GUI-07 to GUI-11)
+- [ ] 17-06-PLAN.md — Query mode, the shared selector picker and the four error shapes with one classifyResponse (GUI-04; GUI-06 on query)
+- [ ] 17-07-PLAN.md — Compare mode: key rules, cmp-3col, promotable HippoRAG column, narrow tabs (GUI-05)
+- [ ] 17-08-PLAN.md — Evidence Inspector and Trace Inspector with the Debug template (GUI-07)
+- [ ] 17-09-PLAN.md — Documents & Jobs: ingest pre-checks, upload, jobs drawer, Delete for every selector (GUI-08)
+- [ ] 17-10-PLAN.md — Corpus & Health: health panel, KPI tiles, corpus table with Retry, operator panels and catalogue (GUI-09)
+- [ ] 17-11-PLAN.md — Ledger: timeline rules, promote form and pre-flight, rollback and retire dialogs (GUI-10; GUI-06 row)
+- [ ] 17-12-PLAN.md — Graph/vector browser with Load attributes; every gap route badged (GUI-11; GUI-03 row)
+- [ ] 17-13-PLAN.md — API-INVENTORY drafts, INVENTORY-MAP.json with its SC2 coverage test, all gates, owner file:// click-through, MOCKUP-APPROVAL.md with sha256; freeze left to Phase 18 per D-13 (all GUI rows)
 
 **UI hint**: yes
 
