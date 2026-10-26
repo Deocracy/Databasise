@@ -1,7 +1,7 @@
 ---
 phase: "17"
 slug: "gui-mockup"
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: "2026-10-25"
@@ -169,7 +169,7 @@ Four sizes, two weights.
 | Heading (panel titles, dialog titles, banner headings) | 16px | 600 | 1.2 |
 | Display (screen title, one per screen) | 20px | 600 | 1.2 |
 
-Sizes in use: 13, 14, 16, 20. Weights in use: 400, 600. No italics. Muted text is a color, not a size. Answer text and evidence content render at Body size with `max-width: 72ch` and `white-space: pre-wrap`.
+Sizes in use: 13, 14, 16, 20. The 13 to 14 px step is intended: 13 px marks the compact tier (labels, headers, badges and monospace values), set in weight 600 or in the monospace stack so it differs from 14 px Body by more than size, and monospace at 13 px matches the x-height of 14 px sans-serif text on the same line. Weights in use: 400, 600. No italics. Muted text is a color, not a size. Answer text and evidence content render at Body size with `max-width: 72ch` and `white-space: pre-wrap`.
 
 ---
 
@@ -209,6 +209,17 @@ Destructive reserved for: the filled confirm buttons of the delete dialog (`Dele
 
 Common to every screen: Display title (20 px) as `<h1>`; a `mock` strip at the top right; a `planned` list at the bottom (see Needs-backend Registry); the four error shapes; `hidden` on the root until the nav selects it. Fixture shapes follow API-INVENTORY section 3.
 
+**Focal point (one per screen).** Each screen root has exactly one primary visual anchor: the element the eye lands on first. It is the first panel after the title (or mode tabs) in source and reading order, spans the full content width, and carries `data-focal="true"` (an attribute, not an id; exactly one per screen, exactly one screen visible). The anchor gets its prominence from position, size and the view's single accent-filled button; no new color, size or border width is added.
+
+| Screen | Focal point | Accent-filled button in it |
+|--------|-------------|----------------------------|
+| Query & Compare | Editor panel with the Run button, followed directly by the answer panel (`query.result.answer`, or `query.colc.answer` per column). The two form one anchor: ask, then read. | `Run` |
+| Evidence & Trace | Evidence Inspector content panel (`evidence.inspector.content`) on its tab; Trace summary panel (`evidence.trace.summary`) with the `clean`/`partial` status badge on the other tab. | `Load trace` (Trace tab) |
+| Documents & Jobs | Ingest panel (selector, active tab and `Submit`), then the result card (`documents.result.card`) with the `job_id`. | `Submit` |
+| Corpus & Health | Health panel with the `overall` status badge (`stores openable / v1 reachable`) and its state word. | `Refresh health` |
+| Ledger | Timeline table (`ledger.timeline.table`) with the active-generation row marked by its `active` status text and a bold weight 600 status cell. | `Promote alias` (promote form, above the fold on desktop, second panel) |
+| Graph/vector browser | Node detail panel (`graph.node.panel`) showing the id, degree and edge list of the opened node; the node list sits left of it as the way in. | `Open node` |
+
 Shorthand: `{a,b,c}` in an id means three ids. `-1..N` means N slot ids. The executor expands them; the generated MOCK-IDS.json is the authority.
 
 ### Shell (header, nav, dialogs)
@@ -221,10 +232,10 @@ Shorthand: `{a,b,c}` in an id means three ids. `-1..N` means N slot ids. The exe
 | Health fixture | `shell.mock.health-fixture` | select: `ok`, `degraded`, `loading`, `error` |
 | Instance chip | `shell.instance.chip` | `version`, `workspace` from GET /info; wrapped in needs-backend `GET /info` |
 | Nav | `shell.nav.{query,evidence,documents,corpus,ledger,graph}` | labels in order: `Query & Compare`, `Evidence & Trace`, `Documents & Jobs`, `Corpus & Health`, `Ledger`, `Graph/vector browser` |
-| Delete dialog | `shell.dialog.{delete,delete-confirm,delete-cancel}` | see Documents & Jobs |
-| Promote dialog | `shell.dialog.{promote,promote-confirm,promote-cancel}` | see Ledger |
-| Rollback dialog | `shell.dialog.{rollback,rollback-traces,rollback-origin-human,rollback-origin-machine,rollback-confirm,rollback-cancel}` | see Ledger |
-| Retire dialog | `shell.dialog.{retire,retire-version,retire-traces,retire-origin-human,retire-origin-machine,retire-confirm,retire-cancel}` | see Ledger |
+| Delete dialog | `shell.dialog.{delete,delete-confirm,delete-cancel}` | see Documents & Jobs; `delete-cancel` text `Keep document` |
+| Promote dialog | `shell.dialog.{promote,promote-confirm,promote-cancel}` | see Ledger; `promote-cancel` text `Keep alias` |
+| Rollback dialog | `shell.dialog.{rollback,rollback-traces,rollback-origin-human,rollback-origin-machine,rollback-confirm,rollback-cancel}` | see Ledger; `rollback-cancel` text `Keep active version` |
+| Retire dialog | `shell.dialog.{retire,retire-version,retire-traces,retire-origin-human,retire-origin-machine,retire-confirm,retire-cancel}` | see Ledger; `retire-cancel` text `Keep version` |
 
 Cross-screen navigation (chained calls): `Open trace` (Query, Evidence, Ledger rows) opens the Trace Inspector with the token prefilled; `Open` on an evidence row or chunk row opens the Evidence Inspector; `promote from this result` and `Promote this arm` open the Ledger promote form with that trace preselected; `Ingest a document` (Corpus empty state) opens the Documents & Jobs `Paste text` tab; `roll back first` focuses the timeline row of the active generation.
 
@@ -349,7 +360,7 @@ Mock: `documents.mock.outcome` (select: `success`, `refusal`, `validation`, `ser
 | Delete id fails the pattern | `Document id may contain only letters, digits, underscore and hyphen.` |
 | Job id empty | `Enter a job id.` |
 
-**Delete dialog (`shell.dialog.delete`).** Title `Delete document`. Body: `Delete document <document_id> using selector <selector label>? This removes it from the v1 corpus and cannot be undone. The query stores are not changed; the deleted document's chunks can stay resolvable.` The names `<document_id>` and `<selector label>` are in mono `<strong>`. Buttons: `shell.dialog.delete-cancel` text `Cancel`; `shell.dialog.delete-confirm` text `Delete`, destructive fill. Focus lands on Cancel. Typed confirmation is not required.
+**Delete dialog (`shell.dialog.delete`).** Title `Delete document`. Body: `Delete document <document_id> using selector <selector label>? This removes it from the v1 corpus and cannot be undone. The query stores are not changed; the deleted document's chunks can stay resolvable.` The names `<document_id>` and `<selector label>` are in mono `<strong>`. Buttons: `shell.dialog.delete-cancel` text `Keep document` (outlined neutral dismiss); `shell.dialog.delete-confirm` text `Delete`, destructive fill. Focus lands on `Keep document`. Typed confirmation is not required.
 
 **Fixtures.** `j-page1`: job `3f9c2a7e5b1d4c88a0e6f1d2c3b4a597`, limit 5, `next_offset: 5`, five documents (`contract-2026-q1` processed, `contract-2026-q2` processed, `dup-15f6f452b1ea8f4a9c36928aa0d86588` failed with `error_message: "Identical content already exists under another filename"`, `memo-ops-114` processing, `memo-ops-115` pending), `counts: {pending:1, processing:1, processed:42, failed:3, preprocessed:0}`. `j-last`: same shape, `next_offset: null`. `j-unknown`: refusal `UnknownJobError {job_id}` (status 404). Ingest success: `{job_id, enqueued: 1}`.
 
@@ -390,7 +401,7 @@ Mock: `ledger.mock.{outcome,fixture}`. Fixture options: `timeline-prod`, `refusa
 - `verb`: a select with six options; `operator-asserted` is selected and the only enabled one; the other five (`check`, `preview`, `run`, `promote-next`, `promote-now`) are `disabled` and each reads `<verb> — not built / gated`.
 - `preflight` (`role="status"`) lists blockers and warnings. Blockers (disable `submit`): `Select at least one trace.`; `Choose a change origin.`; `Enter an alias.`; `This alias looks like a hash (64 hex characters, optional sha256: prefix) and cannot be used.`; `Trace <short> is a partial run and cannot be promoted.`; `Trace <short> is from a HippoRAG run. Promotion from HippoRAG runs is blocked in this console.` Warning (does not block): `Selected traces came from different selectors: <a>, <b>. The server refuses traces that resolve to different arms.`
 - `preview` text `Preview promotion`, wrapper needs-backend `POST /promote/preview`; `preview-result` prints `arm`, `mutation_class`, `next_version`, `promotable`, `reason`, plus the caption `next_version holds only if no write lands before you promote.`
-- `submit` text `Promote alias` opens `shell.dialog.promote`. Title `Promote alias`; body `Promoting <alias> from <n> trace(s) repoints the alias; append-only; undo only by a later rollback.` Buttons `Cancel` and `Promote` (accent fill).
+- `submit` text `Promote alias` opens `shell.dialog.promote`. Title `Promote alias`; body `Promoting <alias> from <n> trace(s) repoints the alias; append-only; undo only by a later rollback.` Buttons `Keep alias` (`shell.dialog.promote-cancel`, outlined neutral dismiss) and `Promote` (accent fill).
 - `result` card: alias, version badge, `record_kind`, `provenance`, `generation_ordinal`; the card also appends the alias to the client-side ledger log.
 
 **Timeline.** Columns: `generation_ordinal`, `created_at`, `record_kind` badge, `minted_version`, `targets_version`, `change_origin`, trace chips (a chip for a partial or failed run carries the label `partial run`, so the console labels such evidence), Status, Actions. Status cell text: `active`, `target of active rollback`, `tombstoned`, or `—`. Actions per row:
@@ -542,6 +553,7 @@ All copy is plain technical English. Labels are verb plus noun except the test-f
 | `Run` | Query and Compare run button |
 | `Submit` | paste and upload buttons |
 | `Delete` | row buttons, standalone button, delete confirm |
+| `Keep document`, `Keep alias`, `Keep active version`, `Keep version` | dismiss button of the delete, promote, rollback and retire dialogs (the id suffix stays `-cancel`; the label is never `Cancel`) |
 | `—` | evidence `tier` cell, null score, null edge fields |
 | `store busy` | Graph store-busy banner text |
 | `Debug (internal identities + node trace)` | Trace Inspector toggle label |
@@ -588,39 +600,111 @@ All copy is plain technical English. Labels are verb plus noun except the test-f
 
 | Action | Confirmation shape |
 |--------|--------------------|
-| Delete document (offered only for LightRAG selectors) | Native dialog `shell.dialog.delete`. Title `Delete document`. Body names `document_id` and the target selector (copy in the Documents & Jobs section). Buttons `Cancel`, `Delete` (destructive fill). No typed confirmation. Initial focus on `Cancel`. |
-| Retire | Native dialog `shell.dialog.retire`. Title `Retire`. Body states the version is permanently ineligible as a rollback target and that nothing un-retires it. Requires typing the version exactly; requires at least one trace and a `change_origin`. Buttons `Cancel`, `Retire` (destructive fill, disabled until all three conditions hold). Disabled on the active row, on the row whose version equals the active rollback's `targets_version`, and on tombstoned rows. |
-| Promote | Native dialog `shell.dialog.promote`. Body contains `repoints the alias; append-only; undo only by a later rollback`. Buttons `Cancel`, `Promote` (accent fill). No typed confirmation. |
-| Roll back to | Native dialog `shell.dialog.rollback`. Names the current active version and the target, and says a new version will be minted. Buttons `Cancel`, `Roll back` (accent fill, disabled until a trace and a `change_origin` are chosen). No typed confirmation. |
+| Delete document (offered only for LightRAG selectors) | Native dialog `shell.dialog.delete`. Title `Delete document`. Body names `document_id` and the target selector (copy in the Documents & Jobs section). Buttons `Keep document` (dismiss), `Delete` (destructive fill). No typed confirmation. Initial focus on `Keep document`. |
+| Retire | Native dialog `shell.dialog.retire`. Title `Retire`. Body states the version is permanently ineligible as a rollback target and that nothing un-retires it. Requires typing the version exactly; requires at least one trace and a `change_origin`. Buttons `Keep version` (dismiss), `Retire` (destructive fill, disabled until all three conditions hold). Disabled on the active row, on the row whose version equals the active rollback's `targets_version`, and on tombstoned rows. |
+| Promote | Native dialog `shell.dialog.promote`. Body contains `repoints the alias; append-only; undo only by a later rollback`. Buttons `Keep alias` (dismiss), `Promote` (accent fill). No typed confirmation. |
+| Roll back to | Native dialog `shell.dialog.rollback`. Names the current active version and the target, and says a new version will be minted. Buttons `Keep active version` (dismiss), `Roll back` (accent fill, disabled until a trace and a `change_origin` are chosen). No typed confirmation. |
 
 ---
 
 ## UI Considerations
 
-Applicable state considerations resolved: 12 covered, 4 backstop, 2 unresolved.
+Probe run by `ui-consideration-probe.cjs` on 2026-10-25 over 14 elements (E1 to E14) with author-supplied kinds. 92 considerations applicable, 0 unclassified. Resolved non-interactively: `explicit` rows state a truth the requirement text or a section above already fixes; `backstop` rows carry the taxonomy question as a held-out visual or state test the planner must wire; `unresolved` rows are assumptions. Empty-state and error-state copy lives in the Copywriting Contract and the Server Error Shapes section; rows below reference them instead of restating.
 
-| Category | Element(s) | Status | Resolution / Reason |
-|----------|------------|--------|---------------------|
-| empty | Evidence table, token table, seam events table | ✅ covered | Query result renders `No evidence: the wiring declares no evidence position, or no items matched.` for an empty evidence list and `No seam events. Query wirings do not mutate stores.` for an empty seam list (Copywriting Contract rows). |
-| empty | Corpus table (total 0) | ✅ covered | State `corpus.state.empty` renders `No LightRAG (v1) documents yet` with the link `Ingest a document` to the Paste text tab. |
-| empty | Jobs documents table, timeline, node list | ✅ covered | Each has an empty heading and body in the Copywriting Contract. |
-| loading | Query Run | ✅ covered | State `query.state.running` with the spinner and `Running. A full run waits for the model; no progress is available.`; Run is `disabled` while in flight. |
-| loading | Health panel, corpus table | ✅ covered | `corpus.health.loading` and `corpus.state.loading` render the 60 second message; manual refresh plus optional poll. |
-| loading | Evidence row Open | ✅ covered | The row is `aria-busy` with the label `Opening`; the inspector shows `evidence.state.loading`. |
-| error | All six screens | ✅ covered | Four distinct shapes, classified by `refusal_type` first (Server Error Shapes). |
-| partial | Query result, compare column | ✅ covered | `partial` badge, `operator diagnostics` line, empty answer text, `promote from this result` and `Promote this arm` disabled with a visible reason; per-column partial state. |
-| partial | Trace node table | ✅ covered | Notice `Only dispatched nodes are listed...`; halted and failed rows highlighted with status text. |
-| populated | Evidence, token, seam, jobs, corpus, timeline, node, edge and chunk tables | ✅ covered | Fixtures in each screen contract give a typical page of 3 to 8 rows. |
-| zero-one-many | Compare builder | ✅ covered | 0 rows blocks with a message; 1 row runs as a plain query with an info message; 2 to 4 rows run a comparison. |
-| zero-one-many | Token table | ✅ covered | One row per `counted_by` plus a `Total` row; a single-row case still shows `Total`. |
-| overflow | Wide tables (node table, wirings, catalogue) | ✅ covered | Inside `.table-scroll`; the page never scrolls horizontally at 375 px. |
-| overflow | Compare columns | ✅ covered | Tabs below 768 px; scroll container from 768 px. |
-| long-text | Answer, evidence content, error_message, cause | 🧪 backstop | `max-width: 72ch`, `pre-wrap`, `overflow-wrap:anywhere`; verify with a 5,000-character fixture at 375 px by a visual state test. |
-| long-text | Trace tokens, hashes, refs | 🧪 backstop | Mono with `overflow-wrap:anywhere`; list rows show the first 8 characters; visual check at 375 px. |
-| overflow | Query history and ledger trace picker beyond 6 rows | 🧪 backstop | The mock holds 3 and 6 slots; paging behavior is Phase 18 work; held-out test that the slot count is stated in the UI. |
-| long-text | Nav labels at 375 px | 🧪 backstop | Labels wrap inside 44 px buttons; visual check. |
-| overflow | Stores table with an unexpected key | ⚠ unresolved | The mock renders the ten documented keys and `not probed` for missing ones; an eleventh key from a future server is not designed. Planner treats it as: append a row with state badge from the value. |
-| zero-one-many | Counts chips with many unknown keys | ⚠ unresolved | Chips wrap onto extra lines; no cap or `+n more` rule is specified. Planner treats it as wrapping with no cap. |
+| Element | Category | Status | Statement |
+|---------|----------|--------|-----------|
+| E1 shell nav and header health badge | loading | resolved (explicit) | The header badge shows a `checking` state with the spinner until the health fixture resolves; the nav renders immediately. |
+| E1 | error | resolved (explicit) | The badge shows the degraded or failed state from the health fixture; a 500 shows the generic view in the Corpus & Health screen, the badge reads `unknown`. |
+| E1 | overflow | resolved (backstop) | What happens when the six nav entries exceed the 224 px rail or the 375 px width: nav grid below 768 px per the Layout Contract; verify at 375 px by a visual state test. |
+| E1 | long-text | resolved (backstop) | Nav labels wrap inside 44 px buttons at 375 px; visual check. |
+| E2 query editor form | empty | resolved (explicit) | Empty or whitespace-only text blocks Run with the inline message (GUI-04); empty capability set blocks Run. |
+| E2 | loading | resolved (explicit) | Run shows the indeterminate spinner and `query.state.running`; Run is disabled while in flight. |
+| E2 | error | resolved (explicit) | Refusal 422, validation 422 with field errors on the selector input, and 500 render per Server Error Shapes. |
+| E2 | partial | resolved (explicit) | Hash-shaped alias, multi-member selector and disabled advanced members each show their reason text; `Resolves to` shows the arm or `unknown here (needs backend)`. |
+| E2 | long-text | resolved (backstop) | A 5,000-character query in the text area grows to the panel height and scrolls inside it; visual state test at 375 px. |
+| E3 query result region | empty | resolved (explicit) | `query.state.empty-evidence` renders the empty evidence copy; empty seam list renders its copy (Copywriting Contract). |
+| E3 | loading | resolved (explicit) | `query.state.running` as above. |
+| E3 | error | resolved (explicit) | `query.state.refusal`, `query.state.validation`, `query.state.server-error` per Server Error Shapes. |
+| E3 | populated | resolved (explicit) | `query.state.success`: answer, depth badge, evidence table of 3 to 8 rows, token table, seam events table, enabled Open trace link. |
+| E3 | partial | resolved (explicit) | `query.state.partial`: partial and degraded badges with reason tooltips, `operator diagnostics` line, `promote from this result` disabled; Open trace disabled when trace_token is null. |
+| E3 | overflow | resolved (explicit) | Tables sit inside `.table-scroll`; the page never scrolls horizontally at 375 px. |
+| E3 | zero-one-many | resolved (explicit) | 0 evidence rows is the empty-evidence state; the token table shows one row per `counted_by` plus a `Total` row, also for one row. |
+| E3 | long-text | resolved (backstop) | Answer and evidence content: `max-width: 72ch`, `pre-wrap`, `overflow-wrap: anywhere`; verify with a 5,000-character fixture at 375 px. |
+| E4 compare mode | empty | resolved (explicit) | 0 builder rows blocks Run with the message; the shared editor applies the E2 empty rule. |
+| E4 | loading | resolved (backstop) | Each column shows its own running state while the fixture resolves; held-out state test that only the running column shows the spinner. |
+| E4 | error | resolved (explicit) | Duplicate comparison key, including cross-kind collisions, blocks Run with the warning; per-column error shapes per Server Error Shapes. |
+| E4 | populated | resolved (explicit) | N result columns (cap 4) each with answer, badges, evidence list, token table, seam events and trace link. |
+| E4 | partial | resolved (explicit) | Only the partial column shows the partial state; `Promote this arm` disabled on partial and HippoRAG columns. |
+| E4 | overflow | resolved (explicit) | Columns become tabs below 768 px; no horizontal page scroll at 375 px (GUI-05 test). |
+| E4 | zero-one-many | resolved (explicit) | 0 rows invalid, 1 row runs as a plain query with the info message, 2 to 4 rows compare. |
+| E4 | long-text | resolved (backstop) | Long comparison keys in the live preview wrap with `overflow-wrap: anywhere`; visual check. |
+| E5 evidence inspector | empty | resolved (explicit) | Before any row is opened the inspector shows the manual lookup form with its empty heading (Copywriting Contract). |
+| E5 | loading | resolved (explicit) | The opened row is `aria-busy` with label `Opening`; `evidence.state.loading` in the inspector. |
+| E5 | error | resolved (explicit) | `record no longer present` refusal state; other shapes per Server Error Shapes. |
+| E5 | populated | resolved (explicit) | Content as readable text, document_id and ordinal chips, generic key/value table, envelope score. |
+| E5 | partial | resolved (explicit) | Chips render only when present; every other key falls into the key/value table. |
+| E5 | overflow | resolved (backstop) | Key/value table inside `.table-scroll`; long values wrap; visual check at 375 px. |
+| E5 | zero-one-many | resolved (backstop) | Zero extra keys hides the key/value table heading; one or many keys list as rows; held-out fixture with zero extra keys. |
+| E5 | long-text | resolved (backstop) | Content: `max-width: 72ch`, `pre-wrap`; verify with a 5,000-character chunk at 375 px. |
+| E6 trace inspector | empty | resolved (explicit) | Empty paste box shows the prefilled trace_reference from the last run or the empty heading; Resolve disabled until a reference is present. |
+| E6 | loading | resolved (backstop) | `trace.state.loading` while the fixture resolves; held-out state test. |
+| E6 | error | resolved (explicit) | Unknown reference renders the `UnknownTraceReferenceError` banner with the trace id highlighted (GUI-06). |
+| E6 | populated | resolved (explicit) | Summary header with clean badge and settings; Debug toggle reveals the identity panel and the node table. |
+| E6 | partial | resolved (explicit) | Partial badge, `sentinel:` values render `not yet recorded`, tier and feed_tier marked placeholders, halted and failed rows highlighted. |
+| E6 | overflow | resolved (explicit) | Node table inside `.table-scroll`. |
+| E6 | zero-one-many | resolved (explicit) | The non-debug view renders no node table; debug lists only dispatched nodes with the notice. |
+| E6 | long-text | resolved (backstop) | Tokens, hashes and refs in mono with `overflow-wrap: anywhere`; list rows show the first 8 characters; visual check. |
+| E7 documents ingest forms | empty | resolved (explicit) | Empty text blocks Submit; a 0-byte file is blocked before any request (GUI-08). |
+| E7 | loading | resolved (explicit) | Submit disabled while in flight; upload shows progress then the processing state. |
+| E7 | error | resolved (explicit) | document_id pattern and size pre-check messages on the inputs; server shapes per Server Error Shapes. |
+| E7 | partial | resolved (explicit) | Optional document_id shows the auto-generate hint; the selector field is omitted for the default selector. |
+| E7 | long-text | resolved (explicit) | UTF-8 byte counter against 26,214,400 blocks oversize text before any request. |
+| E8 jobs drawer | empty | resolved (explicit) | Empty job list and empty document table render their Copywriting Contract headings. |
+| E8 | loading | resolved (backstop) | Table rows show the loading state while a job fixture resolves; held-out state test. |
+| E8 | error | resolved (explicit) | Page size 0 and 101 are rejected on the input; per-row `error_message` is expandable. |
+| E8 | populated | resolved (explicit) | Document table with status badge, updated_at, counts bar labelled `whole corpus, not this job`. |
+| E8 | partial | resolved (explicit) | Next enabled only when next_offset is not null. |
+| E8 | overflow | resolved (explicit) | Table inside `.table-scroll`; drawer docks at 1200 px and overlays below. |
+| E8 | zero-one-many | resolved (backstop) | One document row still shows the counts bar and paging controls; held-out single-row fixture. |
+| E8 | long-text | resolved (explicit) | `error_message` collapsed behind an expander. |
+| E9 corpus and health | empty | resolved (explicit) | Total 0 renders `corpus.state.empty` with the `Ingest a document` link; the `preprocessed` tile is hidden at 0. |
+| E9 | loading | resolved (explicit) | `corpus.health.loading` and `corpus.state.loading` render the 60 second message. |
+| E9 | error | resolved (explicit) | Degraded badge reads `stores openable / v1 reachable` with state degraded; a missing store key reads `not probed`; 500 shows the generic view. |
+| E9 | populated | resolved (explicit) | KPI tiles per status plus total; corpus table with counts chips and paging. |
+| E9 | partial | resolved (explicit) | Counts chips render whatever keys arrive; client presence, failure reasons and store-busy are needs-backend fields. |
+| E9 | overflow | unresolved | Stores table with an eleventh, undocumented key is not designed. Planner treats it as: append a row with the state badge taken from the value. |
+| E9 | zero-one-many | unresolved | Counts chips with many unknown keys wrap with no cap and no `+n more` rule. Planner treats it as wrapping with no cap. |
+| E9 | long-text | resolved (explicit) | `error_message` expandable per row. |
+| E10 ledger promote form | empty | resolved (explicit) | Pre-flight blocks an empty trace list, no change_origin and an empty alias; change_origin has no default selection. |
+| E10 | loading | resolved (backstop) | Promote button disabled with spinner while the fixture resolves; held-out state test. |
+| E10 | error | resolved (explicit) | Pre-flight messages inline; `ActiveGenerationRetirementError` banner offers the `roll back first` link; other shapes per Server Error Shapes. |
+| E10 | partial | resolved (explicit) | Warning when traces came from different selectors; partial and HippoRAG traces blocked. |
+| E10 | long-text | resolved (backstop) | Long alias text wraps in the autocomplete list; visual check. |
+| E11 alias timeline | empty | resolved (explicit) | Empty timeline renders its Copywriting Contract heading. |
+| E11 | loading | resolved (backstop) | Timeline rows show the loading state while the history fixture resolves; held-out state test. |
+| E11 | error | resolved (explicit) | Retire refusal renders the typed banner; `roll back first` link on `ActiveGenerationRetirementError`. |
+| E11 | populated | resolved (explicit) | One row per record with `Roll back to` and `Retire`; active row marked. |
+| E11 | partial | resolved (explicit) | Retire disabled with tooltip on the active row, the active rollback's target row and tombstoned rows. |
+| E11 | overflow | resolved (explicit) | Table inside `.table-scroll`; paged by next_offset. |
+| E11 | zero-one-many | resolved (backstop) | A single-record timeline shows the row as active with both actions disabled; held-out single-row fixture. |
+| E11 | long-text | resolved (backstop) | Version strings and provenance in mono with `overflow-wrap: anywhere`; visual check. |
+| E12 graph and vector browser | empty | resolved (explicit) | Prefix filter with no match, empty node list and empty chunk list render their Copywriting Contract headings. |
+| E12 | loading | resolved (backstop) | List panels show the loading state while a fixture resolves; held-out state test. |
+| E12 | error | resolved (explicit) | Unknown-node refusal state; `store busy` refusal state for the graph lock. |
+| E12 | populated | resolved (explicit) | Node list with degree column, node detail with attributes and incident edges, chunk browser, count tiles. |
+| E12 | partial | resolved (explicit) | Paging by next_offset on nodes, edges and chunks; `Load attributes` marked needs-backend. |
+| E12 | overflow | resolved (explicit) | Tables inside `.table-scroll`. |
+| E12 | zero-one-many | resolved (backstop) | A node with zero edges shows the empty edge heading; one edge still shows the paging controls; held-out fixtures. |
+| E12 | long-text | resolved (backstop) | Node ids and refs in mono with `overflow-wrap: anywhere`; visual check. |
+| E13 server error shapes | loading | resolved (explicit) | Not applicable: banners render synchronously from the injected response; the calling region owns the loading state. |
+| E13 | error | resolved (explicit) | Four distinct shapes classified by refusal_type first (Server Error Shapes). |
+| E13 | overflow | resolved (backstop) | Banner attribute tables inside `.table-scroll`; visual check at 375 px. |
+| E13 | long-text | resolved (explicit) | `cause` collapsed behind the `Show details` toggle, shown only when present. |
+| E14 confirmation dialogs | empty | resolved (explicit) | Retire confirm disabled until the typed version matches; Roll back disabled until a trace and change_origin are chosen. |
+| E14 | loading | resolved (backstop) | Confirm button disabled with spinner while the fixture resolves; held-out state test. |
+| E14 | error | resolved (backstop) | A refusal after confirm closes the dialog and renders the banner in the owning screen; held-out state test. |
+| E14 | partial | resolved (explicit) | Delete dialog names document_id and selector; Delete is not offered for HippoRAG-resolving selectors. |
+| E14 | long-text | resolved (backstop) | Long document_id or alias in the dialog body wraps with `overflow-wrap: anywhere`; visual check. |
 
 ---
 
@@ -635,15 +719,15 @@ Applicable state considerations resolved: 12 covered, 4 backstop, 2 unresolved.
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
-- [ ] Dimension 7 Inventory Provenance: PASS
+- [x] Dimension 1 Copywriting: FLAG (Submit bound by GUI-08; single-word CTAs are test-asserted; Cancel pipeline needs a confirmation shape; `Check Health` to sentence case)
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: FLAG (13 and 14 px adjacent; justified)
+- [x] Dimension 5 Spacing: FLAG (2 px focus offset and 1 px borders to be marked as non-spacing values)
+- [x] Dimension 6 Registry Safety: PASS
+- [x] Dimension 7 Inventory Provenance: FLAG (accepted non-exhaustive form for Tool: none)
 
-**Approval:** pending
+**Approval:** approved 2026-10-25 by gsd-ui-checker, revision 1 (0 BLOCK, 4 FLAG)
 
 ---
 
@@ -666,12 +750,12 @@ Applicable state considerations resolved: 12 covered, 4 backstop, 2 unresolved.
 | Theme | Light only | v1 UI has both; the mockup needs one | Add a dark token set under `.dark`; no id or structure changes. |
 | Fonts | System font stacks, no web fonts | GUI-01 (zero network) | None needed; embedding a font as base64 is possible but adds size. |
 | Icons | Inline sprite of 7 symbols | GUI-01 (zero network) | Swap symbols in the sprite. |
-| Type scale | 13, 14, 16, 20 px; weights 400 and 600; body line height 1.5; heading 1.2 | Agent defaults; dense console | Change the five role rows; the checker needs 3 to 4 sizes and 2 weights. |
+| Type scale | 13, 14, 16, 20 px; weights 400 and 600; body line height 1.5; heading 1.2. The 13 to 14 px step is kept on purpose (compact tier for labels and mono data; see Typography). | Agent defaults; dense console | Change the five role rows (for example move Label and Data to 12 px); the checker needs 3 to 4 sizes and 2 weights. |
 | Spacing scale | 4, 8, 16, 24, 32, 48, 64; exceptions for 36, 44, 56, 224, 480, 640 | Agent defaults; GUI-05 44 px rule | Edit the table; keep multiples of 4. |
 | Palette | Neutrals, accent `#1D4ED8` and focus `#3B82F6` from v1; muted text `#52525B`; destructive `#B91C1C`; status tints as listed | `v1/lightrag_webui/src/index.css`; contrast computed for 4.5:1 | Replace hex values in the Color table; contrast must stay at or above 4.5:1 for text. |
 | Accent reservation | Primary filled button of a view, active nav entry, focus ring | Interaction rule in the task | Add links or selected tabs to the list if wanted. |
 | Destructive color scope | Only the filled `Delete` and `Retire` confirm buttons | Interaction rule in the task | Extend to the Roll back confirm if the owner treats it as destructive. |
-| Confirmation shapes | Native `<dialog>`; typed version only for Retire; focus on Cancel for Delete | Settled facts item 7 | Add typed confirmation to Delete by editing the dialog. |
+| Confirmation shapes | Native `<dialog>`; typed version only for Retire; focus on the dismiss button `Keep document` for Delete | Settled facts item 7 | Add typed confirmation to Delete by editing the dialog. |
 | Breakpoints | 768 px (compare tabs, nav grid, control height), 1200 px (docked drawer) | GUI-05 for 768 px; 1200 px chosen | Edit the Layout table. |
 | Page sizes | Default 50, bounds 1 to 100; log limit default 100, bounds 1 to 1000 | API-INVENTORY 3.3.3, 3.4.2, 5.1a | None; these are server bounds. |
 | Polling | Health and jobs polling off by default; health interval 30 or 60 seconds; jobs refresh 30 seconds | API-INVENTORY 3.3.3, 3.4.1 | Change the defaults in the fixtures and toggles. |
@@ -682,4 +766,7 @@ Applicable state considerations resolved: 12 covered, 4 backstop, 2 unresolved.
 | Client-side `Resolves to` for unknown token sets | Text `Resolves to: unknown here (needs backend)` | No dry-run route exists (API-INVENTORY 5.3 item 1) | Add rows to the inline resolution table. |
 | Mock chrome | Region `mock`, attribute `data-mock-only="true"`, dashed border | Needed to drive the fixtures in tests | The Phase 18 port plan marks all `*.mock.*` ids as intentionally dropped. |
 | Health failure-reason route string | `GET /health (engine_reason)` | API-INVENTORY 5.1 names no literal route for health reasons | Rename the string in the mockup and in `docs/gui/GAP-ROUTES.json` together. |
+| `Submit` label kept for paste and upload (checker Dimension 1 flagged it as generic) | `Submit` stays on `documents.paste.submit` and `documents.upload.submit` | GUI-08 requirement text is frozen input and names the wording "Submit disabled while in flight"; orchestrator ruling for this revision | Amend the GUI-08 text, then rename the buttons to `Ingest text` (paste) and `Upload file` (upload) in the Test-asserted strings table, the Per-screen contract, the Disabled-and-blocked table, Color accent list and the in-flight state. |
+| Dialog dismiss labels | `Keep document`, `Keep alias`, `Keep active version`, `Keep version` replace `Cancel` in the four dialogs; ids keep the `-cancel` suffix | Checker Dimension 1 (no generic CTA labels); no frozen requirement binds `Cancel` | Rename the labels in the Shell table, Delete dialog text, Ledger dialog text, Test-asserted strings and Destructive confirmations tables together. |
+| Focal point per screen | One anchor per screen, marked `data-focal="true"`, chosen as listed in Screen Contracts | Checker Dimension 2 (visuals) | Name a different anchor in the Focal point table; no id changes. |
 | Counts and tile hiding | `preprocessed` tile hidden at 0; other tiles always shown | GUI-09 | None. |

@@ -5,11 +5,11 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 17
 current_phase_name: GUI Mockup
 status: planning
-stopped_at: Phase 16 complete, ready to plan Phase 17
-last_updated: "2026-10-23T02:34:18.250Z"
+stopped_at: Phase 17 UI-SPEC approved
+last_updated: "2026-10-26T02:17:00.810Z"
 last_activity: 2026-10-22
 last_activity_desc: Phase 16 complete, transitioned to Phase 17
-state_head: 39a6b9f59af6f3e2ac3bee91721085f1721632e6
+state_head: a1add9628e48ae5ec8e0400a616c9b4cf417c0f1
 progress:
   total_phases: 11
   completed_phases: 9
@@ -330,9 +330,9 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-22T20:30:52.476Z
-Stopped at: Phase 16 complete, ready to plan Phase 17
-Resume file: None
+Last session: 2026-10-26T02:16:59.796Z
+Stopped at: Phase 17 UI-SPEC approved
+Resume file: .planning/phases/17-gui-mockup/17-UI-SPEC.md
 
 ## Operator Next Steps
 
