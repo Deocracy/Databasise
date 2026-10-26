@@ -59,9 +59,21 @@ The owner chose to amend all four. The amendments go into REQUIREMENTS.md and th
 - **D-12:** The last plan is a human-verify plan:
   1. Claude drafts the new needs into `docs/gui/API-INVENTORY.md` (at least `POST /graph/node/attrs` and any route strings the UI-SPEC chose `(default)`) and syncs `docs/gui/GAP-ROUTES.json`.
   2. The plan stops at a `checkpoint:human-verify` while the owner clicks through.
-  3. Only on approval does it write `mockup_freeze {variant: "console-a", path: "mockups/operator-console.html", sha256}` through `scripts/ledger-amend.py` and confirm that `scripts/mockup-id-check.py` exits 0.
+  3. On approval it records the approved file's sha256 and the approval in a checked-in note (for example `docs/gui/MOCKUP-APPROVAL.md` with variant `console-a`, path `mockups/operator-console.html`, sha256, date). It does **not** write `mockup_freeze`; see D-13.
 
-  — **Reversibility:** one-way — after the freeze, every frozen id must appear in the Phase 18 build or be mapped in MOCKUP-PORT.md (LIVE-09), and a re-freeze needs a new ledger amendment.
+- **D-13 (amends D-12, owner ruling after research):** The ledger `mockup_freeze` write (`scripts/ledger-amend.py freeze-variant --variant console-a --path mockups/operator-console.html`) moves to the **first plan of Phase 18**.
+  - Reason: once `mockup_freeze` is set, `scripts/check-ledger.py` runs `scripts/mockup-id-check.py` inside the completion gate. The check exits 1 for every frozen id missing from a UI source outside `mockups/` and `tests/`, and no such source exists until Phase 18.
+  - Phase 17 must not set `mockup_freeze`, and must not copy the HTML into a non-skipped directory to satisfy the checker.
+  - Phase 18's first plan verifies that the file's sha256 still equals the recorded approval before freezing.
+
+  — **Reversibility:** one-way (at the Phase 18 freeze) — after the freeze, every frozen id must appear in the Phase 18 build or be mapped in MOCKUP-PORT.md (LIVE-09), and a re-freeze needs a new ledger amendment.
+
+### E. Owner rulings after research (2026-10-25)
+- **D-14 (GUI-09 amendment):** Client presence (`clients`) and failure reasons (`engine_reason`) already exist on `GET /health`, so they are treated as existing fields. They get no badge, and the `GET /health (engine_reason)` registry row is removed. Amend the GUI-09 text in the same way as D-06 to D-09 (REQUIREMENTS.md and UI-SPEC only). Store-busy stays an `operator route` field, because it is on `GET /info`.
+- **D-15 (GUI-01 dependencies):** The owner approves adding `playwright==1.59.0` and its dependencies `greenlet` and `pyee` to `[dependency-groups].dev` in `databasise/pyproject.toml`, followed by `uv lock`. No mid-execution legitimacy checkpoint is needed for these three packages; the approval is recorded here.
+  - Version 1.59.0 is pinned to match nixpkgs 26.05 `playwright-driver` (chromium revision 1217).
+  - Browsers come from `nix-build '<nixpkgs>' -A playwright-driver.browsers`, through the binary cache, with `PLAYWRIGHT_BROWSERS_PATH` set. They do not come from `playwright install`.
+  - GUI tests fail rather than skip when the mockup file is absent (17-RESEARCH).
 
 ### Claude's Discretion
 - Every other row of UI-SPEC "Decisions taken by default" is accepted as written. This covers:
@@ -71,7 +83,15 @@ The owner chose to amend all four. The amendments go into REQUIREMENTS.md and th
   - blocking style (query Run clickable with an inline message, everything else natively disabled);
   - polling off by default, the stream mock timings, `not probed` = a key the server did not report;
   - dialog dismiss labels, and `Submit` kept on paste and upload.
-- How plans are split and ordered, provided the amendment work (D-06 to D-09) lands before the screens it affects, and the freeze (D-12) is last.
+- How plans are split and ordered, provided the amendment work (D-06 to D-09, D-14) lands before the screens it affects, and the approval (D-12) is last.
+- UI-SPEC drift against the code found by 17-RESEARCH: **follow the code**, and record each change in the UI-SPEC in the same plan.
+  - The health engine keys are `v1_reachable`.
+  - The `interrupted` corpus status gets a status colour and a KPI tile.
+  - `tier` and `feed_tier` render as `—` with the placeholder badge, because the code returns `None`.
+  - `GET /corpus` takes a `selector`, so HippoRAG corpus listing moves out of the Planned list.
+  - `POST /documents/{id}/retry` exists, so retrying one document is not badged.
+  - The `operator route` badge uses the neutral status token pair.
+  - Apply the D-07 and D-08 knock-on string and id edits listed in 17-RESEARCH Pitfall 9.
 
 </decisions>
 
