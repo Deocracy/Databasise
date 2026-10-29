@@ -487,7 +487,7 @@ Plans:
 - GUI-03: whether 'later' §5.1 rows with no proposed route get a placeholder control or one 'planned' list entry per screen
 - GUI-06: refusal catalogue generated from code (CONN-02 already generates one) or hand-written
 - GUI-11: fixture shape follows open question 6 (attrs or references only, settled in Phase 16)
-- End of phase: the owner freezes a mockup variant (mockup_freeze) after recording new needs back into API-INVENTORY.md (required by LIVE-09)
+- End of phase: the owner approves the mockup by click-through after new needs are recorded back into API-INVENTORY.md; the approval and sha256 go in docs/gui/MOCKUP-APPROVAL.md. The ledger mockup_freeze write moves to the first plan of Phase 18 (17-CONTEXT D-13), because the completion gate runs mockup-id-check.py once the freeze is set
 
 **Plans**: 13 plans
 
@@ -527,7 +527,7 @@ Plans:
 - LIVE-05 (open question 8): until M-04 (Phase 11) unifies LightRAG's write and read stores, the screen keeps the 'different stores' notice and the test asserts only the corpus-status path
 - LIVE-07 (open questions 2 and 3): if alias enumeration and trace listing stay closed (Phase 16), the pickers stay client-side with their needs-backend badges
 - LIVE-08: depends on the Phase 16 connector routes and open question 6
-- LIVE-09: depends on the mockup_freeze set at the end of Phase 17
+- LIVE-09: depends on the mockup_freeze written by the first Phase 18 plan from the Phase 17 approval record (17-CONTEXT D-13); that plan checks the sha256 in docs/gui/MOCKUP-APPROVAL.md before freezing
 
 **Plans**: TBD
 **UI hint**: yes
