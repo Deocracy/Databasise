@@ -849,3 +849,4 @@
 {"v": 849, "ts": "2026-10-23T02:34:49Z", "op": "set-phase", "id": "", "changes": {"current_phase": ["16", "17"]}}
 {"v": 850, "ts": "2026-10-26T01:59:05Z", "op": "resume-gate", "id": "", "reason": "<text>", "quote": "<your words>"}
 {"v": 851, "ts": "2026-10-26T02:06:27Z", "op": "resume-gate", "id": "", "reason": "Phase 17 started; the open GUI rows are the phase now being worked, not a defect", "quote": "resume the gate, phase 17 is in progress"}
+{"v": 852, "ts": "2026-10-29T20:40:24Z", "op": "resume-gate", "id": "", "reason": "Phase 17 is still being planned; the open GUI rows are the work in progress; stale S3 traces are regenerated after plan 17-03 lands", "quote": "resume the gate, phase 17 is still being planned and its GUI rows are the work in progress"}
