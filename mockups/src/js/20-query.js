@@ -1,15 +1,31 @@
 var QueryScreen = (function () {
   var STATES = ["idle", "running", "success", "partial", "empty-evidence", "refusal-422", "validation-422", "error-500"];
   var RESULT_STATES = ["success", "partial", "empty-evidence"];
+  var ERROR_STATES = ["refusal-422", "validation-422", "error-500"];
+  // setState renders these fixtures (UI-SPEC section 1, Mock row).
+  var STATE_FIXTURE = {
+    success: "q-success",
+    partial: "q-partial",
+    "empty-evidence": "q-empty-evidence",
+    "refusal-422": "q-refusal",
+    "validation-422": "q-validation",
+    "error-500": "q-500",
+  };
+  var SHAPE_STATE = { refusal: "refusal-422", validation: "validation-422", "server-failure": "error-500", generic: "error-500" };
+  var STREAM_CLOSED = "The stream closed before the final event.";
+  var STREAMING = "Streaming. The answer arrives with the final event.";
   var MSG = {
     textEmpty: "Query text is empty. Enter at least one non-space character.",
     badJson: "Raw selector JSON is not valid JSON.",
     multiMember: "A selector may set only one member: alias, capability or harness.",
   };
   var root = $id("screen-query");
+  var errorsBox = root.querySelector('[data-role="errors"]');
   var timers = [];
   var evidenceRefs = [];
   var lastTrace = null;
+  var lastLabel = "Default";
+  var history = FIX.query.history.slice();
   var touched = false;
   var mode = "query";
 
@@ -26,18 +42,27 @@ var QueryScreen = (function () {
     timers = [];
   }
 
+  function setDisabled(button, disabled) {
+    button.disabled = disabled;
+    if (disabled) button.setAttribute("aria-disabled", "true");
+    else button.removeAttribute("aria-disabled");
+  }
+
+  // Exactly one state view is visible. Field errors belong to one render, so every state change clears them.
   function showState(name) {
     STATES.forEach(function (s) {
-      var view = ID("state." + s);
-      if (view) view.hidden = s !== name; // the error views arrive with the shared error shapes
+      ID("state." + s).hidden = s !== name;
     });
     ID("result.panel").hidden = RESULT_STATES.indexOf(name) < 0;
+    errorsBox.hidden = ERROR_STATES.indexOf(name) < 0;
     var running = name === "running";
     ID("run.spinner").hidden = !running;
-    var submit = ID("run.submit");
-    submit.disabled = running;
-    if (running) submit.setAttribute("aria-disabled", "true");
-    else submit.removeAttribute("aria-disabled");
+    setDisabled(ID("run.submit"), running);
+    ID("mock.state-switcher").value = name;
+    Array.prototype.forEach.call(root.querySelectorAll("[data-error-id]"), function (el) {
+      setFieldError(el, "");
+    });
+    ID("run.message").hidden = true;
   }
 
   function cell(row, i, text) {
@@ -53,6 +78,7 @@ var QueryScreen = (function () {
     cell(row, 3, ref.kind);
     cell(row, 4, typeof ref.score === "number" ? ref.score.toFixed(4) : "—");
     row.hidden = false;
+    root.querySelector('[data-role="evidence-wrap"]').hidden = false;
   }
 
   function renderTokens(entries) {
@@ -109,20 +135,37 @@ var QueryScreen = (function () {
     });
   }
 
-  function renderResult(env) {
+  function renderBadge(name, shown, text, reason) {
+    var badge = ID("result." + name);
+    badge.hidden = !shown;
+    if (!shown) return;
+    badge.textContent = text;
+    badge.title = "operator diagnostics\n" + reason;
+  }
+
+  // opts.streaming renders the layout before the final event; opts.layoutSample labels the sample row.
+  function renderResult(env, opts) {
+    opts = opts || {};
     var partial = !!env.partial;
     var answer = ID("result.answer");
-    answer.textContent = env.answer || "No answer was produced.";
-    answer.classList.toggle("muted", !env.answer);
+    var text = opts.streaming ? STREAMING : env.answer || "No answer was produced.";
+    answer.textContent = text;
+    answer.classList.toggle("muted", opts.streaming || !env.answer);
     ID("result.depth").textContent = "depth: " + (env.depth_label || "not answered");
+    ID("result.depth").title = "operator diagnostics\ndepth_label: " + env.depth_label;
+    renderBadge("partial", partial, "▲ partial", "stop_reason: " + env.stop_reason);
+    renderBadge("degraded", !!env.degraded, "▲ degraded", "degradation_reason: " + env.degradation_reason);
+    root.querySelector('[data-role="stop-reason"]').textContent = "stop_reason: " + env.stop_reason;
 
     evidenceRefs = [];
+    root.querySelector('[data-role="evidence-wrap"]').hidden = env.evidence.length === 0;
     for (var n = 1; n <= 5; n++) {
       if (env.evidence[n - 1]) fillEvidence(n, env.evidence[n - 1]);
       else ID("evidence.open-" + n).closest("tr").hidden = true;
     }
     renderTokens(env.token_accounting);
     renderSeam(env.seam_events);
+    root.querySelector('[data-role="layout-sample"]').hidden = !opts.layoutSample;
 
     lastTrace = env.trace_token;
     var link = ID("result.trace-link");
@@ -135,13 +178,51 @@ var QueryScreen = (function () {
       link.setAttribute("aria-disabled", "true");
       link.setAttribute("tabindex", "-1");
     }
+    root.querySelector('[data-role="no-trace"]').hidden = !!lastTrace || !!opts.streaming;
+    ID("result.copy-trace").hidden = !lastTrace;
 
-    var promote = ID("result.promote");
-    promote.disabled = partial;
-    if (partial) promote.setAttribute("aria-disabled", "true");
-    else promote.removeAttribute("aria-disabled");
+    setDisabled(ID("result.promote"), partial);
     root.querySelector('[data-role="no-promote"]').hidden = !partial;
-    showState("success");
+    showState(opts.state || (partial ? "partial" : env.evidence.length === 0 ? "empty-evidence" : "success"));
+  }
+
+  // Classifies a response and shows its result layout or its error shape; returns the shape.
+  function applyResponse(status, body, opts) {
+    var shape = classifyResponse(status, body);
+    if (shape === "result") renderResult(body, opts);
+    else {
+      showState(SHAPE_STATE[shape]);
+      renderError("query", status, body, opts);
+    }
+    return shape;
+  }
+
+  function applyFixture(name) {
+    var fx = FIX.query[name];
+    if (!fx) throw new Error("unknown query fixture " + name);
+    if (fx.stream_closed) return applyResponse(0, "", { text: STREAM_CLOSED });
+    return applyResponse(fx.status, fx.body, { layoutSample: !!fx.layout_sample });
+  }
+
+  function renderHistory() {
+    for (var n = 1; n <= 3; n++) {
+      var row = ID("history.open-" + n).closest("tr");
+      var entry = history[n - 1];
+      row.hidden = !entry;
+      if (!entry) continue;
+      cell(row, 0, entry.time);
+      cell(row, 1, entry.selector);
+      cell(row, 2, entry.trace_token.slice(0, 8));
+      cell(row, 3, entry.partial ? "partial" : "—");
+    }
+  }
+
+  function remember(env) {
+    if (!env.trace_token) return;
+    var d = new Date();
+    history.unshift({ time: d.toISOString().slice(0, 19).replace("T", " "), selector: lastLabel, trace_token: env.trace_token, partial: !!env.partial });
+    history = history.slice(0, 3);
+    renderHistory();
   }
 
   // Blockers, in the UI-SPEC order: text, raw selector JSON, then the picker. Returns {ok, selector, focus}.
@@ -171,7 +252,7 @@ var QueryScreen = (function () {
     setFieldError(ID("selector.group"), pickMsg);
     var focus = textMsg ? ID("text.error") : jsonMsg ? ID("advanced.selector-json-error") : pickMsg ? ID("selector.error") : null;
     if (jsonMsg) ID("advanced.panel").open = true;
-    ID("run.message").hidden = !(touched && focus);
+    if (!focus) ID("run.message").hidden = true;
     return { ok: !focus, selector: override !== null ? override : picker.value(), focus: focus };
   }
 
@@ -179,23 +260,49 @@ var QueryScreen = (function () {
     if (touched) validate();
   });
 
+  // The fixture a Run ends in: the Fixture select wins, otherwise the State select (idle and running fall back to success).
   function pickFixture() {
-    return "q-success";
+    var variant = ID("mock.fixture").value;
+    if (variant !== "standard") return variant;
+    return STATE_FIXTURE[ID("mock.state-switcher").value] || "q-success";
+  }
+
+  function finish(name) {
+    var fx = FIX.query[name];
+    var streaming = ID("run.stream").checked || !!fx.stream_closed;
+    if (!streaming || classifyResponse(fx.status, fx.body) !== "result") {
+      if (applyFixture(name) === "result") remember(fx.body);
+      return;
+    }
+    var env = fx.body;
+    var rows = fx.stream_closed ? env.evidence.slice(0, 1) : env.evidence;
+    renderResult({ answer: "", evidence: [], trace_token: null, depth_label: null, partial: false, degraded: false, token_accounting: [], seam_events: [] }, { streaming: true, state: "success" });
+    rows.forEach(function (ref, i) {
+      later(200 * (i + 1), function () {
+        fillEvidence(i + 1, ref);
+      });
+    });
+    later(200 * (rows.length + 1), function () {
+      if (applyFixture(name) === "result") remember(env);
+    });
   }
 
   function run() {
     touched = true;
     var check = validate();
     if (!check.ok) {
-      ID("run.message").textContent = "Run blocked. Fix the message shown above.";
-      ID("run.message").hidden = false;
+      var message = ID("run.message");
+      message.textContent = "Run blocked. Fix the message shown above.";
+      message.hidden = false;
       check.focus.focus();
       return;
     }
     cancelTimers();
+    lastLabel = selectorLabel(check.selector);
+    var name = pickFixture();
     showState("running");
     later(800, function () {
-      renderResult(FIX.query[pickFixture()].body);
+      finish(name);
     });
   }
 
@@ -204,6 +311,13 @@ var QueryScreen = (function () {
     root.setAttribute("data-mode", mode);
     ID("mode.query").setAttribute("aria-selected", String(mode === "query"));
     ID("mode.compare").setAttribute("aria-selected", String(mode === "compare"));
+  }
+
+  function setState(name) {
+    cancelTimers();
+    if (STATES.indexOf(name) < 0) throw new Error("unknown query state " + name);
+    if (name === "idle" || name === "running") showState(name);
+    else applyFixture(STATE_FIXTURE[name]);
   }
 
   function buildResolutionTable() {
@@ -236,6 +350,14 @@ var QueryScreen = (function () {
     ID("selector.table-toggle").setAttribute("aria-expanded", String(!wrap.hidden));
     ID("selector.table-toggle").textContent = wrap.hidden ? "Show resolution table" : "Hide resolution table";
   });
+  ID("mock.state-switcher").addEventListener("change", function (event) {
+    setState(event.target.value);
+  });
+  ID("mock.fixture").addEventListener("change", function (event) {
+    cancelTimers();
+    if (event.target.value === "standard") setState("success");
+    else applyFixture(event.target.value);
+  });
   ID("result.trace-link").addEventListener("click", function (event) {
     event.preventDefault();
     if (!lastTrace) return;
@@ -252,6 +374,16 @@ var QueryScreen = (function () {
       });
     })(slot);
   }
+  for (var row = 1; row <= 3; row++) {
+    (function (n) {
+      ID("history.open-" + n).addEventListener("click", function () {
+        var entry = history[n - 1];
+        if (!entry) return;
+        Console.show("evidence");
+        Console.emit("open-trace", { token: entry.trace_token });
+      });
+    })(row);
+  }
   ID("result.copy-trace").addEventListener("click", function () {
     if (lastTrace) copyText(lastTrace, root.querySelector('[data-role="copied"]'));
   });
@@ -263,21 +395,23 @@ var QueryScreen = (function () {
     setMode("compare");
   });
 
+  wireErrors("query");
   buildResolutionTable();
+  renderHistory();
   showState("idle");
   return {
     setMode: setMode,
     picker: picker,
-    setState: function (name) {
+    showState: showState,
+    renderResult: renderResult,
+    setState: setState,
+    inject: function (response) {
       cancelTimers();
-      if (STATES.indexOf(name) < 0) throw new Error("unknown query state " + name);
-      if (name === "idle" || name === "running") showState(name);
-      else renderResult(FIX.query["q-success"].body);
+      applyResponse(response.status, response.body);
     },
-    inject: function () {},
     loadFixture: function (name) {
       cancelTimers();
-      renderResult(FIX.query[name].body);
+      applyFixture(name);
     },
   };
 })();

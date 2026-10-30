@@ -1,5 +1,28 @@
 <section data-mock-id="screen-query" hidden data-mode="query">
   <h1>Query &amp; Compare</h1>
+  <div class="mock-strip" data-mock-only="true">
+    <label>State
+      <select data-mock-id="query.mock.state-switcher" data-mock-only="true">
+        <option value="idle">idle</option>
+        <option value="running">running</option>
+        <option value="success">success</option>
+        <option value="partial">partial</option>
+        <option value="empty-evidence">empty-evidence</option>
+        <option value="refusal-422">refusal-422</option>
+        <option value="validation-422">validation-422</option>
+        <option value="error-500">error-500</option>
+      </select>
+    </label>
+    <label>Fixture
+      <select data-mock-id="query.mock.fixture" data-mock-only="true">
+        <option value="standard">standard</option>
+        <option value="q-trace-null">trace_token null</option>
+        <option value="q-500-foreign">server failure (error-500 variant)</option>
+        <option value="q-stream-disconnected">stream disconnected (error-500 variant)</option>
+        <option value="q-layout-sample">layout sample</option>
+      </select>
+    </label>
+  </div>
   <div class="tabs" role="tablist" aria-label="Mode" data-mock-id="query.mode.tablist">
     <button type="button" role="tab" aria-selected="true" data-mock-id="query.mode.query">Query</button>
     <button type="button" role="tab" aria-selected="false" data-mock-id="query.mode.compare">Compare</button>
@@ -113,5 +136,40 @@
       </div>
       <p class="muted" data-role="layout-sample" hidden>layout sample, not producible today</p>
     </section>
+    <div class="state-view" data-mock-id="query.state.refusal-422" hidden>
+      <p class="muted">The server refused the request (HTTP 422).</p>
+    </div>
+    <div class="state-view" data-mock-id="query.state.validation-422" hidden>
+      <p class="muted">The server found invalid fields (HTTP 422).</p>
+    </div>
+    <div class="state-view" data-mock-id="query.state.error-500" hidden>
+      <p class="muted">The request failed on the server or the stream ended early.</p>
+    </div>
+    <div data-role="errors" hidden>
+<!--@include parts/errors.html s=query-->
+    </div>
   </section>
+  <details class="panel" data-mock-id="query.history.panel">
+    <summary data-mock-id="query.history.toggle">Query history (this browser)</summary>
+    <div class="table-scroll">
+      <table role="table" data-mock-id="query.history.table">
+        <thead><tr><th>Time</th><th>Selector</th><th>Trace token</th><th>Partial</th><th>Action</th></tr></thead>
+        <tbody>
+<!--@repeat n 3-->
+          <tr hidden><td></td><td class="mono"></td><td class="mono"></td><td></td><td><button type="button" class="btn btn-outline" data-mock-id="query.history.open-{{n}}">Open trace</button></td></tr>
+<!--@end n-->
+        </tbody>
+      </table>
+    </div>
+    <p class="muted">Stored in this browser; no route lists traces.</p>
+  </details>
+  <details class="panel" data-mock-id="query.planned.list">
+    <summary data-mock-id="query.planned.toggle">Planned (not built)</summary>
+    <ul>
+      <li>Per-request token allowance (fixed at 1,000,000 per node today)</li>
+      <li>Token-level answer streaming</li>
+      <li>Request cancel</li>
+      <li>Per-request arm settings</li>
+    </ul>
+  </details>
 </section>

@@ -1,0 +1,28 @@
+<div class="banner error-shape" data-state="warn" role="alert" data-mock-id="{{s}}.error.refusal" hidden>
+  <p class="label"><span aria-hidden="true">▲</span> Request refused</p>
+  <h3 class="mono" data-role="type"></h3>
+  <p data-role="message"></p>
+  <div class="table-scroll" data-role="attrs-wrap"><dl class="attrs" data-role="attrs"></dl></div>
+  <p class="muted" data-role="hint"></p>
+  <p class="muted"><span data-role="footer"></span>
+    <span data-needs-backend="GET /refusals" title="Not implemented yet: GET /refusals"><span class="badge badge-nb">needs backend</span> <a href="#corpus" data-mock-id="{{s}}.error.catalogue-link">Show in refusal catalogue</a></span></p>
+</div>
+<div class="banner error-shape" data-state="fail" role="alert" data-mock-id="{{s}}.error.validation" hidden>
+  <p data-role="summary"></p>
+  <ul data-role="list"></ul>
+</div>
+<div class="banner error-shape" data-state="fail" role="alert" data-mock-id="{{s}}.error.server-failure" hidden>
+  <p class="label"><span aria-hidden="true">✕</span> Server failure</p>
+  <p data-role="text"></p>
+  <button type="button" class="btn btn-outline" aria-expanded="false" data-mock-id="{{s}}.error.details-toggle">Show details</button>
+  <div data-role="details" hidden>
+    <div class="mono" data-role="detail-list"></div>
+    <button type="button" class="btn btn-outline" data-mock-id="{{s}}.error.open-trace" hidden>Open trace</button>
+  </div>
+</div>
+<div class="banner error-shape" data-state="neutral" role="alert" data-mock-id="{{s}}.error.generic" hidden>
+  <p class="label"><span aria-hidden="true">■</span> Server error</p>
+  <p data-role="text"></p>
+  <pre class="mono" data-role="body" hidden></pre>
+  <span data-needs-backend="GET /log" data-backend-state="operator" title="Mounted only with --operator --log-file"><span class="badge badge-op">operator route</span> <a href="#corpus" data-mock-id="{{s}}.error.server-log">Open server log</a></span>
+</div>

@@ -264,6 +264,17 @@ label.inline { display: inline-flex; align-items: center; gap: var(--sm); }
 .advanced-grid p { margin: 0 0 var(--sm); align-self: start; }
 .subpanel textarea { width: 100%; }
 
+.error-shape { margin: var(--md) 0; border-left-width: 4px; }
+.error-shape .label { margin: 0 0 var(--xs); }
+.error-shape h3 { margin: 0 0 var(--xs); }
+.error-shape pre { margin: var(--sm) 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.error-shape ul { margin: 0; padding-left: var(--lg); }
+.attrs { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--xs) var(--md); margin: 0 0 var(--sm); }
+.attrs dt { font: 600 13px/1.5 var(--font); }
+.attrs dd { margin: 0; overflow-wrap: anywhere; }
+mark { padding: 0 var(--xs); border-radius: 4px; background: var(--warn-bg); color: var(--text); }
+.panel > summary, details.panel > summary { cursor: pointer; font: 600 13px/1.5 var(--font); }
+
 .answer { max-width: 72ch; margin-bottom: var(--md); white-space: pre-wrap; overflow-wrap: anywhere; }
 .actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sm); margin: var(--md) 0 var(--sm); }
 .cap-first::first-letter { text-transform: uppercase; }
@@ -305,6 +316,29 @@ label.inline { display: inline-flex; align-items: center; gap: var(--sm); }
     <main class="content">
 <section data-mock-id="screen-query" hidden data-mode="query">
   <h1>Query &amp; Compare</h1>
+  <div class="mock-strip" data-mock-only="true">
+    <label>State
+      <select data-mock-id="query.mock.state-switcher" data-mock-only="true">
+        <option value="idle">idle</option>
+        <option value="running">running</option>
+        <option value="success">success</option>
+        <option value="partial">partial</option>
+        <option value="empty-evidence">empty-evidence</option>
+        <option value="refusal-422">refusal-422</option>
+        <option value="validation-422">validation-422</option>
+        <option value="error-500">error-500</option>
+      </select>
+    </label>
+    <label>Fixture
+      <select data-mock-id="query.mock.fixture" data-mock-only="true">
+        <option value="standard">standard</option>
+        <option value="q-trace-null">trace_token null</option>
+        <option value="q-500-foreign">server failure (error-500 variant)</option>
+        <option value="q-stream-disconnected">stream disconnected (error-500 variant)</option>
+        <option value="q-layout-sample">layout sample</option>
+      </select>
+    </label>
+  </div>
   <div class="tabs" role="tablist" aria-label="Mode" data-mock-id="query.mode.tablist">
     <button type="button" role="tab" aria-selected="true" data-mock-id="query.mode.query">Query</button>
     <button type="button" role="tab" aria-selected="false" data-mock-id="query.mode.compare">Compare</button>
@@ -482,7 +516,74 @@ label.inline { display: inline-flex; align-items: center; gap: var(--sm); }
       </div>
       <p class="muted" data-role="layout-sample" hidden>layout sample, not producible today</p>
     </section>
+    <div class="state-view" data-mock-id="query.state.refusal-422" hidden>
+      <p class="muted">The server refused the request (HTTP 422).</p>
+    </div>
+    <div class="state-view" data-mock-id="query.state.validation-422" hidden>
+      <p class="muted">The server found invalid fields (HTTP 422).</p>
+    </div>
+    <div class="state-view" data-mock-id="query.state.error-500" hidden>
+      <p class="muted">The request failed on the server or the stream ended early.</p>
+    </div>
+    <div data-role="errors" hidden>
+<div class="banner error-shape" data-state="warn" role="alert" data-mock-id="query.error.refusal" hidden>
+  <p class="label"><span aria-hidden="true">▲</span> Request refused</p>
+  <h3 class="mono" data-role="type"></h3>
+  <p data-role="message"></p>
+  <div class="table-scroll" data-role="attrs-wrap"><dl class="attrs" data-role="attrs"></dl></div>
+  <p class="muted" data-role="hint"></p>
+  <p class="muted"><span data-role="footer"></span>
+    <span data-needs-backend="GET /refusals" title="Not implemented yet: GET /refusals"><span class="badge badge-nb">needs backend</span> <a href="#corpus" data-mock-id="query.error.catalogue-link">Show in refusal catalogue</a></span></p>
+</div>
+<div class="banner error-shape" data-state="fail" role="alert" data-mock-id="query.error.validation" hidden>
+  <p data-role="summary"></p>
+  <ul data-role="list"></ul>
+</div>
+<div class="banner error-shape" data-state="fail" role="alert" data-mock-id="query.error.server-failure" hidden>
+  <p class="label"><span aria-hidden="true">✕</span> Server failure</p>
+  <p data-role="text"></p>
+  <button type="button" class="btn btn-outline" aria-expanded="false" data-mock-id="query.error.details-toggle">Show details</button>
+  <div data-role="details" hidden>
+    <div class="mono" data-role="detail-list"></div>
+    <button type="button" class="btn btn-outline" data-mock-id="query.error.open-trace" hidden>Open trace</button>
+  </div>
+</div>
+<div class="banner error-shape" data-state="neutral" role="alert" data-mock-id="query.error.generic" hidden>
+  <p class="label"><span aria-hidden="true">■</span> Server error</p>
+  <p data-role="text"></p>
+  <pre class="mono" data-role="body" hidden></pre>
+  <span data-needs-backend="GET /log" data-backend-state="operator" title="Mounted only with --operator --log-file"><span class="badge badge-op">operator route</span> <a href="#corpus" data-mock-id="query.error.server-log">Open server log</a></span>
+</div>
+
+    </div>
   </section>
+  <details class="panel" data-mock-id="query.history.panel">
+    <summary data-mock-id="query.history.toggle">Query history (this browser)</summary>
+    <div class="table-scroll">
+      <table role="table" data-mock-id="query.history.table">
+        <thead><tr><th>Time</th><th>Selector</th><th>Trace token</th><th>Partial</th><th>Action</th></tr></thead>
+        <tbody>
+
+          <tr hidden><td></td><td class="mono"></td><td class="mono"></td><td></td><td><button type="button" class="btn btn-outline" data-mock-id="query.history.open-1">Open trace</button></td></tr>
+
+          <tr hidden><td></td><td class="mono"></td><td class="mono"></td><td></td><td><button type="button" class="btn btn-outline" data-mock-id="query.history.open-2">Open trace</button></td></tr>
+
+          <tr hidden><td></td><td class="mono"></td><td class="mono"></td><td></td><td><button type="button" class="btn btn-outline" data-mock-id="query.history.open-3">Open trace</button></td></tr>
+
+        </tbody>
+      </table>
+    </div>
+    <p class="muted">Stored in this browser; no route lists traces.</p>
+  </details>
+  <details class="panel" data-mock-id="query.planned.list">
+    <summary data-mock-id="query.planned.toggle">Planned (not built)</summary>
+    <ul>
+      <li>Per-request token allowance (fixed at 1,000,000 per node today)</li>
+      <li>Token-level answer streaming</li>
+      <li>Request cancel</li>
+      <li>Per-request arm settings</li>
+    </ul>
+  </details>
 </section>
 
 <section data-mock-id="screen-evidence" hidden>
@@ -518,7 +619,7 @@ label.inline { display: inline-flex; align-items: center; gap: var(--sm); }
     <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></symbol>
   </svg>
 </div>
-<script type="application/json" id="mock-fixtures">{"aliases":[{"alias":"prod","active_version":"4.0.0","record_kind":"rollback","generation_ordinal":5,"created_at":"2026-10-20T09:12:44Z","arm":"naive"},{"alias":"staging","active_version":"1.0.0","record_kind":"promotion","generation_ordinal":6,"created_at":"2026-10-21T15:40:02Z","arm":"naive"},{"alias":"hr","active_version":"1.0.0","record_kind":"promotion","generation_ordinal":7,"created_at":"2026-10-22T11:05:37Z","arm":"hipporag"}],"health":{"health-ok":{"status":"ok","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:chunks":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"ok","graph:hipporag-graph":"ok","vector:hipporag-chunks":"ok","vector:hipporag-entities":"ok","vector:hipporag-facts":"ok"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":true,"embedding":true,"rerank":true},"engine_reason":null},"health-degraded":{"status":"degraded","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"absent","graph:hipporag-graph":"absent","vector:hipporag-chunks":"absent","vector:hipporag-entities":"absent","vector:hipporag-facts":"absent"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":false,"embedding":false,"rerank":false},"engine_reason":"model clients not configured"},"health-loading":{"loading":true},"health-error":{"status":500,"body":"Internal Server Error"}},"query":{"q-success":{"status":200,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}}},"shell":{"info":{"version":"0.1.0","workspace":"default","clients":{"llm":true,"embedding":true,"rerank":false},"write_in_flight":false,"graph_busy":false}},"refusals":[{"refusal_type":"ActiveGenerationRetirementError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"AmbiguousAnswerPositionError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"AmbiguousIngestPayloadError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"DisagreeingPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"DocumentNotInterruptedError","module":"databasise.seam.refusals","attribute_keys":["document_id","status"],"http_status":422},{"refusal_type":"DuplicateComparisonKeyError","module":"databasise.seam.refusals","attribute_keys":["key"],"http_status":422},{"refusal_type":"DuplicateDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"EmptyCapabilitySelectorError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyComparisonRequestError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyIngestDocumentError","module":"databasise.seam.refusals","attribute_keys":["member"],"http_status":422},{"refusal_type":"EmptyNamespaceError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":422},{"refusal_type":"EmptyPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"EmptyQueryObjectError","module":"databasise.seam.refusals","attribute_keys":["query_object"],"http_status":422},{"refusal_type":"ForbiddenSelectorInputError","module":"databasise.seam.refusals","attribute_keys":["member_name","value"],"http_status":422},{"refusal_type":"ForeignEngineRefusalError","module":"databasise.seam.refusals","attribute_keys":["failure_class","operation"],"http_status":502},{"refusal_type":"GateNotCalibratedError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"GateVerbNotBuiltError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"InvalidChangeOriginError","module":"databasise.seam.refusals","attribute_keys":["change_origin"],"http_status":422},{"refusal_type":"InvalidDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"InvalidEvidenceNamespaceError","module":"databasise.seam.refusals","attribute_keys":["namespace"],"http_status":422},{"refusal_type":"InvalidGuardDeclarationError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"InvalidNodeSettingError","module":"databasise.seam.refusals","attribute_keys":["setting"],"http_status":422},{"refusal_type":"InvalidPromotionAliasError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"MalformedBase64PayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MalformedSelectorPayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MeasurementPostureRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"MissingScopeArgumentError","module":"databasise.seam.refusals","attribute_keys":["argument","scope","tool"],"http_status":422},{"refusal_type":"MultiMemberSelectorError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"MutableStoreComparisonExcludedError","module":"databasise.seam.refusals","attribute_keys":["component"],"http_status":422},{"refusal_type":"NoRawUploadPathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NoWritePathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NonFiniteNumberError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"OversizedDocumentError","module":"databasise.seam.refusals","attribute_keys":["actual_bytes","limit_bytes"],"http_status":422},{"refusal_type":"PageBoundsError","module":"databasise.seam.refusals","attribute_keys":["limit","offset"],"http_status":422},{"refusal_type":"PageSizeExceededError","module":"databasise.seam.refusals","attribute_keys":["limit","requested"],"http_status":422},{"refusal_type":"PartialRunEvidenceError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"StoreBusyError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":409},{"refusal_type":"TombstonedGenerationError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"UnbudgetableParticipantError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"UncalibratedFloorRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"UnconsumableQueryMemberError","module":"databasise.seam.refusals","attribute_keys":["member_name"],"http_status":422},{"refusal_type":"UnknownDocumentError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"UnknownGenerationVersionError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":404},{"refusal_type":"UnknownGraphNodeError","module":"databasise.seam.refusals","attribute_keys":["node_id"],"http_status":422},{"refusal_type":"UnknownJobError","module":"databasise.seam.refusals","attribute_keys":["job_id"],"http_status":404},{"refusal_type":"UnknownTraceReferenceError","module":"databasise.seam.refusals","attribute_keys":["trace_reference"],"http_status":404},{"refusal_type":"UnparseableWiringError","module":"databasise.seam.refusals","attribute_keys":["violations"],"http_status":422},{"refusal_type":"UnrecognisedPromotionVerbError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"UnresolvableEvidenceReferenceError","module":"databasise.seam.refusals","attribute_keys":["ref"],"http_status":404},{"refusal_type":"UnsatisfiableSelectorError","module":"databasise.seam.refusals","attribute_keys":["requested","selector_kind"],"http_status":422},{"refusal_type":"UnsupportedUploadTypeError","module":"databasise.seam.refusals","attribute_keys":["suffix"],"http_status":422}],"resolution":{"rows":[{"selector":null,"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_kv"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_vector"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_graph"]},"wiring":"hipporag","node_count":14,"outcome":"resolved"},{"selector":{"capability":["reads_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_blob"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_artifact"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["calls_llm"]},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"capability":["calls_rerank"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["calls_embedding"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["net"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["fs"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["self_storage"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["mutates_store"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_kv"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_vector"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_graph"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_vector:entities"]},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:relationships"]},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:entities","reads_vector:relationships"]},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"capability":[]},"wiring":null,"node_count":null,"outcome":"EmptyCapabilitySelectorError"},{"selector":{"harness":"hotpotqa"},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"alias":"fixture-naive"},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"alias":"fixture-bypass"},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"alias":"fixture-hybrid"},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"alias":"fixture-local"},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-global"},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-hipporag"},"wiring":"hipporag","node_count":14,"outcome":"resolved"}],"reachable":{"naive":true,"bypass":true,"hybrid":true,"local":true,"global":true,"hipporag":true}}}</script>
+<script type="application/json" id="mock-fixtures">{"aliases":[{"alias":"prod","active_version":"4.0.0","record_kind":"rollback","generation_ordinal":5,"created_at":"2026-10-20T09:12:44Z","arm":"naive"},{"alias":"staging","active_version":"1.0.0","record_kind":"promotion","generation_ordinal":6,"created_at":"2026-10-21T15:40:02Z","arm":"naive"},{"alias":"hr","active_version":"1.0.0","record_kind":"promotion","generation_ordinal":7,"created_at":"2026-10-22T11:05:37Z","arm":"hipporag"}],"health":{"health-ok":{"status":"ok","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:chunks":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"ok","graph:hipporag-graph":"ok","vector:hipporag-chunks":"ok","vector:hipporag-entities":"ok","vector:hipporag-facts":"ok"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":true,"embedding":true,"rerank":true},"engine_reason":null},"health-degraded":{"status":"degraded","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"absent","graph:hipporag-graph":"absent","vector:hipporag-chunks":"absent","vector:hipporag-entities":"absent","vector:hipporag-facts":"absent"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":false,"embedding":false,"rerank":false},"engine_reason":"model clients not configured"},"health-loading":{"loading":true},"health-error":{"status":500,"body":"Internal Server Error"}},"query":{"q-success":{"status":200,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-partial":{"status":200,"body":{"answer":"","evidence":[],"trace_token":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","depth_label":null,"partial":true,"degraded":true,"stop_reason":"node_failed","degradation_reason":"node_failed","token_accounting":[{"counted_by":"none","prompt_tokens":0,"completion_tokens":0,"cached_read_tokens":0,"call_count":0}],"seam_events":[]}},"q-empty-evidence":{"status":200,"body":{"answer":"The question was sent to the model without retrieval, so this answer rests on the model alone.","evidence":[],"trace_token":"Ln0sA6lQeuJl7PW1NWiFpTOTogKdJBOUmXJloaJa78Y","depth_label":"opaque","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":212,"completion_tokens":58,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-trace-null":{"status":200,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":null,"depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-layout-sample":{"status":200,"layout_sample":true,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":null,"tier":null}],"trace_token":"GKw-c0PwFokMUQ6T-TUmEWnZ4_VlQ2Qpgw-vCTT0-OQ","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1}],"seam_events":[{"component":"mutates_store","outcome":"completed","spend":{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":40,"completion_tokens":8,"cached_read_tokens":0,"call_count":1}}]}},"q-refusal":{"status":422,"body":{"refusal_type":"UnsatisfiableSelectorError","message":"no wiring satisfies the requested selector","selector_kind":"capability","requested":["writes_graph"]}},"q-validation":{"status":422,"body":{"detail":[{"loc":["body","selector"],"msg":"Value error, a selector may set only one member","type":"value_error"}]}},"q-500":{"status":500,"body":"Internal Server Error"},"q-500-foreign":{"status":502,"body":{"refusal_type":"ForeignEngineRefusalError","message":"operation 'query' failed (StoreFault)","operation":"query","failure_class":"StoreFault","trace_token":"P3m7e0NbBTIWUdrv03TNxoHcBvqmXjdOODN7iMoEbeo","cause":"graph store lock held by another process in this namespace"}},"q-stream-disconnected":{"status":200,"stream_closed":true,"body":{"answer":"","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null}],"trace_token":null,"depth_label":null,"partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[],"seam_events":[]}},"history":[{"time":"2026-10-24 16:42:09","selector":"Default","trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","partial":false},{"time":"2026-10-24 16:31:55","selector":"capability reads_vector:entities","trace_token":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","partial":true},{"time":"2026-10-23 10:08:21","selector":"alias prod","trace_token":"Ln0sA6lQeuJl7PW1NWiFpTOTogKdJBOUmXJloaJa78Y","partial":false}]},"shell":{"info":{"version":"0.1.0","workspace":"default","clients":{"llm":true,"embedding":true,"rerank":false},"write_in_flight":false,"graph_busy":false}},"refusals":[{"refusal_type":"ActiveGenerationRetirementError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"AmbiguousAnswerPositionError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"AmbiguousIngestPayloadError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"DisagreeingPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"DocumentNotInterruptedError","module":"databasise.seam.refusals","attribute_keys":["document_id","status"],"http_status":422},{"refusal_type":"DuplicateComparisonKeyError","module":"databasise.seam.refusals","attribute_keys":["key"],"http_status":422},{"refusal_type":"DuplicateDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"EmptyCapabilitySelectorError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyComparisonRequestError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyIngestDocumentError","module":"databasise.seam.refusals","attribute_keys":["member"],"http_status":422},{"refusal_type":"EmptyNamespaceError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":422},{"refusal_type":"EmptyPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"EmptyQueryObjectError","module":"databasise.seam.refusals","attribute_keys":["query_object"],"http_status":422},{"refusal_type":"ForbiddenSelectorInputError","module":"databasise.seam.refusals","attribute_keys":["member_name","value"],"http_status":422},{"refusal_type":"ForeignEngineRefusalError","module":"databasise.seam.refusals","attribute_keys":["failure_class","operation"],"http_status":502},{"refusal_type":"GateNotCalibratedError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"GateVerbNotBuiltError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"InvalidChangeOriginError","module":"databasise.seam.refusals","attribute_keys":["change_origin"],"http_status":422},{"refusal_type":"InvalidDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"InvalidEvidenceNamespaceError","module":"databasise.seam.refusals","attribute_keys":["namespace"],"http_status":422},{"refusal_type":"InvalidGuardDeclarationError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"InvalidNodeSettingError","module":"databasise.seam.refusals","attribute_keys":["setting"],"http_status":422},{"refusal_type":"InvalidPromotionAliasError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"MalformedBase64PayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MalformedSelectorPayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MeasurementPostureRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"MissingScopeArgumentError","module":"databasise.seam.refusals","attribute_keys":["argument","scope","tool"],"http_status":422},{"refusal_type":"MultiMemberSelectorError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"MutableStoreComparisonExcludedError","module":"databasise.seam.refusals","attribute_keys":["component"],"http_status":422},{"refusal_type":"NoRawUploadPathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NoWritePathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NonFiniteNumberError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"OversizedDocumentError","module":"databasise.seam.refusals","attribute_keys":["actual_bytes","limit_bytes"],"http_status":422},{"refusal_type":"PageBoundsError","module":"databasise.seam.refusals","attribute_keys":["limit","offset"],"http_status":422},{"refusal_type":"PageSizeExceededError","module":"databasise.seam.refusals","attribute_keys":["limit","requested"],"http_status":422},{"refusal_type":"PartialRunEvidenceError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"StoreBusyError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":409},{"refusal_type":"TombstonedGenerationError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"UnbudgetableParticipantError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"UncalibratedFloorRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"UnconsumableQueryMemberError","module":"databasise.seam.refusals","attribute_keys":["member_name"],"http_status":422},{"refusal_type":"UnknownDocumentError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"UnknownGenerationVersionError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":404},{"refusal_type":"UnknownGraphNodeError","module":"databasise.seam.refusals","attribute_keys":["node_id"],"http_status":422},{"refusal_type":"UnknownJobError","module":"databasise.seam.refusals","attribute_keys":["job_id"],"http_status":404},{"refusal_type":"UnknownTraceReferenceError","module":"databasise.seam.refusals","attribute_keys":["trace_reference"],"http_status":404},{"refusal_type":"UnparseableWiringError","module":"databasise.seam.refusals","attribute_keys":["violations"],"http_status":422},{"refusal_type":"UnrecognisedPromotionVerbError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"UnresolvableEvidenceReferenceError","module":"databasise.seam.refusals","attribute_keys":["ref"],"http_status":404},{"refusal_type":"UnsatisfiableSelectorError","module":"databasise.seam.refusals","attribute_keys":["requested","selector_kind"],"http_status":422},{"refusal_type":"UnsupportedUploadTypeError","module":"databasise.seam.refusals","attribute_keys":["suffix"],"http_status":422}],"resolution":{"rows":[{"selector":null,"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_kv"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_vector"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_graph"]},"wiring":"hipporag","node_count":14,"outcome":"resolved"},{"selector":{"capability":["reads_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_blob"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_artifact"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["calls_llm"]},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"capability":["calls_rerank"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["calls_embedding"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["net"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["fs"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["self_storage"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["mutates_store"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_kv"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_vector"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_graph"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_vector:entities"]},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:relationships"]},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:entities","reads_vector:relationships"]},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"capability":[]},"wiring":null,"node_count":null,"outcome":"EmptyCapabilitySelectorError"},{"selector":{"harness":"hotpotqa"},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"alias":"fixture-naive"},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"alias":"fixture-bypass"},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"alias":"fixture-hybrid"},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"alias":"fixture-local"},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-global"},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-hipporag"},"wiring":"hipporag","node_count":14,"outcome":"resolved"}],"reachable":{"naive":true,"bypass":true,"hybrid":true,"local":true,"global":true,"hipporag":true}}}</script>
 <script>
 "use strict";
 // Shared scope: every js/*.js file is concatenated into one script, so FIX, $id and Console are global to later screens.
@@ -821,6 +922,152 @@ var Picker = {
   },
 };
 
+// The four server error shapes (GUI-06, D-04). One classifier, in the UI-SPEC order, never on status alone.
+var ERROR_SHAPES = ["refusal", "validation", "server-failure", "generic"];
+var MONO_KEY = /trace|alias|version|document|job|key|ref/i;
+var REFUSAL_HINTS = {
+  UnknownTraceReferenceError: "Check the trace token. Tokens come from a query result or from Recent runs.",
+  UnresolvableEvidenceReferenceError: "record no longer present; the store changed since the query.",
+  UnsatisfiableSelectorError: "No wiring matches this selector. See the selector table.",
+  DuplicateComparisonKeyError: "Change one selector so each comparison key is unique.",
+  PartialRunEvidenceError: "Remove the partial run from the selection.",
+  DisagreeingPromotionTraceIdsError: "Select traces from one selector only.",
+  InvalidPromotionAliasError: "Use an alias that is not 64 hex characters.",
+  InvalidChangeOriginError: "Choose human_edit or machine_mutation.",
+  ActiveGenerationRetirementError: "roll back first, then retire.",
+  TombstonedGenerationError: "This version is retired. Choose another version.",
+  StoreBusyError: "The store is in use by another process. Retry when it has finished.",
+  PageSizeExceededError: "Use a page size from 1 to 100.",
+  NoRawUploadPathForModalityError: "Raw upload is not available for this selector. Use Paste text.",
+};
+
+function classifyResponse(status, body) {
+  var structured = body !== null && typeof body === "object";
+  if (structured && body.refusal_type === "ForeignEngineRefusalError") return "server-failure";
+  if (structured && typeof body.refusal_type === "string") return "refusal";
+  if (status === 422 && structured && Array.isArray(body.detail)) return "validation";
+  if (status >= 200 && status < 300) return "result";
+  return "generic";
+}
+
+function fillRole(banner, role, text) {
+  banner.querySelector('[data-role="' + role + '"]').textContent = text;
+}
+
+function appendAttribute(list, key, value) {
+  list.appendChild(h("dt", key));
+  var dd = h("dd", null, MONO_KEY.test(key) ? "mono" : "");
+  (Array.isArray(value) ? value : [value]).forEach(function (item, i) {
+    if (i) dd.appendChild(document.createTextNode(", "));
+    var text = item === null || item === undefined ? "—" : typeof item === "object" ? JSON.stringify(item) : String(item);
+    if (/trace/i.test(key) && item) {
+      var mark = document.createElement("mark");
+      mark.textContent = text;
+      dd.appendChild(mark);
+    } else {
+      dd.appendChild(document.createTextNode(text));
+    }
+  });
+  list.appendChild(dd);
+}
+
+function fillRefusal(banner, status, body) {
+  fillRole(banner, "type", body.refusal_type);
+  fillRole(banner, "message", body.message || "");
+  var list = banner.querySelector('[data-role="attrs"]');
+  clearNode(list);
+  Object.keys(body).forEach(function (key) {
+    if (key !== "refusal_type" && key !== "message") appendAttribute(list, key, body[key]);
+  });
+  banner.querySelector('[data-role="attrs-wrap"]').hidden = list.children.length === 0;
+  fillRole(banner, "hint", REFUSAL_HINTS[body.refusal_type] || "Review the attributes and change the request.");
+  var entry = FIX.refusals.filter(function (r) {
+    return r.refusal_type === body.refusal_type;
+  })[0];
+  var keys = entry ? entry.attribute_keys.join(", ") || "none" : "not in the catalogue";
+  fillRole(banner, "footer", "HTTP " + status + ". Documented attributes: " + keys + ".");
+}
+
+function fillValidation(screen, banner, body) {
+  var list = banner.querySelector('[data-role="list"]');
+  clearNode(list);
+  fillRole(banner, "summary", "The request has " + body.detail.length + " invalid field(s).");
+  var fields = Array.prototype.slice.call($id("screen-" + screen).querySelectorAll("[data-field-loc]"));
+  body.detail.forEach(function (d) {
+    var loc = (d.loc || []).join(".");
+    list.appendChild(h("li", loc + ": " + d.msg));
+    fields.forEach(function (field) {
+      if (field.getAttribute("data-field-loc") === loc) setFieldError(field, d.msg);
+    });
+  });
+}
+
+function fillServerFailure(banner, body) {
+  fillRole(banner, "text", "The server could not complete the operation (" + body.operation + ", " + body.failure_class + "). The input was not at fault. Retry later or check the server log.");
+  var list = banner.querySelector('[data-role="detail-list"]');
+  clearNode(list);
+  ["message", "failure_class", "operation", "trace_token", "cause"].forEach(function (key) {
+    if (body[key] !== undefined && body[key] !== null) list.appendChild(h("div", key + ": " + body[key]));
+  });
+  var open = banner.querySelector('[data-mock-id$=".error.open-trace"]');
+  open.hidden = !body.trace_token;
+  open.setAttribute("data-token", body.trace_token || "");
+  banner.querySelector('[data-role="details"]').hidden = true;
+  var toggle = banner.querySelector('[data-mock-id$=".error.details-toggle"]');
+  toggle.setAttribute("aria-expanded", "false");
+  toggle.textContent = "Show details";
+}
+
+function fillGeneric(banner, status, body, opts) {
+  fillRole(banner, "text", opts && opts.text ? opts.text : status === 0 ? "No response from the server." : "The server returned HTTP " + status + " with no structured body. Check the server log.");
+  var pre = banner.querySelector('[data-role="body"]');
+  var text = typeof body === "string" ? body : body === null || body === undefined ? "" : JSON.stringify(body);
+  pre.textContent = text.slice(0, 500);
+  pre.hidden = text === "";
+}
+
+// Shows exactly one of the four shapes of a screen (or none for a 2xx) and returns the shape name.
+function renderError(screen, status, body, opts) {
+  var shape = classifyResponse(status, body);
+  ERROR_SHAPES.forEach(function (s) {
+    $id(screen + ".error." + s).hidden = true;
+  });
+  Array.prototype.forEach.call($id("screen-" + screen).querySelectorAll("[data-error-id]"), function (el) {
+    setFieldError(el, "");
+  });
+  if (shape === "result") return shape;
+  var banner = $id(screen + ".error." + shape);
+  if (shape === "refusal") fillRefusal(banner, status, body);
+  else if (shape === "validation") fillValidation(screen, banner, body);
+  else if (shape === "server-failure") fillServerFailure(banner, body);
+  else fillGeneric(banner, status, body, opts);
+  banner.hidden = false;
+  return shape;
+}
+
+// Click behaviour of the shared error components; every screen with the errors partial calls this once.
+function wireErrors(screen) {
+  var toggle = $id(screen + ".error.details-toggle");
+  toggle.addEventListener("click", function () {
+    var open = toggle.getAttribute("aria-expanded") !== "true";
+    toggle.parentElement.querySelector('[data-role="details"]').hidden = !open;
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.textContent = open ? "Hide details" : "Show details";
+  });
+  [["catalogue-link", "open-catalogue"], ["server-log", "open-log"]].forEach(function (pair) {
+    $id(screen + ".error." + pair[0]).addEventListener("click", function (event) {
+      event.preventDefault();
+      Console.show("corpus");
+      Console.emit(pair[1]);
+    });
+  });
+  var open = $id(screen + ".error.open-trace");
+  open.addEventListener("click", function () {
+    Console.show("evidence");
+    Console.emit("open-trace", { token: open.getAttribute("data-token") });
+  });
+}
+
 function copyText(text, flash) {
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -839,15 +1086,31 @@ function copyText(text, flash) {
 var QueryScreen = (function () {
   var STATES = ["idle", "running", "success", "partial", "empty-evidence", "refusal-422", "validation-422", "error-500"];
   var RESULT_STATES = ["success", "partial", "empty-evidence"];
+  var ERROR_STATES = ["refusal-422", "validation-422", "error-500"];
+  // setState renders these fixtures (UI-SPEC section 1, Mock row).
+  var STATE_FIXTURE = {
+    success: "q-success",
+    partial: "q-partial",
+    "empty-evidence": "q-empty-evidence",
+    "refusal-422": "q-refusal",
+    "validation-422": "q-validation",
+    "error-500": "q-500",
+  };
+  var SHAPE_STATE = { refusal: "refusal-422", validation: "validation-422", "server-failure": "error-500", generic: "error-500" };
+  var STREAM_CLOSED = "The stream closed before the final event.";
+  var STREAMING = "Streaming. The answer arrives with the final event.";
   var MSG = {
     textEmpty: "Query text is empty. Enter at least one non-space character.",
     badJson: "Raw selector JSON is not valid JSON.",
     multiMember: "A selector may set only one member: alias, capability or harness.",
   };
   var root = $id("screen-query");
+  var errorsBox = root.querySelector('[data-role="errors"]');
   var timers = [];
   var evidenceRefs = [];
   var lastTrace = null;
+  var lastLabel = "Default";
+  var history = FIX.query.history.slice();
   var touched = false;
   var mode = "query";
 
@@ -864,18 +1127,27 @@ var QueryScreen = (function () {
     timers = [];
   }
 
+  function setDisabled(button, disabled) {
+    button.disabled = disabled;
+    if (disabled) button.setAttribute("aria-disabled", "true");
+    else button.removeAttribute("aria-disabled");
+  }
+
+  // Exactly one state view is visible. Field errors belong to one render, so every state change clears them.
   function showState(name) {
     STATES.forEach(function (s) {
-      var view = ID("state." + s);
-      if (view) view.hidden = s !== name; // the error views arrive with the shared error shapes
+      ID("state." + s).hidden = s !== name;
     });
     ID("result.panel").hidden = RESULT_STATES.indexOf(name) < 0;
+    errorsBox.hidden = ERROR_STATES.indexOf(name) < 0;
     var running = name === "running";
     ID("run.spinner").hidden = !running;
-    var submit = ID("run.submit");
-    submit.disabled = running;
-    if (running) submit.setAttribute("aria-disabled", "true");
-    else submit.removeAttribute("aria-disabled");
+    setDisabled(ID("run.submit"), running);
+    ID("mock.state-switcher").value = name;
+    Array.prototype.forEach.call(root.querySelectorAll("[data-error-id]"), function (el) {
+      setFieldError(el, "");
+    });
+    ID("run.message").hidden = true;
   }
 
   function cell(row, i, text) {
@@ -891,6 +1163,7 @@ var QueryScreen = (function () {
     cell(row, 3, ref.kind);
     cell(row, 4, typeof ref.score === "number" ? ref.score.toFixed(4) : "—");
     row.hidden = false;
+    root.querySelector('[data-role="evidence-wrap"]').hidden = false;
   }
 
   function renderTokens(entries) {
@@ -947,20 +1220,37 @@ var QueryScreen = (function () {
     });
   }
 
-  function renderResult(env) {
+  function renderBadge(name, shown, text, reason) {
+    var badge = ID("result." + name);
+    badge.hidden = !shown;
+    if (!shown) return;
+    badge.textContent = text;
+    badge.title = "operator diagnostics\n" + reason;
+  }
+
+  // opts.streaming renders the layout before the final event; opts.layoutSample labels the sample row.
+  function renderResult(env, opts) {
+    opts = opts || {};
     var partial = !!env.partial;
     var answer = ID("result.answer");
-    answer.textContent = env.answer || "No answer was produced.";
-    answer.classList.toggle("muted", !env.answer);
+    var text = opts.streaming ? STREAMING : env.answer || "No answer was produced.";
+    answer.textContent = text;
+    answer.classList.toggle("muted", opts.streaming || !env.answer);
     ID("result.depth").textContent = "depth: " + (env.depth_label || "not answered");
+    ID("result.depth").title = "operator diagnostics\ndepth_label: " + env.depth_label;
+    renderBadge("partial", partial, "▲ partial", "stop_reason: " + env.stop_reason);
+    renderBadge("degraded", !!env.degraded, "▲ degraded", "degradation_reason: " + env.degradation_reason);
+    root.querySelector('[data-role="stop-reason"]').textContent = "stop_reason: " + env.stop_reason;
 
     evidenceRefs = [];
+    root.querySelector('[data-role="evidence-wrap"]').hidden = env.evidence.length === 0;
     for (var n = 1; n <= 5; n++) {
       if (env.evidence[n - 1]) fillEvidence(n, env.evidence[n - 1]);
       else ID("evidence.open-" + n).closest("tr").hidden = true;
     }
     renderTokens(env.token_accounting);
     renderSeam(env.seam_events);
+    root.querySelector('[data-role="layout-sample"]').hidden = !opts.layoutSample;
 
     lastTrace = env.trace_token;
     var link = ID("result.trace-link");
@@ -973,13 +1263,51 @@ var QueryScreen = (function () {
       link.setAttribute("aria-disabled", "true");
       link.setAttribute("tabindex", "-1");
     }
+    root.querySelector('[data-role="no-trace"]').hidden = !!lastTrace || !!opts.streaming;
+    ID("result.copy-trace").hidden = !lastTrace;
 
-    var promote = ID("result.promote");
-    promote.disabled = partial;
-    if (partial) promote.setAttribute("aria-disabled", "true");
-    else promote.removeAttribute("aria-disabled");
+    setDisabled(ID("result.promote"), partial);
     root.querySelector('[data-role="no-promote"]').hidden = !partial;
-    showState("success");
+    showState(opts.state || (partial ? "partial" : env.evidence.length === 0 ? "empty-evidence" : "success"));
+  }
+
+  // Classifies a response and shows its result layout or its error shape; returns the shape.
+  function applyResponse(status, body, opts) {
+    var shape = classifyResponse(status, body);
+    if (shape === "result") renderResult(body, opts);
+    else {
+      showState(SHAPE_STATE[shape]);
+      renderError("query", status, body, opts);
+    }
+    return shape;
+  }
+
+  function applyFixture(name) {
+    var fx = FIX.query[name];
+    if (!fx) throw new Error("unknown query fixture " + name);
+    if (fx.stream_closed) return applyResponse(0, "", { text: STREAM_CLOSED });
+    return applyResponse(fx.status, fx.body, { layoutSample: !!fx.layout_sample });
+  }
+
+  function renderHistory() {
+    for (var n = 1; n <= 3; n++) {
+      var row = ID("history.open-" + n).closest("tr");
+      var entry = history[n - 1];
+      row.hidden = !entry;
+      if (!entry) continue;
+      cell(row, 0, entry.time);
+      cell(row, 1, entry.selector);
+      cell(row, 2, entry.trace_token.slice(0, 8));
+      cell(row, 3, entry.partial ? "partial" : "—");
+    }
+  }
+
+  function remember(env) {
+    if (!env.trace_token) return;
+    var d = new Date();
+    history.unshift({ time: d.toISOString().slice(0, 19).replace("T", " "), selector: lastLabel, trace_token: env.trace_token, partial: !!env.partial });
+    history = history.slice(0, 3);
+    renderHistory();
   }
 
   // Blockers, in the UI-SPEC order: text, raw selector JSON, then the picker. Returns {ok, selector, focus}.
@@ -1009,7 +1337,7 @@ var QueryScreen = (function () {
     setFieldError(ID("selector.group"), pickMsg);
     var focus = textMsg ? ID("text.error") : jsonMsg ? ID("advanced.selector-json-error") : pickMsg ? ID("selector.error") : null;
     if (jsonMsg) ID("advanced.panel").open = true;
-    ID("run.message").hidden = !(touched && focus);
+    if (!focus) ID("run.message").hidden = true;
     return { ok: !focus, selector: override !== null ? override : picker.value(), focus: focus };
   }
 
@@ -1017,23 +1345,49 @@ var QueryScreen = (function () {
     if (touched) validate();
   });
 
+  // The fixture a Run ends in: the Fixture select wins, otherwise the State select (idle and running fall back to success).
   function pickFixture() {
-    return "q-success";
+    var variant = ID("mock.fixture").value;
+    if (variant !== "standard") return variant;
+    return STATE_FIXTURE[ID("mock.state-switcher").value] || "q-success";
+  }
+
+  function finish(name) {
+    var fx = FIX.query[name];
+    var streaming = ID("run.stream").checked || !!fx.stream_closed;
+    if (!streaming || classifyResponse(fx.status, fx.body) !== "result") {
+      if (applyFixture(name) === "result") remember(fx.body);
+      return;
+    }
+    var env = fx.body;
+    var rows = fx.stream_closed ? env.evidence.slice(0, 1) : env.evidence;
+    renderResult({ answer: "", evidence: [], trace_token: null, depth_label: null, partial: false, degraded: false, token_accounting: [], seam_events: [] }, { streaming: true, state: "success" });
+    rows.forEach(function (ref, i) {
+      later(200 * (i + 1), function () {
+        fillEvidence(i + 1, ref);
+      });
+    });
+    later(200 * (rows.length + 1), function () {
+      if (applyFixture(name) === "result") remember(env);
+    });
   }
 
   function run() {
     touched = true;
     var check = validate();
     if (!check.ok) {
-      ID("run.message").textContent = "Run blocked. Fix the message shown above.";
-      ID("run.message").hidden = false;
+      var message = ID("run.message");
+      message.textContent = "Run blocked. Fix the message shown above.";
+      message.hidden = false;
       check.focus.focus();
       return;
     }
     cancelTimers();
+    lastLabel = selectorLabel(check.selector);
+    var name = pickFixture();
     showState("running");
     later(800, function () {
-      renderResult(FIX.query[pickFixture()].body);
+      finish(name);
     });
   }
 
@@ -1042,6 +1396,13 @@ var QueryScreen = (function () {
     root.setAttribute("data-mode", mode);
     ID("mode.query").setAttribute("aria-selected", String(mode === "query"));
     ID("mode.compare").setAttribute("aria-selected", String(mode === "compare"));
+  }
+
+  function setState(name) {
+    cancelTimers();
+    if (STATES.indexOf(name) < 0) throw new Error("unknown query state " + name);
+    if (name === "idle" || name === "running") showState(name);
+    else applyFixture(STATE_FIXTURE[name]);
   }
 
   function buildResolutionTable() {
@@ -1074,6 +1435,14 @@ var QueryScreen = (function () {
     ID("selector.table-toggle").setAttribute("aria-expanded", String(!wrap.hidden));
     ID("selector.table-toggle").textContent = wrap.hidden ? "Show resolution table" : "Hide resolution table";
   });
+  ID("mock.state-switcher").addEventListener("change", function (event) {
+    setState(event.target.value);
+  });
+  ID("mock.fixture").addEventListener("change", function (event) {
+    cancelTimers();
+    if (event.target.value === "standard") setState("success");
+    else applyFixture(event.target.value);
+  });
   ID("result.trace-link").addEventListener("click", function (event) {
     event.preventDefault();
     if (!lastTrace) return;
@@ -1090,6 +1459,16 @@ var QueryScreen = (function () {
       });
     })(slot);
   }
+  for (var row = 1; row <= 3; row++) {
+    (function (n) {
+      ID("history.open-" + n).addEventListener("click", function () {
+        var entry = history[n - 1];
+        if (!entry) return;
+        Console.show("evidence");
+        Console.emit("open-trace", { token: entry.trace_token });
+      });
+    })(row);
+  }
   ID("result.copy-trace").addEventListener("click", function () {
     if (lastTrace) copyText(lastTrace, root.querySelector('[data-role="copied"]'));
   });
@@ -1101,21 +1480,23 @@ var QueryScreen = (function () {
     setMode("compare");
   });
 
+  wireErrors("query");
   buildResolutionTable();
+  renderHistory();
   showState("idle");
   return {
     setMode: setMode,
     picker: picker,
-    setState: function (name) {
+    showState: showState,
+    renderResult: renderResult,
+    setState: setState,
+    inject: function (response) {
       cancelTimers();
-      if (STATES.indexOf(name) < 0) throw new Error("unknown query state " + name);
-      if (name === "idle" || name === "running") showState(name);
-      else renderResult(FIX.query["q-success"].body);
+      applyResponse(response.status, response.body);
     },
-    inject: function () {},
     loadFixture: function (name) {
       cancelTimers();
-      renderResult(FIX.query[name].body);
+      applyFixture(name);
     },
   };
 })();
