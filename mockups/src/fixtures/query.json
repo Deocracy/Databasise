@@ -1,0 +1,24 @@
+{
+  "q-success": {
+    "status": 200,
+    "body": {
+      "answer": "The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.",
+      "evidence": [
+        {"ref": "c-7f3a91", "namespace": "chunks", "kind": "text_chunk", "score": 0.8731, "tier": null},
+        {"ref": "c-02be44", "namespace": "chunks", "kind": "text_chunk", "score": 0.812, "tier": null},
+        {"ref": "c-91d0c7", "namespace": "chunks", "kind": "text_chunk", "score": 0.7764, "tier": null}
+      ],
+      "trace_token": "ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs",
+      "depth_label": "evidence",
+      "partial": false,
+      "degraded": false,
+      "stop_reason": null,
+      "degradation_reason": null,
+      "token_accounting": [
+        {"counted_by": "gpt-4o-mini-2024-07-18", "prompt_tokens": 1284, "completion_tokens": 96, "cached_read_tokens": 0, "call_count": 1},
+        {"counted_by": "text-embedding-3-small", "prompt_tokens": 14, "completion_tokens": 0, "cached_read_tokens": 0, "call_count": 1}
+      ],
+      "seam_events": []
+    }
+  }
+}

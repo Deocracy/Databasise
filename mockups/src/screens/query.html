@@ -1,3 +1,83 @@
-<section data-mock-id="screen-query" hidden>
+<section data-mock-id="screen-query" hidden data-mode="query">
   <h1>Query &amp; Compare</h1>
+  <div class="tabs" role="tablist" aria-label="Mode" data-mock-id="query.mode.tablist">
+    <button type="button" role="tab" aria-selected="true" data-mock-id="query.mode.query">Query</button>
+    <button type="button" role="tab" aria-selected="false" data-mock-id="query.mode.compare">Compare</button>
+  </div>
+  <section class="panel" data-focal="true" data-mock-id="query.editor.panel">
+    <h2>Query</h2>
+    <label class="field"><span class="label">Query text</span>
+      <textarea rows="4" data-mock-id="query.text.input" data-field-loc="body.query.text" data-error-id="query.text.error"></textarea>
+    </label>
+    <p class="field-error" role="alert" tabindex="-1" data-mock-id="query.text.error" hidden></p>
+    <div class="run-row">
+      <button type="button" class="btn btn-primary" data-mock-id="query.run.submit">Run</button>
+      <span class="spinner" role="presentation" data-mock-id="query.run.spinner" hidden></span>
+      <label class="inline"><input type="checkbox" data-mock-id="query.run.stream"> Stream the response</label>
+      <p class="muted" role="status" data-mock-id="query.run.message" hidden></p>
+    </div>
+  </section>
+  <section data-mock-id="query.results.region">
+    <div class="state-view" data-mock-id="query.state.idle">
+      <h2>No query has run</h2>
+      <p class="muted">Enter query text, choose a selector and select Run. The result appears here.</p>
+    </div>
+    <div class="state-view banner" data-state="progress" data-mock-id="query.state.running" hidden>
+      <p>Running. A full run waits for the model; no progress is available.</p>
+    </div>
+    <section class="panel" data-mock-id="query.result.panel" hidden>
+      <div class="state-view banner" data-state="ok" data-mock-id="query.state.success" hidden>
+        <p>Run complete.</p>
+      </div>
+      <div class="state-view banner" data-state="warn" data-mock-id="query.state.partial" hidden>
+        <p>Partial run: the run stopped early. Open the trace to see which node halted.</p>
+        <p class="muted"><strong>operator diagnostics</strong> <span class="mono" data-role="stop-reason"></span></p>
+      </div>
+      <div class="state-view banner" data-state="neutral" data-mock-id="query.state.empty-evidence" hidden>
+        <p>No evidence: the wiring declares no evidence position, or no items matched.</p>
+      </div>
+      <h2>Answer</h2>
+      <div class="answer" data-mock-id="query.result.answer"></div>
+      <div class="badges" data-mock-id="query.result.badges">
+        <span class="badge" tabindex="0" data-state="neutral" data-mock-id="query.result.depth"></span>
+        <span class="badge" tabindex="0" data-state="warn" data-mock-id="query.result.partial" hidden></span>
+        <span class="badge" tabindex="0" data-state="warn" data-mock-id="query.result.degraded" hidden></span>
+      </div>
+      <div class="actions">
+        <a href="#evidence" data-mock-id="query.result.trace-link">Open trace</a>
+        <button type="button" class="btn btn-outline btn-icon" aria-label="Copy trace token" data-mock-id="query.result.copy-trace"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></button>
+        <span class="muted" data-role="copied" hidden>Copied</span>
+        <button type="button" class="btn btn-outline cap-first" data-mock-id="query.result.promote">promote from this result</button>
+        <button type="button" class="btn btn-outline" data-mock-id="query.result.compare">Compare this query</button>
+      </div>
+      <p class="muted" data-role="no-trace" hidden>No trace token on this result.</p>
+      <p class="muted" data-role="no-promote" hidden>A partial run cannot be promoted.</p>
+      <h3>Evidence</h3>
+      <div class="table-scroll" data-role="evidence-wrap">
+        <table role="table" data-mock-id="query.evidence.table">
+          <thead><tr><th>Rank</th><th>Ref</th><th>Namespace</th><th>Kind</th><th>Score</th><th>Tier</th><th>Action</th></tr></thead>
+          <tbody>
+<!--@repeat n 5-->
+            <tr hidden><td></td><td class="mono"></td><td></td><td></td><td></td><td>—</td><td><button type="button" class="btn btn-outline" data-mock-id="query.evidence.open-{{n}}">Open</button></td></tr>
+<!--@end n-->
+          </tbody>
+        </table>
+      </div>
+      <h3>Token accounting</h3>
+      <div class="table-scroll">
+        <table role="table" data-mock-id="query.tokens.table">
+          <thead><tr><th>counted_by</th><th>Prompt</th><th>Completion</th><th>Cached read</th><th>Calls</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <h3>Seam events</h3>
+      <div class="table-scroll">
+        <table role="table" data-mock-id="query.seam.table">
+          <thead><tr><th>Component</th><th>Outcome</th><th>Spend</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="muted" data-role="layout-sample" hidden>layout sample, not producible today</p>
+    </section>
+  </section>
 </section>
