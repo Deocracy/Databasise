@@ -2,99 +2,99 @@
   "bak_trace": 1,
   "step": "S3",
   "part": "phase16",
-  "ledger_version": 843,
+  "ledger_version": 853,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "706e8932423f803d9742994b3351ee2047a46a0f1e56b4f2bd5a8630f89cf533"
+    ".planning/REQUIREMENTS.md": "29820e5c96451358bc5ddcae7fe0ece3f6ca580a5e598fdc91c0ff8660d1bc0b"
   },
   "checker": {
     "harness": "claude-code",
     "model": "claude-opus-5-5",
-    "session": "32d1701b-4256-409c-a5a7-e305cc822f40"
+    "session": "4225ba7a-bf20-4ae2-a5d8-62042292a101"
   },
   "items": [
     {
       "id": "CONN-01",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:695",
-      "quote": "- [x] **CONN-01**: Every operator read route in CONN-04 to CONN-14 is served from the launcher's process and reuses the single `Databasise` on `app.state.engine` (no second engine, trace-store connection or registry). Each route body only deserializes the request, awaits one `Databasise` method and returns. It does not read the ledger, trace store, registry or stores directly, and it does not call `ResponseEnvelope`, `resolve_selector` or the redact exports. The thin-adapter AST test covers every module that defines these routes. The routes are mounted only under `create_app(operator=True)` (launcher `databasise-rest --operator`); without it each is a 404. Each new engine operation is REST-only: it gets no MCP tool and is recorded in COVERAGE.md's deliberately-absent table. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*"
+      "quote": "- [x] **CONN-01**: Every operator read route in CONN-04 to CONN-14 is served from the launcher's process and reuses t"
     },
     {
       "id": "CONN-02",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:699",
-      "quote": "- [x] **CONN-02**: The repo holds a machine-readable refusal catalogue, a static JSON file under docs/gui/. For every `SeamRefusalError` subclass reachable at runtime (50 today, all in `refusals.__all__`) it gives `refusal_type`, the module that defines it, the attribute keys of the body that `refusal_body` builds, and `http_status`. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*"
+      "quote": "- [x] **CONN-02**: The repo holds a machine-readable refusal catalogue, a static JSON file under docs/gui/. For every"
     },
     {
       "id": "CONN-03",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:702",
-      "quote": "- [x] **CONN-03**: The repo holds a checked-in selector-resolution fixture. For each selector form the console offers (no selector/default, each single effect from the 17-member vocabulary as a capability, the namespace tokens `reads_vector:entities`, `reads_vector:relationships` and both together, harness, and an alias promoted from each reachable arm), it records the wiring name the selector resolves to, that wiring's node_count, and the outcome: resolved, or the refusal type. A per-wiring `reachable` flag is true for all six arms. `capability: []` is listed as refused with `EmptyCapabilitySelectorError`. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*"
+      "quote": "- [x] **CONN-03**: The repo holds a checked-in selector-resolution fixture. For each selector form the console offers"
     },
     {
       "id": "CONN-04",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:705",
-      "quote": "- [x] **CONN-04**: GET /info returns 200 with `{version, workspace, clients: {llm: bool, embedding: bool, rerank: bool}}`. `version` is read from `databasise.__version__`, not from a literal. `clients` reports only which keys are present in the engine's clients dict and makes no network call. The body never contains `store_root`, base URLs, model names, API keys or client objects. `rerank` is true only when the RERANK_* settings are configured. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*"
+      "quote": "- [x] **CONN-04**: GET /info returns 200 with `{version, workspace, clients: {llm: bool, embedding: bool, rerank: boo"
     },
     {
       "id": "CONN-05",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:708",
-      "quote": "- [x] **CONN-05**: GET /wirings returns 200 with one row per candidate in `all_wirings()`: `{name, wiring_id, wiring_version, title, node_count, effects, provides, harnesses, default_eligible, is_default, reachable}`. `name` is the row key. Each arm has its own `wiring_id` since Phase 13 (D-03): lightrag-base, lightrag-bypass, lightrag-hybrid, lightrag-local, lightrag-global, hipporag-base. Node counts are naive 7, bypass 1, hybrid 17, local 15, global 15 and hipporag 14 (7 on the query run). `is_default` is true only for naive. `default_eligible` is false for hipporag. The five LightRAG arms share one `title`, so rows are keyed on `name`. `reachable` is computed from the selector resolution rules, not from a hard-coded list; since WIRE-01 (Phase 13) every listed arm is reachable. `codebase-memory-mcp` is not listed. *(Amended 2026-10-22 per Phase 14 CONTEXT Specifics and Phase 16 CONTEXT.)*"
+      "quote": "- [x] **CONN-05**: GET /wirings returns 200 with one row per candidate in `all_wirings()`: `{name, wiring_id, wiring_"
     },
     {
       "id": "CONN-06",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:712",
-      "quote": "- [x] **CONN-06**: GET /ledger/aliases returns 200 with `[{alias, active_version, record_kind, generation_ordinal, created_at}]`, one row per distinct alias, through a new `Ledger.aliases()` whose rows are projected from `LedgerEntry`, which carries `id` and `created_at`. The route is mounted only behind `--operator`, and this alias listing is recorded in COVERAGE.md as an exception to the selectors.py:281-302 no-enumeration rule. The read creates no file: on a fresh store root it returns `[]` and `ledger.db` does not exist afterwards. The ledger connection is closed when the call returns. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*"
+      "quote": "- [x] **CONN-06**: GET /ledger/aliases returns 200 with `[{alias, active_version, record_kind, generation_ordinal, cr"
     },
     {
       "id": "CONN-07",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:716",
-      "quote": "- [x] **CONN-07**: POST /ledger/history with `{alias, limit, offset}` returns `{records: [{generation_ordinal, created_at, record_kind, minted_version, targets_version, change_origin, promotion_trace_ids, active, tombstoned}], total, next_offset}`, ordered by `generation_ordinal`. `active` is computed from `Ledger.lineage` (Phase 14 D-06): it is true for the active row's `minted_version` and also for the `targets_version` of an active rollback row. `tombstoned` is true for a retired version. `mutation_id`, `parent` and `arm_instance_hashes` are not returned. `limit` is bounded 1..100: `limit < 1` gives 422 `PageBoundsError` and `limit > 100` gives `PageSizeExceededError`, through `corpus.checked_page`. An unknown alias returns `records: []` and `total: 0`, and no file is created. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*"
+      "quote": "- [x] **CONN-07**: POST /ledger/history with `{alias, limit, offset}` returns `{records: [{generation_ordinal, create"
     },
     {
       "id": "CONN-08",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:720",
-      "quote": "- [x] **CONN-08**: GET /traces?limit&offset returns `{items: [{trace_reference, created_at, partial, degraded, stop_reason}], total, next_offset}`, newest first, through a new `TraceStore` list method. It returns the stored `created_at`, takes `limit` 1..100 and `offset >= 0`, and makes `next_offset` null on the last page. `stop_reason` passes through the same `node_free_reason` scrub as POST /trace/resolve. Trace bodies, node lists, wiring ids and instance hashes are not returned; those stay behind POST /trace/resolve. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*"
+      "quote": "- [x] **CONN-08**: GET /traces?limit&offset returns `{items: [{trace_reference, created_at, partial, degraded, stop_r"
     },
     {
       "id": "CONN-09",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:724",
-      "quote": "- [x] **CONN-09**: POST /promote/preview with `{alias, trace_ids, verb, change_origin}` returns 200 `{arm, mutation_class, next_version, promotable, reason}`. It uses the same `resolve_single_arm`, `derive_mutation_class` and `mint_version` logic as /promote, writes no ledger row, and creates no `ledger.db` on a fresh store root. A trace from a partial run returns `promotable: false` with the named reason `PartialRunEvidenceError`, through `seam.promotion.refuse_partial_evidence`, the same check /promote uses (Phase 14 D-03). A degraded but complete run is not refused on that ground. A gate verb (`promote-next`, `promote-now`) returns `promotable: false` with the reason `GateNotCalibratedError`, or the two-stage floor reason once floors exist (Phase 14 D-04, Phase 15 D-13). An unknown trace id returns 404 `UnknownTraceReferenceError` (SEAM-04). `arm` and `mutation_class` are returned only on the `--operator` surface. When `promotable` is true, a following /promote with the same body mints exactly `next_version`, provided no ledger write lands between the two calls: preview runs outside BEGIN IMMEDIATE. *(Amended 2026-10-22 per Phase 14 CONTEXT Specifics and Phase 16 CONTEXT.)*"
+      "quote": "- [x] **CONN-09**: POST /promote/preview with `{alias, trace_ids, verb, change_origin}` returns 200 `{arm, mutation_c"
     },
     {
       "id": "CONN-10",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:728",
-      "quote": "- [x] **CONN-10**: POST /chunks with `{selector, limit, offset}` returns `{refs: [EvidenceRef], total, next_offset}`, where refs are references only and carry no chunk text (\u00a718.2). The chunk namespace comes from the `evidence_position.namespace` of the selector's resolved wiring family's base wiring, without constructing any store (never `_build_stores`): a HippoRAG selector lists HippoRAG chunks and a LightRAG selector lists LightRAG chunks. The page comes from a new `FaissVectorStore.list_ids(offset, limit)` that reconstructs no vectors. The selector is taken in the JSON body. A malformed selector returns 422, never 500. A namespace that was never populated returns `total: 0`. Every returned ref resolves through POST /evidence/resolve. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*"
+      "quote": "- [x] **CONN-10**: POST /chunks with `{selector, limit, offset}` returns `{refs: [EvidenceRef], total, next_offset}`,"
     },
     {
       "id": "CONN-11",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:731",
-      "quote": "- [x] **CONN-11**: POST /graph/nodes with `{selector, prefix, limit, offset}` returns `{nodes: [{id, degree}], total, next_offset}`, sorted by id and filtered by an optional id prefix. The graph namespace comes from the selector's resolved wiring, never from a namespace name in the request (\u00a718.4). Degrees for a page are computed in one batched store query, not one full-scan `node_degree` query per id. If the graph namespace is held by another process, the route returns 409 `StoreBusyError(store_kind=\"graph\")`, not a 500. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*"
+      "quote": "- [x] **CONN-11**: POST /graph/nodes with `{selector, prefix, limit, offset}` returns `{nodes: [{id, degree}], total,"
     },
     {
       "id": "CONN-12",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:734",
-      "quote": "- [x] **CONN-12**: POST /graph/node with `{selector, node_id, limit, offset}` returns `{id, degree, edges: [{src, tgt, edge_types, weight}], next_offset}`. Edges are stored undirected in lexicographic order, so the response carries no direction field. `edge_types` and `weight` are always present and null when the store has none; no other attrs are returned. An unknown `node_id` returns 422 (not 404) `UnknownGraphNodeError`, a new refusal added to the CONN-02 catalogue. The graph namespace comes from the selector's resolved wiring. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*"
+      "quote": "- [x] **CONN-12**: POST /graph/node with `{selector, node_id, limit, offset}` returns `{id, degree, edges: [{src, tgt"
     },
     {
       "id": "CONN-13",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:738",
-      "quote": "- [x] **CONN-13**: The console can read a store-busy status without opening any store or running the v1 subprocess. GET /info carries the fields `write_in_flight: bool` and `graph_busy: bool`, where `write_in_flight` is true while any ingest or delete runs and `graph_busy` is true while any call in this process holds a graph store; `graph_busy` does not see out-of-process holders, so the console labels it \"in use\", not \"locked\". The fields are keyed by store role, never by namespace name, and the read returns while an ingest is in progress. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*"
+      "quote": "- [x] **CONN-13**: The console can read a store-busy status without opening any store or running the v1 subprocess. G"
     },
     {
       "id": "CONN-14",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:742",
-      "quote": "- [x] **CONN-14**: GET /log?limit=N (1..1000) returns `{lines: [str]}`: the last N lines of the server log file the launcher writes, so the console's 500 state can show the exception text that today exists only in the uvicorn log. The route is mounted only when the launcher is started with both `--operator` and `--log-file PATH`. Without either it returns 404, and `limit` outside 1..1000 returns 422. This narrows Phase 9 D-04: refusal and fault bodies stay free of stderr and causes, and the off-by-default, loopback-only log route is the one allowed exception. *(Amended 2026-10-22 per Phase 16 CONTEXT.)*"
+      "quote": "- [x] **CONN-14**: GET /log?limit=N (1..1000) returns `{lines: [str]}`: the last N lines of the server log file the l"
     }
   ],
   "extra": []
