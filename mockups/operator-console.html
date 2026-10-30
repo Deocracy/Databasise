@@ -418,6 +418,19 @@ fieldset.plain label.inline { margin-right: var(--md); }
 .dialog-fields select { width: 100%; max-width: 100%; }
 .dialog-fields input[type="text"] { width: 100%; max-width: 100%; }
 dialog .mono { overflow-wrap: anywhere; }
+/* Graph/vector browser (17-12) */
+.graph-block { margin-bottom: var(--md); }
+.graph-block > .badge { margin-bottom: var(--xs); }
+.graph-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--md); align-items: start; }
+.graph-cols > * { min-width: 0; margin-bottom: 0; }
+@media (min-width: 768px) {
+  .graph-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
+}
+.graph-block .tile { cursor: default; }
+.graph-block td[data-role="types"] { min-width: 12ch; }
+.graph-block h3[data-role="node-id"] { margin: var(--sm) 0; }
+.graph-block .attrs { margin-top: var(--sm); }
+[data-role="busy-wrap"] .banner, [data-role="unknown-wrap"] .banner { margin: 0 0 var(--md); }
 
 </style>
 </head>
@@ -2359,6 +2372,417 @@ dialog .mono { overflow-wrap: anywhere; }
 
 <section data-mock-id="screen-graph" hidden>
   <h1>Graph/vector browser</h1>
+  <div class="mock-strip" data-mock-only="true">
+    <label>Outcome
+      <select data-mock-id="graph.mock.outcome" data-mock-only="true">
+        <option value="success">success</option>
+        <option value="refusal">refusal</option>
+        <option value="validation">validation</option>
+        <option value="server-failure">server failure</option>
+        <option value="generic">generic 5xx</option>
+      </select>
+    </label>
+    <label>Fixture
+      <select data-mock-id="graph.mock.fixture" data-mock-only="true">
+        <option value="lightrag" selected>lightrag</option>
+        <option value="hipporag">hipporag</option>
+        <option value="store-busy">store-busy</option>
+        <option value="unknown-node">unknown-node</option>
+      </select>
+    </label>
+  </div>
+  <div data-role="errors" hidden>
+<div class="banner error-shape" data-state="warn" role="alert" data-mock-id="graph.error.refusal" hidden>
+  <p class="label"><span aria-hidden="true">▲</span> Request refused</p>
+  <h3 class="mono" data-role="type"></h3>
+  <p data-role="message"></p>
+  <div class="table-scroll" data-role="attrs-wrap"><dl class="attrs" data-role="attrs"></dl></div>
+  <p class="muted" data-role="hint"></p>
+  <p class="muted"><span data-role="footer"></span>
+    <span data-needs-backend="GET /refusals" title="Not implemented yet: GET /refusals"><span class="badge badge-nb">needs backend</span> <a href="#corpus" data-mock-id="graph.error.catalogue-link">Show in refusal catalogue</a></span></p>
+</div>
+<div class="banner error-shape" data-state="fail" role="alert" data-mock-id="graph.error.validation" hidden>
+  <p data-role="summary"></p>
+  <ul data-role="list"></ul>
+</div>
+<div class="banner error-shape" data-state="fail" role="alert" data-mock-id="graph.error.server-failure" hidden>
+  <p class="label"><span aria-hidden="true">✕</span> Server failure</p>
+  <p data-role="text"></p>
+  <button type="button" class="btn btn-outline" aria-expanded="false" data-mock-id="graph.error.details-toggle">Show details</button>
+  <div data-role="details" hidden>
+    <div class="mono" data-role="detail-list"></div>
+    <button type="button" class="btn btn-outline" data-mock-id="graph.error.open-trace" hidden>Open trace</button>
+  </div>
+</div>
+<div class="banner error-shape" data-state="neutral" role="alert" data-mock-id="graph.error.generic" hidden>
+  <p class="label"><span aria-hidden="true">■</span> Server error</p>
+  <p data-role="text"></p>
+  <pre class="mono" data-role="body" hidden></pre>
+  <span data-needs-backend="GET /log" data-backend-state="operator" title="Mounted only with --operator --log-file"><span class="badge badge-op">operator route</span> <a href="#corpus" data-mock-id="graph.error.server-log">Open server log</a></span>
+</div>
+
+  </div>
+  <div data-needs-backend="POST /graph/nodes" data-backend-state="operator" title="Mounted only with --operator" data-role="busy-wrap" hidden>
+    <div class="banner state-view" data-state="warn" role="alert" data-mock-id="graph.state.store-busy">
+      <span class="badge badge-op">operator route</span>
+      <p class="label"><span aria-hidden="true">▲</span> Request refused: store busy</p>
+      <h3 class="mono">StoreBusyError</h3>
+      <p data-role="message"></p>
+      <p class="muted">The store is in use by another process. Retry when it has finished.</p>
+      <p class="muted">HTTP 409. store_kind: <span class="mono">graph</span></p>
+      <button type="button" class="btn btn-outline" data-mock-id="graph.state.retry">Retry request</button>
+    </div>
+  </div>
+  <div data-needs-backend="POST /graph/node" data-backend-state="operator" title="Mounted only with --operator" data-role="unknown-wrap" hidden>
+    <div class="banner state-view" data-state="warn" role="alert" data-mock-id="graph.state.unknown-node">
+      <span class="badge badge-op">operator route</span>
+      <p class="label"><span aria-hidden="true">▲</span> Request refused</p>
+      <h3 class="mono">UnknownGraphNodeError</h3>
+      <p>No node with the id <mark data-role="node-id"></mark> exists in the selected graph.</p>
+      <p class="muted">Check the id, or open a node from the list. HTTP 422.</p>
+    </div>
+  </div>
+
+  <div class="graph-block" data-needs-backend="POST /graph/nodes" data-backend-state="operator" title="Mounted only with --operator">
+    <span class="badge badge-op">operator route</span>
+<fieldset class="selector" data-mock-id="graph.selector.group" data-field-loc="body.selector" data-error-id="graph.selector.error">
+  <legend>Selector</legend>
+  <div class="selector-kinds">
+    <label class="inline"><input type="radio" name="graph-selector-kind" value="default" checked data-mock-id="graph.selector.kind-default"> Default</label>
+    <label class="inline"><input type="radio" name="graph-selector-kind" value="alias" data-mock-id="graph.selector.kind-alias"> Alias</label>
+    <label class="inline"><input type="radio" name="graph-selector-kind" value="capability" data-mock-id="graph.selector.kind-capability"> Capability</label>
+    <label class="inline"><input type="radio" name="graph-selector-kind" value="harness" disabled aria-disabled="true" data-mock-id="graph.selector.kind-harness"> Harness</label>
+  </div>
+  <div class="selector-grid">
+    <div class="selector-part">
+      <label class="field"><span class="label">Alias</span>
+        <input type="text" autocomplete="off" spellcheck="false" data-mock-id="graph.selector.alias">
+      </label>
+      <span data-needs-backend="GET /ledger/aliases" data-backend-state="operator" title="Mounted only with --operator"><span class="badge badge-op">operator route</span>
+        <label class="field"><span class="label">Known aliases</span>
+          <select data-mock-id="graph.selector.alias-picker"><option value="">Choose an alias</option></select>
+        </label>
+      </span>
+    </div>
+    <div class="selector-part">
+      <label class="field"><span class="label">Capability tokens</span>
+        <select multiple size="8" data-mock-id="graph.selector.capability">
+          <option value="reads_kv">reads_kv</option>
+          <option value="reads_vector">reads_vector</option>
+          <option value="reads_graph">reads_graph</option>
+          <option value="reads_lexical">reads_lexical</option>
+          <option value="reads_blob">reads_blob</option>
+          <option value="writes_artifact">writes_artifact</option>
+          <option value="calls_llm">calls_llm</option>
+          <option value="calls_rerank">calls_rerank</option>
+          <option value="calls_embedding">calls_embedding</option>
+          <option value="net">net</option>
+          <option value="fs">fs</option>
+          <option value="self_storage">self_storage</option>
+          <option value="mutates_store">mutates_store</option>
+          <option value="writes_kv">writes_kv</option>
+          <option value="writes_vector">writes_vector</option>
+          <option value="writes_graph">writes_graph</option>
+          <option value="writes_lexical">writes_lexical</option>
+          <option value="reads_vector:chunks">reads_vector:chunks</option>
+          <option value="reads_vector:entities">reads_vector:entities</option>
+          <option value="reads_vector:relationships">reads_vector:relationships</option>
+        </select>
+      </label>
+      <div class="chips" data-mock-id="graph.selector.chips"></div>
+    </div>
+    <div class="selector-part">
+      <label class="field"><span class="label">Harness</span>
+        <input type="text" disabled aria-disabled="true" data-mock-id="graph.selector.harness">
+      </label>
+      <p class="muted">no production wiring declares a harness</p>
+    </div>
+  </div>
+  <p class="field-error" role="alert" tabindex="-1" data-mock-id="graph.selector.error" hidden></p>
+  <span data-needs-backend="POST /selectors/resolve" title="Not implemented yet: POST /selectors/resolve"><span class="badge badge-nb">needs backend</span> <span role="status" data-mock-id="graph.selector.resolves-to"></span></span>
+</fieldset>
+
+    <p class="muted" role="status" data-mock-id="graph.selector.family">Reading: LightRAG graph</p>
+  </div>
+
+  <div class="graph-block" data-needs-backend="POST /stores/counts" title="Not implemented yet: POST /stores/counts">
+    <span class="badge badge-nb">needs backend</span>
+    <div class="tiles" role="group" aria-label="Store counts">
+      <div class="tile" data-mock-id="graph.counts.nodes"><span class="count" data-role="count">0</span><span class="label">nodes</span></div>
+      <div class="tile" data-mock-id="graph.counts.edges"><span class="count" data-role="count">0</span><span class="label">edges</span></div>
+      <div class="tile" data-mock-id="graph.counts.chunks"><span class="count" data-role="count">0</span><span class="label">chunks</span></div>
+    </div>
+  </div>
+
+  <div class="graph-cols">
+    <div class="graph-block" data-needs-backend="POST /graph/nodes" data-backend-state="operator" title="Mounted only with --operator">
+      <span class="badge badge-op">operator route</span>
+      <div class="panel" data-mock-id="graph.nodes.panel">
+        <h2>Nodes</h2>
+        <div class="run-row">
+          <label class="inline">Node id prefix
+            <input type="text" autocomplete="off" spellcheck="false" data-mock-id="graph.nodes.prefix">
+          </label>
+          <label class="inline">Page size (1 to 100)
+            <input type="number" min="1" max="100" step="1" value="50" data-mock-id="graph.nodes.page-size" data-field-loc="body.limit" data-error-id="graph.nodes.page-size-error">
+          </label>
+        </div>
+        <p class="field-error" role="alert" tabindex="-1" data-mock-id="graph.nodes.page-size-error" hidden></p>
+        <p class="muted" role="status" data-mock-id="graph.nodes.total"></p>
+        <div class="state-view" role="status" data-mock-id="graph.nodes.loading" hidden><span class="spinner" role="presentation"></span> Reading nodes from the graph store.</div>
+        <div class="state-view" data-mock-id="graph.nodes.empty" hidden>
+          <h3>No nodes to show</h3>
+          <p>The selected graph has no nodes for this prefix. Clear the prefix or choose another selector.</p>
+        </div>
+        <div class="table-scroll" data-role="table-wrap">
+          <table role="table" data-mock-id="graph.nodes.table">
+            <thead><tr><th>Node id</th><th>Degree</th><th>Actions</th></tr></thead>
+            <tbody>
+
+              <tr hidden>
+                <td class="mono" data-role="id"></td>
+                <td data-role="degree"></td>
+                <td><button type="button" class="btn btn-outline" data-mock-id="graph.nodes.open-1">Open</button></td>
+              </tr>
+
+              <tr hidden>
+                <td class="mono" data-role="id"></td>
+                <td data-role="degree"></td>
+                <td><button type="button" class="btn btn-outline" data-mock-id="graph.nodes.open-2">Open</button></td>
+              </tr>
+
+              <tr hidden>
+                <td class="mono" data-role="id"></td>
+                <td data-role="degree"></td>
+                <td><button type="button" class="btn btn-outline" data-mock-id="graph.nodes.open-3">Open</button></td>
+              </tr>
+
+              <tr hidden>
+                <td class="mono" data-role="id"></td>
+                <td data-role="degree"></td>
+                <td><button type="button" class="btn btn-outline" data-mock-id="graph.nodes.open-4">Open</button></td>
+              </tr>
+
+              <tr hidden>
+                <td class="mono" data-role="id"></td>
+                <td data-role="degree"></td>
+                <td><button type="button" class="btn btn-outline" data-mock-id="graph.nodes.open-5">Open</button></td>
+              </tr>
+
+              <tr hidden>
+                <td class="mono" data-role="id"></td>
+                <td data-role="degree"></td>
+                <td><button type="button" class="btn btn-outline" data-mock-id="graph.nodes.open-6">Open</button></td>
+              </tr>
+
+              <tr hidden>
+                <td class="mono" data-role="id"></td>
+                <td data-role="degree"></td>
+                <td><button type="button" class="btn btn-outline" data-mock-id="graph.nodes.open-7">Open</button></td>
+              </tr>
+
+              <tr hidden>
+                <td class="mono" data-role="id"></td>
+                <td data-role="degree"></td>
+                <td><button type="button" class="btn btn-outline" data-mock-id="graph.nodes.open-8">Open</button></td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+        <div class="run-row" data-role="pager">
+          <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="graph.nodes.prev">Previous page</button>
+          <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="graph.nodes.next">Next page</button>
+          <span class="muted" data-role="range"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="graph-block" data-needs-backend="POST /graph/node" data-backend-state="operator" title="Mounted only with --operator">
+      <span class="badge badge-op">operator route</span>
+      <div class="panel" data-focal="true" data-mock-id="graph.node.panel">
+        <h2>Node</h2>
+        <div class="run-row">
+          <label class="inline">Node id
+            <input type="text" autocomplete="off" spellcheck="false" data-mock-id="graph.node.lookup" data-field-loc="body.node_id" data-error-id="graph.node.lookup-error">
+          </label>
+          <button type="button" class="btn btn-primary" data-mock-id="graph.node.lookup-submit">Open node</button>
+        </div>
+        <p class="field-error" role="alert" tabindex="-1" data-mock-id="graph.node.lookup-error" hidden></p>
+        <div class="state-view" role="status" data-mock-id="graph.node.loading" hidden><span class="spinner" role="presentation"></span> Reading the node.</div>
+        <p class="muted" data-role="prompt">Open a node from the list, or enter a node id.</p>
+        <div data-role="detail-body" hidden>
+          <h3 class="mono" data-role="node-id"></h3>
+          <p>Degree: <strong data-mock-id="graph.node.degree"></strong></p>
+          <div class="graph-block" data-needs-backend="POST /graph/node/attrs" title="Not implemented yet: POST /graph/node/attrs">
+            <span class="badge badge-nb">needs backend</span>
+            <button type="button" class="btn btn-outline" data-mock-id="graph.node.attrs-load">Load attributes</button>
+            <dl class="attrs" data-mock-id="graph.node.attrs" hidden></dl>
+          </div>
+          <h3>Edges</h3>
+          <div class="graph-block" data-needs-backend="POST /graph/node" data-backend-state="operator" title="Mounted only with --operator">
+            <span class="badge badge-op">operator route</span>
+            <div class="run-row">
+              <label class="inline">Page size (1 to 100)
+                <input type="number" min="1" max="100" step="1" value="50" data-mock-id="graph.edges.page-size" data-error-id="graph.edges.page-size-error">
+              </label>
+            </div>
+            <p class="field-error" role="alert" tabindex="-1" data-mock-id="graph.edges.page-size-error" hidden></p>
+            <div class="state-view" role="status" data-mock-id="graph.edges.loading" hidden><span class="spinner" role="presentation"></span> Reading edges.</div>
+            <div class="state-view" data-mock-id="graph.edges.empty" hidden>
+              <h3>No edges to show</h3>
+              <p>This node has no incident edges.</p>
+            </div>
+            <div class="table-scroll" data-role="table-wrap">
+              <table role="table" data-mock-id="graph.edges.table">
+                <thead><tr><th>src</th><th>tgt</th><th>edge_types</th><th>weight</th></tr></thead>
+                <tbody>
+
+                  <tr hidden>
+                    <td class="mono" data-role="src"></td>
+                    <td><span class="mono" data-role="tgt"></span> <button type="button" class="btn btn-outline" data-mock-id="graph.edges.open-1">Open node</button></td>
+                    <td data-role="types"></td>
+                    <td data-role="weight"></td>
+                  </tr>
+
+                  <tr hidden>
+                    <td class="mono" data-role="src"></td>
+                    <td><span class="mono" data-role="tgt"></span> <button type="button" class="btn btn-outline" data-mock-id="graph.edges.open-2">Open node</button></td>
+                    <td data-role="types"></td>
+                    <td data-role="weight"></td>
+                  </tr>
+
+                  <tr hidden>
+                    <td class="mono" data-role="src"></td>
+                    <td><span class="mono" data-role="tgt"></span> <button type="button" class="btn btn-outline" data-mock-id="graph.edges.open-3">Open node</button></td>
+                    <td data-role="types"></td>
+                    <td data-role="weight"></td>
+                  </tr>
+
+                  <tr hidden>
+                    <td class="mono" data-role="src"></td>
+                    <td><span class="mono" data-role="tgt"></span> <button type="button" class="btn btn-outline" data-mock-id="graph.edges.open-4">Open node</button></td>
+                    <td data-role="types"></td>
+                    <td data-role="weight"></td>
+                  </tr>
+
+                  <tr hidden>
+                    <td class="mono" data-role="src"></td>
+                    <td><span class="mono" data-role="tgt"></span> <button type="button" class="btn btn-outline" data-mock-id="graph.edges.open-5">Open node</button></td>
+                    <td data-role="types"></td>
+                    <td data-role="weight"></td>
+                  </tr>
+
+                  <tr hidden>
+                    <td class="mono" data-role="src"></td>
+                    <td><span class="mono" data-role="tgt"></span> <button type="button" class="btn btn-outline" data-mock-id="graph.edges.open-6">Open node</button></td>
+                    <td data-role="types"></td>
+                    <td data-role="weight"></td>
+                  </tr>
+
+                </tbody>
+              </table>
+            </div>
+            <div class="run-row" data-role="pager">
+              <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="graph.edges.prev">Previous page</button>
+              <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="graph.edges.next">Next page</button>
+              <span class="muted" data-role="range"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="graph-block" data-needs-backend="POST /chunks" data-backend-state="operator" title="Mounted only with --operator">
+    <span class="badge badge-op">operator route</span>
+    <div class="panel" data-mock-id="graph.chunks.panel">
+      <h2>Chunks</h2>
+      <div class="run-row">
+        <label class="inline">Page size (1 to 100)
+          <input type="number" min="1" max="100" step="1" value="50" data-mock-id="graph.chunks.page-size" data-error-id="graph.chunks.page-size-error">
+        </label>
+      </div>
+      <p class="field-error" role="alert" tabindex="-1" data-mock-id="graph.chunks.page-size-error" hidden></p>
+      <p class="muted" role="status" data-mock-id="graph.chunks.total"></p>
+      <div class="state-view" role="status" data-mock-id="graph.chunks.loading" hidden><span class="spinner" role="presentation"></span> Reading chunks.</div>
+      <div class="state-view" data-mock-id="graph.chunks.empty" hidden>
+        <h3>No chunks to show</h3>
+        <p>The selected store has no chunks. Ingest a document or choose another selector.</p>
+      </div>
+      <div class="table-scroll" data-role="table-wrap">
+        <table role="table" data-mock-id="graph.chunks.table">
+          <thead><tr><th>Chunk ref</th><th>Kind</th><th>Actions</th></tr></thead>
+          <tbody>
+
+            <tr hidden>
+              <td class="mono" data-role="ref"></td>
+              <td data-role="kind"></td>
+              <td><button type="button" class="btn btn-outline" data-mock-id="graph.chunks.open-1">Open</button></td>
+            </tr>
+
+            <tr hidden>
+              <td class="mono" data-role="ref"></td>
+              <td data-role="kind"></td>
+              <td><button type="button" class="btn btn-outline" data-mock-id="graph.chunks.open-2">Open</button></td>
+            </tr>
+
+            <tr hidden>
+              <td class="mono" data-role="ref"></td>
+              <td data-role="kind"></td>
+              <td><button type="button" class="btn btn-outline" data-mock-id="graph.chunks.open-3">Open</button></td>
+            </tr>
+
+            <tr hidden>
+              <td class="mono" data-role="ref"></td>
+              <td data-role="kind"></td>
+              <td><button type="button" class="btn btn-outline" data-mock-id="graph.chunks.open-4">Open</button></td>
+            </tr>
+
+            <tr hidden>
+              <td class="mono" data-role="ref"></td>
+              <td data-role="kind"></td>
+              <td><button type="button" class="btn btn-outline" data-mock-id="graph.chunks.open-5">Open</button></td>
+            </tr>
+
+            <tr hidden>
+              <td class="mono" data-role="ref"></td>
+              <td data-role="kind"></td>
+              <td><button type="button" class="btn btn-outline" data-mock-id="graph.chunks.open-6">Open</button></td>
+            </tr>
+
+            <tr hidden>
+              <td class="mono" data-role="ref"></td>
+              <td data-role="kind"></td>
+              <td><button type="button" class="btn btn-outline" data-mock-id="graph.chunks.open-7">Open</button></td>
+            </tr>
+
+            <tr hidden>
+              <td class="mono" data-role="ref"></td>
+              <td data-role="kind"></td>
+              <td><button type="button" class="btn btn-outline" data-mock-id="graph.chunks.open-8">Open</button></td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+      <div class="run-row" data-role="pager">
+        <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="graph.chunks.prev">Previous page</button>
+        <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="graph.chunks.next">Next page</button>
+        <span class="muted" data-role="range"></span>
+      </div>
+    </div>
+  </div>
+
+  <details class="panel" data-mock-id="graph.planned.list">
+    <summary data-mock-id="graph.planned.toggle">Planned (not built)</summary>
+    <ul>
+      <li>Graph editing</li>
+      <li>Lexical search</li>
+      <li>Blob view</li>
+      <li>Entity and relation vector browsing</li>
+    </ul>
+  </details>
 </section>
 
     </main>
@@ -2429,7 +2853,7 @@ dialog .mono { overflow-wrap: anywhere; }
     <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></symbol>
   </svg>
 </div>
-<script type="application/json" id="mock-fixtures">{"aliases":[{"alias":"prod","active_version":"4.0.0","record_kind":"rollback","generation_ordinal":5,"created_at":"2026-10-20T09:12:44Z","arm":"naive"},{"alias":"staging","active_version":"1.0.0","record_kind":"promotion","generation_ordinal":6,"created_at":"2026-10-21T15:40:02Z","arm":"naive"},{"alias":"hr","active_version":"1.0.0","record_kind":"promotion","generation_ordinal":7,"created_at":"2026-10-22T11:05:37Z","arm":"hipporag"}],"compare":{"bodies":{"naive-ok":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]},"local-partial":{"answer":"","evidence":[],"trace_token":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","depth_label":null,"partial":true,"degraded":true,"stop_reason":"node_failed","degradation_reason":"node_failed","token_accounting":[{"counted_by":"none","prompt_tokens":0,"completion_tokens":0,"cached_read_tokens":0,"call_count":0}],"seam_events":[]},"local-ok":{"answer":"Renewal is on 1 March 2027. The supplier, Northwind Freight, must receive notice 90 days earlier.","evidence":[{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.8409,"tier":null},{"ref":"c-5ac3e0","namespace":"chunks","kind":"text_chunk","score":0.7918,"tier":null}],"trace_token":"Qm1x7TqHk0fE2uVc9JrZsYw3NdLbA8pXoG4iMtRh5Ks","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1840,"completion_tokens":112,"cached_read_tokens":0,"call_count":2},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]},"hipporag-ok":{"answer":"The supplier contract renews on 1 March 2027. Notice of non-renewal is due 90 days before, by 30 November 2026.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.9012,"tier":null},{"ref":"c-e1b7d2","namespace":"chunks","kind":"text_chunk","score":0.8456,"tier":null},{"ref":"c-5ac3e0","namespace":"chunks","kind":"text_chunk","score":0.8101,"tier":null},{"ref":"c-3d98fa","namespace":"chunks","kind":"text_chunk","score":0.7733,"tier":null}],"trace_token":"f3Jd9WcL2vQy7TnB0sKxEoAh5ZuRg1MiPaV8bXkC4yU","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":2210,"completion_tokens":131,"cached_read_tokens":0,"call_count":3},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"cmp-3col":[{"selector":null,"body":"naive-ok"},{"selector":{"capability":["reads_vector:entities"]},"body":"local-partial"},{"selector":{"capability":["reads_graph","calls_llm"]},"body":"hipporag-ok"}],"cmp-3col-clean":[{"selector":null,"body":"naive-ok"},{"selector":{"capability":["reads_vector:entities"]},"body":"local-ok"},{"selector":{"capability":["reads_graph","calls_llm"]},"body":"hipporag-ok"}]},"corpus":{"counts-normal":{"total":47,"offset":0,"next_offset":6,"counts":{"pending":1,"parsing":0,"analyzing":0,"processing":1,"preprocessed":0,"processed":42,"failed":3,"interrupted":0,"queued":0},"documents":[{"document_id":"annual-report-2025","status":"processed","updated_at":"2026-10-28T09:14:02Z","error_message":null},{"document_id":"board-minutes-2026-02","status":"failed","updated_at":"2026-10-28T09:20:41Z","error_message":"parse error: the file is not valid UTF-8 text (byte 0xff at offset 1024)"},{"document_id":"contract-2026-q1","status":"processed","updated_at":"2026-10-28T10:02:15Z","error_message":null},{"document_id":"handbook-v3","status":"processing","updated_at":"2026-10-29T08:41:57Z","error_message":null},{"document_id":"meeting-notes-0412","status":"failed","updated_at":"2026-10-29T08:44:10Z","error_message":"entity extraction failed on chunk 14 of 31: the model call timed out after 120 s; the document stays in this status until it is reprocessed"},{"document_id":"policy-draft","status":"pending","updated_at":"2026-10-29T08:50:33Z","error_message":null}]},"counts-preprocessed":{"total":47,"offset":0,"next_offset":6,"counts":{"pending":1,"parsing":0,"analyzing":0,"processing":0,"preprocessed":2,"processed":41,"failed":2,"interrupted":1,"queued":0},"documents":[{"document_id":"annual-report-2025","status":"processed","updated_at":"2026-10-28T09:14:02Z","error_message":null},{"document_id":"board-minutes-2026-02","status":"failed","updated_at":"2026-10-28T09:20:41Z","error_message":"parse error: the file is not valid UTF-8 text (byte 0xff at offset 1024)"},{"document_id":"contract-2026-q1","status":"preprocessed","updated_at":"2026-10-28T10:02:15Z","error_message":null},{"document_id":"handbook-v3","status":"interrupted","updated_at":"2026-10-29T08:41:57Z","error_message":null},{"document_id":"meeting-notes-0412","status":"preprocessed","updated_at":"2026-10-29T08:44:10Z","error_message":null},{"document_id":"policy-draft","status":"processed","updated_at":"2026-10-29T08:50:33Z","error_message":null}]},"counts-empty":{"total":0,"offset":0,"next_offset":null,"counts":{"pending":0,"parsing":0,"analyzing":0,"processing":0,"preprocessed":0,"processed":0,"failed":0,"interrupted":0},"documents":[]},"counts-last":{"total":47,"offset":41,"next_offset":null,"counts":{"pending":1,"parsing":0,"analyzing":0,"processing":1,"preprocessed":0,"processed":42,"failed":3,"interrupted":0,"queued":0},"documents":[{"document_id":"q3-forecast","status":"processed","updated_at":"2026-10-27T15:31:09Z","error_message":null},{"document_id":"release-notes-0.9","status":"processed","updated_at":"2026-10-27T15:33:48Z","error_message":null},{"document_id":"style-guide","status":"failed","updated_at":"2026-10-27T15:40:22Z","error_message":"document text is empty after parsing; nothing to index"},{"document_id":"supplier-terms","status":"processed","updated_at":"2026-10-27T16:02:51Z","error_message":null},{"document_id":"training-plan","status":"processed","updated_at":"2026-10-27T16:11:30Z","error_message":null},{"document_id":"visitor-policy","status":"processed","updated_at":"2026-10-27T16:19:04Z","error_message":null}]},"retry":{"job_id":"a41c7e90d2b84f63915e0c7a3d8b2f14","enqueued":true},"wirings":[{"name":"naive","wiring_id":"lightrag-base","wiring_version":"1","title":"LightRAG query side base wiring","node_count":7,"effects":["calls_embedding","calls_llm","reads_kv","reads_vector"],"provides":["answer","evidence"],"harnesses":[],"default_eligible":true,"is_default":true,"reachable":true},{"name":"bypass","wiring_id":"lightrag-bypass","wiring_version":"1","title":"LightRAG query side base wiring","node_count":1,"effects":["calls_llm"],"provides":["answer"],"harnesses":[],"default_eligible":false,"is_default":false,"reachable":true},{"name":"hybrid","wiring_id":"lightrag-hybrid","wiring_version":"1","title":"LightRAG query side base wiring","node_count":17,"effects":["calls_embedding","calls_llm","reads_graph","reads_kv","reads_vector"],"provides":["answer","evidence"],"harnesses":[],"default_eligible":false,"is_default":false,"reachable":true},{"name":"local","wiring_id":"lightrag-local","wiring_version":"1","title":"LightRAG query side base wiring","node_count":15,"effects":["calls_embedding","calls_llm","calls_rerank","reads_graph","reads_kv","reads_vector"],"provides":["answer","evidence"],"harnesses":[],"default_eligible":false,"is_default":false,"reachable":true},{"name":"global","wiring_id":"lightrag-global","wiring_version":"1","title":"LightRAG query side base wiring","node_count":15,"effects":["calls_embedding","calls_llm","reads_graph","reads_kv","reads_vector"],"provides":["answer","evidence"],"harnesses":[],"default_eligible":false,"is_default":false,"reachable":true},{"name":"hipporag","wiring_id":"hipporag-base","wiring_version":"1","title":"HippoRAG 2 base wiring","node_count":14,"effects":["calls_embedding","calls_llm","reads_graph","reads_kv","reads_vector"],"provides":["answer","evidence"],"harnesses":[],"default_eligible":false,"is_default":false,"reachable":true}],"log":{"lines":["2026-10-29T08:40:02Z INFO  databasise-rest started (operator=true, host=127.0.0.1)","2026-10-29T08:41:55Z INFO  POST /documents 200 job_id=3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","2026-10-29T08:41:57Z INFO  v1 driver op=ingest document_id=handbook-v3 status=processing","2026-10-29T08:44:10Z WARN  v1 driver op=ingest document_id=meeting-notes-0412 model call timed out after 120 s","2026-10-29T08:44:10Z ERROR v1 driver op=ingest document_id=meeting-notes-0412 failed (CorpusOpSubprocessError)","2026-10-29T08:47:31Z INFO  GET /health 200 degraded stores_absent=5","2026-10-29T08:50:33Z INFO  POST /documents 200 job_id=9b04e1c7f2a84d5e8c13a6b0d7f92e41","2026-10-29T08:52:08Z INFO  POST /query 200 selector=default arm=naive nodes=7","2026-10-29T08:52:49Z INFO  POST /compare 200 arms=2","2026-10-29T08:55:12Z WARN  graph store chunk_entity_relation held by another process; read refused (StoreBusyError)","2026-10-29T08:55:40Z INFO  GET /corpus 200 limit=50 offset=0 total=47","2026-10-29T08:56:03Z INFO  GET /info 200"]}},"documents":{"ingest-success":{"job_id":"3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","enqueued":1},"session-jobs":[{"job_id":"e0a37c19d5b24f68b1c2a9d8f7e40356","submitted":"2026-10-29 09:02","enqueued":1},{"job_id":"5b8d1f0a6c2e4979a3e7d4c1b0f82a65","submitted":"2026-10-29 08:41","enqueued":1}],"pipeline":{"busy":true,"text":"Pipeline: busy, 1 job in flight (fixture)"},"j-page1":{"job_id":"3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","limit":5,"offset":0,"next_offset":5,"documents":[{"document_id":"contract-2026-q1","status":"processed","updated_at":"2026-10-29T09:14:02Z","error_message":null},{"document_id":"contract-2026-q2","status":"processed","updated_at":"2026-10-29T09:14:31Z","error_message":null},{"document_id":"dup-15f6f452b1ea8f4a9c36928aa0d86588","status":"failed","updated_at":"2026-10-29T09:15:07Z","error_message":"Identical content already exists under another filename"},{"document_id":"memo-ops-114","status":"processing","updated_at":"2026-10-29T09:15:40Z","error_message":null},{"document_id":"memo-ops-115","status":"pending","updated_at":"2026-10-29T09:15:41Z","error_message":null}],"counts":{"pending":1,"processing":1,"processed":42,"failed":3,"preprocessed":0}},"j-last":{"job_id":"3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","limit":5,"offset":5,"next_offset":null,"documents":[{"document_id":"memo-ops-116","status":"processed","updated_at":"2026-10-29T09:16:12Z","error_message":null},{"document_id":"policy-hr-007","status":"failed","updated_at":"2026-10-29T09:16:55Z","error_message":"Set of Tasks/Futures is empty."}],"counts":{"pending":1,"processing":1,"processed":42,"failed":3,"preprocessed":0}},"j-single":{"job_id":"5b8d1f0a6c2e4979a3e7d4c1b0f82a65","limit":50,"offset":0,"next_offset":null,"documents":[{"document_id":"report-annual-2025","status":"processed","updated_at":"2026-10-29T08:44:19Z","error_message":null}],"counts":{"pending":0,"processing":0,"processed":46,"failed":3,"preprocessed":0}},"j-empty":{"job_id":"e0a37c19d5b24f68b1c2a9d8f7e40356","limit":50,"offset":0,"next_offset":null,"documents":[],"counts":{"pending":0,"processing":0,"processed":46,"failed":3,"preprocessed":0}},"j-unknown":{"status":404,"body":{"refusal_type":"UnknownJobError","message":"unknown job","job_id":"00000000000000000000000000000000"}},"delete-success":{"document_id":"contract-2026-q1","status":"success","message":"Document deleted.","seam_events":[{"component":"mutates_store","spend":{"counted_by":"unbudgetable"},"outcome":"completed"}]},"delete-not_found":{"document_id":"contract-2026-q1","status":"not_found","message":"No document with this id.","seam_events":[]},"delete-not_allowed":{"document_id":"contract-2026-q1","status":"not_allowed","message":"The document is being processed and cannot be deleted now.","seam_events":[]},"delete-fail":{"document_id":"contract-2026-q1","status":"fail","message":"","seam_events":[]}},"evidence":{"e-lightrag-chunk":{"id":"c-7f3a91","full_doc_id":"doc-3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","content":"Supplier contract, section 9. This supplier contract renews automatically on 1 March 2027 for a further term of twelve months. Either party may prevent renewal by giving 90 days written notice before expiry. Notice sent after that date takes effect at the end of the following term.","file_path":"contracts/supplier-contract-2026-q1.pdf"},"e-hipporag-chunk":{"id":"chunk:7f3a91","document_id":"contract-2026-q1","ordinal":3,"content":"Section 9, renewal. The supplier contract renews on 1 March 2027. Written notice of 90 days is required to stop the renewal."},"chunks":{"c-02be44":{"id":"c-02be44","full_doc_id":"doc-3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","content":"Section 10, termination. Either party may end the supplier contract for material breach if the breach is not cured within 30 days of written notice.","file_path":"contracts/supplier-contract-2026-q1.pdf"},"c-91d0c7":{"id":"c-91d0c7","full_doc_id":"doc-3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","content":"Section 4, payment. Invoices are payable within 45 days. Late payment accrues interest at 1.5 percent per month.","file_path":"contracts/supplier-contract-2026-q1.pdf"},"c-3d98fa":{"id":"c-3d98fa","full_doc_id":"doc-77a1c0de52b94f6a8d3e9b0c1f2a3d4e","content":"Operations memo 114. The supply chain review moved the supplier audit to the second quarter.","file_path":"memos/memo-ops-114.docx"},"c-5ac3e0":{"id":"c-5ac3e0","full_doc_id":"doc-77a1c0de52b94f6a8d3e9b0c1f2a3d4e","content":"Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit find","file_path":"archive/2026/operations/long-form/annual-supplier-review/appendix-b-supporting-material/very-long-file-name-that-must-wrap-at-narrow-widths-0123456789abcdef0123456789abcdef.pdf"},"c-e1b7d2":{"id":"c-e1b7d2","full_doc_id":"doc-77a1c0de52b94f6a8d3e9b0c1f2a3d4e","content":"Operations memo 115. Renewal dates for all supplier contracts are tracked in the contracts register.","file_path":"memos/memo-ops-115.docx"}},"t-clean":{"partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"bundle_ref":"sentinel:no-eval-bundle-until-phase-2","corpus_snapshot_hash":"sentinel:no-corpus-snapshot-until-phase-2","executor_version":"databasise@0.1.0","determinism_setting":"cache-bypassed","concurrency_setting":"sequential","arm_execution_order":0},"t-partial-debug":{"partial":true,"degraded":true,"stop_reason":"node_failed","degradation_reason":"node_failed","bundle_ref":"sentinel:no-eval-bundle-until-phase-2","corpus_snapshot_hash":"sentinel:no-corpus-snapshot-until-phase-2","executor_version":"databasise@0.1.0","determinism_setting":"cache-bypassed","concurrency_setting":"sequential","arm_execution_order":0,"run_id":"5b0e7c1a-2f4d-4e8b-9a36-d1c8f07b3e52","wiring_id":"lightrag-base","wiring_instance_hash":"sha256:9f2c4e7a1b8d03652ac4f7e19d0b6a83c5e21f4d7a90b3c68e5d1f02a7b4c9e6","arm_id":"naive","nodes":[{"node_id":"embedder-index","instance_hash":"sha256:1a7d3c9e5f0b284671ce9a3d5b0f8e24c6a1d7f39e5b0c482a6d1f73e9b5c0a8","depth":"opaque","effective_depth":"opaque","tier":null,"feed_tier":null,"status":"completed","execution_mode":"in-process","wall_clock_ms":412,"cache_hit":false,"guards_fired":[],"budget_state":"within_budget","spent":14,"allowance":1000000,"realised_budget_share":1.4e-05,"cross_process_failure_cause":null,"resumable":false,"tokens":{"prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1,"counted_by":"text-embedding-3-small"}},{"node_id":"embedder-query","instance_hash":"sha256:6e0b2d8a4c7f19053bd8e2a6c4f1097d3b5e8a20c6f4d1793a5b0e82d7c1f469","depth":"opaque","effective_depth":"opaque","tier":null,"feed_tier":null,"status":"failed","execution_mode":"in-process","wall_clock_ms":0,"cache_hit":null,"guards_fired":[],"budget_state":"halted","spent":null,"allowance":1000000,"realised_budget_share":0.0,"cross_process_failure_cause":"declared effect 'calls_embedding' requires client 'embedding'","resumable":false,"tokens":{"prompt_tokens":0,"completion_tokens":0,"cached_read_tokens":0,"call_count":0,"counted_by":"none"}}]}},"health":{"health-ok":{"status":"ok","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:chunks":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"ok","graph:hipporag-graph":"ok","vector:hipporag-chunks":"ok","vector:hipporag-entities":"ok","vector:hipporag-facts":"ok"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":true,"embedding":true,"rerank":true},"engine_reason":null},"health-degraded":{"status":"degraded","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"absent","graph:hipporag-graph":"absent","vector:hipporag-chunks":"absent","vector:hipporag-entities":"absent","vector:hipporag-facts":"absent"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":false,"embedding":false,"rerank":false},"engine_reason":"model clients not configured"},"health-loading":{"loading":true},"health-error":{"status":500,"body":"Internal Server Error"}},"ledger":{"timeline-prod":{"alias":"prod","offset":0,"records":[{"generation_ordinal":1,"created_at":"2026-10-12T08:30:11Z","record_kind":"promotion","minted_version":"1.0.0","targets_version":null,"change_origin":"human_edit","promotion_trace_ids":["ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs"],"active":false,"tombstoned":false},{"generation_ordinal":2,"created_at":"2026-10-14T13:02:47Z","record_kind":"promotion","minted_version":"2.0.0","targets_version":null,"change_origin":"machine_mutation","promotion_trace_ids":["Vb8Ke2NwQx5RtYh0LzUa3PdMc7JiGfS1oXn4AeWq9Tk"],"active":false,"tombstoned":true},{"generation_ordinal":3,"created_at":"2026-10-16T10:45:20Z","record_kind":"promotion","minted_version":"3.0.0","targets_version":null,"change_origin":"human_edit","promotion_trace_ids":["Qm1x7TqHk0fE2uVc9JrZsYw3NdLbA8pXoG4iMtRh5Ks"],"active":false,"tombstoned":false},{"generation_ordinal":4,"created_at":"2026-10-18T16:21:09Z","record_kind":"tombstone","minted_version":null,"targets_version":"2.0.0","change_origin":"human_edit","promotion_trace_ids":["Ln0sA6lQeuJl7PW1NWiFpTOTogKdJBOUmXJloaJa78Y"],"active":false,"tombstoned":false},{"generation_ordinal":5,"created_at":"2026-10-20T09:12:44Z","record_kind":"rollback","minted_version":"4.0.0","targets_version":"1.0.0","change_origin":"human_edit","promotion_trace_ids":["PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0"],"active":true,"tombstoned":false}],"total":5,"next_offset":null},"timeline-single":{"alias":"hr","offset":0,"records":[{"generation_ordinal":7,"created_at":"2026-10-22T11:05:37Z","record_kind":"promotion","minted_version":"1.0.0","targets_version":null,"change_origin":"human_edit","promotion_trace_ids":["f3Jd9WcL2vQy7TnB0sKxEoAh5ZuRg1MiPaV8bXkC4yU"],"active":true,"tombstoned":false}],"total":1,"next_offset":null},"traces":[{"trace_reference":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","created_at":"2026-10-24 16:42:09","selector":"Default","arm":"naive","partial":false,"degraded":false},{"trace_reference":"Vb8Ke2NwQx5RtYh0LzUa3PdMc7JiGfS1oXn4AeWq9Tk","created_at":"2026-10-24 15:58:33","selector":"Default","arm":"naive","partial":false,"degraded":true},{"trace_reference":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","created_at":"2026-10-24 16:31:55","selector":"capability reads_vector:entities","arm":"local","partial":true,"degraded":false},{"trace_reference":"Qm1x7TqHk0fE2uVc9JrZsYw3NdLbA8pXoG4iMtRh5Ks","created_at":"2026-10-24 16:36:18","selector":"capability reads_vector:entities","arm":"local","partial":false,"degraded":false},{"trace_reference":"f3Jd9WcL2vQy7TnB0sKxEoAh5ZuRg1MiPaV8bXkC4yU","created_at":"2026-10-24 16:44:02","selector":"capability reads_graph+calls_llm","arm":"hipporag","partial":false,"degraded":false},{"trace_reference":"Ln0sA6lQeuJl7PW1NWiFpTOTogKdJBOUmXJloaJa78Y","created_at":"2026-10-23 10:08:21","selector":"alias prod","arm":"naive","partial":false,"degraded":false}],"preview":{"arm":"naive","mutation_class":"minor","next_version":"2.0.0","promotable":true,"reason":null},"promote-success":{"alias":"staging","version":"2.0.0","record_kind":"promotion","provenance":"operator_asserted","generation_ordinal":6},"refusal-partial":{"status":422,"body":{"refusal_type":"PartialRunEvidenceError","message":"promotion refused: the trace comes from a partial run","trace_ids":["PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0"]}},"refusal-unknown-trace":{"status":404,"body":{"refusal_type":"UnknownTraceReferenceError","message":"unknown trace reference","trace_reference":"Zx9QpL3mT7vNc2WdHs5Ka8YfRb1GjUe4OiXt6Mn0AwE"}},"refusal-active-retire":{"status":422,"body":{"refusal_type":"ActiveGenerationRetirementError","message":"version 4.0.0 is in the active generation of alias prod and cannot be retired","alias":"prod","version":"4.0.0"}},"validation":{"status":422,"body":{"detail":[{"loc":["body","alias"],"msg":"String should have at least 1 character","type":"string_too_short"}]}},"server-failure":{"status":502,"body":{"refusal_type":"ForeignEngineRefusalError","message":"operation 'promote' failed (StoreFault)","operation":"promote","failure_class":"StoreFault","cause":"the ledger store could not be written"}},"generic-5xx":{"status":500,"body":"Internal Server Error"}},"query":{"q-success":{"status":200,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-partial":{"status":200,"body":{"answer":"","evidence":[],"trace_token":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","depth_label":null,"partial":true,"degraded":true,"stop_reason":"node_failed","degradation_reason":"node_failed","token_accounting":[{"counted_by":"none","prompt_tokens":0,"completion_tokens":0,"cached_read_tokens":0,"call_count":0}],"seam_events":[]}},"q-empty-evidence":{"status":200,"body":{"answer":"The question was sent to the model without retrieval, so this answer rests on the model alone.","evidence":[],"trace_token":"Ln0sA6lQeuJl7PW1NWiFpTOTogKdJBOUmXJloaJa78Y","depth_label":"opaque","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":212,"completion_tokens":58,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-trace-null":{"status":200,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":null,"depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-layout-sample":{"status":200,"layout_sample":true,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":null,"tier":null}],"trace_token":"GKw-c0PwFokMUQ6T-TUmEWnZ4_VlQ2Qpgw-vCTT0-OQ","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1}],"seam_events":[{"component":"mutates_store","outcome":"completed","spend":{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":40,"completion_tokens":8,"cached_read_tokens":0,"call_count":1}}]}},"q-refusal":{"status":422,"body":{"refusal_type":"UnsatisfiableSelectorError","message":"no wiring satisfies the requested selector","selector_kind":"capability","requested":["writes_graph"]}},"q-validation":{"status":422,"body":{"detail":[{"loc":["body","selector"],"msg":"Value error, a selector may set only one member","type":"value_error"}]}},"q-500":{"status":500,"body":"Internal Server Error"},"q-500-foreign":{"status":502,"body":{"refusal_type":"ForeignEngineRefusalError","message":"operation 'query' failed (StoreFault)","operation":"query","failure_class":"StoreFault","trace_token":"P3m7e0NbBTIWUdrv03TNxoHcBvqmXjdOODN7iMoEbeo","cause":"graph store lock held by another process in this namespace"}},"q-stream-disconnected":{"status":200,"stream_closed":true,"body":{"answer":"","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null}],"trace_token":null,"depth_label":null,"partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[],"seam_events":[]}},"history":[{"time":"2026-10-24 16:42:09","selector":"Default","trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","partial":false},{"time":"2026-10-24 16:31:55","selector":"capability reads_vector:entities","trace_token":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","partial":true},{"time":"2026-10-23 10:08:21","selector":"alias prod","trace_token":"Ln0sA6lQeuJl7PW1NWiFpTOTogKdJBOUmXJloaJa78Y","partial":false}]},"shell":{"info":{"version":"0.1.0","workspace":"default","clients":{"llm":true,"embedding":true,"rerank":false},"write_in_flight":false,"graph_busy":false}},"refusals":[{"refusal_type":"ActiveGenerationRetirementError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"AmbiguousAnswerPositionError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"AmbiguousIngestPayloadError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"DisagreeingPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"DocumentNotInterruptedError","module":"databasise.seam.refusals","attribute_keys":["document_id","status"],"http_status":422},{"refusal_type":"DuplicateComparisonKeyError","module":"databasise.seam.refusals","attribute_keys":["key"],"http_status":422},{"refusal_type":"DuplicateDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"EmptyCapabilitySelectorError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyComparisonRequestError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyIngestDocumentError","module":"databasise.seam.refusals","attribute_keys":["member"],"http_status":422},{"refusal_type":"EmptyNamespaceError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":422},{"refusal_type":"EmptyPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"EmptyQueryObjectError","module":"databasise.seam.refusals","attribute_keys":["query_object"],"http_status":422},{"refusal_type":"ForbiddenSelectorInputError","module":"databasise.seam.refusals","attribute_keys":["member_name","value"],"http_status":422},{"refusal_type":"ForeignEngineRefusalError","module":"databasise.seam.refusals","attribute_keys":["failure_class","operation"],"http_status":502},{"refusal_type":"GateNotCalibratedError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"GateVerbNotBuiltError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"InvalidChangeOriginError","module":"databasise.seam.refusals","attribute_keys":["change_origin"],"http_status":422},{"refusal_type":"InvalidDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"InvalidEvidenceNamespaceError","module":"databasise.seam.refusals","attribute_keys":["namespace"],"http_status":422},{"refusal_type":"InvalidGuardDeclarationError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"InvalidNodeSettingError","module":"databasise.seam.refusals","attribute_keys":["setting"],"http_status":422},{"refusal_type":"InvalidPromotionAliasError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"MalformedBase64PayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MalformedSelectorPayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MeasurementPostureRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"MissingScopeArgumentError","module":"databasise.seam.refusals","attribute_keys":["argument","scope","tool"],"http_status":422},{"refusal_type":"MultiMemberSelectorError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"MutableStoreComparisonExcludedError","module":"databasise.seam.refusals","attribute_keys":["component"],"http_status":422},{"refusal_type":"NoRawUploadPathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NoWritePathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NonFiniteNumberError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"OversizedDocumentError","module":"databasise.seam.refusals","attribute_keys":["actual_bytes","limit_bytes"],"http_status":422},{"refusal_type":"PageBoundsError","module":"databasise.seam.refusals","attribute_keys":["limit","offset"],"http_status":422},{"refusal_type":"PageSizeExceededError","module":"databasise.seam.refusals","attribute_keys":["limit","requested"],"http_status":422},{"refusal_type":"PartialRunEvidenceError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"StoreBusyError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":409},{"refusal_type":"TombstonedGenerationError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"UnbudgetableParticipantError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"UncalibratedFloorRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"UnconsumableQueryMemberError","module":"databasise.seam.refusals","attribute_keys":["member_name"],"http_status":422},{"refusal_type":"UnknownDocumentError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"UnknownGenerationVersionError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":404},{"refusal_type":"UnknownGraphNodeError","module":"databasise.seam.refusals","attribute_keys":["node_id"],"http_status":422},{"refusal_type":"UnknownJobError","module":"databasise.seam.refusals","attribute_keys":["job_id"],"http_status":404},{"refusal_type":"UnknownTraceReferenceError","module":"databasise.seam.refusals","attribute_keys":["trace_reference"],"http_status":404},{"refusal_type":"UnparseableWiringError","module":"databasise.seam.refusals","attribute_keys":["violations"],"http_status":422},{"refusal_type":"UnrecognisedPromotionVerbError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"UnresolvableEvidenceReferenceError","module":"databasise.seam.refusals","attribute_keys":["ref"],"http_status":404},{"refusal_type":"UnsatisfiableSelectorError","module":"databasise.seam.refusals","attribute_keys":["requested","selector_kind"],"http_status":422},{"refusal_type":"UnsupportedUploadTypeError","module":"databasise.seam.refusals","attribute_keys":["suffix"],"http_status":422}],"resolution":{"rows":[{"selector":null,"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_kv"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_vector"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_graph"]},"wiring":"hipporag","node_count":14,"outcome":"resolved"},{"selector":{"capability":["reads_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_blob"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_artifact"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["calls_llm"]},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"capability":["calls_rerank"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["calls_embedding"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["net"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["fs"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["self_storage"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["mutates_store"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_kv"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_vector"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_graph"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_vector:entities"]},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:relationships"]},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:entities","reads_vector:relationships"]},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"capability":[]},"wiring":null,"node_count":null,"outcome":"EmptyCapabilitySelectorError"},{"selector":{"harness":"hotpotqa"},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"alias":"fixture-naive"},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"alias":"fixture-bypass"},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"alias":"fixture-hybrid"},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"alias":"fixture-local"},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-global"},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-hipporag"},"wiring":"hipporag","node_count":14,"outcome":"resolved"}],"reachable":{"naive":true,"bypass":true,"hybrid":true,"local":true,"global":true,"hipporag":true}}}</script>
+<script type="application/json" id="mock-fixtures">{"aliases":[{"alias":"prod","active_version":"4.0.0","record_kind":"rollback","generation_ordinal":5,"created_at":"2026-10-20T09:12:44Z","arm":"naive"},{"alias":"staging","active_version":"1.0.0","record_kind":"promotion","generation_ordinal":6,"created_at":"2026-10-21T15:40:02Z","arm":"naive"},{"alias":"hr","active_version":"1.0.0","record_kind":"promotion","generation_ordinal":7,"created_at":"2026-10-22T11:05:37Z","arm":"hipporag"}],"compare":{"bodies":{"naive-ok":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]},"local-partial":{"answer":"","evidence":[],"trace_token":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","depth_label":null,"partial":true,"degraded":true,"stop_reason":"node_failed","degradation_reason":"node_failed","token_accounting":[{"counted_by":"none","prompt_tokens":0,"completion_tokens":0,"cached_read_tokens":0,"call_count":0}],"seam_events":[]},"local-ok":{"answer":"Renewal is on 1 March 2027. The supplier, Northwind Freight, must receive notice 90 days earlier.","evidence":[{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.8409,"tier":null},{"ref":"c-5ac3e0","namespace":"chunks","kind":"text_chunk","score":0.7918,"tier":null}],"trace_token":"Qm1x7TqHk0fE2uVc9JrZsYw3NdLbA8pXoG4iMtRh5Ks","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1840,"completion_tokens":112,"cached_read_tokens":0,"call_count":2},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]},"hipporag-ok":{"answer":"The supplier contract renews on 1 March 2027. Notice of non-renewal is due 90 days before, by 30 November 2026.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.9012,"tier":null},{"ref":"c-e1b7d2","namespace":"chunks","kind":"text_chunk","score":0.8456,"tier":null},{"ref":"c-5ac3e0","namespace":"chunks","kind":"text_chunk","score":0.8101,"tier":null},{"ref":"c-3d98fa","namespace":"chunks","kind":"text_chunk","score":0.7733,"tier":null}],"trace_token":"f3Jd9WcL2vQy7TnB0sKxEoAh5ZuRg1MiPaV8bXkC4yU","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":2210,"completion_tokens":131,"cached_read_tokens":0,"call_count":3},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"cmp-3col":[{"selector":null,"body":"naive-ok"},{"selector":{"capability":["reads_vector:entities"]},"body":"local-partial"},{"selector":{"capability":["reads_graph","calls_llm"]},"body":"hipporag-ok"}],"cmp-3col-clean":[{"selector":null,"body":"naive-ok"},{"selector":{"capability":["reads_vector:entities"]},"body":"local-ok"},{"selector":{"capability":["reads_graph","calls_llm"]},"body":"hipporag-ok"}]},"corpus":{"counts-normal":{"total":47,"offset":0,"next_offset":6,"counts":{"pending":1,"parsing":0,"analyzing":0,"processing":1,"preprocessed":0,"processed":42,"failed":3,"interrupted":0,"queued":0},"documents":[{"document_id":"annual-report-2025","status":"processed","updated_at":"2026-10-28T09:14:02Z","error_message":null},{"document_id":"board-minutes-2026-02","status":"failed","updated_at":"2026-10-28T09:20:41Z","error_message":"parse error: the file is not valid UTF-8 text (byte 0xff at offset 1024)"},{"document_id":"contract-2026-q1","status":"processed","updated_at":"2026-10-28T10:02:15Z","error_message":null},{"document_id":"handbook-v3","status":"processing","updated_at":"2026-10-29T08:41:57Z","error_message":null},{"document_id":"meeting-notes-0412","status":"failed","updated_at":"2026-10-29T08:44:10Z","error_message":"entity extraction failed on chunk 14 of 31: the model call timed out after 120 s; the document stays in this status until it is reprocessed"},{"document_id":"policy-draft","status":"pending","updated_at":"2026-10-29T08:50:33Z","error_message":null}]},"counts-preprocessed":{"total":47,"offset":0,"next_offset":6,"counts":{"pending":1,"parsing":0,"analyzing":0,"processing":0,"preprocessed":2,"processed":41,"failed":2,"interrupted":1,"queued":0},"documents":[{"document_id":"annual-report-2025","status":"processed","updated_at":"2026-10-28T09:14:02Z","error_message":null},{"document_id":"board-minutes-2026-02","status":"failed","updated_at":"2026-10-28T09:20:41Z","error_message":"parse error: the file is not valid UTF-8 text (byte 0xff at offset 1024)"},{"document_id":"contract-2026-q1","status":"preprocessed","updated_at":"2026-10-28T10:02:15Z","error_message":null},{"document_id":"handbook-v3","status":"interrupted","updated_at":"2026-10-29T08:41:57Z","error_message":null},{"document_id":"meeting-notes-0412","status":"preprocessed","updated_at":"2026-10-29T08:44:10Z","error_message":null},{"document_id":"policy-draft","status":"processed","updated_at":"2026-10-29T08:50:33Z","error_message":null}]},"counts-empty":{"total":0,"offset":0,"next_offset":null,"counts":{"pending":0,"parsing":0,"analyzing":0,"processing":0,"preprocessed":0,"processed":0,"failed":0,"interrupted":0},"documents":[]},"counts-last":{"total":47,"offset":41,"next_offset":null,"counts":{"pending":1,"parsing":0,"analyzing":0,"processing":1,"preprocessed":0,"processed":42,"failed":3,"interrupted":0,"queued":0},"documents":[{"document_id":"q3-forecast","status":"processed","updated_at":"2026-10-27T15:31:09Z","error_message":null},{"document_id":"release-notes-0.9","status":"processed","updated_at":"2026-10-27T15:33:48Z","error_message":null},{"document_id":"style-guide","status":"failed","updated_at":"2026-10-27T15:40:22Z","error_message":"document text is empty after parsing; nothing to index"},{"document_id":"supplier-terms","status":"processed","updated_at":"2026-10-27T16:02:51Z","error_message":null},{"document_id":"training-plan","status":"processed","updated_at":"2026-10-27T16:11:30Z","error_message":null},{"document_id":"visitor-policy","status":"processed","updated_at":"2026-10-27T16:19:04Z","error_message":null}]},"retry":{"job_id":"a41c7e90d2b84f63915e0c7a3d8b2f14","enqueued":true},"wirings":[{"name":"naive","wiring_id":"lightrag-base","wiring_version":"1","title":"LightRAG query side base wiring","node_count":7,"effects":["calls_embedding","calls_llm","reads_kv","reads_vector"],"provides":["answer","evidence"],"harnesses":[],"default_eligible":true,"is_default":true,"reachable":true},{"name":"bypass","wiring_id":"lightrag-bypass","wiring_version":"1","title":"LightRAG query side base wiring","node_count":1,"effects":["calls_llm"],"provides":["answer"],"harnesses":[],"default_eligible":false,"is_default":false,"reachable":true},{"name":"hybrid","wiring_id":"lightrag-hybrid","wiring_version":"1","title":"LightRAG query side base wiring","node_count":17,"effects":["calls_embedding","calls_llm","reads_graph","reads_kv","reads_vector"],"provides":["answer","evidence"],"harnesses":[],"default_eligible":false,"is_default":false,"reachable":true},{"name":"local","wiring_id":"lightrag-local","wiring_version":"1","title":"LightRAG query side base wiring","node_count":15,"effects":["calls_embedding","calls_llm","calls_rerank","reads_graph","reads_kv","reads_vector"],"provides":["answer","evidence"],"harnesses":[],"default_eligible":false,"is_default":false,"reachable":true},{"name":"global","wiring_id":"lightrag-global","wiring_version":"1","title":"LightRAG query side base wiring","node_count":15,"effects":["calls_embedding","calls_llm","reads_graph","reads_kv","reads_vector"],"provides":["answer","evidence"],"harnesses":[],"default_eligible":false,"is_default":false,"reachable":true},{"name":"hipporag","wiring_id":"hipporag-base","wiring_version":"1","title":"HippoRAG 2 base wiring","node_count":14,"effects":["calls_embedding","calls_llm","reads_graph","reads_kv","reads_vector"],"provides":["answer","evidence"],"harnesses":[],"default_eligible":false,"is_default":false,"reachable":true}],"log":{"lines":["2026-10-29T08:40:02Z INFO  databasise-rest started (operator=true, host=127.0.0.1)","2026-10-29T08:41:55Z INFO  POST /documents 200 job_id=3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","2026-10-29T08:41:57Z INFO  v1 driver op=ingest document_id=handbook-v3 status=processing","2026-10-29T08:44:10Z WARN  v1 driver op=ingest document_id=meeting-notes-0412 model call timed out after 120 s","2026-10-29T08:44:10Z ERROR v1 driver op=ingest document_id=meeting-notes-0412 failed (CorpusOpSubprocessError)","2026-10-29T08:47:31Z INFO  GET /health 200 degraded stores_absent=5","2026-10-29T08:50:33Z INFO  POST /documents 200 job_id=9b04e1c7f2a84d5e8c13a6b0d7f92e41","2026-10-29T08:52:08Z INFO  POST /query 200 selector=default arm=naive nodes=7","2026-10-29T08:52:49Z INFO  POST /compare 200 arms=2","2026-10-29T08:55:12Z WARN  graph store chunk_entity_relation held by another process; read refused (StoreBusyError)","2026-10-29T08:55:40Z INFO  GET /corpus 200 limit=50 offset=0 total=47","2026-10-29T08:56:03Z INFO  GET /info 200"]}},"documents":{"ingest-success":{"job_id":"3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","enqueued":1},"session-jobs":[{"job_id":"e0a37c19d5b24f68b1c2a9d8f7e40356","submitted":"2026-10-29 09:02","enqueued":1},{"job_id":"5b8d1f0a6c2e4979a3e7d4c1b0f82a65","submitted":"2026-10-29 08:41","enqueued":1}],"pipeline":{"busy":true,"text":"Pipeline: busy, 1 job in flight (fixture)"},"j-page1":{"job_id":"3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","limit":5,"offset":0,"next_offset":5,"documents":[{"document_id":"contract-2026-q1","status":"processed","updated_at":"2026-10-29T09:14:02Z","error_message":null},{"document_id":"contract-2026-q2","status":"processed","updated_at":"2026-10-29T09:14:31Z","error_message":null},{"document_id":"dup-15f6f452b1ea8f4a9c36928aa0d86588","status":"failed","updated_at":"2026-10-29T09:15:07Z","error_message":"Identical content already exists under another filename"},{"document_id":"memo-ops-114","status":"processing","updated_at":"2026-10-29T09:15:40Z","error_message":null},{"document_id":"memo-ops-115","status":"pending","updated_at":"2026-10-29T09:15:41Z","error_message":null}],"counts":{"pending":1,"processing":1,"processed":42,"failed":3,"preprocessed":0}},"j-last":{"job_id":"3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","limit":5,"offset":5,"next_offset":null,"documents":[{"document_id":"memo-ops-116","status":"processed","updated_at":"2026-10-29T09:16:12Z","error_message":null},{"document_id":"policy-hr-007","status":"failed","updated_at":"2026-10-29T09:16:55Z","error_message":"Set of Tasks/Futures is empty."}],"counts":{"pending":1,"processing":1,"processed":42,"failed":3,"preprocessed":0}},"j-single":{"job_id":"5b8d1f0a6c2e4979a3e7d4c1b0f82a65","limit":50,"offset":0,"next_offset":null,"documents":[{"document_id":"report-annual-2025","status":"processed","updated_at":"2026-10-29T08:44:19Z","error_message":null}],"counts":{"pending":0,"processing":0,"processed":46,"failed":3,"preprocessed":0}},"j-empty":{"job_id":"e0a37c19d5b24f68b1c2a9d8f7e40356","limit":50,"offset":0,"next_offset":null,"documents":[],"counts":{"pending":0,"processing":0,"processed":46,"failed":3,"preprocessed":0}},"j-unknown":{"status":404,"body":{"refusal_type":"UnknownJobError","message":"unknown job","job_id":"00000000000000000000000000000000"}},"delete-success":{"document_id":"contract-2026-q1","status":"success","message":"Document deleted.","seam_events":[{"component":"mutates_store","spend":{"counted_by":"unbudgetable"},"outcome":"completed"}]},"delete-not_found":{"document_id":"contract-2026-q1","status":"not_found","message":"No document with this id.","seam_events":[]},"delete-not_allowed":{"document_id":"contract-2026-q1","status":"not_allowed","message":"The document is being processed and cannot be deleted now.","seam_events":[]},"delete-fail":{"document_id":"contract-2026-q1","status":"fail","message":"","seam_events":[]}},"evidence":{"e-lightrag-chunk":{"id":"c-7f3a91","full_doc_id":"doc-3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","content":"Supplier contract, section 9. This supplier contract renews automatically on 1 March 2027 for a further term of twelve months. Either party may prevent renewal by giving 90 days written notice before expiry. Notice sent after that date takes effect at the end of the following term.","file_path":"contracts/supplier-contract-2026-q1.pdf"},"e-hipporag-chunk":{"id":"chunk:7f3a91","document_id":"contract-2026-q1","ordinal":3,"content":"Section 9, renewal. The supplier contract renews on 1 March 2027. Written notice of 90 days is required to stop the renewal."},"chunks":{"c-02be44":{"id":"c-02be44","full_doc_id":"doc-3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","content":"Section 10, termination. Either party may end the supplier contract for material breach if the breach is not cured within 30 days of written notice.","file_path":"contracts/supplier-contract-2026-q1.pdf"},"c-91d0c7":{"id":"c-91d0c7","full_doc_id":"doc-3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","content":"Section 4, payment. Invoices are payable within 45 days. Late payment accrues interest at 1.5 percent per month.","file_path":"contracts/supplier-contract-2026-q1.pdf"},"c-3d98fa":{"id":"c-3d98fa","full_doc_id":"doc-77a1c0de52b94f6a8d3e9b0c1f2a3d4e","content":"Operations memo 114. The supply chain review moved the supplier audit to the second quarter.","file_path":"memos/memo-ops-114.docx"},"c-5ac3e0":{"id":"c-5ac3e0","full_doc_id":"doc-77a1c0de52b94f6a8d3e9b0c1f2a3d4e","content":"Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit find","file_path":"archive/2026/operations/long-form/annual-supplier-review/appendix-b-supporting-material/very-long-file-name-that-must-wrap-at-narrow-widths-0123456789abcdef0123456789abcdef.pdf"},"c-e1b7d2":{"id":"c-e1b7d2","full_doc_id":"doc-77a1c0de52b94f6a8d3e9b0c1f2a3d4e","content":"Operations memo 115. Renewal dates for all supplier contracts are tracked in the contracts register.","file_path":"memos/memo-ops-115.docx"}},"t-clean":{"partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"bundle_ref":"sentinel:no-eval-bundle-until-phase-2","corpus_snapshot_hash":"sentinel:no-corpus-snapshot-until-phase-2","executor_version":"databasise@0.1.0","determinism_setting":"cache-bypassed","concurrency_setting":"sequential","arm_execution_order":0},"t-partial-debug":{"partial":true,"degraded":true,"stop_reason":"node_failed","degradation_reason":"node_failed","bundle_ref":"sentinel:no-eval-bundle-until-phase-2","corpus_snapshot_hash":"sentinel:no-corpus-snapshot-until-phase-2","executor_version":"databasise@0.1.0","determinism_setting":"cache-bypassed","concurrency_setting":"sequential","arm_execution_order":0,"run_id":"5b0e7c1a-2f4d-4e8b-9a36-d1c8f07b3e52","wiring_id":"lightrag-base","wiring_instance_hash":"sha256:9f2c4e7a1b8d03652ac4f7e19d0b6a83c5e21f4d7a90b3c68e5d1f02a7b4c9e6","arm_id":"naive","nodes":[{"node_id":"embedder-index","instance_hash":"sha256:1a7d3c9e5f0b284671ce9a3d5b0f8e24c6a1d7f39e5b0c482a6d1f73e9b5c0a8","depth":"opaque","effective_depth":"opaque","tier":null,"feed_tier":null,"status":"completed","execution_mode":"in-process","wall_clock_ms":412,"cache_hit":false,"guards_fired":[],"budget_state":"within_budget","spent":14,"allowance":1000000,"realised_budget_share":1.4e-05,"cross_process_failure_cause":null,"resumable":false,"tokens":{"prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1,"counted_by":"text-embedding-3-small"}},{"node_id":"embedder-query","instance_hash":"sha256:6e0b2d8a4c7f19053bd8e2a6c4f1097d3b5e8a20c6f4d1793a5b0e82d7c1f469","depth":"opaque","effective_depth":"opaque","tier":null,"feed_tier":null,"status":"failed","execution_mode":"in-process","wall_clock_ms":0,"cache_hit":null,"guards_fired":[],"budget_state":"halted","spent":null,"allowance":1000000,"realised_budget_share":0.0,"cross_process_failure_cause":"declared effect 'calls_embedding' requires client 'embedding'","resumable":false,"tokens":{"prompt_tokens":0,"completion_tokens":0,"cached_read_tokens":0,"call_count":0,"counted_by":"none"}}]}},"graph":{"lightrag":{"family":"LightRAG","chunk_namespace":"chunks","counts":{"nodes":214,"edges":487,"chunks":96},"edge_types":null,"weight":{"start":10,"step":1},"nodes":[{"offset":0,"total":214,"next_offset":8,"nodes":[{"id":"ACME CORP","degree":12},{"id":"ACME HOLDINGS","degree":4},{"id":"ALICE JOHNSON","degree":7},{"id":"BOB SMITH","degree":5},{"id":"BOSTON","degree":3},{"id":"CONTRACT RENEWAL","degree":9},{"id":"SUPPLIER","degree":6},{"id":"SUPPLY CHAIN","degree":8}]},{"offset":8,"total":214,"next_offset":null,"nodes":[{"id":"TAX AUTHORITY","degree":2},{"id":"TERMINATION CLAUSE","degree":5},{"id":"THEO ARMSTRONG","degree":3},{"id":"UNITED STATES","degree":11},{"id":"VENDOR AUDIT","degree":1},{"id":"WAREHOUSE 7","degree":4},{"id":"WEST COAST HUB","degree":6},{"id":"ZENITH LOGISTICS","degree":0}]}],"edges":{"ACME CORP":[{"src":"ACME CORP","tgt":"ACME HOLDINGS","edge_types":null,"weight":9.5},{"src":"ACME CORP","tgt":"ALICE JOHNSON","edge_types":null,"weight":8},{"src":"ACME CORP","tgt":"BOB SMITH","edge_types":null,"weight":7.5},{"src":"ACME CORP","tgt":"BOSTON","edge_types":null,"weight":6},{"src":"ACME CORP","tgt":"CONTRACT RENEWAL","edge_types":null,"weight":5},{"src":"ACME CORP","tgt":"SUPPLIER","edge_types":null,"weight":4.5},{"src":"ACME CORP","tgt":"SUPPLY CHAIN","edge_types":null,"weight":4},{"src":"ACME CORP","tgt":"TAX AUTHORITY","edge_types":null,"weight":3},{"src":"ACME CORP","tgt":"TERMINATION CLAUSE","edge_types":null,"weight":2.5},{"src":"ACME CORP","tgt":"THEO ARMSTRONG","edge_types":null,"weight":2},{"src":"ACME CORP","tgt":"UNITED STATES","edge_types":null,"weight":1.5},{"src":"ACME CORP","tgt":"VENDOR AUDIT","edge_types":null,"weight":1}]},"attrs":{"ACME CORP":{"entity_type":"ORGANIZATION","description":"Acme Corp is a manufacturer that supplies industrial components to its customers under annual supply contracts.","source_id":"c-7f3a91"},"ACME HOLDINGS":{"entity_type":"ORGANIZATION","description":"Acme Holdings is the parent company of Acme Corp.","source_id":"c-02be44"}},"chunks":[{"offset":0,"total":96,"next_offset":8,"refs":[{"ref":"c-7f3a91","kind":"text_chunk"},{"ref":"c-02be44","kind":"text_chunk"},{"ref":"c-91d0c7","kind":"text_chunk"},{"ref":"c-3d98fa","kind":"text_chunk"},{"ref":"c-5ac3e0","kind":"text_chunk"},{"ref":"c-e1b7d2","kind":"text_chunk"},{"ref":"c-0a4f68","kind":"text_chunk"},{"ref":"c-b2c7e9","kind":"text_chunk"}]},{"offset":8,"total":96,"next_offset":null,"refs":[{"ref":"c-4e81d3","kind":"text_chunk"},{"ref":"c-d9035a","kind":"text_chunk"},{"ref":"c-17b6f2","kind":"text_chunk"},{"ref":"c-6a2c80","kind":"text_chunk"},{"ref":"c-f35e19","kind":"text_chunk"},{"ref":"c-83d4b7","kind":"text_chunk"},{"ref":"c-2c9e56","kind":"text_chunk"},{"ref":"c-a07f41","kind":"text_chunk"}]}]},"hipporag":{"family":"HippoRAG","chunk_namespace":"hipporag-chunks","counts":{"nodes":342,"edges":2108,"chunks":96},"edge_types":["cooccurrence","synonymy"],"weight":{"start":0.92,"step":0.07},"nodes":[{"offset":0,"total":342,"next_offset":8,"nodes":[{"id":"chunk:02be44d91a7c","degree":3},{"id":"chunk:3d98fa6c10e4","degree":4},{"id":"chunk:7f3a91c04b2e","degree":5},{"id":"chunk:91d0c7a3e5b8","degree":4},{"id":"entity:acme corp","degree":7},{"id":"entity:acme holdings","degree":4},{"id":"entity:alice johnson","degree":5},{"id":"entity:boston","degree":3}]},{"offset":8,"total":342,"next_offset":null,"nodes":[{"id":"entity:bob smith","degree":5},{"id":"entity:contract renewal","degree":6},{"id":"entity:supplier","degree":4},{"id":"entity:supply chain","degree":6},{"id":"entity:tax authority","degree":2},{"id":"entity:warehouse 7","degree":3},{"id":"entity:zenith logistics","degree":1},{"id":"entity:zenith orphan","degree":0}]}],"edges":{},"attrs":{},"chunks":[{"offset":0,"total":96,"next_offset":8,"refs":[{"ref":"chunk:7f3a91c04b2e","kind":"text_chunk"},{"ref":"chunk:02be44d91a7c","kind":"text_chunk"},{"ref":"chunk:91d0c7a3e5b8","kind":"text_chunk"},{"ref":"chunk:3d98fa6c10e4","kind":"text_chunk"},{"ref":"chunk:5ac3e0b7f912","kind":"text_chunk"},{"ref":"chunk:e1b7d24c60a3","kind":"text_chunk"},{"ref":"chunk:0a4f68d3e9b1","kind":"text_chunk"},{"ref":"chunk:b2c7e9014fd5","kind":"text_chunk"}]},{"offset":8,"total":96,"next_offset":null,"refs":[{"ref":"chunk:4e81d3a0c7f6","kind":"text_chunk"},{"ref":"chunk:d9035a2e18bc","kind":"text_chunk"},{"ref":"chunk:17b6f2d84a09","kind":"text_chunk"},{"ref":"chunk:6a2c80f5e3d1","kind":"text_chunk"},{"ref":"chunk:f35e19b7a264","kind":"text_chunk"},{"ref":"chunk:83d4b70c9e5a","kind":"text_chunk"},{"ref":"chunk:2c9e56a1f0d8","kind":"text_chunk"},{"ref":"chunk:a07f41c3b69e","kind":"text_chunk"}]}]},"store-busy":{"status":409,"body":{"refusal_type":"StoreBusyError","message":"the graph store is held by another process","store_kind":"graph"}},"unknown-node":{"status":422,"body":{"refusal_type":"UnknownGraphNodeError","message":"no node with this id in the selected graph","node_id":"UNKNOWN NODE"}}},"health":{"health-ok":{"status":"ok","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:chunks":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"ok","graph:hipporag-graph":"ok","vector:hipporag-chunks":"ok","vector:hipporag-entities":"ok","vector:hipporag-facts":"ok"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":true,"embedding":true,"rerank":true},"engine_reason":null},"health-degraded":{"status":"degraded","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"absent","graph:hipporag-graph":"absent","vector:hipporag-chunks":"absent","vector:hipporag-entities":"absent","vector:hipporag-facts":"absent"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":false,"embedding":false,"rerank":false},"engine_reason":"model clients not configured"},"health-loading":{"loading":true},"health-error":{"status":500,"body":"Internal Server Error"}},"ledger":{"timeline-prod":{"alias":"prod","offset":0,"records":[{"generation_ordinal":1,"created_at":"2026-10-12T08:30:11Z","record_kind":"promotion","minted_version":"1.0.0","targets_version":null,"change_origin":"human_edit","promotion_trace_ids":["ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs"],"active":false,"tombstoned":false},{"generation_ordinal":2,"created_at":"2026-10-14T13:02:47Z","record_kind":"promotion","minted_version":"2.0.0","targets_version":null,"change_origin":"machine_mutation","promotion_trace_ids":["Vb8Ke2NwQx5RtYh0LzUa3PdMc7JiGfS1oXn4AeWq9Tk"],"active":false,"tombstoned":true},{"generation_ordinal":3,"created_at":"2026-10-16T10:45:20Z","record_kind":"promotion","minted_version":"3.0.0","targets_version":null,"change_origin":"human_edit","promotion_trace_ids":["Qm1x7TqHk0fE2uVc9JrZsYw3NdLbA8pXoG4iMtRh5Ks"],"active":false,"tombstoned":false},{"generation_ordinal":4,"created_at":"2026-10-18T16:21:09Z","record_kind":"tombstone","minted_version":null,"targets_version":"2.0.0","change_origin":"human_edit","promotion_trace_ids":["Ln0sA6lQeuJl7PW1NWiFpTOTogKdJBOUmXJloaJa78Y"],"active":false,"tombstoned":false},{"generation_ordinal":5,"created_at":"2026-10-20T09:12:44Z","record_kind":"rollback","minted_version":"4.0.0","targets_version":"1.0.0","change_origin":"human_edit","promotion_trace_ids":["PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0"],"active":true,"tombstoned":false}],"total":5,"next_offset":null},"timeline-single":{"alias":"hr","offset":0,"records":[{"generation_ordinal":7,"created_at":"2026-10-22T11:05:37Z","record_kind":"promotion","minted_version":"1.0.0","targets_version":null,"change_origin":"human_edit","promotion_trace_ids":["f3Jd9WcL2vQy7TnB0sKxEoAh5ZuRg1MiPaV8bXkC4yU"],"active":true,"tombstoned":false}],"total":1,"next_offset":null},"traces":[{"trace_reference":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","created_at":"2026-10-24 16:42:09","selector":"Default","arm":"naive","partial":false,"degraded":false},{"trace_reference":"Vb8Ke2NwQx5RtYh0LzUa3PdMc7JiGfS1oXn4AeWq9Tk","created_at":"2026-10-24 15:58:33","selector":"Default","arm":"naive","partial":false,"degraded":true},{"trace_reference":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","created_at":"2026-10-24 16:31:55","selector":"capability reads_vector:entities","arm":"local","partial":true,"degraded":false},{"trace_reference":"Qm1x7TqHk0fE2uVc9JrZsYw3NdLbA8pXoG4iMtRh5Ks","created_at":"2026-10-24 16:36:18","selector":"capability reads_vector:entities","arm":"local","partial":false,"degraded":false},{"trace_reference":"f3Jd9WcL2vQy7TnB0sKxEoAh5ZuRg1MiPaV8bXkC4yU","created_at":"2026-10-24 16:44:02","selector":"capability reads_graph+calls_llm","arm":"hipporag","partial":false,"degraded":false},{"trace_reference":"Ln0sA6lQeuJl7PW1NWiFpTOTogKdJBOUmXJloaJa78Y","created_at":"2026-10-23 10:08:21","selector":"alias prod","arm":"naive","partial":false,"degraded":false}],"preview":{"arm":"naive","mutation_class":"minor","next_version":"2.0.0","promotable":true,"reason":null},"promote-success":{"alias":"staging","version":"2.0.0","record_kind":"promotion","provenance":"operator_asserted","generation_ordinal":6},"refusal-partial":{"status":422,"body":{"refusal_type":"PartialRunEvidenceError","message":"promotion refused: the trace comes from a partial run","trace_ids":["PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0"]}},"refusal-unknown-trace":{"status":404,"body":{"refusal_type":"UnknownTraceReferenceError","message":"unknown trace reference","trace_reference":"Zx9QpL3mT7vNc2WdHs5Ka8YfRb1GjUe4OiXt6Mn0AwE"}},"refusal-active-retire":{"status":422,"body":{"refusal_type":"ActiveGenerationRetirementError","message":"version 4.0.0 is in the active generation of alias prod and cannot be retired","alias":"prod","version":"4.0.0"}},"validation":{"status":422,"body":{"detail":[{"loc":["body","alias"],"msg":"String should have at least 1 character","type":"string_too_short"}]}},"server-failure":{"status":502,"body":{"refusal_type":"ForeignEngineRefusalError","message":"operation 'promote' failed (StoreFault)","operation":"promote","failure_class":"StoreFault","cause":"the ledger store could not be written"}},"generic-5xx":{"status":500,"body":"Internal Server Error"}},"query":{"q-success":{"status":200,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-partial":{"status":200,"body":{"answer":"","evidence":[],"trace_token":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","depth_label":null,"partial":true,"degraded":true,"stop_reason":"node_failed","degradation_reason":"node_failed","token_accounting":[{"counted_by":"none","prompt_tokens":0,"completion_tokens":0,"cached_read_tokens":0,"call_count":0}],"seam_events":[]}},"q-empty-evidence":{"status":200,"body":{"answer":"The question was sent to the model without retrieval, so this answer rests on the model alone.","evidence":[],"trace_token":"Ln0sA6lQeuJl7PW1NWiFpTOTogKdJBOUmXJloaJa78Y","depth_label":"opaque","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":212,"completion_tokens":58,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-trace-null":{"status":200,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":null,"depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-layout-sample":{"status":200,"layout_sample":true,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":null,"tier":null}],"trace_token":"GKw-c0PwFokMUQ6T-TUmEWnZ4_VlQ2Qpgw-vCTT0-OQ","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1}],"seam_events":[{"component":"mutates_store","outcome":"completed","spend":{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":40,"completion_tokens":8,"cached_read_tokens":0,"call_count":1}}]}},"q-refusal":{"status":422,"body":{"refusal_type":"UnsatisfiableSelectorError","message":"no wiring satisfies the requested selector","selector_kind":"capability","requested":["writes_graph"]}},"q-validation":{"status":422,"body":{"detail":[{"loc":["body","selector"],"msg":"Value error, a selector may set only one member","type":"value_error"}]}},"q-500":{"status":500,"body":"Internal Server Error"},"q-500-foreign":{"status":502,"body":{"refusal_type":"ForeignEngineRefusalError","message":"operation 'query' failed (StoreFault)","operation":"query","failure_class":"StoreFault","trace_token":"P3m7e0NbBTIWUdrv03TNxoHcBvqmXjdOODN7iMoEbeo","cause":"graph store lock held by another process in this namespace"}},"q-stream-disconnected":{"status":200,"stream_closed":true,"body":{"answer":"","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null}],"trace_token":null,"depth_label":null,"partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[],"seam_events":[]}},"history":[{"time":"2026-10-24 16:42:09","selector":"Default","trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","partial":false},{"time":"2026-10-24 16:31:55","selector":"capability reads_vector:entities","trace_token":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","partial":true},{"time":"2026-10-23 10:08:21","selector":"alias prod","trace_token":"Ln0sA6lQeuJl7PW1NWiFpTOTogKdJBOUmXJloaJa78Y","partial":false}]},"shell":{"info":{"version":"0.1.0","workspace":"default","clients":{"llm":true,"embedding":true,"rerank":false},"write_in_flight":false,"graph_busy":false}},"refusals":[{"refusal_type":"ActiveGenerationRetirementError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"AmbiguousAnswerPositionError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"AmbiguousIngestPayloadError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"DisagreeingPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"DocumentNotInterruptedError","module":"databasise.seam.refusals","attribute_keys":["document_id","status"],"http_status":422},{"refusal_type":"DuplicateComparisonKeyError","module":"databasise.seam.refusals","attribute_keys":["key"],"http_status":422},{"refusal_type":"DuplicateDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"EmptyCapabilitySelectorError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyComparisonRequestError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyIngestDocumentError","module":"databasise.seam.refusals","attribute_keys":["member"],"http_status":422},{"refusal_type":"EmptyNamespaceError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":422},{"refusal_type":"EmptyPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"EmptyQueryObjectError","module":"databasise.seam.refusals","attribute_keys":["query_object"],"http_status":422},{"refusal_type":"ForbiddenSelectorInputError","module":"databasise.seam.refusals","attribute_keys":["member_name","value"],"http_status":422},{"refusal_type":"ForeignEngineRefusalError","module":"databasise.seam.refusals","attribute_keys":["failure_class","operation"],"http_status":502},{"refusal_type":"GateNotCalibratedError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"GateVerbNotBuiltError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"InvalidChangeOriginError","module":"databasise.seam.refusals","attribute_keys":["change_origin"],"http_status":422},{"refusal_type":"InvalidDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"InvalidEvidenceNamespaceError","module":"databasise.seam.refusals","attribute_keys":["namespace"],"http_status":422},{"refusal_type":"InvalidGuardDeclarationError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"InvalidNodeSettingError","module":"databasise.seam.refusals","attribute_keys":["setting"],"http_status":422},{"refusal_type":"InvalidPromotionAliasError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"MalformedBase64PayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MalformedSelectorPayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MeasurementPostureRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"MissingScopeArgumentError","module":"databasise.seam.refusals","attribute_keys":["argument","scope","tool"],"http_status":422},{"refusal_type":"MultiMemberSelectorError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"MutableStoreComparisonExcludedError","module":"databasise.seam.refusals","attribute_keys":["component"],"http_status":422},{"refusal_type":"NoRawUploadPathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NoWritePathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NonFiniteNumberError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"OversizedDocumentError","module":"databasise.seam.refusals","attribute_keys":["actual_bytes","limit_bytes"],"http_status":422},{"refusal_type":"PageBoundsError","module":"databasise.seam.refusals","attribute_keys":["limit","offset"],"http_status":422},{"refusal_type":"PageSizeExceededError","module":"databasise.seam.refusals","attribute_keys":["limit","requested"],"http_status":422},{"refusal_type":"PartialRunEvidenceError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"StoreBusyError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":409},{"refusal_type":"TombstonedGenerationError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"UnbudgetableParticipantError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"UncalibratedFloorRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"UnconsumableQueryMemberError","module":"databasise.seam.refusals","attribute_keys":["member_name"],"http_status":422},{"refusal_type":"UnknownDocumentError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"UnknownGenerationVersionError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":404},{"refusal_type":"UnknownGraphNodeError","module":"databasise.seam.refusals","attribute_keys":["node_id"],"http_status":422},{"refusal_type":"UnknownJobError","module":"databasise.seam.refusals","attribute_keys":["job_id"],"http_status":404},{"refusal_type":"UnknownTraceReferenceError","module":"databasise.seam.refusals","attribute_keys":["trace_reference"],"http_status":404},{"refusal_type":"UnparseableWiringError","module":"databasise.seam.refusals","attribute_keys":["violations"],"http_status":422},{"refusal_type":"UnrecognisedPromotionVerbError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"UnresolvableEvidenceReferenceError","module":"databasise.seam.refusals","attribute_keys":["ref"],"http_status":404},{"refusal_type":"UnsatisfiableSelectorError","module":"databasise.seam.refusals","attribute_keys":["requested","selector_kind"],"http_status":422},{"refusal_type":"UnsupportedUploadTypeError","module":"databasise.seam.refusals","attribute_keys":["suffix"],"http_status":422}],"resolution":{"rows":[{"selector":null,"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_kv"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_vector"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_graph"]},"wiring":"hipporag","node_count":14,"outcome":"resolved"},{"selector":{"capability":["reads_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_blob"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_artifact"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["calls_llm"]},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"capability":["calls_rerank"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["calls_embedding"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["net"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["fs"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["self_storage"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["mutates_store"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_kv"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_vector"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_graph"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_vector:entities"]},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:relationships"]},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:entities","reads_vector:relationships"]},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"capability":[]},"wiring":null,"node_count":null,"outcome":"EmptyCapabilitySelectorError"},{"selector":{"harness":"hotpotqa"},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"alias":"fixture-naive"},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"alias":"fixture-bypass"},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"alias":"fixture-hybrid"},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"alias":"fixture-local"},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-global"},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-hipporag"},"wiring":"hipporag","node_count":14,"outcome":"resolved"}],"reachable":{"naive":true,"bypass":true,"hybrid":true,"local":true,"global":true,"hipporag":true}}}</script>
 <script>
 "use strict";
 // Shared scope: every js/*.js file is concatenated into one script, so FIX, $id and Console are global to later screens.
@@ -6102,6 +6526,483 @@ var LedgerScreen = (function () {
   return { setState: setState, inject: inject, loadFixture: loadFixture };
 })();
 Console.register("ledger", LedgerScreen);
+var GraphScreen = (function () {
+  var MSG = { pageSize: "Page size must be between 1 and 100.", noId: "Enter a node id." };
+  var LOAD_MS = 300;
+  var EDGE_PAGE = 6;
+  var EMPTY = { offset: 0, total: 0, next_offset: null, nodes: [], refs: [] };
+
+  var root = $id("screen-graph");
+  var errorsBox = root.querySelector('[data-role="errors"]');
+  var busyWrap = root.querySelector('[data-role="busy-wrap"]');
+  var unknownWrap = root.querySelector('[data-role="unknown-wrap"]');
+  var detailBody = root.querySelector('[data-role="detail-body"]');
+  var nodeRows = ID("nodes.table").tBodies[0].rows;
+  var edgeRows = ID("edges.table").tBodies[0].rows;
+  var chunkRows = ID("chunks.table").tBodies[0].rows;
+  var sizeInputs = [ID("nodes.page-size"), ID("edges.page-size"), ID("chunks.page-size")];
+
+  var fixName = "lightrag";
+  var nodePage = 0;
+  var chunkPage = 0;
+  var edgeOffset = 0;
+  var openId = null;
+  var attrsShown = false;
+  var empty = false;
+  var ready = false;
+  var picker = null;
+  var timer = null;
+  var loading = { nodes: false, node: false, edges: false, chunks: false };
+
+  function ID(name) {
+    return $id("graph." + name);
+  }
+
+  function fix() {
+    return FIX.graph[fixName];
+  }
+
+  function setDisabled(button, disabled) {
+    button.disabled = disabled;
+    if (disabled) button.setAttribute("aria-disabled", "true");
+    else button.removeAttribute("aria-disabled");
+  }
+
+  function wrapOf(table) {
+    return table.parentElement;
+  }
+
+  function pagerOf(table) {
+    return wrapOf(table).nextElementSibling;
+  }
+
+  // ---- fixture lookups ----
+
+  function allNodes() {
+    return fix().nodes.reduce(function (all, page) {
+      return all.concat(page.nodes);
+    }, []);
+  }
+
+  // null when the id is not a node of the current fixture graph.
+  function degreeOf(id) {
+    var hit = allNodes().filter(function (n) {
+      return n.id === id;
+    })[0];
+    return hit ? hit.degree : null;
+  }
+
+  // Edges as references {src, tgt, edge_types, weight}. Nodes without explicit rows get rows derived from their degree.
+  function edgesOf(id) {
+    var f = fix();
+    if (f.edges[id]) return f.edges[id];
+    var pool = allNodes()
+      .map(function (n) {
+        return n.id;
+      })
+      .filter(function (other) {
+        return other !== id;
+      });
+    var rows = [];
+    for (var i = 0; i < degreeOf(id); i++) {
+      rows.push({ src: id, tgt: pool[i % pool.length], edge_types: f.edge_types, weight: Math.round((f.weight.start - i * f.weight.step) * 100) / 100 });
+    }
+    return rows;
+  }
+
+  function attrsOf(id) {
+    return (
+      fix().attrs[id] || {
+        entity_type: id.indexOf("chunk:") === 0 ? "CHUNK" : "ENTITY",
+        description: "Fixture description for " + id + ".",
+        source_id: fix().chunks[0].refs[1].ref,
+      }
+    );
+  }
+
+  // ---- errors ----
+
+  function hideErrors() {
+    renderError("graph", 200, null);
+    errorsBox.hidden = true;
+    busyWrap.hidden = true;
+    unknownWrap.hidden = true;
+    checkAll();
+  }
+
+  function showState(name, body) {
+    hideErrors();
+    if (name === "store-busy") {
+      busyWrap.querySelector('[data-role="message"]').textContent = body.message || "";
+      busyWrap.hidden = false;
+    } else {
+      unknownWrap.querySelector("mark").textContent = body.node_id;
+      unknownWrap.hidden = false;
+    }
+  }
+
+  // The two named refusals have their own banners; every other response uses the shared error shapes.
+  function fail(status, body) {
+    var name = body && typeof body === "object" ? body.refusal_type : "";
+    if (name === "StoreBusyError") return showState("store-busy", body);
+    if (name === "UnknownGraphNodeError") return showState("unknown-node", body);
+    busyWrap.hidden = true;
+    unknownWrap.hidden = true;
+    var shape = renderError("graph", status, body);
+    errorsBox.hidden = shape === "result";
+    if (shape !== "result") errorsBox.scrollIntoView({ block: "nearest" });
+  }
+
+  function unknownBody(id) {
+    return { refusal_type: "UnknownGraphNodeError", message: FIX.graph["unknown-node"].body.message, node_id: id };
+  }
+
+  // The mock outcome select decides which server response the next call gets.
+  function failure(op, id) {
+    var o = ID("mock.outcome").value;
+    if (o === "refusal") {
+      if (op === "node" || op === "edges") return [422, unknownBody(id)];
+      return [409, FIX.graph["store-busy"].body];
+    }
+    if (o === "validation") {
+      var loc = op === "nodes" ? ["body", "limit"] : op === "node" ? ["body", "node_id"] : ["body", "offset"];
+      return [422, { detail: [{ loc: loc, msg: "Input should be greater than or equal to " + (op === "nodes" ? 1 : 0), type: "value_error" }] }];
+    }
+    if (o === "server-failure") {
+      return [502, { refusal_type: "ForeignEngineRefusalError", message: "operation '" + op + "' failed (StoreFault)", operation: op, failure_class: "StoreFault" }];
+    }
+    if (o === "generic") return [500, "Internal Server Error"];
+    return null;
+  }
+
+  // ---- checks ----
+
+  function checkSize(input) {
+    var raw = input.value.trim();
+    var n = Number(raw);
+    var ok = raw !== "" && Number.isInteger(n) && n >= 1 && n <= 100;
+    setFieldError(input, ok ? "" : MSG.pageSize);
+  }
+
+  // renderError clears every field message, so the client-side checks are rerun afterwards.
+  function checkAll() {
+    sizeInputs.forEach(checkSize);
+    if (picker) setFieldError(ID("selector.group"), picker.blockers()[0] || "");
+  }
+
+  // ---- paint ----
+
+  function pageOf(list) {
+    return empty ? EMPTY : list[list === fix().nodes ? nodePage : chunkPage];
+  }
+
+  function paintCounts() {
+    var counts = empty ? { nodes: 0, edges: 0, chunks: 0 } : fix().counts;
+    ["nodes", "edges", "chunks"].forEach(function (key) {
+      ID("counts." + key).querySelector('[data-role="count"]').textContent = String(counts[key]);
+    });
+  }
+
+  function pager(table, prev, next, busy, page, shown) {
+    var bar = pagerOf(table);
+    var items = page.nodes || page.refs;
+    bar.hidden = busy || shown === 0;
+    setDisabled(prev, busy || page.offset <= 0);
+    setDisabled(next, busy || page.next_offset === null);
+    bar.querySelector('[data-role="range"]').textContent = items.length ? "Showing " + (page.offset + 1) + " to " + (page.offset + items.length) + " of " + page.total : "";
+  }
+
+  function paintNodes() {
+    var page = pageOf(fix().nodes);
+    var prefix = ID("nodes.prefix").value;
+    var list = page.nodes.filter(function (n) {
+      return n.id.indexOf(prefix) === 0;
+    });
+    Array.prototype.forEach.call(nodeRows, function (row, i) {
+      var node = list[i];
+      row.hidden = !node;
+      if (!node) return;
+      row.querySelector('[data-role="id"]').textContent = node.id;
+      row.querySelector('[data-role="degree"]').textContent = String(node.degree);
+      ID("nodes.open-" + (i + 1)).setAttribute("aria-label", "Open " + node.id);
+    });
+    ID("nodes.total").textContent = (empty ? 0 : fix().nodes[0].total) + " nodes in this graph";
+    ID("nodes.loading").hidden = !loading.nodes;
+    ID("nodes.empty").hidden = loading.nodes || list.length > 0;
+    wrapOf(ID("nodes.table")).hidden = loading.nodes || list.length === 0;
+    // The prefix narrows the current page only, so paging stays available while it matches nothing here.
+    pager(ID("nodes.table"), ID("nodes.prev"), ID("nodes.next"), loading.nodes, page, page.nodes.length);
+    if (prefix !== "" && page.nodes.length) pagerOf(ID("nodes.table")).querySelector('[data-role="range"]').textContent += ". " + list.length + " on this page start with the prefix.";
+  }
+
+  function paintChunks() {
+    var page = pageOf(fix().chunks);
+    Array.prototype.forEach.call(chunkRows, function (row, i) {
+      var chunk = page.refs[i];
+      row.hidden = !chunk;
+      if (!chunk) return;
+      row.querySelector('[data-role="ref"]').textContent = chunk.ref;
+      row.querySelector('[data-role="kind"]').textContent = chunk.kind;
+      ID("chunks.open-" + (i + 1)).setAttribute("aria-label", "Open chunk " + chunk.ref);
+    });
+    ID("chunks.total").textContent = page.total + " chunks in this store";
+    ID("chunks.loading").hidden = !loading.chunks;
+    ID("chunks.empty").hidden = loading.chunks || page.refs.length > 0;
+    wrapOf(ID("chunks.table")).hidden = loading.chunks || page.refs.length === 0;
+    pager(ID("chunks.table"), ID("chunks.prev"), ID("chunks.next"), loading.chunks, page, page.refs.length);
+  }
+
+  function fillTypes(cell, types) {
+    clearNode(cell);
+    if (!types) return cell.appendChild(document.createTextNode("—"));
+    types.forEach(function (t) {
+      cell.appendChild(h("span", t, "chip"));
+    });
+  }
+
+  function paintEdges() {
+    var rows = edgesOf(openId);
+    var slice = rows.slice(edgeOffset, edgeOffset + EDGE_PAGE);
+    Array.prototype.forEach.call(edgeRows, function (row, i) {
+      var edge = slice[i];
+      row.hidden = !edge;
+      if (!edge) return;
+      row.querySelector('[data-role="src"]').textContent = edge.src;
+      row.querySelector('[data-role="tgt"]').textContent = edge.tgt;
+      fillTypes(row.querySelector('[data-role="types"]'), edge.edge_types);
+      row.querySelector('[data-role="weight"]').textContent = edge.weight === null || edge.weight === undefined ? "—" : String(edge.weight);
+      ID("edges.open-" + (i + 1)).setAttribute("aria-label", "Open node " + edge.tgt);
+    });
+    ID("edges.loading").hidden = !loading.edges;
+    ID("edges.empty").hidden = loading.edges || rows.length > 0;
+    wrapOf(ID("edges.table")).hidden = loading.edges || rows.length === 0;
+    pager(ID("edges.table"), ID("edges.prev"), ID("edges.next"), loading.edges, { offset: edgeOffset, total: rows.length, next_offset: edgeOffset + EDGE_PAGE < rows.length ? edgeOffset + EDGE_PAGE : null, refs: slice }, rows.length);
+  }
+
+  function paintDetail() {
+    ID("node.loading").hidden = !loading.node;
+    root.querySelector('[data-role="prompt"]').hidden = loading.node || openId !== null;
+    detailBody.hidden = loading.node || openId === null;
+    if (openId === null) return;
+    detailBody.querySelector('[data-role="node-id"]').textContent = openId;
+    ID("node.degree").textContent = String(degreeOf(openId));
+    var attrs = ID("node.attrs");
+    attrs.hidden = !attrsShown;
+    clearNode(attrs);
+    if (attrsShown) {
+      var data = attrsOf(openId);
+      Object.keys(data).forEach(function (key) {
+        appendAttribute(attrs, key, data[key]);
+      });
+    }
+    paintEdges();
+  }
+
+  function paint() {
+    ID("selector.family").textContent = "Reading: " + fix().family + " graph";
+    ID("mock.fixture").value = fixName;
+    paintCounts();
+    paintNodes();
+    paintDetail();
+    paintChunks();
+  }
+
+  // ---- actions ----
+
+  function resetView() {
+    nodePage = 0;
+    chunkPage = 0;
+    edgeOffset = 0;
+    openId = null;
+    attrsShown = false;
+    empty = false;
+  }
+
+  // Shows a short loading state on the named regions, then the mock outcome or the result of fn.
+  function later(regions, op, id, fn) {
+    clearTimeout(timer);
+    hideErrors();
+    regions.forEach(function (r) {
+      loading[r] = true;
+    });
+    paint();
+    timer = setTimeout(function () {
+      Object.keys(loading).forEach(function (r) {
+        loading[r] = false;
+      });
+      var bad = failure(op, id);
+      if (bad) {
+        paint();
+        return fail(bad[0], bad[1]);
+      }
+      fn();
+      paint();
+    }, LOAD_MS);
+  }
+
+  function reload(name) {
+    later(["nodes", "chunks"], "nodes", null, function () {
+      fixName = name;
+      resetView();
+    });
+  }
+
+  function openNode(id) {
+    later(["node"], "node", id, function () {
+      if (degreeOf(id) === null) return fail(422, unknownBody(id));
+      openId = id;
+      edgeOffset = 0;
+      attrsShown = false;
+      ID("node.panel").scrollIntoView({ block: "nearest" });
+    });
+  }
+
+  function submitLookup() {
+    var input = ID("node.lookup");
+    var id = input.value.trim();
+    if (id === "") return setFieldError(input, MSG.noId);
+    openNode(id);
+  }
+
+  // ---- hooks ----
+
+  function setState(name) {
+    clearTimeout(timer);
+    if (name === "loading") {
+      hideErrors();
+      Object.keys(loading).forEach(function (r) {
+        loading[r] = true;
+      });
+      return paint();
+    }
+    Object.keys(loading).forEach(function (r) {
+      loading[r] = false;
+    });
+    if (name === "empty") {
+      hideErrors();
+      resetView();
+      empty = true;
+      return paint();
+    }
+    if (name !== "idle" && name !== "populated") throw new Error("unknown graph state " + name);
+    hideErrors();
+    resetView();
+    paint();
+  }
+
+  function loadFixture(name) {
+    clearTimeout(timer);
+    Object.keys(loading).forEach(function (r) {
+      loading[r] = false;
+    });
+    if (name === "store-busy" || name === "unknown-node") {
+      ID("mock.fixture").value = name;
+      return showState(name, FIX.graph[name].body);
+    }
+    if (name !== "lightrag" && name !== "hipporag") throw new Error("unknown graph fixture " + name);
+    hideErrors();
+    fixName = name;
+    resetView();
+    paint();
+  }
+
+  function inject(response) {
+    clearTimeout(timer);
+    Object.keys(loading).forEach(function (r) {
+      loading[r] = false;
+    });
+    paint();
+    fail(response.status, response.body);
+  }
+
+  // ---- wiring ----
+
+  ID("mock.fixture").addEventListener("change", function () {
+    loadFixture(this.value);
+  });
+  ID("state.retry").addEventListener("click", function () {
+    reload(fixName);
+  });
+  wireErrors("graph");
+
+  sizeInputs.forEach(function (input) {
+    input.addEventListener("input", function () {
+      checkSize(input);
+    });
+  });
+  ID("nodes.prefix").addEventListener("input", paintNodes);
+  ID("nodes.prev").addEventListener("click", function () {
+    later(["nodes"], "nodes", null, function () {
+      nodePage -= 1;
+    });
+  });
+  ID("nodes.next").addEventListener("click", function () {
+    later(["nodes"], "nodes", null, function () {
+      nodePage += 1;
+    });
+  });
+  ID("edges.prev").addEventListener("click", function () {
+    later(["edges"], "edges", openId, function () {
+      edgeOffset -= EDGE_PAGE;
+    });
+  });
+  ID("edges.next").addEventListener("click", function () {
+    later(["edges"], "edges", openId, function () {
+      edgeOffset += EDGE_PAGE;
+    });
+  });
+  ID("chunks.prev").addEventListener("click", function () {
+    later(["chunks"], "chunks", null, function () {
+      chunkPage -= 1;
+    });
+  });
+  ID("chunks.next").addEventListener("click", function () {
+    later(["chunks"], "chunks", null, function () {
+      chunkPage += 1;
+    });
+  });
+  ID("node.lookup-submit").addEventListener("click", submitLookup);
+  ID("node.lookup").addEventListener("keydown", function (event) {
+    if (event.key === "Enter") submitLookup();
+  });
+  ID("node.lookup").addEventListener("input", function () {
+    setFieldError(this, "");
+  });
+  ID("node.attrs-load").addEventListener("click", function () {
+    attrsShown = true;
+    paintDetail();
+  });
+  [1, 2, 3, 4, 5, 6, 7, 8].forEach(function (n) {
+    ID("nodes.open-" + n).addEventListener("click", function () {
+      openNode(nodeRows[n - 1].querySelector('[data-role="id"]').textContent);
+    });
+    ID("chunks.open-" + n).addEventListener("click", function () {
+      var ref = pageOf(fix().chunks).refs[n - 1];
+      Console.show("evidence");
+      Console.emit("open-evidence", { ref: { id: ref.ref, namespace: fix().chunk_namespace, kind: ref.kind } });
+    });
+  });
+  [1, 2, 3, 4, 5, 6].forEach(function (n) {
+    ID("edges.open-" + n).addEventListener("click", function () {
+      openNode(edgeRows[n - 1].querySelector('[data-role="tgt"]').textContent);
+    });
+  });
+
+  // The family follows the selector: HippoRAG arms read the hipporag graph, every other resolved arm the LightRAG graph.
+  picker = Picker.attach("graph", function (api) {
+    if (!ready) return;
+    checkAll();
+    var arm = api.arm();
+    if (api.blockers().length || arm === null) return;
+    var next = arm === "hipporag" ? "hipporag" : "lightrag";
+    if (next !== fixName) reload(next);
+  });
+  ready = true;
+  checkAll();
+  paint();
+  return { setState: setState, inject: inject, loadFixture: loadFixture };
+})();
+Console.register("graph", GraphScreen);
 
 </script>
 </body>

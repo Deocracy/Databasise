@@ -1,3 +1,211 @@
 <section data-mock-id="screen-graph" hidden>
   <h1>Graph/vector browser</h1>
+  <div class="mock-strip" data-mock-only="true">
+    <label>Outcome
+      <select data-mock-id="graph.mock.outcome" data-mock-only="true">
+        <option value="success">success</option>
+        <option value="refusal">refusal</option>
+        <option value="validation">validation</option>
+        <option value="server-failure">server failure</option>
+        <option value="generic">generic 5xx</option>
+      </select>
+    </label>
+    <label>Fixture
+      <select data-mock-id="graph.mock.fixture" data-mock-only="true">
+        <option value="lightrag" selected>lightrag</option>
+        <option value="hipporag">hipporag</option>
+        <option value="store-busy">store-busy</option>
+        <option value="unknown-node">unknown-node</option>
+      </select>
+    </label>
+  </div>
+  <div data-role="errors" hidden>
+<!--@include parts/errors.html s=graph-->
+  </div>
+  <div data-needs-backend="POST /graph/nodes" data-backend-state="operator" title="Mounted only with --operator" data-role="busy-wrap" hidden>
+    <div class="banner state-view" data-state="warn" role="alert" data-mock-id="graph.state.store-busy">
+      <span class="badge badge-op">operator route</span>
+      <p class="label"><span aria-hidden="true">▲</span> Request refused: store busy</p>
+      <h3 class="mono">StoreBusyError</h3>
+      <p data-role="message"></p>
+      <p class="muted">The store is in use by another process. Retry when it has finished.</p>
+      <p class="muted">HTTP 409. store_kind: <span class="mono">graph</span></p>
+      <button type="button" class="btn btn-outline" data-mock-id="graph.state.retry">Retry request</button>
+    </div>
+  </div>
+  <div data-needs-backend="POST /graph/node" data-backend-state="operator" title="Mounted only with --operator" data-role="unknown-wrap" hidden>
+    <div class="banner state-view" data-state="warn" role="alert" data-mock-id="graph.state.unknown-node">
+      <span class="badge badge-op">operator route</span>
+      <p class="label"><span aria-hidden="true">▲</span> Request refused</p>
+      <h3 class="mono">UnknownGraphNodeError</h3>
+      <p>No node with the id <mark data-role="node-id"></mark> exists in the selected graph.</p>
+      <p class="muted">Check the id, or open a node from the list. HTTP 422.</p>
+    </div>
+  </div>
+
+  <div class="graph-block" data-needs-backend="POST /graph/nodes" data-backend-state="operator" title="Mounted only with --operator">
+    <span class="badge badge-op">operator route</span>
+<!--@include parts/selector.html s=graph-->
+    <p class="muted" role="status" data-mock-id="graph.selector.family">Reading: LightRAG graph</p>
+  </div>
+
+  <div class="graph-block" data-needs-backend="POST /stores/counts" title="Not implemented yet: POST /stores/counts">
+    <span class="badge badge-nb">needs backend</span>
+    <div class="tiles" role="group" aria-label="Store counts">
+      <div class="tile" data-mock-id="graph.counts.nodes"><span class="count" data-role="count">0</span><span class="label">nodes</span></div>
+      <div class="tile" data-mock-id="graph.counts.edges"><span class="count" data-role="count">0</span><span class="label">edges</span></div>
+      <div class="tile" data-mock-id="graph.counts.chunks"><span class="count" data-role="count">0</span><span class="label">chunks</span></div>
+    </div>
+  </div>
+
+  <div class="graph-cols">
+    <div class="graph-block" data-needs-backend="POST /graph/nodes" data-backend-state="operator" title="Mounted only with --operator">
+      <span class="badge badge-op">operator route</span>
+      <div class="panel" data-mock-id="graph.nodes.panel">
+        <h2>Nodes</h2>
+        <div class="run-row">
+          <label class="inline">Node id prefix
+            <input type="text" autocomplete="off" spellcheck="false" data-mock-id="graph.nodes.prefix">
+          </label>
+          <label class="inline">Page size (1 to 100)
+            <input type="number" min="1" max="100" step="1" value="50" data-mock-id="graph.nodes.page-size" data-field-loc="body.limit" data-error-id="graph.nodes.page-size-error">
+          </label>
+        </div>
+        <p class="field-error" role="alert" tabindex="-1" data-mock-id="graph.nodes.page-size-error" hidden></p>
+        <p class="muted" role="status" data-mock-id="graph.nodes.total"></p>
+        <div class="state-view" role="status" data-mock-id="graph.nodes.loading" hidden><span class="spinner" role="presentation"></span> Reading nodes from the graph store.</div>
+        <div class="state-view" data-mock-id="graph.nodes.empty" hidden>
+          <h3>No nodes to show</h3>
+          <p>The selected graph has no nodes for this prefix. Clear the prefix or choose another selector.</p>
+        </div>
+        <div class="table-scroll" data-role="table-wrap">
+          <table role="table" data-mock-id="graph.nodes.table">
+            <thead><tr><th>Node id</th><th>Degree</th><th>Actions</th></tr></thead>
+            <tbody>
+<!--@repeat n 8-->
+              <tr hidden>
+                <td class="mono" data-role="id"></td>
+                <td data-role="degree"></td>
+                <td><button type="button" class="btn btn-outline" data-mock-id="graph.nodes.open-{{n}}">Open</button></td>
+              </tr>
+<!--@end n-->
+            </tbody>
+          </table>
+        </div>
+        <div class="run-row" data-role="pager">
+          <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="graph.nodes.prev">Previous page</button>
+          <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="graph.nodes.next">Next page</button>
+          <span class="muted" data-role="range"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="graph-block" data-needs-backend="POST /graph/node" data-backend-state="operator" title="Mounted only with --operator">
+      <span class="badge badge-op">operator route</span>
+      <div class="panel" data-focal="true" data-mock-id="graph.node.panel">
+        <h2>Node</h2>
+        <div class="run-row">
+          <label class="inline">Node id
+            <input type="text" autocomplete="off" spellcheck="false" data-mock-id="graph.node.lookup" data-field-loc="body.node_id" data-error-id="graph.node.lookup-error">
+          </label>
+          <button type="button" class="btn btn-primary" data-mock-id="graph.node.lookup-submit">Open node</button>
+        </div>
+        <p class="field-error" role="alert" tabindex="-1" data-mock-id="graph.node.lookup-error" hidden></p>
+        <div class="state-view" role="status" data-mock-id="graph.node.loading" hidden><span class="spinner" role="presentation"></span> Reading the node.</div>
+        <p class="muted" data-role="prompt">Open a node from the list, or enter a node id.</p>
+        <div data-role="detail-body" hidden>
+          <h3 class="mono" data-role="node-id"></h3>
+          <p>Degree: <strong data-mock-id="graph.node.degree"></strong></p>
+          <div class="graph-block" data-needs-backend="POST /graph/node/attrs" title="Not implemented yet: POST /graph/node/attrs">
+            <span class="badge badge-nb">needs backend</span>
+            <button type="button" class="btn btn-outline" data-mock-id="graph.node.attrs-load">Load attributes</button>
+            <dl class="attrs" data-mock-id="graph.node.attrs" hidden></dl>
+          </div>
+          <h3>Edges</h3>
+          <div class="graph-block" data-needs-backend="POST /graph/node" data-backend-state="operator" title="Mounted only with --operator">
+            <span class="badge badge-op">operator route</span>
+            <div class="run-row">
+              <label class="inline">Page size (1 to 100)
+                <input type="number" min="1" max="100" step="1" value="50" data-mock-id="graph.edges.page-size" data-error-id="graph.edges.page-size-error">
+              </label>
+            </div>
+            <p class="field-error" role="alert" tabindex="-1" data-mock-id="graph.edges.page-size-error" hidden></p>
+            <div class="state-view" role="status" data-mock-id="graph.edges.loading" hidden><span class="spinner" role="presentation"></span> Reading edges.</div>
+            <div class="state-view" data-mock-id="graph.edges.empty" hidden>
+              <h3>No edges to show</h3>
+              <p>This node has no incident edges.</p>
+            </div>
+            <div class="table-scroll" data-role="table-wrap">
+              <table role="table" data-mock-id="graph.edges.table">
+                <thead><tr><th>src</th><th>tgt</th><th>edge_types</th><th>weight</th></tr></thead>
+                <tbody>
+<!--@repeat n 6-->
+                  <tr hidden>
+                    <td class="mono" data-role="src"></td>
+                    <td><span class="mono" data-role="tgt"></span> <button type="button" class="btn btn-outline" data-mock-id="graph.edges.open-{{n}}">Open node</button></td>
+                    <td data-role="types"></td>
+                    <td data-role="weight"></td>
+                  </tr>
+<!--@end n-->
+                </tbody>
+              </table>
+            </div>
+            <div class="run-row" data-role="pager">
+              <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="graph.edges.prev">Previous page</button>
+              <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="graph.edges.next">Next page</button>
+              <span class="muted" data-role="range"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="graph-block" data-needs-backend="POST /chunks" data-backend-state="operator" title="Mounted only with --operator">
+    <span class="badge badge-op">operator route</span>
+    <div class="panel" data-mock-id="graph.chunks.panel">
+      <h2>Chunks</h2>
+      <div class="run-row">
+        <label class="inline">Page size (1 to 100)
+          <input type="number" min="1" max="100" step="1" value="50" data-mock-id="graph.chunks.page-size" data-error-id="graph.chunks.page-size-error">
+        </label>
+      </div>
+      <p class="field-error" role="alert" tabindex="-1" data-mock-id="graph.chunks.page-size-error" hidden></p>
+      <p class="muted" role="status" data-mock-id="graph.chunks.total"></p>
+      <div class="state-view" role="status" data-mock-id="graph.chunks.loading" hidden><span class="spinner" role="presentation"></span> Reading chunks.</div>
+      <div class="state-view" data-mock-id="graph.chunks.empty" hidden>
+        <h3>No chunks to show</h3>
+        <p>The selected store has no chunks. Ingest a document or choose another selector.</p>
+      </div>
+      <div class="table-scroll" data-role="table-wrap">
+        <table role="table" data-mock-id="graph.chunks.table">
+          <thead><tr><th>Chunk ref</th><th>Kind</th><th>Actions</th></tr></thead>
+          <tbody>
+<!--@repeat n 8-->
+            <tr hidden>
+              <td class="mono" data-role="ref"></td>
+              <td data-role="kind"></td>
+              <td><button type="button" class="btn btn-outline" data-mock-id="graph.chunks.open-{{n}}">Open</button></td>
+            </tr>
+<!--@end n-->
+          </tbody>
+        </table>
+      </div>
+      <div class="run-row" data-role="pager">
+        <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="graph.chunks.prev">Previous page</button>
+        <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="graph.chunks.next">Next page</button>
+        <span class="muted" data-role="range"></span>
+      </div>
+    </div>
+  </div>
+
+  <details class="panel" data-mock-id="graph.planned.list">
+    <summary data-mock-id="graph.planned.toggle">Planned (not built)</summary>
+    <ul>
+      <li>Graph editing</li>
+      <li>Lexical search</li>
+      <li>Blob view</li>
+      <li>Entity and relation vector browsing</li>
+    </ul>
+  </details>
 </section>
