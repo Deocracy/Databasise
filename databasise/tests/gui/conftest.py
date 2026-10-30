@@ -36,7 +36,9 @@ def pytest_pyfunc_call(pyfuncitem):
         assert MOCKUP.is_file(), f"{MOCKUP} is missing (GUI mockup not built yet)"
 
 
-@pytest.fixture(scope="session")
+# Module scope: a live sync_playwright keeps its event loop registered, which breaks every async
+# test that runs after tests/gui in the same session.
+@pytest.fixture(scope="module")
 def browser():
     if BROWSERS.exists():
         os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", str(BROWSERS))
