@@ -5,6 +5,14 @@ var Compare = (function () {
   var errorsBox = root.querySelector('[data-role="errors"]');
   var STATES = ["idle", "running", "success", "partial", "empty-evidence", "refusal-422", "validation-422", "error-500"];
   var TEXT_EMPTY = "Query text is empty. Enter at least one non-space character.";
+  var MSG = {
+    zero: "Add at least one selector. A comparison with no selectors is refused.",
+    one: "One selector runs as a plain query and returns a single result, not a set of columns.",
+  };
+
+  function duplicateMessage(key) {
+    return 'Duplicate comparison key "' + key + '". Each selector must render a unique key; the server refuses duplicates after earlier arms have run.';
+  }
   var model = [{ kind: "default", alias: "", tokens: [] }];
   var shown = [];
   var timers = [];
@@ -76,11 +84,25 @@ var Compare = (function () {
 
   // Derives keys, parts, chips and messages from the model; the slots hold the controls.
   function update() {
-    var blocked = model.length === 0;
+    var keys = [];
+    var dupKeys = [];
+    var dupRows = [];
+    model.forEach(function (m, idx) {
+      var v = selectorOf(m);
+      if (blockerOf(v)) return;
+      var key = comparisonKey(v);
+      // Exact comparison: the later occurrence is the one the server would refuse.
+      if (keys.indexOf(key) >= 0) {
+        dupRows.push(idx);
+        if (dupKeys.indexOf(key) < 0) dupKeys.push(key);
+      }
+      keys.push(key);
+    });
+    var blocked = model.length === 0 || dupKeys.length > 0;
     model.forEach(function (m, idx) {
       var i = idx + 1;
       var v = selectorOf(m);
-      var msg = blockerOf(v);
+      var msg = blockerOf(v) || (dupRows.indexOf(idx) >= 0 ? duplicateMessage(comparisonKey(v)) : "");
       var row = R(i, "kind").closest('[data-role="row"]');
       Array.prototype.forEach.call(row.querySelectorAll("[data-part]"), function (part) {
         part.hidden = part.getAttribute("data-part") !== m.kind;
@@ -95,7 +117,21 @@ var Compare = (function () {
       error.textContent = msg;
       error.hidden = !msg;
       if (msg) blocked = true;
+      setDisabled(R(i, "move-up"), i === 1);
+      setDisabled(R(i, "move-down"), i === model.length);
     });
+    var dup = ID("compare.warning-duplicate");
+    clearNode(dup);
+    dupKeys.forEach(function (key) {
+      dup.appendChild(h("p", duplicateMessage(key)));
+    });
+    dup.hidden = dupKeys.length === 0;
+    var count = ID("compare.warning-count");
+    count.textContent = model.length === 0 ? MSG.zero : model.length === 1 ? MSG.one : "";
+    count.setAttribute("data-state", model.length === 0 ? "warn" : "neutral");
+    count.hidden = model.length > 1;
+    setDisabled(ID("compare.add"), model.length >= MAX);
+    ID("compare.add").closest(".cmp-add-row").querySelector('[data-role="cap-note"]').hidden = model.length < MAX;
     syncRun(blocked);
   }
 
@@ -220,19 +256,75 @@ var Compare = (function () {
     }
     fillTokens(C(c, "tokens"), env.token_accounting);
     fillSeam(C(c, "seam"), env.seam_events);
+    setDisabled(C(c, "promote"), partial);
     C(c, "promote").title = partial ? "A partial run cannot be promoted." : "";
+    panel.querySelector('[data-role="no-promote"]').hidden = !partial;
   }
 
-  function showColumns(results) {
+  // Only a column whose fixture is still resolving shows a spinner (E4 loading).
+  function setBusy(c, busy) {
+    var panel = C(c, "panel");
+    panel.querySelector('[data-role="spinner"]').hidden = !busy;
+    panel.querySelector('[data-role="body"]').hidden = busy;
+    panel.setAttribute("aria-busy", String(busy));
+  }
+
+  // Below 768 px the CSS shows only the active column; the tabs pick it.
+  function selectTab(active) {
+    for (var c = 1; c <= MAX; c++) {
+      var r = shown[c - 1];
+      var tab = ID("compare.tab" + c);
+      tab.hidden = !r;
+      tab.textContent = r ? r.key : "";
+      tab.setAttribute("aria-selected", String(c === active));
+      C(c, "panel").setAttribute("data-active", String(c === active));
+    }
+  }
+
+  function renderDiff() {
+    var count = Object.create(null);
+    shown.forEach(function (r) {
+      r.body.evidence.forEach(function (e) {
+        count[e.ref] = (count[e.ref] || 0) + 1;
+      });
+    });
+    var shared = Object.keys(count).filter(function (ref) {
+      return count[ref] > 1;
+    }).length;
+    var totals = shown.map(function (r) {
+      var sum = r.body.token_accounting.reduce(function (acc, t) {
+        return acc + t.prompt_tokens + t.completion_tokens;
+      }, 0);
+      return r.key + " " + sum;
+    });
+    ID("compare.diff").textContent = "Evidence refs shared between columns: " + shared + ". Tokens per column (prompt + completion): " + totals.join(" · ") + ".";
+  }
+
+  // animate staggers the columns 200 ms apart, each with its own spinner until its result arrives.
+  function showColumns(results, animate, done) {
     shown = results;
     ID("compare.columns").hidden = false;
+    ID("compare.diff").textContent = "";
     for (var c = 1; c <= MAX; c++) {
       var r = results[c - 1];
       C(c, "panel").hidden = !r;
       if (!r) continue;
       fillHeader(c, r);
       fillBody(c, r);
+      setBusy(c, !!animate);
     }
+    selectTab(1);
+    function finish() {
+      renderDiff();
+      if (done) done();
+    }
+    if (!animate) return finish();
+    results.forEach(function (r, idx) {
+      later(200 * (idx + 1), function () {
+        setBusy(idx + 1, false);
+        if (idx === results.length - 1) finish();
+      });
+    });
   }
 
   function describe(m) {
@@ -255,16 +347,64 @@ var Compare = (function () {
     QueryScreen.showState("running");
     var specs = model.map(describe);
     later(800, function () {
-      hideStates();
+      var bad = specs.filter(function (s) {
+        return s.resolve.indexOf("not satisfiable") >= 0;
+      })[0];
+      if (bad) {
+        // A compare-level failure renders through the shared query error shapes.
+        running = false;
+        QueryScreen.showState("refusal-422");
+        renderError("query", 422, {
+          refusal_type: "UnsatisfiableSelectorError",
+          message: "no wiring satisfies the requested selector",
+          selector_kind: bad.value && bad.value.capability ? "capability" : "harness",
+          requested: bad.value && bad.value.capability ? bad.value.capability : [],
+        });
+        update();
+        return;
+      }
       var body = FIX.query["q-success"].body;
+      if (specs.length === 1) {
+        // One selector runs as a plain query: the single-result layout, not a column.
+        running = false;
+        QueryScreen.renderResult(body);
+        update();
+        return;
+      }
+      hideStates();
       showColumns(
         specs.map(function (s) {
           return { key: s.key, arm: s.arm, resolve: s.resolve, body: body };
-        })
+        }),
+        true,
+        function () {
+          running = false;
+          update();
+        }
       );
-      running = false;
-      update();
     });
+  }
+
+  function loadFixture(name) {
+    var fx = FIX.compare[name];
+    if (!fx) throw new Error("unknown compare fixture " + name);
+    cancel();
+    running = false;
+    model = fx.map(function (column) {
+      var s = column.selector;
+      return s === null ? { kind: "default", alias: "", tokens: [] } : s.alias !== undefined ? { kind: "alias", alias: s.alias, tokens: [] } : { kind: "capability", alias: "", tokens: s.capability.slice() };
+    });
+    QueryScreen.setMode("compare");
+    sync();
+    hideStates();
+    paint();
+    showColumns(
+      model.map(function (m, idx) {
+        var d = describe(m);
+        return { key: d.key, arm: d.arm, resolve: d.resolve, body: FIX.compare.bodies[fx[idx].body] };
+      }),
+      false
+    );
   }
 
   // Mode changes arrive from the tab buttons and from "Compare this query"; both only set data-mode.
@@ -301,11 +441,20 @@ var Compare = (function () {
   builder.addEventListener("change", onEdit);
   builder.addEventListener("click", function (event) {
     var button = event.target.closest("button");
-    var hit = button && /^query\.row(\d)\.remove$/.exec(button.getAttribute("data-mock-id"));
+    var hit = button && /^query\.row(\d)\.(remove|move-up|move-down)$/.exec(button.getAttribute("data-mock-id"));
     if (!hit) return;
-    model.splice(+hit[1] - 1, 1);
+    var idx = +hit[1] - 1;
+    if (hit[2] === "remove") {
+      model.splice(idx, 1);
+      paint();
+      ID("compare.add").focus();
+      return;
+    }
+    var to = idx + (hit[2] === "move-up" ? -1 : 1);
+    if (to < 0 || to >= model.length) return;
+    model.splice(to, 0, model.splice(idx, 1)[0]);
     paint();
-    ID("compare.add").focus();
+    R(to + 1, hit[2]).focus();
   });
   ID("compare.add").addEventListener("click", function () {
     if (model.length >= MAX) return;
@@ -322,6 +471,15 @@ var Compare = (function () {
         if (!r || !r.body.trace_token) return;
         Console.show("evidence");
         Console.emit("open-trace", { token: r.body.trace_token });
+      });
+      C(col, "promote").addEventListener("click", function () {
+        var r = shown[col - 1];
+        if (!r) return;
+        Console.show("ledger");
+        Console.emit("promote", { trace: r.body.trace_token });
+      });
+      ID("compare.tab" + col).addEventListener("click", function () {
+        selectTab(col);
       });
       for (var n = 1; n <= 5; n++) {
         (function (slot) {
@@ -348,8 +506,12 @@ var Compare = (function () {
     R(i, "kind").setAttribute("data-error-id", "query.row" + i + ".error");
   }
 
+  ID("text.input").addEventListener("input", function (event) {
+    var box = event.target;
+    if (root.getAttribute("data-mode") === "compare" && box.getAttribute("aria-invalid")) setFieldError(box, box.value.trim() === "" ? TEXT_EMPTY : "");
+  });
   new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ["data-mode"] });
   hideColumns();
   paint();
-  return { run: run, loadFixture: function () {} };
+  return { run: run, loadFixture: loadFixture };
 })();
