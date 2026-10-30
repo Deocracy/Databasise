@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Databasise operator console (mockup)</title>
+<style>
+<!--@glob css/*.css-->
+</style>
+</head>
+<body>
+<div data-mock-id="shell.root.app" data-mock-variant="console-a" class="app">
+  <header class="app-header">
+    <div class="app-title"><span class="brand">Databasise</span> <span class="muted">Operator console</span></div>
+    <div class="health">
+      <div data-mock-id="shell.health.status" role="status" data-state="ok">stores openable / v1 reachable</div>
+      <span class="badge" data-role="health-badge" data-state="ok"><span class="spinner" role="presentation" hidden></span><span data-role="health-glyph" aria-hidden="true"></span> <span data-role="health-word"></span></span>
+      <button type="button" class="btn btn-outline" data-mock-id="shell.health.details">Health details</button>
+    </div>
+  </header>
+  <div class="app-body">
+    <nav class="nav" aria-label="Screens">
+      <button type="button" data-mock-id="shell.nav.query">Query &amp; Compare</button>
+      <button type="button" data-mock-id="shell.nav.evidence">Evidence &amp; Trace</button>
+      <button type="button" data-mock-id="shell.nav.documents">Documents &amp; Jobs</button>
+      <button type="button" data-mock-id="shell.nav.corpus">Corpus &amp; Health</button>
+      <button type="button" data-mock-id="shell.nav.ledger">Ledger</button>
+      <button type="button" data-mock-id="shell.nav.graph">Graph/vector browser</button>
+    </nav>
+    <main class="content">
+<!--@include screens/query.html-->
+<!--@include screens/evidence.html-->
+<!--@include screens/documents.html-->
+<!--@include screens/corpus.html-->
+<!--@include screens/ledger.html-->
+<!--@include screens/graph.html-->
+    </main>
+  </div>
+<!--@glob dialogs/*.html-->
+</div>
+<script type="application/json" id="mock-fixtures"><!--@fixtures--></script>
+<script>
+<!--@glob js/*.js-->
+</script>
+</body>
+</html>
