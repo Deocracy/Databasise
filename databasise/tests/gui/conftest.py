@@ -1,7 +1,9 @@
 """17-01 (GUI-01, D-01, D-15): shared fixtures for the operator-console mockup tests.
 
-``mockup_path`` fails (never skips) when ``mockups/operator-console.html`` is absent, so a fail-first
-run names the missing file. ``browser`` launches nixpkgs Chromium through Playwright for Python:
+A test that uses ``mockup_path`` (directly or through ``ui``) fails, never skips and never errors,
+when ``mockups/operator-console.html`` is absent: ``pytest_pyfunc_call`` raises the AssertionError
+in the call phase (a failing fixture would be reported as ERROR, not failed), so a fail-first run
+counts "failed" and names the missing file. ``browser`` launches nixpkgs Chromium through Playwright for Python:
 a missing browser fails when ``DATABASISE_REQUIRE_BROWSER=1`` and skips otherwise. ``ui`` opens the
 mockup in an offline context and records every non-local request and every page error; a JS
 exception fails the test that caused it. Tests are plain synchronous functions (pytest-asyncio's
@@ -24,9 +26,14 @@ _LOCAL_SCHEMES = ("file:", "data:", "blob:", "about:")
 
 @pytest.fixture(scope="session")
 def mockup_path() -> Path:
-    # Fail, never skip: the fail-first run needs a non-zero exit that names the missing file.
-    assert MOCKUP.is_file(), f"{MOCKUP} is missing (GUI mockup not built yet)"
     return MOCKUP
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_pyfunc_call(pyfuncitem):
+    # Fail, never skip: the fail-first run needs a failure that names the missing file.
+    if "mockup_path" in pyfuncitem.fixturenames:
+        assert MOCKUP.is_file(), f"{MOCKUP} is missing (GUI mockup not built yet)"
 
 
 @pytest.fixture(scope="session")
@@ -101,9 +108,14 @@ class MockUI:
 
 
 @pytest.fixture
-def ui(mockup_path, browser):
-    # mockup_path is listed first so a missing file fails before any browser work.
+def ui(mockup_path, request):
+    if not mockup_path.is_file():
+        # pytest_pyfunc_call reports the missing file as the test failure; no browser work first.
+        yield None
+        return
     from playwright.sync_api import expect
+
+    browser = request.getfixturevalue("browser")
 
     context = browser.new_context(offline=True, viewport={"width": 1280, "height": 900})
     context.set_default_timeout(3000)
