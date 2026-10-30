@@ -1,0 +1,19 @@
+/* Corpus & Health (17-10) */
+.health-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sm); margin-bottom: var(--sm); }
+.health-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sm); margin-bottom: var(--sm); }
+.health-row .label { margin: 0; }
+.panel input[type="number"], .panel input[type="text"] { max-width: 100%; }
+.panel select { max-width: 100%; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: var(--sm); margin-bottom: var(--lg); }
+.tile .count { font: 600 20px/1.2 var(--font); }
+.tile .label { margin: 0; color: var(--muted); }
+.tile[data-state] { border-color: var(--st-fg); background: var(--st-bg); }
+.tile[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 0; }
+
+.tools { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sm); }
+.doc-table td [data-role="error"] { max-width: 40ch; margin: var(--xs) 0 0; overflow-wrap: anywhere; }
+.row-actions { white-space: nowrap; }
+.panel > details, details.panel > .table-scroll { margin-top: var(--sm); }
+details.panel[open] > summary { margin-bottom: var(--sm); }
+details.panel pre.preview { margin-top: var(--sm); }

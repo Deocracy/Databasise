@@ -445,6 +445,7 @@ var DocumentsScreen = (function () {
   }
 
   function finishDelete(p) {
+    if (p.from === "corpus") Console.show("documents");
     var bad = failure("delete", ["path", "document_id"]);
     if (bad) return showError(bad[0], bad[1]);
     showDeleteOutcome(Object.assign({}, FIX.documents["delete-success"], { document_id: p.id }), p.kind);
@@ -606,6 +607,14 @@ var DocumentsScreen = (function () {
   });
 
   wireErrors("documents");
+  // Delete from Corpus & Health: that screen lists the default store, so the Default selector label applies.
+  Console.on("delete-document", function (event) {
+    pending = { id: event.document_id, kind: "lightrag", from: "corpus" };
+    dialog.querySelector('[data-role="doc"]').textContent = event.document_id;
+    dialog.querySelector('[data-role="sel"]').textContent = "Default";
+    dialog.querySelector('[data-role="tail"]').textContent = DELETE_TAIL.lightrag;
+    openDialog("shell.dialog.delete", "shell.dialog.delete-cancel");
+  });
   Console.on("open-ingest", function () {
     Console.show("documents");
     showTab("paste");

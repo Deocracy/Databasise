@@ -1,0 +1,76 @@
+{
+  "counts-normal": {
+    "total": 47,
+    "offset": 0,
+    "next_offset": 6,
+    "counts": {"pending": 1, "parsing": 0, "analyzing": 0, "processing": 1, "preprocessed": 0, "processed": 42, "failed": 3, "interrupted": 0, "queued": 0},
+    "documents": [
+      {"document_id": "annual-report-2025", "status": "processed", "updated_at": "2026-10-28T09:14:02Z", "error_message": null},
+      {"document_id": "board-minutes-2026-02", "status": "failed", "updated_at": "2026-10-28T09:20:41Z", "error_message": "parse error: the file is not valid UTF-8 text (byte 0xff at offset 1024)"},
+      {"document_id": "contract-2026-q1", "status": "processed", "updated_at": "2026-10-28T10:02:15Z", "error_message": null},
+      {"document_id": "handbook-v3", "status": "processing", "updated_at": "2026-10-29T08:41:57Z", "error_message": null},
+      {"document_id": "meeting-notes-0412", "status": "failed", "updated_at": "2026-10-29T08:44:10Z", "error_message": "entity extraction failed on chunk 14 of 31: the model call timed out after 120 s; the document stays in this status until it is reprocessed"},
+      {"document_id": "policy-draft", "status": "pending", "updated_at": "2026-10-29T08:50:33Z", "error_message": null}
+    ]
+  },
+  "counts-preprocessed": {
+    "total": 47,
+    "offset": 0,
+    "next_offset": 6,
+    "counts": {"pending": 1, "parsing": 0, "analyzing": 0, "processing": 0, "preprocessed": 2, "processed": 41, "failed": 2, "interrupted": 1, "queued": 0},
+    "documents": [
+      {"document_id": "annual-report-2025", "status": "processed", "updated_at": "2026-10-28T09:14:02Z", "error_message": null},
+      {"document_id": "board-minutes-2026-02", "status": "failed", "updated_at": "2026-10-28T09:20:41Z", "error_message": "parse error: the file is not valid UTF-8 text (byte 0xff at offset 1024)"},
+      {"document_id": "contract-2026-q1", "status": "preprocessed", "updated_at": "2026-10-28T10:02:15Z", "error_message": null},
+      {"document_id": "handbook-v3", "status": "interrupted", "updated_at": "2026-10-29T08:41:57Z", "error_message": null},
+      {"document_id": "meeting-notes-0412", "status": "preprocessed", "updated_at": "2026-10-29T08:44:10Z", "error_message": null},
+      {"document_id": "policy-draft", "status": "processed", "updated_at": "2026-10-29T08:50:33Z", "error_message": null}
+    ]
+  },
+  "counts-empty": {
+    "total": 0,
+    "offset": 0,
+    "next_offset": null,
+    "counts": {"pending": 0, "parsing": 0, "analyzing": 0, "processing": 0, "preprocessed": 0, "processed": 0, "failed": 0, "interrupted": 0},
+    "documents": []
+  },
+  "counts-last": {
+    "total": 47,
+    "offset": 41,
+    "next_offset": null,
+    "counts": {"pending": 1, "parsing": 0, "analyzing": 0, "processing": 1, "preprocessed": 0, "processed": 42, "failed": 3, "interrupted": 0, "queued": 0},
+    "documents": [
+      {"document_id": "q3-forecast", "status": "processed", "updated_at": "2026-10-27T15:31:09Z", "error_message": null},
+      {"document_id": "release-notes-0.9", "status": "processed", "updated_at": "2026-10-27T15:33:48Z", "error_message": null},
+      {"document_id": "style-guide", "status": "failed", "updated_at": "2026-10-27T15:40:22Z", "error_message": "document text is empty after parsing; nothing to index"},
+      {"document_id": "supplier-terms", "status": "processed", "updated_at": "2026-10-27T16:02:51Z", "error_message": null},
+      {"document_id": "training-plan", "status": "processed", "updated_at": "2026-10-27T16:11:30Z", "error_message": null},
+      {"document_id": "visitor-policy", "status": "processed", "updated_at": "2026-10-27T16:19:04Z", "error_message": null}
+    ]
+  },
+  "retry": {"job_id": "a41c7e90d2b84f63915e0c7a3d8b2f14", "enqueued": true},
+  "wirings": [
+    {"name": "naive", "wiring_id": "lightrag-base", "wiring_version": "1", "title": "LightRAG query side base wiring", "node_count": 7, "effects": ["calls_embedding", "calls_llm", "reads_kv", "reads_vector"], "provides": ["answer", "evidence"], "harnesses": [], "default_eligible": true, "is_default": true, "reachable": true},
+    {"name": "bypass", "wiring_id": "lightrag-bypass", "wiring_version": "1", "title": "LightRAG query side base wiring", "node_count": 1, "effects": ["calls_llm"], "provides": ["answer"], "harnesses": [], "default_eligible": false, "is_default": false, "reachable": true},
+    {"name": "hybrid", "wiring_id": "lightrag-hybrid", "wiring_version": "1", "title": "LightRAG query side base wiring", "node_count": 17, "effects": ["calls_embedding", "calls_llm", "reads_graph", "reads_kv", "reads_vector"], "provides": ["answer", "evidence"], "harnesses": [], "default_eligible": false, "is_default": false, "reachable": true},
+    {"name": "local", "wiring_id": "lightrag-local", "wiring_version": "1", "title": "LightRAG query side base wiring", "node_count": 15, "effects": ["calls_embedding", "calls_llm", "calls_rerank", "reads_graph", "reads_kv", "reads_vector"], "provides": ["answer", "evidence"], "harnesses": [], "default_eligible": false, "is_default": false, "reachable": true},
+    {"name": "global", "wiring_id": "lightrag-global", "wiring_version": "1", "title": "LightRAG query side base wiring", "node_count": 15, "effects": ["calls_embedding", "calls_llm", "reads_graph", "reads_kv", "reads_vector"], "provides": ["answer", "evidence"], "harnesses": [], "default_eligible": false, "is_default": false, "reachable": true},
+    {"name": "hipporag", "wiring_id": "hipporag-base", "wiring_version": "1", "title": "HippoRAG 2 base wiring", "node_count": 14, "effects": ["calls_embedding", "calls_llm", "reads_graph", "reads_kv", "reads_vector"], "provides": ["answer", "evidence"], "harnesses": [], "default_eligible": false, "is_default": false, "reachable": true}
+  ],
+  "log": {
+    "lines": [
+      "2026-10-29T08:40:02Z INFO  databasise-rest started (operator=true, host=127.0.0.1)",
+      "2026-10-29T08:41:55Z INFO  POST /documents 200 job_id=3f9c2a7e5b1d4c88a0e6f1d2c3b4a597",
+      "2026-10-29T08:41:57Z INFO  v1 driver op=ingest document_id=handbook-v3 status=processing",
+      "2026-10-29T08:44:10Z WARN  v1 driver op=ingest document_id=meeting-notes-0412 model call timed out after 120 s",
+      "2026-10-29T08:44:10Z ERROR v1 driver op=ingest document_id=meeting-notes-0412 failed (CorpusOpSubprocessError)",
+      "2026-10-29T08:47:31Z INFO  GET /health 200 degraded stores_absent=5",
+      "2026-10-29T08:50:33Z INFO  POST /documents 200 job_id=9b04e1c7f2a84d5e8c13a6b0d7f92e41",
+      "2026-10-29T08:52:08Z INFO  POST /query 200 selector=default arm=naive nodes=7",
+      "2026-10-29T08:52:49Z INFO  POST /compare 200 arms=2",
+      "2026-10-29T08:55:12Z WARN  graph store chunk_entity_relation held by another process; read refused (StoreBusyError)",
+      "2026-10-29T08:55:40Z INFO  GET /corpus 200 limit=50 offset=0 total=47",
+      "2026-10-29T08:56:03Z INFO  GET /info 200"
+    ]
+  }
+}
