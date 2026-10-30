@@ -1,0 +1,463 @@
+{
+  "Alias list with active version (also feeds the selector picker)": {
+    "ids": [
+      "ledger.aliases.panel",
+      "ledger.aliases.table",
+      "query.selector.alias-picker",
+      "query.row1.alias-picker",
+      "documents.selector.alias-picker",
+      "graph.selector.alias-picker"
+    ]
+  },
+  "Arm knobs (top_k, related_chunk_number, live_rerank, keyword pinned replay, HippoRAG chunk size, synonymy threshold, damping, result top_k)": {
+    "planned": "query.planned.list",
+    "item": "Per-request arm settings"
+  },
+  "Artifact registry browser and §16.1 discovery": {
+    "planned": "corpus.planned.list",
+    "item": "Artifact registry browser"
+  },
+  "Batch evidence or trace resolve": {
+    "ids": [
+      "evidence.batch.submit",
+      "evidence.batch.status"
+    ]
+  },
+  "Browser access from the GUI origin": {
+    "not_a_control": "Serving and CORS decision (same-origin static serving or an allow_origins launcher option); no console control, the console is the client of that decision."
+  },
+  "Chunk browser: paged list of a modality's chunks": {
+    "ids": [
+      "graph.chunks.panel",
+      "graph.chunks.table",
+      "graph.chunks.page-size",
+      "graph.chunks.prev",
+      "graph.chunks.next",
+      "graph.chunks.open-1"
+    ]
+  },
+  "Clear all documents / clear LLM cache": {
+    "planned": "documents.planned.list",
+    "item": "Clear all documents and LLM cache"
+  },
+  "Console instance info": {
+    "ids": [
+      "shell.instance.chip",
+      "corpus.instance.panel",
+      "corpus.instance.version",
+      "corpus.instance.workspace"
+    ]
+  },
+  "Corpus filter, sort, search, per-document metadata": {
+    "ids": [
+      "corpus.table.status-filter",
+      "corpus.table.sort",
+      "corpus.table.search",
+      "corpus.table.clear-filter"
+    ]
+  },
+  "Corpus, counts and jobs for HippoRAG documents": {
+    "planned": "documents.planned.list",
+    "item": "HippoRAG job status"
+  },
+  "DELETE /documents/{document_id}": {
+    "ids": [
+      "documents.delete.panel",
+      "documents.delete.document-id",
+      "documents.delete.submit",
+      "documents.delete.outcome",
+      "corpus.table.delete-1",
+      "shell.dialog.delete-confirm"
+    ]
+  },
+  "Delete outcome `status_code`, `file_path`; `delete_llm_cache`; delete-impact preview": {
+    "planned": "documents.planned.list",
+    "item": "Delete-impact preview"
+  },
+  "Entity and relation vector browsing": {
+    "planned": "graph.planned.list",
+    "item": "Entity and relation vector browsing"
+  },
+  "Environment digest and its inputs": {
+    "planned": "corpus.planned.list",
+    "item": "Environment digest"
+  },
+  "Error detail for 500s and node failures": {
+    "ids": [
+      "corpus.log.panel",
+      "corpus.log.lines",
+      "corpus.log.refresh",
+      "query.error.server-log",
+      "query.error.server-failure"
+    ]
+  },
+  "Eval bundles, A/A calibration, parity results, falsifier reports": {
+    "planned": "ledger.planned.list",
+    "item": "Evaluation bundle and parity viewers"
+  },
+  "GET /corpus": {
+    "ids": [
+      "corpus.table.panel",
+      "corpus.table.documents",
+      "corpus.table.page-size",
+      "corpus.table.prev",
+      "corpus.table.next",
+      "corpus.table.refresh",
+      "corpus.table.poll",
+      "corpus.table.error-toggle-1"
+    ]
+  },
+  "GET /corpus/counts": {
+    "ids": [
+      "corpus.kpi.region",
+      "corpus.kpi.total",
+      "corpus.kpi.processed",
+      "corpus.kpi.failed",
+      "corpus.table.counts"
+    ]
+  },
+  "GET /health": {
+    "ids": [
+      "shell.health.status",
+      "shell.health.details",
+      "corpus.health.panel",
+      "corpus.health.overall",
+      "corpus.health.stores",
+      "corpus.health.engine",
+      "corpus.health.interpreter",
+      "corpus.health.refresh",
+      "corpus.health.poll"
+    ]
+  },
+  "GET /jobs/{job_id}": {
+    "ids": [
+      "documents.jobs.drawer",
+      "documents.jobs.job-id",
+      "documents.jobs.load",
+      "documents.jobs.documents",
+      "documents.jobs.counts",
+      "documents.jobs.page-size",
+      "documents.jobs.prev",
+      "documents.jobs.next"
+    ]
+  },
+  "Graph browser: node detail with incident edges": {
+    "ids": [
+      "graph.node.panel",
+      "graph.node.lookup",
+      "graph.node.lookup-submit",
+      "graph.node.degree",
+      "graph.node.attrs-load",
+      "graph.node.attrs",
+      "graph.edges.table",
+      "graph.edges.open-1"
+    ]
+  },
+  "Graph browser: paged node list": {
+    "ids": [
+      "graph.selector.group",
+      "graph.nodes.panel",
+      "graph.nodes.prefix",
+      "graph.nodes.table",
+      "graph.nodes.page-size",
+      "graph.nodes.prev",
+      "graph.nodes.next",
+      "graph.nodes.open-1"
+    ]
+  },
+  "Graph edge detail": {
+    "ids": [
+      "graph.edges.table",
+      "graph.edges.open-1"
+    ]
+  },
+  "Graph editing, lexical search, blob view": {
+    "planned": "graph.planned.list",
+    "item": "Graph editing"
+  },
+  "Health failure reasons and per-modality probes": {
+    "ids": [
+      "corpus.health.reasons",
+      "corpus.health.stores",
+      "corpus.health.engine"
+    ]
+  },
+  "HippoRAG delete and re-index": {
+    "ids": [
+      "documents.delete.panel",
+      "documents.selector.group",
+      "documents.delete.submit",
+      "documents.error.refusal"
+    ]
+  },
+  "HippoRAG job status, corpus listing, counts and index statistics": {
+    "planned": "documents.planned.list",
+    "item": "HippoRAG job status"
+  },
+  "Ingest/delete wall-clock ceilings and timeout reason": {
+    "planned": "documents.planned.list",
+    "item": "Ingest and delete time limits, with a typed timeout refusal"
+  },
+  "Job list": {
+    "ids": [
+      "documents.jobs.all",
+      "documents.jobs.list",
+      "documents.jobs.select-1"
+    ]
+  },
+  "Make LightRAG documents ingested through REST queryable": {
+    "ids": [
+      "documents.notice.store-split"
+    ]
+  },
+  "Modalities / wirings list": {
+    "ids": [
+      "corpus.wirings.panel",
+      "corpus.wirings.table",
+      "corpus.wirings.toggle"
+    ]
+  },
+  "Nearest neighbours of a chunk": {
+    "planned": "evidence.planned.list",
+    "item": "Nearest neighbours of a chunk"
+  },
+  "POST /compare": {
+    "ids": [
+      "query.mode.compare",
+      "query.compare.builder",
+      "query.compare.add",
+      "query.compare.columns",
+      "query.compare.diff",
+      "query.compare.warning-duplicate",
+      "query.row1.kind",
+      "query.col1.panel"
+    ]
+  },
+  "POST /documents": {
+    "ids": [
+      "documents.tabs.paste",
+      "documents.paste.text",
+      "documents.paste.document-id",
+      "documents.paste.request-preview",
+      "documents.paste.submit",
+      "documents.result.card",
+      "documents.result.open-job",
+      "documents.selector.group"
+    ]
+  },
+  "POST /documents/upload": {
+    "ids": [
+      "documents.tabs.upload",
+      "documents.upload.file",
+      "documents.upload.document-id",
+      "documents.upload.request-preview",
+      "documents.upload.submit",
+      "documents.upload.progress",
+      "documents.upload.notice"
+    ]
+  },
+  "POST /evidence/resolve": {
+    "ids": [
+      "evidence.lookup.panel",
+      "evidence.lookup.ref",
+      "evidence.lookup.namespace",
+      "evidence.lookup.kind",
+      "evidence.lookup.submit",
+      "evidence.inspector.panel",
+      "evidence.inspector.content",
+      "evidence.inspector.kv",
+      "query.evidence.open-1"
+    ]
+  },
+  "POST /promote": {
+    "ids": [
+      "ledger.promote.form",
+      "ledger.promote.alias",
+      "ledger.promote.traces",
+      "ledger.promote.origin-human",
+      "ledger.promote.origin-machine",
+      "ledger.promote.submit",
+      "ledger.promote.result",
+      "shell.dialog.promote-confirm",
+      "query.result.promote"
+    ]
+  },
+  "POST /query": {
+    "ids": [
+      "query.editor.panel",
+      "query.text.input",
+      "query.selector.group",
+      "query.advanced.panel",
+      "query.run.submit",
+      "query.result.panel",
+      "query.result.answer",
+      "query.result.badges",
+      "query.result.trace-link",
+      "query.evidence.table",
+      "query.tokens.table",
+      "query.seam.table",
+      "query.history.table"
+    ]
+  },
+  "POST /query/stream": {
+    "ids": [
+      "query.run.stream",
+      "query.run.spinner",
+      "query.run.message"
+    ]
+  },
+  "POST /retire": {
+    "ids": [
+      "ledger.timeline.retire-1",
+      "shell.dialog.retire",
+      "shell.dialog.retire-version",
+      "shell.dialog.retire-traces",
+      "shell.dialog.retire-confirm"
+    ]
+  },
+  "POST /rollback": {
+    "ids": [
+      "ledger.timeline.rollback-1",
+      "shell.dialog.rollback",
+      "shell.dialog.rollback-traces",
+      "shell.dialog.rollback-confirm"
+    ]
+  },
+  "POST /trace/resolve": {
+    "ids": [
+      "evidence.tabs.trace",
+      "evidence.trace.panel",
+      "evidence.trace.reference",
+      "evidence.trace.load",
+      "evidence.trace.debug",
+      "evidence.trace.summary",
+      "evidence.trace.identity",
+      "evidence.trace.nodes",
+      "evidence.trace.chart"
+    ]
+  },
+  "Parity and cross-modality views (ranked-id diff, keyword variance band, readiness preflight, import verification)": {
+    "planned": "ledger.planned.list",
+    "item": "Evaluation bundle and parity viewers"
+  },
+  "Part registry view": {
+    "planned": "corpus.planned.list",
+    "item": "Wiring detail and part registry views"
+  },
+  "Per-node placement (`execution_mode`), cancelled/never-scheduled nodes, failed-node elapsed time, allowance": {
+    "planned": "evidence.planned.list",
+    "item": "Node placement and cancelled nodes"
+  },
+  "Per-node run outputs (LightRAG keywords, `missing_seeds`, budget consumed/allowance, `pick_method_used`, assembled context; HippoRAG fact scores, guard branch)": {
+    "planned": "evidence.planned.list",
+    "item": "Per-node outputs in the trace"
+  },
+  "Per-request token budget": {
+    "planned": "query.planned.list",
+    "item": "Per-request token allowance (fixed at 1,000,000 per node today)"
+  },
+  "Pipeline status, busy flag, cancel": {
+    "ids": [
+      "documents.pipeline.status",
+      "documents.pipeline.cancel",
+      "documents.state.in-flight"
+    ]
+  },
+  "Promotability of a trace and promotion dry-run (derived arm, mutation class, next version, partial flag)": {
+    "ids": [
+      "ledger.promote.preview",
+      "ledger.promote.preview-result",
+      "ledger.promote.preflight"
+    ]
+  },
+  "Promotion form options (verbs, change origins, posture)": {
+    "planned": "ledger.planned.list",
+    "item": "Promotion options listing"
+  },
+  "Quarantined-namespace inventory and GC": {
+    "planned": "corpus.planned.list",
+    "item": "Namespace cleanup"
+  },
+  "Recent runs list (trace picker for ledger forms)": {
+    "ids": [
+      "evidence.trace.recent",
+      "ledger.promote.source-recent",
+      "ledger.promote.source-history"
+    ]
+  },
+  "Refusal catalogue (`refusal_type` names and attribute keys)": {
+    "ids": [
+      "corpus.catalogue.panel",
+      "corpus.catalogue.table",
+      "corpus.catalogue.filter",
+      "query.error.catalogue-link"
+    ]
+  },
+  "Reprocess failed or stuck documents": {
+    "ids": [
+      "corpus.table.reprocess"
+    ]
+  },
+  "Selector dry-run (which wiring a selector resolves to; whether it is reachable, satisfiable, default-eligible)": {
+    "ids": [
+      "query.selector.resolves-to",
+      "query.selector.table",
+      "query.selector.table-toggle",
+      "query.col1.resolves-to",
+      "documents.selector.resolves-to",
+      "graph.selector.resolves-to"
+    ]
+  },
+  "Show which model clients are wired (llm, embedding, rerank) and whether they respond": {
+    "ids": [
+      "corpus.health.clients"
+    ]
+  },
+  "Start the REST app with a chosen store root, workspace and port": {
+    "not_a_control": "Launcher process (databasise-rest); the console is served by and talks to the running app, so it has no control for starting it."
+  },
+  "Store counts (nodes, edges, chunks)": {
+    "ids": [
+      "graph.counts.nodes",
+      "graph.counts.edges",
+      "graph.counts.chunks"
+    ]
+  },
+  "Token-level answer streaming": {
+    "planned": "query.planned.list",
+    "item": "Token-level answer streaming"
+  },
+  "Versions and history of one alias (rollback/retire pickers, timeline)": {
+    "ids": [
+      "ledger.timeline.region",
+      "ledger.timeline.alias",
+      "ledger.timeline.table",
+      "ledger.timeline.prev",
+      "ledger.timeline.next",
+      "ledger.timeline.rollback-1",
+      "ledger.timeline.retire-1"
+    ]
+  },
+  "Wiring detail (DAG view)": {
+    "planned": "corpus.planned.list",
+    "item": "Wiring detail and part registry views"
+  },
+  "Wiring validation report": {
+    "planned": "corpus.planned.list",
+    "item": "Wiring validation report"
+  },
+  "Working LightRAG file upload": {
+    "ids": [
+      "documents.upload.notice",
+      "documents.upload.file",
+      "documents.upload.submit"
+    ]
+  },
+  "Write-in-flight / store-busy status": {
+    "ids": [
+      "documents.state.in-flight",
+      "corpus.health.busy",
+      "graph.state.store-busy"
+    ]
+  }
+}
