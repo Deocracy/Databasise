@@ -1,5 +1,5 @@
 {
-  "ledger_version": 876,
+  "ledger_version": 877,
   "frozen_at": null,
   "items": [
     {
@@ -2529,7 +2529,12 @@
     "owner_wait_h": 24
   },
   "check_guard": [],
-  "check_edit_grants": {},
+  "check_edit_grants": {
+    "databasise/tests/gui/conftest.py": {
+      "reason": "browser fixture is session-scoped; Playwright sync event loop breaks async tests that run after tests/gui; change scope to module",
+      "granted_at": 877
+    }
+  },
   "notify_cmd": null,
   "check_baseline": 606
 }
