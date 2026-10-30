@@ -5,6 +5,230 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Databasise operator console (mockup)</title>
 <style>
+:root {
+  --bg: #ffffff;
+  --bg-2: #f4f4f5;
+  --border: #e4e4e7;
+  --text: #09090b;
+  --muted: #52525b;
+  --accent: #1d4ed8;
+  --focus: #3b82f6;
+  --destructive: #b91c1c;
+  --ok-fg: #166534;
+  --ok-bg: #dcfce7;
+  --warn-fg: #92400e;
+  --warn-bg: #fef3c7;
+  --fail-fg: #991b1b;
+  --fail-bg: #fee2e2;
+  --neutral-fg: #52525b;
+  --neutral-bg: #f4f4f5;
+  --progress-fg: #1e40af;
+  --progress-bg: #dbeafe;
+  --nb-fg: #5b21b6;
+  --nb-bg: #ede9fe;
+  --xs: 4px;
+  --sm: 8px;
+  --md: 16px;
+  --lg: 24px;
+  --xl: 32px;
+  --2xl: 48px;
+  --3xl: 64px;
+  --font: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+[hidden] { display: none !important; }
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font: 400 14px/1.5 var(--font);
+  color: var(--text);
+  background: var(--bg);
+}
+
+h1 { margin: 0 0 var(--xl); font-size: 20px; font-weight: 600; line-height: 1.2; }
+h2, h3 { margin: 0 0 var(--sm); font-size: 16px; font-weight: 600; line-height: 1.2; }
+p { margin: 0 0 var(--sm); }
+.muted { color: var(--muted); }
+.brand { font-size: 16px; font-weight: 600; line-height: 1.2; }
+
+/* Status tints: any element with data-state hands its colours to .badge, .banner and .chip. */
+[data-state="ok"] { --st-fg: var(--ok-fg); --st-bg: var(--ok-bg); }
+[data-state="warn"], [data-state="degraded"] { --st-fg: var(--warn-fg); --st-bg: var(--warn-bg); }
+[data-state="fail"], [data-state="error"] { --st-fg: var(--fail-fg); --st-bg: var(--fail-bg); }
+[data-state="neutral"] { --st-fg: var(--neutral-fg); --st-bg: var(--neutral-bg); }
+[data-state="progress"], [data-state="loading"] { --st-fg: var(--progress-fg); --st-bg: var(--progress-bg); }
+
+/* Focus ring on every focusable element. */
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Shell */
+.app { min-height: 100vh; display: flex; flex-direction: column; }
+.app-header {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md);
+  padding: 0 var(--lg);
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+}
+.app-title { display: flex; align-items: baseline; gap: var(--sm); }
+.health { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sm); }
+.app-body { display: grid; grid-template-columns: 224px minmax(0, 1fr); flex: 1; }
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xs);
+  padding: var(--sm);
+  background: var(--bg-2);
+  border-right: 1px solid var(--border);
+}
+.nav button {
+  height: 36px;
+  padding: 0 var(--md);
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  font: 600 13px/1.5 var(--font);
+  text-align: left;
+  cursor: pointer;
+}
+.nav button:hover { background: var(--border); }
+.nav button[aria-current="page"] { box-shadow: inset 3px 0 0 var(--accent); color: var(--accent); background: var(--bg); }
+.content { min-width: 0; max-width: 1440px; padding: var(--lg); }
+.content > * { min-width: 0; }
+
+/* Mock chrome */
+.mock-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sm);
+  padding: var(--sm) var(--lg);
+  background: var(--bg-2);
+  border: 1px dashed var(--muted);
+  color: var(--muted);
+}
+
+/* Region marker (GUI-02 test keys on this class): a titled box of content. */
+.panel {
+  padding: var(--md);
+  margin-bottom: var(--lg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+/* Region marker (GUI-02 test keys on this class): a message strip; the data-state sets its tint. */
+.banner {
+  padding: var(--md);
+  border: 1px solid var(--st-fg, var(--border));
+  border-radius: 8px;
+  background: var(--st-bg, var(--bg-2));
+  color: var(--st-fg, var(--text));
+}
+.mock-banner { padding: var(--sm) var(--lg); border-radius: 0; border-width: 0 0 1px; }
+
+/* Region marker (GUI-02 test keys on this class): one named screen state; vertical spacing only. */
+.state-view { margin: var(--md) 0; }
+
+/* Region marker (GUI-02 test keys on this class): a badge group. */
+.badges { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sm); }
+
+.badge, .chip, .badge-nb, .badge-op {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xs);
+  padding: 0 var(--sm);
+  border-radius: 4px;
+  font: 600 13px/1.5 var(--font);
+  color: var(--st-fg, var(--neutral-fg));
+  background: var(--st-bg, var(--neutral-bg));
+}
+.chip { border: 1px solid var(--border); font-weight: 400; }
+.badge-nb { color: var(--nb-fg); background: var(--nb-bg); }
+.badge-op { color: #52525b; background: #f4f4f5; }
+
+.table-scroll { overflow-x: auto; max-width: 100%; }
+table { border-collapse: collapse; width: 100%; }
+th, td { padding: var(--sm) var(--md); border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+th { background: var(--bg-2); font: 600 13px/1.5 var(--font); }
+tbody tr:nth-child(even) { background: var(--bg-2); }
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xs);
+  padding: var(--md);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-2);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mono, .data { font: 400 13px/1.5 var(--mono); overflow-wrap: anywhere; }
+.field-error { margin: var(--xs) 0 0; color: var(--fail-fg); font-size: 13px; }
+
+/* Controls */
+.btn, input, select, textarea {
+  min-height: 36px;
+  padding: 0 var(--sm);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font: 400 14px/1.5 var(--font);
+}
+textarea { padding: var(--sm); }
+.btn { padding: 0 var(--md); font-weight: 600; cursor: pointer; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #ffffff; }
+.btn-outline { background: var(--bg); border-color: var(--muted); color: var(--text); }
+.btn-destructive { background: var(--destructive); border-color: var(--destructive); color: #ffffff; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-icon { width: 44px; height: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.icon { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .spinner { animation: spin 0.8s linear infinite; }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Dialogs (480 px; 640 px for retire) */
+dialog { width: 480px; max-width: calc(100% - 32px); padding: var(--lg); border: 1px solid var(--border); border-radius: 8px; }
+dialog.dialog-wide { width: 640px; }
+dialog::backdrop { background: rgba(9, 9, 11, 0.4); }
+
+@media (max-width: 767px) {
+  .app-header { flex-direction: column; align-items: flex-start; justify-content: center; gap: var(--sm); padding: var(--sm) var(--md); }
+  .app-body { grid-template-columns: minmax(0, 1fr); align-content: start; }
+  .nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .nav button { min-height: 44px; height: auto; padding: var(--xs); text-align: center; overflow-wrap: anywhere; }
+  .nav button[aria-current="page"] { box-shadow: inset 0 -3px 0 var(--accent); }
+  .content { padding: var(--md); }
+  .mock-banner, .mock-strip { padding-left: var(--md); padding-right: var(--md); }
+  .btn, input, select { min-height: 44px; }
+}
 
 </style>
 </head>
@@ -18,6 +242,17 @@
       <button type="button" class="btn btn-outline" data-mock-id="shell.health.details">Health details</button>
     </div>
   </header>
+  <div class="banner mock-banner" data-mock-id="shell.mock.banner" data-state="neutral">Mockup. All data is fixture data; no network request is made.</div>
+  <div class="mock-strip" data-mock-only="true">
+    <label>Health fixture
+      <select data-mock-id="shell.mock.health-fixture" data-mock-only="true">
+        <option value="ok">ok</option>
+        <option value="degraded">degraded</option>
+        <option value="loading">loading</option>
+        <option value="error">error</option>
+      </select>
+    </label>
+  </div>
   <div class="app-body">
     <nav class="nav" aria-label="Screens">
       <button type="button" data-mock-id="shell.nav.query">Query &amp; Compare</button>
@@ -55,6 +290,15 @@
     </main>
   </div>
 
+  <svg hidden aria-hidden="true" width="0" height="0">
+    <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></symbol>
+    <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+    <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></symbol>
+  </svg>
 </div>
 <script type="application/json" id="mock-fixtures">{"health":{"health-ok":{"status":"ok","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:chunks":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"ok","graph:hipporag-graph":"ok","vector:hipporag-chunks":"ok","vector:hipporag-entities":"ok","vector:hipporag-facts":"ok"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":true,"embedding":true,"rerank":true},"engine_reason":null},"health-degraded":{"status":"degraded","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"absent","graph:hipporag-graph":"absent","vector:hipporag-chunks":"absent","vector:hipporag-entities":"absent","vector:hipporag-facts":"absent"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":false,"embedding":false,"rerank":false},"engine_reason":"model clients not configured"},"health-loading":{"loading":true},"health-error":{"status":500,"body":"Internal Server Error"}},"refusals":[{"refusal_type":"ActiveGenerationRetirementError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"AmbiguousAnswerPositionError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"AmbiguousIngestPayloadError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"DisagreeingPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"DocumentNotInterruptedError","module":"databasise.seam.refusals","attribute_keys":["document_id","status"],"http_status":422},{"refusal_type":"DuplicateComparisonKeyError","module":"databasise.seam.refusals","attribute_keys":["key"],"http_status":422},{"refusal_type":"DuplicateDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"EmptyCapabilitySelectorError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyComparisonRequestError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyIngestDocumentError","module":"databasise.seam.refusals","attribute_keys":["member"],"http_status":422},{"refusal_type":"EmptyNamespaceError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":422},{"refusal_type":"EmptyPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"EmptyQueryObjectError","module":"databasise.seam.refusals","attribute_keys":["query_object"],"http_status":422},{"refusal_type":"ForbiddenSelectorInputError","module":"databasise.seam.refusals","attribute_keys":["member_name","value"],"http_status":422},{"refusal_type":"ForeignEngineRefusalError","module":"databasise.seam.refusals","attribute_keys":["failure_class","operation"],"http_status":502},{"refusal_type":"GateNotCalibratedError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"GateVerbNotBuiltError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"InvalidChangeOriginError","module":"databasise.seam.refusals","attribute_keys":["change_origin"],"http_status":422},{"refusal_type":"InvalidDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"InvalidEvidenceNamespaceError","module":"databasise.seam.refusals","attribute_keys":["namespace"],"http_status":422},{"refusal_type":"InvalidGuardDeclarationError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"InvalidNodeSettingError","module":"databasise.seam.refusals","attribute_keys":["setting"],"http_status":422},{"refusal_type":"InvalidPromotionAliasError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"MalformedBase64PayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MalformedSelectorPayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MeasurementPostureRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"MissingScopeArgumentError","module":"databasise.seam.refusals","attribute_keys":["argument","scope","tool"],"http_status":422},{"refusal_type":"MultiMemberSelectorError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"MutableStoreComparisonExcludedError","module":"databasise.seam.refusals","attribute_keys":["component"],"http_status":422},{"refusal_type":"NoRawUploadPathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NoWritePathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NonFiniteNumberError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"OversizedDocumentError","module":"databasise.seam.refusals","attribute_keys":["actual_bytes","limit_bytes"],"http_status":422},{"refusal_type":"PageBoundsError","module":"databasise.seam.refusals","attribute_keys":["limit","offset"],"http_status":422},{"refusal_type":"PageSizeExceededError","module":"databasise.seam.refusals","attribute_keys":["limit","requested"],"http_status":422},{"refusal_type":"PartialRunEvidenceError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"StoreBusyError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":409},{"refusal_type":"TombstonedGenerationError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"UnbudgetableParticipantError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"UncalibratedFloorRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"UnconsumableQueryMemberError","module":"databasise.seam.refusals","attribute_keys":["member_name"],"http_status":422},{"refusal_type":"UnknownDocumentError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"UnknownGenerationVersionError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":404},{"refusal_type":"UnknownGraphNodeError","module":"databasise.seam.refusals","attribute_keys":["node_id"],"http_status":422},{"refusal_type":"UnknownJobError","module":"databasise.seam.refusals","attribute_keys":["job_id"],"http_status":404},{"refusal_type":"UnknownTraceReferenceError","module":"databasise.seam.refusals","attribute_keys":["trace_reference"],"http_status":404},{"refusal_type":"UnparseableWiringError","module":"databasise.seam.refusals","attribute_keys":["violations"],"http_status":422},{"refusal_type":"UnrecognisedPromotionVerbError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"UnresolvableEvidenceReferenceError","module":"databasise.seam.refusals","attribute_keys":["ref"],"http_status":404},{"refusal_type":"UnsatisfiableSelectorError","module":"databasise.seam.refusals","attribute_keys":["requested","selector_kind"],"http_status":422},{"refusal_type":"UnsupportedUploadTypeError","module":"databasise.seam.refusals","attribute_keys":["suffix"],"http_status":422}],"resolution":{"rows":[{"selector":null,"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_kv"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_vector"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_graph"]},"wiring":"hipporag","node_count":14,"outcome":"resolved"},{"selector":{"capability":["reads_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_blob"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_artifact"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["calls_llm"]},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"capability":["calls_rerank"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["calls_embedding"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["net"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["fs"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["self_storage"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["mutates_store"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_kv"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_vector"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_graph"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_vector:entities"]},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:relationships"]},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:entities","reads_vector:relationships"]},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"capability":[]},"wiring":null,"node_count":null,"outcome":"EmptyCapabilitySelectorError"},{"selector":{"harness":"hotpotqa"},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"alias":"fixture-naive"},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"alias":"fixture-bypass"},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"alias":"fixture-hybrid"},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"alias":"fixture-local"},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-global"},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-hipporag"},"wiring":"hipporag","node_count":14,"outcome":"resolved"}],"reachable":{"naive":true,"bypass":true,"hybrid":true,"local":true,"global":true,"hipporag":true}}}</script>
 <script>
@@ -96,13 +340,39 @@ var Console = {
   },
 };
 
-function renderHealth(fixtureName) {
-  var h = FIX.health[fixtureName];
-  $id("shell.health.status").setAttribute("data-state", "ok");
-  document.querySelector('[data-role="health-badge"]').setAttribute("data-state", "ok");
-  document.querySelector('[data-role="health-glyph"]').textContent = "✓";
-  document.querySelector('[data-role="health-word"]').textContent = h.status;
+var HEALTH_WORDS = { ok: "ok", degraded: "degraded", loading: "checking", error: "unreachable" };
+var HEALTH_GLYPHS = { ok: "✓", degraded: "▲", loading: "", error: "✕" };
+var healthFixture = "health-ok";
+
+function healthState(h) {
+  if (h.loading) return "loading";
+  return typeof h.status === "number" ? "error" : h.status;
 }
+
+function renderHealth(fixtureName) {
+  healthFixture = fixtureName;
+  var state = healthState(FIX.health[fixtureName]);
+  $id("shell.health.status").setAttribute("data-state", state);
+  var badge = document.querySelector('[data-role="health-badge"]');
+  badge.setAttribute("data-state", state);
+  badge.querySelector(".spinner").hidden = state !== "loading";
+  badge.querySelector('[data-role="health-glyph"]').textContent = HEALTH_GLYPHS[state];
+  badge.querySelector('[data-role="health-word"]').textContent = HEALTH_WORDS[state];
+  Console.emit("health", state);
+}
+
+// Corpus & Health reuses the same fixture object.
+Console.health = function () {
+  return FIX.health[healthFixture];
+};
+
+$id("shell.mock.health-fixture").addEventListener("change", function (event) {
+  renderHealth("health-" + event.target.value);
+});
+$id("shell.health.details").addEventListener("click", function () {
+  Console.show("corpus");
+  Console.emit("focus-health");
+});
 
 SCREENS.forEach(function (name) {
   $id("shell.nav." + name).addEventListener("click", function () {
@@ -124,7 +394,7 @@ function dispatch(method) {
   };
 }
 
-renderHealth("health-ok");
+renderHealth("health-" + $id("shell.mock.health-fixture").value);
 Console.show(location.hash.slice(1) || "query");
 
 window.Console = Console;

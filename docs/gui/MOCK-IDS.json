@@ -1,0 +1,19 @@
+[
+  "screen-corpus",
+  "screen-documents",
+  "screen-evidence",
+  "screen-graph",
+  "screen-ledger",
+  "screen-query",
+  "shell.health.details",
+  "shell.health.status",
+  "shell.mock.banner",
+  "shell.mock.health-fixture",
+  "shell.nav.corpus",
+  "shell.nav.documents",
+  "shell.nav.evidence",
+  "shell.nav.graph",
+  "shell.nav.ledger",
+  "shell.nav.query",
+  "shell.root.app"
+]

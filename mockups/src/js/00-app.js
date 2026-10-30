@@ -36,13 +36,39 @@ var Console = {
   },
 };
 
-function renderHealth(fixtureName) {
-  var h = FIX.health[fixtureName];
-  $id("shell.health.status").setAttribute("data-state", "ok");
-  document.querySelector('[data-role="health-badge"]').setAttribute("data-state", "ok");
-  document.querySelector('[data-role="health-glyph"]').textContent = "✓";
-  document.querySelector('[data-role="health-word"]').textContent = h.status;
+var HEALTH_WORDS = { ok: "ok", degraded: "degraded", loading: "checking", error: "unreachable" };
+var HEALTH_GLYPHS = { ok: "✓", degraded: "▲", loading: "", error: "✕" };
+var healthFixture = "health-ok";
+
+function healthState(h) {
+  if (h.loading) return "loading";
+  return typeof h.status === "number" ? "error" : h.status;
 }
+
+function renderHealth(fixtureName) {
+  healthFixture = fixtureName;
+  var state = healthState(FIX.health[fixtureName]);
+  $id("shell.health.status").setAttribute("data-state", state);
+  var badge = document.querySelector('[data-role="health-badge"]');
+  badge.setAttribute("data-state", state);
+  badge.querySelector(".spinner").hidden = state !== "loading";
+  badge.querySelector('[data-role="health-glyph"]').textContent = HEALTH_GLYPHS[state];
+  badge.querySelector('[data-role="health-word"]').textContent = HEALTH_WORDS[state];
+  Console.emit("health", state);
+}
+
+// Corpus & Health reuses the same fixture object.
+Console.health = function () {
+  return FIX.health[healthFixture];
+};
+
+$id("shell.mock.health-fixture").addEventListener("change", function (event) {
+  renderHealth("health-" + event.target.value);
+});
+$id("shell.health.details").addEventListener("click", function () {
+  Console.show("corpus");
+  Console.emit("focus-health");
+});
 
 SCREENS.forEach(function (name) {
   $id("shell.nav." + name).addEventListener("click", function () {
@@ -64,7 +90,7 @@ function dispatch(method) {
   };
 }
 
-renderHealth("health-ok");
+renderHealth("health-" + $id("shell.mock.health-fixture").value);
 Console.show(location.hash.slice(1) || "query");
 
 window.Console = Console;
