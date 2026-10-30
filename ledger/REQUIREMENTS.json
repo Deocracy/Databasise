@@ -1,5 +1,5 @@
 {
-  "ledger_version": 866,
+  "ledger_version": 867,
   "frozen_at": null,
   "items": [
     {
@@ -2374,7 +2374,7 @@
   "mockup_freeze": null,
   "scope_lock": null,
   "check_locks": {
-    "commit": "46a2f45b53c475ef5d0d2d4b01e13d5975bf6452",
+    "commit": "8defea7c751d3788e8a7c654f36ad65fc6c8d8fb",
     "files": {
       "databasise/tests/seam/test_run01_coverage_crosscheck.py": "3da3eb8683a6556bf3e29bde7ec7d19257bcf6371a55245b5be90450985e9258",
       "databasise/tests/clients/test_openai_compat.py": "1e342492d32774e047de1dd616030f4de8aaca7faf98d51449fd608505e1774f",
@@ -2503,7 +2503,18 @@
       "databasise/tests/seam/test_console_preview.py": "5afcc0d37c85fedd3a216e2857d119a63a38fb2f2c249d73cd4f7b5862b322a3",
       "databasise/tests/seam/test_console_chunks.py": "7478f4a1f161896a30231637bd0e13f92bc8661b4de9f226274e934bfe1e5f39",
       "databasise/tests/seam/test_console_graph.py": "12970f67939a9322a7401cbede5d540f31bd52145ba59c0e5f151b2b5925153a",
-      "databasise/tests/seam/test_console_log.py": "2b1426fd41b20aa08d6b51acb2142d8166d92848f1a873bf41b73c6a305ba56c"
+      "databasise/tests/seam/test_console_log.py": "2b1426fd41b20aa08d6b51acb2142d8166d92848f1a873bf41b73c6a305ba56c",
+      "databasise/tests/gui/test_gui_01_shell.py": "f0ad455368dc09502cb3ca13ab5e9812511b62d05f381b258400db085ac1f621",
+      "databasise/tests/gui/test_gui_02_ids.py": "1f769431401e34369f2209e0650fff8af25112e8796f5ab4c65bc3b3e2198960",
+      "databasise/tests/gui/test_gui_03_needs_backend.py": "b353cd438ce68c479f81014f637cb171f395afbd92d8ef987759cab29b0c58bb",
+      "databasise/tests/gui/test_gui_04_query_mode.py": "44427d371c5ee65932f128f5c9b08a3a9c76fd85b21ff81e832f1d86cb0bc843",
+      "databasise/tests/gui/test_gui_05_compare.py": "fff69723bfe21bef861e3bf2c23f3a2968d721f4de59119f3870811ddfcfb200",
+      "databasise/tests/gui/test_gui_06_errors.py": "8263bc9217407ad7b0d9f6ef40bf14378c7d1fd034d8e6b2c4ef5d19043e594b",
+      "databasise/tests/gui/test_gui_07_evidence_trace.py": "a09f8a0742e0df87c61112ccf3a0a9094b5f3a991c027b15b45e1c92e8e42675",
+      "databasise/tests/gui/test_gui_08_documents.py": "38b7e47f282921d28ba2476e76e8909f28e20d74d88ee1437bbb58ec4cc9bedb",
+      "databasise/tests/gui/test_gui_09_corpus.py": "4ba32b588f5b5a9d4c111f71b77ec28868d8cbc05f9e4fcc8058fc609fcd26c1",
+      "databasise/tests/gui/test_gui_10_ledger.py": "0f1b770aedb4d32050c709bb54ebd7fc573913607a8978421b938c6ca5de7ed5",
+      "databasise/tests/gui/test_gui_11_graph.py": "3fa0beb1f8ca1f12d9568d9ac937f13ecc37d757ac5e51671b7d87cc4c143623"
     }
   },
   "trace": {
