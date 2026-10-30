@@ -251,6 +251,19 @@ label.inline { display: inline-flex; align-items: center; gap: var(--sm); }
 .run-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--md); margin-top: var(--md); }
 .run-row p { margin: 0; }
 
+.selector { margin: var(--md) 0; padding: var(--md); border: 1px solid var(--border); border-radius: 8px; min-width: 0; }
+.selector legend { padding: 0 var(--xs); }
+.selector-kinds { display: flex; flex-wrap: wrap; gap: var(--md); margin-bottom: var(--sm); }
+.selector-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--md); }
+.selector-part { min-width: 0; }
+.selector-part input, .selector-part select { width: 100%; max-width: 100%; }
+.chips { display: flex; flex-wrap: wrap; gap: var(--xs); margin-top: var(--xs); }
+.subpanel { margin: var(--md) 0; padding: var(--sm) var(--md); border: 1px solid var(--border); border-radius: 8px; }
+.subpanel summary { cursor: pointer; font: 600 13px/1.5 var(--font); }
+.advanced-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 var(--md); margin-top: var(--sm); }
+.advanced-grid p { margin: 0 0 var(--sm); align-self: start; }
+.subpanel textarea { width: 100%; }
+
 .answer { max-width: 72ch; margin-bottom: var(--md); white-space: pre-wrap; overflow-wrap: anywhere; }
 .actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sm); margin: var(--md) 0 var(--sm); }
 .cap-first::first-letter { text-transform: uppercase; }
@@ -302,6 +315,96 @@ label.inline { display: inline-flex; align-items: center; gap: var(--sm); }
       <textarea rows="4" data-mock-id="query.text.input" data-field-loc="body.query.text" data-error-id="query.text.error"></textarea>
     </label>
     <p class="field-error" role="alert" tabindex="-1" data-mock-id="query.text.error" hidden></p>
+<fieldset class="selector" data-mock-id="query.selector.group" data-field-loc="body.selector" data-error-id="query.selector.error">
+  <legend>Selector</legend>
+  <div class="selector-kinds">
+    <label class="inline"><input type="radio" name="query-selector-kind" value="default" checked data-mock-id="query.selector.kind-default"> Default</label>
+    <label class="inline"><input type="radio" name="query-selector-kind" value="alias" data-mock-id="query.selector.kind-alias"> Alias</label>
+    <label class="inline"><input type="radio" name="query-selector-kind" value="capability" data-mock-id="query.selector.kind-capability"> Capability</label>
+    <label class="inline"><input type="radio" name="query-selector-kind" value="harness" disabled aria-disabled="true" data-mock-id="query.selector.kind-harness"> Harness</label>
+  </div>
+  <div class="selector-grid">
+    <div class="selector-part">
+      <label class="field"><span class="label">Alias</span>
+        <input type="text" autocomplete="off" spellcheck="false" data-mock-id="query.selector.alias">
+      </label>
+      <span data-needs-backend="GET /ledger/aliases" data-backend-state="operator" title="Mounted only with --operator"><span class="badge badge-op">operator route</span>
+        <label class="field"><span class="label">Known aliases</span>
+          <select data-mock-id="query.selector.alias-picker"><option value="">Choose an alias</option></select>
+        </label>
+      </span>
+    </div>
+    <div class="selector-part">
+      <label class="field"><span class="label">Capability tokens</span>
+        <select multiple size="8" data-mock-id="query.selector.capability">
+          <option value="reads_kv">reads_kv</option>
+          <option value="reads_vector">reads_vector</option>
+          <option value="reads_graph">reads_graph</option>
+          <option value="reads_lexical">reads_lexical</option>
+          <option value="reads_blob">reads_blob</option>
+          <option value="writes_artifact">writes_artifact</option>
+          <option value="calls_llm">calls_llm</option>
+          <option value="calls_rerank">calls_rerank</option>
+          <option value="calls_embedding">calls_embedding</option>
+          <option value="net">net</option>
+          <option value="fs">fs</option>
+          <option value="self_storage">self_storage</option>
+          <option value="mutates_store">mutates_store</option>
+          <option value="writes_kv">writes_kv</option>
+          <option value="writes_vector">writes_vector</option>
+          <option value="writes_graph">writes_graph</option>
+          <option value="writes_lexical">writes_lexical</option>
+          <option value="reads_vector:chunks">reads_vector:chunks</option>
+          <option value="reads_vector:entities">reads_vector:entities</option>
+          <option value="reads_vector:relationships">reads_vector:relationships</option>
+        </select>
+      </label>
+      <div class="chips" data-mock-id="query.selector.chips"></div>
+    </div>
+    <div class="selector-part">
+      <label class="field"><span class="label">Harness</span>
+        <input type="text" disabled aria-disabled="true" data-mock-id="query.selector.harness">
+      </label>
+      <p class="muted">no production wiring declares a harness</p>
+    </div>
+  </div>
+  <p class="field-error" role="alert" tabindex="-1" data-mock-id="query.selector.error" hidden></p>
+  <span data-needs-backend="POST /selectors/resolve" title="Not implemented yet: POST /selectors/resolve"><span class="badge badge-nb">needs backend</span> <span role="status" data-mock-id="query.selector.resolves-to"></span></span>
+</fieldset>
+
+    <button type="button" class="btn btn-outline" aria-expanded="false" data-mock-id="query.selector.table-toggle">Show resolution table</button>
+    <div class="table-scroll" data-role="resolution-wrap" hidden>
+      <table role="table" data-mock-id="query.selector.table">
+        <thead><tr><th>Selector</th><th>Resolves to</th><th>Nodes</th><th>Outcome</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="muted">Every arm is reachable: naive, bypass, hybrid, local, global and hipporag.</p>
+    </div>
+    <details class="subpanel" data-mock-id="query.advanced.panel">
+      <summary data-mock-id="query.advanced.toggle">Advanced query members</summary>
+      <div class="advanced-grid">
+        <div>
+        <label class="field"><span class="label">Embedding</span><input type="text" disabled aria-disabled="true" data-mock-id="query.advanced.embedding"></label>
+        <p class="muted">no registered part consumes this member</p>
+        </div>
+        <div>
+        <label class="field"><span class="label">Predicates</span><input type="text" disabled aria-disabled="true" data-mock-id="query.advanced.predicates"></label>
+        <p class="muted">no registered part consumes this member</p>
+        </div>
+        <div>
+        <label class="field"><span class="label">Profile ref</span><input type="text" disabled aria-disabled="true" data-mock-id="query.advanced.profile-ref"></label>
+        <p class="muted">no registered part consumes this member</p>
+        </div>
+        <div>
+        <label class="field"><span class="label">Formal query</span><input type="text" disabled aria-disabled="true" data-mock-id="query.advanced.formal-query"></label>
+        <p class="muted">no registered part consumes this member</p>
+        </div>
+      </div>
+      <label class="field"><span class="label">Raw selector JSON</span>
+        <textarea rows="3" spellcheck="false" data-mock-id="query.advanced.selector-json" data-error-id="query.advanced.selector-json-error"></textarea>
+      </label>
+      <p class="field-error" role="alert" tabindex="-1" data-mock-id="query.advanced.selector-json-error" hidden></p>
+    </details>
     <div class="run-row">
       <button type="button" class="btn btn-primary" data-mock-id="query.run.submit">Run</button>
       <span class="spinner" role="presentation" data-mock-id="query.run.spinner" hidden></span>
@@ -415,7 +518,7 @@ label.inline { display: inline-flex; align-items: center; gap: var(--sm); }
     <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></symbol>
   </svg>
 </div>
-<script type="application/json" id="mock-fixtures">{"health":{"health-ok":{"status":"ok","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:chunks":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"ok","graph:hipporag-graph":"ok","vector:hipporag-chunks":"ok","vector:hipporag-entities":"ok","vector:hipporag-facts":"ok"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":true,"embedding":true,"rerank":true},"engine_reason":null},"health-degraded":{"status":"degraded","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"absent","graph:hipporag-graph":"absent","vector:hipporag-chunks":"absent","vector:hipporag-entities":"absent","vector:hipporag-facts":"absent"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":false,"embedding":false,"rerank":false},"engine_reason":"model clients not configured"},"health-loading":{"loading":true},"health-error":{"status":500,"body":"Internal Server Error"}},"query":{"q-success":{"status":200,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}}},"shell":{"info":{"version":"0.1.0","workspace":"default","clients":{"llm":true,"embedding":true,"rerank":false},"write_in_flight":false,"graph_busy":false}},"refusals":[{"refusal_type":"ActiveGenerationRetirementError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"AmbiguousAnswerPositionError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"AmbiguousIngestPayloadError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"DisagreeingPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"DocumentNotInterruptedError","module":"databasise.seam.refusals","attribute_keys":["document_id","status"],"http_status":422},{"refusal_type":"DuplicateComparisonKeyError","module":"databasise.seam.refusals","attribute_keys":["key"],"http_status":422},{"refusal_type":"DuplicateDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"EmptyCapabilitySelectorError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyComparisonRequestError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyIngestDocumentError","module":"databasise.seam.refusals","attribute_keys":["member"],"http_status":422},{"refusal_type":"EmptyNamespaceError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":422},{"refusal_type":"EmptyPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"EmptyQueryObjectError","module":"databasise.seam.refusals","attribute_keys":["query_object"],"http_status":422},{"refusal_type":"ForbiddenSelectorInputError","module":"databasise.seam.refusals","attribute_keys":["member_name","value"],"http_status":422},{"refusal_type":"ForeignEngineRefusalError","module":"databasise.seam.refusals","attribute_keys":["failure_class","operation"],"http_status":502},{"refusal_type":"GateNotCalibratedError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"GateVerbNotBuiltError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"InvalidChangeOriginError","module":"databasise.seam.refusals","attribute_keys":["change_origin"],"http_status":422},{"refusal_type":"InvalidDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"InvalidEvidenceNamespaceError","module":"databasise.seam.refusals","attribute_keys":["namespace"],"http_status":422},{"refusal_type":"InvalidGuardDeclarationError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"InvalidNodeSettingError","module":"databasise.seam.refusals","attribute_keys":["setting"],"http_status":422},{"refusal_type":"InvalidPromotionAliasError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"MalformedBase64PayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MalformedSelectorPayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MeasurementPostureRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"MissingScopeArgumentError","module":"databasise.seam.refusals","attribute_keys":["argument","scope","tool"],"http_status":422},{"refusal_type":"MultiMemberSelectorError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"MutableStoreComparisonExcludedError","module":"databasise.seam.refusals","attribute_keys":["component"],"http_status":422},{"refusal_type":"NoRawUploadPathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NoWritePathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NonFiniteNumberError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"OversizedDocumentError","module":"databasise.seam.refusals","attribute_keys":["actual_bytes","limit_bytes"],"http_status":422},{"refusal_type":"PageBoundsError","module":"databasise.seam.refusals","attribute_keys":["limit","offset"],"http_status":422},{"refusal_type":"PageSizeExceededError","module":"databasise.seam.refusals","attribute_keys":["limit","requested"],"http_status":422},{"refusal_type":"PartialRunEvidenceError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"StoreBusyError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":409},{"refusal_type":"TombstonedGenerationError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"UnbudgetableParticipantError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"UncalibratedFloorRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"UnconsumableQueryMemberError","module":"databasise.seam.refusals","attribute_keys":["member_name"],"http_status":422},{"refusal_type":"UnknownDocumentError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"UnknownGenerationVersionError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":404},{"refusal_type":"UnknownGraphNodeError","module":"databasise.seam.refusals","attribute_keys":["node_id"],"http_status":422},{"refusal_type":"UnknownJobError","module":"databasise.seam.refusals","attribute_keys":["job_id"],"http_status":404},{"refusal_type":"UnknownTraceReferenceError","module":"databasise.seam.refusals","attribute_keys":["trace_reference"],"http_status":404},{"refusal_type":"UnparseableWiringError","module":"databasise.seam.refusals","attribute_keys":["violations"],"http_status":422},{"refusal_type":"UnrecognisedPromotionVerbError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"UnresolvableEvidenceReferenceError","module":"databasise.seam.refusals","attribute_keys":["ref"],"http_status":404},{"refusal_type":"UnsatisfiableSelectorError","module":"databasise.seam.refusals","attribute_keys":["requested","selector_kind"],"http_status":422},{"refusal_type":"UnsupportedUploadTypeError","module":"databasise.seam.refusals","attribute_keys":["suffix"],"http_status":422}],"resolution":{"rows":[{"selector":null,"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_kv"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_vector"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_graph"]},"wiring":"hipporag","node_count":14,"outcome":"resolved"},{"selector":{"capability":["reads_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_blob"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_artifact"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["calls_llm"]},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"capability":["calls_rerank"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["calls_embedding"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["net"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["fs"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["self_storage"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["mutates_store"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_kv"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_vector"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_graph"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_vector:entities"]},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:relationships"]},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:entities","reads_vector:relationships"]},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"capability":[]},"wiring":null,"node_count":null,"outcome":"EmptyCapabilitySelectorError"},{"selector":{"harness":"hotpotqa"},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"alias":"fixture-naive"},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"alias":"fixture-bypass"},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"alias":"fixture-hybrid"},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"alias":"fixture-local"},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-global"},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-hipporag"},"wiring":"hipporag","node_count":14,"outcome":"resolved"}],"reachable":{"naive":true,"bypass":true,"hybrid":true,"local":true,"global":true,"hipporag":true}}}</script>
+<script type="application/json" id="mock-fixtures">{"aliases":[{"alias":"prod","active_version":"4.0.0","record_kind":"rollback","generation_ordinal":5,"created_at":"2026-10-20T09:12:44Z","arm":"naive"},{"alias":"staging","active_version":"1.0.0","record_kind":"promotion","generation_ordinal":6,"created_at":"2026-10-21T15:40:02Z","arm":"naive"},{"alias":"hr","active_version":"1.0.0","record_kind":"promotion","generation_ordinal":7,"created_at":"2026-10-22T11:05:37Z","arm":"hipporag"}],"health":{"health-ok":{"status":"ok","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:chunks":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"ok","graph:hipporag-graph":"ok","vector:hipporag-chunks":"ok","vector:hipporag-entities":"ok","vector:hipporag-facts":"ok"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":true,"embedding":true,"rerank":true},"engine_reason":null},"health-degraded":{"status":"degraded","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"absent","graph:hipporag-graph":"absent","vector:hipporag-chunks":"absent","vector:hipporag-entities":"absent","vector:hipporag-facts":"absent"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":false,"embedding":false,"rerank":false},"engine_reason":"model clients not configured"},"health-loading":{"loading":true},"health-error":{"status":500,"body":"Internal Server Error"}},"query":{"q-success":{"status":200,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}}},"shell":{"info":{"version":"0.1.0","workspace":"default","clients":{"llm":true,"embedding":true,"rerank":false},"write_in_flight":false,"graph_busy":false}},"refusals":[{"refusal_type":"ActiveGenerationRetirementError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"AmbiguousAnswerPositionError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"AmbiguousIngestPayloadError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"DisagreeingPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"DocumentNotInterruptedError","module":"databasise.seam.refusals","attribute_keys":["document_id","status"],"http_status":422},{"refusal_type":"DuplicateComparisonKeyError","module":"databasise.seam.refusals","attribute_keys":["key"],"http_status":422},{"refusal_type":"DuplicateDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"EmptyCapabilitySelectorError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyComparisonRequestError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyIngestDocumentError","module":"databasise.seam.refusals","attribute_keys":["member"],"http_status":422},{"refusal_type":"EmptyNamespaceError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":422},{"refusal_type":"EmptyPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"EmptyQueryObjectError","module":"databasise.seam.refusals","attribute_keys":["query_object"],"http_status":422},{"refusal_type":"ForbiddenSelectorInputError","module":"databasise.seam.refusals","attribute_keys":["member_name","value"],"http_status":422},{"refusal_type":"ForeignEngineRefusalError","module":"databasise.seam.refusals","attribute_keys":["failure_class","operation"],"http_status":502},{"refusal_type":"GateNotCalibratedError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"GateVerbNotBuiltError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"InvalidChangeOriginError","module":"databasise.seam.refusals","attribute_keys":["change_origin"],"http_status":422},{"refusal_type":"InvalidDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"InvalidEvidenceNamespaceError","module":"databasise.seam.refusals","attribute_keys":["namespace"],"http_status":422},{"refusal_type":"InvalidGuardDeclarationError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"InvalidNodeSettingError","module":"databasise.seam.refusals","attribute_keys":["setting"],"http_status":422},{"refusal_type":"InvalidPromotionAliasError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"MalformedBase64PayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MalformedSelectorPayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MeasurementPostureRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"MissingScopeArgumentError","module":"databasise.seam.refusals","attribute_keys":["argument","scope","tool"],"http_status":422},{"refusal_type":"MultiMemberSelectorError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"MutableStoreComparisonExcludedError","module":"databasise.seam.refusals","attribute_keys":["component"],"http_status":422},{"refusal_type":"NoRawUploadPathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NoWritePathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NonFiniteNumberError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"OversizedDocumentError","module":"databasise.seam.refusals","attribute_keys":["actual_bytes","limit_bytes"],"http_status":422},{"refusal_type":"PageBoundsError","module":"databasise.seam.refusals","attribute_keys":["limit","offset"],"http_status":422},{"refusal_type":"PageSizeExceededError","module":"databasise.seam.refusals","attribute_keys":["limit","requested"],"http_status":422},{"refusal_type":"PartialRunEvidenceError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"StoreBusyError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":409},{"refusal_type":"TombstonedGenerationError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"UnbudgetableParticipantError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"UncalibratedFloorRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"UnconsumableQueryMemberError","module":"databasise.seam.refusals","attribute_keys":["member_name"],"http_status":422},{"refusal_type":"UnknownDocumentError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"UnknownGenerationVersionError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":404},{"refusal_type":"UnknownGraphNodeError","module":"databasise.seam.refusals","attribute_keys":["node_id"],"http_status":422},{"refusal_type":"UnknownJobError","module":"databasise.seam.refusals","attribute_keys":["job_id"],"http_status":404},{"refusal_type":"UnknownTraceReferenceError","module":"databasise.seam.refusals","attribute_keys":["trace_reference"],"http_status":404},{"refusal_type":"UnparseableWiringError","module":"databasise.seam.refusals","attribute_keys":["violations"],"http_status":422},{"refusal_type":"UnrecognisedPromotionVerbError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"UnresolvableEvidenceReferenceError","module":"databasise.seam.refusals","attribute_keys":["ref"],"http_status":404},{"refusal_type":"UnsatisfiableSelectorError","module":"databasise.seam.refusals","attribute_keys":["requested","selector_kind"],"http_status":422},{"refusal_type":"UnsupportedUploadTypeError","module":"databasise.seam.refusals","attribute_keys":["suffix"],"http_status":422}],"resolution":{"rows":[{"selector":null,"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_kv"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_vector"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_graph"]},"wiring":"hipporag","node_count":14,"outcome":"resolved"},{"selector":{"capability":["reads_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_blob"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_artifact"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["calls_llm"]},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"capability":["calls_rerank"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["calls_embedding"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["net"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["fs"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["self_storage"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["mutates_store"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_kv"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_vector"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_graph"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_vector:entities"]},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:relationships"]},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:entities","reads_vector:relationships"]},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"capability":[]},"wiring":null,"node_count":null,"outcome":"EmptyCapabilitySelectorError"},{"selector":{"harness":"hotpotqa"},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"alias":"fixture-naive"},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"alias":"fixture-bypass"},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"alias":"fixture-hybrid"},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"alias":"fixture-local"},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-global"},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-hipporag"},"wiring":"hipporag","node_count":14,"outcome":"resolved"}],"reachable":{"naive":true,"bypass":true,"hybrid":true,"local":true,"global":true,"hipporag":true}}}</script>
 <script>
 "use strict";
 // Shared scope: every js/*.js file is concatenated into one script, so FIX, $id and Console are global to later screens.
@@ -535,6 +638,189 @@ function clearNode(node) {
   while (node.firstChild) node.removeChild(node.firstChild);
 }
 
+// Writes (or clears) the message under an input and marks the input invalid. The input names its message element in data-error-id.
+function setFieldError(input, message) {
+  var error = $id(input.getAttribute("data-error-id"));
+  if (message) input.setAttribute("aria-invalid", "true");
+  else input.removeAttribute("aria-invalid");
+  if (error) {
+    error.textContent = message || "";
+    error.hidden = !message;
+  }
+}
+
+// A selector value is null (Default), {alias}, {capability: [...]} or {harness}.
+function selectorLabel(value) {
+  if (!value) return "Default";
+  if (value.alias !== undefined) return "alias " + value.alias;
+  if (value.capability !== undefined) return "capability " + value.capability.join("+");
+  return "harness " + value.harness;
+}
+
+// The server's un-prefixed rendering rule (compare keys): alias and harness are the string, capability joins with +, none is "default".
+function comparisonKey(value) {
+  if (!value) return "default";
+  if (value.alias !== undefined) return value.alias;
+  if (value.capability !== undefined) return value.capability.join("+");
+  return value.harness;
+}
+
+var SELECTOR_MSG = {
+  noCapability: "Select at least one capability. An empty set is refused by the server.",
+  noAlias: "Enter an alias, or choose Default.",
+  hashAlias: "This alias looks like a hash (64 hex characters, optional sha256: prefix). The server refuses it.",
+};
+var HASH_SHAPED = /^(sha256:)?[0-9a-f]{64}$/i;
+
+// Selector resolution (D-06): the embedded post-WIRE-01 table plus the four documented combinations (API-INVENTORY 3.0).
+var Resolution = (function () {
+  var arms = {};
+  var caps = {};
+  var aliases = {};
+  var def = null;
+  var harness = null;
+  var rows = FIX.resolution.rows.slice();
+  var UNKNOWN = "Resolves to: unknown here (needs backend)";
+  var ALIAS_UNKNOWN = "Alias not in the client-side ledger log; the server resolves it at run time.";
+
+  function capKey(tokens) {
+    return tokens.slice().sort().join("|");
+  }
+
+  rows.forEach(function (r) {
+    if (r.wiring && !(r.wiring in arms)) arms[r.wiring] = r.node_count;
+  });
+  [
+    [["reads_vector:chunks"], "naive"],
+    [["calls_llm", "reads_graph"], "hipporag"],
+    [["reads_graph", "reads_kv"], "hipporag"],
+    [["calls_rerank", "reads_graph"], "local"],
+  ].forEach(function (d) {
+    rows.push({ selector: { capability: d[0] }, wiring: d[1], node_count: arms[d[1]], outcome: "resolved" });
+  });
+  rows.forEach(function (r) {
+    var s = r.selector;
+    if (s === null) def = r;
+    else if (s.capability) caps[capKey(s.capability)] = r;
+    else if (s.alias !== undefined) aliases[s.alias] = r;
+    else harness = r;
+  });
+  FIX.aliases.forEach(function (a) {
+    aliases[a.alias] = { wiring: a.arm, node_count: arms[a.arm], outcome: "resolved" };
+  });
+
+  function describe(r) {
+    if (r.wiring) return { text: "Resolves to: " + r.wiring + " (" + r.node_count + " nodes)", arm: r.wiring, nodes: r.node_count };
+    return { text: "Resolves to: not satisfiable (" + r.outcome + ")", arm: null, nodes: null };
+  }
+
+  return {
+    rows: rows,
+    resolve: function (value) {
+      var r;
+      if (value === null) r = def;
+      else if (value.capability) r = caps[capKey(value.capability)];
+      else if (value.alias !== undefined) {
+        r = aliases[value.alias];
+        if (!r) return { text: value.alias === "" ? UNKNOWN : ALIAS_UNKNOWN, arm: null, nodes: null };
+      } else r = harness;
+      return r ? describe(r) : { text: UNKNOWN, arm: null, nodes: null };
+    },
+  };
+})();
+
+// One selector picker per screen prefix: ids are <prefix>.selector.*. onChange runs after every edit.
+var Picker = {
+  attach: function (prefix, onChange) {
+    function ID(name) {
+      return $id(prefix + ".selector." + name);
+    }
+    var group = ID("group");
+    var kinds = ["default", "alias", "capability", "harness"];
+    var alias = ID("alias");
+    var picker = ID("alias-picker");
+    var capability = ID("capability");
+
+    FIX.aliases.forEach(function (a) {
+      var option = h("option", a.alias + " (" + a.arm + ", " + a.active_version + ")");
+      option.value = a.alias;
+      picker.appendChild(option);
+    });
+
+    function kind() {
+      for (var i = 0; i < kinds.length; i++) if (ID("kind-" + kinds[i]).checked) return kinds[i];
+      return "default";
+    }
+
+    function tokens() {
+      return Array.prototype.filter
+        .call(capability.options, function (o) {
+          return o.selected;
+        })
+        .map(function (o) {
+          return o.value;
+        });
+    }
+
+    function value() {
+      var k = kind();
+      if (k === "alias") return { alias: alias.value };
+      if (k === "capability") return { capability: tokens() };
+      return null;
+    }
+
+    var api = {
+      value: value,
+      label: function () {
+        return selectorLabel(value());
+      },
+      key: function () {
+        return comparisonKey(value());
+      },
+      blockers: function () {
+        var v = value();
+        if (v && v.capability && v.capability.length === 0) return [SELECTOR_MSG.noCapability];
+        if (v && v.alias !== undefined) {
+          if (v.alias === "") return [SELECTOR_MSG.noAlias];
+          if (HASH_SHAPED.test(v.alias)) return [SELECTOR_MSG.hashAlias];
+        }
+        return [];
+      },
+      resolve: function () {
+        return Resolution.resolve(value()).text;
+      },
+      arm: function () {
+        return Resolution.resolve(value()).arm;
+      },
+    };
+
+    function refresh() {
+      var chips = ID("chips");
+      clearNode(chips);
+      tokens().forEach(function (t) {
+        chips.appendChild(h("span", t, "chip mono"));
+      });
+      ID("resolves-to").textContent = api.resolve();
+      if (onChange) onChange(api);
+    }
+
+    group.addEventListener("input", function (event) {
+      if (event.target === alias) ID("kind-alias").checked = true;
+      refresh();
+    });
+    group.addEventListener("change", function (event) {
+      if (event.target === picker && picker.value) {
+        alias.value = picker.value;
+        ID("kind-alias").checked = true;
+      }
+      if (event.target === capability) ID("kind-capability").checked = true;
+      refresh();
+    });
+    refresh();
+    return api;
+  },
+};
+
 function copyText(text, flash) {
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -553,10 +839,17 @@ function copyText(text, flash) {
 var QueryScreen = (function () {
   var STATES = ["idle", "running", "success", "partial", "empty-evidence", "refusal-422", "validation-422", "error-500"];
   var RESULT_STATES = ["success", "partial", "empty-evidence"];
+  var MSG = {
+    textEmpty: "Query text is empty. Enter at least one non-space character.",
+    badJson: "Raw selector JSON is not valid JSON.",
+    multiMember: "A selector may set only one member: alias, capability or harness.",
+  };
   var root = $id("screen-query");
   var timers = [];
   var evidenceRefs = [];
   var lastTrace = null;
+  var touched = false;
+  var mode = "query";
 
   function ID(name) {
     return $id("query." + name);
@@ -655,6 +948,7 @@ var QueryScreen = (function () {
   }
 
   function renderResult(env) {
+    var partial = !!env.partial;
     var answer = ID("result.answer");
     answer.textContent = env.answer || "No answer was produced.";
     answer.classList.toggle("muted", !env.answer);
@@ -679,18 +973,107 @@ var QueryScreen = (function () {
       link.setAttribute("aria-disabled", "true");
       link.setAttribute("tabindex", "-1");
     }
+
+    var promote = ID("result.promote");
+    promote.disabled = partial;
+    if (partial) promote.setAttribute("aria-disabled", "true");
+    else promote.removeAttribute("aria-disabled");
+    root.querySelector('[data-role="no-promote"]').hidden = !partial;
     showState("success");
   }
 
+  // Blockers, in the UI-SPEC order: text, raw selector JSON, then the picker. Returns {ok, selector, focus}.
+  function validate() {
+    var textBox = ID("text.input");
+    var jsonBox = ID("advanced.selector-json");
+    var raw = jsonBox.value.trim();
+    var textMsg = textBox.value.trim() === "" ? MSG.textEmpty : "";
+    var jsonMsg = "";
+    var override = null;
+    if (raw !== "") {
+      var parsed = null;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (e) {
+        jsonMsg = MSG.badJson;
+      }
+      if (!jsonMsg) {
+        if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) jsonMsg = MSG.badJson;
+        else if (Object.keys(parsed).filter(function (k) { return parsed[k] !== null; }).length > 1) jsonMsg = MSG.multiMember;
+        else override = parsed;
+      }
+    }
+    var pickMsg = raw !== "" ? "" : picker.blockers()[0] || "";
+    setFieldError(textBox, textMsg);
+    setFieldError(jsonBox, jsonMsg);
+    setFieldError(ID("selector.group"), pickMsg);
+    var focus = textMsg ? ID("text.error") : jsonMsg ? ID("advanced.selector-json-error") : pickMsg ? ID("selector.error") : null;
+    if (jsonMsg) ID("advanced.panel").open = true;
+    ID("run.message").hidden = !(touched && focus);
+    return { ok: !focus, selector: override !== null ? override : picker.value(), focus: focus };
+  }
+
+  var picker = Picker.attach("query", function () {
+    if (touched) validate();
+  });
+
+  function pickFixture() {
+    return "q-success";
+  }
+
   function run() {
+    touched = true;
+    var check = validate();
+    if (!check.ok) {
+      ID("run.message").textContent = "Run blocked. Fix the message shown above.";
+      ID("run.message").hidden = false;
+      check.focus.focus();
+      return;
+    }
     cancelTimers();
     showState("running");
     later(800, function () {
-      renderResult(FIX.query["q-success"].body);
+      renderResult(FIX.query[pickFixture()].body);
+    });
+  }
+
+  function setMode(next) {
+    mode = next;
+    root.setAttribute("data-mode", mode);
+    ID("mode.query").setAttribute("aria-selected", String(mode === "query"));
+    ID("mode.compare").setAttribute("aria-selected", String(mode === "compare"));
+  }
+
+  function buildResolutionTable() {
+    var body = ID("selector.table").tBodies[0];
+    Resolution.rows.forEach(function (r) {
+      var tr = h("tr");
+      tr.appendChild(h("td", selectorLabel(r.selector), "mono"));
+      tr.appendChild(h("td", r.wiring || "not satisfiable"));
+      tr.appendChild(h("td", r.node_count === null || r.node_count === undefined ? "—" : String(r.node_count)));
+      tr.appendChild(h("td", r.outcome));
+      body.appendChild(tr);
     });
   }
 
   ID("run.submit").addEventListener("click", run);
+  ID("mode.query").addEventListener("click", function () {
+    setMode("query");
+  });
+  ID("mode.compare").addEventListener("click", function () {
+    setMode("compare");
+  });
+  ["text.input", "advanced.selector-json"].forEach(function (name) {
+    ID(name).addEventListener("input", function () {
+      if (touched) validate();
+    });
+  });
+  ID("selector.table-toggle").addEventListener("click", function () {
+    var wrap = root.querySelector('[data-role="resolution-wrap"]');
+    wrap.hidden = !wrap.hidden;
+    ID("selector.table-toggle").setAttribute("aria-expanded", String(!wrap.hidden));
+    ID("selector.table-toggle").textContent = wrap.hidden ? "Show resolution table" : "Hide resolution table";
+  });
   ID("result.trace-link").addEventListener("click", function (event) {
     event.preventDefault();
     if (!lastTrace) return;
@@ -710,9 +1093,19 @@ var QueryScreen = (function () {
   ID("result.copy-trace").addEventListener("click", function () {
     if (lastTrace) copyText(lastTrace, root.querySelector('[data-role="copied"]'));
   });
+  ID("result.promote").addEventListener("click", function () {
+    Console.show("ledger");
+    Console.emit("promote", { trace: lastTrace });
+  });
+  ID("result.compare").addEventListener("click", function () {
+    setMode("compare");
+  });
 
+  buildResolutionTable();
   showState("idle");
   return {
+    setMode: setMode,
+    picker: picker,
     setState: function (name) {
       cancelTimers();
       if (STATES.indexOf(name) < 0) throw new Error("unknown query state " + name);

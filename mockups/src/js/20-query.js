@@ -1,10 +1,17 @@
 var QueryScreen = (function () {
   var STATES = ["idle", "running", "success", "partial", "empty-evidence", "refusal-422", "validation-422", "error-500"];
   var RESULT_STATES = ["success", "partial", "empty-evidence"];
+  var MSG = {
+    textEmpty: "Query text is empty. Enter at least one non-space character.",
+    badJson: "Raw selector JSON is not valid JSON.",
+    multiMember: "A selector may set only one member: alias, capability or harness.",
+  };
   var root = $id("screen-query");
   var timers = [];
   var evidenceRefs = [];
   var lastTrace = null;
+  var touched = false;
+  var mode = "query";
 
   function ID(name) {
     return $id("query." + name);
@@ -103,6 +110,7 @@ var QueryScreen = (function () {
   }
 
   function renderResult(env) {
+    var partial = !!env.partial;
     var answer = ID("result.answer");
     answer.textContent = env.answer || "No answer was produced.";
     answer.classList.toggle("muted", !env.answer);
@@ -127,18 +135,107 @@ var QueryScreen = (function () {
       link.setAttribute("aria-disabled", "true");
       link.setAttribute("tabindex", "-1");
     }
+
+    var promote = ID("result.promote");
+    promote.disabled = partial;
+    if (partial) promote.setAttribute("aria-disabled", "true");
+    else promote.removeAttribute("aria-disabled");
+    root.querySelector('[data-role="no-promote"]').hidden = !partial;
     showState("success");
   }
 
+  // Blockers, in the UI-SPEC order: text, raw selector JSON, then the picker. Returns {ok, selector, focus}.
+  function validate() {
+    var textBox = ID("text.input");
+    var jsonBox = ID("advanced.selector-json");
+    var raw = jsonBox.value.trim();
+    var textMsg = textBox.value.trim() === "" ? MSG.textEmpty : "";
+    var jsonMsg = "";
+    var override = null;
+    if (raw !== "") {
+      var parsed = null;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (e) {
+        jsonMsg = MSG.badJson;
+      }
+      if (!jsonMsg) {
+        if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) jsonMsg = MSG.badJson;
+        else if (Object.keys(parsed).filter(function (k) { return parsed[k] !== null; }).length > 1) jsonMsg = MSG.multiMember;
+        else override = parsed;
+      }
+    }
+    var pickMsg = raw !== "" ? "" : picker.blockers()[0] || "";
+    setFieldError(textBox, textMsg);
+    setFieldError(jsonBox, jsonMsg);
+    setFieldError(ID("selector.group"), pickMsg);
+    var focus = textMsg ? ID("text.error") : jsonMsg ? ID("advanced.selector-json-error") : pickMsg ? ID("selector.error") : null;
+    if (jsonMsg) ID("advanced.panel").open = true;
+    ID("run.message").hidden = !(touched && focus);
+    return { ok: !focus, selector: override !== null ? override : picker.value(), focus: focus };
+  }
+
+  var picker = Picker.attach("query", function () {
+    if (touched) validate();
+  });
+
+  function pickFixture() {
+    return "q-success";
+  }
+
   function run() {
+    touched = true;
+    var check = validate();
+    if (!check.ok) {
+      ID("run.message").textContent = "Run blocked. Fix the message shown above.";
+      ID("run.message").hidden = false;
+      check.focus.focus();
+      return;
+    }
     cancelTimers();
     showState("running");
     later(800, function () {
-      renderResult(FIX.query["q-success"].body);
+      renderResult(FIX.query[pickFixture()].body);
+    });
+  }
+
+  function setMode(next) {
+    mode = next;
+    root.setAttribute("data-mode", mode);
+    ID("mode.query").setAttribute("aria-selected", String(mode === "query"));
+    ID("mode.compare").setAttribute("aria-selected", String(mode === "compare"));
+  }
+
+  function buildResolutionTable() {
+    var body = ID("selector.table").tBodies[0];
+    Resolution.rows.forEach(function (r) {
+      var tr = h("tr");
+      tr.appendChild(h("td", selectorLabel(r.selector), "mono"));
+      tr.appendChild(h("td", r.wiring || "not satisfiable"));
+      tr.appendChild(h("td", r.node_count === null || r.node_count === undefined ? "—" : String(r.node_count)));
+      tr.appendChild(h("td", r.outcome));
+      body.appendChild(tr);
     });
   }
 
   ID("run.submit").addEventListener("click", run);
+  ID("mode.query").addEventListener("click", function () {
+    setMode("query");
+  });
+  ID("mode.compare").addEventListener("click", function () {
+    setMode("compare");
+  });
+  ["text.input", "advanced.selector-json"].forEach(function (name) {
+    ID(name).addEventListener("input", function () {
+      if (touched) validate();
+    });
+  });
+  ID("selector.table-toggle").addEventListener("click", function () {
+    var wrap = root.querySelector('[data-role="resolution-wrap"]');
+    wrap.hidden = !wrap.hidden;
+    ID("selector.table-toggle").setAttribute("aria-expanded", String(!wrap.hidden));
+    ID("selector.table-toggle").textContent = wrap.hidden ? "Show resolution table" : "Hide resolution table";
+  });
   ID("result.trace-link").addEventListener("click", function (event) {
     event.preventDefault();
     if (!lastTrace) return;
@@ -158,9 +255,19 @@ var QueryScreen = (function () {
   ID("result.copy-trace").addEventListener("click", function () {
     if (lastTrace) copyText(lastTrace, root.querySelector('[data-role="copied"]'));
   });
+  ID("result.promote").addEventListener("click", function () {
+    Console.show("ledger");
+    Console.emit("promote", { trace: lastTrace });
+  });
+  ID("result.compare").addEventListener("click", function () {
+    setMode("compare");
+  });
 
+  buildResolutionTable();
   showState("idle");
   return {
+    setMode: setMode,
+    picker: picker,
     setState: function (name) {
       cancelTimers();
       if (STATES.indexOf(name) < 0) throw new Error("unknown query state " + name);

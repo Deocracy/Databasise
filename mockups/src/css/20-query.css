@@ -20,6 +20,19 @@ label.inline { display: inline-flex; align-items: center; gap: var(--sm); }
 .run-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--md); margin-top: var(--md); }
 .run-row p { margin: 0; }
 
+.selector { margin: var(--md) 0; padding: var(--md); border: 1px solid var(--border); border-radius: 8px; min-width: 0; }
+.selector legend { padding: 0 var(--xs); }
+.selector-kinds { display: flex; flex-wrap: wrap; gap: var(--md); margin-bottom: var(--sm); }
+.selector-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--md); }
+.selector-part { min-width: 0; }
+.selector-part input, .selector-part select { width: 100%; max-width: 100%; }
+.chips { display: flex; flex-wrap: wrap; gap: var(--xs); margin-top: var(--xs); }
+.subpanel { margin: var(--md) 0; padding: var(--sm) var(--md); border: 1px solid var(--border); border-radius: 8px; }
+.subpanel summary { cursor: pointer; font: 600 13px/1.5 var(--font); }
+.advanced-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 var(--md); margin-top: var(--sm); }
+.advanced-grid p { margin: 0 0 var(--sm); align-self: start; }
+.subpanel textarea { width: 100%; }
+
 .answer { max-width: 72ch; margin-bottom: var(--md); white-space: pre-wrap; overflow-wrap: anywhere; }
 .actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sm); margin: var(--md) 0 var(--sm); }
 .cap-first::first-letter { text-transform: uppercase; }

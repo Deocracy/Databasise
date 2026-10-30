@@ -1,0 +1,56 @@
+<fieldset class="selector" data-mock-id="{{s}}.selector.group" data-field-loc="body.selector" data-error-id="{{s}}.selector.error">
+  <legend>Selector</legend>
+  <div class="selector-kinds">
+    <label class="inline"><input type="radio" name="{{s}}-selector-kind" value="default" checked data-mock-id="{{s}}.selector.kind-default"> Default</label>
+    <label class="inline"><input type="radio" name="{{s}}-selector-kind" value="alias" data-mock-id="{{s}}.selector.kind-alias"> Alias</label>
+    <label class="inline"><input type="radio" name="{{s}}-selector-kind" value="capability" data-mock-id="{{s}}.selector.kind-capability"> Capability</label>
+    <label class="inline"><input type="radio" name="{{s}}-selector-kind" value="harness" disabled aria-disabled="true" data-mock-id="{{s}}.selector.kind-harness"> Harness</label>
+  </div>
+  <div class="selector-grid">
+    <div class="selector-part">
+      <label class="field"><span class="label">Alias</span>
+        <input type="text" autocomplete="off" spellcheck="false" data-mock-id="{{s}}.selector.alias">
+      </label>
+      <span data-needs-backend="GET /ledger/aliases" data-backend-state="operator" title="Mounted only with --operator"><span class="badge badge-op">operator route</span>
+        <label class="field"><span class="label">Known aliases</span>
+          <select data-mock-id="{{s}}.selector.alias-picker"><option value="">Choose an alias</option></select>
+        </label>
+      </span>
+    </div>
+    <div class="selector-part">
+      <label class="field"><span class="label">Capability tokens</span>
+        <select multiple size="8" data-mock-id="{{s}}.selector.capability">
+          <option value="reads_kv">reads_kv</option>
+          <option value="reads_vector">reads_vector</option>
+          <option value="reads_graph">reads_graph</option>
+          <option value="reads_lexical">reads_lexical</option>
+          <option value="reads_blob">reads_blob</option>
+          <option value="writes_artifact">writes_artifact</option>
+          <option value="calls_llm">calls_llm</option>
+          <option value="calls_rerank">calls_rerank</option>
+          <option value="calls_embedding">calls_embedding</option>
+          <option value="net">net</option>
+          <option value="fs">fs</option>
+          <option value="self_storage">self_storage</option>
+          <option value="mutates_store">mutates_store</option>
+          <option value="writes_kv">writes_kv</option>
+          <option value="writes_vector">writes_vector</option>
+          <option value="writes_graph">writes_graph</option>
+          <option value="writes_lexical">writes_lexical</option>
+          <option value="reads_vector:chunks">reads_vector:chunks</option>
+          <option value="reads_vector:entities">reads_vector:entities</option>
+          <option value="reads_vector:relationships">reads_vector:relationships</option>
+        </select>
+      </label>
+      <div class="chips" data-mock-id="{{s}}.selector.chips"></div>
+    </div>
+    <div class="selector-part">
+      <label class="field"><span class="label">Harness</span>
+        <input type="text" disabled aria-disabled="true" data-mock-id="{{s}}.selector.harness">
+      </label>
+      <p class="muted">no production wiring declares a harness</p>
+    </div>
+  </div>
+  <p class="field-error" role="alert" tabindex="-1" data-mock-id="{{s}}.selector.error" hidden></p>
+  <span data-needs-backend="POST /selectors/resolve" title="Not implemented yet: POST /selectors/resolve"><span class="badge badge-nb">needs backend</span> <span role="status" data-mock-id="{{s}}.selector.resolves-to"></span></span>
+</fieldset>

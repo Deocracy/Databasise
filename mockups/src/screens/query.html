@@ -10,6 +10,40 @@
       <textarea rows="4" data-mock-id="query.text.input" data-field-loc="body.query.text" data-error-id="query.text.error"></textarea>
     </label>
     <p class="field-error" role="alert" tabindex="-1" data-mock-id="query.text.error" hidden></p>
+<!--@include parts/selector.html s=query-->
+    <button type="button" class="btn btn-outline" aria-expanded="false" data-mock-id="query.selector.table-toggle">Show resolution table</button>
+    <div class="table-scroll" data-role="resolution-wrap" hidden>
+      <table role="table" data-mock-id="query.selector.table">
+        <thead><tr><th>Selector</th><th>Resolves to</th><th>Nodes</th><th>Outcome</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="muted">Every arm is reachable: naive, bypass, hybrid, local, global and hipporag.</p>
+    </div>
+    <details class="subpanel" data-mock-id="query.advanced.panel">
+      <summary data-mock-id="query.advanced.toggle">Advanced query members</summary>
+      <div class="advanced-grid">
+        <div>
+        <label class="field"><span class="label">Embedding</span><input type="text" disabled aria-disabled="true" data-mock-id="query.advanced.embedding"></label>
+        <p class="muted">no registered part consumes this member</p>
+        </div>
+        <div>
+        <label class="field"><span class="label">Predicates</span><input type="text" disabled aria-disabled="true" data-mock-id="query.advanced.predicates"></label>
+        <p class="muted">no registered part consumes this member</p>
+        </div>
+        <div>
+        <label class="field"><span class="label">Profile ref</span><input type="text" disabled aria-disabled="true" data-mock-id="query.advanced.profile-ref"></label>
+        <p class="muted">no registered part consumes this member</p>
+        </div>
+        <div>
+        <label class="field"><span class="label">Formal query</span><input type="text" disabled aria-disabled="true" data-mock-id="query.advanced.formal-query"></label>
+        <p class="muted">no registered part consumes this member</p>
+        </div>
+      </div>
+      <label class="field"><span class="label">Raw selector JSON</span>
+        <textarea rows="3" spellcheck="false" data-mock-id="query.advanced.selector-json" data-error-id="query.advanced.selector-json-error"></textarea>
+      </label>
+      <p class="field-error" role="alert" tabindex="-1" data-mock-id="query.advanced.selector-json-error" hidden></p>
+    </details>
     <div class="run-row">
       <button type="button" class="btn btn-primary" data-mock-id="query.run.submit">Run</button>
       <span class="spinner" role="presentation" data-mock-id="query.run.spinner" hidden></span>
