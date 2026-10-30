@@ -339,6 +339,14 @@ function wireErrors(screen) {
   });
 }
 
+// Opens a shell dialog modally and puts focus on the named control (the safe choice); Escape closes it natively.
+function openDialog(dialogId, focusId) {
+  var dialog = $id(dialogId);
+  if (!dialog.open) dialog.showModal();
+  var target = $id(focusId);
+  if (target) target.focus();
+}
+
 function copyText(text, flash) {
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) {

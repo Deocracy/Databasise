@@ -1,0 +1,33 @@
+/* Documents & Jobs (17-09) */
+.docs-layout { display: block; }
+.docs-main { min-width: 0; }
+.preview { margin: 0 0 var(--md); padding: var(--sm); max-height: 200px; overflow: auto; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+.field input[type="text"], .field input[type="file"] { width: 100%; max-width: 100%; }
+.field textarea { overflow-wrap: anywhere; }
+.upload-progress { display: flex; align-items: center; gap: var(--sm); margin: 0 0 var(--md); }
+.upload-progress progress { width: 160px; max-width: 100%; }
+.docs-outcome { margin-top: var(--md); padding: var(--md); border: 1px solid var(--border); border-radius: 8px; }
+.docs-outcome .mono { overflow-wrap: anywhere; }
+.seam summary { cursor: pointer; font: 600 13px/1.5 var(--font); }
+.seam ul { margin: var(--sm) 0 0; padding-left: var(--lg); }
+
+/* Jobs drawer: docked at 1200 px and wider, overlay below. */
+.docs-drawer { position: fixed; top: 0; right: 0; bottom: 0; z-index: 20; width: min(480px, 100%); overflow-y: auto; padding: var(--md); background: var(--bg); border-left: 1px solid var(--border); box-shadow: -4px 0 16px rgba(9, 9, 11, 0.15); }
+.drawer-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sm); margin-bottom: var(--sm); }
+.drawer-head h2 { margin: 0; }
+.docs-drawer input[type="text"], .docs-drawer input[type="number"] { width: 100%; max-width: 100%; }
+.jobs-list { margin: 0 0 var(--md); padding: 0; list-style: none; }
+.jobs-list li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sm); padding: var(--xs) 0; border-bottom: 1px solid var(--border); }
+.pipeline-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--md); margin: var(--md) 0; }
+.job-table td [data-role="error"] { max-width: 28ch; margin: var(--xs) 0 0; overflow-wrap: anywhere; }
+.counts { margin: var(--md) 0; }
+.stack { display: flex; height: 16px; overflow: hidden; border-radius: 4px; background: var(--bg-2); }
+.stack span { display: block; width: var(--w, 0%); background: var(--st-fg, var(--muted)); }
+@media (min-width: 1200px) {
+  .docs-layout[data-drawer="open"] { display: grid; grid-template-columns: minmax(0, 1fr) 480px; gap: var(--lg); align-items: start; }
+  .docs-drawer { position: static; z-index: auto; width: auto; overflow: visible; border: 1px solid var(--border); border-radius: 8px; box-shadow: none; }
+}
+
+/* Delete dialog */
+.dialog-actions { display: flex; justify-content: flex-end; gap: var(--sm); margin-top: var(--md); }
+dialog strong { overflow-wrap: anywhere; }

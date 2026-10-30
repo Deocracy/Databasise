@@ -343,6 +343,39 @@ mark { padding: 0 var(--xs); border-radius: 4px; background: var(--warn-bg); col
 .bar-chart { display: grid; gap: var(--xs); max-width: 640px; }
 .bar-row { display: grid; grid-template-columns: minmax(80px, 160px) minmax(0, 1fr) max-content; align-items: center; gap: var(--sm); }
 .bar { display: block; height: 12px; width: var(--w, 0%); min-width: 2px; border-radius: 2px; background: var(--accent); }
+/* Documents & Jobs (17-09) */
+.docs-layout { display: block; }
+.docs-main { min-width: 0; }
+.preview { margin: 0 0 var(--md); padding: var(--sm); max-height: 200px; overflow: auto; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+.field input[type="text"], .field input[type="file"] { width: 100%; max-width: 100%; }
+.field textarea { overflow-wrap: anywhere; }
+.upload-progress { display: flex; align-items: center; gap: var(--sm); margin: 0 0 var(--md); }
+.upload-progress progress { width: 160px; max-width: 100%; }
+.docs-outcome { margin-top: var(--md); padding: var(--md); border: 1px solid var(--border); border-radius: 8px; }
+.docs-outcome .mono { overflow-wrap: anywhere; }
+.seam summary { cursor: pointer; font: 600 13px/1.5 var(--font); }
+.seam ul { margin: var(--sm) 0 0; padding-left: var(--lg); }
+
+/* Jobs drawer: docked at 1200 px and wider, overlay below. */
+.docs-drawer { position: fixed; top: 0; right: 0; bottom: 0; z-index: 20; width: min(480px, 100%); overflow-y: auto; padding: var(--md); background: var(--bg); border-left: 1px solid var(--border); box-shadow: -4px 0 16px rgba(9, 9, 11, 0.15); }
+.drawer-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sm); margin-bottom: var(--sm); }
+.drawer-head h2 { margin: 0; }
+.docs-drawer input[type="text"], .docs-drawer input[type="number"] { width: 100%; max-width: 100%; }
+.jobs-list { margin: 0 0 var(--md); padding: 0; list-style: none; }
+.jobs-list li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sm); padding: var(--xs) 0; border-bottom: 1px solid var(--border); }
+.pipeline-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--md); margin: var(--md) 0; }
+.job-table td [data-role="error"] { max-width: 28ch; margin: var(--xs) 0 0; overflow-wrap: anywhere; }
+.counts { margin: var(--md) 0; }
+.stack { display: flex; height: 16px; overflow: hidden; border-radius: 4px; background: var(--bg-2); }
+.stack span { display: block; width: var(--w, 0%); background: var(--st-fg, var(--muted)); }
+@media (min-width: 1200px) {
+  .docs-layout[data-drawer="open"] { display: grid; grid-template-columns: minmax(0, 1fr) 480px; gap: var(--lg); align-items: start; }
+  .docs-drawer { position: static; z-index: auto; width: auto; overflow: visible; border: 1px solid var(--border); border-radius: 8px; box-shadow: none; }
+}
+
+/* Delete dialog */
+.dialog-actions { display: flex; justify-content: flex-end; gap: var(--sm); margin-top: var(--md); }
+dialog strong { overflow-wrap: anywhere; }
 
 </style>
 </head>
@@ -1383,6 +1416,305 @@ mark { padding: 0 var(--xs); border-radius: 4px; background: var(--warn-bg); col
 
 <section data-mock-id="screen-documents" hidden>
   <h1>Documents &amp; Jobs</h1>
+  <div class="mock-strip" data-mock-only="true">
+    <label>Outcome
+      <select data-mock-id="documents.mock.outcome" data-mock-only="true">
+        <option value="success">success</option>
+        <option value="refusal">refusal</option>
+        <option value="validation">validation</option>
+        <option value="server-failure">server failure</option>
+        <option value="generic">generic 5xx</option>
+        <option value="unknown-job">unknown job</option>
+      </select>
+    </label>
+  </div>
+  <div class="docs-layout" data-role="layout" data-drawer="closed">
+  <div class="docs-main">
+    <div class="actions">
+      <button type="button" class="btn btn-outline" aria-expanded="false" data-mock-id="documents.jobs.open">Open jobs</button>
+    </div>
+    <div data-role="errors" hidden>
+<div class="banner error-shape" data-state="warn" role="alert" data-mock-id="documents.error.refusal" hidden>
+  <p class="label"><span aria-hidden="true">▲</span> Request refused</p>
+  <h3 class="mono" data-role="type"></h3>
+  <p data-role="message"></p>
+  <div class="table-scroll" data-role="attrs-wrap"><dl class="attrs" data-role="attrs"></dl></div>
+  <p class="muted" data-role="hint"></p>
+  <p class="muted"><span data-role="footer"></span>
+    <span data-needs-backend="GET /refusals" title="Not implemented yet: GET /refusals"><span class="badge badge-nb">needs backend</span> <a href="#corpus" data-mock-id="documents.error.catalogue-link">Show in refusal catalogue</a></span></p>
+</div>
+<div class="banner error-shape" data-state="fail" role="alert" data-mock-id="documents.error.validation" hidden>
+  <p data-role="summary"></p>
+  <ul data-role="list"></ul>
+</div>
+<div class="banner error-shape" data-state="fail" role="alert" data-mock-id="documents.error.server-failure" hidden>
+  <p class="label"><span aria-hidden="true">✕</span> Server failure</p>
+  <p data-role="text"></p>
+  <button type="button" class="btn btn-outline" aria-expanded="false" data-mock-id="documents.error.details-toggle">Show details</button>
+  <div data-role="details" hidden>
+    <div class="mono" data-role="detail-list"></div>
+    <button type="button" class="btn btn-outline" data-mock-id="documents.error.open-trace" hidden>Open trace</button>
+  </div>
+</div>
+<div class="banner error-shape" data-state="neutral" role="alert" data-mock-id="documents.error.generic" hidden>
+  <p class="label"><span aria-hidden="true">■</span> Server error</p>
+  <p data-role="text"></p>
+  <pre class="mono" data-role="body" hidden></pre>
+  <span data-needs-backend="GET /log" data-backend-state="operator" title="Mounted only with --operator --log-file"><span class="badge badge-op">operator route</span> <a href="#corpus" data-mock-id="documents.error.server-log">Open server log</a></span>
+</div>
+
+    </div>
+
+    <section class="panel" data-focal="true" data-mock-id="documents.ingest.panel">
+      <h2>Ingest a document</h2>
+<fieldset class="selector" data-mock-id="documents.selector.group" data-field-loc="body.selector" data-error-id="documents.selector.error">
+  <legend>Selector</legend>
+  <div class="selector-kinds">
+    <label class="inline"><input type="radio" name="documents-selector-kind" value="default" checked data-mock-id="documents.selector.kind-default"> Default</label>
+    <label class="inline"><input type="radio" name="documents-selector-kind" value="alias" data-mock-id="documents.selector.kind-alias"> Alias</label>
+    <label class="inline"><input type="radio" name="documents-selector-kind" value="capability" data-mock-id="documents.selector.kind-capability"> Capability</label>
+    <label class="inline"><input type="radio" name="documents-selector-kind" value="harness" disabled aria-disabled="true" data-mock-id="documents.selector.kind-harness"> Harness</label>
+  </div>
+  <div class="selector-grid">
+    <div class="selector-part">
+      <label class="field"><span class="label">Alias</span>
+        <input type="text" autocomplete="off" spellcheck="false" data-mock-id="documents.selector.alias">
+      </label>
+      <span data-needs-backend="GET /ledger/aliases" data-backend-state="operator" title="Mounted only with --operator"><span class="badge badge-op">operator route</span>
+        <label class="field"><span class="label">Known aliases</span>
+          <select data-mock-id="documents.selector.alias-picker"><option value="">Choose an alias</option></select>
+        </label>
+      </span>
+    </div>
+    <div class="selector-part">
+      <label class="field"><span class="label">Capability tokens</span>
+        <select multiple size="8" data-mock-id="documents.selector.capability">
+          <option value="reads_kv">reads_kv</option>
+          <option value="reads_vector">reads_vector</option>
+          <option value="reads_graph">reads_graph</option>
+          <option value="reads_lexical">reads_lexical</option>
+          <option value="reads_blob">reads_blob</option>
+          <option value="writes_artifact">writes_artifact</option>
+          <option value="calls_llm">calls_llm</option>
+          <option value="calls_rerank">calls_rerank</option>
+          <option value="calls_embedding">calls_embedding</option>
+          <option value="net">net</option>
+          <option value="fs">fs</option>
+          <option value="self_storage">self_storage</option>
+          <option value="mutates_store">mutates_store</option>
+          <option value="writes_kv">writes_kv</option>
+          <option value="writes_vector">writes_vector</option>
+          <option value="writes_graph">writes_graph</option>
+          <option value="writes_lexical">writes_lexical</option>
+          <option value="reads_vector:chunks">reads_vector:chunks</option>
+          <option value="reads_vector:entities">reads_vector:entities</option>
+          <option value="reads_vector:relationships">reads_vector:relationships</option>
+        </select>
+      </label>
+      <div class="chips" data-mock-id="documents.selector.chips"></div>
+    </div>
+    <div class="selector-part">
+      <label class="field"><span class="label">Harness</span>
+        <input type="text" disabled aria-disabled="true" data-mock-id="documents.selector.harness">
+      </label>
+      <p class="muted">no production wiring declares a harness</p>
+    </div>
+  </div>
+  <p class="field-error" role="alert" tabindex="-1" data-mock-id="documents.selector.error" hidden></p>
+  <span data-needs-backend="POST /selectors/resolve" title="Not implemented yet: POST /selectors/resolve"><span class="badge badge-nb">needs backend</span> <span role="status" data-mock-id="documents.selector.resolves-to"></span></span>
+</fieldset>
+
+      <p><span class="chip" data-state="neutral" role="status" data-mock-id="documents.selector.family">Target: LightRAG</span></p>
+      <p class="banner" data-state="neutral" data-mock-id="documents.notice.store-split">LightRAG documents ingested here appear in Corpus &amp; Health and in Jobs. They are not visible in Query &amp; Compare or Evidence &amp; Trace.</p>
+      <div class="tabs" role="tablist" aria-label="Ingest" data-mock-id="documents.tabs.tablist">
+        <button type="button" role="tab" aria-selected="true" data-mock-id="documents.tabs.paste">Paste text</button>
+        <button type="button" role="tab" aria-selected="false" data-mock-id="documents.tabs.upload">Upload file</button>
+      </div>
+
+      <div role="tabpanel" aria-label="Paste text" data-role="pane-paste">
+        <label class="field"><span class="label">Document text</span>
+          <textarea rows="6" autocomplete="off" spellcheck="false" data-mock-id="documents.paste.text" data-field-loc="body.document.text" data-error-id="documents.paste.text-error"></textarea>
+        </label>
+        <p class="field-error" role="alert" tabindex="-1" data-mock-id="documents.paste.text-error" hidden></p>
+        <p class="muted mono" data-mock-id="documents.paste.bytes"></p>
+        <label class="field"><span class="label">Document id (optional)</span>
+          <input type="text" class="mono" autocomplete="off" spellcheck="false" data-mock-id="documents.paste.document-id" data-field-loc="body.document.document_id" data-error-id="documents.paste.document-id-error">
+        </label>
+        <p class="muted">Leave empty to generate an id.</p>
+        <p class="field-error" role="alert" tabindex="-1" data-mock-id="documents.paste.document-id-error" hidden></p>
+        <p class="label">Request body</p>
+        <pre class="mono preview" data-mock-id="documents.paste.request-preview"></pre>
+        <button type="button" class="btn btn-primary" data-mock-id="documents.paste.submit">Submit</button>
+      </div>
+
+      <div role="tabpanel" aria-label="Upload file" data-role="pane-upload" hidden>
+        <label class="field"><span class="label">File (one file per request)</span>
+          <input type="file" data-mock-id="documents.upload.file" data-field-loc="body.file" data-error-id="documents.upload.file-error">
+        </label>
+        <p class="field-error" role="alert" tabindex="-1" data-mock-id="documents.upload.file-error" hidden></p>
+        <label class="field"><span class="label">Document id (optional)</span>
+          <input type="text" class="mono" autocomplete="off" spellcheck="false" data-mock-id="documents.upload.document-id" data-field-loc="body.document_id" data-error-id="documents.upload.document-id-error">
+        </label>
+        <p class="muted">Leave empty to generate an id.</p>
+        <p class="field-error" role="alert" tabindex="-1" data-mock-id="documents.upload.document-id-error" hidden></p>
+        <p class="muted" data-mock-id="documents.upload.notice"></p>
+        <p class="label">Multipart fields</p>
+        <pre class="mono preview" data-mock-id="documents.upload.request-preview"></pre>
+        <div role="status" class="upload-progress" data-mock-id="documents.upload.progress" hidden>
+          <progress max="100" value="0"></progress>
+          <span class="spinner" role="presentation" data-role="spin" hidden></span>
+          <span data-role="text"></span>
+        </div>
+        <button type="button" class="btn btn-primary" data-mock-id="documents.upload.submit">Submit</button>
+      </div>
+
+      <div class="state-view banner" data-state="progress" role="status" data-mock-id="documents.state.in-flight" hidden>
+        <p><span class="spinner" role="presentation"></span> Submitting. A LightRAG ingest waits for the model and can take minutes.</p>
+      </div>
+    </section>
+
+    <section class="panel" data-mock-id="documents.result.card" hidden>
+      <h2>Ingest accepted</h2>
+      <p>Job id <span class="mono" data-role="job-id"></span>
+        <button type="button" class="btn btn-outline btn-icon" aria-label="Copy job id" data-mock-id="documents.result.copy-job-id"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></button><span class="muted" data-role="copied" hidden>Copied</span></p>
+      <p>enqueued <span class="mono" data-role="enqueued"></span></p>
+      <p class="muted" data-role="note"></p>
+      <button type="button" class="btn btn-outline" data-mock-id="documents.result.open-job">Open job</button>
+    </section>
+
+    <section class="panel" data-mock-id="documents.delete.panel">
+      <h2>Delete by id</h2>
+      <p class="muted">Uses the selector above. Delete is offered for every selector the server deletes under.</p>
+      <label class="field"><span class="label">Document id</span>
+        <input type="text" class="mono" autocomplete="off" spellcheck="false" data-mock-id="documents.delete.document-id" data-field-loc="path.document_id" data-error-id="documents.delete.document-id-error">
+      </label>
+      <p class="field-error" role="alert" tabindex="-1" data-mock-id="documents.delete.document-id-error" hidden></p>
+      <button type="button" class="btn btn-outline" data-mock-id="documents.delete.submit">Delete</button>
+      <div class="docs-outcome" role="status" data-mock-id="documents.delete.outcome" hidden>
+        <p><span class="badge" data-role="status"></span> <span class="mono" data-role="doc"></span></p>
+        <p data-role="message"></p>
+        <details class="seam" data-mock-id="documents.delete.seam-events">
+          <summary data-mock-id="documents.delete.seam-toggle"></summary>
+          <ul data-role="seam-list"></ul>
+        </details>
+      </div>
+    </section>
+
+    <details class="panel" data-mock-id="documents.planned.list">
+      <summary data-mock-id="documents.planned.toggle">Planned (not built)</summary>
+      <ul>
+        <li>Clear all documents and LLM cache</li>
+        <li>Delete-impact preview</li>
+        <li>HippoRAG job status</li>
+        <li>Ingest and delete time limits, with a typed timeout refusal</li>
+      </ul>
+    </details>
+  </div>
+
+  <aside class="docs-drawer" aria-label="Jobs" data-mock-id="documents.jobs.drawer" hidden>
+    <div class="drawer-head">
+      <h2>Jobs</h2>
+      <button type="button" class="btn btn-outline btn-icon" aria-label="Close jobs" data-mock-id="documents.jobs.close"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <label class="field"><span class="label">Job id</span>
+      <input type="text" class="mono" autocomplete="off" spellcheck="false" data-mock-id="documents.jobs.job-id" data-field-loc="path.job_id" data-error-id="documents.jobs.job-id-error">
+    </label>
+    <p class="field-error" role="alert" tabindex="-1" data-mock-id="documents.jobs.job-id-error" hidden></p>
+    <div class="run-row">
+      <button type="button" class="btn btn-primary" data-mock-id="documents.jobs.load">Load job</button>
+      <span data-needs-backend="GET /jobs" title="Not implemented yet: GET /jobs"><span class="badge badge-nb">needs backend</span> <button type="button" class="btn btn-outline" data-mock-id="documents.jobs.all">List all jobs</button></span>
+    </div>
+
+    <h3>Jobs from this session</h3>
+    <ul class="jobs-list" data-mock-id="documents.jobs.list">
+
+      <li data-role="slot" hidden><span class="mono" data-role="id"></span> <span class="muted" data-role="meta"></span> <button type="button" class="btn btn-outline" data-mock-id="documents.jobs.select-1">Open job</button></li>
+
+      <li data-role="slot" hidden><span class="mono" data-role="id"></span> <span class="muted" data-role="meta"></span> <button type="button" class="btn btn-outline" data-mock-id="documents.jobs.select-2">Open job</button></li>
+
+      <li data-role="slot" hidden><span class="mono" data-role="id"></span> <span class="muted" data-role="meta"></span> <button type="button" class="btn btn-outline" data-mock-id="documents.jobs.select-3">Open job</button></li>
+
+    </ul>
+
+    <div class="pipeline-row">
+      <span data-needs-backend="GET /pipeline" title="Not implemented yet: GET /pipeline"><span class="badge badge-nb">needs backend</span> <span role="status" data-mock-id="documents.pipeline.status"></span></span>
+      <span data-needs-backend="POST /jobs/{job_id}/cancel" title="Not implemented yet: POST /jobs/{job_id}/cancel"><span class="badge badge-nb">needs backend</span> <button type="button" class="btn btn-outline" data-mock-id="documents.pipeline.cancel">Cancel pipeline</button></span>
+    </div>
+
+    <label class="field"><span class="label">Page size (1 to 100)</span>
+      <input type="number" min="1" max="100" step="1" value="50" data-mock-id="documents.jobs.page-size" data-error-id="documents.jobs.page-size-error">
+    </label>
+    <p class="field-error" role="alert" tabindex="-1" data-mock-id="documents.jobs.page-size-error" hidden></p>
+
+    <p class="muted" data-role="no-job">No job loaded. Enter a job id or choose one from the list.</p>
+    <div class="state-view" role="status" data-mock-id="documents.jobs.loading" hidden><span class="spinner" role="presentation"></span> Loading job</div>
+    <div class="state-view" data-mock-id="documents.jobs.empty" hidden>
+      <h3>No documents on this page</h3>
+      <p class="muted">This job has no documents on this page. Check the job id or select Refresh job.</p>
+    </div>
+    <div class="table-scroll" data-role="table-wrap" hidden>
+      <table role="table" class="job-table" data-mock-id="documents.jobs.documents">
+        <thead><tr><th>document_id</th><th>status</th><th>updated_at</th><th>error</th><th>Actions</th></tr></thead>
+        <tbody>
+
+          <tr hidden>
+            <td class="mono" data-role="id"></td>
+            <td><span class="badge" data-role="status"></span></td>
+            <td class="mono" data-role="updated"></td>
+            <td><button type="button" class="btn btn-outline" aria-expanded="false" data-mock-id="documents.jobs.error-toggle-1" hidden>Show error</button><p class="mono" data-role="error" hidden></p></td>
+            <td><button type="button" class="btn btn-outline" data-mock-id="documents.jobs.delete-1">Delete</button></td>
+          </tr>
+
+          <tr hidden>
+            <td class="mono" data-role="id"></td>
+            <td><span class="badge" data-role="status"></span></td>
+            <td class="mono" data-role="updated"></td>
+            <td><button type="button" class="btn btn-outline" aria-expanded="false" data-mock-id="documents.jobs.error-toggle-2" hidden>Show error</button><p class="mono" data-role="error" hidden></p></td>
+            <td><button type="button" class="btn btn-outline" data-mock-id="documents.jobs.delete-2">Delete</button></td>
+          </tr>
+
+          <tr hidden>
+            <td class="mono" data-role="id"></td>
+            <td><span class="badge" data-role="status"></span></td>
+            <td class="mono" data-role="updated"></td>
+            <td><button type="button" class="btn btn-outline" aria-expanded="false" data-mock-id="documents.jobs.error-toggle-3" hidden>Show error</button><p class="mono" data-role="error" hidden></p></td>
+            <td><button type="button" class="btn btn-outline" data-mock-id="documents.jobs.delete-3">Delete</button></td>
+          </tr>
+
+          <tr hidden>
+            <td class="mono" data-role="id"></td>
+            <td><span class="badge" data-role="status"></span></td>
+            <td class="mono" data-role="updated"></td>
+            <td><button type="button" class="btn btn-outline" aria-expanded="false" data-mock-id="documents.jobs.error-toggle-4" hidden>Show error</button><p class="mono" data-role="error" hidden></p></td>
+            <td><button type="button" class="btn btn-outline" data-mock-id="documents.jobs.delete-4">Delete</button></td>
+          </tr>
+
+          <tr hidden>
+            <td class="mono" data-role="id"></td>
+            <td><span class="badge" data-role="status"></span></td>
+            <td class="mono" data-role="updated"></td>
+            <td><button type="button" class="btn btn-outline" aria-expanded="false" data-mock-id="documents.jobs.error-toggle-5" hidden>Show error</button><p class="mono" data-role="error" hidden></p></td>
+            <td><button type="button" class="btn btn-outline" data-mock-id="documents.jobs.delete-5">Delete</button></td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+    <div class="run-row">
+      <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="documents.jobs.prev">Previous page</button>
+      <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="documents.jobs.next">Next page</button>
+    </div>
+    <div class="counts" data-mock-id="documents.jobs.counts" hidden>
+      <p class="label">whole corpus, not this job</p>
+      <div class="stack" data-role="bar"></div>
+      <div class="chips" data-role="chips"></div>
+    </div>
+    <div class="run-row">
+      <button type="button" class="btn btn-outline" data-mock-id="documents.jobs.refresh">Refresh job</button>
+      <label class="inline"><input type="checkbox" data-mock-id="documents.jobs.poll"> Refresh every 30 seconds</label>
+    </div>
+  </aside>
+  </div>
 </section>
 
 <section data-mock-id="screen-corpus" hidden>
@@ -1399,6 +1731,14 @@ mark { padding: 0 var(--xs); border-radius: 4px; background: var(--warn-bg); col
 
     </main>
   </div>
+  <dialog role="dialog" aria-label="Delete document" data-mock-id="shell.dialog.delete">
+    <h2>Delete document</h2>
+    <p>Delete document <strong class="mono" data-role="doc"></strong> using selector <strong class="mono" data-role="sel"></strong>? <span data-role="tail"></span></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-outline" data-mock-id="shell.dialog.delete-cancel">Keep document</button>
+      <button type="button" class="btn btn-destructive" data-mock-id="shell.dialog.delete-confirm"><span class="spinner" role="presentation" hidden></span> Delete</button>
+    </div>
+  </dialog>
 
   <svg hidden aria-hidden="true" width="0" height="0">
     <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
@@ -1410,7 +1750,7 @@ mark { padding: 0 var(--xs); border-radius: 4px; background: var(--warn-bg); col
     <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></symbol>
   </svg>
 </div>
-<script type="application/json" id="mock-fixtures">{"aliases":[{"alias":"prod","active_version":"4.0.0","record_kind":"rollback","generation_ordinal":5,"created_at":"2026-10-20T09:12:44Z","arm":"naive"},{"alias":"staging","active_version":"1.0.0","record_kind":"promotion","generation_ordinal":6,"created_at":"2026-10-21T15:40:02Z","arm":"naive"},{"alias":"hr","active_version":"1.0.0","record_kind":"promotion","generation_ordinal":7,"created_at":"2026-10-22T11:05:37Z","arm":"hipporag"}],"compare":{"bodies":{"naive-ok":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]},"local-partial":{"answer":"","evidence":[],"trace_token":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","depth_label":null,"partial":true,"degraded":true,"stop_reason":"node_failed","degradation_reason":"node_failed","token_accounting":[{"counted_by":"none","prompt_tokens":0,"completion_tokens":0,"cached_read_tokens":0,"call_count":0}],"seam_events":[]},"local-ok":{"answer":"Renewal is on 1 March 2027. The supplier, Northwind Freight, must receive notice 90 days earlier.","evidence":[{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.8409,"tier":null},{"ref":"c-5ac3e0","namespace":"chunks","kind":"text_chunk","score":0.7918,"tier":null}],"trace_token":"Qm1x7TqHk0fE2uVc9JrZsYw3NdLbA8pXoG4iMtRh5Ks","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1840,"completion_tokens":112,"cached_read_tokens":0,"call_count":2},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]},"hipporag-ok":{"answer":"The supplier contract renews on 1 March 2027. Notice of non-renewal is due 90 days before, by 30 November 2026.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.9012,"tier":null},{"ref":"c-e1b7d2","namespace":"chunks","kind":"text_chunk","score":0.8456,"tier":null},{"ref":"c-5ac3e0","namespace":"chunks","kind":"text_chunk","score":0.8101,"tier":null},{"ref":"c-3d98fa","namespace":"chunks","kind":"text_chunk","score":0.7733,"tier":null}],"trace_token":"f3Jd9WcL2vQy7TnB0sKxEoAh5ZuRg1MiPaV8bXkC4yU","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":2210,"completion_tokens":131,"cached_read_tokens":0,"call_count":3},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"cmp-3col":[{"selector":null,"body":"naive-ok"},{"selector":{"capability":["reads_vector:entities"]},"body":"local-partial"},{"selector":{"capability":["reads_graph","calls_llm"]},"body":"hipporag-ok"}],"cmp-3col-clean":[{"selector":null,"body":"naive-ok"},{"selector":{"capability":["reads_vector:entities"]},"body":"local-ok"},{"selector":{"capability":["reads_graph","calls_llm"]},"body":"hipporag-ok"}]},"evidence":{"e-lightrag-chunk":{"id":"c-7f3a91","full_doc_id":"doc-3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","content":"Supplier contract, section 9. This supplier contract renews automatically on 1 March 2027 for a further term of twelve months. Either party may prevent renewal by giving 90 days written notice before expiry. Notice sent after that date takes effect at the end of the following term.","file_path":"contracts/supplier-contract-2026-q1.pdf"},"e-hipporag-chunk":{"id":"chunk:7f3a91","document_id":"contract-2026-q1","ordinal":3,"content":"Section 9, renewal. The supplier contract renews on 1 March 2027. Written notice of 90 days is required to stop the renewal."},"chunks":{"c-02be44":{"id":"c-02be44","full_doc_id":"doc-3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","content":"Section 10, termination. Either party may end the supplier contract for material breach if the breach is not cured within 30 days of written notice.","file_path":"contracts/supplier-contract-2026-q1.pdf"},"c-91d0c7":{"id":"c-91d0c7","full_doc_id":"doc-3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","content":"Section 4, payment. Invoices are payable within 45 days. Late payment accrues interest at 1.5 percent per month.","file_path":"contracts/supplier-contract-2026-q1.pdf"},"c-3d98fa":{"id":"c-3d98fa","full_doc_id":"doc-77a1c0de52b94f6a8d3e9b0c1f2a3d4e","content":"Operations memo 114. The supply chain review moved the supplier audit to the second quarter.","file_path":"memos/memo-ops-114.docx"},"c-5ac3e0":{"id":"c-5ac3e0","full_doc_id":"doc-77a1c0de52b94f6a8d3e9b0c1f2a3d4e","content":"Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit find","file_path":"archive/2026/operations/long-form/annual-supplier-review/appendix-b-supporting-material/very-long-file-name-that-must-wrap-at-narrow-widths-0123456789abcdef0123456789abcdef.pdf"},"c-e1b7d2":{"id":"c-e1b7d2","full_doc_id":"doc-77a1c0de52b94f6a8d3e9b0c1f2a3d4e","content":"Operations memo 115. Renewal dates for all supplier contracts are tracked in the contracts register.","file_path":"memos/memo-ops-115.docx"}},"t-clean":{"partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"bundle_ref":"sentinel:no-eval-bundle-until-phase-2","corpus_snapshot_hash":"sentinel:no-corpus-snapshot-until-phase-2","executor_version":"databasise@0.1.0","determinism_setting":"cache-bypassed","concurrency_setting":"sequential","arm_execution_order":0},"t-partial-debug":{"partial":true,"degraded":true,"stop_reason":"node_failed","degradation_reason":"node_failed","bundle_ref":"sentinel:no-eval-bundle-until-phase-2","corpus_snapshot_hash":"sentinel:no-corpus-snapshot-until-phase-2","executor_version":"databasise@0.1.0","determinism_setting":"cache-bypassed","concurrency_setting":"sequential","arm_execution_order":0,"run_id":"5b0e7c1a-2f4d-4e8b-9a36-d1c8f07b3e52","wiring_id":"lightrag-base","wiring_instance_hash":"sha256:9f2c4e7a1b8d03652ac4f7e19d0b6a83c5e21f4d7a90b3c68e5d1f02a7b4c9e6","arm_id":"naive","nodes":[{"node_id":"embedder-index","instance_hash":"sha256:1a7d3c9e5f0b284671ce9a3d5b0f8e24c6a1d7f39e5b0c482a6d1f73e9b5c0a8","depth":"opaque","effective_depth":"opaque","tier":null,"feed_tier":null,"status":"completed","execution_mode":"in-process","wall_clock_ms":412,"cache_hit":false,"guards_fired":[],"budget_state":"within_budget","spent":14,"allowance":1000000,"realised_budget_share":1.4e-05,"cross_process_failure_cause":null,"resumable":false,"tokens":{"prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1,"counted_by":"text-embedding-3-small"}},{"node_id":"embedder-query","instance_hash":"sha256:6e0b2d8a4c7f19053bd8e2a6c4f1097d3b5e8a20c6f4d1793a5b0e82d7c1f469","depth":"opaque","effective_depth":"opaque","tier":null,"feed_tier":null,"status":"failed","execution_mode":"in-process","wall_clock_ms":0,"cache_hit":null,"guards_fired":[],"budget_state":"halted","spent":null,"allowance":1000000,"realised_budget_share":0.0,"cross_process_failure_cause":"declared effect 'calls_embedding' requires client 'embedding'","resumable":false,"tokens":{"prompt_tokens":0,"completion_tokens":0,"cached_read_tokens":0,"call_count":0,"counted_by":"none"}}]}},"health":{"health-ok":{"status":"ok","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:chunks":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"ok","graph:hipporag-graph":"ok","vector:hipporag-chunks":"ok","vector:hipporag-entities":"ok","vector:hipporag-facts":"ok"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":true,"embedding":true,"rerank":true},"engine_reason":null},"health-degraded":{"status":"degraded","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"absent","graph:hipporag-graph":"absent","vector:hipporag-chunks":"absent","vector:hipporag-entities":"absent","vector:hipporag-facts":"absent"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":false,"embedding":false,"rerank":false},"engine_reason":"model clients not configured"},"health-loading":{"loading":true},"health-error":{"status":500,"body":"Internal Server Error"}},"query":{"q-success":{"status":200,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-partial":{"status":200,"body":{"answer":"","evidence":[],"trace_token":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","depth_label":null,"partial":true,"degraded":true,"stop_reason":"node_failed","degradation_reason":"node_failed","token_accounting":[{"counted_by":"none","prompt_tokens":0,"completion_tokens":0,"cached_read_tokens":0,"call_count":0}],"seam_events":[]}},"q-empty-evidence":{"status":200,"body":{"answer":"The question was sent to the model without retrieval, so this answer rests on the model alone.","evidence":[],"trace_token":"Ln0sA6lQeuJl7PW1NWiFpTOTogKdJBOUmXJloaJa78Y","depth_label":"opaque","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":212,"completion_tokens":58,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-trace-null":{"status":200,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":null,"depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-layout-sample":{"status":200,"layout_sample":true,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":null,"tier":null}],"trace_token":"GKw-c0PwFokMUQ6T-TUmEWnZ4_VlQ2Qpgw-vCTT0-OQ","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1}],"seam_events":[{"component":"mutates_store","outcome":"completed","spend":{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":40,"completion_tokens":8,"cached_read_tokens":0,"call_count":1}}]}},"q-refusal":{"status":422,"body":{"refusal_type":"UnsatisfiableSelectorError","message":"no wiring satisfies the requested selector","selector_kind":"capability","requested":["writes_graph"]}},"q-validation":{"status":422,"body":{"detail":[{"loc":["body","selector"],"msg":"Value error, a selector may set only one member","type":"value_error"}]}},"q-500":{"status":500,"body":"Internal Server Error"},"q-500-foreign":{"status":502,"body":{"refusal_type":"ForeignEngineRefusalError","message":"operation 'query' failed (StoreFault)","operation":"query","failure_class":"StoreFault","trace_token":"P3m7e0NbBTIWUdrv03TNxoHcBvqmXjdOODN7iMoEbeo","cause":"graph store lock held by another process in this namespace"}},"q-stream-disconnected":{"status":200,"stream_closed":true,"body":{"answer":"","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null}],"trace_token":null,"depth_label":null,"partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[],"seam_events":[]}},"history":[{"time":"2026-10-24 16:42:09","selector":"Default","trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","partial":false},{"time":"2026-10-24 16:31:55","selector":"capability reads_vector:entities","trace_token":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","partial":true},{"time":"2026-10-23 10:08:21","selector":"alias prod","trace_token":"Ln0sA6lQeuJl7PW1NWiFpTOTogKdJBOUmXJloaJa78Y","partial":false}]},"shell":{"info":{"version":"0.1.0","workspace":"default","clients":{"llm":true,"embedding":true,"rerank":false},"write_in_flight":false,"graph_busy":false}},"refusals":[{"refusal_type":"ActiveGenerationRetirementError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"AmbiguousAnswerPositionError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"AmbiguousIngestPayloadError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"DisagreeingPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"DocumentNotInterruptedError","module":"databasise.seam.refusals","attribute_keys":["document_id","status"],"http_status":422},{"refusal_type":"DuplicateComparisonKeyError","module":"databasise.seam.refusals","attribute_keys":["key"],"http_status":422},{"refusal_type":"DuplicateDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"EmptyCapabilitySelectorError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyComparisonRequestError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyIngestDocumentError","module":"databasise.seam.refusals","attribute_keys":["member"],"http_status":422},{"refusal_type":"EmptyNamespaceError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":422},{"refusal_type":"EmptyPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"EmptyQueryObjectError","module":"databasise.seam.refusals","attribute_keys":["query_object"],"http_status":422},{"refusal_type":"ForbiddenSelectorInputError","module":"databasise.seam.refusals","attribute_keys":["member_name","value"],"http_status":422},{"refusal_type":"ForeignEngineRefusalError","module":"databasise.seam.refusals","attribute_keys":["failure_class","operation"],"http_status":502},{"refusal_type":"GateNotCalibratedError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"GateVerbNotBuiltError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"InvalidChangeOriginError","module":"databasise.seam.refusals","attribute_keys":["change_origin"],"http_status":422},{"refusal_type":"InvalidDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"InvalidEvidenceNamespaceError","module":"databasise.seam.refusals","attribute_keys":["namespace"],"http_status":422},{"refusal_type":"InvalidGuardDeclarationError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"InvalidNodeSettingError","module":"databasise.seam.refusals","attribute_keys":["setting"],"http_status":422},{"refusal_type":"InvalidPromotionAliasError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"MalformedBase64PayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MalformedSelectorPayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MeasurementPostureRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"MissingScopeArgumentError","module":"databasise.seam.refusals","attribute_keys":["argument","scope","tool"],"http_status":422},{"refusal_type":"MultiMemberSelectorError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"MutableStoreComparisonExcludedError","module":"databasise.seam.refusals","attribute_keys":["component"],"http_status":422},{"refusal_type":"NoRawUploadPathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NoWritePathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NonFiniteNumberError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"OversizedDocumentError","module":"databasise.seam.refusals","attribute_keys":["actual_bytes","limit_bytes"],"http_status":422},{"refusal_type":"PageBoundsError","module":"databasise.seam.refusals","attribute_keys":["limit","offset"],"http_status":422},{"refusal_type":"PageSizeExceededError","module":"databasise.seam.refusals","attribute_keys":["limit","requested"],"http_status":422},{"refusal_type":"PartialRunEvidenceError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"StoreBusyError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":409},{"refusal_type":"TombstonedGenerationError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"UnbudgetableParticipantError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"UncalibratedFloorRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"UnconsumableQueryMemberError","module":"databasise.seam.refusals","attribute_keys":["member_name"],"http_status":422},{"refusal_type":"UnknownDocumentError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"UnknownGenerationVersionError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":404},{"refusal_type":"UnknownGraphNodeError","module":"databasise.seam.refusals","attribute_keys":["node_id"],"http_status":422},{"refusal_type":"UnknownJobError","module":"databasise.seam.refusals","attribute_keys":["job_id"],"http_status":404},{"refusal_type":"UnknownTraceReferenceError","module":"databasise.seam.refusals","attribute_keys":["trace_reference"],"http_status":404},{"refusal_type":"UnparseableWiringError","module":"databasise.seam.refusals","attribute_keys":["violations"],"http_status":422},{"refusal_type":"UnrecognisedPromotionVerbError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"UnresolvableEvidenceReferenceError","module":"databasise.seam.refusals","attribute_keys":["ref"],"http_status":404},{"refusal_type":"UnsatisfiableSelectorError","module":"databasise.seam.refusals","attribute_keys":["requested","selector_kind"],"http_status":422},{"refusal_type":"UnsupportedUploadTypeError","module":"databasise.seam.refusals","attribute_keys":["suffix"],"http_status":422}],"resolution":{"rows":[{"selector":null,"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_kv"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_vector"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_graph"]},"wiring":"hipporag","node_count":14,"outcome":"resolved"},{"selector":{"capability":["reads_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_blob"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_artifact"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["calls_llm"]},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"capability":["calls_rerank"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["calls_embedding"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["net"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["fs"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["self_storage"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["mutates_store"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_kv"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_vector"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_graph"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_vector:entities"]},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:relationships"]},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:entities","reads_vector:relationships"]},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"capability":[]},"wiring":null,"node_count":null,"outcome":"EmptyCapabilitySelectorError"},{"selector":{"harness":"hotpotqa"},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"alias":"fixture-naive"},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"alias":"fixture-bypass"},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"alias":"fixture-hybrid"},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"alias":"fixture-local"},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-global"},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-hipporag"},"wiring":"hipporag","node_count":14,"outcome":"resolved"}],"reachable":{"naive":true,"bypass":true,"hybrid":true,"local":true,"global":true,"hipporag":true}}}</script>
+<script type="application/json" id="mock-fixtures">{"aliases":[{"alias":"prod","active_version":"4.0.0","record_kind":"rollback","generation_ordinal":5,"created_at":"2026-10-20T09:12:44Z","arm":"naive"},{"alias":"staging","active_version":"1.0.0","record_kind":"promotion","generation_ordinal":6,"created_at":"2026-10-21T15:40:02Z","arm":"naive"},{"alias":"hr","active_version":"1.0.0","record_kind":"promotion","generation_ordinal":7,"created_at":"2026-10-22T11:05:37Z","arm":"hipporag"}],"compare":{"bodies":{"naive-ok":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]},"local-partial":{"answer":"","evidence":[],"trace_token":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","depth_label":null,"partial":true,"degraded":true,"stop_reason":"node_failed","degradation_reason":"node_failed","token_accounting":[{"counted_by":"none","prompt_tokens":0,"completion_tokens":0,"cached_read_tokens":0,"call_count":0}],"seam_events":[]},"local-ok":{"answer":"Renewal is on 1 March 2027. The supplier, Northwind Freight, must receive notice 90 days earlier.","evidence":[{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.8409,"tier":null},{"ref":"c-5ac3e0","namespace":"chunks","kind":"text_chunk","score":0.7918,"tier":null}],"trace_token":"Qm1x7TqHk0fE2uVc9JrZsYw3NdLbA8pXoG4iMtRh5Ks","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1840,"completion_tokens":112,"cached_read_tokens":0,"call_count":2},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]},"hipporag-ok":{"answer":"The supplier contract renews on 1 March 2027. Notice of non-renewal is due 90 days before, by 30 November 2026.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.9012,"tier":null},{"ref":"c-e1b7d2","namespace":"chunks","kind":"text_chunk","score":0.8456,"tier":null},{"ref":"c-5ac3e0","namespace":"chunks","kind":"text_chunk","score":0.8101,"tier":null},{"ref":"c-3d98fa","namespace":"chunks","kind":"text_chunk","score":0.7733,"tier":null}],"trace_token":"f3Jd9WcL2vQy7TnB0sKxEoAh5ZuRg1MiPaV8bXkC4yU","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":2210,"completion_tokens":131,"cached_read_tokens":0,"call_count":3},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"cmp-3col":[{"selector":null,"body":"naive-ok"},{"selector":{"capability":["reads_vector:entities"]},"body":"local-partial"},{"selector":{"capability":["reads_graph","calls_llm"]},"body":"hipporag-ok"}],"cmp-3col-clean":[{"selector":null,"body":"naive-ok"},{"selector":{"capability":["reads_vector:entities"]},"body":"local-ok"},{"selector":{"capability":["reads_graph","calls_llm"]},"body":"hipporag-ok"}]},"documents":{"ingest-success":{"job_id":"3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","enqueued":1},"session-jobs":[{"job_id":"e0a37c19d5b24f68b1c2a9d8f7e40356","submitted":"2026-10-29 09:02","enqueued":1},{"job_id":"5b8d1f0a6c2e4979a3e7d4c1b0f82a65","submitted":"2026-10-29 08:41","enqueued":1}],"pipeline":{"busy":true,"text":"Pipeline: busy, 1 job in flight (fixture)"},"j-page1":{"job_id":"3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","limit":5,"offset":0,"next_offset":5,"documents":[{"document_id":"contract-2026-q1","status":"processed","updated_at":"2026-10-29T09:14:02Z","error_message":null},{"document_id":"contract-2026-q2","status":"processed","updated_at":"2026-10-29T09:14:31Z","error_message":null},{"document_id":"dup-15f6f452b1ea8f4a9c36928aa0d86588","status":"failed","updated_at":"2026-10-29T09:15:07Z","error_message":"Identical content already exists under another filename"},{"document_id":"memo-ops-114","status":"processing","updated_at":"2026-10-29T09:15:40Z","error_message":null},{"document_id":"memo-ops-115","status":"pending","updated_at":"2026-10-29T09:15:41Z","error_message":null}],"counts":{"pending":1,"processing":1,"processed":42,"failed":3,"preprocessed":0}},"j-last":{"job_id":"3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","limit":5,"offset":5,"next_offset":null,"documents":[{"document_id":"memo-ops-116","status":"processed","updated_at":"2026-10-29T09:16:12Z","error_message":null},{"document_id":"policy-hr-007","status":"failed","updated_at":"2026-10-29T09:16:55Z","error_message":"Set of Tasks/Futures is empty."}],"counts":{"pending":1,"processing":1,"processed":42,"failed":3,"preprocessed":0}},"j-single":{"job_id":"5b8d1f0a6c2e4979a3e7d4c1b0f82a65","limit":50,"offset":0,"next_offset":null,"documents":[{"document_id":"report-annual-2025","status":"processed","updated_at":"2026-10-29T08:44:19Z","error_message":null}],"counts":{"pending":0,"processing":0,"processed":46,"failed":3,"preprocessed":0}},"j-empty":{"job_id":"e0a37c19d5b24f68b1c2a9d8f7e40356","limit":50,"offset":0,"next_offset":null,"documents":[],"counts":{"pending":0,"processing":0,"processed":46,"failed":3,"preprocessed":0}},"j-unknown":{"status":404,"body":{"refusal_type":"UnknownJobError","message":"unknown job","job_id":"00000000000000000000000000000000"}},"delete-success":{"document_id":"contract-2026-q1","status":"success","message":"Document deleted.","seam_events":[{"component":"mutates_store","spend":{"counted_by":"unbudgetable"},"outcome":"completed"}]},"delete-not_found":{"document_id":"contract-2026-q1","status":"not_found","message":"No document with this id.","seam_events":[]},"delete-not_allowed":{"document_id":"contract-2026-q1","status":"not_allowed","message":"The document is being processed and cannot be deleted now.","seam_events":[]},"delete-fail":{"document_id":"contract-2026-q1","status":"fail","message":"","seam_events":[]}},"evidence":{"e-lightrag-chunk":{"id":"c-7f3a91","full_doc_id":"doc-3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","content":"Supplier contract, section 9. This supplier contract renews automatically on 1 March 2027 for a further term of twelve months. Either party may prevent renewal by giving 90 days written notice before expiry. Notice sent after that date takes effect at the end of the following term.","file_path":"contracts/supplier-contract-2026-q1.pdf"},"e-hipporag-chunk":{"id":"chunk:7f3a91","document_id":"contract-2026-q1","ordinal":3,"content":"Section 9, renewal. The supplier contract renews on 1 March 2027. Written notice of 90 days is required to stop the renewal."},"chunks":{"c-02be44":{"id":"c-02be44","full_doc_id":"doc-3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","content":"Section 10, termination. Either party may end the supplier contract for material breach if the breach is not cured within 30 days of written notice.","file_path":"contracts/supplier-contract-2026-q1.pdf"},"c-91d0c7":{"id":"c-91d0c7","full_doc_id":"doc-3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","content":"Section 4, payment. Invoices are payable within 45 days. Late payment accrues interest at 1.5 percent per month.","file_path":"contracts/supplier-contract-2026-q1.pdf"},"c-3d98fa":{"id":"c-3d98fa","full_doc_id":"doc-77a1c0de52b94f6a8d3e9b0c1f2a3d4e","content":"Operations memo 114. The supply chain review moved the supplier audit to the second quarter.","file_path":"memos/memo-ops-114.docx"},"c-5ac3e0":{"id":"c-5ac3e0","full_doc_id":"doc-77a1c0de52b94f6a8d3e9b0c1f2a3d4e","content":"Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit find","file_path":"archive/2026/operations/long-form/annual-supplier-review/appendix-b-supporting-material/very-long-file-name-that-must-wrap-at-narrow-widths-0123456789abcdef0123456789abcdef.pdf"},"c-e1b7d2":{"id":"c-e1b7d2","full_doc_id":"doc-77a1c0de52b94f6a8d3e9b0c1f2a3d4e","content":"Operations memo 115. Renewal dates for all supplier contracts are tracked in the contracts register.","file_path":"memos/memo-ops-115.docx"}},"t-clean":{"partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"bundle_ref":"sentinel:no-eval-bundle-until-phase-2","corpus_snapshot_hash":"sentinel:no-corpus-snapshot-until-phase-2","executor_version":"databasise@0.1.0","determinism_setting":"cache-bypassed","concurrency_setting":"sequential","arm_execution_order":0},"t-partial-debug":{"partial":true,"degraded":true,"stop_reason":"node_failed","degradation_reason":"node_failed","bundle_ref":"sentinel:no-eval-bundle-until-phase-2","corpus_snapshot_hash":"sentinel:no-corpus-snapshot-until-phase-2","executor_version":"databasise@0.1.0","determinism_setting":"cache-bypassed","concurrency_setting":"sequential","arm_execution_order":0,"run_id":"5b0e7c1a-2f4d-4e8b-9a36-d1c8f07b3e52","wiring_id":"lightrag-base","wiring_instance_hash":"sha256:9f2c4e7a1b8d03652ac4f7e19d0b6a83c5e21f4d7a90b3c68e5d1f02a7b4c9e6","arm_id":"naive","nodes":[{"node_id":"embedder-index","instance_hash":"sha256:1a7d3c9e5f0b284671ce9a3d5b0f8e24c6a1d7f39e5b0c482a6d1f73e9b5c0a8","depth":"opaque","effective_depth":"opaque","tier":null,"feed_tier":null,"status":"completed","execution_mode":"in-process","wall_clock_ms":412,"cache_hit":false,"guards_fired":[],"budget_state":"within_budget","spent":14,"allowance":1000000,"realised_budget_share":1.4e-05,"cross_process_failure_cause":null,"resumable":false,"tokens":{"prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1,"counted_by":"text-embedding-3-small"}},{"node_id":"embedder-query","instance_hash":"sha256:6e0b2d8a4c7f19053bd8e2a6c4f1097d3b5e8a20c6f4d1793a5b0e82d7c1f469","depth":"opaque","effective_depth":"opaque","tier":null,"feed_tier":null,"status":"failed","execution_mode":"in-process","wall_clock_ms":0,"cache_hit":null,"guards_fired":[],"budget_state":"halted","spent":null,"allowance":1000000,"realised_budget_share":0.0,"cross_process_failure_cause":"declared effect 'calls_embedding' requires client 'embedding'","resumable":false,"tokens":{"prompt_tokens":0,"completion_tokens":0,"cached_read_tokens":0,"call_count":0,"counted_by":"none"}}]}},"health":{"health-ok":{"status":"ok","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:chunks":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"ok","graph:hipporag-graph":"ok","vector:hipporag-chunks":"ok","vector:hipporag-entities":"ok","vector:hipporag-facts":"ok"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":true,"embedding":true,"rerank":true},"engine_reason":null},"health-degraded":{"status":"degraded","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"absent","graph:hipporag-graph":"absent","vector:hipporag-chunks":"absent","vector:hipporag-entities":"absent","vector:hipporag-facts":"absent"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":false,"embedding":false,"rerank":false},"engine_reason":"model clients not configured"},"health-loading":{"loading":true},"health-error":{"status":500,"body":"Internal Server Error"}},"query":{"q-success":{"status":200,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-partial":{"status":200,"body":{"answer":"","evidence":[],"trace_token":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","depth_label":null,"partial":true,"degraded":true,"stop_reason":"node_failed","degradation_reason":"node_failed","token_accounting":[{"counted_by":"none","prompt_tokens":0,"completion_tokens":0,"cached_read_tokens":0,"call_count":0}],"seam_events":[]}},"q-empty-evidence":{"status":200,"body":{"answer":"The question was sent to the model without retrieval, so this answer rests on the model alone.","evidence":[],"trace_token":"Ln0sA6lQeuJl7PW1NWiFpTOTogKdJBOUmXJloaJa78Y","depth_label":"opaque","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":212,"completion_tokens":58,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-trace-null":{"status":200,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":null,"depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-layout-sample":{"status":200,"layout_sample":true,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":null,"tier":null}],"trace_token":"GKw-c0PwFokMUQ6T-TUmEWnZ4_VlQ2Qpgw-vCTT0-OQ","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1}],"seam_events":[{"component":"mutates_store","outcome":"completed","spend":{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":40,"completion_tokens":8,"cached_read_tokens":0,"call_count":1}}]}},"q-refusal":{"status":422,"body":{"refusal_type":"UnsatisfiableSelectorError","message":"no wiring satisfies the requested selector","selector_kind":"capability","requested":["writes_graph"]}},"q-validation":{"status":422,"body":{"detail":[{"loc":["body","selector"],"msg":"Value error, a selector may set only one member","type":"value_error"}]}},"q-500":{"status":500,"body":"Internal Server Error"},"q-500-foreign":{"status":502,"body":{"refusal_type":"ForeignEngineRefusalError","message":"operation 'query' failed (StoreFault)","operation":"query","failure_class":"StoreFault","trace_token":"P3m7e0NbBTIWUdrv03TNxoHcBvqmXjdOODN7iMoEbeo","cause":"graph store lock held by another process in this namespace"}},"q-stream-disconnected":{"status":200,"stream_closed":true,"body":{"answer":"","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null}],"trace_token":null,"depth_label":null,"partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[],"seam_events":[]}},"history":[{"time":"2026-10-24 16:42:09","selector":"Default","trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","partial":false},{"time":"2026-10-24 16:31:55","selector":"capability reads_vector:entities","trace_token":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","partial":true},{"time":"2026-10-23 10:08:21","selector":"alias prod","trace_token":"Ln0sA6lQeuJl7PW1NWiFpTOTogKdJBOUmXJloaJa78Y","partial":false}]},"shell":{"info":{"version":"0.1.0","workspace":"default","clients":{"llm":true,"embedding":true,"rerank":false},"write_in_flight":false,"graph_busy":false}},"refusals":[{"refusal_type":"ActiveGenerationRetirementError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"AmbiguousAnswerPositionError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"AmbiguousIngestPayloadError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"DisagreeingPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"DocumentNotInterruptedError","module":"databasise.seam.refusals","attribute_keys":["document_id","status"],"http_status":422},{"refusal_type":"DuplicateComparisonKeyError","module":"databasise.seam.refusals","attribute_keys":["key"],"http_status":422},{"refusal_type":"DuplicateDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"EmptyCapabilitySelectorError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyComparisonRequestError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyIngestDocumentError","module":"databasise.seam.refusals","attribute_keys":["member"],"http_status":422},{"refusal_type":"EmptyNamespaceError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":422},{"refusal_type":"EmptyPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"EmptyQueryObjectError","module":"databasise.seam.refusals","attribute_keys":["query_object"],"http_status":422},{"refusal_type":"ForbiddenSelectorInputError","module":"databasise.seam.refusals","attribute_keys":["member_name","value"],"http_status":422},{"refusal_type":"ForeignEngineRefusalError","module":"databasise.seam.refusals","attribute_keys":["failure_class","operation"],"http_status":502},{"refusal_type":"GateNotCalibratedError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"GateVerbNotBuiltError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"InvalidChangeOriginError","module":"databasise.seam.refusals","attribute_keys":["change_origin"],"http_status":422},{"refusal_type":"InvalidDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"InvalidEvidenceNamespaceError","module":"databasise.seam.refusals","attribute_keys":["namespace"],"http_status":422},{"refusal_type":"InvalidGuardDeclarationError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"InvalidNodeSettingError","module":"databasise.seam.refusals","attribute_keys":["setting"],"http_status":422},{"refusal_type":"InvalidPromotionAliasError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"MalformedBase64PayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MalformedSelectorPayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MeasurementPostureRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"MissingScopeArgumentError","module":"databasise.seam.refusals","attribute_keys":["argument","scope","tool"],"http_status":422},{"refusal_type":"MultiMemberSelectorError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"MutableStoreComparisonExcludedError","module":"databasise.seam.refusals","attribute_keys":["component"],"http_status":422},{"refusal_type":"NoRawUploadPathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NoWritePathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NonFiniteNumberError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"OversizedDocumentError","module":"databasise.seam.refusals","attribute_keys":["actual_bytes","limit_bytes"],"http_status":422},{"refusal_type":"PageBoundsError","module":"databasise.seam.refusals","attribute_keys":["limit","offset"],"http_status":422},{"refusal_type":"PageSizeExceededError","module":"databasise.seam.refusals","attribute_keys":["limit","requested"],"http_status":422},{"refusal_type":"PartialRunEvidenceError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"StoreBusyError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":409},{"refusal_type":"TombstonedGenerationError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"UnbudgetableParticipantError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"UncalibratedFloorRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"UnconsumableQueryMemberError","module":"databasise.seam.refusals","attribute_keys":["member_name"],"http_status":422},{"refusal_type":"UnknownDocumentError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"UnknownGenerationVersionError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":404},{"refusal_type":"UnknownGraphNodeError","module":"databasise.seam.refusals","attribute_keys":["node_id"],"http_status":422},{"refusal_type":"UnknownJobError","module":"databasise.seam.refusals","attribute_keys":["job_id"],"http_status":404},{"refusal_type":"UnknownTraceReferenceError","module":"databasise.seam.refusals","attribute_keys":["trace_reference"],"http_status":404},{"refusal_type":"UnparseableWiringError","module":"databasise.seam.refusals","attribute_keys":["violations"],"http_status":422},{"refusal_type":"UnrecognisedPromotionVerbError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"UnresolvableEvidenceReferenceError","module":"databasise.seam.refusals","attribute_keys":["ref"],"http_status":404},{"refusal_type":"UnsatisfiableSelectorError","module":"databasise.seam.refusals","attribute_keys":["requested","selector_kind"],"http_status":422},{"refusal_type":"UnsupportedUploadTypeError","module":"databasise.seam.refusals","attribute_keys":["suffix"],"http_status":422}],"resolution":{"rows":[{"selector":null,"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_kv"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_vector"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_graph"]},"wiring":"hipporag","node_count":14,"outcome":"resolved"},{"selector":{"capability":["reads_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_blob"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_artifact"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["calls_llm"]},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"capability":["calls_rerank"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["calls_embedding"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["net"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["fs"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["self_storage"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["mutates_store"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_kv"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_vector"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_graph"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_vector:entities"]},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:relationships"]},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:entities","reads_vector:relationships"]},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"capability":[]},"wiring":null,"node_count":null,"outcome":"EmptyCapabilitySelectorError"},{"selector":{"harness":"hotpotqa"},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"alias":"fixture-naive"},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"alias":"fixture-bypass"},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"alias":"fixture-hybrid"},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"alias":"fixture-local"},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-global"},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-hipporag"},"wiring":"hipporag","node_count":14,"outcome":"resolved"}],"reachable":{"naive":true,"bypass":true,"hybrid":true,"local":true,"global":true,"hipporag":true}}}</script>
 <script>
 "use strict";
 // Shared scope: every js/*.js file is concatenated into one script, so FIX, $id and Console are global to later screens.
@@ -1857,6 +2197,14 @@ function wireErrors(screen) {
     Console.show("evidence");
     Console.emit("open-trace", { token: open.getAttribute("data-token") });
   });
+}
+
+// Opens a shell dialog modally and puts focus on the named control (the safe choice); Escape closes it natively.
+function openDialog(dialogId, focusId) {
+  var dialog = $id(dialogId);
+  if (!dialog.open) dialog.showModal();
+  var target = $id(focusId);
+  if (target) target.focus();
 }
 
 function copyText(text, flash) {
@@ -3284,6 +3632,626 @@ var EvidenceScreen = (function () {
   return { setState: setState, inject: inject, loadFixture: loadFixture };
 })();
 Console.register("evidence", EvidenceScreen);
+var DocumentsScreen = (function () {
+  var LIMIT = 26214400;
+  var ID_RE = /^[A-Za-z0-9_-]+$/;
+  var MSG = {
+    noText: "Enter document text.",
+    bigText: "Text is larger than 26,214,400 bytes.",
+    badId: "Document id may contain only letters, digits, underscore and hyphen.",
+    emptyFile: "The file is empty. Choose a file with content.",
+    bigFile: "The file is larger than 26,214,400 bytes.",
+    noFile: "Choose a file.",
+    noJob: "Enter a job id.",
+    pageSize: "Page size must be between 1 and 100.",
+  };
+  var NOTICE = {
+    lightrag: "File upload does not index the file for LightRAG today; the file is not parsed.",
+    hipporag: "Raw upload is refused for HippoRAG selectors. Use Paste text.",
+  };
+  var CARD_NOTE = {
+    lightrag: "enqueued is not a success signal; check the job row status.",
+    hipporag: "HippoRAG ingest finished synchronously; its job has no status record.",
+  };
+  var DELETE_TAIL = {
+    lightrag: "This removes it from the v1 corpus and cannot be undone. The query stores are not changed; the deleted document's chunks can stay resolvable.",
+    hipporag: "This removes it from the HippoRAG stores and cannot be undone.",
+  };
+  var STATUS_STATE = { processed: "ok", failed: "fail", processing: "progress", parsing: "progress", analyzing: "progress", pending: "neutral", preprocessed: "neutral", interrupted: "warn" };
+  var STATUS_GLYPH = { ok: "✓", fail: "✕", progress: "●", neutral: "■", warn: "▲" };
+  var DELETE_STATE = { success: "ok", not_found: "neutral", not_allowed: "fail", fail: "fail" };
+  var JOB_FIXTURES = ["j-page1", "j-last", "j-single", "j-empty"];
+  var PREVIEW_TEXT_CAP = 300;
+  var FLIGHT_MS = 800;
+  var LOAD_MS = 300;
+  var CONFIRM_MS = 300;
+
+  var root = $id("screen-documents");
+  var errorsBox = root.querySelector('[data-role="errors"]');
+  var layout = root.querySelector('[data-role="layout"]');
+  var panes = { paste: root.querySelector('[data-role="pane-paste"]'), upload: root.querySelector('[data-role="pane-upload"]') };
+  var card = ID("result.card");
+  var dialog = $id("shell.dialog.delete");
+  var confirmButton = $id("shell.dialog.delete-confirm");
+  var timers = [];
+  var jobTimer = null;
+  var jobsShown = "none";
+  var sessionJobs = FIX.documents["session-jobs"].slice();
+  var picker = null;
+  var busy = false;
+  var tab = "paste";
+  var pending = null;
+  var current = null;
+  var lastSize = 50;
+  var pollTimer = null;
+
+  function ID(name) {
+    return $id("documents." + name);
+  }
+
+  function setDisabled(button, disabled) {
+    button.disabled = disabled;
+    if (disabled) button.setAttribute("aria-disabled", "true");
+    else button.removeAttribute("aria-disabled");
+  }
+
+  function later(fn, ms) {
+    timers.push(setTimeout(fn, ms));
+  }
+
+  // Ingest and delete timers; the job-load timer is separate so opening a job never cancels a submit in flight.
+  function clearTimers() {
+    timers.forEach(clearTimeout);
+    timers = [];
+  }
+
+  function clearAll() {
+    clearTimers();
+    clearTimeout(jobTimer);
+  }
+
+  function outcome() {
+    return ID("mock.outcome").value;
+  }
+
+  function bytes(text) {
+    return new TextEncoder().encode(text).length;
+  }
+
+  function grouped(n) {
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+
+  function badge(el, state, text) {
+    el.setAttribute("data-state", state);
+    el.textContent = STATUS_GLYPH[state] + " " + text;
+  }
+
+  // ---- errors ----
+
+  function showError(status, body) {
+    var shape = renderError("documents", status, body);
+    errorsBox.hidden = shape === "result";
+    if (shape !== "result") errorsBox.scrollIntoView({ block: "nearest" });
+    return shape;
+  }
+
+  // renderError clears every field message, so the client-side checks are rerun afterwards.
+  function hideErrors() {
+    renderError("documents", 200, null);
+    errorsBox.hidden = true;
+    refresh();
+  }
+
+  // The mock outcome select decides which server response the next call gets; "success" (and "unknown job" outside Load job) returns null.
+  function failure(op, field, refusalType) {
+    var o = outcome();
+    if (o === "refusal") {
+      if (op === "job") return [422, { refusal_type: "PageSizeExceededError", message: "page size above the limit", requested: 500, limit: 100 }];
+      if (op === "delete") return [409, { refusal_type: "StoreBusyError", message: "the store is in use by another process", store_kind: "graph" }];
+      return [422, { refusal_type: "DuplicateDocumentIdError", message: "a document with this id already exists; delete it first", document_id: refusalType || "contract-2026-q1" }];
+    }
+    if (o === "validation") return [422, { detail: [{ loc: field, msg: "Field required", type: "missing" }] }];
+    if (o === "server-failure") {
+      return [502, { refusal_type: "ForeignEngineRefusalError", message: "operation '" + op + "' failed (CorpusOpSubprocessError)", operation: op, failure_class: "CorpusOpSubprocessError", cause: "the v1 driver exited with status 1" }];
+    }
+    if (o === "generic") return [500, "Internal Server Error"];
+    return null;
+  }
+
+  // ---- ingest checks and previews ----
+
+  var text = ID("paste.text");
+  var pasteId = ID("paste.document-id");
+  var file = ID("upload.file");
+  var uploadId = ID("upload.document-id");
+  var pasteSubmit = ID("paste.submit");
+  var uploadSubmit = ID("upload.submit");
+
+  function idMessage(value) {
+    return value !== "" && !ID_RE.test(value) ? MSG.badId : "";
+  }
+
+  function family() {
+    return picker && picker.arm() === "hipporag" ? "hipporag" : "lightrag";
+  }
+
+  function textMessage() {
+    if (text.value.trim() === "") return MSG.noText;
+    return bytes(text.value) > LIMIT ? MSG.bigText : "";
+  }
+
+  function fileMessage() {
+    var f = file.files[0];
+    if (!f) return MSG.noFile;
+    if (f.size === 0) return MSG.emptyFile;
+    return f.size > LIMIT ? MSG.bigFile : "";
+  }
+
+  function pasteBody() {
+    var shown = text.value;
+    if (shown.length > PREVIEW_TEXT_CAP) shown = shown.slice(0, PREVIEW_TEXT_CAP) + "... (" + grouped(shown.length - PREVIEW_TEXT_CAP) + " more characters not shown)";
+    var doc = { text: shown };
+    if (pasteId.value !== "") doc.document_id = pasteId.value;
+    var body = { document: doc };
+    var selector = picker.value();
+    if (selector !== null) body.selector = selector;
+    return JSON.stringify(body, null, 2);
+  }
+
+  // The selector field is omitted for the Default selector; it never reads null or [].
+  function uploadFields() {
+    var f = file.files[0];
+    var lines = ["POST /documents/upload (multipart/form-data)", "file: " + (f ? f.name + " (" + grouped(f.size) + " bytes)" : "(none chosen)")];
+    if (uploadId.value !== "") lines.push("document_id: " + uploadId.value);
+    var selector = picker.value();
+    if (selector !== null) lines.push("selector: " + JSON.stringify(selector));
+    return lines.join("\n");
+  }
+
+  function refresh() {
+    if (!picker) return;
+    var kind = family();
+    var blockers = picker.blockers();
+    setFieldError(ID("selector.group"), blockers[0] || "");
+    ID("selector.family").textContent = "Target: " + (kind === "hipporag" ? "HippoRAG" : "LightRAG");
+
+    var tm = textMessage();
+    var im = idMessage(pasteId.value);
+    setFieldError(text, tm);
+    setFieldError(pasteId, im);
+    ID("paste.bytes").textContent = grouped(bytes(text.value)) + " of 26,214,400 bytes";
+    ID("paste.request-preview").textContent = pasteBody();
+    setDisabled(pasteSubmit, busy || tm !== "" || im !== "" || blockers.length > 0);
+
+    var fm = fileMessage();
+    var um = idMessage(uploadId.value);
+    setFieldError(file, fm);
+    setFieldError(uploadId, um);
+    ID("upload.notice").textContent = NOTICE[kind];
+    ID("upload.request-preview").textContent = uploadFields();
+    setDisabled(uploadSubmit, busy || fm !== "" || um !== "" || blockers.length > 0 || kind === "hipporag");
+  }
+
+  function showTab(name) {
+    tab = name;
+    ["paste", "upload"].forEach(function (n) {
+      panes[n].hidden = n !== name;
+      ID("tabs." + n).setAttribute("aria-selected", String(n === name));
+    });
+  }
+
+  // ---- ingest flight and result card ----
+
+  function setBusy(on) {
+    busy = on;
+    [pasteSubmit, uploadSubmit].forEach(function (button) {
+      if (on) button.setAttribute("aria-busy", "true");
+      else button.removeAttribute("aria-busy");
+    });
+    refresh();
+  }
+
+  function submitTime() {
+    var d = new Date();
+    return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+  }
+
+  function showCard(job) {
+    var kind = family();
+    card.querySelector('[data-role="job-id"]').textContent = job.job_id;
+    card.querySelector('[data-role="enqueued"]').textContent = String(job.enqueued);
+    card.querySelector('[data-role="note"]').textContent = CARD_NOTE[kind];
+    setDisabled(ID("result.open-job"), kind === "hipporag");
+    card.hidden = false;
+    sessionJobs = sessionJobs.filter(function (j) {
+      return j.job_id !== job.job_id;
+    });
+    sessionJobs.unshift({ job_id: job.job_id, submitted: submitTime(), enqueued: job.enqueued });
+    sessionJobs = sessionJobs.slice(0, 3);
+    renderList();
+  }
+
+  function finishIngest(field) {
+    ID("state.in-flight").hidden = true;
+    ID("upload.progress").hidden = true;
+    setBusy(false);
+    var bad = failure("ingest", field);
+    if (bad) return showError(bad[0], bad[1]);
+    showCard(FIX.documents["ingest-success"]);
+  }
+
+  function submitPaste() {
+    if (busy || pasteSubmit.disabled) return;
+    clearTimers();
+    hideErrors();
+    card.hidden = true;
+    setBusy(true);
+    ID("state.in-flight").hidden = false;
+    later(function () {
+      finishIngest(["body", "document", "text"]);
+    }, FLIGHT_MS);
+  }
+
+  function submitUpload() {
+    if (busy || uploadSubmit.disabled) return;
+    clearTimers();
+    hideErrors();
+    card.hidden = true;
+    setBusy(true);
+    var box = ID("upload.progress");
+    var bar = box.querySelector("progress");
+    var spin = box.querySelector('[data-role="spin"]');
+    var label = box.querySelector('[data-role="text"]');
+    spin.hidden = true;
+    bar.hidden = false;
+    box.hidden = false;
+    var pct = 0;
+    (function step() {
+      pct += 20;
+      if (pct < 100) {
+        bar.value = pct;
+        label.textContent = "Uploading " + pct + "%";
+        return later(step, 150);
+      }
+      bar.value = 100;
+      bar.hidden = true;
+      spin.hidden = false;
+      label.textContent = "Processing";
+      later(function () {
+        finishIngest(["body", "file"]);
+      }, FLIGHT_MS);
+    })();
+  }
+
+  // ---- jobs drawer ----
+
+  function setDrawer(open) {
+    ID("jobs.drawer").hidden = !open;
+    layout.setAttribute("data-drawer", open ? "open" : "closed");
+    ID("jobs.open").setAttribute("aria-expanded", String(open));
+  }
+
+  function renderList() {
+    var slots = ID("jobs.list").querySelectorAll('[data-role="slot"]');
+    Array.prototype.forEach.call(slots, function (slot, i) {
+      var job = sessionJobs[i];
+      slot.hidden = !job;
+      if (!job) return;
+      slot.querySelector('[data-role="id"]').textContent = job.job_id;
+      slot.querySelector('[data-role="meta"]').textContent = "submitted " + job.submitted + ", enqueued " + job.enqueued;
+    });
+  }
+
+  function jobView(name) {
+    var loading = name === "loading";
+    if (!loading) jobsShown = name;
+    ID("jobs.loading").hidden = !loading;
+    ID("jobs.empty").hidden = name !== "empty";
+    root.querySelector('[data-role="no-job"]').hidden = name !== "none";
+    root.querySelector('[data-role="table-wrap"]').hidden = name !== "table";
+    ID("jobs.documents").setAttribute("aria-busy", String(loading));
+    ID("jobs.counts").hidden = name !== "table" && name !== "empty";
+    if (loading) {
+      setDisabled(ID("jobs.prev"), true);
+      setDisabled(ID("jobs.next"), true);
+    }
+  }
+
+  function fillRows(docs) {
+    var rows = ID("jobs.documents").tBodies[0].rows;
+    Array.prototype.forEach.call(rows, function (row, i) {
+      var doc = docs[i];
+      row.hidden = !doc;
+      if (!doc) return;
+      row.querySelector('[data-role="id"]').textContent = doc.document_id;
+      badge(row.querySelector('[data-role="status"]'), STATUS_STATE[doc.status] || "neutral", doc.status);
+      row.querySelector('[data-role="updated"]').textContent = doc.updated_at;
+      var toggle = ID("jobs.error-toggle-" + (i + 1));
+      var reason = row.querySelector('[data-role="error"]');
+      toggle.hidden = !doc.error_message;
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.textContent = "Show error";
+      reason.textContent = doc.error_message || "";
+      reason.hidden = true;
+    });
+  }
+
+  function fillCounts(counts) {
+    var bar = ID("jobs.counts").querySelector('[data-role="bar"]');
+    var chips = ID("jobs.counts").querySelector('[data-role="chips"]');
+    clearNode(bar);
+    clearNode(chips);
+    var keys = Object.keys(counts);
+    var total = keys.reduce(function (sum, key) {
+      return sum + counts[key];
+    }, 0);
+    keys.forEach(function (key) {
+      var state = STATUS_STATE[key] || "neutral";
+      var segment = h("span");
+      segment.setAttribute("data-state", state);
+      segment.title = key + " " + counts[key];
+      segment.style.setProperty("--w", (total ? (counts[key] / total) * 100 : 0) + "%");
+      bar.appendChild(segment);
+      var chip = h("span", key + " " + counts[key], "chip");
+      chip.setAttribute("data-state", state);
+      chips.appendChild(chip);
+    });
+  }
+
+  function renderJob(name) {
+    var rec = FIX.documents[name];
+    current = { name: name, rec: rec };
+    setDrawer(true);
+    hideErrors();
+    ID("jobs.job-id").value = rec.job_id;
+    setFieldError(ID("jobs.job-id"), "");
+    fillRows(rec.documents);
+    fillCounts(rec.counts);
+    setDisabled(ID("jobs.prev"), rec.offset <= 0);
+    setDisabled(ID("jobs.next"), rec.next_offset === null);
+    jobView(rec.documents.length ? "table" : "empty");
+  }
+
+  function fixtureFor(id, next) {
+    if (id === FIX.documents["j-page1"].job_id) return next === "last" ? "j-last" : "j-page1";
+    var found = JOB_FIXTURES.filter(function (n) {
+      return FIX.documents[n].job_id === id;
+    })[0];
+    return found || null;
+  }
+
+  function loadJob(id, which) {
+    var input = ID("jobs.job-id");
+    id = id.trim();
+    if (id === "") return setFieldError(input, MSG.noJob);
+    setFieldError(input, "");
+    clearTimeout(jobTimer);
+    hideErrors();
+    setDrawer(true);
+    jobView("loading");
+    jobTimer = setTimeout(function () {
+      var bad = failure("job", ["path", "job_id"]);
+      var name = fixtureFor(id, which);
+      if (bad || outcome() === "unknown-job" || !name) {
+        jobView(jobsShown);
+        if (bad) return showError(bad[0], bad[1]);
+        return showError(FIX.documents["j-unknown"].status, Object.assign({}, FIX.documents["j-unknown"].body, { job_id: id }));
+      }
+      renderJob(name);
+    }, LOAD_MS);
+  }
+
+  function checkSize() {
+    var input = ID("jobs.page-size");
+    var raw = input.value.trim();
+    var n = Number(raw);
+    var ok = raw !== "" && Number.isInteger(n) && n >= 1 && n <= 100;
+    setFieldError(input, ok ? "" : MSG.pageSize);
+    if (ok) lastSize = n;
+  }
+
+  // ---- delete ----
+
+  function askDelete(documentId) {
+    if (picker.blockers().length) return;
+    var kind = family();
+    pending = { id: documentId, kind: kind };
+    dialog.querySelector('[data-role="doc"]').textContent = documentId;
+    dialog.querySelector('[data-role="sel"]').textContent = picker.label();
+    dialog.querySelector('[data-role="tail"]').textContent = DELETE_TAIL[kind];
+    openDialog("shell.dialog.delete", "shell.dialog.delete-cancel");
+  }
+
+  function showDeleteOutcome(rec, kind) {
+    var box = ID("delete.outcome");
+    badge(box.querySelector('[data-role="status"]'), DELETE_STATE[rec.status], rec.status);
+    box.querySelector('[data-role="doc"]').textContent = rec.document_id;
+    box.querySelector('[data-role="message"]').textContent = rec.message || "The server returned no message.";
+    ID("delete.seam-toggle").textContent = "Seam events, reported by the " + (kind === "hipporag" ? "HippoRAG" : "v1") + " delete node";
+    var list = box.querySelector('[data-role="seam-list"]');
+    clearNode(list);
+    if (!rec.seam_events.length) list.appendChild(h("li", "No seam events."));
+    rec.seam_events.forEach(function (event) {
+      list.appendChild(h("li", event.component + ": " + event.outcome + ", counted_by " + event.spend.counted_by));
+    });
+    box.hidden = false;
+  }
+
+  function finishDelete(p) {
+    var bad = failure("delete", ["path", "document_id"]);
+    if (bad) return showError(bad[0], bad[1]);
+    showDeleteOutcome(Object.assign({}, FIX.documents["delete-success"], { document_id: p.id }), p.kind);
+  }
+
+  // ---- hooks ----
+
+  function setState(name) {
+    clearAll();
+    setBusy(false);
+    ID("state.in-flight").hidden = name !== "in-flight";
+    if (name === "in-flight") return setBusy(true);
+    if (name === "result") return showCard(FIX.documents["ingest-success"]);
+    if (name === "loading") {
+      setDrawer(true);
+      return jobView("loading");
+    }
+    if (name === "empty") return renderJob("j-empty");
+    if (name !== "idle") throw new Error("unknown documents state " + name);
+    card.hidden = true;
+    hideErrors();
+  }
+
+  function loadFixture(name) {
+    clearAll();
+    setBusy(false);
+    ID("state.in-flight").hidden = true;
+    if (JOB_FIXTURES.indexOf(name) >= 0) return renderJob(name);
+    if (name === "j-unknown") {
+      setDrawer(true);
+      jobView("none");
+      return showError(FIX.documents[name].status, FIX.documents[name].body);
+    }
+    if (name === "ingest-success") return showCard(FIX.documents[name]);
+    if (/^delete-/.test(name) && FIX.documents[name]) return showDeleteOutcome(FIX.documents[name], family());
+    throw new Error("unknown documents fixture " + name);
+  }
+
+  function inject(response) {
+    clearAll();
+    setBusy(false);
+    ID("state.in-flight").hidden = true;
+    showError(response.status, response.body);
+  }
+
+  // ---- wiring ----
+
+  picker = Picker.attach("documents", function (api) {
+    picker = api;
+    refresh();
+  });
+
+  ID("tabs.paste").addEventListener("click", function () {
+    showTab("paste");
+  });
+  ID("tabs.upload").addEventListener("click", function () {
+    showTab("upload");
+  });
+  [text, pasteId, file, uploadId].forEach(function (input) {
+    input.addEventListener("input", refresh);
+    input.addEventListener("change", refresh);
+  });
+  pasteSubmit.addEventListener("click", submitPaste);
+  uploadSubmit.addEventListener("click", submitUpload);
+  ID("result.copy-job-id").addEventListener("click", function () {
+    copyText(card.querySelector('[data-role="job-id"]').textContent, card.querySelector('[data-role="copied"]'));
+  });
+  ID("result.open-job").addEventListener("click", function () {
+    loadJob(card.querySelector('[data-role="job-id"]').textContent);
+  });
+
+  ID("jobs.open").addEventListener("click", function () {
+    setDrawer(true);
+  });
+  ID("jobs.close").addEventListener("click", function () {
+    setDrawer(false);
+    ID("jobs.open").focus();
+  });
+  ID("jobs.load").addEventListener("click", function () {
+    loadJob(ID("jobs.job-id").value);
+  });
+  ID("jobs.job-id").addEventListener("keydown", function (event) {
+    if (event.key === "Enter") loadJob(this.value);
+  });
+  ID("jobs.refresh").addEventListener("click", function () {
+    loadJob(ID("jobs.job-id").value, current && current.name === "j-last" ? "last" : undefined);
+  });
+  ID("jobs.prev").addEventListener("click", function () {
+    loadJob(ID("jobs.job-id").value);
+  });
+  ID("jobs.next").addEventListener("click", function () {
+    loadJob(ID("jobs.job-id").value, "last");
+  });
+  ID("jobs.page-size").addEventListener("input", checkSize);
+  ID("jobs.poll").addEventListener("change", function () {
+    clearInterval(pollTimer);
+    pollTimer = null;
+    if (this.checked) {
+      pollTimer = setInterval(function () {
+        if (current) ID("jobs.refresh").click();
+      }, 30000);
+    }
+  });
+  [1, 2, 3].forEach(function (n) {
+    ID("jobs.select-" + n).addEventListener("click", function () {
+      loadJob(sessionJobs[n - 1].job_id);
+    });
+  });
+  [1, 2, 3, 4, 5].forEach(function (n) {
+    var toggle = ID("jobs.error-toggle-" + n);
+    toggle.addEventListener("click", function () {
+      var open = toggle.getAttribute("aria-expanded") !== "true";
+      toggle.parentElement.querySelector('[data-role="error"]').hidden = !open;
+      toggle.setAttribute("aria-expanded", String(open));
+      toggle.textContent = open ? "Hide error" : "Show error";
+    });
+    ID("jobs.delete-" + n).addEventListener("click", function () {
+      askDelete(this.closest("tr").querySelector('[data-role="id"]').textContent);
+    });
+  });
+  ID("jobs.all").addEventListener("click", function () {
+    var list = ID("jobs.list");
+    list.scrollIntoView({ block: "nearest" });
+  });
+  ID("pipeline.status").textContent = FIX.documents.pipeline.text;
+  ID("pipeline.cancel").addEventListener("click", function () {
+    ID("pipeline.status").textContent = "Cancel requested (fixture)";
+  });
+
+  ID("delete.document-id").addEventListener("input", function () {
+    setFieldError(this, idMessage(this.value));
+  });
+  ID("delete.submit").addEventListener("click", function () {
+    var input = ID("delete.document-id");
+    var value = input.value;
+    if (value === "" || !ID_RE.test(value)) return setFieldError(input, MSG.badId);
+    setFieldError(input, "");
+    askDelete(value);
+  });
+  $id("shell.dialog.delete-cancel").addEventListener("click", function () {
+    dialog.close();
+  });
+  dialog.addEventListener("close", function () {
+    pending = null;
+    confirmButton.removeAttribute("aria-busy");
+    confirmButton.querySelector(".spinner").hidden = true;
+    setDisabled(confirmButton, false);
+  });
+  confirmButton.addEventListener("click", function () {
+    if (!pending || confirmButton.disabled) return;
+    var p = pending;
+    setDisabled(confirmButton, true);
+    confirmButton.setAttribute("aria-busy", "true");
+    confirmButton.querySelector(".spinner").hidden = false;
+    later(function () {
+      dialog.close();
+      finishDelete(p);
+    }, CONFIRM_MS);
+  });
+
+  wireErrors("documents");
+  Console.on("open-ingest", function () {
+    Console.show("documents");
+    showTab("paste");
+  });
+
+  renderList();
+  jobView("none");
+  checkSize();
+  refresh();
+  return { setState: setState, inject: inject, loadFixture: loadFixture };
+})();
+Console.register("documents", DocumentsScreen);
 
 </script>
 </body>
