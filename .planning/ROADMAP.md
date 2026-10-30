@@ -366,6 +366,7 @@ Plans (six waves; `seam/engine.py` is touched by one plan per wave in waves 1-6;
 **Plans**: 11/11 plans complete
 
 Plans:
+
 - [x] 14-01-PLAN.md — Owner grant for the protected WIRE-17 reachability test (checkpoint; D-13; wave 1)
 - [x] 14-02-PLAN.md — Ledger store: alias history, close/open_existing, lineage (LEDG-07; wave 1)
 - [x] 14-03-PLAN.md — PartialRunEvidenceError, GateNotCalibratedError and wiring_for_name (prerequisite; wave 1)
@@ -408,6 +409,7 @@ Plans:
 **Plans**: 19/19 plans complete
 
 Plans:
+
 - [x] 15-01-PLAN.md — Wheel carries tools, bundles and fixtures; one version source; bounded mcp; import-boundary scan fixes (TOOL-01; wave 1)
 - [x] 15-02-PLAN.md — Shared CLI helper (exit table, refuse, positive_int, named-arm check); inert --spend on six CLIs and the shared test edits (prerequisite for TOOL-04/05; wave 1)
 - [x] 15-03-PLAN.md — Admission enforced at registry load; record/part name match; field, kind and scope checks; granted WIRE-13 line (TOOL-16; wave 2)
@@ -454,6 +456,7 @@ Plans:
 **Plans**: 12/12 plans complete
 
 Plans:
+
 - [x] 16-01-PLAN.md — tracer: `create_app(operator=True)` / `databasise-rest --operator`, `operator_rest.py`, GET /info, AST thin-adapter test (CONN-04; CONN-01 part)
 - [x] 16-02-PLAN.md — generated refusal catalogue and selector-resolution fixture with sync tests (CONN-02, CONN-03)
 - [x] 16-03-PLAN.md — GET /wirings with node counts, default and reachability (CONN-05)
@@ -489,44 +492,56 @@ Plans:
 - GUI-11: fixture shape follows open question 6 (attrs or references only, settled in Phase 16)
 - End of phase: the owner approves the mockup by click-through after new needs are recorded back into API-INVENTORY.md; the approval and sha256 go in docs/gui/MOCKUP-APPROVAL.md. The ledger mockup_freeze write moves to the first plan of Phase 18 (17-CONTEXT D-13), because the completion gate runs mockup-id-check.py once the freeze is set
 
-**Plans**: 13 plans
+**Plans**: 1/13 plans executed
 
 Plans:
 **Wave 1**
-- [ ] 17-01-PLAN.md — tracer: Playwright 1.59.0 with nixpkgs browsers and the fail-not-skip harness; complete GUI-01, GUI-02 and build-stability tests committed as the GUI fail-first base (GUI-01, GUI-02)
+
+- [x] 17-01-PLAN.md — tracer: Playwright 1.59.0 with nixpkgs browsers and the fail-not-skip harness; complete GUI-01, GUI-02 and build-stability tests committed as the GUI fail-first base (GUI-01, GUI-02)
 
 **Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 17-02-PLAN.md — tracer: `mockups/build.py` assembler and console shell pass GUI-01; base styles and MOCK-IDS.json pass GUI-02 (GUI-01, GUI-02)
 
 **Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 17-03-PLAN.md — GAP-ROUTES.json with operator/missing kinds checked against the live route table, GUI-03 test, shell instance chip; REQUIREMENTS.md and UI-SPEC amendments D-03, D-05 to D-10, D-13, D-14 (GUI-03)
 
 **Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 17-04-PLAN.md — Wave 0 row checks for query mode, compare and the error shapes plus the refusal catalogue (GUI-04, GUI-05, GUI-06)
 - [ ] 17-05-PLAN.md — Wave 0 row checks for Evidence & Trace, Documents & Jobs, Corpus & Health, Ledger and the graph browser (GUI-07 to GUI-11)
 
 **Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 17-06-PLAN.md — Query mode, the shared selector picker and the four error shapes with one classifyResponse (GUI-04; GUI-06 on query)
 
 **Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 17-07-PLAN.md — Compare mode: key rules, cmp-3col, promotable HippoRAG column, narrow tabs (GUI-05)
 
 **Wave 7** *(blocked on Wave 6 completion)*
+
 - [ ] 17-08-PLAN.md — Evidence Inspector and Trace Inspector with the Debug template (GUI-07)
 
 **Wave 8** *(blocked on Wave 7 completion)*
+
 - [ ] 17-09-PLAN.md — Documents & Jobs: ingest pre-checks, upload, jobs drawer, Delete for every selector (GUI-08)
 
 **Wave 9** *(blocked on Wave 8 completion)*
+
 - [ ] 17-10-PLAN.md — Corpus & Health: health panel, KPI tiles, corpus table with Retry, operator panels and catalogue (GUI-09)
 
 **Wave 10** *(blocked on Wave 9 completion)*
+
 - [ ] 17-11-PLAN.md — Ledger: timeline rules, promote form and pre-flight, rollback and retire dialogs (GUI-10; GUI-06 row)
 
 **Wave 11** *(blocked on Wave 10 completion)*
+
 - [ ] 17-12-PLAN.md — Graph/vector browser with Load attributes; every gap route badged (GUI-11; GUI-03 row)
 
 **Wave 12** *(blocked on Wave 11 completion)*
+
 - [ ] 17-13-PLAN.md — API-INVENTORY drafts, INVENTORY-MAP.json with its SC2 coverage test, all gates, owner file:// click-through, MOCKUP-APPROVAL.md with sha256; freeze left to Phase 18 per D-13 (all GUI rows)
 
 **UI hint**: yes
@@ -571,7 +586,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 14. Promotion & Ledger | 11/11 | Complete    | 2026-10-21 |
 | 15. Offline Tooling & Packaging | 19/19 | Complete    | 2026-10-22 |
 | 16. GUI Connectors | 12/12 | Complete    | 2026-10-22 |
-| 17. GUI Mockup | 0/TBD | Not started | - |
+| 17. GUI Mockup | 1/13 | In Progress|  |
 | 18. GUI Live | 0/TBD | Not started | - |
 
 v1.0 (Phases 1-7, 64 plans) shipped 2026-09-12 — see `.planning/MILESTONES.md`.
