@@ -1,3 +1,182 @@
 <section data-mock-id="screen-evidence" hidden>
   <h1>Evidence &amp; Trace</h1>
+  <div class="mock-strip" data-mock-only="true">
+    <label>Outcome
+      <select data-mock-id="evidence.mock.outcome" data-mock-only="true">
+        <option value="success">success</option>
+        <option value="refusal">refusal</option>
+        <option value="validation">validation</option>
+        <option value="server-failure">server failure</option>
+        <option value="generic">generic 5xx</option>
+        <option value="unknown-trace">unknown trace</option>
+      </select>
+    </label>
+  </div>
+  <div class="tabs" role="tablist" aria-label="Inspector" data-mock-id="evidence.tabs.tablist">
+    <button type="button" role="tab" aria-selected="true" data-mock-id="evidence.tabs.evidence">Evidence Inspector</button>
+    <button type="button" role="tab" aria-selected="false" data-mock-id="evidence.tabs.trace">Trace Inspector</button>
+  </div>
+  <div data-role="errors" hidden>
+<!--@include parts/errors.html s=evidence-->
+  </div>
+
+  <div role="tabpanel" aria-label="Evidence Inspector" data-role="pane-evidence">
+    <div class="state-view" data-mock-id="evidence.state.idle">
+      <h2>No evidence selected</h2>
+      <p class="muted">Select Open on an evidence row in Query &amp; Compare, or use Manual lookup.</p>
+    </div>
+    <div class="state-view banner" data-state="progress" role="status" data-mock-id="evidence.state.loading" hidden>
+      <p><span class="spinner" role="presentation"></span> Resolving evidence</p>
+    </div>
+    <div class="state-view banner" data-state="warn" role="alert" data-mock-id="evidence.state.refusal" hidden>
+      <p class="label"><span aria-hidden="true">▲</span> Request refused</p>
+      <p>record no longer present; the store changed since the query</p>
+      <p class="muted mono">UnresolvableEvidenceReferenceError</p>
+    </div>
+    <div class="state-view" data-mock-id="evidence.state.resolved" hidden>
+      <section class="panel" data-focal="true" data-mock-id="evidence.inspector.panel">
+        <h2>Evidence</h2>
+        <div class="ev-header" data-mock-id="evidence.inspector.header"></div>
+        <p>Score <span class="mono" data-mock-id="evidence.inspector.score"></span></p>
+        <div class="ev-chips">
+          <span class="chip mono" data-mock-id="evidence.inspector.document-id" hidden></span>
+          <span class="chip mono" data-mock-id="evidence.inspector.ordinal" hidden></span>
+        </div>
+        <div class="evidence-content" data-mock-id="evidence.inspector.content"></div>
+        <div data-role="kv-wrap">
+          <h3>Other fields</h3>
+          <div class="table-scroll">
+            <table role="table" data-mock-id="evidence.inspector.kv">
+              <thead><tr><th>Key</th><th>Value</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="actions">
+          <a href="#corpus" data-mock-id="evidence.inspector.document-link" hidden>Open in Corpus</a>
+          <a href="#evidence" data-mock-id="evidence.inspector.trace-link">Open trace</a>
+        </div>
+        <p class="muted">Cached for this session by namespace and ref.</p>
+      </section>
+    </div>
+
+    <details class="panel" data-mock-id="evidence.lookup.panel">
+      <summary data-mock-id="evidence.lookup.toggle">Manual lookup</summary>
+      <div class="ev-grid">
+        <div>
+          <label class="field"><span class="label">Evidence ref</span>
+            <input type="text" class="mono" autocomplete="off" spellcheck="false" data-mock-id="evidence.lookup.ref" data-field-loc="body.ref" data-error-id="evidence.lookup.ref-error">
+          </label>
+          <p class="field-error" role="alert" tabindex="-1" data-mock-id="evidence.lookup.ref-error" hidden></p>
+        </div>
+        <div>
+          <label class="field"><span class="label">Namespace</span>
+            <select data-mock-id="evidence.lookup.namespace">
+              <option value="chunks">chunks</option>
+              <option value="hipporag-chunks">hipporag-chunks</option>
+            </select>
+          </label>
+        </div>
+        <div>
+          <label class="field"><span class="label">Kind</span>
+            <input type="text" value="text_chunk" disabled aria-disabled="true" data-mock-id="evidence.lookup.kind">
+          </label>
+        </div>
+      </div>
+      <button type="button" class="btn btn-primary" data-mock-id="evidence.lookup.submit">Resolve evidence</button>
+    </details>
+    <div class="ev-batch">
+      <span data-needs-backend="POST /evidence/resolve-batch" title="Not implemented yet: POST /evidence/resolve-batch"><span class="badge badge-nb">needs backend</span> <button type="button" class="btn btn-outline" data-mock-id="evidence.batch.submit">Resolve all evidence</button></span>
+      <span class="muted" role="status" data-mock-id="evidence.batch.status"></span>
+    </div>
+  </div>
+
+  <div role="tabpanel" aria-label="Trace Inspector" data-role="pane-trace" hidden>
+    <section class="panel" data-mock-id="evidence.trace.panel">
+      <h2>Trace</h2>
+      <label class="field"><span class="label">Trace reference</span>
+        <input type="text" class="mono" autocomplete="off" spellcheck="false" data-mock-id="evidence.trace.reference" data-field-loc="body.trace_reference" data-error-id="evidence.trace.reference-error">
+      </label>
+      <p class="field-error" role="alert" tabindex="-1" data-mock-id="evidence.trace.reference-error" hidden></p>
+      <div class="run-row">
+        <button type="button" class="btn btn-primary" disabled aria-disabled="true" data-mock-id="evidence.trace.load">Load trace</button>
+        <span class="ev-recent" data-needs-backend="GET /traces" data-backend-state="operator" title="Mounted only with --operator"><span class="badge badge-op">operator route</span>
+          <label>Recent runs
+            <select data-mock-id="evidence.trace.recent"><option value="">Choose a recent run</option></select>
+          </label>
+        </span>
+        <label class="inline"><input type="checkbox" data-mock-id="evidence.trace.debug"> Debug (internal identities + node trace)</label>
+      </div>
+    </section>
+
+    <div data-role="trace-empty">
+      <h2>No trace loaded</h2>
+      <p class="muted">Paste a trace reference and select Load trace, or select Open trace on a query result.</p>
+    </div>
+    <div class="state-view banner" data-state="progress" role="status" data-mock-id="evidence.state.trace-loading" hidden>
+      <p><span class="spinner" role="presentation"></span> Loading trace</p>
+    </div>
+    <section class="panel" data-focal="true" data-mock-id="evidence.trace.summary" hidden>
+      <h2>Run summary</h2>
+      <p><span class="badge" data-state="ok" data-mock-id="evidence.trace.status"></span></p>
+      <div data-mock-id="evidence.trace.stop-reason">
+        <p class="label">operator diagnostics</p>
+        <p class="mono" data-role="stop_reason"></p>
+        <p class="mono" data-role="degradation_reason"></p>
+      </div>
+      <dl class="attrs">
+        <dt>executor_version</dt><dd class="mono" data-role="executor_version"></dd>
+        <dt>concurrency_setting</dt><dd class="mono" data-role="concurrency_setting"></dd>
+        <dt>determinism_setting</dt><dd class="mono" data-role="determinism_setting"></dd>
+        <dt>arm_execution_order</dt><dd class="mono" data-role="arm_execution_order"></dd>
+        <dt>bundle_ref</dt><dd class="mono"><span data-mock-id="evidence.trace.bundle-ref"></span></dd>
+        <dt>corpus_snapshot_hash</dt><dd class="mono"><span data-mock-id="evidence.trace.snapshot-hash"></span></dd>
+      </dl>
+      <button type="button" class="btn btn-outline" data-mock-id="evidence.trace.use-in-ledger">Use trace in Ledger</button>
+    </section>
+    <p class="muted" data-role="debug-absent" hidden>This fixture holds the non-debug fields only, so it has no identities or node trace.</p>
+  </div>
+
+  <template data-role="debug-template">
+    <div data-role="debug-view">
+      <section class="panel" data-mock-id="evidence.trace.identity">
+        <h3>Internal identities</h3>
+        <dl class="ident">
+          <dt>run_id</dt>
+          <dd><span class="mono" data-role="run_id"></span><button type="button" class="btn btn-outline btn-icon" aria-label="Copy run_id" data-copy="run_id" data-mock-id="evidence.trace.copy-run-id"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></button><span class="muted" data-role="copied" hidden>Copied</span></dd>
+          <dt>wiring_id</dt>
+          <dd><span class="mono" data-role="wiring_id"></span><button type="button" class="btn btn-outline btn-icon" aria-label="Copy wiring_id" data-copy="wiring_id" data-mock-id="evidence.trace.copy-wiring-id"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></button><span class="muted" data-role="copied" hidden>Copied</span></dd>
+          <dt>wiring_instance_hash</dt>
+          <dd><span class="mono" data-role="wiring_instance_hash"></span><button type="button" class="btn btn-outline btn-icon" aria-label="Copy wiring_instance_hash" data-copy="wiring_instance_hash" data-mock-id="evidence.trace.copy-hash"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></button><span class="muted" data-role="copied" hidden>Copied</span>
+            <span class="muted ident-note">Do not paste this hash into a selector; the server refuses hash-shaped values.</span></dd>
+          <dt>arm_id</dt>
+          <dd><span class="mono" data-role="arm_id"></span><button type="button" class="btn btn-outline btn-icon" aria-label="Copy arm_id" data-copy="arm_id" data-mock-id="evidence.trace.copy-arm-id"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></button><span class="muted" data-role="copied" hidden>Copied</span></dd>
+        </dl>
+      </section>
+      <div class="ev-block">
+        <h3>Node trace</h3>
+        <p class="muted">Only dispatched nodes are listed. Cancelled siblings and later batches have no entry.</p>
+        <div class="table-scroll">
+          <table role="table" class="node-table" data-mock-id="evidence.trace.nodes">
+            <thead><tr><th>node_id</th><th>instance_hash</th><th>depth</th><th>effective_depth</th><th>tier</th><th>feed_tier</th><th>status</th><th>execution_mode</th><th>wall_clock_ms</th><th>cache_hit</th><th>guards_fired</th><th>budget_state</th><th>spent</th><th>allowance</th><th>realised_budget_share</th><th>cross_process_failure_cause</th><th>resumable</th><th>prompt</th><th>completion</th><th>cached read</th><th>calls</th><th>counted_by</th></tr></thead>
+            <tbody></tbody>
+            <tfoot><tr data-mock-id="evidence.trace.sums"></tr></tfoot>
+          </table>
+        </div>
+      </div>
+      <div class="ev-block">
+        <h3>Wall clock per node</h3>
+        <div class="bar-chart" data-mock-id="evidence.trace.chart"></div>
+      </div>
+    </div>
+  </template>
+
+  <details class="panel" data-mock-id="evidence.planned.list">
+    <summary data-mock-id="evidence.planned.toggle">Planned (not built)</summary>
+    <ul>
+      <li>Per-node outputs in the trace</li>
+      <li>Node placement and cancelled nodes</li>
+      <li>Nearest neighbours of a chunk</li>
+    </ul>
+  </details>
 </section>

@@ -1,0 +1,33 @@
+/* Evidence & Trace (17-08) */
+.evidence-content { max-width: 72ch; margin: var(--sm) 0 var(--md); white-space: pre-wrap; overflow-wrap: anywhere; }
+.ev-header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sm); margin-bottom: var(--sm); }
+.ev-chips { display: flex; flex-wrap: wrap; gap: var(--sm); }
+.ev-chips .chip { overflow-wrap: anywhere; }
+.ev-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 0 var(--md); margin-top: var(--sm); }
+.ev-grid input, .ev-grid select { width: 100%; max-width: 100%; }
+.ev-batch { display: flex; flex-wrap: wrap; align-items: center; gap: var(--md); margin-bottom: var(--lg); }
+.ev-batch p { margin: 0; }
+[data-mock-id="evidence.inspector.kv"] td:first-child { white-space: nowrap; }
+[data-mock-id="evidence.inspector.kv"] td { overflow-wrap: anywhere; }
+
+.ev-recent { display: block; max-width: 100%; min-width: 0; }
+.ev-recent label, .ev-recent select { display: block; max-width: 100%; }
+.ev-block { margin-bottom: var(--lg); }
+.ident { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--sm) var(--md); margin: 0; align-items: center; }
+.ident dt { font: 600 13px/1.5 var(--font); }
+.ident dd { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sm); margin: 0; min-width: 0; }
+.ident dd .mono { min-width: 0; }
+.ident-note { flex-basis: 100%; }
+
+.node-table th, .node-table td { white-space: nowrap; }
+.node-table td.mono { white-space: normal; min-width: 160px; }
+.node-table tbody tr:nth-child(odd) { background: var(--bg); }
+.node-table th:first-child, .node-table td:first-child { position: sticky; left: 0; background: inherit; }
+.node-table th:first-child { background: var(--bg-2); }
+.node-table tr[data-row-state="failed"] > td { background: var(--fail-bg); }
+.node-table tr[data-row-state="halted"] > td { background: var(--warn-bg); }
+.node-table tfoot td { font-weight: 600; background: var(--bg-2); }
+
+.bar-chart { display: grid; gap: var(--xs); max-width: 640px; }
+.bar-row { display: grid; grid-template-columns: minmax(80px, 160px) minmax(0, 1fr) max-content; align-items: center; gap: var(--sm); }
+.bar { display: block; height: 12px; width: var(--w, 0%); min-width: 2px; border-radius: 2px; background: var(--accent); }

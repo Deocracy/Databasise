@@ -310,6 +310,39 @@ mark { padding: 0 var(--xs); border-radius: 4px; background: var(--warn-bg); col
   .cmp-col { flex-basis: 100%; }
   .cmp-col[data-active="false"] { display: none; }
 }
+/* Evidence & Trace (17-08) */
+.evidence-content { max-width: 72ch; margin: var(--sm) 0 var(--md); white-space: pre-wrap; overflow-wrap: anywhere; }
+.ev-header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sm); margin-bottom: var(--sm); }
+.ev-chips { display: flex; flex-wrap: wrap; gap: var(--sm); }
+.ev-chips .chip { overflow-wrap: anywhere; }
+.ev-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 0 var(--md); margin-top: var(--sm); }
+.ev-grid input, .ev-grid select { width: 100%; max-width: 100%; }
+.ev-batch { display: flex; flex-wrap: wrap; align-items: center; gap: var(--md); margin-bottom: var(--lg); }
+.ev-batch p { margin: 0; }
+[data-mock-id="evidence.inspector.kv"] td:first-child { white-space: nowrap; }
+[data-mock-id="evidence.inspector.kv"] td { overflow-wrap: anywhere; }
+
+.ev-recent { display: block; max-width: 100%; min-width: 0; }
+.ev-recent label, .ev-recent select { display: block; max-width: 100%; }
+.ev-block { margin-bottom: var(--lg); }
+.ident { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--sm) var(--md); margin: 0; align-items: center; }
+.ident dt { font: 600 13px/1.5 var(--font); }
+.ident dd { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sm); margin: 0; min-width: 0; }
+.ident dd .mono { min-width: 0; }
+.ident-note { flex-basis: 100%; }
+
+.node-table th, .node-table td { white-space: nowrap; }
+.node-table td.mono { white-space: normal; min-width: 160px; }
+.node-table tbody tr:nth-child(odd) { background: var(--bg); }
+.node-table th:first-child, .node-table td:first-child { position: sticky; left: 0; background: inherit; }
+.node-table th:first-child { background: var(--bg-2); }
+.node-table tr[data-row-state="failed"] > td { background: var(--fail-bg); }
+.node-table tr[data-row-state="halted"] > td { background: var(--warn-bg); }
+.node-table tfoot td { font-weight: 600; background: var(--bg-2); }
+
+.bar-chart { display: grid; gap: var(--xs); max-width: 640px; }
+.bar-row { display: grid; grid-template-columns: minmax(80px, 160px) minmax(0, 1fr) max-content; align-items: center; gap: var(--sm); }
+.bar { display: block; height: 12px; width: var(--w, 0%); min-width: 2px; border-radius: 2px; background: var(--accent); }
 
 </style>
 </head>
@@ -1139,6 +1172,213 @@ mark { padding: 0 var(--xs); border-radius: 4px; background: var(--warn-bg); col
 
 <section data-mock-id="screen-evidence" hidden>
   <h1>Evidence &amp; Trace</h1>
+  <div class="mock-strip" data-mock-only="true">
+    <label>Outcome
+      <select data-mock-id="evidence.mock.outcome" data-mock-only="true">
+        <option value="success">success</option>
+        <option value="refusal">refusal</option>
+        <option value="validation">validation</option>
+        <option value="server-failure">server failure</option>
+        <option value="generic">generic 5xx</option>
+        <option value="unknown-trace">unknown trace</option>
+      </select>
+    </label>
+  </div>
+  <div class="tabs" role="tablist" aria-label="Inspector" data-mock-id="evidence.tabs.tablist">
+    <button type="button" role="tab" aria-selected="true" data-mock-id="evidence.tabs.evidence">Evidence Inspector</button>
+    <button type="button" role="tab" aria-selected="false" data-mock-id="evidence.tabs.trace">Trace Inspector</button>
+  </div>
+  <div data-role="errors" hidden>
+<div class="banner error-shape" data-state="warn" role="alert" data-mock-id="evidence.error.refusal" hidden>
+  <p class="label"><span aria-hidden="true">▲</span> Request refused</p>
+  <h3 class="mono" data-role="type"></h3>
+  <p data-role="message"></p>
+  <div class="table-scroll" data-role="attrs-wrap"><dl class="attrs" data-role="attrs"></dl></div>
+  <p class="muted" data-role="hint"></p>
+  <p class="muted"><span data-role="footer"></span>
+    <span data-needs-backend="GET /refusals" title="Not implemented yet: GET /refusals"><span class="badge badge-nb">needs backend</span> <a href="#corpus" data-mock-id="evidence.error.catalogue-link">Show in refusal catalogue</a></span></p>
+</div>
+<div class="banner error-shape" data-state="fail" role="alert" data-mock-id="evidence.error.validation" hidden>
+  <p data-role="summary"></p>
+  <ul data-role="list"></ul>
+</div>
+<div class="banner error-shape" data-state="fail" role="alert" data-mock-id="evidence.error.server-failure" hidden>
+  <p class="label"><span aria-hidden="true">✕</span> Server failure</p>
+  <p data-role="text"></p>
+  <button type="button" class="btn btn-outline" aria-expanded="false" data-mock-id="evidence.error.details-toggle">Show details</button>
+  <div data-role="details" hidden>
+    <div class="mono" data-role="detail-list"></div>
+    <button type="button" class="btn btn-outline" data-mock-id="evidence.error.open-trace" hidden>Open trace</button>
+  </div>
+</div>
+<div class="banner error-shape" data-state="neutral" role="alert" data-mock-id="evidence.error.generic" hidden>
+  <p class="label"><span aria-hidden="true">■</span> Server error</p>
+  <p data-role="text"></p>
+  <pre class="mono" data-role="body" hidden></pre>
+  <span data-needs-backend="GET /log" data-backend-state="operator" title="Mounted only with --operator --log-file"><span class="badge badge-op">operator route</span> <a href="#corpus" data-mock-id="evidence.error.server-log">Open server log</a></span>
+</div>
+
+  </div>
+
+  <div role="tabpanel" aria-label="Evidence Inspector" data-role="pane-evidence">
+    <div class="state-view" data-mock-id="evidence.state.idle">
+      <h2>No evidence selected</h2>
+      <p class="muted">Select Open on an evidence row in Query &amp; Compare, or use Manual lookup.</p>
+    </div>
+    <div class="state-view banner" data-state="progress" role="status" data-mock-id="evidence.state.loading" hidden>
+      <p><span class="spinner" role="presentation"></span> Resolving evidence</p>
+    </div>
+    <div class="state-view banner" data-state="warn" role="alert" data-mock-id="evidence.state.refusal" hidden>
+      <p class="label"><span aria-hidden="true">▲</span> Request refused</p>
+      <p>record no longer present; the store changed since the query</p>
+      <p class="muted mono">UnresolvableEvidenceReferenceError</p>
+    </div>
+    <div class="state-view" data-mock-id="evidence.state.resolved" hidden>
+      <section class="panel" data-focal="true" data-mock-id="evidence.inspector.panel">
+        <h2>Evidence</h2>
+        <div class="ev-header" data-mock-id="evidence.inspector.header"></div>
+        <p>Score <span class="mono" data-mock-id="evidence.inspector.score"></span></p>
+        <div class="ev-chips">
+          <span class="chip mono" data-mock-id="evidence.inspector.document-id" hidden></span>
+          <span class="chip mono" data-mock-id="evidence.inspector.ordinal" hidden></span>
+        </div>
+        <div class="evidence-content" data-mock-id="evidence.inspector.content"></div>
+        <div data-role="kv-wrap">
+          <h3>Other fields</h3>
+          <div class="table-scroll">
+            <table role="table" data-mock-id="evidence.inspector.kv">
+              <thead><tr><th>Key</th><th>Value</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="actions">
+          <a href="#corpus" data-mock-id="evidence.inspector.document-link" hidden>Open in Corpus</a>
+          <a href="#evidence" data-mock-id="evidence.inspector.trace-link">Open trace</a>
+        </div>
+        <p class="muted">Cached for this session by namespace and ref.</p>
+      </section>
+    </div>
+
+    <details class="panel" data-mock-id="evidence.lookup.panel">
+      <summary data-mock-id="evidence.lookup.toggle">Manual lookup</summary>
+      <div class="ev-grid">
+        <div>
+          <label class="field"><span class="label">Evidence ref</span>
+            <input type="text" class="mono" autocomplete="off" spellcheck="false" data-mock-id="evidence.lookup.ref" data-field-loc="body.ref" data-error-id="evidence.lookup.ref-error">
+          </label>
+          <p class="field-error" role="alert" tabindex="-1" data-mock-id="evidence.lookup.ref-error" hidden></p>
+        </div>
+        <div>
+          <label class="field"><span class="label">Namespace</span>
+            <select data-mock-id="evidence.lookup.namespace">
+              <option value="chunks">chunks</option>
+              <option value="hipporag-chunks">hipporag-chunks</option>
+            </select>
+          </label>
+        </div>
+        <div>
+          <label class="field"><span class="label">Kind</span>
+            <input type="text" value="text_chunk" disabled aria-disabled="true" data-mock-id="evidence.lookup.kind">
+          </label>
+        </div>
+      </div>
+      <button type="button" class="btn btn-primary" data-mock-id="evidence.lookup.submit">Resolve evidence</button>
+    </details>
+    <div class="ev-batch">
+      <span data-needs-backend="POST /evidence/resolve-batch" title="Not implemented yet: POST /evidence/resolve-batch"><span class="badge badge-nb">needs backend</span> <button type="button" class="btn btn-outline" data-mock-id="evidence.batch.submit">Resolve all evidence</button></span>
+      <span class="muted" role="status" data-mock-id="evidence.batch.status"></span>
+    </div>
+  </div>
+
+  <div role="tabpanel" aria-label="Trace Inspector" data-role="pane-trace" hidden>
+    <section class="panel" data-mock-id="evidence.trace.panel">
+      <h2>Trace</h2>
+      <label class="field"><span class="label">Trace reference</span>
+        <input type="text" class="mono" autocomplete="off" spellcheck="false" data-mock-id="evidence.trace.reference" data-field-loc="body.trace_reference" data-error-id="evidence.trace.reference-error">
+      </label>
+      <p class="field-error" role="alert" tabindex="-1" data-mock-id="evidence.trace.reference-error" hidden></p>
+      <div class="run-row">
+        <button type="button" class="btn btn-primary" disabled aria-disabled="true" data-mock-id="evidence.trace.load">Load trace</button>
+        <span class="ev-recent" data-needs-backend="GET /traces" data-backend-state="operator" title="Mounted only with --operator"><span class="badge badge-op">operator route</span>
+          <label>Recent runs
+            <select data-mock-id="evidence.trace.recent"><option value="">Choose a recent run</option></select>
+          </label>
+        </span>
+        <label class="inline"><input type="checkbox" data-mock-id="evidence.trace.debug"> Debug (internal identities + node trace)</label>
+      </div>
+    </section>
+
+    <div data-role="trace-empty">
+      <h2>No trace loaded</h2>
+      <p class="muted">Paste a trace reference and select Load trace, or select Open trace on a query result.</p>
+    </div>
+    <div class="state-view banner" data-state="progress" role="status" data-mock-id="evidence.state.trace-loading" hidden>
+      <p><span class="spinner" role="presentation"></span> Loading trace</p>
+    </div>
+    <section class="panel" data-focal="true" data-mock-id="evidence.trace.summary" hidden>
+      <h2>Run summary</h2>
+      <p><span class="badge" data-state="ok" data-mock-id="evidence.trace.status"></span></p>
+      <div data-mock-id="evidence.trace.stop-reason">
+        <p class="label">operator diagnostics</p>
+        <p class="mono" data-role="stop_reason"></p>
+        <p class="mono" data-role="degradation_reason"></p>
+      </div>
+      <dl class="attrs">
+        <dt>executor_version</dt><dd class="mono" data-role="executor_version"></dd>
+        <dt>concurrency_setting</dt><dd class="mono" data-role="concurrency_setting"></dd>
+        <dt>determinism_setting</dt><dd class="mono" data-role="determinism_setting"></dd>
+        <dt>arm_execution_order</dt><dd class="mono" data-role="arm_execution_order"></dd>
+        <dt>bundle_ref</dt><dd class="mono"><span data-mock-id="evidence.trace.bundle-ref"></span></dd>
+        <dt>corpus_snapshot_hash</dt><dd class="mono"><span data-mock-id="evidence.trace.snapshot-hash"></span></dd>
+      </dl>
+      <button type="button" class="btn btn-outline" data-mock-id="evidence.trace.use-in-ledger">Use trace in Ledger</button>
+    </section>
+    <p class="muted" data-role="debug-absent" hidden>This fixture holds the non-debug fields only, so it has no identities or node trace.</p>
+  </div>
+
+  <template data-role="debug-template">
+    <div data-role="debug-view">
+      <section class="panel" data-mock-id="evidence.trace.identity">
+        <h3>Internal identities</h3>
+        <dl class="ident">
+          <dt>run_id</dt>
+          <dd><span class="mono" data-role="run_id"></span><button type="button" class="btn btn-outline btn-icon" aria-label="Copy run_id" data-copy="run_id" data-mock-id="evidence.trace.copy-run-id"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></button><span class="muted" data-role="copied" hidden>Copied</span></dd>
+          <dt>wiring_id</dt>
+          <dd><span class="mono" data-role="wiring_id"></span><button type="button" class="btn btn-outline btn-icon" aria-label="Copy wiring_id" data-copy="wiring_id" data-mock-id="evidence.trace.copy-wiring-id"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></button><span class="muted" data-role="copied" hidden>Copied</span></dd>
+          <dt>wiring_instance_hash</dt>
+          <dd><span class="mono" data-role="wiring_instance_hash"></span><button type="button" class="btn btn-outline btn-icon" aria-label="Copy wiring_instance_hash" data-copy="wiring_instance_hash" data-mock-id="evidence.trace.copy-hash"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></button><span class="muted" data-role="copied" hidden>Copied</span>
+            <span class="muted ident-note">Do not paste this hash into a selector; the server refuses hash-shaped values.</span></dd>
+          <dt>arm_id</dt>
+          <dd><span class="mono" data-role="arm_id"></span><button type="button" class="btn btn-outline btn-icon" aria-label="Copy arm_id" data-copy="arm_id" data-mock-id="evidence.trace.copy-arm-id"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></button><span class="muted" data-role="copied" hidden>Copied</span></dd>
+        </dl>
+      </section>
+      <div class="ev-block">
+        <h3>Node trace</h3>
+        <p class="muted">Only dispatched nodes are listed. Cancelled siblings and later batches have no entry.</p>
+        <div class="table-scroll">
+          <table role="table" class="node-table" data-mock-id="evidence.trace.nodes">
+            <thead><tr><th>node_id</th><th>instance_hash</th><th>depth</th><th>effective_depth</th><th>tier</th><th>feed_tier</th><th>status</th><th>execution_mode</th><th>wall_clock_ms</th><th>cache_hit</th><th>guards_fired</th><th>budget_state</th><th>spent</th><th>allowance</th><th>realised_budget_share</th><th>cross_process_failure_cause</th><th>resumable</th><th>prompt</th><th>completion</th><th>cached read</th><th>calls</th><th>counted_by</th></tr></thead>
+            <tbody></tbody>
+            <tfoot><tr data-mock-id="evidence.trace.sums"></tr></tfoot>
+          </table>
+        </div>
+      </div>
+      <div class="ev-block">
+        <h3>Wall clock per node</h3>
+        <div class="bar-chart" data-mock-id="evidence.trace.chart"></div>
+      </div>
+    </div>
+  </template>
+
+  <details class="panel" data-mock-id="evidence.planned.list">
+    <summary data-mock-id="evidence.planned.toggle">Planned (not built)</summary>
+    <ul>
+      <li>Per-node outputs in the trace</li>
+      <li>Node placement and cancelled nodes</li>
+      <li>Nearest neighbours of a chunk</li>
+    </ul>
+  </details>
 </section>
 
 <section data-mock-id="screen-documents" hidden>
@@ -1170,7 +1410,7 @@ mark { padding: 0 var(--xs); border-radius: 4px; background: var(--warn-bg); col
     <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></symbol>
   </svg>
 </div>
-<script type="application/json" id="mock-fixtures">{"aliases":[{"alias":"prod","active_version":"4.0.0","record_kind":"rollback","generation_ordinal":5,"created_at":"2026-10-20T09:12:44Z","arm":"naive"},{"alias":"staging","active_version":"1.0.0","record_kind":"promotion","generation_ordinal":6,"created_at":"2026-10-21T15:40:02Z","arm":"naive"},{"alias":"hr","active_version":"1.0.0","record_kind":"promotion","generation_ordinal":7,"created_at":"2026-10-22T11:05:37Z","arm":"hipporag"}],"compare":{"bodies":{"naive-ok":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]},"local-partial":{"answer":"","evidence":[],"trace_token":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","depth_label":null,"partial":true,"degraded":true,"stop_reason":"node_failed","degradation_reason":"node_failed","token_accounting":[{"counted_by":"none","prompt_tokens":0,"completion_tokens":0,"cached_read_tokens":0,"call_count":0}],"seam_events":[]},"local-ok":{"answer":"Renewal is on 1 March 2027. The supplier, Northwind Freight, must receive notice 90 days earlier.","evidence":[{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.8409,"tier":null},{"ref":"c-5ac3e0","namespace":"chunks","kind":"text_chunk","score":0.7918,"tier":null}],"trace_token":"Qm1x7TqHk0fE2uVc9JrZsYw3NdLbA8pXoG4iMtRh5Ks","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1840,"completion_tokens":112,"cached_read_tokens":0,"call_count":2},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]},"hipporag-ok":{"answer":"The supplier contract renews on 1 March 2027. Notice of non-renewal is due 90 days before, by 30 November 2026.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.9012,"tier":null},{"ref":"c-e1b7d2","namespace":"chunks","kind":"text_chunk","score":0.8456,"tier":null},{"ref":"c-5ac3e0","namespace":"chunks","kind":"text_chunk","score":0.8101,"tier":null},{"ref":"c-3d98fa","namespace":"chunks","kind":"text_chunk","score":0.7733,"tier":null}],"trace_token":"f3Jd9WcL2vQy7TnB0sKxEoAh5ZuRg1MiPaV8bXkC4yU","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":2210,"completion_tokens":131,"cached_read_tokens":0,"call_count":3},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"cmp-3col":[{"selector":null,"body":"naive-ok"},{"selector":{"capability":["reads_vector:entities"]},"body":"local-partial"},{"selector":{"capability":["reads_graph","calls_llm"]},"body":"hipporag-ok"}],"cmp-3col-clean":[{"selector":null,"body":"naive-ok"},{"selector":{"capability":["reads_vector:entities"]},"body":"local-ok"},{"selector":{"capability":["reads_graph","calls_llm"]},"body":"hipporag-ok"}]},"health":{"health-ok":{"status":"ok","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:chunks":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"ok","graph:hipporag-graph":"ok","vector:hipporag-chunks":"ok","vector:hipporag-entities":"ok","vector:hipporag-facts":"ok"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":true,"embedding":true,"rerank":true},"engine_reason":null},"health-degraded":{"status":"degraded","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"absent","graph:hipporag-graph":"absent","vector:hipporag-chunks":"absent","vector:hipporag-entities":"absent","vector:hipporag-facts":"absent"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":false,"embedding":false,"rerank":false},"engine_reason":"model clients not configured"},"health-loading":{"loading":true},"health-error":{"status":500,"body":"Internal Server Error"}},"query":{"q-success":{"status":200,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-partial":{"status":200,"body":{"answer":"","evidence":[],"trace_token":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","depth_label":null,"partial":true,"degraded":true,"stop_reason":"node_failed","degradation_reason":"node_failed","token_accounting":[{"counted_by":"none","prompt_tokens":0,"completion_tokens":0,"cached_read_tokens":0,"call_count":0}],"seam_events":[]}},"q-empty-evidence":{"status":200,"body":{"answer":"The question was sent to the model without retrieval, so this answer rests on the model alone.","evidence":[],"trace_token":"Ln0sA6lQeuJl7PW1NWiFpTOTogKdJBOUmXJloaJa78Y","depth_label":"opaque","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":212,"completion_tokens":58,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-trace-null":{"status":200,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":null,"depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-layout-sample":{"status":200,"layout_sample":true,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":null,"tier":null}],"trace_token":"GKw-c0PwFokMUQ6T-TUmEWnZ4_VlQ2Qpgw-vCTT0-OQ","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1}],"seam_events":[{"component":"mutates_store","outcome":"completed","spend":{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":40,"completion_tokens":8,"cached_read_tokens":0,"call_count":1}}]}},"q-refusal":{"status":422,"body":{"refusal_type":"UnsatisfiableSelectorError","message":"no wiring satisfies the requested selector","selector_kind":"capability","requested":["writes_graph"]}},"q-validation":{"status":422,"body":{"detail":[{"loc":["body","selector"],"msg":"Value error, a selector may set only one member","type":"value_error"}]}},"q-500":{"status":500,"body":"Internal Server Error"},"q-500-foreign":{"status":502,"body":{"refusal_type":"ForeignEngineRefusalError","message":"operation 'query' failed (StoreFault)","operation":"query","failure_class":"StoreFault","trace_token":"P3m7e0NbBTIWUdrv03TNxoHcBvqmXjdOODN7iMoEbeo","cause":"graph store lock held by another process in this namespace"}},"q-stream-disconnected":{"status":200,"stream_closed":true,"body":{"answer":"","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null}],"trace_token":null,"depth_label":null,"partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[],"seam_events":[]}},"history":[{"time":"2026-10-24 16:42:09","selector":"Default","trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","partial":false},{"time":"2026-10-24 16:31:55","selector":"capability reads_vector:entities","trace_token":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","partial":true},{"time":"2026-10-23 10:08:21","selector":"alias prod","trace_token":"Ln0sA6lQeuJl7PW1NWiFpTOTogKdJBOUmXJloaJa78Y","partial":false}]},"shell":{"info":{"version":"0.1.0","workspace":"default","clients":{"llm":true,"embedding":true,"rerank":false},"write_in_flight":false,"graph_busy":false}},"refusals":[{"refusal_type":"ActiveGenerationRetirementError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"AmbiguousAnswerPositionError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"AmbiguousIngestPayloadError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"DisagreeingPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"DocumentNotInterruptedError","module":"databasise.seam.refusals","attribute_keys":["document_id","status"],"http_status":422},{"refusal_type":"DuplicateComparisonKeyError","module":"databasise.seam.refusals","attribute_keys":["key"],"http_status":422},{"refusal_type":"DuplicateDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"EmptyCapabilitySelectorError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyComparisonRequestError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyIngestDocumentError","module":"databasise.seam.refusals","attribute_keys":["member"],"http_status":422},{"refusal_type":"EmptyNamespaceError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":422},{"refusal_type":"EmptyPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"EmptyQueryObjectError","module":"databasise.seam.refusals","attribute_keys":["query_object"],"http_status":422},{"refusal_type":"ForbiddenSelectorInputError","module":"databasise.seam.refusals","attribute_keys":["member_name","value"],"http_status":422},{"refusal_type":"ForeignEngineRefusalError","module":"databasise.seam.refusals","attribute_keys":["failure_class","operation"],"http_status":502},{"refusal_type":"GateNotCalibratedError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"GateVerbNotBuiltError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"InvalidChangeOriginError","module":"databasise.seam.refusals","attribute_keys":["change_origin"],"http_status":422},{"refusal_type":"InvalidDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"InvalidEvidenceNamespaceError","module":"databasise.seam.refusals","attribute_keys":["namespace"],"http_status":422},{"refusal_type":"InvalidGuardDeclarationError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"InvalidNodeSettingError","module":"databasise.seam.refusals","attribute_keys":["setting"],"http_status":422},{"refusal_type":"InvalidPromotionAliasError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"MalformedBase64PayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MalformedSelectorPayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MeasurementPostureRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"MissingScopeArgumentError","module":"databasise.seam.refusals","attribute_keys":["argument","scope","tool"],"http_status":422},{"refusal_type":"MultiMemberSelectorError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"MutableStoreComparisonExcludedError","module":"databasise.seam.refusals","attribute_keys":["component"],"http_status":422},{"refusal_type":"NoRawUploadPathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NoWritePathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NonFiniteNumberError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"OversizedDocumentError","module":"databasise.seam.refusals","attribute_keys":["actual_bytes","limit_bytes"],"http_status":422},{"refusal_type":"PageBoundsError","module":"databasise.seam.refusals","attribute_keys":["limit","offset"],"http_status":422},{"refusal_type":"PageSizeExceededError","module":"databasise.seam.refusals","attribute_keys":["limit","requested"],"http_status":422},{"refusal_type":"PartialRunEvidenceError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"StoreBusyError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":409},{"refusal_type":"TombstonedGenerationError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"UnbudgetableParticipantError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"UncalibratedFloorRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"UnconsumableQueryMemberError","module":"databasise.seam.refusals","attribute_keys":["member_name"],"http_status":422},{"refusal_type":"UnknownDocumentError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"UnknownGenerationVersionError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":404},{"refusal_type":"UnknownGraphNodeError","module":"databasise.seam.refusals","attribute_keys":["node_id"],"http_status":422},{"refusal_type":"UnknownJobError","module":"databasise.seam.refusals","attribute_keys":["job_id"],"http_status":404},{"refusal_type":"UnknownTraceReferenceError","module":"databasise.seam.refusals","attribute_keys":["trace_reference"],"http_status":404},{"refusal_type":"UnparseableWiringError","module":"databasise.seam.refusals","attribute_keys":["violations"],"http_status":422},{"refusal_type":"UnrecognisedPromotionVerbError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"UnresolvableEvidenceReferenceError","module":"databasise.seam.refusals","attribute_keys":["ref"],"http_status":404},{"refusal_type":"UnsatisfiableSelectorError","module":"databasise.seam.refusals","attribute_keys":["requested","selector_kind"],"http_status":422},{"refusal_type":"UnsupportedUploadTypeError","module":"databasise.seam.refusals","attribute_keys":["suffix"],"http_status":422}],"resolution":{"rows":[{"selector":null,"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_kv"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_vector"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_graph"]},"wiring":"hipporag","node_count":14,"outcome":"resolved"},{"selector":{"capability":["reads_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_blob"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_artifact"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["calls_llm"]},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"capability":["calls_rerank"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["calls_embedding"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["net"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["fs"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["self_storage"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["mutates_store"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_kv"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_vector"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_graph"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_vector:entities"]},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:relationships"]},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:entities","reads_vector:relationships"]},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"capability":[]},"wiring":null,"node_count":null,"outcome":"EmptyCapabilitySelectorError"},{"selector":{"harness":"hotpotqa"},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"alias":"fixture-naive"},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"alias":"fixture-bypass"},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"alias":"fixture-hybrid"},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"alias":"fixture-local"},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-global"},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-hipporag"},"wiring":"hipporag","node_count":14,"outcome":"resolved"}],"reachable":{"naive":true,"bypass":true,"hybrid":true,"local":true,"global":true,"hipporag":true}}}</script>
+<script type="application/json" id="mock-fixtures">{"aliases":[{"alias":"prod","active_version":"4.0.0","record_kind":"rollback","generation_ordinal":5,"created_at":"2026-10-20T09:12:44Z","arm":"naive"},{"alias":"staging","active_version":"1.0.0","record_kind":"promotion","generation_ordinal":6,"created_at":"2026-10-21T15:40:02Z","arm":"naive"},{"alias":"hr","active_version":"1.0.0","record_kind":"promotion","generation_ordinal":7,"created_at":"2026-10-22T11:05:37Z","arm":"hipporag"}],"compare":{"bodies":{"naive-ok":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]},"local-partial":{"answer":"","evidence":[],"trace_token":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","depth_label":null,"partial":true,"degraded":true,"stop_reason":"node_failed","degradation_reason":"node_failed","token_accounting":[{"counted_by":"none","prompt_tokens":0,"completion_tokens":0,"cached_read_tokens":0,"call_count":0}],"seam_events":[]},"local-ok":{"answer":"Renewal is on 1 March 2027. The supplier, Northwind Freight, must receive notice 90 days earlier.","evidence":[{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.8409,"tier":null},{"ref":"c-5ac3e0","namespace":"chunks","kind":"text_chunk","score":0.7918,"tier":null}],"trace_token":"Qm1x7TqHk0fE2uVc9JrZsYw3NdLbA8pXoG4iMtRh5Ks","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1840,"completion_tokens":112,"cached_read_tokens":0,"call_count":2},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]},"hipporag-ok":{"answer":"The supplier contract renews on 1 March 2027. Notice of non-renewal is due 90 days before, by 30 November 2026.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.9012,"tier":null},{"ref":"c-e1b7d2","namespace":"chunks","kind":"text_chunk","score":0.8456,"tier":null},{"ref":"c-5ac3e0","namespace":"chunks","kind":"text_chunk","score":0.8101,"tier":null},{"ref":"c-3d98fa","namespace":"chunks","kind":"text_chunk","score":0.7733,"tier":null}],"trace_token":"f3Jd9WcL2vQy7TnB0sKxEoAh5ZuRg1MiPaV8bXkC4yU","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":2210,"completion_tokens":131,"cached_read_tokens":0,"call_count":3},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"cmp-3col":[{"selector":null,"body":"naive-ok"},{"selector":{"capability":["reads_vector:entities"]},"body":"local-partial"},{"selector":{"capability":["reads_graph","calls_llm"]},"body":"hipporag-ok"}],"cmp-3col-clean":[{"selector":null,"body":"naive-ok"},{"selector":{"capability":["reads_vector:entities"]},"body":"local-ok"},{"selector":{"capability":["reads_graph","calls_llm"]},"body":"hipporag-ok"}]},"evidence":{"e-lightrag-chunk":{"id":"c-7f3a91","full_doc_id":"doc-3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","content":"Supplier contract, section 9. This supplier contract renews automatically on 1 March 2027 for a further term of twelve months. Either party may prevent renewal by giving 90 days written notice before expiry. Notice sent after that date takes effect at the end of the following term.","file_path":"contracts/supplier-contract-2026-q1.pdf"},"e-hipporag-chunk":{"id":"chunk:7f3a91","document_id":"contract-2026-q1","ordinal":3,"content":"Section 9, renewal. The supplier contract renews on 1 March 2027. Written notice of 90 days is required to stop the renewal."},"chunks":{"c-02be44":{"id":"c-02be44","full_doc_id":"doc-3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","content":"Section 10, termination. Either party may end the supplier contract for material breach if the breach is not cured within 30 days of written notice.","file_path":"contracts/supplier-contract-2026-q1.pdf"},"c-91d0c7":{"id":"c-91d0c7","full_doc_id":"doc-3f9c2a7e5b1d4c88a0e6f1d2c3b4a597","content":"Section 4, payment. Invoices are payable within 45 days. Late payment accrues interest at 1.5 percent per month.","file_path":"contracts/supplier-contract-2026-q1.pdf"},"c-3d98fa":{"id":"c-3d98fa","full_doc_id":"doc-77a1c0de52b94f6a8d3e9b0c1f2a3d4e","content":"Operations memo 114. The supply chain review moved the supplier audit to the second quarter.","file_path":"memos/memo-ops-114.docx"},"c-5ac3e0":{"id":"c-5ac3e0","full_doc_id":"doc-77a1c0de52b94f6a8d3e9b0c1f2a3d4e","content":"Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit find","file_path":"archive/2026/operations/long-form/annual-supplier-review/appendix-b-supporting-material/very-long-file-name-that-must-wrap-at-narrow-widths-0123456789abcdef0123456789abcdef.pdf"},"c-e1b7d2":{"id":"c-e1b7d2","full_doc_id":"doc-77a1c0de52b94f6a8d3e9b0c1f2a3d4e","content":"Operations memo 115. Renewal dates for all supplier contracts are tracked in the contracts register.","file_path":"memos/memo-ops-115.docx"}},"t-clean":{"partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"bundle_ref":"sentinel:no-eval-bundle-until-phase-2","corpus_snapshot_hash":"sentinel:no-corpus-snapshot-until-phase-2","executor_version":"databasise@0.1.0","determinism_setting":"cache-bypassed","concurrency_setting":"sequential","arm_execution_order":0},"t-partial-debug":{"partial":true,"degraded":true,"stop_reason":"node_failed","degradation_reason":"node_failed","bundle_ref":"sentinel:no-eval-bundle-until-phase-2","corpus_snapshot_hash":"sentinel:no-corpus-snapshot-until-phase-2","executor_version":"databasise@0.1.0","determinism_setting":"cache-bypassed","concurrency_setting":"sequential","arm_execution_order":0,"run_id":"5b0e7c1a-2f4d-4e8b-9a36-d1c8f07b3e52","wiring_id":"lightrag-base","wiring_instance_hash":"sha256:9f2c4e7a1b8d03652ac4f7e19d0b6a83c5e21f4d7a90b3c68e5d1f02a7b4c9e6","arm_id":"naive","nodes":[{"node_id":"embedder-index","instance_hash":"sha256:1a7d3c9e5f0b284671ce9a3d5b0f8e24c6a1d7f39e5b0c482a6d1f73e9b5c0a8","depth":"opaque","effective_depth":"opaque","tier":null,"feed_tier":null,"status":"completed","execution_mode":"in-process","wall_clock_ms":412,"cache_hit":false,"guards_fired":[],"budget_state":"within_budget","spent":14,"allowance":1000000,"realised_budget_share":1.4e-05,"cross_process_failure_cause":null,"resumable":false,"tokens":{"prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1,"counted_by":"text-embedding-3-small"}},{"node_id":"embedder-query","instance_hash":"sha256:6e0b2d8a4c7f19053bd8e2a6c4f1097d3b5e8a20c6f4d1793a5b0e82d7c1f469","depth":"opaque","effective_depth":"opaque","tier":null,"feed_tier":null,"status":"failed","execution_mode":"in-process","wall_clock_ms":0,"cache_hit":null,"guards_fired":[],"budget_state":"halted","spent":null,"allowance":1000000,"realised_budget_share":0.0,"cross_process_failure_cause":"declared effect 'calls_embedding' requires client 'embedding'","resumable":false,"tokens":{"prompt_tokens":0,"completion_tokens":0,"cached_read_tokens":0,"call_count":0,"counted_by":"none"}}]}},"health":{"health-ok":{"status":"ok","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:chunks":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"ok","graph:hipporag-graph":"ok","vector:hipporag-chunks":"ok","vector:hipporag-entities":"ok","vector:hipporag-facts":"ok"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":true,"embedding":true,"rerank":true},"engine_reason":null},"health-degraded":{"status":"degraded","stores":{"kv:text_chunks":"ok","graph:chunk_entity_relation":"ok","vector:entities":"ok","vector:relationships":"ok","kv:hipporag-text-chunks":"absent","graph:hipporag-graph":"absent","vector:hipporag-chunks":"absent","vector:hipporag-entities":"absent","vector:hipporag-facts":"absent"},"engine":{"interpreter_present":true,"working_dir_present":true,"v1_reachable":true},"clients":{"llm":false,"embedding":false,"rerank":false},"engine_reason":"model clients not configured"},"health-loading":{"loading":true},"health-error":{"status":500,"body":"Internal Server Error"}},"query":{"q-success":{"status":200,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-partial":{"status":200,"body":{"answer":"","evidence":[],"trace_token":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","depth_label":null,"partial":true,"degraded":true,"stop_reason":"node_failed","degradation_reason":"node_failed","token_accounting":[{"counted_by":"none","prompt_tokens":0,"completion_tokens":0,"cached_read_tokens":0,"call_count":0}],"seam_events":[]}},"q-empty-evidence":{"status":200,"body":{"answer":"The question was sent to the model without retrieval, so this answer rests on the model alone.","evidence":[],"trace_token":"Ln0sA6lQeuJl7PW1NWiFpTOTogKdJBOUmXJloaJa78Y","depth_label":"opaque","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":212,"completion_tokens":58,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-trace-null":{"status":200,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null},{"ref":"c-91d0c7","namespace":"chunks","kind":"text_chunk","score":0.7764,"tier":null}],"trace_token":null,"depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1},{"counted_by":"text-embedding-3-small","prompt_tokens":14,"completion_tokens":0,"cached_read_tokens":0,"call_count":1}],"seam_events":[]}},"q-layout-sample":{"status":200,"layout_sample":true,"body":{"answer":"The supplier contract renews on 1 March 2027 and requires 90 days written notice before expiry.","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":null,"tier":null}],"trace_token":"GKw-c0PwFokMUQ6T-TUmEWnZ4_VlQ2Qpgw-vCTT0-OQ","depth_label":"evidence","partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":1284,"completion_tokens":96,"cached_read_tokens":0,"call_count":1}],"seam_events":[{"component":"mutates_store","outcome":"completed","spend":{"counted_by":"gpt-4o-mini-2024-07-18","prompt_tokens":40,"completion_tokens":8,"cached_read_tokens":0,"call_count":1}}]}},"q-refusal":{"status":422,"body":{"refusal_type":"UnsatisfiableSelectorError","message":"no wiring satisfies the requested selector","selector_kind":"capability","requested":["writes_graph"]}},"q-validation":{"status":422,"body":{"detail":[{"loc":["body","selector"],"msg":"Value error, a selector may set only one member","type":"value_error"}]}},"q-500":{"status":500,"body":"Internal Server Error"},"q-500-foreign":{"status":502,"body":{"refusal_type":"ForeignEngineRefusalError","message":"operation 'query' failed (StoreFault)","operation":"query","failure_class":"StoreFault","trace_token":"P3m7e0NbBTIWUdrv03TNxoHcBvqmXjdOODN7iMoEbeo","cause":"graph store lock held by another process in this namespace"}},"q-stream-disconnected":{"status":200,"stream_closed":true,"body":{"answer":"","evidence":[{"ref":"c-7f3a91","namespace":"chunks","kind":"text_chunk","score":0.8731,"tier":null},{"ref":"c-02be44","namespace":"chunks","kind":"text_chunk","score":0.812,"tier":null}],"trace_token":null,"depth_label":null,"partial":false,"degraded":false,"stop_reason":null,"degradation_reason":null,"token_accounting":[],"seam_events":[]}},"history":[{"time":"2026-10-24 16:42:09","selector":"Default","trace_token":"ypeBEsobvcr6wjGzmiPcTaeG7_gUfE5yuYB3ha_uSLs","partial":false},{"time":"2026-10-24 16:31:55","selector":"capability reads_vector:entities","trace_token":"PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0","partial":true},{"time":"2026-10-23 10:08:21","selector":"alias prod","trace_token":"Ln0sA6lQeuJl7PW1NWiFpTOTogKdJBOUmXJloaJa78Y","partial":false}]},"shell":{"info":{"version":"0.1.0","workspace":"default","clients":{"llm":true,"embedding":true,"rerank":false},"write_in_flight":false,"graph_busy":false}},"refusals":[{"refusal_type":"ActiveGenerationRetirementError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"AmbiguousAnswerPositionError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"AmbiguousIngestPayloadError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"DisagreeingPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"DocumentNotInterruptedError","module":"databasise.seam.refusals","attribute_keys":["document_id","status"],"http_status":422},{"refusal_type":"DuplicateComparisonKeyError","module":"databasise.seam.refusals","attribute_keys":["key"],"http_status":422},{"refusal_type":"DuplicateDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"EmptyCapabilitySelectorError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyComparisonRequestError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"EmptyIngestDocumentError","module":"databasise.seam.refusals","attribute_keys":["member"],"http_status":422},{"refusal_type":"EmptyNamespaceError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":422},{"refusal_type":"EmptyPromotionTraceIdsError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"EmptyQueryObjectError","module":"databasise.seam.refusals","attribute_keys":["query_object"],"http_status":422},{"refusal_type":"ForbiddenSelectorInputError","module":"databasise.seam.refusals","attribute_keys":["member_name","value"],"http_status":422},{"refusal_type":"ForeignEngineRefusalError","module":"databasise.seam.refusals","attribute_keys":["failure_class","operation"],"http_status":502},{"refusal_type":"GateNotCalibratedError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"GateVerbNotBuiltError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"InvalidChangeOriginError","module":"databasise.seam.refusals","attribute_keys":["change_origin"],"http_status":422},{"refusal_type":"InvalidDocumentIdError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"InvalidEvidenceNamespaceError","module":"databasise.seam.refusals","attribute_keys":["namespace"],"http_status":422},{"refusal_type":"InvalidGuardDeclarationError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"InvalidNodeSettingError","module":"databasise.seam.refusals","attribute_keys":["setting"],"http_status":422},{"refusal_type":"InvalidPromotionAliasError","module":"databasise.seam.refusals","attribute_keys":["alias"],"http_status":422},{"refusal_type":"MalformedBase64PayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MalformedSelectorPayloadError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"MeasurementPostureRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"MissingScopeArgumentError","module":"databasise.seam.refusals","attribute_keys":["argument","scope","tool"],"http_status":422},{"refusal_type":"MultiMemberSelectorError","module":"databasise.seam.refusals","attribute_keys":["set_members"],"http_status":422},{"refusal_type":"MutableStoreComparisonExcludedError","module":"databasise.seam.refusals","attribute_keys":["component"],"http_status":422},{"refusal_type":"NoRawUploadPathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NoWritePathForModalityError","module":"databasise.seam.refusals","attribute_keys":["operation"],"http_status":422},{"refusal_type":"NonFiniteNumberError","module":"databasise.seam.refusals","attribute_keys":["field"],"http_status":422},{"refusal_type":"OversizedDocumentError","module":"databasise.seam.refusals","attribute_keys":["actual_bytes","limit_bytes"],"http_status":422},{"refusal_type":"PageBoundsError","module":"databasise.seam.refusals","attribute_keys":["limit","offset"],"http_status":422},{"refusal_type":"PageSizeExceededError","module":"databasise.seam.refusals","attribute_keys":["limit","requested"],"http_status":422},{"refusal_type":"PartialRunEvidenceError","module":"databasise.seam.refusals","attribute_keys":["trace_ids"],"http_status":422},{"refusal_type":"StoreBusyError","module":"databasise.seam.refusals","attribute_keys":["store_kind"],"http_status":409},{"refusal_type":"TombstonedGenerationError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":422},{"refusal_type":"UnbudgetableParticipantError","module":"databasise.seam.refusals","attribute_keys":[],"http_status":422},{"refusal_type":"UncalibratedFloorRefusalError","module":"databasise.seam.refusals","attribute_keys":["mutation_class","verb"],"http_status":422},{"refusal_type":"UnconsumableQueryMemberError","module":"databasise.seam.refusals","attribute_keys":["member_name"],"http_status":422},{"refusal_type":"UnknownDocumentError","module":"databasise.seam.refusals","attribute_keys":["document_id"],"http_status":422},{"refusal_type":"UnknownGenerationVersionError","module":"databasise.seam.refusals","attribute_keys":["alias","version"],"http_status":404},{"refusal_type":"UnknownGraphNodeError","module":"databasise.seam.refusals","attribute_keys":["node_id"],"http_status":422},{"refusal_type":"UnknownJobError","module":"databasise.seam.refusals","attribute_keys":["job_id"],"http_status":404},{"refusal_type":"UnknownTraceReferenceError","module":"databasise.seam.refusals","attribute_keys":["trace_reference"],"http_status":404},{"refusal_type":"UnparseableWiringError","module":"databasise.seam.refusals","attribute_keys":["violations"],"http_status":422},{"refusal_type":"UnrecognisedPromotionVerbError","module":"databasise.seam.refusals","attribute_keys":["verb"],"http_status":422},{"refusal_type":"UnresolvableEvidenceReferenceError","module":"databasise.seam.refusals","attribute_keys":["ref"],"http_status":404},{"refusal_type":"UnsatisfiableSelectorError","module":"databasise.seam.refusals","attribute_keys":["requested","selector_kind"],"http_status":422},{"refusal_type":"UnsupportedUploadTypeError","module":"databasise.seam.refusals","attribute_keys":["suffix"],"http_status":422}],"resolution":{"rows":[{"selector":null,"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_kv"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_vector"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["reads_graph"]},"wiring":"hipporag","node_count":14,"outcome":"resolved"},{"selector":{"capability":["reads_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_blob"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_artifact"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["calls_llm"]},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"capability":["calls_rerank"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["calls_embedding"]},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"capability":["net"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["fs"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["self_storage"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["mutates_store"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_kv"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_vector"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_graph"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["writes_lexical"]},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"capability":["reads_vector:entities"]},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:relationships"]},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"capability":["reads_vector:entities","reads_vector:relationships"]},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"capability":[]},"wiring":null,"node_count":null,"outcome":"EmptyCapabilitySelectorError"},{"selector":{"harness":"hotpotqa"},"wiring":null,"node_count":null,"outcome":"UnsatisfiableSelectorError"},{"selector":{"alias":"fixture-naive"},"wiring":"naive","node_count":7,"outcome":"resolved"},{"selector":{"alias":"fixture-bypass"},"wiring":"bypass","node_count":1,"outcome":"resolved"},{"selector":{"alias":"fixture-hybrid"},"wiring":"hybrid","node_count":17,"outcome":"resolved"},{"selector":{"alias":"fixture-local"},"wiring":"local","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-global"},"wiring":"global","node_count":15,"outcome":"resolved"},{"selector":{"alias":"fixture-hipporag"},"wiring":"hipporag","node_count":14,"outcome":"resolved"}],"reachable":{"naive":true,"bypass":true,"hybrid":true,"local":true,"global":true,"hipporag":true}}}</script>
 <script>
 "use strict";
 // Shared scope: every js/*.js file is concatenated into one script, so FIX, $id and Console are global to later screens.
@@ -2571,6 +2811,479 @@ var Compare = (function () {
   paint();
   return { run: run, loadFixture: loadFixture };
 })();
+var EvidenceScreen = (function () {
+  var STATES = ["idle", "loading", "resolved", "refusal"];
+  var NS_OF = { "e-lightrag-chunk": "chunks", "e-hipporag-chunk": "hipporag-chunks" };
+  var KIND = "text_chunk";
+  var LOAD_MS = 300;
+  var MSG = { noRef: "Enter an evidence ref.", noTrace: "Enter a trace reference." };
+  var root = $id("screen-evidence");
+  var errorsBox = root.querySelector('[data-role="errors"]');
+  var panes = { evidence: root.querySelector('[data-role="pane-evidence"]'), trace: root.querySelector('[data-role="pane-trace"]') };
+  var cache = {};
+  var tab = "evidence";
+  var timer = null;
+  var opener = null;
+  var busyEl = null;
+  var originLink = null;
+  var loaded = null;
+  var debugView = null;
+
+  function ID(name) {
+    return $id("evidence." + name);
+  }
+
+  // Token -> which trace fixture it resolves to, read from the query and compare fixtures (a partial body gives the partial trace).
+  var TRACE_OF = {};
+  var DEFAULT_TOKEN = {};
+  (function scan(o) {
+    if (Array.isArray(o)) return o.forEach(scan);
+    if (o && typeof o === "object") {
+      if (typeof o.trace_token === "string" && o.trace_token) {
+        var name = o.partial ? "t-partial-debug" : "t-clean";
+        TRACE_OF[o.trace_token] = TRACE_OF[o.trace_token] || name;
+        DEFAULT_TOKEN[name] = DEFAULT_TOKEN[name] || o.trace_token;
+      }
+      Object.keys(o).forEach(function (k) {
+        scan(o[k]);
+      });
+    }
+  })([FIX.query, FIX.compare]);
+
+  function setDisabled(button, disabled) {
+    button.disabled = disabled;
+    if (disabled) button.setAttribute("aria-disabled", "true");
+    else button.removeAttribute("aria-disabled");
+  }
+
+  function outcome() {
+    return ID("mock.outcome").value;
+  }
+
+  // ---- evidence tab ----
+
+  function evState(name) {
+    STATES.forEach(function (s) {
+      $id("evidence.state." + s).hidden = s !== name;
+    });
+  }
+
+  function showTab(name) {
+    tab = name;
+    ["evidence", "trace"].forEach(function (n) {
+      panes[n].hidden = n !== name;
+      ID("tabs." + n).setAttribute("aria-selected", String(n === name));
+    });
+  }
+
+  function hideErrors() {
+    renderError("evidence", 200, null);
+    errorsBox.hidden = true;
+  }
+
+  function showError(status, body) {
+    var shape = renderError("evidence", status, body);
+    errorsBox.hidden = shape === "result";
+    if (shape !== "result") {
+      if (tab === "evidence") evState(null);
+      else traceView("none");
+    }
+  }
+
+  function busy(on) {
+    if (!busyEl) return;
+    var row = busyEl.closest("tr");
+    if (on) {
+      busyEl.setAttribute("aria-busy", "true");
+      busyEl.setAttribute("aria-label", "Opening");
+      if (row) row.setAttribute("aria-busy", "true");
+    } else {
+      busyEl.removeAttribute("aria-busy");
+      busyEl.removeAttribute("aria-label");
+      if (row) row.removeAttribute("aria-busy");
+      busyEl = null;
+    }
+  }
+
+  // Records come from the fixtures; any other well-formed chunk ref of the two namespaces gets a generic record so Open works from every screen.
+  function find(ns, ref) {
+    if (ns === "chunks") {
+      if (ref === FIX.evidence["e-lightrag-chunk"].id) return FIX.evidence["e-lightrag-chunk"];
+      if (FIX.evidence.chunks[ref]) return FIX.evidence.chunks[ref];
+      if (/^c-[0-9a-f]{6}$/.test(ref)) return { id: ref, full_doc_id: FIX.evidence["e-lightrag-chunk"].full_doc_id, content: "Fixture text for chunk " + ref + ".", file_path: FIX.evidence["e-lightrag-chunk"].file_path };
+    }
+    if (ns === "hipporag-chunks") {
+      if (ref === FIX.evidence["e-hipporag-chunk"].id) return FIX.evidence["e-hipporag-chunk"];
+      if (/^chunk:[0-9a-f]{6,}$/.test(ref)) return { id: ref, document_id: FIX.evidence["e-hipporag-chunk"].document_id, ordinal: 0, content: "Fixture text for chunk " + ref + "." };
+    }
+    return null;
+  }
+
+  function renderRecord(ns, rec, score) {
+    var header = ID("inspector.header");
+    clearNode(header);
+    header.appendChild(h("span", rec.id, "mono"));
+    header.appendChild(h("span", ns, "chip"));
+    header.appendChild(h("span", KIND, "chip"));
+    ID("inspector.score").textContent = typeof score === "number" ? score.toFixed(4) : "—";
+    ID("inspector.content").textContent = rec.content === undefined ? "" : String(rec.content);
+    var doc = ID("inspector.document-id");
+    doc.hidden = rec.document_id === undefined;
+    doc.textContent = "document_id: " + rec.document_id;
+    var ord = ID("inspector.ordinal");
+    ord.hidden = rec.ordinal === undefined;
+    ord.textContent = "ordinal: " + rec.ordinal;
+    ID("inspector.document-link").hidden = rec.document_id === undefined;
+
+    var body = ID("inspector.kv").tBodies[0];
+    clearNode(body);
+    Object.keys(rec).forEach(function (key) {
+      if (["id", "content", "document_id", "ordinal"].indexOf(key) >= 0) return;
+      var value = rec[key];
+      var tr = h("tr");
+      tr.appendChild(h("td", key, "mono"));
+      tr.appendChild(h("td", value !== null && typeof value === "object" ? JSON.stringify(value) : String(value), "mono"));
+      body.appendChild(tr);
+    });
+    root.querySelector('[data-role="kv-wrap"]').hidden = body.children.length === 0;
+  }
+
+  function fail(which, ns) {
+    var op = ns === "trace" ? "resolve_trace" : "resolve_evidence";
+    var field = ns === "trace" ? "trace_reference" : "ref";
+    if (which === "validation") return showError(422, { detail: [{ loc: ["body", field], msg: "Field required", type: "missing" }] });
+    if (which === "server-failure") {
+      return showError(502, { refusal_type: "ForeignEngineRefusalError", message: "operation '" + op + "' failed (StoreFault)", operation: op, failure_class: "StoreFault", cause: "index checksum mismatch" });
+    }
+    return showError(500, "Internal Server Error");
+  }
+
+  function finishResolve(ns, ref, score) {
+    busy(false);
+    var o = outcome();
+    var key = ns + "\u0001" + ref;
+    if (o === "refusal") return evState("refusal");
+    if (o === "validation" || o === "server-failure" || o === "generic") return fail(o, "evidence");
+    var rec = cache[key] || find(ns, ref);
+    if (!rec) return evState("refusal");
+    cache[key] = rec;
+    renderRecord(ns, rec, score);
+    evState("resolved");
+  }
+
+  // One evidence lookup: loading for about 300 ms, then the record, a refusal or the mock outcome. A cached record resolves at once.
+  function resolve(ns, ref, score) {
+    clearTimeout(timer);
+    showTab("evidence");
+    hideErrors();
+    if (cache[ns + "\u0001" + ref] && outcome() === "success") return finishResolve(ns, ref, score);
+    evState("loading");
+    busy(true);
+    timer = setTimeout(function () {
+      finishResolve(ns, ref, score);
+    }, LOAD_MS);
+  }
+
+  function submitLookup() {
+    var input = ID("lookup.ref");
+    var ref = input.value.trim();
+    hideErrors();
+    if (ref === "") return setFieldError(input, MSG.noRef);
+    busyEl = null;
+    resolve(ID("lookup.namespace").value, ref, null);
+  }
+
+  function batch() {
+    ["c-7f3a91", "c-02be44", "c-91d0c7"].forEach(function (ref) {
+      cache["chunks\u0001" + ref] = find("chunks", ref);
+    });
+    ID("batch.status").textContent = "Resolved 3 of 3 (fixture)";
+  }
+
+  // ---- trace tab ----
+
+  function traceView(name) {
+    root.querySelector('[data-role="trace-empty"]').hidden = name !== "empty";
+    ID("state.trace-loading").hidden = name !== "loading";
+    ID("trace.summary").hidden = name !== "loaded";
+    syncDebug();
+  }
+
+  function syncLoad() {
+    setDisabled(ID("trace.load"), ID("trace.reference").value.trim() === "");
+  }
+
+  function setField(name, text) {
+    root.querySelector('[data-role="' + name + '"]').textContent = text;
+  }
+
+  function sentinel(el, value) {
+    var isSentinel = typeof value === "string" && value.indexOf("sentinel:") === 0;
+    el.textContent = isSentinel ? "not yet recorded" : String(value);
+    el.title = value === null || value === undefined ? "" : String(value);
+  }
+
+  function renderTrace(name, token) {
+    var rec = FIX.evidence[name];
+    loaded = { name: name, token: token, rec: rec };
+    ID("trace.reference").value = token;
+    syncLoad();
+    var status = ID("trace.status");
+    status.setAttribute("data-state", rec.partial ? "warn" : "ok");
+    status.textContent = rec.partial ? "▲ partial" : "✓ clean";
+    setField("stop_reason", "stop_reason: " + (rec.stop_reason === null ? "—" : rec.stop_reason));
+    setField("degradation_reason", "degradation_reason: " + (rec.degradation_reason === null ? "—" : rec.degradation_reason));
+    ["executor_version", "concurrency_setting", "determinism_setting", "arm_execution_order"].forEach(function (key) {
+      setField(key, String(rec[key]));
+    });
+    sentinel(ID("trace.bundle-ref"), rec.bundle_ref);
+    sentinel(ID("trace.snapshot-hash"), rec.corpus_snapshot_hash);
+    traceView("loaded");
+  }
+
+  function loadTrace() {
+    var token = ID("trace.reference").value.trim();
+    if (token === "") return;
+    clearTimeout(timer);
+    hideErrors();
+    traceView("loading");
+    timer = setTimeout(function () {
+      var o = outcome();
+      if (o === "validation" || o === "server-failure" || o === "generic") return fail(o, "trace");
+      var name = TRACE_OF[token];
+      if (o === "refusal" || o === "unknown-trace" || !name) {
+        return showError(404, { refusal_type: "UnknownTraceReferenceError", message: "unknown trace reference", trace_reference: token });
+      }
+      renderTrace(name, token);
+    }, LOAD_MS);
+  }
+
+  var NODE_CELLS = [
+    function (n) { return n.node_id; },
+    function (n) { return n.instance_hash; },
+    function (n) { return n.depth; },
+    function (n) { return n.effective_depth; },
+    function () { return "—"; },
+    function () { return "—"; },
+    function (n) { return n.status; },
+    function (n) { return n.execution_mode; },
+    function (n) { return n.wall_clock_ms; },
+    function (n) { return n.cache_hit; },
+    function (n) { return n.guards_fired.length ? n.guards_fired.join(", ") : "—"; },
+    function (n) { return n.budget_state; },
+    function (n) { return n.spent; },
+    function (n) { return n.allowance; },
+    function (n) { return n.realised_budget_share; },
+    function (n) { return n.cross_process_failure_cause; },
+    function (n) { return n.resumable; },
+    function (n) { return n.tokens.prompt_tokens; },
+    function (n) { return n.tokens.completion_tokens; },
+    function (n) { return n.tokens.cached_read_tokens; },
+    function (n) { return n.tokens.call_count; },
+    function (n) { return n.tokens.counted_by; },
+  ];
+  var PLACEHOLDER_COLS = [4, 5];
+  var SUM_COLS = [8, 17, 18, 19, 20];
+
+  function cellText(value) {
+    return value === null || value === undefined ? "—" : String(value);
+  }
+
+  function fillDebug(view, rec) {
+    ["run_id", "wiring_id", "wiring_instance_hash", "arm_id"].forEach(function (key) {
+      view.querySelector('[data-role="' + key + '"]').textContent = rec[key];
+    });
+    Array.prototype.forEach.call(view.querySelectorAll("button[data-copy]"), function (button) {
+      button.addEventListener("click", function () {
+        copyText(rec[button.getAttribute("data-copy")], button.parentElement.querySelector('[data-role="copied"]'));
+      });
+    });
+
+    var body = view.querySelector("tbody");
+    var sums = view.querySelector("tfoot tr");
+    var totals = {};
+    rec.nodes.forEach(function (node) {
+      var tr = h("tr");
+      var state = node.status === "failed" ? "failed" : node.budget_state === "halted" ? "halted" : null;
+      if (state) tr.setAttribute("data-row-state", state);
+      NODE_CELLS.forEach(function (cell, i) {
+        var td = h("td", null, i === 0 || i === 1 || i === 15 ? "mono" : "");
+        td.appendChild(document.createTextNode(cellText(cell(node))));
+        if (PLACEHOLDER_COLS.indexOf(i) >= 0) {
+          td.appendChild(document.createTextNode(" "));
+          var badge = h("span", "placeholder", "badge");
+          badge.setAttribute("data-state", "neutral");
+          td.appendChild(badge);
+        }
+        if (i === 6 && state) td.style.fontWeight = "600";
+        tr.appendChild(td);
+        if (SUM_COLS.indexOf(i) >= 0) totals[i] = (totals[i] || 0) + cell(node);
+      });
+      body.appendChild(tr);
+    });
+    NODE_CELLS.forEach(function (cell, i) {
+      sums.appendChild(h("td", i === 0 ? "Sum" : SUM_COLS.indexOf(i) >= 0 ? String(totals[i] || 0) : ""));
+    });
+
+    var chart = view.querySelector(".bar-chart");
+    var max = Math.max.apply(null, rec.nodes.map(function (n) { return n.wall_clock_ms; }).concat([1]));
+    rec.nodes.forEach(function (node) {
+      var row = h("div", null, "bar-row");
+      row.appendChild(h("span", node.node_id, "mono"));
+      var bar = h("span", null, "bar");
+      bar.style.setProperty("--w", Math.round((node.wall_clock_ms / max) * 100) + "%");
+      row.appendChild(bar);
+      row.appendChild(h("span", node.wall_clock_ms + " ms"));
+      chart.appendChild(row);
+    });
+  }
+
+  // The Debug view exists only as a template: one clone after the summary while the toggle is on and the loaded trace has debug fields.
+  function syncDebug() {
+    if (debugView) {
+      debugView.parentNode.removeChild(debugView);
+      debugView = null;
+    }
+    var absent = root.querySelector('[data-role="debug-absent"]');
+    absent.hidden = true;
+    var summary = ID("trace.summary");
+    if (!ID("trace.debug").checked || summary.hidden || !loaded) return;
+    if (!loaded.rec.nodes) {
+      absent.hidden = false;
+      return;
+    }
+    var clone = root.querySelector('template[data-role="debug-template"]').content.cloneNode(true);
+    debugView = clone.firstElementChild;
+    fillDebug(debugView, loaded.rec);
+    summary.parentNode.insertBefore(debugView, summary.nextSibling);
+  }
+
+  function openTrace(token) {
+    clearTimeout(timer);
+    showTab("trace");
+    hideErrors();
+    ID("trace.reference").value = token;
+    syncLoad();
+    traceView(loaded && loaded.token === token ? "loaded" : "empty");
+  }
+
+  // ---- hooks ----
+
+  function setState(name) {
+    clearTimeout(timer);
+    busy(false);
+    if (name === "trace-loading") {
+      showTab("trace");
+      hideErrors();
+      return traceView("loading");
+    }
+    if (STATES.indexOf(name) < 0) throw new Error("unknown evidence state " + name);
+    showTab("evidence");
+    hideErrors();
+    if (name === "resolved" && !cache["chunks\u0001c-7f3a91"]) loadFixture("e-lightrag-chunk");
+    else evState(name);
+  }
+
+  function loadFixture(name) {
+    clearTimeout(timer);
+    busy(false);
+    if (NS_OF[name]) {
+      showTab("evidence");
+      hideErrors();
+      var rec = FIX.evidence[name];
+      cache[NS_OF[name] + "\u0001" + rec.id] = rec;
+      renderRecord(NS_OF[name], rec, null);
+      return evState("resolved");
+    }
+    if (name !== "t-clean" && name !== "t-partial-debug") throw new Error("unknown evidence fixture " + name);
+    showTab("trace");
+    hideErrors();
+    renderTrace(name, DEFAULT_TOKEN[name]);
+  }
+
+  function inject(response) {
+    clearTimeout(timer);
+    busy(false);
+    showError(response.status, response.body);
+  }
+
+  ID("tabs.evidence").addEventListener("click", function () {
+    showTab("evidence");
+    hideErrors();
+    if (ID("state.loading").hidden && ID("state.resolved").hidden && ID("state.refusal").hidden) evState("idle");
+  });
+  ID("tabs.trace").addEventListener("click", function () {
+    showTab("trace");
+    hideErrors();
+    traceView(loaded && loaded.token === ID("trace.reference").value.trim() ? "loaded" : "empty");
+  });
+  ID("lookup.submit").addEventListener("click", submitLookup);
+  ID("lookup.ref").addEventListener("input", function () {
+    if (this.value.trim() !== "") setFieldError(this, "");
+  });
+  ID("batch.submit").addEventListener("click", batch);
+  ID("trace.reference").addEventListener("input", function () {
+    syncLoad();
+    setFieldError(this, this.value.trim() === "" ? MSG.noTrace : "");
+  });
+  ID("trace.reference").addEventListener("keydown", function (event) {
+    if (event.key === "Enter") loadTrace();
+  });
+  ID("trace.load").addEventListener("click", loadTrace);
+  ID("trace.debug").addEventListener("change", syncDebug);
+  ID("trace.recent").addEventListener("change", function (event) {
+    if (!event.target.value) return;
+    ID("trace.reference").value = event.target.value;
+    setFieldError(ID("trace.reference"), "");
+    syncLoad();
+  });
+  FIX.query.history.forEach(function (entry) {
+    var option = h("option", entry.time + " " + entry.selector + " " + entry.trace_token.slice(0, 8));
+    option.value = entry.trace_token;
+    ID("trace.recent").appendChild(option);
+  });
+  ID("trace.use-in-ledger").addEventListener("click", function () {
+    Console.show("ledger");
+    Console.emit("promote", { trace: ID("trace.reference").value.trim() });
+  });
+  ID("inspector.document-link").addEventListener("click", function (event) {
+    event.preventDefault();
+    Console.show("corpus");
+  });
+  // Open trace delegates to the Open trace link of the result the evidence came from, so the token is the one that result holds.
+  ID("inspector.trace-link").addEventListener("click", function (event) {
+    event.preventDefault();
+    var link = originLink || $id("query.result.trace-link");
+    if (link) link.click();
+  });
+  wireErrors("evidence");
+
+  // Capture phase: runs before the Open button's own handler, so the opener is known when open-evidence arrives.
+  document.addEventListener(
+    "click",
+    function (event) {
+      var button = event.target.closest && event.target.closest("button");
+      var id = button && button.getAttribute("data-mock-id");
+      if (id && /^(query\.evidence|query\.col\d|graph\.chunks)\.open-\d+$/.test(id)) opener = button;
+    },
+    true
+  );
+  Console.on("open-evidence", function (payload) {
+    busyEl = opener;
+    var origin = opener && opener.closest('[data-mock-id="query.result.panel"], .cmp-col');
+    originLink = origin ? origin.querySelector('[data-mock-id$=".trace-link"]') : null;
+    opener = null;
+    resolve(payload.ref.namespace, payload.ref.id, payload.score);
+  });
+  Console.on("open-trace", function (payload) {
+    openTrace(payload.token || "");
+  });
+
+  evState("idle");
+  traceView("empty");
+  return { setState: setState, inject: inject, loadFixture: loadFixture };
+})();
+Console.register("evidence", EvidenceScreen);
 
 </script>
 </body>
