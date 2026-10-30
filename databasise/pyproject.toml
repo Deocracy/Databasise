@@ -68,6 +68,9 @@ dev = [
     # extra is installed. Version matches v1/pyproject.toml:87's existing pin. Package
     # legitimacy confirmed by the developer 2026-09-06 (see 04-CHECKPOINT-ANSWERS.md).
     "httpx>=0.28.1",
+    # Phase 17 (GUI-01, D-01, D-15): drives the operator-console mockup in the GUI tests. Pinned to 1.59.0
+    # to match nixpkgs 26.05 playwright-driver (chromium revision 1217); playwright, greenlet and pyee approved by the owner in 17-CONTEXT D-15.
+    "playwright==1.59.0",
 ]
 
 # 04-05 (D-15, EMBED-02, ROADMAP criterion 5): the optional REST transport. A
