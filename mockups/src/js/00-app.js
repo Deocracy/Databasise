@@ -62,6 +62,8 @@ Console.health = function () {
   return FIX.health[healthFixture];
 };
 
+$id("shell.instance.chip").textContent = "version " + FIX.shell.info.version + " · workspace " + FIX.shell.info.workspace;
+
 $id("shell.mock.health-fixture").addEventListener("change", function (event) {
   renderHealth("health-" + event.target.value);
 });

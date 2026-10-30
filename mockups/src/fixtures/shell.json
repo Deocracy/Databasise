@@ -1,0 +1,9 @@
+{
+  "info": {
+    "version": "0.1.0",
+    "workspace": "default",
+    "clients": {"llm": true, "embedding": true, "rerank": false},
+    "write_in_flight": false,
+    "graph_busy": false
+  }
+}

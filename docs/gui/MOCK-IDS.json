@@ -7,6 +7,7 @@
   "screen-query",
   "shell.health.details",
   "shell.health.status",
+  "shell.instance.chip",
   "shell.mock.banner",
   "shell.mock.health-fixture",
   "shell.nav.corpus",

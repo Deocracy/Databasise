@@ -12,6 +12,7 @@
 <div data-mock-id="shell.root.app" data-mock-variant="console-a" class="app">
   <header class="app-header">
     <div class="app-title"><span class="brand">Databasise</span> <span class="muted">Operator console</span></div>
+    <span data-needs-backend="GET /info" data-backend-state="operator" title="Mounted only with --operator"><span class="badge badge-op">operator route</span> <span data-mock-id="shell.instance.chip" class="chip" role="status"></span></span>
     <div class="health">
       <div data-mock-id="shell.health.status" role="status" data-state="ok">stores openable / v1 reachable</div>
       <span class="badge" data-role="health-badge" data-state="ok"><span class="spinner" role="presentation" hidden></span><span data-role="health-glyph" aria-hidden="true"></span> <span data-role="health-word"></span></span>

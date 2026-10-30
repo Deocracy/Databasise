@@ -1,0 +1,82 @@
+[
+  {
+    "route": "GET /corpus (status, sort, search)",
+    "kind": "missing"
+  },
+  {
+    "route": "GET /info",
+    "kind": "operator"
+  },
+  {
+    "route": "GET /jobs",
+    "kind": "missing"
+  },
+  {
+    "route": "GET /ledger/aliases",
+    "kind": "operator"
+  },
+  {
+    "route": "GET /log",
+    "kind": "operator"
+  },
+  {
+    "route": "GET /pipeline",
+    "kind": "missing"
+  },
+  {
+    "route": "GET /refusals",
+    "kind": "missing"
+  },
+  {
+    "route": "GET /traces",
+    "kind": "operator"
+  },
+  {
+    "route": "GET /wirings",
+    "kind": "operator"
+  },
+  {
+    "route": "POST /chunks",
+    "kind": "operator"
+  },
+  {
+    "route": "POST /documents/reprocess",
+    "kind": "missing"
+  },
+  {
+    "route": "POST /evidence/resolve-batch",
+    "kind": "missing"
+  },
+  {
+    "route": "POST /graph/node",
+    "kind": "operator"
+  },
+  {
+    "route": "POST /graph/node/attrs",
+    "kind": "missing"
+  },
+  {
+    "route": "POST /graph/nodes",
+    "kind": "operator"
+  },
+  {
+    "route": "POST /jobs/{job_id}/cancel",
+    "kind": "missing"
+  },
+  {
+    "route": "POST /ledger/history",
+    "kind": "operator"
+  },
+  {
+    "route": "POST /promote/preview",
+    "kind": "operator"
+  },
+  {
+    "route": "POST /selectors/resolve",
+    "kind": "missing"
+  },
+  {
+    "route": "POST /stores/counts",
+    "kind": "missing"
+  }
+]
