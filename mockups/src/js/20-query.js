@@ -288,6 +288,7 @@ var QueryScreen = (function () {
   }
 
   function run() {
+    if (mode === "compare") return Compare.run();
     touched = true;
     var check = validate();
     if (!check.ok) {
@@ -411,6 +412,7 @@ var QueryScreen = (function () {
     },
     loadFixture: function (name) {
       cancelTimers();
+      if (/^cmp-/.test(name)) return Compare.loadFixture(name);
       applyFixture(name);
     },
   };
