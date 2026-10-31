@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 18
 current_phase_name: GUI Live
 status: executing
-stopped_at: Completed 18-03-PLAN.md
-last_updated: "2026-10-31T21:04:26.433Z"
+stopped_at: Completed 18-04-PLAN.md
+last_updated: "2026-10-31T21:26:52.779Z"
 last_activity: 2026-10-31
 last_activity_desc: Phase 18 execution started
-state_head: b285c7a587463eb1ae22b2c137b8710e27399627
+state_head: d2e9302a786abf80dbbc8fd13b003ad21ee0d193
 progress:
   total_phases: 11
   completed_phases: 10
   total_plans: 136
-  completed_plans: 128
+  completed_plans: 129
   percent: 91
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-19 after Phase 12)
 ## Current Position
 
 Phase: 18 (GUI Live) — EXECUTING
-Plan: 4 of 11
+Plan: 5 of 11
 Status: Ready to execute
 Last activity: 2026-10-31 — Phase 18 execution started
 
@@ -167,6 +167,7 @@ Progress: [█████████░] 91% (4/11 phases)
 | Phase 18 P01 | n/a | 2 tasks | 45 files |
 | Phase 18 P02 | n/a | 2 tasks | 7 files |
 | Phase 18 P03 | 40 min | 3 tasks | 9 files |
+| Phase 18 P04 | 60 min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -278,6 +279,8 @@ Recent decisions affecting current work:
 - [Phase 16]: 16-09: UnknownGraphNodeError is 422 and stays out of _NOT_FOUND_REFUSALS; a selected graph with no graph.cozo is that refusal on /graph/node while /graph/nodes answers total 0
 - [Phase 18]: 18-02: console CSP hash sources are computed by the launcher from the packaged page at start-up; --console refused for non-loopback host and --port 0 before the store lock
 - [Phase 18]: WIRED keys are '<scope> <data-needs-backend value>'; a badge drops only for a present route with a WIRED key, so screen plans add their own keys
+- [Phase 18]: 18-04: run history stores exactly {query, selector, trace_token, timestamp} in sessionStorage databasise.console.history (cap 50); the Partial column shows a dash
+- [Phase 18]: 18-04: before the final stream event the result panel stays under the running banner; the disconnected state reuses the no-trace reason line for 'The run did not finish.'
 
 ### Pending Todos
 
@@ -337,8 +340,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-31T21:04:21.027Z
-Stopped at: Completed 18-03-PLAN.md
+Last session: 2026-10-31T21:26:52.503Z
+Stopped at: Completed 18-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
