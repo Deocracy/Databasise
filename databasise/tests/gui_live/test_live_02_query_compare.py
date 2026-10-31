@@ -122,3 +122,177 @@ def test_raw_selector_json_accepts_only_the_three_members(seeded, live_ui):
     posts = _posts(ui)
     assert len(posts) == 1
     assert json.loads(posts[0]["post_data"])["selector"] == {"capability": CAPS}
+
+
+# ---- Task 2: the SSE stream, the disconnected state and the run history ----
+
+HISTORY_KEY = "databasise.console.history"
+HISTORY_ROWS = '[data-mock-id="query.history.table"] tbody tr:not([hidden])'
+DISCONNECTED = (
+    "The stream closed before the final event. Evidence received so far is shown below; "
+    "the run is not complete. Run again to retry."
+)
+
+
+def _final(stream_text):
+    for block in stream_text.split("\n\n"):
+        if block.startswith("data: "):
+            event = json.loads(block[len("data: ") :])
+            if event["kind"] == "final":
+                return event
+    raise AssertionError("no final event in the stream")
+
+
+def _stored(ui):
+    raw = ui.page.evaluate(f"sessionStorage.getItem('{HISTORY_KEY}')")
+    return json.loads(raw) if raw else []
+
+
+def _not_finished(ui):
+    ui.expect("query.result.promote").to_be_disabled()
+    assert ui.el("query.result.trace-link").get_attribute("aria-disabled") == "true"
+    ui.expect(ui.page.get_by_text("Run complete.", exact=True)).to_be_hidden()
+
+
+def test_stream_renders_evidence_then_final(seeded, browser):
+    held = []
+    with _ui(browser, seeded, lambda page: page.route("**/query/stream", lambda route: held.append(route))) as ui:
+        _fill(ui, stream=True)
+        ui.el("query.run.submit").click()
+        for _ in range(100):  # bounded: a console that never streams must fail, not hang
+            if held:
+                break
+            ui.page.wait_for_timeout(50)
+        assert len(held) == 1, "no POST /query/stream was sent"
+        # Before the final event: running, no completion text, nothing to promote or open (WR-JSA-05).
+        ui.expect("query.state.running").to_be_visible()
+        ui.expect("query.result.answer").to_have_text("Receiving evidence")
+        _not_finished(ui)
+        held[0].continue_()
+
+        ui.expect("query.state.success").to_be_visible()
+        ui.expect(ui.page.get_by_text("Run complete.", exact=True)).to_be_visible()
+        ui.expect(ui.page.locator(EVIDENCE_ROWS)).to_have_count(1)
+        ui.expect("query.result.promote").to_be_enabled()
+        assert ui.el("query.result.trace-link").get_attribute("aria-disabled") is None
+        assert len(_posts(ui, "/query/stream")) == 1
+        assert _posts(ui) == []
+
+
+def test_early_closed_stream_shows_disconnected(seeded, browser):
+    def handler(route):
+        response = route.fetch()
+        route.fulfill(response=response, body=response.text().split("\n\n")[0] + "\n\n")
+
+    with _ui(browser, seeded, lambda page: page.route("**/query/stream", handler)) as ui:
+        _fill(ui, stream=True)
+        ui.el("query.run.submit").click()
+        ui.expect("query.error.generic").to_contain_text(DISCONNECTED)
+        ui.expect(ui.page.locator(EVIDENCE_ROWS)).to_have_count(1)
+        _not_finished(ui)
+        ui.expect(ui.page.get_by_text("The run did not finish.", exact=True)).to_be_visible()
+        ui.expect(ui.page.locator(HISTORY_ROWS)).to_have_count(0)
+        assert _stored(ui) == []
+
+
+def test_stream_ignores_comment_lines(seeded, browser):
+    def handler(route):
+        response = route.fetch()
+        route.fulfill(response=response, body=": ping\n\n" + response.text())
+
+    with _ui(browser, seeded, lambda page: page.route("**/query/stream", handler)) as ui:
+        _fill(ui, stream=True)
+        ui.el("query.run.submit").click()
+        ui.expect("query.state.success").to_be_visible()
+        ui.expect(ui.page.get_by_text("Run complete.", exact=True)).to_be_visible()
+        ui.expect(ui.page.locator(EVIDENCE_ROWS)).to_have_count(1)
+        ui.expect("query.result.promote").to_be_enabled()
+        assert len(_posts(ui, "/query/stream")) == 1
+
+
+def test_stream_refusal_is_not_parsed_as_events(seeded, live_ui):
+    ui = live_ui
+    ui.el("query.text.input").fill("Ed Wood")
+    ui.el("query.selector.alias").fill("no-such-alias")
+    ui.el("query.run.stream").check()
+    ui.el("query.run.submit").click()
+    ui.expect("query.error.refusal").to_contain_text("UnsatisfiableSelectorError")
+    assert len(_posts(ui, "/query/stream")) == 1
+    ui.expect("query.error.generic").to_be_hidden()
+
+
+def test_each_run_lands_in_the_history(seeded, live_ui):
+    ui = live_ui
+    _fill(ui)
+    with ui.page.expect_response(_is_post("/query")) as plain:
+        ui.el("query.run.submit").click()
+    first = plain.value.json()["trace_token"]
+    ui.expect("query.state.success").to_be_visible()
+
+    _fill(ui, stream=True)
+    with ui.page.expect_response(_is_post("/query/stream")) as streamed:
+        ui.el("query.run.submit").click()
+    second = _final(streamed.value.text())["trace_token"]
+    ui.expect("query.state.success").to_be_visible()
+    assert first != second
+
+    ui.el("query.history.toggle").click()
+    rows = ui.page.locator(HISTORY_ROWS)
+    ui.expect(rows).to_have_count(2)
+    ui.expect(rows.nth(0).locator("td").nth(2)).to_have_text(second[:8])
+    ui.expect(rows.nth(1).locator("td").nth(2)).to_have_text(first[:8])
+    entries = _stored(ui)
+    assert [e["trace_token"] for e in entries] == [second, first]
+    for entry in entries:
+        assert sorted(entry) == ["query", "selector", "timestamp", "trace_token"]
+        assert entry["query"] == "Ed Wood"
+        assert sorted(entry["selector"]["capability"]) == CAPS
+
+    ui.goto()  # a reload in the same tab keeps the history
+    ui.expect(ui.page.locator(HISTORY_ROWS)).to_have_count(2)
+
+
+def test_history_shows_the_50_newest_of_60(live_app, browser):
+    seed = (
+        f"sessionStorage.setItem('{HISTORY_KEY}', JSON.stringify(Array.from({{length: 60}}, (_, i) => ({{"
+        "query: 'q' + (59 - i), selector: null, "
+        "trace_token: 'tok' + String(59 - i).padStart(2, '0') + 'xxxxxxxxxxxx', "
+        "timestamp: '2026-10-31T10:00:00.000Z'}))));"
+    )
+    with _ui(browser, live_app, lambda page: page.add_init_script(seed)) as ui:
+        ui.el("query.history.toggle").click()
+        rows = ui.page.locator(HISTORY_ROWS)
+        ui.expect(rows).to_have_count(50)
+        ui.expect(rows.nth(0).locator("td").nth(2)).to_have_text("tok59xxx")
+        ui.expect(rows.nth(49).locator("td").nth(2)).to_have_text("tok10xxx")
+        box = ui.el("query.history.panel").locator(".table-scroll")
+        max_height, overflow_y, scrolls = box.evaluate(
+            "(e) => { const s = getComputedStyle(e); return [s.maxHeight, s.overflowY, e.scrollHeight > e.clientHeight]; }"
+        )
+        assert (max_height, overflow_y, scrolls) == ("240px", "auto", True)
+
+
+def test_history_works_when_session_storage_throws(seeded, browser):
+    blocked = "Storage.prototype.setItem = function () { throw new Error('blocked'); };"
+    with _ui(browser, seeded, lambda page: page.add_init_script(blocked)) as ui:
+        _fill(ui)
+        ui.el("query.run.submit").click()
+        ui.expect("query.state.success").to_be_visible()
+        ui.el("query.history.toggle").click()
+        ui.expect(ui.page.locator(HISTORY_ROWS)).to_have_count(1)
+
+
+def test_promote_from_result_disabled_without_trace_token(seeded, browser):
+    def handler(route):
+        response = route.fetch()
+        env = response.json()
+        env["trace_token"] = None
+        route.fulfill(response=response, body=json.dumps(env))
+
+    with _ui(browser, seeded, lambda page: page.route("**/query", handler)) as ui:
+        _fill(ui)
+        ui.el("query.run.submit").click()
+        ui.expect("query.state.success").to_be_visible()
+        ui.expect("query.result.promote").to_be_disabled()
+        ui.expect(ui.page.get_by_text("No trace token on this result.", exact=True)).to_be_visible()
+        assert ui.el("query.result.trace-link").get_attribute("aria-disabled") == "true"
