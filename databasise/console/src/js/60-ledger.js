@@ -23,6 +23,9 @@ var LedgerScreen = (function () {
   var KIND_STATE = { promotion: "ok", rollback: "warn", tombstone: "neutral" };
   var KIND_GLYPH = { ok: "✓", warn: "▲", neutral: "■" };
   var SERVER_TRACES = "Recent runs (server)";
+  var LOG_ONLY = "Showing this browser's ledger log only; the server history route is not mounted.";
+  var LOG_RETIRE_TIP = "Needs the server history to confirm this version is not active.";
+  var NO_PREVIEW = "Preview unavailable: POST /promote/preview is not mounted.";
 
   var root = $id("screen-ledger");
   var errorsBox = root.querySelector('[data-role="errors"]');
@@ -230,6 +233,14 @@ var LedgerScreen = (function () {
     return blockers;
   }
 
+  // The newest version this browser's log holds for the alias (the preview fallback), or null.
+  function lastKnown(name) {
+    var entry = ledgerLog.all().filter(function (e) {
+      return e.alias === name && e.record_kind !== "tombstone";
+    })[0];
+    return entry ? entry.version : null;
+  }
+
   // A form edit moves previewSeq on, so a Preview answer for the earlier form is dropped.
   function formEdited() {
     previewSeq += 1;
@@ -247,6 +258,21 @@ var LedgerScreen = (function () {
   function showPreview() {
     if (writing || previewing || preview.disabled) return;
     hideErrors();
+    var result = ID("promote.preview-result");
+    var unavailable = result.querySelector('[data-role="preview-unavailable"]');
+    var routed = Live.has("POST", "/promote/preview");
+    if (!routed) {
+      var known = lastKnown(alias.value);
+      unavailable.textContent = NO_PREVIEW + " Last known active version in this browser: " + (known === null ? "none recorded" : known) + ".";
+      result.querySelector('[data-role="attrs"]').hidden = true;
+      result.querySelector('[data-role="preview-note"]').hidden = true;
+      unavailable.hidden = false;
+      result.hidden = false;
+      return;
+    }
+    unavailable.hidden = true;
+    result.querySelector('[data-role="attrs"]').hidden = false;
+    result.querySelector('[data-role="preview-note"]').hidden = false;
     var req = { alias: alias.value, trace_ids: selectedTraces().map(function (t) { return t.token; }), change_origin: origin() };
     var seq = (previewSeq += 1);
     previewing = true;
@@ -473,6 +499,10 @@ var LedgerScreen = (function () {
     wrap.hidden = records.length === 0;
     var range = root.querySelector('[data-role="range"]');
     range.hidden = records.length === 0;
+    var logOnly = !!(timeline && timeline.logOnly);
+    var notice = ID("timeline.notice");
+    notice.textContent = LOG_ONLY;
+    notice.hidden = !logOnly;
     if (!timeline) {
       setDisabled(ID("timeline.prev"), true);
       setDisabled(ID("timeline.next"), true);
@@ -504,15 +534,46 @@ var LedgerScreen = (function () {
       buttons[0].hidden = tombstone;
       wrapRetire.hidden = tombstone;
       setDisabled(buttons[0], status === "active" || status === "tombstoned");
-      var blocked = status !== "none";
+      var blocked = logOnly || status !== "none";
       setDisabled(buttons[1], blocked);
-      if (blocked) wrapRetire.setAttribute("title", TIP[status]);
+      if (blocked) wrapRetire.setAttribute("title", logOnly ? LOG_RETIRE_TIP : TIP[status]);
       else wrapRetire.removeAttribute("title");
     });
     ID("timeline.alias").value = timeline.alias;
     range.textContent = "Showing " + (timeline.offset + 1) + " to " + (timeline.offset + records.length) + " of " + timeline.body.total;
     setDisabled(ID("timeline.prev"), timeline.offset <= 0);
     setDisabled(ID("timeline.next"), timeline.body.next_offset === null);
+  }
+
+  // Without POST /ledger/history the timeline lists this browser's log rows for the alias (D-09). No status is known, so every
+  // Status cell reads "—", Roll back to stays enabled (the server decides) and Retire is disabled.
+  function showLogTimeline(name) {
+    var records = ledgerLog
+      .all()
+      .filter(function (e) {
+        return e.alias === name;
+      })
+      .sort(function (a, b) {
+        return a.generation_ordinal - b.generation_ordinal;
+      })
+      .map(function (e) {
+        return {
+          generation_ordinal: e.generation_ordinal,
+          created_at: e.created_at,
+          record_kind: e.record_kind,
+          minted_version: e.version,
+          targets_version: e.targets_version || null,
+          change_origin: e.change_origin || null,
+          promotion_trace_ids: e.trace_ids || [],
+          active: false,
+          tombstoned: false,
+        };
+      });
+    timeline = { alias: name, offset: 0, limit: Math.max(records.length, 1), logOnly: true, body: { records: records, total: records.length, next_offset: null } };
+    serverHistory = false;
+    ID("timeline.alias").value = name;
+    setLoading(false);
+    renderTimeline();
   }
 
   // Reads one page of the alias history. The previous page stays on screen while it loads and after a failure (WR-JSB-03 style);
@@ -526,6 +587,7 @@ var LedgerScreen = (function () {
       setLoading(false);
       return renderTimeline();
     }
+    if (!Live.has("POST", "/ledger/history")) return showLogTimeline(name);
     var limit = limitValue();
     if (limit === null) return checkSize();
     var mine = (historyCtl = new AbortController());
@@ -549,7 +611,6 @@ var LedgerScreen = (function () {
 
   function chooseAlias(name) {
     root.querySelector('[data-role="outcome"]').hidden = true;
-    ID("timeline.notice").hidden = true;
     loadTimeline(name, 0);
   }
 
@@ -581,9 +642,14 @@ var LedgerScreen = (function () {
     d.el.querySelector('[data-role="alias"]').textContent = timeline.alias;
     if (kind === "rollback") {
       d.el.querySelector('[data-role="target"]').textContent = r.minted_version;
-      d.el.querySelector('[data-role="active"]').textContent = active === null ? "" : active;
-      d.el.querySelector('[data-role="active-known"]').hidden = active === null;
-      d.el.querySelector('[data-role="active-unknown"]').hidden = active !== null;
+      // 17-UI-SPEC body when the server history names the active version; the log-only body otherwise.
+      var phrase = d.el.querySelector('[data-role="active-phrase"]');
+      clearNode(phrase);
+      if (active === null) phrase.textContent = "the active version (not known in this browser)";
+      else {
+        phrase.appendChild(document.createTextNode("active version "));
+        phrase.appendChild(h("strong", active, "mono"));
+      }
     } else {
       d.el.querySelector('[data-role="version"]').textContent = r.minted_version;
       d.el.querySelector('[data-role="hint"]').textContent = r.minted_version;

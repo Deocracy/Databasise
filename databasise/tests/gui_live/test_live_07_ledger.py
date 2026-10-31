@@ -165,6 +165,10 @@ def test_rollback_and_retire_through_the_timeline_update_the_rows(lineage, live_
     ui.el("ledger.timeline.rollback-1").click()
     ui.expect("shell.dialog.rollback").to_be_visible()
     assert _posts(ui, "/rollback") == []
+    # With the server history the 17-UI-SPEC body names the active version.
+    ui.expect(ui.el("shell.dialog.rollback").locator('[data-role="body"]')).to_have_text(
+        f"Roll back lin from active version {lineage['v2']} to {lineage['v1']}? A new version will be minted."
+    )
     ui.el("shell.dialog.rollback-traces").select_option(lineage["a"])
     ui.el("shell.dialog.rollback-origin-human").check()
     history, aliases = len(_posts(ui, "/ledger/history")), len(_gets(ui, "/ledger/aliases"))
@@ -445,7 +449,7 @@ def test_without_listing_routes_the_ledger_uses_the_client_log(plain_app, browse
 
         # GET /traces is not mounted: the source is disabled with its reason, and the history source works.
         ui.expect("ledger.promote.source-recent").to_be_disabled()
-        ui.expect(ui.page.get_by_text("Needs GET /traces.", exact=True)).to_be_visible()
+        ui.expect(ui.el("screen-ledger").get_by_text("Needs GET /traces.", exact=True)).to_be_visible()
         ui.expect("ledger.promote.source-history").to_be_checked()
         ui.expect(ui.el("ledger.promote.traces").locator("label.trace-row:not([hidden])")).to_have_count(1)
         assert _gets(ui, "/traces") == []
