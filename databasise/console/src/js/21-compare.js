@@ -77,7 +77,7 @@ var Compare = (function () {
   function syncRun(blocked) {
     lastBlocked = blocked;
     if (root.getAttribute("data-mode") !== "compare") return;
-    setDisabled(ID("run.submit"), blocked || running);
+    setDisabled(ID("run.submit"), blocked || running || InFlight.writing());
   }
 
   // Derives keys, parts, chips and messages from the model; the slots hold the controls.
@@ -374,7 +374,7 @@ var Compare = (function () {
     }
     setFieldError(textBox, "");
     // Re-check every blocker here: the button may have been enabled by a stale state (WR-JSA-02).
-    if (update() || (InFlight.counts.compare || 0) > 0) return;
+    if (update() || (InFlight.counts.compare || 0) > 0 || InFlight.writing()) return;
     var text = textBox.value;
     var chosen = model.slice();
     // Default is {} for compare (null is a 422 here); /query keeps null.
@@ -505,6 +505,10 @@ var Compare = (function () {
     R(i, "kind").setAttribute("data-error-id", "query.row" + i + ".error");
   }
   Console.on("aliases", fillPickers);
+  // A document write blocks Run in compare mode too (LIVE-05); the reason line belongs to QueryScreen.
+  Console.on("inflight", function () {
+    syncRun(lastBlocked);
+  });
   fillPickers();
 
   ID("text.input").addEventListener("input", function (event) {

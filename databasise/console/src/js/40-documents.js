@@ -34,7 +34,6 @@ var DocumentsScreen = (function () {
   var POLL_RUNNING = "Refreshing every 30 seconds.";
   var POLL_STOPPED = "Stopped: every document has a final status.";
   var PREVIEW_TEXT_CAP = 300;
-  var CONFIRM_MS = 300;
 
   var root = $id("screen-documents");
   var errorsBox = root.querySelector('[data-role="errors"]');
@@ -43,12 +42,12 @@ var DocumentsScreen = (function () {
   var card = ID("result.card");
   var dialog = $id("shell.dialog.delete");
   var confirmButton = $id("shell.dialog.delete-confirm");
+  var cancelButton = $id("shell.dialog.delete-cancel");
   var jobs = SessionLog("databasise.console.jobs", 50);
-  var timers = [];
   var picker = null;
-  var busy = false;
-  var tab = "paste";
-  var pending = null;
+  var invalid = { paste: true, upload: true }; // a client-side check fails; the write gate is added in syncWrites
+  var pending = null; // the delete the open dialog asks about: {id, selector, kind, label, from}
+  var sending = false; // the confirmed delete is in flight; it is never aborted
   var job = null; // the last page that loaded: {id, offset, limit, body}
   var readCtl = null; // the abort handle of the job read in flight
   var jobsShown = "none";
@@ -57,10 +56,6 @@ var DocumentsScreen = (function () {
 
   function ID(name) {
     return $id("documents." + name);
-  }
-
-  function later(fn, ms) {
-    timers.push(setTimeout(fn, ms));
   }
 
   function bytes(text) {
@@ -90,11 +85,6 @@ var DocumentsScreen = (function () {
     renderError("documents", 200, null);
     errorsBox.hidden = true;
     refresh();
-  }
-
-  // The delete outcome select decides which server response the next delete gets; replaced by the live delete in 18-08 Task 3.
-  function failure() {
-    return null;
   }
 
   // ---- ingest checks and previews ----
@@ -165,7 +155,7 @@ var DocumentsScreen = (function () {
     setFieldError(pasteId, im);
     ID("paste.bytes").textContent = grouped(bytes(text.value)) + " of 26,214,400 bytes";
     ID("paste.request-preview").textContent = pastePreview();
-    setDisabled(pasteSubmit, busy || tm !== "" || im !== "" || blockers.length > 0);
+    invalid.paste = tm !== "" || im !== "" || blockers.length > 0;
 
     var fm = fileMessage();
     var um = idMessage(uploadId.value);
@@ -173,11 +163,39 @@ var DocumentsScreen = (function () {
     setFieldError(uploadId, um);
     ID("upload.notice").textContent = NOTICE[kind];
     ID("upload.request-preview").textContent = uploadFields();
-    setDisabled(uploadSubmit, busy || fm !== "" || um !== "" || blockers.length > 0 || kind === "hipporag");
+    invalid.upload = fm !== "" || um !== "" || blockers.length > 0 || kind === "hipporag";
+    syncWrites();
+  }
+
+  // D-13 / LIVE-05: while any ingest, upload or delete is in flight, every control that starts a write is disabled with a visible
+  // reason. This leaves field messages alone, so it can run on every InFlight change.
+  function syncWrites() {
+    var writing = InFlight.writing();
+    setDisabled(pasteSubmit, writing || invalid.paste);
+    setDisabled(uploadSubmit, writing || invalid.upload);
+    setDisabled(ID("delete.submit"), writing);
+    Array.prototype.forEach.call(ID("jobs.documents").querySelectorAll('[data-mock-id^="documents.jobs.delete-"]'), function (button) {
+      setDisabled(button, writing);
+    });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-role="write-note"]'), function (note) {
+      note.hidden = !writing;
+    });
+    syncDialog();
+  }
+
+  // The dialog's Confirm waits for any write; once its own delete is sent both buttons wait for the answer (D-14).
+  function syncDialog() {
+    var writing = InFlight.writing();
+    setDisabled(confirmButton, writing || sending);
+    setDisabled(cancelButton, sending);
+    if (sending) confirmButton.setAttribute("aria-busy", "true");
+    else confirmButton.removeAttribute("aria-busy");
+    confirmButton.querySelector(".spinner").hidden = !sending;
+    dialog.querySelector('[data-role="sending"]').hidden = !sending;
+    dialog.querySelector('[data-role="write-note"]').hidden = !writing || sending;
   }
 
   function showTab(name) {
-    tab = name;
     ["paste", "upload"].forEach(function (n) {
       panes[n].hidden = n !== name;
       ID("tabs." + n).setAttribute("aria-selected", String(n === name));
@@ -187,12 +205,10 @@ var DocumentsScreen = (function () {
   // ---- ingest flight and result card ----
 
   function setBusy(on) {
-    busy = on;
     [pasteSubmit, uploadSubmit].forEach(function (button) {
       if (on) button.setAttribute("aria-busy", "true");
       else button.removeAttribute("aria-busy");
     });
-    refresh();
   }
 
   function submitTime() {
@@ -227,7 +243,7 @@ var DocumentsScreen = (function () {
   }
 
   function submitPaste() {
-    if (busy || pasteSubmit.disabled) return;
+    if (pasteSubmit.disabled) return;
     hideErrors();
     card.hidden = true;
     var sent = { documentId: pasteId.value, label: picker.label() };
@@ -243,7 +259,7 @@ var DocumentsScreen = (function () {
   // fetch reports no upload progress, so the line is indeterminate: the <progress> has no value attribute (18-RESEARCH Pitfall 7).
   // The body is a FormData with no hand-set Content-Type, so the browser adds the multipart boundary.
   function submitUpload() {
-    if (busy || uploadSubmit.disabled) return;
+    if (uploadSubmit.disabled) return;
     hideErrors();
     card.hidden = true;
     var sent = { documentId: uploadId.value, label: picker.label() };
@@ -365,6 +381,7 @@ var DocumentsScreen = (function () {
       reason.textContent = doc.error_message || "";
       reason.hidden = true;
     });
+    syncWrites(); // a cloned row's Delete follows the write gate too
   }
 
   function fillCounts(counts) {
@@ -441,36 +458,66 @@ var DocumentsScreen = (function () {
 
   // ---- delete ----
 
+  // Opens the dialog for one delete. The request is built and sent only in the Confirm handler; a dismiss or Escape before it sends
+  // nothing (WR-JSB-02, T-18-20). The id and selector are captured here, never read from the page at confirm time.
+  function openDelete(p) {
+    if (sending) return;
+    pending = p;
+    dialog.querySelector('[data-role="doc"]').textContent = p.id;
+    dialog.querySelector('[data-role="sel"]').textContent = p.label;
+    dialog.querySelector('[data-role="tail"]').textContent = DELETE_TAIL[p.kind];
+    syncDialog();
+    openDialog("shell.dialog.delete", "shell.dialog.delete-cancel");
+  }
+
   function askDelete(documentId) {
     if (picker.blockers().length) return;
-    var kind = family();
-    pending = { id: documentId, kind: kind };
-    dialog.querySelector('[data-role="doc"]').textContent = documentId;
-    dialog.querySelector('[data-role="sel"]').textContent = picker.label();
-    dialog.querySelector('[data-role="tail"]').textContent = DELETE_TAIL[kind];
-    openDialog("shell.dialog.delete", "shell.dialog.delete-cancel");
+    openDelete({ id: documentId, selector: picker.value(), kind: family(), label: picker.label() });
   }
 
   function showDeleteOutcome(rec, kind) {
     var box = ID("delete.outcome");
-    badge(box.querySelector('[data-role="status"]'), DELETE_STATE[rec.status], rec.status);
+    badge(box.querySelector('[data-role="status"]'), DELETE_STATE[rec.status] || "neutral", rec.status);
     box.querySelector('[data-role="doc"]').textContent = rec.document_id;
     box.querySelector('[data-role="message"]').textContent = rec.message || "The server returned no message.";
     ID("delete.seam-toggle").textContent = "Seam events, reported by the " + (kind === "hipporag" ? "HippoRAG" : "v1") + " delete node";
     var list = box.querySelector('[data-role="seam-list"]');
     clearNode(list);
-    if (!rec.seam_events.length) list.appendChild(h("li", "No seam events."));
-    rec.seam_events.forEach(function (event) {
-      list.appendChild(h("li", event.component + ": " + event.outcome + ", counted_by " + event.spend.counted_by));
+    var events = Array.isArray(rec.seam_events) ? rec.seam_events : [];
+    if (!events.length) list.appendChild(h("li", "No seam events."));
+    events.forEach(function (event) {
+      list.appendChild(h("li", event.component + ": " + event.outcome + (event.spend ? ", counted_by " + event.spend.counted_by : "")));
     });
     box.hidden = false;
   }
 
-  function finishDelete(p) {
+  function finishDelete(p, result) {
     if (p.from === "corpus") Console.show("documents");
-    var bad = failure();
-    if (bad) return showError(bad[0], bad[1]);
-    showDeleteOutcome(Object.assign({}, FIX.documents["delete-success"], { document_id: p.id }), p.kind);
+    var body = result.body;
+    if (result.status >= 200 && result.status < 300 && body !== null && typeof body === "object" && typeof body.status === "string") {
+      showDeleteOutcome(body, p.kind);
+      if (body.status === "success") Console.emit("corpus-changed");
+      return;
+    }
+    ID("delete.outcome").hidden = true;
+    if (showError(result.status, body) === "result") showError(0, null, { text: "The server answered without a deletion outcome." });
+  }
+
+  // Confirm sends the delete and keeps the dialog open, both buttons disabled and Escape ignored, until the answer arrives (D-14).
+  // The request has no abort signal: a request that has been sent cannot be cancelled.
+  function confirmDelete() {
+    if (!pending || sending || confirmButton.disabled) return;
+    var p = pending;
+    sending = true;
+    hideErrors();
+    ID("delete.outcome").hidden = true;
+    syncDialog();
+    api("DELETE", "/documents/" + encodeURIComponent(p.id), { selector: p.selector }, { kind: "delete" }).then(function (result) {
+      sending = false;
+      dialog.close();
+      syncWrites();
+      finishDelete(p, result);
+    });
   }
 
   // ---- wiring ----
@@ -557,36 +604,27 @@ var DocumentsScreen = (function () {
     setFieldError(input, "");
     askDelete(value);
   });
-  $id("shell.dialog.delete-cancel").addEventListener("click", function () {
-    dialog.close();
+  cancelButton.addEventListener("click", function () {
+    if (!sending) dialog.close();
+  });
+  // Escape asks the dialog to cancel; it is ignored while the delete is in flight.
+  dialog.addEventListener("cancel", function (event) {
+    if (sending) event.preventDefault();
   });
   dialog.addEventListener("close", function () {
+    // Chromium lets a repeated Escape through even when it was prevented; the dialog goes back up until the answer arrives.
+    if (sending) return dialog.showModal();
     pending = null;
-    confirmButton.removeAttribute("aria-busy");
-    confirmButton.querySelector(".spinner").hidden = true;
-    setDisabled(confirmButton, false);
+    syncDialog();
   });
-  confirmButton.addEventListener("click", function () {
-    if (!pending || confirmButton.disabled) return;
-    var p = pending;
-    setDisabled(confirmButton, true);
-    confirmButton.setAttribute("aria-busy", "true");
-    confirmButton.querySelector(".spinner").hidden = false;
-    later(function () {
-      dialog.close();
-      finishDelete(p);
-    }, CONFIRM_MS);
-  });
+  confirmButton.addEventListener("click", confirmDelete);
 
   wireErrors("documents");
   // Delete from Corpus & Health: that screen lists the default store, so the Default selector label applies.
   Console.on("delete-document", function (event) {
-    pending = { id: event.document_id, kind: "lightrag", from: "corpus" };
-    dialog.querySelector('[data-role="doc"]').textContent = event.document_id;
-    dialog.querySelector('[data-role="sel"]').textContent = "Default";
-    dialog.querySelector('[data-role="tail"]').textContent = DELETE_TAIL.lightrag;
-    openDialog("shell.dialog.delete", "shell.dialog.delete-cancel");
+    openDelete({ id: event.document_id, selector: null, kind: "lightrag", label: "Default", from: "corpus" });
   });
+  Console.on("inflight", syncWrites);
   Console.on("open-ingest", function () {
     Console.show("documents");
     showTab("paste");
@@ -599,7 +637,6 @@ var DocumentsScreen = (function () {
   });
   window.addEventListener("pagehide", function () {
     clearInterval(pollTimer);
-    timers.forEach(clearTimeout);
   });
 
   renderList();

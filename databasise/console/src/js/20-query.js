@@ -11,6 +11,7 @@ var QueryScreen = (function () {
   var NO_TRACE = "No trace token on this result.";
   var UNFINISHED = "The run did not finish.";
   var DISCONNECTED = "The stream closed before the final event. Evidence received so far is shown below; the run is not complete. Run again to retry.";
+  var WRITING = "A document write is in progress. Queries are unavailable until the ingest or delete finishes.";
   var MSG = {
     textEmpty: "Query text is empty. Enter at least one non-space character.",
     badJson: "Raw selector JSON is not valid JSON.",
@@ -29,6 +30,23 @@ var QueryScreen = (function () {
     return $id("query." + name);
   }
 
+  // LIVE-05 (D-13 as amended 2026-10-31): while an ingest, upload or delete is in flight Run is natively disabled, with the reason
+  // in run.message. The 17 validation blockers keep their style: Run stays clickable and the message appears on press.
+  function resetMessage() {
+    var message = ID("run.message");
+    if (InFlight.writing()) message.textContent = WRITING;
+    message.hidden = !InFlight.writing();
+  }
+
+  function syncWrite() {
+    if (mode !== "compare") setDisabled(ID("run.submit"), !ID("state.running").hidden || InFlight.writing());
+    var message = ID("run.message");
+    if (InFlight.writing()) {
+      message.textContent = WRITING;
+      message.hidden = false;
+    } else if (message.textContent === WRITING) message.hidden = true;
+  }
+
   // Exactly one state view is visible. Field errors belong to one render, so every state change clears them.
   function showState(name) {
     STATES.forEach(function (s) {
@@ -39,13 +57,13 @@ var QueryScreen = (function () {
     var running = name === "running";
     ID("run.spinner").hidden = !running;
     // In compare mode Run belongs to Compare, which also decides it from the row blockers (WR-JSA-02, WR-JSA-03).
-    if (mode !== "compare") setDisabled(ID("run.submit"), running);
+    if (mode !== "compare") setDisabled(ID("run.submit"), running || InFlight.writing());
     // A state view and the compare columns never show together.
     if (Compare) Compare.hideColumns();
     Array.prototype.forEach.call(root.querySelectorAll("[data-error-id]"), function (el) {
       setFieldError(el, "");
     });
-    ID("run.message").hidden = true;
+    resetMessage();
   }
 
   function cell(row, i, text) {
@@ -260,7 +278,7 @@ var QueryScreen = (function () {
     setFieldError(ID("selector.group"), pickMsg);
     var focus = textMsg ? ID("text.error") : jsonMsg ? ID("advanced.selector-json-error") : pickMsg ? ID("selector.error") : null;
     if (jsonMsg) ID("advanced.panel").open = true;
-    if (!focus) ID("run.message").hidden = true;
+    if (!focus) resetMessage();
     return { ok: !focus, selector: hasOverride ? override : picker.value(), focus: focus };
   }
 
@@ -350,6 +368,7 @@ var QueryScreen = (function () {
 
   function run() {
     if (mode === "compare") return Compare.run();
+    if (InFlight.writing()) return;
     touched = true;
     var check = validate();
     if (!check.ok) {
@@ -458,6 +477,7 @@ var QueryScreen = (function () {
     setMode("compare");
   });
 
+  Console.on("inflight", syncWrite);
   wireErrors("query");
   buildResolutionTable();
   setMode("query");

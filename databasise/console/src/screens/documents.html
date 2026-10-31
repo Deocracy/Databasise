@@ -26,6 +26,7 @@
 <!--@include parts/selector.html s=documents-->
       <p><span class="chip" data-state="neutral" role="status" data-mock-id="documents.selector.family">Target: LightRAG</span></p>
       <p class="banner" data-state="neutral" data-mock-id="documents.notice.store-split">LightRAG documents ingested here appear in Corpus &amp; Health and in Jobs. They are not visible in Query &amp; Compare or Evidence &amp; Trace.</p>
+      <p class="muted" role="status" data-role="write-note" hidden>Another write is in progress.</p>
       <div class="tabs" role="tablist" aria-label="Ingest" data-mock-id="documents.tabs.tablist">
         <button type="button" role="tab" aria-selected="true" data-mock-id="documents.tabs.paste">Paste text</button>
         <button type="button" role="tab" aria-selected="false" data-mock-id="documents.tabs.upload">Upload file</button>
@@ -90,6 +91,7 @@
       </label>
       <p class="field-error" role="alert" tabindex="-1" data-mock-id="documents.delete.document-id-error" hidden></p>
       <button type="button" class="btn btn-outline" data-mock-id="documents.delete.submit">Delete</button>
+      <p class="muted" role="status" data-role="write-note" hidden>Another write is in progress.</p>
       <div class="docs-outcome" role="status" data-mock-id="documents.delete.outcome" hidden>
         <p><span class="badge" data-role="status"></span> <span class="mono" data-role="doc"></span></p>
         <p data-role="message"></p>
