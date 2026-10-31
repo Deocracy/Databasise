@@ -1,0 +1,237 @@
+<section data-mock-id="screen-corpus" hidden>
+  <h1>LightRAG (v1) documents</h1>
+  <p class="muted">Documents listed here come from the v1 document-status store under the default selector. GET /corpus and GET /corpus/counts also accept a selector; this screen uses the default.</p>
+  <div class="mock-strip" data-mock-only="true">
+    <label>Outcome
+      <select data-mock-id="corpus.mock.outcome" data-mock-only="true">
+        <option value="success">success</option>
+        <option value="refusal">refusal</option>
+        <option value="validation">validation</option>
+        <option value="server-failure">server failure</option>
+        <option value="generic">generic 5xx</option>
+      </select>
+    </label>
+    <label>Fixture
+      <select data-mock-id="corpus.mock.fixture" data-mock-only="true">
+        <option value="health-ok">health-ok</option>
+        <option value="health-degraded">health-degraded</option>
+        <option value="health-loading">health-loading</option>
+        <option value="health-error">health-error</option>
+        <option value="counts-normal" selected>counts-normal</option>
+        <option value="counts-preprocessed">counts-preprocessed</option>
+        <option value="counts-empty">counts-empty</option>
+      </select>
+    </label>
+  </div>
+  <div data-role="errors" hidden>
+<!--@include parts/errors.html s=corpus-->
+    <p><button type="button" class="btn btn-outline" data-mock-id="corpus.error.check-health" hidden>Check health</button></p>
+  </div>
+
+  <section class="panel" data-focal="true" data-mock-id="corpus.health.panel">
+    <h2>Health</h2>
+    <div class="health-top">
+      <span class="badge" role="status" data-state="ok" data-mock-id="corpus.health.overall">stores openable / v1 reachable</span>
+      <span class="badge" data-role="state-badge" data-state="ok"><span data-role="glyph" aria-hidden="true"></span> <span data-mock-id="corpus.health.state">ok</span></span>
+    </div>
+    <p class="state-view" role="status" data-mock-id="corpus.health.loading" hidden><span class="spinner" role="presentation"></span> Checking stores and the v1 engine. This can take up to 60 seconds.</p>
+    <div class="run-row">
+      <button type="button" class="btn btn-primary" data-mock-id="corpus.health.refresh">Refresh health</button>
+      <label class="inline"><input type="checkbox" data-mock-id="corpus.health.poll"> Poll health</label>
+      <select aria-label="Poll interval" data-mock-id="corpus.health.poll-interval">
+        <option value="30">30 seconds</option>
+        <option value="60">60 seconds</option>
+      </select>
+    </div>
+    <div data-role="health-body">
+      <h3>Stores</h3>
+      <div class="table-scroll">
+        <table role="table" data-mock-id="corpus.health.stores">
+          <thead><tr><th>Store</th><th>State</th><th>What it means</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <h3>Engine</h3>
+      <div class="health-row" data-mock-id="corpus.health.engine">
+        <span class="label">v1 engine reachable</span>
+        <span class="badge" data-role="value"></span>
+        <span class="muted">Derived from the v1 driver probe: the subprocess exited 0 and the working directory exists.</span>
+      </div>
+      <div class="health-row" data-mock-id="corpus.health.interpreter">
+        <span class="label">v1 interpreter present</span>
+        <span class="badge" data-role="value"></span>
+        <span class="muted">A path check; it does not run v1.</span>
+      </div>
+      <div data-mock-id="corpus.health.clients">
+        <p class="label">Model clients</p>
+        <div class="chips" data-role="chips"></div>
+        <p class="muted">Presence of configured clients, not reachability.</p>
+      </div>
+      <div data-mock-id="corpus.health.reasons">
+        <p class="label">Failure reasons</p>
+        <p data-role="text"></p>
+      </div>
+      <div data-needs-backend="GET /info" data-backend-state="operator" title="Mounted only with --operator">
+        <span class="badge badge-op">operator route</span>
+        <div class="chips" data-mock-id="corpus.health.busy"></div>
+        <p class="muted">graph in use counts holders in this server process only.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="tiles" role="group" aria-label="Documents by status" data-mock-id="corpus.kpi.region">
+    <button type="button" class="tile" data-mock-id="corpus.kpi.total"><span class="count" data-role="count">0</span><span class="label">Total</span></button>
+    <button type="button" class="tile" data-mock-id="corpus.kpi.pending"><span class="count" data-role="count">0</span><span class="label">pending</span></button>
+    <button type="button" class="tile" data-mock-id="corpus.kpi.parsing"><span class="count" data-role="count">0</span><span class="label">parsing</span></button>
+    <button type="button" class="tile" data-mock-id="corpus.kpi.analyzing"><span class="count" data-role="count">0</span><span class="label">analyzing</span></button>
+    <button type="button" class="tile" data-mock-id="corpus.kpi.processing"><span class="count" data-role="count">0</span><span class="label">processing</span></button>
+    <button type="button" class="tile" data-mock-id="corpus.kpi.preprocessed" hidden><span class="count" data-role="count">0</span><span class="label">preprocessed</span></button>
+    <button type="button" class="tile" data-state="warn" data-mock-id="corpus.kpi.interrupted" hidden><span class="count" data-role="count">0</span><span class="label">interrupted</span></button>
+    <button type="button" class="tile" data-mock-id="corpus.kpi.processed"><span class="count" data-role="count">0</span><span class="label">processed</span></button>
+    <button type="button" class="tile" data-mock-id="corpus.kpi.failed"><span class="count" data-role="count">0</span><span class="label">failed</span></button>
+  </div>
+
+  <section class="panel" data-mock-id="corpus.table.panel">
+    <h2>Documents</h2>
+    <div class="chips" data-mock-id="corpus.table.counts"></div>
+    <div class="run-row">
+      <label class="inline">Page size (1 to 100)
+        <input type="number" min="1" max="100" step="1" value="50" data-mock-id="corpus.table.page-size" data-field-loc="query.limit" data-error-id="corpus.table.page-size-error">
+      </label>
+      <button type="button" class="btn btn-outline" data-mock-id="corpus.table.refresh">Refresh documents</button>
+      <label class="inline"><input type="checkbox" data-mock-id="corpus.table.poll"> Refresh every 30 seconds</label>
+    </div>
+    <p class="field-error" role="alert" tabindex="-1" data-mock-id="corpus.table.page-size-error" hidden></p>
+    <div class="run-row">
+      <span data-needs-backend="GET /corpus (status, sort, search)" title="Not implemented yet: GET /corpus (status, sort, search)" class="tools">
+        <span class="badge badge-nb">needs backend</span>
+        <label class="inline">Status
+          <select data-mock-id="corpus.table.status-filter">
+            <option value="all">all</option>
+            <option value="pending">pending</option>
+            <option value="parsing">parsing</option>
+            <option value="analyzing">analyzing</option>
+            <option value="processing">processing</option>
+            <option value="preprocessed">preprocessed</option>
+            <option value="interrupted">interrupted</option>
+            <option value="processed">processed</option>
+            <option value="failed">failed</option>
+          </select>
+        </label>
+        <label class="inline">Sort
+          <select data-mock-id="corpus.table.sort">
+            <option value="document_id">document_id</option>
+            <option value="status">status</option>
+            <option value="updated_at">updated_at (newest first)</option>
+          </select>
+        </label>
+        <label class="inline">Search
+          <input type="text" autocomplete="off" spellcheck="false" data-mock-id="corpus.table.search">
+        </label>
+      </span>
+      <span data-needs-backend="POST /documents/reprocess" title="Not implemented yet: POST /documents/reprocess" class="tools">
+        <span class="badge badge-nb">needs backend</span>
+        <button type="button" class="btn btn-outline" data-mock-id="corpus.table.reprocess">Reprocess failed documents</button>
+        <span class="muted" data-role="reprocess-msg" hidden>Reprocess requested (fixture only).</span>
+      </span>
+    </div>
+    <div class="run-row">
+      <span class="chip" data-state="neutral" data-role="filter-chip" hidden></span>
+      <button type="button" class="btn btn-outline" data-mock-id="corpus.table.clear-filter" hidden>Clear filter</button>
+    </div>
+
+    <div class="state-view" role="status" data-mock-id="corpus.state.loading" hidden><span class="spinner" role="presentation"></span> Loading documents from the v1 engine. This can take up to 60 seconds.</div>
+    <div class="state-view" data-mock-id="corpus.state.empty" hidden>
+      <h3>No LightRAG (v1) documents yet</h3>
+      <p>The v1 corpus is empty. <a href="#documents" data-mock-id="corpus.state.ingest-link">Ingest a document</a> to see it here.</p>
+    </div>
+    <p class="muted" data-role="no-match" hidden>No document on this page matches the filter.</p>
+    <div class="table-scroll" data-role="table-wrap">
+      <table role="table" class="doc-table" data-mock-id="corpus.table.documents">
+        <thead><tr><th>document_id</th><th>status</th><th>updated_at</th><th>error_message</th><th>Actions</th></tr></thead>
+        <tbody>
+<!--@repeat n 6-->
+          <tr data-status="" hidden>
+            <td class="mono" data-role="id"></td>
+            <td><span class="badge" data-role="status"></span></td>
+            <td class="mono" data-role="updated"></td>
+            <td><button type="button" class="btn btn-outline" aria-expanded="false" data-mock-id="corpus.table.error-toggle-{{n}}" hidden>Show error</button><p class="mono" data-role="error" hidden></p><p class="muted" data-role="retry-msg" hidden></p></td>
+            <td class="row-actions"><button type="button" class="btn btn-outline" data-mock-id="corpus.table.delete-{{n}}">Delete</button> <button type="button" class="btn btn-outline" data-mock-id="corpus.table.retry-{{n}}" hidden>Retry</button></td>
+          </tr>
+<!--@end n-->
+        </tbody>
+      </table>
+    </div>
+    <div class="run-row" data-role="pager">
+      <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="corpus.table.prev">Previous page</button>
+      <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="corpus.table.next">Next page</button>
+      <span class="muted" data-role="range"></span>
+    </div>
+  </section>
+
+  <div data-needs-backend="GET /info" data-backend-state="operator" title="Mounted only with --operator">
+    <details class="panel" data-mock-id="corpus.instance.panel">
+      <summary data-mock-id="corpus.instance.toggle">Instance <span class="badge badge-op">operator route</span></summary>
+      <dl class="attrs">
+        <dt>version</dt><dd class="mono" data-mock-id="corpus.instance.version"></dd>
+        <dt>workspace</dt><dd class="mono" data-mock-id="corpus.instance.workspace"></dd>
+        <dt>clients</dt><dd data-role="clients"></dd>
+        <dt>write_in_flight</dt><dd data-role="write"></dd>
+        <dt>graph_busy</dt><dd data-role="graph"></dd>
+      </dl>
+    </details>
+  </div>
+
+  <div data-needs-backend="GET /wirings" data-backend-state="operator" title="Mounted only with --operator">
+    <details class="panel" data-mock-id="corpus.wirings.panel">
+      <summary data-mock-id="corpus.wirings.toggle">Wirings <span class="badge badge-op">operator route</span></summary>
+      <p class="muted">Rows are keyed on name: the five LightRAG arms share one title.</p>
+      <div class="table-scroll">
+        <table role="table" data-mock-id="corpus.wirings.table">
+          <thead><tr><th>name</th><th>wiring_id</th><th>wiring_version</th><th>title</th><th>node_count</th><th>effects</th><th>provides</th><th>harnesses</th><th>default_eligible</th><th>is_default</th><th>reachable</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+
+  <div data-needs-backend="GET /refusals" title="Not implemented yet: GET /refusals">
+    <details class="panel" data-mock-id="corpus.catalogue.panel">
+      <summary data-mock-id="corpus.catalogue.toggle">Refusal catalogue <span class="badge badge-nb">needs backend</span></summary>
+      <label class="field"><span class="label">Filter refusal types</span>
+        <input type="text" autocomplete="off" spellcheck="false" data-mock-id="corpus.catalogue.filter">
+      </label>
+      <p class="muted" data-role="count"></p>
+      <div class="table-scroll">
+        <table role="table" data-mock-id="corpus.catalogue.table">
+          <thead><tr><th>refusal_type</th><th>http_status</th><th>attribute keys</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+
+  <div data-needs-backend="GET /log" data-backend-state="operator" title="Mounted only with --operator --log-file">
+    <details class="panel" data-mock-id="corpus.log.panel">
+      <summary data-mock-id="corpus.log.toggle">Server log <span class="badge badge-op">operator route</span></summary>
+      <p class="muted">Mounted only when the server starts with --operator and --log-file. Lines are redacted. Loopback only.</p>
+      <label class="field"><span class="label">Line limit (1 to 1000)</span>
+        <input type="number" min="1" max="1000" step="1" value="100" data-mock-id="corpus.log.limit" data-error-id="corpus.log.limit-error">
+      </label>
+      <p class="field-error" role="alert" tabindex="-1" data-mock-id="corpus.log.limit-error" hidden></p>
+      <p><button type="button" class="btn btn-outline" data-mock-id="corpus.log.refresh">Refresh log</button></p>
+      <pre class="mono preview" data-mock-id="corpus.log.lines"></pre>
+    </details>
+  </div>
+
+  <details class="panel" data-mock-id="corpus.planned.list">
+    <summary data-mock-id="corpus.planned.toggle">Planned (not built)</summary>
+    <ul>
+      <li>Wiring detail and part registry views</li>
+      <li>Wiring validation report</li>
+      <li>Environment digest</li>
+      <li>Namespace cleanup</li>
+      <li>Artifact registry browser</li>
+    </ul>
+  </details>
+</section>

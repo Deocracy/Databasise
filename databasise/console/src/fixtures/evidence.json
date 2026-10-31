@@ -1,0 +1,128 @@
+{
+  "e-lightrag-chunk": {
+    "id": "c-7f3a91",
+    "full_doc_id": "doc-3f9c2a7e5b1d4c88a0e6f1d2c3b4a597",
+    "content": "Supplier contract, section 9. This supplier contract renews automatically on 1 March 2027 for a further term of twelve months. Either party may prevent renewal by giving 90 days written notice before expiry. Notice sent after that date takes effect at the end of the following term.",
+    "file_path": "contracts/supplier-contract-2026-q1.pdf"
+  },
+  "e-hipporag-chunk": {
+    "id": "chunk:7f3a91",
+    "document_id": "contract-2026-q1",
+    "ordinal": 3,
+    "content": "Section 9, renewal. The supplier contract renews on 1 March 2027. Written notice of 90 days is required to stop the renewal."
+  },
+  "chunks": {
+    "c-02be44": {
+      "id": "c-02be44",
+      "full_doc_id": "doc-3f9c2a7e5b1d4c88a0e6f1d2c3b4a597",
+      "content": "Section 10, termination. Either party may end the supplier contract for material breach if the breach is not cured within 30 days of written notice.",
+      "file_path": "contracts/supplier-contract-2026-q1.pdf"
+    },
+    "c-91d0c7": {
+      "id": "c-91d0c7",
+      "full_doc_id": "doc-3f9c2a7e5b1d4c88a0e6f1d2c3b4a597",
+      "content": "Section 4, payment. Invoices are payable within 45 days. Late payment accrues interest at 1.5 percent per month.",
+      "file_path": "contracts/supplier-contract-2026-q1.pdf"
+    },
+    "c-3d98fa": {
+      "id": "c-3d98fa",
+      "full_doc_id": "doc-77a1c0de52b94f6a8d3e9b0c1f2a3d4e",
+      "content": "Operations memo 114. The supply chain review moved the supplier audit to the second quarter.",
+      "file_path": "memos/memo-ops-114.docx"
+    },
+    "c-5ac3e0": {
+      "id": "c-5ac3e0",
+      "full_doc_id": "doc-77a1c0de52b94f6a8d3e9b0c1f2a3d4e",
+      "content": "Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit findings and the renewal calendar for every supplier contract in the register. Annual supplier review, long form. The review covers delivery performance, price changes, audit find",
+      "file_path": "archive/2026/operations/long-form/annual-supplier-review/appendix-b-supporting-material/very-long-file-name-that-must-wrap-at-narrow-widths-0123456789abcdef0123456789abcdef.pdf"
+    },
+    "c-e1b7d2": {
+      "id": "c-e1b7d2",
+      "full_doc_id": "doc-77a1c0de52b94f6a8d3e9b0c1f2a3d4e",
+      "content": "Operations memo 115. Renewal dates for all supplier contracts are tracked in the contracts register.",
+      "file_path": "memos/memo-ops-115.docx"
+    }
+  },
+  "t-clean": {
+    "partial": false,
+    "degraded": false,
+    "stop_reason": null,
+    "degradation_reason": null,
+    "bundle_ref": "sentinel:no-eval-bundle-until-phase-2",
+    "corpus_snapshot_hash": "sentinel:no-corpus-snapshot-until-phase-2",
+    "executor_version": "databasise@0.1.0",
+    "determinism_setting": "cache-bypassed",
+    "concurrency_setting": "sequential",
+    "arm_execution_order": 0
+  },
+  "t-partial-debug": {
+    "partial": true,
+    "degraded": true,
+    "stop_reason": "node_failed",
+    "degradation_reason": "node_failed",
+    "bundle_ref": "sentinel:no-eval-bundle-until-phase-2",
+    "corpus_snapshot_hash": "sentinel:no-corpus-snapshot-until-phase-2",
+    "executor_version": "databasise@0.1.0",
+    "determinism_setting": "cache-bypassed",
+    "concurrency_setting": "sequential",
+    "arm_execution_order": 0,
+    "run_id": "5b0e7c1a-2f4d-4e8b-9a36-d1c8f07b3e52",
+    "wiring_id": "lightrag-base",
+    "wiring_instance_hash": "sha256:9f2c4e7a1b8d03652ac4f7e19d0b6a83c5e21f4d7a90b3c68e5d1f02a7b4c9e6",
+    "arm_id": "naive",
+    "nodes": [
+      {
+        "node_id": "embedder-index",
+        "instance_hash": "sha256:1a7d3c9e5f0b284671ce9a3d5b0f8e24c6a1d7f39e5b0c482a6d1f73e9b5c0a8",
+        "depth": "opaque",
+        "effective_depth": "opaque",
+        "tier": null,
+        "feed_tier": null,
+        "status": "completed",
+        "execution_mode": "in-process",
+        "wall_clock_ms": 412,
+        "cache_hit": false,
+        "guards_fired": [],
+        "budget_state": "within_budget",
+        "spent": 14,
+        "allowance": 1000000,
+        "realised_budget_share": 0.000014,
+        "cross_process_failure_cause": null,
+        "resumable": false,
+        "tokens": {
+          "prompt_tokens": 14,
+          "completion_tokens": 0,
+          "cached_read_tokens": 0,
+          "call_count": 1,
+          "counted_by": "text-embedding-3-small"
+        }
+      },
+      {
+        "node_id": "embedder-query",
+        "instance_hash": "sha256:6e0b2d8a4c7f19053bd8e2a6c4f1097d3b5e8a20c6f4d1793a5b0e82d7c1f469",
+        "depth": "opaque",
+        "effective_depth": "opaque",
+        "tier": null,
+        "feed_tier": null,
+        "status": "failed",
+        "execution_mode": "in-process",
+        "wall_clock_ms": 0,
+        "cache_hit": null,
+        "guards_fired": [],
+        "budget_state": "halted",
+        "spent": null,
+        "allowance": 1000000,
+        "realised_budget_share": 0.0,
+        "cross_process_failure_cause": "declared effect 'calls_embedding' requires client 'embedding'",
+        "resumable": false,
+        "tokens": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "cached_read_tokens": 0,
+          "call_count": 0,
+          "counted_by": "none"
+        }
+      }
+    ]
+  }
+}

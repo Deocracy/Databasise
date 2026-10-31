@@ -1,0 +1,23 @@
+/* Ledger (17-11) */
+fieldset.plain { margin: 0 0 var(--md); padding: 0; border: 0; min-width: 0; }
+fieldset.plain legend { padding: 0; margin-bottom: var(--xs); font: 600 13px/1.5 var(--font); }
+fieldset.plain label.inline { margin-right: var(--md); }
+.field input[list] { width: 100%; max-width: 100%; overflow-wrap: anywhere; }
+.trace-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sm); padding: var(--xs) 0; }
+.trace-row input { min-height: 0; }
+.trace-chips { display: inline-flex; flex-wrap: wrap; gap: var(--xs); }
+.trace-group { margin: var(--sm) 0 0; font: 600 13px/1.5 var(--font); overflow-wrap: anywhere; }
+.preflight { margin: 0 0 var(--md); }
+.preflight ul { margin: 0 0 var(--sm); padding-left: var(--lg); }
+.preflight li { overflow-wrap: anywhere; }
+.preflight li[data-state] { color: var(--st-fg); }
+.timeline-table td { overflow-wrap: anywhere; }
+.timeline-table td[data-role="traces"] { min-width: 14ch; }
+.timeline-table tr[data-status="active"] td[data-role="status"] { font-weight: 600; }
+.timeline-table tr[data-status="active"] { box-shadow: inset 3px 0 0 var(--accent); }
+.timeline-table tr:focus { outline: 2px solid var(--focus); outline-offset: -2px; }
+.row-actions { display: flex; flex-wrap: wrap; gap: var(--xs); }
+.dialog-fields { margin: var(--sm) 0; }
+.dialog-fields select { width: 100%; max-width: 100%; }
+.dialog-fields input[type="text"] { width: 100%; max-width: 100%; }
+dialog .mono { overflow-wrap: anywhere; }

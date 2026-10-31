@@ -1,0 +1,312 @@
+<section data-mock-id="screen-query" hidden data-mode="query">
+  <h1>Query &amp; Compare</h1>
+  <div class="mock-strip" data-mock-only="true">
+    <label>State
+      <select data-mock-id="query.mock.state-switcher" data-mock-only="true">
+        <option value="idle">idle</option>
+        <option value="running">running</option>
+        <option value="success">success</option>
+        <option value="partial">partial</option>
+        <option value="empty-evidence">empty-evidence</option>
+        <option value="refusal-422">refusal-422</option>
+        <option value="validation-422">validation-422</option>
+        <option value="error-500">error-500</option>
+      </select>
+    </label>
+    <label>Fixture
+      <select data-mock-id="query.mock.fixture" data-mock-only="true">
+        <option value="standard">standard</option>
+        <option value="q-trace-null">trace_token null</option>
+        <option value="q-500-foreign">server failure (error-500 variant)</option>
+        <option value="q-stream-disconnected">stream disconnected (error-500 variant)</option>
+        <option value="q-layout-sample">layout sample</option>
+      </select>
+    </label>
+  </div>
+  <div class="tabs" role="tablist" aria-label="Mode" data-mock-id="query.mode.tablist">
+    <button type="button" role="tab" aria-selected="true" data-mock-id="query.mode.query">Query</button>
+    <button type="button" role="tab" aria-selected="false" data-mock-id="query.mode.compare">Compare</button>
+  </div>
+  <section class="panel" data-focal="true" data-mock-id="query.editor.panel">
+    <h2>Query</h2>
+    <label class="field"><span class="label">Query text</span>
+      <textarea rows="4" data-mock-id="query.text.input" data-field-loc="body.query.text" data-error-id="query.text.error"></textarea>
+    </label>
+    <p class="field-error" role="alert" tabindex="-1" data-mock-id="query.text.error" hidden></p>
+<div class="query-only">
+<!--@include parts/selector.html s=query-->
+    <button type="button" class="btn btn-outline" aria-expanded="false" data-mock-id="query.selector.table-toggle">Show resolution table</button>
+    <div class="table-scroll" data-role="resolution-wrap" hidden>
+      <table role="table" data-mock-id="query.selector.table">
+        <thead><tr><th>Selector</th><th>Resolves to</th><th>Nodes</th><th>Outcome</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="muted">Every arm is reachable: naive, bypass, hybrid, local, global and hipporag.</p>
+    </div>
+    </div>
+    <div class="compare-only" data-mock-id="query.compare.builder">
+<!--@repeat r 4-->
+      <fieldset class="cmp-row" data-role="row" hidden>
+        <legend>Selector {{r}}</legend>
+        <div class="cmp-row-grid">
+          <div class="cmp-part">
+            <label class="field"><span class="label">Kind</span>
+              <select data-mock-id="query.row{{r}}.kind">
+                <option value="default">Default</option>
+                <option value="alias">Alias</option>
+                <option value="capability">Capability</option>
+                <option value="harness" disabled>Harness</option>
+              </select>
+            </label>
+          </div>
+          <div class="cmp-part" data-part="alias" hidden>
+            <label class="field"><span class="label">Alias</span>
+              <input type="text" autocomplete="off" spellcheck="false" data-mock-id="query.row{{r}}.alias">
+            </label>
+            <span data-needs-backend="GET /ledger/aliases" data-backend-state="operator" title="Mounted only with --operator"><span class="badge badge-op">operator route</span>
+              <label class="field"><span class="label">Known aliases</span>
+                <select data-mock-id="query.row{{r}}.alias-picker"><option value="">Choose an alias</option></select>
+              </label>
+            </span>
+          </div>
+          <div class="cmp-part" data-part="capability" hidden>
+            <label class="field"><span class="label">Capability tokens</span>
+              <select multiple size="6" data-mock-id="query.row{{r}}.capability">
+                <option value="reads_kv">reads_kv</option>
+                <option value="reads_vector">reads_vector</option>
+                <option value="reads_graph">reads_graph</option>
+                <option value="reads_lexical">reads_lexical</option>
+                <option value="reads_blob">reads_blob</option>
+                <option value="writes_artifact">writes_artifact</option>
+                <option value="calls_llm">calls_llm</option>
+                <option value="calls_rerank">calls_rerank</option>
+                <option value="calls_embedding">calls_embedding</option>
+                <option value="net">net</option>
+                <option value="fs">fs</option>
+                <option value="self_storage">self_storage</option>
+                <option value="mutates_store">mutates_store</option>
+                <option value="writes_kv">writes_kv</option>
+                <option value="writes_vector">writes_vector</option>
+                <option value="writes_graph">writes_graph</option>
+                <option value="writes_lexical">writes_lexical</option>
+                <option value="reads_vector:chunks">reads_vector:chunks</option>
+                <option value="reads_vector:entities">reads_vector:entities</option>
+                <option value="reads_vector:relationships">reads_vector:relationships</option>
+              </select>
+            </label>
+            <div class="chips" data-mock-id="query.row{{r}}.chips"></div>
+          </div>
+          <div class="cmp-part" data-part="harness" hidden>
+            <label class="field"><span class="label">Harness</span>
+              <input type="text" disabled aria-disabled="true" data-mock-id="query.row{{r}}.harness">
+            </label>
+            <p class="muted">no production wiring declares a harness</p>
+          </div>
+        </div>
+        <div class="cmp-row-foot">
+          <p class="cmp-key mono" data-mock-id="query.row{{r}}.key"></p>
+          <div class="cmp-row-actions">
+            <button type="button" class="btn btn-outline btn-icon" aria-label="Move selector up" data-mock-id="query.row{{r}}.move-up"><svg class="icon" aria-hidden="true"><use href="#i-arrow-up"/></svg></button>
+            <button type="button" class="btn btn-outline btn-icon" aria-label="Move selector down" data-mock-id="query.row{{r}}.move-down"><svg class="icon" aria-hidden="true"><use href="#i-arrow-down"/></svg></button>
+            <button type="button" class="btn btn-outline btn-icon" aria-label="Remove selector" data-mock-id="query.row{{r}}.remove"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+          </div>
+        </div>
+        <p class="field-error" role="alert" tabindex="-1" data-mock-id="query.row{{r}}.error" hidden></p>
+      </fieldset>
+<!--@end r-->
+      <div class="cmp-add-row">
+        <button type="button" class="btn btn-outline" data-mock-id="query.compare.add">Add selector</button>
+        <p class="muted" data-role="cap-note" hidden>The mockup shows up to 4 columns.</p>
+      </div>
+      <div class="banner cmp-warning" data-state="fail" role="alert" data-mock-id="query.compare.warning-duplicate" hidden></div>
+      <div class="banner cmp-warning" data-state="neutral" role="status" data-mock-id="query.compare.warning-count" hidden></div>
+    </div>
+    <details class="subpanel" data-mock-id="query.advanced.panel">
+      <summary data-mock-id="query.advanced.toggle">Advanced query members</summary>
+      <div class="advanced-grid">
+        <div>
+        <label class="field"><span class="label">Embedding</span><input type="text" disabled aria-disabled="true" data-mock-id="query.advanced.embedding"></label>
+        <p class="muted">no registered part consumes this member</p>
+        </div>
+        <div>
+        <label class="field"><span class="label">Predicates</span><input type="text" disabled aria-disabled="true" data-mock-id="query.advanced.predicates"></label>
+        <p class="muted">no registered part consumes this member</p>
+        </div>
+        <div>
+        <label class="field"><span class="label">Profile ref</span><input type="text" disabled aria-disabled="true" data-mock-id="query.advanced.profile-ref"></label>
+        <p class="muted">no registered part consumes this member</p>
+        </div>
+        <div>
+        <label class="field"><span class="label">Formal query</span><input type="text" disabled aria-disabled="true" data-mock-id="query.advanced.formal-query"></label>
+        <p class="muted">no registered part consumes this member</p>
+        </div>
+      </div>
+      <label class="field"><span class="label">Raw selector JSON</span>
+        <textarea rows="3" spellcheck="false" data-mock-id="query.advanced.selector-json" data-error-id="query.advanced.selector-json-error"></textarea>
+      </label>
+      <p class="field-error" role="alert" tabindex="-1" data-mock-id="query.advanced.selector-json-error" hidden></p>
+    </details>
+    <div class="run-row">
+      <button type="button" class="btn btn-primary" data-mock-id="query.run.submit">Run</button>
+      <span class="spinner" role="presentation" data-mock-id="query.run.spinner" hidden></span>
+      <label class="inline"><input type="checkbox" data-mock-id="query.run.stream"> Stream the response</label>
+      <p class="muted" role="status" data-mock-id="query.run.message" hidden></p>
+    </div>
+  </section>
+  <section data-mock-id="query.results.region">
+    <div class="state-view" data-mock-id="query.state.idle">
+      <h2>No query has run</h2>
+      <p class="muted">Enter query text, choose a selector and select Run. The result appears here.</p>
+    </div>
+    <div class="state-view banner" data-state="progress" data-mock-id="query.state.running" hidden>
+      <p>Running. A full run waits for the model; no progress is available.</p>
+    </div>
+    <section class="panel" data-mock-id="query.result.panel" hidden>
+      <div class="state-view banner" data-state="ok" data-mock-id="query.state.success" hidden>
+        <p>Run complete.</p>
+      </div>
+      <div class="state-view banner" data-state="warn" data-mock-id="query.state.partial" hidden>
+        <p>Partial run: the run stopped early. Open the trace to see which node halted.</p>
+        <p class="muted"><strong>operator diagnostics</strong> <span class="mono" data-role="stop-reason"></span></p>
+      </div>
+      <div class="state-view banner" data-state="neutral" data-mock-id="query.state.empty-evidence" hidden>
+        <p>No evidence: the wiring declares no evidence position, or no items matched.</p>
+      </div>
+      <h2>Answer</h2>
+      <div class="answer" data-mock-id="query.result.answer"></div>
+      <div class="badges" data-mock-id="query.result.badges">
+        <span class="badge" tabindex="0" data-state="neutral" data-mock-id="query.result.depth"></span>
+        <span class="badge" tabindex="0" data-state="warn" data-mock-id="query.result.partial" hidden></span>
+        <span class="badge" tabindex="0" data-state="warn" data-mock-id="query.result.degraded" hidden></span>
+      </div>
+      <div class="actions">
+        <a href="#evidence" data-mock-id="query.result.trace-link">Open trace</a>
+        <button type="button" class="btn btn-outline btn-icon" aria-label="Copy trace token" data-mock-id="query.result.copy-trace"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></button>
+        <span class="muted" data-role="copied" hidden>Copied</span>
+        <button type="button" class="btn btn-outline cap-first" data-mock-id="query.result.promote">promote from this result</button>
+        <button type="button" class="btn btn-outline" data-mock-id="query.result.compare">Compare this query</button>
+      </div>
+      <p class="muted" data-role="no-trace" hidden>No trace token on this result.</p>
+      <p class="muted" data-role="no-promote" hidden>A partial run cannot be promoted.</p>
+      <h3>Evidence</h3>
+      <div class="table-scroll" data-role="evidence-wrap">
+        <table role="table" data-mock-id="query.evidence.table">
+          <thead><tr><th>Rank</th><th>Ref</th><th>Namespace</th><th>Kind</th><th>Score</th><th>Tier</th><th>Action</th></tr></thead>
+          <tbody>
+<!--@repeat n 5-->
+            <tr hidden><td></td><td class="mono"></td><td></td><td></td><td></td><td>—</td><td><button type="button" class="btn btn-outline" data-mock-id="query.evidence.open-{{n}}">Open</button></td></tr>
+<!--@end n-->
+          </tbody>
+        </table>
+      </div>
+      <h3>Token accounting</h3>
+      <div class="table-scroll">
+        <table role="table" data-mock-id="query.tokens.table">
+          <thead><tr><th>counted_by</th><th>Prompt</th><th>Completion</th><th>Cached read</th><th>Calls</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <h3>Seam events</h3>
+      <div class="table-scroll">
+        <table role="table" data-mock-id="query.seam.table">
+          <thead><tr><th>Component</th><th>Outcome</th><th>Spend</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="muted" data-role="layout-sample" hidden>layout sample, not producible today</p>
+    </section>
+    <div class="state-view" data-mock-id="query.state.refusal-422" hidden>
+      <p class="muted">The server refused the request (HTTP 422).</p>
+    </div>
+    <div class="state-view" data-mock-id="query.state.validation-422" hidden>
+      <p class="muted">The server found invalid fields (HTTP 422).</p>
+    </div>
+    <div class="state-view" data-mock-id="query.state.error-500" hidden>
+      <p class="muted">The request failed on the server or the stream ended early.</p>
+    </div>
+    <div data-role="errors" hidden>
+<!--@include parts/errors.html s=query-->
+    </div>
+    <section class="compare-only" data-mock-id="query.compare.columns" hidden>
+      <p class="muted cmp-diff" role="status" data-mock-id="query.compare.diff"></p>
+      <div class="tabs cmp-tabs" role="tablist" aria-label="Columns" data-mock-id="query.compare.tabs">
+<!--@repeat c 4-->
+        <button type="button" role="tab" aria-selected="false" data-mock-id="query.compare.tab{{c}}" hidden></button>
+<!--@end c-->
+      </div>
+      <div class="cmp-scroll">
+<!--@repeat c 4-->
+        <article class="cmp-col" data-active="false" data-mock-id="query.col{{c}}.panel" hidden>
+          <h3 data-mock-id="query.col{{c}}.header"></h3>
+          <p><span data-needs-backend="POST /selectors/resolve" title="Not implemented yet: POST /selectors/resolve"><span class="badge badge-nb">needs backend</span> <span role="status" data-mock-id="query.col{{c}}.resolves-to"></span></span> <span class="spinner" role="presentation" data-role="spinner" hidden></span></p>
+          <div data-role="body">
+            <div class="banner" data-state="warn" data-mock-id="query.col{{c}}.state-partial" hidden>
+              <p>Partial run: the run stopped early. Open the trace to see which node halted.</p>
+              <p class="muted"><strong>operator diagnostics</strong> <span class="mono" data-role="stop-reason"></span></p>
+            </div>
+            <div class="answer" data-mock-id="query.col{{c}}.answer"></div>
+            <div class="badges" data-mock-id="query.col{{c}}.badges">
+              <span class="badge" tabindex="0" data-state="neutral" data-mock-id="query.col{{c}}.depth"></span>
+              <span class="badge" tabindex="0" data-state="warn" data-mock-id="query.col{{c}}.partial" hidden></span>
+              <span class="badge" tabindex="0" data-state="warn" data-mock-id="query.col{{c}}.degraded" hidden></span>
+            </div>
+            <div class="actions">
+              <a href="#evidence" data-mock-id="query.col{{c}}.trace-link">Open trace</a>
+              <button type="button" class="btn btn-outline" data-mock-id="query.col{{c}}.promote">Promote this arm</button>
+            </div>
+            <p class="muted" data-role="no-promote" hidden>A partial run cannot be promoted.</p>
+            <h4>Evidence</h4>
+            <div class="table-scroll" data-role="evidence-wrap">
+              <table role="table" data-mock-id="query.col{{c}}.evidence">
+                <thead><tr><th>Rank</th><th>Ref</th><th>Namespace</th><th>Kind</th><th>Score</th><th>Tier</th><th>Action</th></tr></thead>
+                <tbody>
+<!--@repeat n 5-->
+                  <tr hidden><td></td><td class="mono"></td><td></td><td></td><td></td><td>—</td><td><button type="button" class="btn btn-outline" data-mock-id="query.col{{c}}.open-{{n}}">Open</button></td></tr>
+<!--@end n-->
+                </tbody>
+              </table>
+            </div>
+            <h4>Token accounting</h4>
+            <div class="table-scroll">
+              <table role="table" data-mock-id="query.col{{c}}.tokens">
+                <thead><tr><th>counted_by</th><th>Prompt</th><th>Completion</th><th>Cached read</th><th>Calls</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <h4>Seam events</h4>
+            <div class="table-scroll">
+              <table role="table" data-mock-id="query.col{{c}}.seam">
+                <thead><tr><th>Component</th><th>Outcome</th><th>Spend</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+<!--@end c-->
+      </div>
+    </section>
+  </section>
+  <details class="panel" data-mock-id="query.history.panel">
+    <summary data-mock-id="query.history.toggle">Query history (this browser)</summary>
+    <div class="table-scroll">
+      <table role="table" data-mock-id="query.history.table">
+        <thead><tr><th>Time</th><th>Selector</th><th>Trace token</th><th>Partial</th><th>Action</th></tr></thead>
+        <tbody>
+<!--@repeat n 3-->
+          <tr hidden><td></td><td class="mono"></td><td class="mono"></td><td></td><td><button type="button" class="btn btn-outline" data-mock-id="query.history.open-{{n}}">Open trace</button></td></tr>
+<!--@end n-->
+        </tbody>
+      </table>
+    </div>
+    <p class="muted">Stored in this browser; no route lists traces.</p>
+  </details>
+  <details class="panel" data-mock-id="query.planned.list">
+    <summary data-mock-id="query.planned.toggle">Planned (not built)</summary>
+    <ul>
+      <li>Per-request token allowance (fixed at 1,000,000 per node today)</li>
+      <li>Token-level answer streaming</li>
+      <li>Request cancel</li>
+      <li>Per-request arm settings</li>
+    </ul>
+  </details>
+</section>

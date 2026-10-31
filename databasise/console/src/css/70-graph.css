@@ -1,0 +1,13 @@
+/* Graph/vector browser (17-12) */
+.graph-block { margin-bottom: var(--md); }
+.graph-block > .badge { margin-bottom: var(--xs); }
+.graph-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--md); align-items: start; }
+.graph-cols > * { min-width: 0; margin-bottom: 0; }
+@media (min-width: 768px) {
+  .graph-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
+}
+.graph-block .tile { cursor: default; }
+.graph-block td[data-role="types"] { min-width: 12ch; }
+.graph-block h3[data-role="node-id"] { margin: var(--sm) 0; }
+.graph-block .attrs { margin-top: var(--sm); }
+[data-role="busy-wrap"] .banner, [data-role="unknown-wrap"] .banner { margin: 0 0 var(--md); }

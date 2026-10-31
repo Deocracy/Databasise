@@ -1,0 +1,182 @@
+<section data-mock-id="screen-documents" hidden>
+  <h1>Documents &amp; Jobs</h1>
+  <div class="mock-strip" data-mock-only="true">
+    <label>Outcome
+      <select data-mock-id="documents.mock.outcome" data-mock-only="true">
+        <option value="success">success</option>
+        <option value="refusal">refusal</option>
+        <option value="validation">validation</option>
+        <option value="server-failure">server failure</option>
+        <option value="generic">generic 5xx</option>
+        <option value="unknown-job">unknown job</option>
+      </select>
+    </label>
+  </div>
+  <div class="docs-layout" data-role="layout" data-drawer="closed">
+  <div class="docs-main">
+    <div class="actions">
+      <button type="button" class="btn btn-outline" aria-expanded="false" data-mock-id="documents.jobs.open">Open jobs</button>
+    </div>
+    <div data-role="errors" hidden>
+<!--@include parts/errors.html s=documents-->
+    </div>
+
+    <section class="panel" data-focal="true" data-mock-id="documents.ingest.panel">
+      <h2>Ingest a document</h2>
+<!--@include parts/selector.html s=documents-->
+      <p><span class="chip" data-state="neutral" role="status" data-mock-id="documents.selector.family">Target: LightRAG</span></p>
+      <p class="banner" data-state="neutral" data-mock-id="documents.notice.store-split">LightRAG documents ingested here appear in Corpus &amp; Health and in Jobs. They are not visible in Query &amp; Compare or Evidence &amp; Trace.</p>
+      <div class="tabs" role="tablist" aria-label="Ingest" data-mock-id="documents.tabs.tablist">
+        <button type="button" role="tab" aria-selected="true" data-mock-id="documents.tabs.paste">Paste text</button>
+        <button type="button" role="tab" aria-selected="false" data-mock-id="documents.tabs.upload">Upload file</button>
+      </div>
+
+      <div role="tabpanel" aria-label="Paste text" data-role="pane-paste">
+        <label class="field"><span class="label">Document text</span>
+          <textarea rows="6" autocomplete="off" spellcheck="false" data-mock-id="documents.paste.text" data-field-loc="body.document.text" data-error-id="documents.paste.text-error"></textarea>
+        </label>
+        <p class="field-error" role="alert" tabindex="-1" data-mock-id="documents.paste.text-error" hidden></p>
+        <p class="muted mono" data-mock-id="documents.paste.bytes"></p>
+        <label class="field"><span class="label">Document id (optional)</span>
+          <input type="text" class="mono" autocomplete="off" spellcheck="false" data-mock-id="documents.paste.document-id" data-field-loc="body.document.document_id" data-error-id="documents.paste.document-id-error">
+        </label>
+        <p class="muted">Leave empty to generate an id.</p>
+        <p class="field-error" role="alert" tabindex="-1" data-mock-id="documents.paste.document-id-error" hidden></p>
+        <p class="label">Request body</p>
+        <pre class="mono preview" data-mock-id="documents.paste.request-preview"></pre>
+        <button type="button" class="btn btn-primary" data-mock-id="documents.paste.submit">Submit</button>
+      </div>
+
+      <div role="tabpanel" aria-label="Upload file" data-role="pane-upload" hidden>
+        <label class="field"><span class="label">File (one file per request)</span>
+          <input type="file" data-mock-id="documents.upload.file" data-field-loc="body.file" data-error-id="documents.upload.file-error">
+        </label>
+        <p class="field-error" role="alert" tabindex="-1" data-mock-id="documents.upload.file-error" hidden></p>
+        <label class="field"><span class="label">Document id (optional)</span>
+          <input type="text" class="mono" autocomplete="off" spellcheck="false" data-mock-id="documents.upload.document-id" data-field-loc="body.document_id" data-error-id="documents.upload.document-id-error">
+        </label>
+        <p class="muted">Leave empty to generate an id.</p>
+        <p class="field-error" role="alert" tabindex="-1" data-mock-id="documents.upload.document-id-error" hidden></p>
+        <p class="muted" data-mock-id="documents.upload.notice"></p>
+        <p class="label">Multipart fields</p>
+        <pre class="mono preview" data-mock-id="documents.upload.request-preview"></pre>
+        <div role="status" class="upload-progress" data-mock-id="documents.upload.progress" hidden>
+          <progress max="100" value="0"></progress>
+          <span class="spinner" role="presentation" data-role="spin" hidden></span>
+          <span data-role="text"></span>
+        </div>
+        <button type="button" class="btn btn-primary" data-mock-id="documents.upload.submit">Submit</button>
+      </div>
+
+      <div class="state-view banner" data-state="progress" role="status" data-mock-id="documents.state.in-flight" hidden>
+        <p><span class="spinner" role="presentation"></span> Submitting. A LightRAG ingest waits for the model and can take minutes.</p>
+      </div>
+    </section>
+
+    <section class="panel" data-mock-id="documents.result.card" hidden>
+      <h2>Ingest accepted</h2>
+      <p>Job id <span class="mono" data-role="job-id"></span>
+        <button type="button" class="btn btn-outline btn-icon" aria-label="Copy job id" data-mock-id="documents.result.copy-job-id"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></button><span class="muted" data-role="copied" hidden>Copied</span></p>
+      <p>enqueued <span class="mono" data-role="enqueued"></span></p>
+      <p class="muted" data-role="note"></p>
+      <button type="button" class="btn btn-outline" data-mock-id="documents.result.open-job">Open job</button>
+    </section>
+
+    <section class="panel" data-mock-id="documents.delete.panel">
+      <h2>Delete by id</h2>
+      <p class="muted">Uses the selector above. Delete is offered for every selector the server deletes under.</p>
+      <label class="field"><span class="label">Document id</span>
+        <input type="text" class="mono" autocomplete="off" spellcheck="false" data-mock-id="documents.delete.document-id" data-field-loc="path.document_id" data-error-id="documents.delete.document-id-error">
+      </label>
+      <p class="field-error" role="alert" tabindex="-1" data-mock-id="documents.delete.document-id-error" hidden></p>
+      <button type="button" class="btn btn-outline" data-mock-id="documents.delete.submit">Delete</button>
+      <div class="docs-outcome" role="status" data-mock-id="documents.delete.outcome" hidden>
+        <p><span class="badge" data-role="status"></span> <span class="mono" data-role="doc"></span></p>
+        <p data-role="message"></p>
+        <details class="seam" data-mock-id="documents.delete.seam-events">
+          <summary data-mock-id="documents.delete.seam-toggle"></summary>
+          <ul data-role="seam-list"></ul>
+        </details>
+      </div>
+    </section>
+
+    <details class="panel" data-mock-id="documents.planned.list">
+      <summary data-mock-id="documents.planned.toggle">Planned (not built)</summary>
+      <ul>
+        <li>Clear all documents and LLM cache</li>
+        <li>Delete-impact preview</li>
+        <li>HippoRAG job status</li>
+        <li>Ingest and delete time limits, with a typed timeout refusal</li>
+      </ul>
+    </details>
+  </div>
+
+  <aside class="docs-drawer" aria-label="Jobs" data-mock-id="documents.jobs.drawer" hidden>
+    <div class="drawer-head">
+      <h2>Jobs</h2>
+      <button type="button" class="btn btn-outline btn-icon" aria-label="Close jobs" data-mock-id="documents.jobs.close"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <label class="field"><span class="label">Job id</span>
+      <input type="text" class="mono" autocomplete="off" spellcheck="false" data-mock-id="documents.jobs.job-id" data-field-loc="path.job_id" data-error-id="documents.jobs.job-id-error">
+    </label>
+    <p class="field-error" role="alert" tabindex="-1" data-mock-id="documents.jobs.job-id-error" hidden></p>
+    <div class="run-row">
+      <button type="button" class="btn btn-primary" data-mock-id="documents.jobs.load">Load job</button>
+      <span data-needs-backend="GET /jobs" title="Not implemented yet: GET /jobs"><span class="badge badge-nb">needs backend</span> <button type="button" class="btn btn-outline" data-mock-id="documents.jobs.all">List all jobs</button></span>
+    </div>
+
+    <h3>Jobs from this session</h3>
+    <ul class="jobs-list" data-mock-id="documents.jobs.list">
+<!--@repeat n 3-->
+      <li data-role="slot" hidden><span class="mono" data-role="id"></span> <span class="muted" data-role="meta"></span> <button type="button" class="btn btn-outline" data-mock-id="documents.jobs.select-{{n}}">Open job</button></li>
+<!--@end n-->
+    </ul>
+
+    <div class="pipeline-row">
+      <span data-needs-backend="GET /pipeline" title="Not implemented yet: GET /pipeline"><span class="badge badge-nb">needs backend</span> <span role="status" data-mock-id="documents.pipeline.status"></span></span>
+      <span data-needs-backend="POST /jobs/{job_id}/cancel" title="Not implemented yet: POST /jobs/{job_id}/cancel"><span class="badge badge-nb">needs backend</span> <button type="button" class="btn btn-outline" data-mock-id="documents.pipeline.cancel">Cancel pipeline</button></span>
+    </div>
+
+    <label class="field"><span class="label">Page size (1 to 100)</span>
+      <input type="number" min="1" max="100" step="1" value="50" data-mock-id="documents.jobs.page-size" data-error-id="documents.jobs.page-size-error">
+    </label>
+    <p class="field-error" role="alert" tabindex="-1" data-mock-id="documents.jobs.page-size-error" hidden></p>
+
+    <p class="muted" data-role="no-job">No job loaded. Enter a job id or choose one from the list.</p>
+    <div class="state-view" role="status" data-mock-id="documents.jobs.loading" hidden><span class="spinner" role="presentation"></span> Loading job</div>
+    <div class="state-view" data-mock-id="documents.jobs.empty" hidden>
+      <h3>No documents on this page</h3>
+      <p class="muted">This job has no documents on this page. Check the job id or select Refresh job.</p>
+    </div>
+    <div class="table-scroll" data-role="table-wrap" hidden>
+      <table role="table" class="job-table" data-mock-id="documents.jobs.documents">
+        <thead><tr><th>document_id</th><th>status</th><th>updated_at</th><th>error</th><th>Actions</th></tr></thead>
+        <tbody>
+<!--@repeat n 5-->
+          <tr hidden>
+            <td class="mono" data-role="id"></td>
+            <td><span class="badge" data-role="status"></span></td>
+            <td class="mono" data-role="updated"></td>
+            <td><button type="button" class="btn btn-outline" aria-expanded="false" data-mock-id="documents.jobs.error-toggle-{{n}}" hidden>Show error</button><p class="mono" data-role="error" hidden></p></td>
+            <td><button type="button" class="btn btn-outline" data-mock-id="documents.jobs.delete-{{n}}">Delete</button></td>
+          </tr>
+<!--@end n-->
+        </tbody>
+      </table>
+    </div>
+    <div class="run-row">
+      <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="documents.jobs.prev">Previous page</button>
+      <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="documents.jobs.next">Next page</button>
+    </div>
+    <div class="counts" data-mock-id="documents.jobs.counts" hidden>
+      <p class="label">whole corpus, not this job</p>
+      <div class="stack" data-role="bar"></div>
+      <div class="chips" data-role="chips"></div>
+    </div>
+    <div class="run-row">
+      <button type="button" class="btn btn-outline" data-mock-id="documents.jobs.refresh">Refresh job</button>
+      <label class="inline"><input type="checkbox" data-mock-id="documents.jobs.poll"> Refresh every 30 seconds</label>
+    </div>
+  </aside>
+  </div>
+</section>

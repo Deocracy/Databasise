@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Databasise operator console (mockup)</title>
+<style>
+<!--@glob css/*.css-->
+</style>
+</head>
+<body>
+<div data-mock-id="shell.root.app" data-mock-variant="console-a" class="app">
+  <header class="app-header">
+    <div class="app-title"><span class="brand">Databasise</span> <span class="muted">Operator console</span></div>
+    <span data-needs-backend="GET /info" data-backend-state="operator" title="Mounted only with --operator"><span class="badge badge-op">operator route</span> <span data-mock-id="shell.instance.chip" class="chip" role="status"></span></span>
+    <div class="health">
+      <div data-mock-id="shell.health.status" role="status" data-state="ok">stores openable / v1 reachable</div>
+      <span class="badge" data-role="health-badge" data-state="ok"><span class="spinner" role="presentation" hidden></span><span data-role="health-glyph" aria-hidden="true"></span> <span data-role="health-word"></span></span>
+      <button type="button" class="btn btn-outline" data-mock-id="shell.health.details">Health details</button>
+    </div>
+  </header>
+  <div class="banner mock-banner" data-mock-id="shell.mock.banner" data-state="neutral">Mockup. All data is fixture data; no network request is made.</div>
+  <div class="mock-strip" data-mock-only="true">
+    <label>Health fixture
+      <select data-mock-id="shell.mock.health-fixture" data-mock-only="true">
+        <option value="ok">ok</option>
+        <option value="degraded">degraded</option>
+        <option value="loading">loading</option>
+        <option value="error">error</option>
+      </select>
+    </label>
+  </div>
+  <div class="app-body">
+    <nav class="nav" aria-label="Screens">
+      <button type="button" data-mock-id="shell.nav.query">Query &amp; Compare</button>
+      <button type="button" data-mock-id="shell.nav.evidence">Evidence &amp; Trace</button>
+      <button type="button" data-mock-id="shell.nav.documents">Documents &amp; Jobs</button>
+      <button type="button" data-mock-id="shell.nav.corpus">Corpus &amp; Health</button>
+      <button type="button" data-mock-id="shell.nav.ledger">Ledger</button>
+      <button type="button" data-mock-id="shell.nav.graph">Graph/vector browser</button>
+    </nav>
+    <main class="content">
+<!--@include screens/query.html-->
+<!--@include screens/evidence.html-->
+<!--@include screens/documents.html-->
+<!--@include screens/corpus.html-->
+<!--@include screens/ledger.html-->
+<!--@include screens/graph.html-->
+    </main>
+  </div>
+<!--@glob dialogs/*.html-->
+  <svg hidden aria-hidden="true" width="0" height="0">
+    <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></symbol>
+    <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+    <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></symbol>
+  </svg>
+</div>
+<script type="application/json" id="mock-fixtures"><!--@fixtures--></script>
+<script>
+<!--@glob js/*.js-->
+</script>
+</body>
+</html>

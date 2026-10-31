@@ -157,6 +157,8 @@ packages = [
     # 15-01-PLAN.md (TOOL-01): the offline CLIs and the import-boundary check ship in the wheel,
     # named in the same commit as the package-data entry below that they read at run time.
     "databasise.tools",
+    # 18-01-PLAN.md (D-03): the live operator console, named in the same commit that creates it.
+    "databasise.console",
 ]
 
 # 15-01-PLAN.md (TOOL-01, D-01): one version source — the wheel METADATA and the REST app both read
@@ -175,3 +177,5 @@ version = {attr = "databasise.__version__"}
 # 15-01-PLAN.md (TOOL-01): the offline CLIs read the eval bundles and both corpus fixtures at run
 # time (CONTRACT §10 and §18.3), so they ship inside the installed package.
 "databasise" = ["evidence/eval-bundles/**/*", "tests/fixtures/corpus/**/*", "tests/fixtures/eval-corpus/**/*"]
+# 18-01-PLAN.md (D-03): only the built file ships; src/ is not a package.
+"databasise.console" = ["operator-console.html"]

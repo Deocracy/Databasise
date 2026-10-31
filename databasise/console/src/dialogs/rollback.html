@@ -1,0 +1,18 @@
+  <dialog role="dialog" aria-label="Roll back to" data-mock-id="shell.dialog.rollback">
+    <h2>Roll back to</h2>
+    <p>Roll back <strong class="mono" data-role="alias"></strong> from active version <strong class="mono" data-role="active"></strong> to <strong class="mono" data-role="target"></strong>? A new version will be minted.</p>
+    <div class="dialog-fields">
+      <label class="field"><span class="label">Traces</span>
+        <select multiple size="4" data-mock-id="shell.dialog.rollback-traces"></select>
+      </label>
+      <fieldset class="plain">
+        <legend>Change origin</legend>
+        <label class="inline"><input type="radio" name="ledger-rollback-origin" value="human_edit" data-mock-id="shell.dialog.rollback-origin-human"> human_edit</label>
+        <label class="inline"><input type="radio" name="ledger-rollback-origin" value="machine_mutation" data-mock-id="shell.dialog.rollback-origin-machine"> machine_mutation</label>
+      </fieldset>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-outline" data-mock-id="shell.dialog.rollback-cancel">Keep active version</button>
+      <button type="button" class="btn btn-primary" disabled aria-disabled="true" data-mock-id="shell.dialog.rollback-confirm"><span class="spinner" role="presentation" hidden></span> Roll back</button>
+    </div>
+  </dialog>

@@ -7,11 +7,12 @@ Directives, all HTML comments inside src files:
   <!--@glob PATTERN-->                 every src file matching PATTERN, sorted, concatenated
   <!--@fixtures-->                     one JSON object: src/fixtures/*.json by stem, refusals, resolution
 
-Usage: build.py [--check]
+Usage: build.py [--check] [--src DIR] [--out FILE]
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import sys
@@ -41,9 +42,9 @@ def read(path: Path, where: str) -> str:
     return path.read_text(encoding="utf-8").replace("\r\n", "\n")
 
 
-def fixtures_json() -> str:
+def fixtures_json(src: Path) -> str:
     data = {}
-    for path in sorted((SRC / "fixtures").glob("*.json")):
+    for path in sorted((src / "fixtures").glob("*.json")):
         data[path.stem] = json.loads(read(path, path.name))
     for key, path in SHARED_FIXTURES.items():
         data[key] = json.loads(read(path, key))
@@ -51,11 +52,11 @@ def fixtures_json() -> str:
     return text.replace("</", "<\\/")  # fixture text must not close the script block
 
 
-def expand(text: str, where: str) -> str:
+def expand(text: str, where: str, src: Path) -> str:
     def repeat(m: re.Match) -> str:
         var, count, body = m.group(1), int(m.group(2)), m.group(3)
         return "".join(
-            expand(body.replace("{{%s}}" % var, str(i)), where) for i in range(1, count + 1)
+            expand(body.replace("{{%s}}" % var, str(i)), where, src) for i in range(1, count + 1)
         )
 
     def directive(m: re.Match) -> str:
@@ -64,22 +65,22 @@ def expand(text: str, where: str) -> str:
             target, _, rest = arg.partition(" ")
             if not target:
                 fail(where, "include without a file name")
-            body = read(SRC / target, where + ": include " + target)
+            body = read(src / target, where + ": include " + target)
             for key, value in re.findall(r"(\w+)=(\S+)", rest):
                 body = body.replace("{{%s}}" % key, value)
-            return expand(body, target)
+            return expand(body, target, src)
         if name == "glob":
-            files = sorted(p for p in SRC.glob(arg) if p.is_file())
-            return "".join(expand(read(p, where), p.relative_to(SRC).as_posix()) for p in files)
+            files = sorted(p for p in src.glob(arg) if p.is_file())
+            return "".join(expand(read(p, where), p.relative_to(src).as_posix(), src) for p in files)
         if name == "fixtures":
-            return fixtures_json()
+            return fixtures_json(src)
         return fail(where, f"unknown directive <!--@{name}-->")
 
     return DIRECTIVE.sub(directive, REPEAT.sub(repeat, text))
 
 
-def build() -> str:
-    html = expand(read(SRC / "page.html", "page.html"), "page.html")
+def build(src: Path = SRC) -> str:
+    html = expand(read(src / "page.html", "page.html"), "page.html", src)
     markup = OPAQUE.sub("", html)
     for token in ("<!--@", "{{"):
         if token in markup:
@@ -89,21 +90,24 @@ def build() -> str:
 
 
 def main(argv: list[str]) -> int:
-    if argv not in ([], ["--check"]):
-        print("usage: build.py [--check]", file=sys.stderr)
-        return 2
-    html = build()
-    if argv:
-        current = OUT.read_text(encoding="utf-8") if OUT.is_file() else None
+    parser = argparse.ArgumentParser(prog="build.py")
+    parser.add_argument("--check", action="store_true")
+    parser.add_argument("--src", type=Path, default=SRC)
+    parser.add_argument("--out", type=Path, default=OUT)
+    args = parser.parse_args(argv)
+    src, out = args.src.resolve(), args.out.resolve()
+    html = build(src)
+    if args.check:
+        current = out.read_text(encoding="utf-8") if out.is_file() else None
         if current != html:
             print(
-                "mockups/operator-console.html is stale; "
-                "run databasise/.venv/bin/python mockups/build.py",
+                f"{out.relative_to(ROOT)} is stale; run databasise/.venv/bin/python mockups/build.py"
+                + ("" if (src, out) == (SRC, OUT) else f" --src {src.relative_to(ROOT)} --out {out.relative_to(ROOT)}"),
                 file=sys.stderr,
             )
             return 1
         return 0
-    OUT.write_bytes(html.encode("utf-8"))
+    out.write_bytes(html.encode("utf-8"))
     return 0
 
 

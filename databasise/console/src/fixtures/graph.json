@@ -1,0 +1,150 @@
+{
+  "lightrag": {
+    "family": "LightRAG",
+    "chunk_namespace": "chunks",
+    "counts": {"nodes": 214, "edges": 487, "chunks": 96},
+    "edge_types": null,
+    "weight": {"start": 10, "step": 1},
+    "nodes": [
+      {"offset": 0, "total": 214, "next_offset": 8, "nodes": [
+        {"id": "ACME CORP", "degree": 12},
+        {"id": "ACME HOLDINGS", "degree": 4},
+        {"id": "ALICE JOHNSON", "degree": 7},
+        {"id": "BOB SMITH", "degree": 5},
+        {"id": "BOSTON", "degree": 3},
+        {"id": "CONTRACT RENEWAL", "degree": 9},
+        {"id": "SUPPLIER", "degree": 6},
+        {"id": "SUPPLY CHAIN", "degree": 8}
+      ]},
+      {"offset": 8, "total": 214, "next_offset": null, "nodes": [
+        {"id": "TAX AUTHORITY", "degree": 2},
+        {"id": "TERMINATION CLAUSE", "degree": 5},
+        {"id": "THEO ARMSTRONG", "degree": 3},
+        {"id": "UNITED STATES", "degree": 11},
+        {"id": "VENDOR AUDIT", "degree": 1},
+        {"id": "WAREHOUSE 7", "degree": 4},
+        {"id": "WEST COAST HUB", "degree": 6},
+        {"id": "ZENITH LOGISTICS", "degree": 0}
+      ]}
+    ],
+    "edges": {
+      "ACME CORP": [
+        {"src": "ACME CORP", "tgt": "ACME HOLDINGS", "edge_types": null, "weight": 9.5},
+        {"src": "ACME CORP", "tgt": "ALICE JOHNSON", "edge_types": null, "weight": 8},
+        {"src": "ACME CORP", "tgt": "BOB SMITH", "edge_types": null, "weight": 7.5},
+        {"src": "ACME CORP", "tgt": "BOSTON", "edge_types": null, "weight": 6},
+        {"src": "ACME CORP", "tgt": "CONTRACT RENEWAL", "edge_types": null, "weight": 5},
+        {"src": "ACME CORP", "tgt": "SUPPLIER", "edge_types": null, "weight": 4.5},
+        {"src": "ACME CORP", "tgt": "SUPPLY CHAIN", "edge_types": null, "weight": 4},
+        {"src": "ACME CORP", "tgt": "TAX AUTHORITY", "edge_types": null, "weight": 3},
+        {"src": "ACME CORP", "tgt": "TERMINATION CLAUSE", "edge_types": null, "weight": 2.5},
+        {"src": "ACME CORP", "tgt": "THEO ARMSTRONG", "edge_types": null, "weight": 2},
+        {"src": "ACME CORP", "tgt": "UNITED STATES", "edge_types": null, "weight": 1.5},
+        {"src": "ACME CORP", "tgt": "VENDOR AUDIT", "edge_types": null, "weight": 1}
+      ]
+    },
+    "attrs": {
+      "ACME CORP": {
+        "entity_type": "ORGANIZATION",
+        "description": "Acme Corp is a manufacturer that supplies industrial components to its customers under annual supply contracts.",
+        "source_id": "c-7f3a91"
+      },
+      "ACME HOLDINGS": {
+        "entity_type": "ORGANIZATION",
+        "description": "Acme Holdings is the parent company of Acme Corp.",
+        "source_id": "c-02be44"
+      }
+    },
+    "chunks": [
+      {"offset": 0, "total": 96, "next_offset": 8, "refs": [
+        {"ref": "c-7f3a91", "kind": "text_chunk"},
+        {"ref": "c-02be44", "kind": "text_chunk"},
+        {"ref": "c-91d0c7", "kind": "text_chunk"},
+        {"ref": "c-3d98fa", "kind": "text_chunk"},
+        {"ref": "c-5ac3e0", "kind": "text_chunk"},
+        {"ref": "c-e1b7d2", "kind": "text_chunk"},
+        {"ref": "c-0a4f68", "kind": "text_chunk"},
+        {"ref": "c-b2c7e9", "kind": "text_chunk"}
+      ]},
+      {"offset": 8, "total": 96, "next_offset": null, "refs": [
+        {"ref": "c-4e81d3", "kind": "text_chunk"},
+        {"ref": "c-d9035a", "kind": "text_chunk"},
+        {"ref": "c-17b6f2", "kind": "text_chunk"},
+        {"ref": "c-6a2c80", "kind": "text_chunk"},
+        {"ref": "c-f35e19", "kind": "text_chunk"},
+        {"ref": "c-83d4b7", "kind": "text_chunk"},
+        {"ref": "c-2c9e56", "kind": "text_chunk"},
+        {"ref": "c-a07f41", "kind": "text_chunk"}
+      ]}
+    ]
+  },
+  "hipporag": {
+    "family": "HippoRAG",
+    "chunk_namespace": "hipporag-chunks",
+    "counts": {"nodes": 342, "edges": 2108, "chunks": 96},
+    "edge_types": ["cooccurrence", "synonymy"],
+    "weight": {"start": 0.92, "step": 0.07},
+    "nodes": [
+      {"offset": 0, "total": 342, "next_offset": 8, "nodes": [
+        {"id": "chunk:02be44d91a7c", "degree": 3},
+        {"id": "chunk:3d98fa6c10e4", "degree": 4},
+        {"id": "chunk:7f3a91c04b2e", "degree": 5},
+        {"id": "chunk:91d0c7a3e5b8", "degree": 4},
+        {"id": "entity:acme corp", "degree": 7},
+        {"id": "entity:acme holdings", "degree": 4},
+        {"id": "entity:alice johnson", "degree": 5},
+        {"id": "entity:boston", "degree": 3}
+      ]},
+      {"offset": 8, "total": 342, "next_offset": null, "nodes": [
+        {"id": "entity:bob smith", "degree": 5},
+        {"id": "entity:contract renewal", "degree": 6},
+        {"id": "entity:supplier", "degree": 4},
+        {"id": "entity:supply chain", "degree": 6},
+        {"id": "entity:tax authority", "degree": 2},
+        {"id": "entity:warehouse 7", "degree": 3},
+        {"id": "entity:zenith logistics", "degree": 1},
+        {"id": "entity:zenith orphan", "degree": 0}
+      ]}
+    ],
+    "edges": {},
+    "attrs": {},
+    "chunks": [
+      {"offset": 0, "total": 96, "next_offset": 8, "refs": [
+        {"ref": "chunk:7f3a91c04b2e", "kind": "text_chunk"},
+        {"ref": "chunk:02be44d91a7c", "kind": "text_chunk"},
+        {"ref": "chunk:91d0c7a3e5b8", "kind": "text_chunk"},
+        {"ref": "chunk:3d98fa6c10e4", "kind": "text_chunk"},
+        {"ref": "chunk:5ac3e0b7f912", "kind": "text_chunk"},
+        {"ref": "chunk:e1b7d24c60a3", "kind": "text_chunk"},
+        {"ref": "chunk:0a4f68d3e9b1", "kind": "text_chunk"},
+        {"ref": "chunk:b2c7e9014fd5", "kind": "text_chunk"}
+      ]},
+      {"offset": 8, "total": 96, "next_offset": null, "refs": [
+        {"ref": "chunk:4e81d3a0c7f6", "kind": "text_chunk"},
+        {"ref": "chunk:d9035a2e18bc", "kind": "text_chunk"},
+        {"ref": "chunk:17b6f2d84a09", "kind": "text_chunk"},
+        {"ref": "chunk:6a2c80f5e3d1", "kind": "text_chunk"},
+        {"ref": "chunk:f35e19b7a264", "kind": "text_chunk"},
+        {"ref": "chunk:83d4b70c9e5a", "kind": "text_chunk"},
+        {"ref": "chunk:2c9e56a1f0d8", "kind": "text_chunk"},
+        {"ref": "chunk:a07f41c3b69e", "kind": "text_chunk"}
+      ]}
+    ]
+  },
+  "store-busy": {
+    "status": 409,
+    "body": {
+      "refusal_type": "StoreBusyError",
+      "message": "the graph store is held by another process",
+      "store_kind": "graph"
+    }
+  },
+  "unknown-node": {
+    "status": 422,
+    "body": {
+      "refusal_type": "UnknownGraphNodeError",
+      "message": "no node with this id in the selected graph",
+      "node_id": "UNKNOWN NODE"
+    }
+  }
+}

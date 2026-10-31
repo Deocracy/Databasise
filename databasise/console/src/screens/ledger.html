@@ -1,0 +1,175 @@
+<section data-mock-id="screen-ledger" hidden>
+  <h1>Ledger</h1>
+  <div class="mock-strip" data-mock-only="true">
+    <label>Outcome
+      <select data-mock-id="ledger.mock.outcome" data-mock-only="true">
+        <option value="success">success</option>
+        <option value="refusal">refusal</option>
+        <option value="validation">validation</option>
+        <option value="server-failure">server failure</option>
+        <option value="generic">generic 5xx</option>
+      </select>
+    </label>
+    <label>Fixture
+      <select data-mock-id="ledger.mock.fixture" data-mock-only="true">
+        <option value="timeline-prod" selected>timeline-prod</option>
+        <option value="timeline-single">timeline-single</option>
+        <option value="refusal-partial">refusal: PartialRunEvidenceError</option>
+        <option value="refusal-unknown-trace">refusal: UnknownTraceReferenceError</option>
+        <option value="refusal-active-retire">refusal: ActiveGenerationRetirementError</option>
+        <option value="validation">validation</option>
+        <option value="server-failure">server failure</option>
+        <option value="generic-5xx">generic 5xx</option>
+      </select>
+    </label>
+  </div>
+  <div data-role="errors" hidden>
+<!--@include parts/errors.html s=ledger-->
+    <p data-role="roll-back-wrap" hidden><a href="#ledger" data-mock-id="ledger.error.roll-back-first">roll back first</a></p>
+  </div>
+
+  <div data-needs-backend="GET /ledger/aliases" data-backend-state="operator" title="Mounted only with --operator">
+    <section class="panel" data-mock-id="ledger.aliases.panel">
+      <h2><span class="badge badge-op">operator route</span> Aliases</h2>
+      <div class="table-scroll">
+        <table role="table" data-mock-id="ledger.aliases.table">
+          <thead><tr><th>alias</th><th>active_version</th><th>record_kind</th><th>generation_ordinal</th><th>created_at</th><th>Actions</th></tr></thead>
+          <tbody>
+<!--@repeat n 3-->
+            <tr>
+              <td class="mono" data-role="alias"></td>
+              <td class="mono" data-role="version"></td>
+              <td data-role="kind"></td>
+              <td class="mono" data-role="ordinal"></td>
+              <td class="mono" data-role="created"></td>
+              <td><button type="button" class="btn btn-outline" data-mock-id="ledger.aliases.view-{{n}}">View timeline</button></td>
+            </tr>
+<!--@end n-->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel" data-mock-id="ledger.promote.form" aria-label="Promote">
+    <h2>Promote</h2>
+    <div data-needs-backend="GET /ledger/aliases" data-backend-state="operator" title="Mounted only with --operator">
+      <p><span class="badge badge-op">operator route</span></p>
+      <label class="field"><span class="label">Alias</span>
+        <input type="text" class="mono" list="ledger-alias-list" autocomplete="off" spellcheck="false" data-mock-id="ledger.promote.alias" data-field-loc="body.alias" data-error-id="ledger.promote.alias-error">
+      </label>
+      <datalist id="ledger-alias-list"></datalist>
+    </div>
+    <p class="field-error" role="alert" tabindex="-1" data-mock-id="ledger.promote.alias-error" hidden></p>
+
+    <fieldset class="plain">
+      <legend>Traces</legend>
+      <div class="run-row">
+        <label class="inline"><input type="radio" name="ledger-promote-source" value="history" checked data-mock-id="ledger.promote.source-history"> Query history (this browser)</label>
+        <span data-needs-backend="GET /traces" data-backend-state="operator" title="Mounted only with --operator"><span class="badge badge-op">operator route</span> <label class="inline"><input type="radio" name="ledger-promote-source" value="recent" data-mock-id="ledger.promote.source-recent"> Recent runs</label></span>
+      </div>
+      <div data-mock-id="ledger.promote.traces" role="group" aria-label="Traces to promote">
+<!--@repeat n 6-->
+        <label class="trace-row" data-role="slot"><input type="checkbox" data-mock-id="ledger.promote.trace-{{n}}"> <span class="mono" data-role="token"></span> <span class="muted" data-role="time"></span> <span class="muted" data-role="selector" hidden></span> <span class="trace-chips" data-role="chips"></span></label>
+<!--@end n-->
+      </div>
+    </fieldset>
+
+    <fieldset class="plain">
+      <legend>Change origin</legend>
+      <label class="inline"><input type="radio" name="ledger-promote-origin" value="human_edit" data-mock-id="ledger.promote.origin-human"> human_edit</label>
+      <label class="inline"><input type="radio" name="ledger-promote-origin" value="machine_mutation" data-mock-id="ledger.promote.origin-machine"> machine_mutation</label>
+    </fieldset>
+
+    <label class="field"><span class="label">Verb</span>
+      <select data-mock-id="ledger.promote.verb">
+        <option value="operator-asserted" selected>operator-asserted</option>
+        <option value="check" disabled>check — not built / gated</option>
+        <option value="preview" disabled>preview — not built / gated</option>
+        <option value="run" disabled>run — not built / gated</option>
+        <option value="promote-next" disabled>promote-next — not built / gated</option>
+        <option value="promote-now" disabled>promote-now — not built / gated</option>
+      </select>
+    </label>
+
+    <div class="preflight" role="status" data-mock-id="ledger.promote.preflight"></div>
+
+    <div data-needs-backend="POST /promote/preview" data-backend-state="operator" title="Mounted only with --operator">
+      <p><span class="badge badge-op">operator route</span> <button type="button" class="btn btn-outline" data-mock-id="ledger.promote.preview"><span class="spinner" role="presentation" hidden></span> Preview promotion</button></p>
+      <div class="docs-outcome" role="status" data-mock-id="ledger.promote.preview-result" hidden>
+        <dl class="attrs" data-role="attrs"></dl>
+        <p class="muted">next_version holds only if no write lands before you promote.</p>
+      </div>
+    </div>
+
+    <p><button type="button" class="btn btn-primary" data-mock-id="ledger.promote.submit"><span class="spinner" role="presentation" hidden></span> Promote alias</button></p>
+
+    <div class="docs-outcome" role="status" data-mock-id="ledger.promote.result" hidden>
+      <h3>Alias promoted</h3>
+      <dl class="attrs">
+        <dt>alias</dt><dd class="mono" data-role="alias"></dd>
+        <dt>version</dt><dd><span class="badge mono" data-state="ok" data-role="version"></span></dd>
+        <dt>record_kind</dt><dd class="mono" data-role="kind"></dd>
+        <dt>provenance</dt><dd class="mono" data-role="provenance"></dd>
+        <dt>generation_ordinal</dt><dd class="mono" data-role="ordinal"></dd>
+      </dl>
+    </div>
+  </section>
+
+  <div data-needs-backend="POST /ledger/history" data-backend-state="operator" title="Mounted only with --operator">
+    <section class="panel" data-focal="true" data-mock-id="ledger.timeline.region" aria-label="Timeline">
+      <h2><span class="badge badge-op">operator route</span> Timeline</h2>
+      <div data-needs-backend="GET /ledger/aliases" data-backend-state="operator" title="Mounted only with --operator">
+        <p><span class="badge badge-op">operator route</span></p>
+        <label class="field"><span class="label">Alias</span>
+          <select data-mock-id="ledger.timeline.alias"></select>
+        </label>
+      </div>
+      <p class="banner" data-state="ok" role="status" data-mock-id="ledger.timeline.notice" hidden></p>
+      <div class="state-view" role="status" data-mock-id="ledger.timeline.loading" hidden><span class="spinner" role="presentation"></span> Loading history</div>
+      <div class="state-view" data-mock-id="ledger.timeline.empty" hidden>
+        <h3>No history for this alias</h3>
+        <p class="muted">Choose an alias to see its generations, or promote a trace to create one.</p>
+      </div>
+      <div class="table-scroll" data-role="table-wrap">
+        <table role="table" class="timeline-table" data-mock-id="ledger.timeline.table">
+          <thead><tr><th>generation_ordinal</th><th>created_at</th><th>record_kind</th><th>minted_version</th><th>targets_version</th><th>change_origin</th><th>Traces</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+<!--@repeat n 5-->
+            <tr hidden data-status="none">
+              <td class="mono" data-role="ordinal"></td>
+              <td class="mono" data-role="created"></td>
+              <td><span class="badge" data-role="kind"></span></td>
+              <td class="mono" data-role="minted"></td>
+              <td class="mono" data-role="targets"></td>
+              <td class="mono" data-role="origin"></td>
+              <td data-role="traces"></td>
+              <td data-role="status"></td>
+              <td><div class="row-actions">
+                <button type="button" class="btn btn-outline" data-mock-id="ledger.timeline.rollback-{{n}}">Roll back to</button>
+                <span data-role="retire-wrap"><button type="button" class="btn btn-outline" data-mock-id="ledger.timeline.retire-{{n}}">Retire</button></span>
+              </div></td>
+            </tr>
+<!--@end n-->
+          </tbody>
+        </table>
+      </div>
+      <div class="run-row">
+        <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="ledger.timeline.prev">Previous page</button>
+        <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="ledger.timeline.next">Next page</button>
+        <label class="inline"><span class="label">Page size (1 to 100)</span>
+          <input type="number" min="1" max="100" step="1" value="50" data-mock-id="ledger.timeline.page-size" data-error-id="ledger.timeline.page-size-error">
+        </label>
+      </div>
+      <p class="field-error" role="alert" tabindex="-1" data-mock-id="ledger.timeline.page-size-error" hidden></p>
+    </section>
+  </div>
+
+  <details class="panel" data-mock-id="ledger.planned.list">
+    <summary data-mock-id="ledger.planned.toggle">Planned (not built)</summary>
+    <ul>
+      <li>Promotion options listing</li>
+      <li>Evaluation bundle and parity viewers</li>
+    </ul>
+  </details>
+</section>

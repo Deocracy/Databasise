@@ -1,0 +1,21 @@
+  <dialog role="dialog" class="dialog-wide" aria-label="Retire" data-mock-id="shell.dialog.retire">
+    <h2>Retire</h2>
+    <p>Retire version <strong class="mono" data-role="version"></strong> of alias <strong class="mono" data-role="alias"></strong>? This permanently makes the version ineligible as a rollback target. Nothing un-retires it.</p>
+    <div class="dialog-fields">
+      <label class="field"><span class="label">Type the version (<span class="mono" data-role="hint"></span>) to confirm.</span>
+        <input type="text" class="mono" autocomplete="off" spellcheck="false" data-mock-id="shell.dialog.retire-version">
+      </label>
+      <label class="field"><span class="label">Traces</span>
+        <select multiple size="4" data-mock-id="shell.dialog.retire-traces"></select>
+      </label>
+      <fieldset class="plain">
+        <legend>Change origin</legend>
+        <label class="inline"><input type="radio" name="ledger-retire-origin" value="human_edit" data-mock-id="shell.dialog.retire-origin-human"> human_edit</label>
+        <label class="inline"><input type="radio" name="ledger-retire-origin" value="machine_mutation" data-mock-id="shell.dialog.retire-origin-machine"> machine_mutation</label>
+      </fieldset>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-outline" data-mock-id="shell.dialog.retire-cancel">Keep version</button>
+      <button type="button" class="btn btn-destructive" disabled aria-disabled="true" data-mock-id="shell.dialog.retire-confirm"><span class="spinner" role="presentation" hidden></span> Retire</button>
+    </div>
+  </dialog>
