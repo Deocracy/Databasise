@@ -47,7 +47,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 14: Promotion & Ledger** - Operator verbs that never 500, aliases that always resolve, no tombstoned generation served, alias history readable (F7) (completed 2026-10-21)
 - [x] **Phase 15: Offline Tooling & Packaging** - Wheel-runnable CLIs that refuse by name and never spend by default, honest parity/eval/evidence records, admission enforced at load (F8) (completed 2026-10-22)
 - [x] **Phase 16: GUI Connectors** - Operator read routes: info, wirings, aliases, history, traces, promote preview, chunks, graph nodes, store-busy status, log tail (completed 2026-10-22)
-- [ ] **Phase 17: GUI Mockup** - Static six-screen operator console mockup on fixtures, every control id-stamped, missing backends badged
+- [x] **Phase 17: GUI Mockup** - Static six-screen operator console mockup on fixtures, every control id-stamped, missing backends badged (completed 2026-10-31)
 - [ ] **Phase 18: GUI Live** - The mockup connected to the live §18 REST API and operator routes, screen by screen
 
 ### Cross-phase decisions
@@ -492,7 +492,7 @@ Plans:
 - GUI-11: fixture shape follows open question 6 (attrs or references only, settled in Phase 16)
 - End of phase: the owner approves the mockup by click-through after new needs are recorded back into API-INVENTORY.md; the approval and sha256 go in docs/gui/MOCKUP-APPROVAL.md. The ledger mockup_freeze write moves to the first plan of Phase 18 (17-CONTEXT D-13), because the completion gate runs mockup-id-check.py once the freeze is set
 
-**Plans**: 1/13 plans executed
+**Plans**: 13/13 plans complete
 
 Plans:
 **Wave 1**
@@ -501,48 +501,48 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 17-02-PLAN.md — tracer: `mockups/build.py` assembler and console shell pass GUI-01; base styles and MOCK-IDS.json pass GUI-02 (GUI-01, GUI-02)
+- [x] 17-02-PLAN.md — tracer: `mockups/build.py` assembler and console shell pass GUI-01; base styles and MOCK-IDS.json pass GUI-02 (GUI-01, GUI-02)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 17-03-PLAN.md — GAP-ROUTES.json with operator/missing kinds checked against the live route table, GUI-03 test, shell instance chip; REQUIREMENTS.md and UI-SPEC amendments D-03, D-05 to D-10, D-13, D-14 (GUI-03)
+- [x] 17-03-PLAN.md — GAP-ROUTES.json with operator/missing kinds checked against the live route table, GUI-03 test, shell instance chip; REQUIREMENTS.md and UI-SPEC amendments D-03, D-05 to D-10, D-13, D-14 (GUI-03)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 17-04-PLAN.md — Wave 0 row checks for query mode, compare and the error shapes plus the refusal catalogue (GUI-04, GUI-05, GUI-06)
-- [ ] 17-05-PLAN.md — Wave 0 row checks for Evidence & Trace, Documents & Jobs, Corpus & Health, Ledger and the graph browser (GUI-07 to GUI-11)
+- [x] 17-04-PLAN.md — Wave 0 row checks for query mode, compare and the error shapes plus the refusal catalogue (GUI-04, GUI-05, GUI-06)
+- [x] 17-05-PLAN.md — Wave 0 row checks for Evidence & Trace, Documents & Jobs, Corpus & Health, Ledger and the graph browser (GUI-07 to GUI-11)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 17-06-PLAN.md — Query mode, the shared selector picker and the four error shapes with one classifyResponse (GUI-04; GUI-06 on query)
+- [x] 17-06-PLAN.md — Query mode, the shared selector picker and the four error shapes with one classifyResponse (GUI-04; GUI-06 on query)
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 17-07-PLAN.md — Compare mode: key rules, cmp-3col, promotable HippoRAG column, narrow tabs (GUI-05)
+- [x] 17-07-PLAN.md — Compare mode: key rules, cmp-3col, promotable HippoRAG column, narrow tabs (GUI-05)
 
 **Wave 7** *(blocked on Wave 6 completion)*
 
-- [ ] 17-08-PLAN.md — Evidence Inspector and Trace Inspector with the Debug template (GUI-07)
+- [x] 17-08-PLAN.md — Evidence Inspector and Trace Inspector with the Debug template (GUI-07)
 
 **Wave 8** *(blocked on Wave 7 completion)*
 
-- [ ] 17-09-PLAN.md — Documents & Jobs: ingest pre-checks, upload, jobs drawer, Delete for every selector (GUI-08)
+- [x] 17-09-PLAN.md — Documents & Jobs: ingest pre-checks, upload, jobs drawer, Delete for every selector (GUI-08)
 
 **Wave 9** *(blocked on Wave 8 completion)*
 
-- [ ] 17-10-PLAN.md — Corpus & Health: health panel, KPI tiles, corpus table with Retry, operator panels and catalogue (GUI-09)
+- [x] 17-10-PLAN.md — Corpus & Health: health panel, KPI tiles, corpus table with Retry, operator panels and catalogue (GUI-09)
 
 **Wave 10** *(blocked on Wave 9 completion)*
 
-- [ ] 17-11-PLAN.md — Ledger: timeline rules, promote form and pre-flight, rollback and retire dialogs (GUI-10; GUI-06 row)
+- [x] 17-11-PLAN.md — Ledger: timeline rules, promote form and pre-flight, rollback and retire dialogs (GUI-10; GUI-06 row)
 
 **Wave 11** *(blocked on Wave 10 completion)*
 
-- [ ] 17-12-PLAN.md — Graph/vector browser with Load attributes; every gap route badged (GUI-11; GUI-03 row)
+- [x] 17-12-PLAN.md — Graph/vector browser with Load attributes; every gap route badged (GUI-11; GUI-03 row)
 
 **Wave 12** *(blocked on Wave 11 completion)*
 
-- [ ] 17-13-PLAN.md — API-INVENTORY drafts, INVENTORY-MAP.json with its SC2 coverage test, all gates, owner file:// click-through, MOCKUP-APPROVAL.md with sha256; freeze left to Phase 18 per D-13 (all GUI rows)
+- [x] 17-13-PLAN.md — API-INVENTORY drafts, INVENTORY-MAP.json with its SC2 coverage test, all gates, owner file:// click-through, MOCKUP-APPROVAL.md with sha256; freeze left to Phase 18 per D-13 (all GUI rows)
 
 **UI hint**: yes
 
@@ -586,7 +586,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 14. Promotion & Ledger | 11/11 | Complete    | 2026-10-21 |
 | 15. Offline Tooling & Packaging | 19/19 | Complete    | 2026-10-22 |
 | 16. GUI Connectors | 12/12 | Complete    | 2026-10-22 |
-| 17. GUI Mockup | 1/13 | In Progress|  |
+| 17. GUI Mockup | 13/13 | Complete    | 2026-10-31 |
 | 18. GUI Live | 0/TBD | Not started | - |
 
 v1.0 (Phases 1-7, 64 plans) shipped 2026-09-12 — see `.planning/MILESTONES.md`.

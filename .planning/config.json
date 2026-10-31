@@ -50,7 +50,8 @@
     "security_block_on": "high",
     "_auto_chain_active": false,
     "test_command": "cd databasise && uv run pytest -q",
-    "use_worktrees": false
+    "use_worktrees": false,
+    "test_gate_timeout": 1800
   },
   "ship": {
     "pr_body_sections": [
