@@ -24,7 +24,7 @@ Source: 17-REVIEW.md (39 findings: 0 critical, 17 warning, 22 info). The finding
 | WR-JSB-01 | warning | fixed in Phase 18 (18-06) | Evidence Inspector 'Open trace' opens an unrelated or stale trace |
 | WR-JSB-02 | warning | open | 'Keep document' or Escape after pressing Delete still completes the delete |
 | WR-JSB-03 | warning | open | A failed job load leaves the restored page with Previous and Next disabled |
-| WR-JSB-04 | warning | open | Table actions erase the health-error banner while health is still unreachable |
+| WR-JSB-04 | warning | fixed in Phase 18 (18-07) | Table actions erase the health-error banner while health is still unreachable |
 | WR-JSC-01 | warning | open | Timeline fixture and status logic contradict the built POST /ledger/history 'active' semantics |
 | WR-JSC-02 | warning | open | Preview promotion throws TypeError if traces are unchecked while the preview is pending |
 | WR-JSC-03 | warning | open | Edge-paging check 'next disabled' passes during the loading state |
