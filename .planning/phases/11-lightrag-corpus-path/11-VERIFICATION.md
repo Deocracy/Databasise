@@ -1,6 +1,6 @@
 ---
 phase: 11-lightrag-corpus-path
-verified: 2026-10-19T07:30:00Z
+verified: 2026-10-31T00:00:00Z
 status: passed
 score: 25/25 must-haves verified (5 success criteria, 20 LRAG requirements)
 covered_files:
@@ -50,17 +50,23 @@ covered_files:
   - "databasise/wirings/lightrag/corpus-delete.json"
   - "databasise/wirings/lightrag/corpus-ingest.json"
   - "databasise/wirings/resolve.py"
-covered_digest: "v3:sha256:4ae2dfdb6b9ddc7995967bc9e147b149799830572a744d3db649bcf1bef81748"
+covered_digest: "v3:sha256:3daa8300b745aa07bfd7ef0513c228ace99f4021c921f600a302d935650abd22"
 behavior_unverified: 0
 overrides_applied: 0
+re_verification:
+  previous_status: passed
+  previous_score: 25/25
+  gaps_closed: []
+  gaps_remaining: []
+  regressions: []
 ---
 
 # Phase 11: LightRAG Corpus Path Verification Report
 
 **Phase Goal:** A document ingested through the seam's LightRAG path is what the LightRAG query arms retrieve, uploads index their real content, health reports only facts it checked, and the KG arms answer the way v1 answers.
-**Verified:** 2026-10-18
+**Verified:** 2026-10-31
 **Status:** passed (no failed truth, no blocker; all five human items resolved, deferred or routed by the owner, see below)
-**Re-verification:** Yes, after the UAT round (commit 8026d56 changed `parity/import_index.py` and `parts_core/lightrag/v1_index_sync.py`)
+**Re-verification:** Yes. Stale-report refresh: 14 covered files moved after the 2026-10-19 report (Phases 12-16 touched `seam/engine.py`, `seam/rest.py`, `seam/refusals.py`, `mcp/server.py`, `mcp/tools.py`, `eval/aa_run.py`, `parity/import_index.py`, `stores/vector.py`, `wirings/resolve.py`, `wirings/lightrag/base.json`, and four lightrag parts). The must-haves are unchanged; they were re-checked against the current code.
 
 ## Method
 
@@ -130,6 +136,19 @@ Goal-backward from ROADMAP success criteria 1-5 and LRAG-01..20. SUMMARY claims 
 | `LRAG-16 read path created no store dirs` | `_build_stores` opens the kv and graph stores before `_refuse_empty_namespaces`, so `text_chunks/kv.sqlite3` and `graph.cozo` appear on a refused query. No vector directory is created, which is what LRAG-16 and D-15 name. The kv/graph open-on-read is Phase 10 behaviour. |
 | `retry on an unknown doc is 404` | Phase 11 D-08 asked only for a named refusal. It returns 422 `UnknownDocumentError`. SEAM-04's 404 list covers the four lookups, not this route. |
 
+## Re-verification 2026-10-31 (stale refresh)
+
+Diff `4cf4dc0..HEAD` over the moved files was read, then the targeted Phase 11 tests were re-run from `databasise/` (no `-m live`, no full suite):
+
+- **Moved-file review.** `v1_corpus_adapter.py`: one added redaction pattern (`?key=`/`&key=`) and a docstring edit; `stderr[-2000:]`, `V1NotConfiguredError` and the named non-JSON refusal are untouched. `assemble.py`: adds an `items` list (the evidence a KG arm returns); the budgeted entity/relation/chunk assembly and the `max_total_tokens` cap are untouched. `chunk_sel_kg.py`, `chunk_vector.py`, `entity_lookup.py`, `relation_lookup.py`: only `reads_namespaces` declarations added. `wirings/lightrag/base.json`: only the no-op `apportionment_policy` config keys removed (no part in `parts_core/lightrag` reads that key). `stores/vector.py`: adds `list_ids` and the `ids=` path of `self_knn`; the `select()` open-without-create behaviour (LRAG-16) is untouched. `wirings/resolve.py`: `without_recipe_only_nodes` now keeps the ancestors of `provides`; LightRAG's `provides` is `["generate"]` and `embedder-index` has `deps: []` and no dependent, so it is still dropped from every query run (LRAG-19). `seam/engine.py` still carries `_stamp_v1_working_dir`, `_write_gate` / `StoreBusyError(store_kind="corpus")`, `_remove_staged`, `_refuse_empty_namespaces` (run on the recipe-stripped copy before dispatch), `retry_document`, `_held_by_v1` and `_inject_max_total_tokens`. REST `POST /documents/{id}/retry` and the MCP `retry` tool still reach the same engine method. The `/corpus` selector added in Phase 12 defaults to the LightRAG corpus.
+- **Tests, all green, 0 failed.**
+  - 18 seam files (corpus path, working dir, upload suffixes, inbox, write gate, interrupted documents, health honesty and probe, status during write, empty namespace, query trace nodes, MACH-11, delete, adapter failures, error scrub, file name, corpus status, REST corpus endpoints): **195 passed**.
+  - Foreign (adapter, driver protocol, not-configured), eval (eval store, corpus ingest, aa_run, store boundary), all of `parts_core/lightrag` (includes `test_kg_fidelity`, `test_kg_retrieval_fidelity`, `test_v1_prompt_drift`, `test_corpus_metering`, `test_full_ingest_compat`, `test_v1_index_sync`) and parity (arm conformance, import verification, naive end to end, v1 driver script): **268 passed, 1 deselected**.
+  - MCP `test_retry_tool.py` and seam `test_hipporag_corpus_surface.py`: **7 passed**.
+- **Debt markers.** No `TBD`, `FIXME` or `XXX` in any covered source file. The four `shortcut:` markers (`assemble.py:48`, `truncator_token_budget.py:68`, `chunk_vector.py:17`, `v1_index_sync.py:86`) remain, each with an upgrade path.
+- **Not repeated.** The two hermetic loopback probes (`probe_sc.py`, `probe_sc2.py`) of the earlier report were not re-run; the tests above cover the same truths. Human items 1-5 below keep their earlier owner decisions.
+- **Requirement IDs.** LRAG-01..20 all appear in REQUIREMENTS.md (lines 185-257; traceability rows 880-899, all `Complete`, mapped to Phase 11). No orphaned Phase 11 requirement.
+
 ## Human verification resolved
 
 Source: `.planning/phases/11-lightrag-corpus-path/11-UAT.md` (status complete: 1 pass, 1 issue now fixed, 2 skipped, 1 routed).
@@ -163,5 +182,5 @@ None. No truth failed, and no blocker was found.
 
 ---
 
-_Verified: 2026-10-18_
+_Verified: 2026-10-31_
 _Verifier: Claude (gsd-verifier)_
