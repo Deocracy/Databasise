@@ -16,9 +16,9 @@ Source: 17-REVIEW.md (39 findings: 0 critical, 17 warning, 22 info). The finding
 |----|----------|-------------|-------|
 | WR-BLD-01 | warning | open | Planned-item check matches the item text anywhere in the file, not inside the named planned list |
 | WR-JSA-01 | warning | fixed in Phase 18 (18-04) | Raw selector JSON accepts wrong member types, then Run throws an uncaught TypeError |
-| WR-JSA-02 | warning | open | Compare.run has no blocker guard, and QueryScreen.showState re-enables Run in compare mode |
-| WR-JSA-03 | warning | open | Query states render next to visible compare columns, so more than one state is shown at once |
-| WR-JSA-04 | warning | open | A mode switch cancels only Compare's timers; a pending Query run still fires in compare mode |
+| WR-JSA-02 | warning | fixed in Phase 18 (18-05) | Compare.run has no blocker guard, and QueryScreen.showState re-enables Run in compare mode |
+| WR-JSA-03 | warning | fixed in Phase 18 (18-05) | Query states render next to visible compare columns, so more than one state is shown at once |
+| WR-JSA-04 | warning | fixed in Phase 18 (18-05) | A mode switch cancels only Compare's timers; a pending Query run still fires in compare mode |
 | WR-JSA-05 | warning | fixed in Phase 18 (18-04) | While streaming, the result panel already shows 'Run complete.' and an enabled Promote |
 | WR-JSA-06 | warning | fixed in Phase 18 (18-05) | Every Compare Run column carries the q-success body, so per-column Open trace and Promote target the Default/naive trace |
 | WR-JSB-01 | warning | open | Evidence Inspector 'Open trace' opens an unrelated or stale trace |
@@ -36,7 +36,7 @@ Source: 17-REVIEW.md (39 findings: 0 critical, 17 warning, 22 info). The finding
 | IN-BLD-04 | info | open | Page-error assertion runs in fixture teardown, so a JS exception is reported as a teardown ERROR, not as a failure of the test |
 | IN-BLD-05 | info | open | Shared fixtures silently overwrite a same-named src/fixtures file |
 | IN-JSA-07 | info | open | Promote events from Query/Compare only add checkmarks and never clear earlier selections |
-| IN-JSA-08 | info | open | Promote stays enabled on a result with trace_token null |
+| IN-JSA-08 | info | fixed in Phase 18 (18-05) | Promote stays enabled on a result with trace_token null |
 | IN-JSA-09 | info | fixed in Phase 18 (18-04) | The refusal state view always says HTTP 422, whatever the response status |
 | IN-JSB-05 | info | open | Jobs poll reopens a closed drawer and keeps running on other screens |
 | IN-JSB-06 | info | open | Retry confirmation can land on a different document's row |
