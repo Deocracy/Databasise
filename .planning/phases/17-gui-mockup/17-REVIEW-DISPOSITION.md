@@ -15,7 +15,7 @@ Source: 17-REVIEW.md (39 findings: 0 critical, 17 warning, 22 info). The finding
 | ID | Severity | Disposition | Title |
 |----|----------|-------------|-------|
 | WR-BLD-01 | warning | open | Planned-item check matches the item text anywhere in the file, not inside the named planned list |
-| WR-JSA-01 | warning | open | Raw selector JSON accepts wrong member types, then Run throws an uncaught TypeError |
+| WR-JSA-01 | warning | fixed in Phase 18 (18-04) | Raw selector JSON accepts wrong member types, then Run throws an uncaught TypeError |
 | WR-JSA-02 | warning | open | Compare.run has no blocker guard, and QueryScreen.showState re-enables Run in compare mode |
 | WR-JSA-03 | warning | open | Query states render next to visible compare columns, so more than one state is shown at once |
 | WR-JSA-04 | warning | open | A mode switch cancels only Compare's timers; a pending Query run still fires in compare mode |
