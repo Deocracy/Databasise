@@ -10,4 +10,5 @@
 .graph-block td[data-role="types"] { min-width: 12ch; }
 .graph-block h3[data-role="node-id"] { margin: var(--sm) 0; }
 .graph-block .attrs { margin-top: var(--sm); }
+.graph-block .panel[aria-busy="true"] table { opacity: 0.55; }
 [data-role="busy-wrap"] .banner, [data-role="unknown-wrap"] .banner { margin: 0 0 var(--md); }

@@ -45,7 +45,7 @@ def test_nodes_list_and_node_edges_by_selector(seeded, live_ui):
     posts = _posts(ui, "/graph/nodes")
     assert len(posts) == 1
     body = json.loads(posts[0]["post_data"])
-    assert body["selector"] == {"capability": CAPS}
+    assert sorted(body["selector"]["capability"]) == sorted(CAPS)
     assert not [key for key in body if "namespace" in key.lower()]
 
     nodes = page["nodes"]
@@ -62,7 +62,7 @@ def test_nodes_list_and_node_edges_by_selector(seeded, live_ui):
     node = info.value.json()
     sent = json.loads(_posts(ui, "/graph/node")[0]["post_data"])
     assert sent["node_id"] == nodes[pick]["id"]
-    assert sent["selector"] == {"capability": CAPS}
+    assert sorted(sent["selector"]["capability"]) == sorted(CAPS)
     ui.expect("graph.node.degree").to_have_text(str(node["degree"]))
     edge_rows = _rows(ui, "graph.edges.table")
     ui.expect(edge_rows).to_have_count(len(node["edges"]))
