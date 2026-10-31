@@ -908,3 +908,4 @@
 {"v": 908, "ts": "2026-10-31T18:48:10Z", "op": "set-status", "id": "GUI-09", "changes": {"status": ["open", "done"]}}
 {"v": 909, "ts": "2026-10-31T18:48:10Z", "op": "set-status", "id": "GUI-10", "changes": {"status": ["open", "done"]}}
 {"v": 910, "ts": "2026-10-31T18:48:10Z", "op": "set-status", "id": "GUI-11", "changes": {"status": ["open", "done"]}}
+{"v": 911, "ts": "2026-10-31T20:37:48Z", "op": "freeze-variant", "id": "", "changes": {"mockup_freeze": [null, {"variant": "console-a", "path": "mockups/operator-console.html", "sha256": "bf98e79e0a0312940963efae9028e708a012021bfc62f51ebdbca57918034d20"}]}}

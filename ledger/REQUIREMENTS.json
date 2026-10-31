@@ -1,5 +1,5 @@
 {
-  "ledger_version": 910,
+  "ledger_version": 911,
   "frozen_at": null,
   "items": [
     {
@@ -2371,7 +2371,11 @@
   ],
   "current_phase": "17",
   "check_cmd": null,
-  "mockup_freeze": null,
+  "mockup_freeze": {
+    "variant": "console-a",
+    "path": "mockups/operator-console.html",
+    "sha256": "bf98e79e0a0312940963efae9028e708a012021bfc62f51ebdbca57918034d20"
+  },
   "scope_lock": null,
   "check_locks": {
     "commit": "8defea7c751d3788e8a7c654f36ad65fc6c8d8fb",
