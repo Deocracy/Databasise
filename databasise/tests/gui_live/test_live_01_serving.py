@@ -164,6 +164,45 @@ def test_console_csp_refuses_a_page_with_two_scripts():
     assert "script-src" in serve_rest.console_csp(data_block)
 
 
+def _health_word(ui) -> str:
+    return ui.page.locator('[data-role="health-word"]').text_content()
+
+
+def test_header_health_shows_the_live_health_result(live_app, live_ui):
+    expected = live_app.http.get("/health").json()["status"]
+    assert expected in ("ok", "degraded")
+    live_ui.expect("shell.health.status").to_have_attribute("data-state", expected)
+    assert _health_word(live_ui) == expected
+    assert live_ui.count("GET", "/health") == 1
+
+
+def test_header_shows_unreachable_when_the_health_fetch_is_rejected(live_app, browser):
+    ui = open_live_ui(browser, live_app, before_goto=lambda page: page.route("**/health", lambda route: route.abort()))
+    try:
+        ui.expect("shell.health.status").to_have_attribute("data-state", "error")
+        assert _health_word(ui) == "unreachable"
+        assert ui.page.locator('[data-role="health-badge"]').get_attribute("title") == "No response from the server."
+    finally:
+        ui.close()
+
+
+def test_header_shows_checking_then_times_out_after_60_seconds(live_app, browser):
+    def never_answer(page):
+        page.clock.install()
+        page.route("**/health", lambda route: None)
+
+    ui = open_live_ui(browser, live_app, before_goto=never_answer)
+    try:
+        ui.expect("shell.health.status").to_have_attribute("data-state", "loading")
+        assert _health_word(ui) == "checking"
+        ui.page.clock.run_for(61000)
+        ui.expect("shell.health.status").to_have_attribute("data-state", "error")
+        assert _health_word(ui) == "unreachable"
+        assert ui.page.locator('[data-role="health-badge"]').get_attribute("title") == "Health check timed out after 60 seconds."
+    finally:
+        ui.close()
+
+
 def test_the_wheel_ships_the_built_console(built_wheel):
     recorded = {line.split(",", 1)[0] for line in _dist_info_text(built_wheel, "RECORD").splitlines()}
     assert "databasise/console/operator-console.html" in recorded

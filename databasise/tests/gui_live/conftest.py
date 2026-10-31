@@ -268,7 +268,8 @@ class LiveUI:
 
     def goto(self) -> None:
         self.page.goto(f"{self.base}/console")
-        self.page.wait_for_function("typeof window.Console === 'object'")
+        # 18-03: the start-up sequence (openapi pass, first screen) ends by setting this attribute.
+        self.page.wait_for_selector('[data-mock-id="shell.root.app"][data-live-ready="true"]', state="attached")
 
     def close(self) -> None:
         self.context.close()
