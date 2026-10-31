@@ -62,6 +62,105 @@ function api(method, path, body, opts) {
     });
 }
 
+// Reads a text/event-stream response (D-10). The caller has checked res.ok and the content type. Frames are separated by a blank
+// line; a frame without a data line (a ": ping" comment) is skipped. onEvidence(ref) and onFinal(event) are called in arrival
+// order. Resolves true once a final event arrived and false when the stream ended without one, including a read that failed
+// after the first chunk (18-RESEARCH A3); a read that fails before any chunk rejects.
+function readStream(res, onEvidence, onFinal) {
+  var reader = res.body.getReader();
+  var decoder = new TextDecoder();
+  var buffer = "";
+  var gotChunk = false;
+  var sawFinal = false;
+
+  function frame(text) {
+    var data = text
+      .split(/\r?\n/)
+      .filter(function (line) {
+        return line.indexOf("data:") === 0;
+      })
+      .map(function (line) {
+        return line.slice(5).replace(/^ /, "");
+      })
+      .join("\n");
+    if (!data) return;
+    var event;
+    try {
+      event = JSON.parse(data);
+    } catch (ignored) {
+      return; // a frame that is not JSON counts as lost; without a final the run shows as unfinished
+    }
+    if (event.kind === "evidence") onEvidence(event.evidence);
+    else if (event.kind === "final") {
+      sawFinal = true;
+      onFinal(event);
+    }
+  }
+
+  function pump() {
+    return reader.read().then(
+      function (chunk) {
+        if (chunk.done) {
+          if (buffer.trim()) frame(buffer);
+          return sawFinal;
+        }
+        gotChunk = true;
+        buffer += decoder.decode(chunk.value, { stream: true });
+        var gap;
+        while ((gap = /\r?\n\r?\n/.exec(buffer))) {
+          frame(buffer.slice(0, gap.index));
+          buffer = buffer.slice(gap.index + gap[0].length);
+        }
+        return pump();
+      },
+      function (error) {
+        if (gotChunk) return sawFinal;
+        throw error;
+      }
+    );
+  }
+  return pump();
+}
+
+// A newest-first list kept in memory and mirrored to sessionStorage under `key`, trimmed to `cap`. Every storage access is in
+// try/catch: a storage that throws leaves the memory list working with no message (D-07, 18-RESEARCH Pitfall 13).
+function SessionLog(key, cap) {
+  var items = [];
+  try {
+    var parsed = JSON.parse(sessionStorage.getItem(key) || "[]");
+    if (Array.isArray(parsed)) {
+      items = parsed
+        .filter(function (entry) {
+          return entry !== null && typeof entry === "object";
+        })
+        .slice(0, cap);
+    }
+  } catch (ignored) {
+    // unreadable or blocked storage starts an empty log
+  }
+  function save() {
+    try {
+      sessionStorage.setItem(key, JSON.stringify(items));
+    } catch (ignored) {
+      // the memory list stays the source of truth
+    }
+  }
+  return {
+    all: function () {
+      return items.slice();
+    },
+    add: function (entry) {
+      items.unshift(entry);
+      items = items.slice(0, cap);
+      save();
+    },
+    clear: function () {
+      items = [];
+      save();
+    },
+  };
+}
+
 function normalizePath(path) {
   return path.replace(/\{[^}]*\}/g, "{}");
 }

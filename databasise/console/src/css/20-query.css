@@ -48,3 +48,5 @@ mark { padding: 0 var(--xs); border-radius: 4px; background: var(--warn-bg); col
 .actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sm); margin: var(--md) 0 var(--sm); }
 .cap-first::first-letter { text-transform: uppercase; }
 [data-mock-id="query.result.partial"], [data-mock-id="query.result.degraded"] { cursor: help; }
+/* 18-04: the run history keeps up to 50 rows and scrolls inside a fixed height (D-07). */
+[data-mock-id="query.history.panel"] .table-scroll { max-height: 240px; overflow-y: auto; }

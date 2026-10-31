@@ -281,6 +281,8 @@ mark { padding: 0 var(--xs); border-radius: 4px; background: var(--warn-bg); col
 .actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sm); margin: var(--md) 0 var(--sm); }
 .cap-first::first-letter { text-transform: uppercase; }
 [data-mock-id="query.result.partial"], [data-mock-id="query.result.degraded"] { cursor: help; }
+/* 18-04: the run history keeps up to 50 rows and scrolls inside a fixed height (D-07). */
+[data-mock-id="query.history.panel"] .table-scroll { max-height: 240px; overflow-y: auto; }
 /* Compare mode (17-07) */
 [data-mode="query"] .compare-only { display: none; }
 [data-mode="compare"] .query-only { display: none; }
@@ -3060,6 +3062,105 @@ function api(method, path, body, opts) {
     });
 }
 
+// Reads a text/event-stream response (D-10). The caller has checked res.ok and the content type. Frames are separated by a blank
+// line; a frame without a data line (a ": ping" comment) is skipped. onEvidence(ref) and onFinal(event) are called in arrival
+// order. Resolves true once a final event arrived and false when the stream ended without one, including a read that failed
+// after the first chunk (18-RESEARCH A3); a read that fails before any chunk rejects.
+function readStream(res, onEvidence, onFinal) {
+  var reader = res.body.getReader();
+  var decoder = new TextDecoder();
+  var buffer = "";
+  var gotChunk = false;
+  var sawFinal = false;
+
+  function frame(text) {
+    var data = text
+      .split(/\r?\n/)
+      .filter(function (line) {
+        return line.indexOf("data:") === 0;
+      })
+      .map(function (line) {
+        return line.slice(5).replace(/^ /, "");
+      })
+      .join("\n");
+    if (!data) return;
+    var event;
+    try {
+      event = JSON.parse(data);
+    } catch (ignored) {
+      return; // a frame that is not JSON counts as lost; without a final the run shows as unfinished
+    }
+    if (event.kind === "evidence") onEvidence(event.evidence);
+    else if (event.kind === "final") {
+      sawFinal = true;
+      onFinal(event);
+    }
+  }
+
+  function pump() {
+    return reader.read().then(
+      function (chunk) {
+        if (chunk.done) {
+          if (buffer.trim()) frame(buffer);
+          return sawFinal;
+        }
+        gotChunk = true;
+        buffer += decoder.decode(chunk.value, { stream: true });
+        var gap;
+        while ((gap = /\r?\n\r?\n/.exec(buffer))) {
+          frame(buffer.slice(0, gap.index));
+          buffer = buffer.slice(gap.index + gap[0].length);
+        }
+        return pump();
+      },
+      function (error) {
+        if (gotChunk) return sawFinal;
+        throw error;
+      }
+    );
+  }
+  return pump();
+}
+
+// A newest-first list kept in memory and mirrored to sessionStorage under `key`, trimmed to `cap`. Every storage access is in
+// try/catch: a storage that throws leaves the memory list working with no message (D-07, 18-RESEARCH Pitfall 13).
+function SessionLog(key, cap) {
+  var items = [];
+  try {
+    var parsed = JSON.parse(sessionStorage.getItem(key) || "[]");
+    if (Array.isArray(parsed)) {
+      items = parsed
+        .filter(function (entry) {
+          return entry !== null && typeof entry === "object";
+        })
+        .slice(0, cap);
+    }
+  } catch (ignored) {
+    // unreadable or blocked storage starts an empty log
+  }
+  function save() {
+    try {
+      sessionStorage.setItem(key, JSON.stringify(items));
+    } catch (ignored) {
+      // the memory list stays the source of truth
+    }
+  }
+  return {
+    all: function () {
+      return items.slice();
+    },
+    add: function (entry) {
+      items.unshift(entry);
+      items = items.slice(0, cap);
+      save();
+    },
+    clear: function () {
+      items = [];
+      save();
+    },
+  };
+}
+
 function normalizePath(path) {
   return path.replace(/\{[^}]*\}/g, "{}");
 }
@@ -3596,6 +3697,10 @@ var QueryScreen = (function () {
   var ERROR_STATES = ["refusal-422", "validation-422", "error-500"];
   var SHAPE_STATE = { refusal: "refusal-422", validation: "validation-422", "server-failure": "error-500", generic: "error-500" };
   var MEMBERS = ["alias", "capability", "harness"];
+  var RECEIVING = "Receiving evidence";
+  var NO_TRACE = "No trace token on this result.";
+  var UNFINISHED = "The run did not finish.";
+  var DISCONNECTED = "The stream closed before the final event. Evidence received so far is shown below; the run is not complete. Run again to retry.";
   var MSG = {
     textEmpty: "Query text is empty. Enter at least one non-space character.",
     badJson: "Raw selector JSON is not valid JSON.",
@@ -3605,7 +3710,7 @@ var QueryScreen = (function () {
   var errorsBox = root.querySelector('[data-role="errors"]');
   var evidenceRefs = [];
   var lastTrace = null;
-  var runLog = [];
+  var runLog = SessionLog("databasise.console.history", 50);
   var controller = null;
   var touched = false;
   var mode = "query";
@@ -3712,9 +3817,11 @@ var QueryScreen = (function () {
   }
 
   // Open trace, Copy, promote from this result: enabled only for a finished run that carries a trace token (IN-JSA-08).
-  function syncTraceControls(env) {
-    lastTrace = env ? env.trace_token || null : null;
-    var partial = !!env && !!env.partial;
+  // phase is "streaming" (before the final event), "unfinished" (the stream ended without one) or "done" (env is the envelope).
+  function syncTraceControls(env, phase) {
+    var done = phase === "done";
+    lastTrace = done ? env.trace_token || null : null;
+    var partial = done && !!env.partial;
     var link = ID("result.trace-link");
     if (lastTrace) {
       link.setAttribute("href", "#evidence");
@@ -3725,9 +3832,12 @@ var QueryScreen = (function () {
       link.setAttribute("aria-disabled", "true");
       link.setAttribute("tabindex", "-1");
     }
-    root.querySelector('[data-role="no-trace"]').hidden = !env || !!lastTrace;
+    var reason = root.querySelector('[data-role="no-trace"]');
+    reason.textContent = phase === "unfinished" ? UNFINISHED : NO_TRACE;
+    reason.hidden = phase === "streaming" || !!lastTrace;
     ID("result.copy-trace").hidden = !lastTrace;
-    setDisabled(ID("result.promote"), !env || partial || !lastTrace);
+    setDisabled(ID("result.promote"), !done || partial || !lastTrace);
+    setDisabled(ID("result.compare"), phase === "streaming");
     root.querySelector('[data-role="no-promote"]').hidden = !partial;
   }
 
@@ -3736,6 +3846,7 @@ var QueryScreen = (function () {
     var answer = ID("result.answer");
     answer.textContent = env.answer || "No answer was produced.";
     answer.classList.toggle("muted", !env.answer);
+    ID("result.depth").hidden = false;
     ID("result.depth").textContent = "depth: " + (env.depth_label || "not answered");
     ID("result.depth").title = "operator diagnostics\ndepth_label: " + env.depth_label;
     renderBadge("partial", partial, "▲ partial", "stop_reason: " + env.stop_reason);
@@ -3744,7 +3855,7 @@ var QueryScreen = (function () {
     fillEvidence(env.evidence);
     renderTokens(env.token_accounting);
     renderSeam(env.seam_events);
-    syncTraceControls(env);
+    syncTraceControls(env, "done");
     showState(partial ? "partial" : env.evidence.length === 0 ? "empty-evidence" : "success");
   }
 
@@ -3763,8 +3874,9 @@ var QueryScreen = (function () {
   }
 
   function renderHistory() {
-    ensureRows(ID("history.table").tBodies[0], runLog.length).forEach(function (row, i) {
-      var entry = runLog[i];
+    var entries = runLog.all();
+    ensureRows(ID("history.table").tBodies[0], entries.length).forEach(function (row, i) {
+      var entry = entries[i];
       cell(row, 0, String(entry.timestamp).slice(0, 19).replace("T", " "));
       cell(row, 1, selectorLabel(entry.selector));
       cell(row, 2, entry.trace_token ? String(entry.trace_token).slice(0, 8) : "—");
@@ -3774,7 +3886,7 @@ var QueryScreen = (function () {
   }
 
   function remember(env, body) {
-    runLog.unshift({ query: body.query.text, selector: body.selector, trace_token: env.trace_token, timestamp: new Date().toISOString() });
+    runLog.add({ query: body.query.text, selector: body.selector, trace_token: env.trace_token, timestamp: new Date().toISOString() });
     renderHistory();
   }
 
@@ -3843,6 +3955,86 @@ var QueryScreen = (function () {
     if (touched) validate();
   });
 
+  // The layout before the final event: a running notice, rows as they arrive, nothing to open or promote yet.
+  function beginStream() {
+    var answer = ID("result.answer");
+    answer.textContent = RECEIVING;
+    answer.classList.add("muted");
+    ID("result.depth").hidden = true;
+    renderBadge("partial", false);
+    renderBadge("degraded", false);
+    fillEvidence([]);
+    renderTokens([]);
+    renderSeam([]);
+    syncTraceControls(null, "streaming");
+    showState("running");
+    ID("result.panel").hidden = false;
+  }
+
+  // The stream ended without a final event: the generic view, the rows already received stay, nothing is promoted or remembered.
+  function showDisconnected() {
+    showState("error-500");
+    ID("result.panel").hidden = false;
+    var answer = ID("result.answer");
+    answer.textContent = "No answer was produced.";
+    answer.classList.add("muted");
+    syncTraceControls(null, "unfinished");
+    renderError("query", 0, null, { text: DISCONNECTED });
+  }
+
+  // A read that fails before any byte arrives: the server went away.
+  function lost(mine) {
+    return function () {
+      if (mine !== controller) return;
+      Console.emit("unreachable");
+      applyResponse(0, "server unreachable");
+    };
+  }
+
+  function runStream(body, mine) {
+    var refs = [];
+    var finalEvent = null;
+    beginStream();
+    api("POST", "/query/stream", body, { raw: true, signal: mine.signal, kind: "query" }).then(function (result) {
+      if (result.aborted || mine !== controller) return;
+      if (result.status === 0) return applyResponse(0, result.body);
+      var res = result.res;
+      if (!res.ok || (res.headers.get("content-type") || "").indexOf("text/event-stream") !== 0) {
+        // Not a stream (a refusal, a validation list, a 500): nothing is parsed as events.
+        return res.text().then(function (text) {
+          var parsed = text;
+          try {
+            parsed = JSON.parse(text);
+          } catch (ignored) {
+            // not JSON: the text itself is the body
+          }
+          if (mine === controller) applyResponse(res.status, parsed);
+        }, lost(mine));
+      }
+      return readStream(
+        res,
+        function (ref) {
+          if (mine !== controller) return;
+          refs.push(ref);
+          fillEvidence(refs);
+        },
+        function (event) {
+          finalEvent = event;
+        }
+      ).then(function (finished) {
+        if (mine !== controller) return;
+        if (!finished) return showDisconnected();
+        var env = {};
+        Object.keys(finalEvent).forEach(function (key) {
+          if (key !== "kind") env[key] = finalEvent[key];
+        });
+        env.evidence = refs;
+        renderResult(env);
+        remember(env, body);
+      }, lost(mine));
+    });
+  }
+
   function run() {
     if (mode === "compare") return Compare.run();
     touched = true;
@@ -3857,6 +4049,7 @@ var QueryScreen = (function () {
     if (controller) controller.abort();
     var mine = (controller = new AbortController());
     var body = { query: { text: ID("text.input").value }, selector: check.selector };
+    if (ID("run.stream").checked) return runStream(body, mine);
     showState("running");
     api("POST", "/query", body, { signal: mine.signal, kind: "query" }).then(function (result) {
       if (result.aborted || mine !== controller) return;
@@ -3925,7 +4118,7 @@ var QueryScreen = (function () {
     Console.emit("open-evidence", { ref: ref, score: ref.score, trace_token: lastTrace });
   });
   ID("history.table").addEventListener("click", function (event) {
-    var entry = runLog[rowIndex(event)];
+    var entry = runLog.all()[rowIndex(event)];
     if (!entry || !entry.trace_token) return;
     Console.show("evidence");
     Console.emit("open-trace", { token: entry.trace_token });
