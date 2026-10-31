@@ -261,7 +261,7 @@ function markAbsent(el) {
   if (!controls.length) return;
   var line = document.createElement("span");
   line.className = "needs-route muted";
-  line.textContent = "Needs " + (route ? route.method + " " + route.path : value) + ".";
+  line.textContent = "Needs " + value + "."; // the full value, so "GET /corpus (status, sort, search)" names its parameters
   el.appendChild(line);
 }
 

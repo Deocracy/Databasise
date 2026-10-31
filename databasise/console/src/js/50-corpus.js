@@ -1,3 +1,7 @@
+WIRED["corpus GET /info"] = true;
+WIRED["corpus GET /wirings"] = true;
+WIRED["corpus GET /log"] = true;
+
 var CorpusScreen = (function () {
   var STORE_KEYS = [
     "kv:text_chunks", "graph:chunk_entity_relation", "vector:chunks", "vector:entities", "vector:relationships",
@@ -22,7 +26,6 @@ var CorpusScreen = (function () {
   };
   var NON_TERMINAL = ["pending", "parsing", "analyzing", "processing", "preprocessed"];
   var COUNTS_POLL_MS = 30000;
-  var RETRY_MS = 300;
 
   var root = $id("screen-corpus");
   var errorsBox = root.querySelector('[data-role="errors"]');
@@ -39,6 +42,9 @@ var CorpusScreen = (function () {
   var statusFilter = "all";
   var isLoading = false;
   var loadedOnce = false;
+  var retrying = {}; // document_id -> true while its POST /retry is outstanding
+  var pendingFocus = ""; // a focus-document id that arrived while the first page was still loading
+  var note = root.querySelector('[data-role="note"]');
   var pageCtl = null;
   var countsCtl = null;
   var healthPoll = null;
@@ -98,25 +104,6 @@ var CorpusScreen = (function () {
     repaintHealthError();
   }
 
-  // The mock outcome select decides which server response the next retry gets (18-07 Task 3 replaces it).
-  function failure(op, documentId) {
-    var o = ID("mock.outcome").value;
-    var retry = op === "retry";
-    if (o === "refusal") {
-      if (retry) return [404, { refusal_type: "UnknownDocumentError", message: "no document with this id in the v1 corpus", document_id: documentId }];
-      return [422, { refusal_type: "PageSizeExceededError", message: "page size above the limit", requested: 500, limit: 100 }];
-    }
-    if (o === "validation") {
-      var loc = retry ? ["path", "document_id"] : ["query", "limit"];
-      return [422, { detail: [{ loc: loc, msg: retry ? "Field required" : "Input should be greater than or equal to 1", type: "value_error" }] }];
-    }
-    if (o === "server-failure") {
-      return [502, { refusal_type: "ForeignEngineRefusalError", message: "operation '" + op + "' failed (CorpusOpSubprocessError)", operation: op, failure_class: "CorpusOpSubprocessError", cause: "the v1 driver exited with status 1" }];
-    }
-    if (o === "generic") return [500, "Internal Server Error"];
-    return null;
-  }
-
   // ---- health ----
 
   function fillStores(stores) {
@@ -149,14 +136,6 @@ var CorpusScreen = (function () {
     else paintBadge(badge, value ? "ok" : "fail", value ? "yes" : "no");
   }
 
-  function fillBusy() {
-    var info = FIX.shell.info;
-    var box = ID("health.busy");
-    clearNode(box);
-    box.appendChild(chip("write in flight: " + (info.write_in_flight ? "yes" : "no"), info.write_in_flight ? "warn" : "neutral"));
-    box.appendChild(chip("graph in use: " + (info.graph_busy ? "yes" : "no"), info.graph_busy ? "warn" : "neutral"));
-  }
-
   function paintHealth() {
     var report = Console.health();
     var state = healthState(report);
@@ -187,7 +166,6 @@ var CorpusScreen = (function () {
       chips.appendChild(chip(GLYPH[present ? "ok" : "warn"] + " " + name + " " + (present ? "present" : "missing"), present ? "ok" : "warn"));
     });
     ID("health.reasons").querySelector('[data-role="text"]').textContent = failed ? "not probed" : report.engine_reason || "none reported";
-    if (!failed) fillBusy();
   }
 
   function clockText() {
@@ -247,6 +225,25 @@ var CorpusScreen = (function () {
     return row.querySelector('[data-mock-id^="corpus.table.' + prefix + '-"]');
   }
 
+  // A retry is a write: once sent it is never aborted, so its row stays busy across a table refresh until the answer arrives.
+  function paintRetrying(row, button, busy) {
+    var message = row.querySelector('[data-role="retry-msg"]');
+    setDisabled(button, busy);
+    if (busy) button.setAttribute("aria-busy", "true");
+    else button.removeAttribute("aria-busy");
+    message.hidden = !busy;
+    message.textContent = busy ? "Sending. A request that has been sent cannot be cancelled." : "";
+  }
+
+  // The visible row for a document id, or null.
+  function rowOf(id) {
+    return (
+      Array.prototype.filter.call(tbody.rows, function (row) {
+        return !row.hidden && row.querySelector('[data-role="id"]').textContent === id;
+      })[0] || null
+    );
+  }
+
   function fillRows(list) {
     ensureRows(tbody, list.length).forEach(function (row, i) {
       var doc = list[i];
@@ -256,11 +253,10 @@ var CorpusScreen = (function () {
       row.setAttribute("data-status", doc.status);
       row.removeAttribute("aria-current");
       row.removeAttribute("tabindex");
-      row.querySelector('[data-role="retry-msg"]').hidden = true;
+      paintRetrying(row, retry, !!retrying[doc.document_id]);
       toggle.setAttribute("aria-expanded", "false");
       toggle.textContent = "Show error";
       reason.hidden = true;
-      setDisabled(retry, false);
       row.querySelector('[data-role="id"]').textContent = doc.document_id;
       paintBadge(row.querySelector('[data-role="status"]'), STATUS_STATE[doc.status] || "neutral", doc.status);
       row.querySelector('[data-role="updated"]').textContent = doc.updated_at;
@@ -373,6 +369,7 @@ var CorpusScreen = (function () {
     if (pageCtl) pageCtl.abort();
     var mine = (pageCtl = new AbortController());
     hideErrors();
+    note.hidden = true;
     isLoading = true;
     paintBusy();
     return api("GET", "/corpus?limit=" + size + "&offset=" + offset, null, { signal: mine.signal }).then(function (result) {
@@ -383,6 +380,7 @@ var CorpusScreen = (function () {
       if (ok(result) && result.body && Array.isArray(result.body.documents)) page = { offset: offset, limit: size, body: result.body };
       else if (!ok(result)) showError(result.status, result.body);
       paintPage();
+      if (pendingFocus) applyFocus();
     });
   }
 
@@ -405,50 +403,88 @@ var CorpusScreen = (function () {
     loadCounts();
   }
 
-  function retryDocument(n) {
-    var row = tbody.rows[n - 1];
-    var button = ID("table.retry-" + n);
-    var message = row.querySelector('[data-role="retry-msg"]');
-    var id = row.querySelector('[data-role="id"]').textContent;
+  // IN-JSB-06: the id is the one on the pressed row; the answer is written to the row that holds that id when it arrives, whatever
+  // the row order is by then. A write is never aborted once sent.
+  function retryDocument(id) {
+    if (retrying[id]) return;
     hideErrors();
-    setDisabled(button, true);
-    button.setAttribute("aria-busy", "true");
-    setTimeout(function () {
-      button.removeAttribute("aria-busy");
-      setDisabled(button, false);
-      var bad = failure("retry", id);
-      if (bad) return showError(bad[0], bad[1]);
-      message.textContent = "Retry enqueued: job " + FIX.corpus.retry.job_id;
+    retrying[id] = true;
+    var pressed = rowOf(id);
+    if (pressed) paintRetrying(pressed, control(pressed, "retry"), true);
+    api("POST", "/documents/" + encodeURIComponent(id) + "/retry", null, { kind: "ingest" }).then(function (result) {
+      delete retrying[id];
+      var row = rowOf(id);
+      if (row) paintRetrying(row, control(row, "retry"), false);
+      if (!ok(result)) return showError(result.status, result.body);
+      var text = "Retry enqueued: job " + (result.body && result.body.job_id);
+      if (!row) {
+        note.textContent = "Document " + id + " is not on the loaded page. " + text;
+        note.hidden = false;
+        return;
+      }
+      var message = row.querySelector('[data-role="retry-msg"]');
+      message.textContent = text;
       message.hidden = false;
-    }, RETRY_MS);
+    });
+  }
+
+  // IN-JSB-07, Corpus side: mark the row and focus it, or say the document is not on this page.
+  function applyFocus() {
+    var id = pendingFocus;
+    pendingFocus = "";
+    note.hidden = true;
+    Array.prototype.forEach.call(tbody.rows, function (row) {
+      row.removeAttribute("aria-current");
+    });
+    var row = rowOf(id);
+    if (!row) {
+      note.textContent = "Document " + id + " is not on the loaded page.";
+      note.hidden = false;
+      return;
+    }
+    row.setAttribute("aria-current", "true");
+    row.setAttribute("tabindex", "-1");
+    row.focus();
   }
 
   // ---- operator panels ----
 
-  function fillInstance() {
-    var info = FIX.shell.info;
+  function paintInfo(info) {
     var panel = ID("instance.panel");
+    var clients = info.clients || {};
     ID("instance.version").textContent = info.version;
     ID("instance.workspace").textContent = info.workspace;
     panel.querySelector('[data-role="clients"]').textContent = CLIENTS.map(function (c) {
-      return c + " " + (info.clients[c] ? "yes" : "no");
+      return c + " " + (clients[c] ? "yes" : "no");
     }).join(", ");
     panel.querySelector('[data-role="write"]').textContent = info.write_in_flight ? "yes" : "no";
     panel.querySelector('[data-role="graph"]').textContent = info.graph_busy ? "yes" : "no";
+    // The same chips as the header (18-03): shown only while true.
+    var box = ID("health.busy");
+    clearNode(box);
+    [["write_in_flight", "write in flight"], ["graph_busy", "graph in use"]].forEach(function (pair) {
+      if (info[pair[0]]) box.appendChild(chip("▲ " + pair[1], "warn"));
+    });
   }
 
   function yesNo(value) {
     return value ? "yes" : "no";
   }
 
-  function fillWirings() {
-    var body = ID("wirings.table").tBodies[0];
-    FIX.corpus.wirings.forEach(function (w) {
-      var row = h("tr");
-      [w.name, w.wiring_id, w.wiring_version, w.title, String(w.node_count), w.effects.join(", "), w.provides.join(", "), w.harnesses.join(", ") || "none", yesNo(w.default_eligible), yesNo(w.is_default), yesNo(w.reachable)].forEach(function (text, i) {
-        row.appendChild(h("td", text, i < 3 ? "mono" : ""));
+  function loadWirings() {
+    if (!Live.has("GET", "/wirings")) return;
+    api("GET", "/wirings").then(function (result) {
+      if (!ok(result)) return showError(result.status, result.body);
+      if (!Array.isArray(result.body)) return;
+      var body = ID("wirings.table").tBodies[0];
+      clearNode(body);
+      result.body.forEach(function (w) {
+        var row = h("tr");
+        [w.name, w.wiring_id, w.wiring_version, w.title, String(w.node_count), (w.effects || []).join(", "), (w.provides || []).join(", "), (w.harnesses || []).join(", ") || "none", yesNo(w.default_eligible), yesNo(w.is_default), yesNo(w.reachable)].forEach(function (text, i) {
+          row.appendChild(h("td", text, i < 3 ? "mono" : ""));
+        });
+        body.appendChild(row);
       });
-      body.appendChild(row);
     });
   }
 
@@ -479,10 +515,19 @@ var CorpusScreen = (function () {
     return valid ? n : null;
   }
 
-  function fillLog() {
+  function loadLog() {
     var n = checkLimit();
-    if (n === null) return;
-    ID("log.lines").textContent = FIX.corpus.log.lines.slice(-n).join("\n");
+    if (n === null || !Live.has("GET", "/log")) return;
+    var button = ID("log.refresh");
+    setDisabled(button, true);
+    button.setAttribute("aria-busy", "true");
+    api("GET", "/log?limit=" + n).then(function (result) {
+      setDisabled(button, false);
+      button.removeAttribute("aria-busy");
+      if (!ok(result)) return showError(result.status, result.body);
+      var lines = result.body && result.body.lines;
+      ID("log.lines").textContent = Array.isArray(lines) ? lines.join("\n") : "";
+    });
   }
 
   function openPanel(name) {
@@ -498,6 +543,14 @@ var CorpusScreen = (function () {
     if (name === "corpus" && !loadedOnce) refreshAll();
   });
   Console.on("corpus-changed", refreshAll);
+  Console.on("info", paintInfo);
+  Console.on("focus-document", function (id) {
+    pendingFocus = id;
+    if (loadedOnce && !isLoading) applyFocus();
+  });
+  ID("wirings.panel").addEventListener("toggle", function () {
+    if (this.open) loadWirings();
+  });
   Console.on("focus-health", function () {
     ID("health.panel").scrollIntoView({ block: "start" });
     ID("health.refresh").focus();
@@ -562,18 +615,15 @@ var CorpusScreen = (function () {
     } else if (mock.indexOf("corpus.table.delete-") === 0) {
       Console.emit("delete-document", { document_id: row.querySelector('[data-role="id"]').textContent });
     } else if (mock.indexOf("corpus.table.retry-") === 0) {
-      retryDocument(Number(mock.slice(mock.lastIndexOf("-") + 1)));
+      retryDocument(row.querySelector('[data-role="id"]').textContent);
     }
   });
   ID("catalogue.filter").addEventListener("input", fillCatalogue);
   ID("log.limit").addEventListener("input", checkLimit);
-  ID("log.refresh").addEventListener("click", fillLog);
+  ID("log.refresh").addEventListener("click", loadLog);
 
   wireErrors("corpus");
-  fillInstance();
-  fillWirings();
   fillCatalogue();
-  fillLog();
   checkSize();
   paintHealth();
   paintHealthNote();

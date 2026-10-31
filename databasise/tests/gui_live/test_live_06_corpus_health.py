@@ -304,7 +304,7 @@ def test_absent_corpus_controls_are_disabled_with_their_route(corpus_docs, live_
 
     ui.el("corpus.catalogue.toggle").click()
     ui.expect(ui.el("corpus.catalogue.table").locator("tbody tr").first).to_be_visible()
-    ui.expect(ui.page.locator(f'{SCREEN} [data-needs-backend="GET /refusals"] .badge-nb')).to_be_visible()
+    ui.expect(ui.el("corpus.catalogue.toggle").locator(".badge-nb")).to_be_visible()
 
 
 def test_focus_document_marks_the_row_or_says_not_on_page(corpus_docs, live_ui):
