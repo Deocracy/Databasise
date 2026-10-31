@@ -763,6 +763,8 @@ Built by Phase 16. Section 5.2 below is the existing-defects section, so this on
 
 Launch: `databasise-rest --operator [--log-file PATH]`. `--operator` needs a loopback `--host`; without the flag every path below is a 404. Every route is REST-only (no MCP tool; COVERAGE.md "Operations deliberately absent"). Paged routes take `limit` and `offset` and answer `next_offset` (null on the last page).
 
+Console (Phase 18, D-01, D-02): `databasise-rest --operator --console --log-file PATH` plus the usual `--store-root`, `--workspace` and client arguments serves the built console at `GET /console` on the same origin. `--console` needs a loopback `--host` and a fixed `--port`, does not imply `--operator`, and the route is hidden from `/openapi.json`.
+
 | Route | Request | Response | Named refusals |
 |---|---|---|---|
 | `GET /info` | none | `{version, workspace, clients: {llm, embedding, rerank}, write_in_flight, graph_busy}` | none |

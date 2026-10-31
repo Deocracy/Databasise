@@ -25,7 +25,7 @@ from urllib.parse import urlparse
 import httpx
 import pytest
 
-from databasise.tests.gui_live import _corpus_fake
+from databasise.tests.gui_live import _corpus_fake, _opened
 from databasise.tests.seam.test_hipporag_write_path import (
     _DOCUMENT_TEXT,
     _StubEmbeddingClient,
@@ -234,7 +234,7 @@ def browser():
     pw.stop()
 
 
-_OPENED: list["LiveUI"] = []
+_OPENED = _opened.OPENED  # shared list, see _opened.py
 
 
 class LiveUI:
