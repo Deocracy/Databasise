@@ -1,4 +1,4 @@
-"""LIVE-02 (D-10, D-11): Query mode runs against the real API; the compare part is added by 18-05.
+"""LIVE-02 (D-10, D-11): Query mode and Compare mode run against the real API.
 
 The row test is ``test_query_without_stream_renders_answer_evidence_and_trace_link``: with Stream off,
 ``query.run.submit`` sends one ``POST /query`` and the answer, badges, every evidence row, token table,
@@ -15,7 +15,9 @@ import contextlib
 import json
 from urllib.parse import urlparse
 
-from databasise.tests.gui_live.conftest import open_live_ui
+import pytest
+
+from databasise.tests.gui_live.conftest import HIPPORAG, open_live_ui
 
 CAPS = ["reads_graph", "reads_kv"]
 EVIDENCE_ROWS = '[data-mock-id="query.evidence.table"] tbody tr:not([hidden])'
@@ -296,3 +298,96 @@ def test_promote_from_result_disabled_without_trace_token(seeded, browser):
         ui.expect("query.result.promote").to_be_disabled()
         ui.expect(ui.page.get_by_text("No trace token on this result.", exact=True)).to_be_visible()
         assert ui.el("query.result.trace-link").get_attribute("aria-disabled") == "true"
+
+
+# ---- Compare mode (18-05): one POST /compare, a bare envelope or a map keyed by the comparison key ----
+
+
+@pytest.fixture(scope="module")
+def answer_alias(seeded):
+    """The alias ``answer`` promoted from a HippoRAG trace: a compare key literally named like the envelope field."""
+    trace = seeded.query("Ed Wood", HIPPORAG)["trace_token"]
+    return seeded.promote("answer", [trace])
+
+
+def _open_compare(ui, text="Ed Wood"):
+    ui.el("query.mode.compare").click()
+    ui.el("query.text.input").fill(text)
+
+
+def _row_capability(ui, i, caps=CAPS):
+    ui.el(f"query.row{i}.kind").select_option("capability")
+    ui.el(f"query.row{i}.capability").select_option(caps)
+
+
+def _row_alias(ui, i, alias):
+    ui.el(f"query.row{i}.kind").select_option("alias")
+    ui.el(f"query.row{i}.alias").fill(alias)
+
+
+def _two_rows(ui, second="alias"):
+    """Row 1 is the HippoRAG capability set; row 2 is the alias ``answer`` (or Default)."""
+    _open_compare(ui)
+    _row_capability(ui, 1)
+    ui.el("query.compare.add").click()
+    if second == "alias":
+        _row_alias(ui, 2, "answer")
+
+
+def _run_compare(ui):
+    with ui.page.expect_response(_is_post("/compare")) as info:
+        ui.el("query.run.submit").click()
+    return info.value.json()
+
+
+def _sent(ui):
+    posts = _posts(ui, "/compare")
+    assert len(posts) == 1
+    return json.loads(posts[0]["post_data"])
+
+
+def _click_each_column_token(ui, columns):
+    """Clicks each column's Open trace and returns the tokens the console emitted, in column order."""
+    ui.page.evaluate("window.__tokens = []; Console.on('open-trace', (p) => { window.__tokens.push(p.token); })")
+    for c in range(1, columns + 1):
+        ui.nav("query")
+        ui.el(f"query.col{c}.trace-link").click()
+    return ui.page.evaluate("window.__tokens")
+
+
+def test_compare_two_selectors_fills_each_column_from_its_own_key(answer_alias, live_ui):
+    ui = live_ui
+    _two_rows(ui)
+    ui.expect("query.run.submit").to_have_text("Run compare")
+    body = _run_compare(ui)
+
+    sent = _sent(ui)
+    assert set(sent) == {"query", "selectors"}
+    assert sent["query"] == {"text": "Ed Wood"}
+    assert set(sent["selectors"][0]) == {"capability"}
+    assert sorted(sent["selectors"][0]["capability"]) == CAPS
+    assert sent["selectors"][1] == {"alias": "answer"}
+
+    # A map keyed by the comparison key, one key literally named like the envelope field `answer`.
+    keys = list(body)
+    assert len(keys) == 2 and "answer" in keys
+    assert "trace_token" not in body
+    tokens = [body[k]["trace_token"] for k in keys]
+    assert tokens[0] != tokens[1]
+
+    for c, key in enumerate(keys, start=1):
+        ui.expect(f"query.col{c}.panel").to_be_visible()
+        ui.expect(f"query.col{c}.header").to_contain_text(key)
+        ui.expect(f"query.col{c}.answer").to_have_text(body[key]["answer"])
+    ui.expect("query.col3.panel").to_be_hidden()
+    assert _click_each_column_token(ui, 2) == tokens
+
+    ui.nav("query")
+    ui.el("query.history.toggle").click()
+    rows = ui.page.locator(HISTORY_ROWS)
+    ui.expect(rows).to_have_count(2)
+    entries = _stored(ui)
+    assert sorted(e["trace_token"] for e in entries) == sorted(tokens)
+    by_token = {e["trace_token"]: e["selector"] for e in entries}
+    assert by_token[body[keys[0]]["trace_token"]] == sent["selectors"][0]
+    assert by_token[body[keys[1]]["trace_token"]] == {"alias": "answer"}
