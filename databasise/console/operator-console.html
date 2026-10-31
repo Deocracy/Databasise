@@ -2895,35 +2895,58 @@ var Console = {
 
 var HEALTH_WORDS = { ok: "ok", degraded: "degraded", loading: "checking", error: "unreachable" };
 var HEALTH_GLYPHS = { ok: "✓", degraded: "▲", loading: "", error: "✕" };
-var healthFixture = "health-ok";
+var HEALTH_TIMEOUT_MS = 60000;
 
 function healthState(h) {
   if (h.loading) return "loading";
   return typeof h.status === "number" ? "error" : h.status;
 }
 
-function renderHealth(fixtureName) {
-  healthFixture = fixtureName;
-  var state = healthState(FIX.health[fixtureName]);
+// report: {loading: true}, a GET /health body, or {status: <number>, text: <cause>}.
+function renderHealth(report) {
+  Live.healthReport = report;
+  var state = healthState(report);
   $id("shell.health.status").setAttribute("data-state", state);
   var badge = document.querySelector('[data-role="health-badge"]');
   badge.setAttribute("data-state", state);
   badge.querySelector(".spinner").hidden = state !== "loading";
   badge.querySelector('[data-role="health-glyph"]').textContent = HEALTH_GLYPHS[state];
   badge.querySelector('[data-role="health-word"]').textContent = HEALTH_WORDS[state];
+  if (state === "error" && report.text) badge.setAttribute("title", report.text);
+  else badge.removeAttribute("title");
   Console.emit("health", state);
 }
 
-// Corpus & Health reuses the same fixture object.
+// Corpus & Health reads the same report.
 Console.health = function () {
-  return FIX.health[healthFixture];
+  return Live.healthReport;
 };
 
-$id("shell.instance.chip").textContent = "version " + FIX.shell.info.version + " · workspace " + FIX.shell.info.workspace;
+// The 60 s abort is a setTimeout (not AbortSignal.timeout) so a faked clock can drive it in tests.
+Console.loadHealth = function () {
+  renderHealth({ loading: true });
+  var controller = new AbortController();
+  var timer = setTimeout(function () {
+    controller.abort();
+  }, HEALTH_TIMEOUT_MS);
+  return api("GET", "/health", null, { signal: controller.signal }).then(function (result) {
+    clearTimeout(timer);
+    var report;
+    if (result.aborted) report = { status: 0, text: "Health check timed out after 60 seconds." };
+    else if (result.status === 0) report = { status: 0, text: "No response from the server." };
+    else if (result.status >= 200 && result.status < 300 && result.body && (result.body.status === "ok" || result.body.status === "degraded")) report = result.body;
+    else report = { status: result.status, text: "The server answered HTTP " + result.status + "." };
+    renderHealth(report);
+    Console.emit("health-report", report);
+    return report;
+  });
+};
 
-$id("shell.mock.health-fixture").addEventListener("change", function (event) {
-  renderHealth("health-" + event.target.value);
+// A rejected call on any screen also puts the header at unreachable (D-12).
+Console.on("unreachable", function () {
+  renderHealth({ status: 0, text: "No response from the server." });
 });
+
 $id("shell.health.details").addEventListener("click", function () {
   Console.show("corpus");
   Console.emit("focus-health");
@@ -2939,27 +2962,92 @@ window.addEventListener("hashchange", function () {
   if (name !== Console.current) Console.show(name);
 });
 
-function dispatch(method) {
-  return function (screen) {
-    var impl = Console.screens[screen];
-    if (!impl || typeof impl[method] !== "function") {
-      throw new Error(screen + " has no " + method);
-    }
-    return impl[method].apply(impl, Array.prototype.slice.call(arguments, 1));
-  };
+window.Console = Console;
+"use strict";
+// 18-03 (D-05, D-13): the live core. `api` is the only fetch call in the console and always resolves; `InFlight` is the
+// shared registry of calls that block the header health poll; `Live` holds the OpenAPI spec and the last health report.
+
+var InFlight = {
+  counts: {},
+  begin: function (kind) {
+    var ended = false;
+    this.counts[kind] = (this.counts[kind] || 0) + 1;
+    Console.emit("inflight");
+    return function () {
+      if (ended) return;
+      ended = true;
+      InFlight.counts[kind] -= 1;
+      Console.emit("inflight");
+    };
+  },
+  any: function () {
+    var counts = this.counts;
+    return Object.keys(counts).some(function (kind) {
+      return counts[kind] > 0;
+    });
+  },
+  writing: function () {
+    return (this.counts.ingest || 0) + (this.counts["delete"] || 0) > 0;
+  },
+};
+
+// Resolves {status, body}; {status: 0, body: "server unreachable"} for a rejected fetch; {status: -1, aborted: true}
+// for an abort; {status, res} with opts.raw. opts.kind registers the call in InFlight. Never throws.
+function api(method, path, body, opts) {
+  opts = opts || {};
+  var init = { method: method, headers: {}, signal: opts.signal };
+  if (typeof FormData !== "undefined" && body instanceof FormData) {
+    init.body = body; // no Content-Type: the browser adds the multipart boundary
+  } else if (body !== undefined && body !== null) {
+    init.headers["Content-Type"] = "application/json";
+    init.body = JSON.stringify(body);
+  }
+  var done = opts.kind ? InFlight.begin(opts.kind) : function () {};
+  return fetch(path, init)
+    .then(function (res) {
+      if (opts.raw) return { status: res.status, res: res };
+      return res.text().then(function (text) {
+        var parsed = text;
+        try {
+          parsed = JSON.parse(text);
+        } catch (ignored) {
+          // not JSON: the text itself is the body
+        }
+        return { status: res.status, body: parsed };
+      });
+    })
+    .catch(function (error) {
+      if (error && error.name === "AbortError") return { status: -1, aborted: true };
+      Console.emit("unreachable");
+      return { status: 0, body: "server unreachable" };
+    })
+    .then(function (result) {
+      done();
+      return result;
+    });
 }
 
-renderHealth("health-" + $id("shell.mock.health-fixture").value);
-Console.show(location.hash.slice(1) || "query");
+function normalizePath(path) {
+  return path.replace(/\{[^}]*\}/g, "{}");
+}
 
-window.Console = Console;
-window.__mock = {
-  show: function (name) {
-    Console.show(name);
+var Live = {
+  spec: null,
+  healthReport: { loading: true },
+  // The OpenAPI operation for a method and path template, or null. Parameter names in the path are ignored.
+  operation: function (method, path) {
+    var paths = this.spec && this.spec.paths;
+    if (!paths) return null;
+    var want = normalizePath(path);
+    var keys = Object.keys(paths);
+    for (var i = 0; i < keys.length; i++) {
+      if (normalizePath(keys[i]) === want) return paths[keys[i]][method.toLowerCase()] || null;
+    }
+    return null;
   },
-  setState: dispatch("setState"),
-  inject: dispatch("inject"),
-  loadFixture: dispatch("loadFixture"),
+  has: function (method, path) {
+    return this.operation(method, path) !== null;
+  },
 };
 // Shared helpers for every screen. Text only ever reaches the DOM through textContent (Pitfall 11).
 function h(tag, text, cls) {
@@ -7003,6 +7091,11 @@ var GraphScreen = (function () {
   return { setState: setState, inject: inject, loadFixture: loadFixture };
 })();
 Console.register("graph", GraphScreen);
+"use strict";
+// 18-03: the start-up sequence. Every screen file has registered by now; the attribute set last is the test hook.
+Console.show(location.hash.slice(1) || "query");
+Console.loadHealth();
+$id("shell.root.app").setAttribute("data-live-ready", "true");
 
 </script>
 </body>
