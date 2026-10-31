@@ -2,99 +2,99 @@
   "bak_trace": 1,
   "step": "S3",
   "part": "phase16",
-  "ledger_version": 853,
+  "ledger_version": 877,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "29820e5c96451358bc5ddcae7fe0ece3f6ca580a5e598fdc91c0ff8660d1bc0b"
+    ".planning/REQUIREMENTS.md": "a27febf66a54136cd156b92fbda92eed6a35bfa728d072abfc686038cd8630b3"
   },
   "checker": {
     "harness": "claude-code",
     "model": "claude-opus-5-5",
-    "session": "4225ba7a-bf20-4ae2-a5d8-62042292a101"
+    "session": "11bd64f3-96e9-4f30-b125-cc3262ef9629"
   },
   "items": [
     {
       "id": "CONN-01",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:695",
-      "quote": "- [x] **CONN-01**: Every operator read route in CONN-04 to CONN-14 is served from the launcher's process and reuses t"
+      "quote": "Every operator read route in CONN-04 to CONN-14 is served from the launcher's process and reuses the single `Databasise` on `app.state.engine` (no second engine, trace-store connection or registry)."
     },
     {
       "id": "CONN-02",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:699",
-      "quote": "- [x] **CONN-02**: The repo holds a machine-readable refusal catalogue, a static JSON file under docs/gui/. For every"
+      "quote": "The repo holds a machine-readable refusal catalogue, a static JSON file under docs/gui/."
     },
     {
       "id": "CONN-03",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:702",
-      "quote": "- [x] **CONN-03**: The repo holds a checked-in selector-resolution fixture. For each selector form the console offers"
+      "quote": "The repo holds a checked-in selector-resolution fixture."
     },
     {
       "id": "CONN-04",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:705",
-      "quote": "- [x] **CONN-04**: GET /info returns 200 with `{version, workspace, clients: {llm: bool, embedding: bool, rerank: boo"
+      "quote": "GET /info returns 200 with `{version, workspace, clients: {llm: bool, embedding: bool, rerank: bool}}`."
     },
     {
       "id": "CONN-05",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:708",
-      "quote": "- [x] **CONN-05**: GET /wirings returns 200 with one row per candidate in `all_wirings()`: `{name, wiring_id, wiring_"
+      "quote": "GET /wirings returns 200 with one row per candidate in `all_wirings()`"
     },
     {
       "id": "CONN-06",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:712",
-      "quote": "- [x] **CONN-06**: GET /ledger/aliases returns 200 with `[{alias, active_version, record_kind, generation_ordinal, cr"
+      "quote": "GET /ledger/aliases returns 200 with `[{alias, active_version, record_kind, generation_ordinal, created_at}]`"
     },
     {
       "id": "CONN-07",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:716",
-      "quote": "- [x] **CONN-07**: POST /ledger/history with `{alias, limit, offset}` returns `{records: [{generation_ordinal, create"
+      "quote": "POST /ledger/history with `{alias, limit, offset}` returns"
     },
     {
       "id": "CONN-08",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:720",
-      "quote": "- [x] **CONN-08**: GET /traces?limit&offset returns `{items: [{trace_reference, created_at, partial, degraded, stop_r"
+      "quote": "GET /traces?limit&offset returns `{items: [{trace_reference, created_at, partial, degraded, stop_reason}], total, next_offset}`, newest first"
     },
     {
       "id": "CONN-09",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:724",
-      "quote": "- [x] **CONN-09**: POST /promote/preview with `{alias, trace_ids, verb, change_origin}` returns 200 `{arm, mutation_c"
+      "quote": "POST /promote/preview with `{alias, trace_ids, verb, change_origin}` returns 200 `{arm, mutation_class, next_version, promotable, reason}`."
     },
     {
       "id": "CONN-10",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:728",
-      "quote": "- [x] **CONN-10**: POST /chunks with `{selector, limit, offset}` returns `{refs: [EvidenceRef], total, next_offset}`,"
+      "quote": "POST /chunks with `{selector, limit, offset}` returns `{refs: [EvidenceRef], total, next_offset}`"
     },
     {
       "id": "CONN-11",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:731",
-      "quote": "- [x] **CONN-11**: POST /graph/nodes with `{selector, prefix, limit, offset}` returns `{nodes: [{id, degree}], total,"
+      "quote": "POST /graph/nodes with `{selector, prefix, limit, offset}` returns `{nodes: [{id, degree}], total, next_offset}`"
     },
     {
       "id": "CONN-12",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:734",
-      "quote": "- [x] **CONN-12**: POST /graph/node with `{selector, node_id, limit, offset}` returns `{id, degree, edges: [{src, tgt"
+      "quote": "POST /graph/node with `{selector, node_id, limit, offset}` returns `{id, degree, edges: [{src, tgt, edge_types, weight}], next_offset}`."
     },
     {
       "id": "CONN-13",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:738",
-      "quote": "- [x] **CONN-13**: The console can read a store-busy status without opening any store or running the v1 subprocess. G"
+      "quote": "The console can read a store-busy status without opening any store or running the v1 subprocess."
     },
     {
       "id": "CONN-14",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:742",
-      "quote": "- [x] **CONN-14**: GET /log?limit=N (1..1000) returns `{lines: [str]}`: the last N lines of the server log file the l"
+      "quote": "GET /log?limit=N (1..1000) returns `{lines: [str]}`"
     }
   ],
   "extra": []

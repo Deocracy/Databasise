@@ -2,27 +2,27 @@
   "bak_trace": 1,
   "step": "S3",
   "part": "phase15",
-  "ledger_version": 853,
+  "ledger_version": 877,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "29820e5c96451358bc5ddcae7fe0ece3f6ca580a5e598fdc91c0ff8660d1bc0b"
+    ".planning/REQUIREMENTS.md": "a27febf66a54136cd156b92fbda92eed6a35bfa728d072abfc686038cd8630b3"
   },
   "checker": {
     "harness": "claude-code",
     "model": "claude-opus-5-5",
-    "session": "4225ba7a-bf20-4ae2-a5d8-62042292a101"
+    "session": "11bd64f3-96e9-4f30-b125-cc3262ef9629"
   },
   "items": [
     {
       "id": "TOOL-01",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:470",
-      "quote": "- [x] **TOOL-01**: A non-editable wheel built from databasise/pyproject.toml co"
+      "quote": "- [x] **TOOL-01**: A non-editable wheel built from databasise/pyproject.toml contains the databasise.tools package (check_import_boundary.py), evidence/eval-bundles/** and the tests/fixtures corpus read by eval.corpus_ingest and parity.corpus."
     },
     {
       "id": "TOOL-02",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:474",
-      "quote": "- [x] **TOOL-02**: `python -m databasise.parity.import_index` parses its argume"
+      "quote": "- [x] **TOOL-02**: `python -m databasise.parity.import_index` parses its arguments with argparse. `--help` prints usage and exits 0. An unknown argument such as `--verfiy` exits 2."
     },
     {
       "id": "TOOL-03",
@@ -34,13 +34,13 @@
       "id": "TOOL-04",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:481",
-      "quote": "- [x] **TOOL-04**: The offline CLIs parity.run_arm, parity.storage_audit, parity.run_comparison, parity.run_cross_modality, eval.aa_run and eval.remint"
+      "quote": "- [x] **TOOL-04**: The offline CLIs parity.run_arm, parity.storage_audit, parity.run_comparison, parity.run_cross_modality, eval.aa_run and eval.remint each map named configuration, input and provider failures to one stderr line and exit 1 with no traceback."
     },
     {
       "id": "TOOL-05",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:493",
-      "quote": "- [x] **TOOL-05**: parity.build_hipporag_index and eval.remint default to an estimate-only dry run."
+      "quote": "- [x] **TOOL-05**: parity.build_hipporag_index and eval.remint default to an estimate-only dry run. The dry run makes no LLM or embedding call and exits 0 with the estimate."
     },
     {
       "id": "TOOL-06",
@@ -70,67 +70,67 @@
       "id": "TOOL-10",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:564",
-      "quote": "- [x] **TOOL-10**: databasise.run_wiring canonicalises the wiring document before executing it"
+      "quote": "- [x] **TOOL-10**: databasise.run_wiring canonicalises the wiring document before executing it, so a wiring containing an integer outside int64 raises CanonicalisationError with zero nodes run."
     },
     {
       "id": "TOOL-11",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:567",
-      "quote": "- [x] **TOOL-11**: eval.corpus_ingest --arm lightrag writes into the eval store"
+      "quote": "eval.corpus_ingest --arm lightrag writes into the eval store (v1/.eval_corpus_store) and never into v1/.corpus_working_dir; otherwise it refuses with a named error."
     },
     {
       "id": "TOOL-12",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:571",
-      "quote": "- [x] **TOOL-12**: eval.calibration refuses calibration when a pass yields no n"
+      "quote": "eval.calibration refuses calibration when a pass yields no node traces, or when any trace node has an unreported cache status."
     },
     {
       "id": "TOOL-13",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:583",
-      "quote": "- [x] **TOOL-13**: eval.bundle changes as follows:"
+      "quote": "eval.bundle changes as follows:"
     },
     {
       "id": "TOOL-14",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:596",
-      "quote": "- [x] **TOOL-14**: evidence.parity_report renders only states it reads:"
+      "quote": "evidence.parity_report renders only states it reads:"
     },
     {
       "id": "TOOL-15",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:621",
-      "quote": "- [x] **TOOL-15**: evidence.falsifier2's verdict paragraph and the exit status "
+      "quote": "evidence.falsifier2's verdict paragraph and the exit status of main() are computed from evaluate_probe results."
     },
     {
       "id": "TOOL-16",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:625",
-      "quote": "- [x] **TOOL-16**: Once all parts and wirings are loaded (in default_registry()"
+      "quote": "A violation refuses with AdmissionConditionMissingError."
     },
     {
       "id": "TOOL-17",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:636",
-      "quote": "- [x] **TOOL-17**: The artifact registry is either wired into the runner or removed. If it is kept:"
+      "quote": "The artifact registry is either wired into the runner or removed. If it is kept:"
     },
     {
       "id": "TOOL-18",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:653",
-      "quote": "- [x] **TOOL-18**: The codebase-memory-mcp adapter and part change as follows:"
+      "quote": "The codebase-memory-mcp adapter and part change as follows:"
     },
     {
       "id": "TOOL-19",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:673",
-      "quote": "- [x] **TOOL-19**: Each of the nine MCP tools in TOOL_NAMES publishes a non-emp"
+      "quote": "Each of the nine MCP tools in TOOL_NAMES publishes a non-empty usage description with no internal plan references"
     },
     {
       "id": "TOOL-20",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:677",
-      "quote": "- [x] **TOOL-20**: Module and data docstrings state current facts:"
+      "quote": "Module and data docstrings state current facts:"
     }
   ],
   "extra": []

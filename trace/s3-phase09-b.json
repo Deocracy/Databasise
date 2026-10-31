@@ -2,27 +2,27 @@
   "bak_trace": 1,
   "step": "S3",
   "part": "phase09-b",
-  "ledger_version": 853,
+  "ledger_version": 877,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "29820e5c96451358bc5ddcae7fe0ece3f6ca580a5e598fdc91c0ff8660d1bc0b"
+    ".planning/REQUIREMENTS.md": "a27febf66a54136cd156b92fbda92eed6a35bfa728d072abfc686038cd8630b3"
   },
   "checker": {
     "harness": "claude-code",
     "model": "claude-opus-5-5",
-    "session": "4225ba7a-bf20-4ae2-a5d8-62042292a101"
+    "session": "11bd64f3-96e9-4f30-b125-cc3262ef9629"
   },
   "items": [
     {
       "id": "SEAM-09",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:91",
-      "quote": "Empty inputs are refused instead of being run or enqueued. Query text that is '' or whitespace-only returns EmptyQueryObjectError before any node runs"
+      "quote": "Empty inputs are refused instead of being run or enqueued. Query text that is '' or whitespace-only returns EmptyQueryObjectError before any node runs: no LLM or embedding call, and no trace is persisted."
     },
     {
       "id": "SEAM-10",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:95",
-      "quote": "Selector(capability=[]) is refused with a named refusal on every route that accepts a selector"
+      "quote": "Selector(capability=[]) is refused with a named refusal on every route that accepts a selector (/query, /compare, /documents, /documents/upload, DELETE /documents, and the MCP tools). It never resolves to the bypass wiring, never renders an empty compare key, and no node runs."
     },
     {
       "id": "SEAM-11",
@@ -34,7 +34,7 @@
       "id": "SEAM-12",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:102",
-      "quote": "POST /promote refuses, with a named refusal, an alias that is empty or that no Selector could carry"
+      "quote": "POST /promote refuses, with a named refusal, an alias that is empty or that no Selector could carry (one that matches the hash shape ^(sha256:)?[0-9a-f]{64}$), and writes no ledger row."
     },
     {
       "id": "SEAM-13",
@@ -52,13 +52,13 @@
       "id": "SEAM-15",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:111",
-      "quote": "An ingest's file_name is either carried through to the v1 document record"
+      "quote": "An ingest's file_name is either carried through to the v1 document record, so citations name the uploaded file instead of '<document_id>.bin' or 'unknown_source'"
     },
     {
       "id": "SEAM-16",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:115",
-      "quote": "Seam docstrings and dead code match the behaviour. The rest.py promote docstrings say that a non-string verb is a validation error"
+      "quote": "Seam docstrings and dead code match the behaviour. The rest.py promote docstrings say that a non-string verb is a validation error and that only a non-member string gives UnrecognisedPromotionVerbError."
     }
   ],
   "extra": []

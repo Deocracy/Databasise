@@ -2,33 +2,33 @@
   "bak_trace": 1,
   "step": "S3",
   "part": "phase13",
-  "ledger_version": 853,
+  "ledger_version": 877,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "29820e5c96451358bc5ddcae7fe0ece3f6ca580a5e598fdc91c0ff8660d1bc0b"
+    ".planning/REQUIREMENTS.md": "a27febf66a54136cd156b92fbda92eed6a35bfa728d072abfc686038cd8630b3"
   },
   "checker": {
     "harness": "claude-code",
     "model": "claude-opus-5-5",
-    "session": "4225ba7a-bf20-4ae2-a5d8-62042292a101"
+    "session": "11bd64f3-96e9-4f30-b125-cc3262ef9629"
   },
   "items": [
     {
       "id": "WIRE-01",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:339",
-      "quote": "- [x] **WIRE-01**: Each of the six query candidates (naive, bypass, hybrid, local, global, hipporag) can be resolved by at least one production"
+      "quote": "- [x] **WIRE-01**: Each of the six query candidates (naive, bypass, hybrid, local, global, hipporag) can be resolved by at least one production \u00a718.4 selector without a promote."
     },
     {
       "id": "WIRE-02",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:343",
-      "quote": "- [x] **WIRE-02**: parse_wiring reports a named violation whenever a top-level provides entry or evidence_position.node names a node missing"
+      "quote": "- [x] **WIRE-02**: parse_wiring reports a named violation whenever a top-level provides entry or evidence_position.node names a node missing from the wiring's nodes."
     },
     {
       "id": "WIRE-03",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:347",
-      "quote": "- [x] **WIRE-03**: ResponseEnvelope.stop_reason and degradation_reason, and the same two fields in the non-debug /trace/resolve output, never contain"
+      "quote": "- [x] **WIRE-03**: ResponseEnvelope.stop_reason and degradation_reason, and the same two fields in the non-debug /trace/resolve output, never contain an internal node id, a part name@version, or an internal exception class name."
     },
     {
       "id": "WIRE-04",
@@ -40,13 +40,13 @@
       "id": "WIRE-05",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:355",
-      "quote": "- [x] **WIRE-05**: Every refusal the runner raises before dispatch, and every cyclic-wiring outcome, reaches REST as a structured SeamRefusalError"
+      "quote": "- [x] **WIRE-05**: Every refusal the runner raises before dispatch, and every cyclic-wiring outcome, reaches REST as a structured SeamRefusalError subclass with a named type and fields, never as an unstructured 500."
     },
     {
       "id": "WIRE-06",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:359",
-      "quote": "- [x] **WIRE-06**: parse_wiring returns a ValidationReport and never raises for a malformed document. It covers doc=[], nodes=None and nodes=[1]."
+      "quote": "- [x] **WIRE-06**: parse_wiring returns a ValidationReport and never raises for a malformed document."
     },
     {
       "id": "WIRE-07",
@@ -58,67 +58,67 @@
       "id": "WIRE-08",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:366",
-      "quote": "- [x] **WIRE-08**: A guard fires only on the value it declares. evaluate_guards compares a declared output field (or signal) of the evaluating node,"
+      "quote": "- [x] **WIRE-08**: A guard fires only on the value it declares."
     },
     {
       "id": "WIRE-09",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:370",
-      "quote": "- [x] **WIRE-09**: The LightRAG local and global arms' keyword fall-through guards (ll_keywords_empty_fallthrough, hl_keywords_empty_fallthrough)"
+      "quote": "- [x] **WIRE-09**: The LightRAG local and global arms' keyword fall-through guards (ll_keywords_empty_fallthrough, hl_keywords_empty_fallthrough) are handled in one of two ways."
     },
     {
       "id": "WIRE-10",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:375",
-      "quote": "- [x] **WIRE-10**: Every node in the wiring has exactly one NodeTrace in the run record, including nodes the TaskGroup cancelled because a sibling failed"
+      "quote": "Every node in the wiring has exactly one NodeTrace in the run record, including nodes the TaskGroup cancelled because a sibling failed and nodes in batches that were never scheduled."
     },
     {
       "id": "WIRE-11",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:379",
-      "quote": "- [x] **WIRE-11**: NodeTrace fields report what was measured. An execution_mode field is stamped on every node (in-process, subprocess and so on)"
+      "quote": "NodeTrace fields report what was measured. An execution_mode field is stamped on every node (in-process, subprocess and so on) on both the success and the refusal path."
     },
     {
       "id": "WIRE-12",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:384",
-      "quote": "- [x] **WIRE-12**: RunRecord identity and persistence describe the run accurately. concurrency_setting reflects that ready batches run concurrently"
+      "quote": "RunRecord identity and persistence describe the run accurately."
     },
     {
       "id": "WIRE-13",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:389",
-      "quote": "- [x] **WIRE-13**: SeamEvent records are correct. A mutating node whose execution raised gets outcome 'failed', not 'halted';"
+      "quote": "SeamEvent records are correct. A mutating node whose execution raised gets outcome 'failed', not 'halted'; 'halted' stays reserved for budget halts."
     },
     {
       "id": "WIRE-14",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:394",
-      "quote": "- [x] **WIRE-14**: Engine internal paths fail by name and open the correct stores. An evidence_position node returning a dict without 'items' raises"
+      "quote": "Engine internal paths fail by name and open the correct stores."
     },
     {
       "id": "WIRE-15",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:397",
-      "quote": "- [x] **WIRE-15**: environment_hash's docstring lists every input. Whether platform.platform() (kernel release and glibc) is included follows the owner decision,"
+      "quote": "environment_hash's docstring lists every input."
     },
     {
       "id": "WIRE-16",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:401",
-      "quote": "- [x] **WIRE-16**: The four advanced query members (embedding, predicates, profile_ref, formal_query) are permanently refused for this contract version,"
+      "quote": "The four advanced query members (embedding, predicates, profile_ref, formal_query) are permanently refused for this contract version"
     },
     {
       "id": "WIRE-17",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:404",
-      "quote": "- [x] **WIRE-17**: Each refusal type that shipped wirings can only partly reach has a test that pins where it can occur."
+      "quote": "Each refusal type that shipped wirings can only partly reach has a test that pins where it can occur."
     },
     {
       "id": "WIRE-18",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:409",
-      "quote": "- [x] **WIRE-18**: The runner exposes no unused scheduling or budget API. The determinism_setting and concurrency_setting parameters of run_wiring"
+      "quote": "The runner exposes no unused scheduling or budget API."
     }
   ],
   "extra": []

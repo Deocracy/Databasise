@@ -2,39 +2,39 @@
   "bak_trace": 1,
   "step": "S3",
   "part": "phase11-a",
-  "ledger_version": 853,
+  "ledger_version": 877,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "29820e5c96451358bc5ddcae7fe0ece3f6ca580a5e598fdc91c0ff8660d1bc0b"
+    ".planning/REQUIREMENTS.md": "a27febf66a54136cd156b92fbda92eed6a35bfa728d072abfc686038cd8630b3"
   },
   "checker": {
     "harness": "claude-code",
     "model": "claude-opus-5-5",
-    "session": "4225ba7a-bf20-4ae2-a5d8-62042292a101"
+    "session": "11bd64f3-96e9-4f30-b125-cc3262ef9629"
   },
   "items": [
     {
       "id": "LRAG-01",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:185",
-      "quote": "Two apps built with different store_root values do not see each other's documents on GET /corpus."
+      "quote": "Every LightRAG corpus operation (ingest, delete, and the status ops behind GET /corpus, /corpus/counts, /jobs/{job_id} and the /health engine probe) passes run_corpus_op a v1 working_dir derived from the app's store_root and workspace, never the repo-global DEFAULT_V1_WORKING_DIR (v1/.corpus_working_dir)."
     },
     {
       "id": "LRAG-02",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:189",
-      "quote": "full-delete only reports graph/vector/kv store touches for stores it actually changed."
+      "quote": "A document ingested through POST /documents with the default (LightRAG) selector becomes retrievable by POST /query on the LightRAG arms and resolvable by POST /evidence/resolve"
     },
     {
       "id": "LRAG-03",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:193",
-      "quote": "The lightrag full-ingest part declares mutates_store (not writes_artifact with scope quarantined)"
+      "quote": "The lightrag full-ingest part declares mutates_store (not writes_artifact with scope quarantined), its admission record names the storage it actually writes"
     },
     {
       "id": "LRAG-04",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:197",
-      "quote": "Concurrent LightRAG writes to one working dir are serialized"
+      "quote": "Concurrent LightRAG writes to one working dir are serialized: while a LightRAG ingest or delete subprocess is running against a working dir"
     },
     {
       "id": "LRAG-05",
@@ -46,7 +46,7 @@
       "id": "LRAG-06",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:205",
-      "quote": "return a named 'v1 not configured' refusal listing the missing key names (never values)"
+      "quote": "ingest/delete/status/counts/jobs return a named 'v1 not configured' refusal listing the missing key names (never values), and /health reports degraded with that reason"
     },
     {
       "id": "LRAG-07",
@@ -58,19 +58,19 @@
       "id": "LRAG-08",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:213",
-      "quote": "An upload of an unsupported type returns a named refusal, not 200."
+      "quote": "POST /documents/upload (and POST /documents with raw) on the LightRAG path indexes the uploaded file's content"
     },
     {
       "id": "LRAG-09",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:217",
-      "quote": "no corpus-inbox file outlives its job."
+      "quote": "Raw upload inbox files are scoped per workspace (<store_root>/<workspace>/corpus-inbox or equivalent)"
     },
     {
       "id": "LRAG-10",
       "status": "present",
       "where": ".planning/REQUIREMENTS.md:220",
-      "quote": "IngestJob.job_id is the track_id v1 recorded for the run."
+      "quote": "IngestJob.enqueued reports the number of documents v1 actually enqueued"
     }
   ],
   "extra": []
