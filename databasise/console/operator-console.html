@@ -4797,8 +4797,6 @@ var Compare = (function () {
 })();
 var EvidenceScreen = (function () {
   var STATES = ["idle", "loading", "resolved", "refusal"];
-  var NS_OF = { "e-lightrag-chunk": "chunks", "e-hipporag-chunk": "hipporag-chunks" };
-  var KIND = "text_chunk";
   var LOAD_MS = 300;
   var MSG = { noRef: "Enter an evidence ref.", noTrace: "Enter a trace reference." };
   var root = $id("screen-evidence");
@@ -4808,6 +4806,7 @@ var EvidenceScreen = (function () {
   var tab = "evidence";
   var timer = null;
   var opener = null;
+  var resolveCtl = null;
   var busyEl = null;
   var originLink = null;
   var loaded = null;
@@ -4889,35 +4888,20 @@ var EvidenceScreen = (function () {
     }
   }
 
-  // Records come from the fixtures; any other well-formed chunk ref of the two namespaces gets a generic record so Open works from every screen.
-  function find(ns, ref) {
-    if (ns === "chunks") {
-      if (ref === FIX.evidence["e-lightrag-chunk"].id) return FIX.evidence["e-lightrag-chunk"];
-      if (FIX.evidence.chunks[ref]) return FIX.evidence.chunks[ref];
-      if (/^c-[0-9a-f]{6}$/.test(ref)) return { id: ref, full_doc_id: FIX.evidence["e-lightrag-chunk"].full_doc_id, content: "Fixture text for chunk " + ref + ".", file_path: FIX.evidence["e-lightrag-chunk"].file_path };
-    }
-    if (ns === "hipporag-chunks") {
-      if (ref === FIX.evidence["e-hipporag-chunk"].id) return FIX.evidence["e-hipporag-chunk"];
-      if (/^chunk:[0-9a-f]{6,}$/.test(ref)) return { id: ref, document_id: FIX.evidence["e-hipporag-chunk"].document_id, ordinal: 0, content: "Fixture text for chunk " + ref + "." };
-    }
-    return null;
-  }
-
-  function renderRecord(ns, rec, score) {
+  function renderRecord(ref, rec, score) {
     var header = ID("inspector.header");
     clearNode(header);
     header.appendChild(h("span", rec.id, "mono"));
-    header.appendChild(h("span", ns, "chip"));
-    header.appendChild(h("span", KIND, "chip"));
+    header.appendChild(h("span", ref.namespace, "chip"));
+    header.appendChild(h("span", ref.kind, "chip"));
     ID("inspector.score").textContent = typeof score === "number" ? score.toFixed(4) : "—";
-    ID("inspector.content").textContent = rec.content === undefined ? "" : String(rec.content);
+    ID("inspector.content").textContent = rec.content === undefined || rec.content === null ? "" : String(rec.content);
     var doc = ID("inspector.document-id");
     doc.hidden = rec.document_id === undefined;
     doc.textContent = "document_id: " + rec.document_id;
     var ord = ID("inspector.ordinal");
     ord.hidden = rec.ordinal === undefined;
     ord.textContent = "ordinal: " + rec.ordinal;
-    ID("inspector.document-link").hidden = rec.document_id === undefined;
 
     var body = ID("inspector.kv").tBodies[0];
     clearNode(body);
@@ -4942,30 +4926,45 @@ var EvidenceScreen = (function () {
     return showError(500, "Internal Server Error");
   }
 
-  function finishResolve(ns, ref, score) {
-    busy(false);
-    var o = outcome();
-    var key = ns + "\u0001" + ref;
-    if (o === "refusal") return evState("refusal");
-    if (o === "validation" || o === "server-failure" || o === "generic") return fail(o, "evidence");
-    var rec = cache[key] || find(ns, ref);
-    if (!rec) return evState("refusal");
-    cache[key] = rec;
-    renderRecord(ns, rec, score);
-    evState("resolved");
+  function isOk(result) {
+    return result.status >= 200 && result.status < 300 && result.body !== null && typeof result.body === "object";
   }
 
-  // One evidence lookup: loading for about 300 ms, then the record, a refusal or the mock outcome. A cached record resolves at once.
-  function resolve(ns, ref, score) {
-    clearTimeout(timer);
+  // Aborts the evidence read in flight and gives its opener button back (IN-JSB-08). The abort sits beside the restore.
+  function abortResolve() {
+    if (resolveCtl) {
+      resolveCtl.abort();
+      resolveCtl = null;
+      if (!ID("state.loading").hidden) evState("idle");
+    }
+    busy(false);
+  }
+
+  // One evidence lookup. The ref goes to the server exactly as it came (Pitfall 2). A cached record shows at once with no
+  // request and no loading view; an error is never cached (D-07). `el` is the Open button to mark busy, or null.
+  function resolve(ref, score, el) {
+    abortResolve();
     showTab("evidence");
     hideErrors();
-    if (cache[ns + "\u0001" + ref] && outcome() === "success") return finishResolve(ns, ref, score);
-    evState("loading");
+    var key = ref.namespace + "\u0001" + ref.ref;
+    if (cache[key]) return showRecord(ref, cache[key], score);
+    busyEl = el;
     busy(true);
-    timer = setTimeout(function () {
-      finishResolve(ns, ref, score);
-    }, LOAD_MS);
+    evState("loading");
+    var mine = (resolveCtl = new AbortController());
+    api("POST", "/evidence/resolve", ref, { signal: mine.signal }).then(function (result) {
+      if (result.aborted || mine !== resolveCtl) return;
+      resolveCtl = null;
+      busy(false);
+      if (!isOk(result)) return showError(result.status, result.body);
+      cache[key] = result.body;
+      showRecord(ref, result.body, score);
+    });
+  }
+
+  function showRecord(ref, rec, score) {
+    renderRecord(ref, rec, score);
+    evState("resolved");
   }
 
   function submitLookup() {
@@ -4973,16 +4972,9 @@ var EvidenceScreen = (function () {
     var ref = input.value.trim();
     hideErrors();
     if (ref === "") return setFieldError(input, MSG.noRef);
-    busyEl = null;
-    resolve(ID("lookup.namespace").value, ref, null);
+    resolve({ ref: ref, namespace: ID("lookup.namespace").value, kind: ID("lookup.kind").value }, null, null);
   }
 
-  function batch() {
-    ["c-7f3a91", "c-02be44", "c-91d0c7"].forEach(function (ref) {
-      cache["chunks\u0001" + ref] = find("chunks", ref);
-    });
-    ID("batch.status").textContent = "Resolved 3 of 3 (fixture)";
-  }
 
   // ---- trace tab ----
 
@@ -5151,46 +5143,6 @@ var EvidenceScreen = (function () {
     traceView(loaded && loaded.token === token ? "loaded" : "empty");
   }
 
-  // ---- hooks ----
-
-  function setState(name) {
-    clearTimeout(timer);
-    busy(false);
-    if (name === "trace-loading") {
-      showTab("trace");
-      hideErrors();
-      return traceView("loading");
-    }
-    if (STATES.indexOf(name) < 0) throw new Error("unknown evidence state " + name);
-    showTab("evidence");
-    hideErrors();
-    if (name === "resolved" && !cache["chunks\u0001c-7f3a91"]) loadFixture("e-lightrag-chunk");
-    else evState(name);
-  }
-
-  function loadFixture(name) {
-    clearTimeout(timer);
-    busy(false);
-    if (NS_OF[name]) {
-      showTab("evidence");
-      hideErrors();
-      var rec = FIX.evidence[name];
-      cache[NS_OF[name] + "\u0001" + rec.id] = rec;
-      renderRecord(NS_OF[name], rec, null);
-      return evState("resolved");
-    }
-    if (name !== "t-clean" && name !== "t-partial-debug") throw new Error("unknown evidence fixture " + name);
-    showTab("trace");
-    hideErrors();
-    renderTrace(name, DEFAULT_TOKEN[name]);
-  }
-
-  function inject(response) {
-    clearTimeout(timer);
-    busy(false);
-    showError(response.status, response.body);
-  }
-
   ID("tabs.evidence").addEventListener("click", function () {
     showTab("evidence");
     hideErrors();
@@ -5205,7 +5157,6 @@ var EvidenceScreen = (function () {
   ID("lookup.ref").addEventListener("input", function () {
     if (this.value.trim() !== "") setFieldError(this, "");
   });
-  ID("batch.submit").addEventListener("click", batch);
   ID("trace.reference").addEventListener("input", function () {
     syncLoad();
     setFieldError(this, this.value.trim() === "" ? MSG.noTrace : "");
@@ -5252,12 +5203,16 @@ var EvidenceScreen = (function () {
     },
     true
   );
-  Console.on("open-evidence", function (payload) {
-    busyEl = opener;
-    var origin = opener && opener.closest('[data-mock-id="query.result.panel"], .cmp-col');
-    originLink = origin ? origin.querySelector('[data-mock-id$=".trace-link"]') : null;
+  // After the button's own handler has run, a click that emitted nothing must not leave its button as the next opener.
+  document.addEventListener("click", function () {
     opener = null;
-    resolve(payload.ref.namespace, payload.ref.id, payload.score);
+  });
+  // payload: {ref: <EvidenceRef unchanged>, score, trace_token} from Query, Compare and the chunk browser.
+  Console.on("open-evidence", function (payload) {
+    var el = opener;
+    opener = null;
+    originLink = null; // replaced by the origin token in the next task
+    resolve(payload.ref, payload.score, el);
   });
   Console.on("open-trace", function (payload) {
     openTrace(payload.token || "");
@@ -5265,7 +5220,7 @@ var EvidenceScreen = (function () {
 
   evState("idle");
   traceView("empty");
-  return { setState: setState, inject: inject, loadFixture: loadFixture };
+  return {};
 })();
 Console.register("evidence", EvidenceScreen);
 var DocumentsScreen = (function () {

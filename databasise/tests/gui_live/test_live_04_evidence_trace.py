@@ -54,8 +54,11 @@ def test_open_resolves_the_envelope_ref_unchanged_once_per_session(seeded, live_
 
     posts = _posts(ui, "/evidence/resolve")
     assert len(posts) == 1
-    assert posts[0]["post_data"] == json.dumps(env["evidence"][0], separators=(",", ":"), ensure_ascii=False)
-    assert "id" not in json.loads(posts[0]["post_data"])
+    # The same keys, values and order. JavaScript writes the score 1.0 as 1, so the text is compared as parsed pairs.
+    sent = json.loads(posts[0]["post_data"], object_pairs_hook=lambda pairs: pairs)
+    assert [key for key, _ in sent] == list(env["evidence"][0])
+    assert dict(sent) == env["evidence"][0]
+    assert "id" not in dict(sent)
     ui.expect("evidence.inspector.content").to_contain_text(record["content"])
     ui.expect(ui.el("evidence.inspector.panel").get_by_text("Cached for this session by namespace and ref.")).to_be_visible()
 
