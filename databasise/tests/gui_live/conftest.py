@@ -319,7 +319,7 @@ def live_ui(browser, live_app):
 @pytest.hookimpl(tryfirst=True)
 def pytest_pyfunc_call(pyfuncitem):
     # Fail, never error: a failing fixture is reported as ERROR, an assert here as failed.
-    for name in ("live_app", "seeded"):
+    for name in ("live_app", "seeded", "mode_app"):
         live = pyfuncitem.funcargs.get(name)
         if live is not None:
             assert live.start_error is None, f"the live app did not start: {live.start_error}"
