@@ -283,3 +283,43 @@ def test_corpus_500_renders_the_generic_view(live_app, browser):
     with live_app.fail("corpus_status"), _ui(browser, live_app) as ui:
         ui.nav("corpus")
         ui.expect("corpus.error.generic").to_contain_text("The server returned HTTP 500")
+
+
+# ---- 18-08: Documents & Jobs ----
+
+PASTE_FIELD = '[data-mock-id="screen-documents"] [data-field-loc="body.document.text"]'
+
+
+def _paste_submit(ui):
+    ui.nav("documents")
+    ui.el("documents.paste.text").fill("Text for the documents error cases.")
+    ui.el("documents.paste.submit").click()
+
+
+def test_documents_unknown_job_renders_its_typed_banner(live_app, live_ui):
+    ui = live_ui
+    ui.nav("documents")
+    ui.el("documents.jobs.open").click()
+    ui.el("documents.jobs.job-id").fill("no-such-job")
+    ui.el("documents.jobs.load").click()
+    banner = ui.el("documents.error.refusal")
+    ui.expect(banner).to_contain_text("UnknownJobError")
+    ui.expect(banner.locator('[data-role="footer"]')).to_have_text(re.compile(r"^HTTP 404\."))
+
+
+def test_documents_validation_marks_the_paste_text(live_app, browser):
+    def handler(route):
+        body = route.request.post_data_json
+        body["document"]["text"] = ["a"]
+        route.continue_(post_data=json.dumps(body))
+
+    with _ui(browser, live_app, lambda page: page.route("**/documents", handler)) as ui:
+        _paste_submit(ui)
+        ui.expect("documents.error.validation").to_be_visible()
+        ui.expect(ui.page.locator(PASTE_FIELD)).to_have_attribute("aria-invalid", "true")
+
+
+def test_documents_500_renders_the_generic_view(live_app, browser):
+    with live_app.fail("ingest"), _ui(browser, live_app) as ui:
+        _paste_submit(ui)
+        ui.expect("documents.error.generic").to_contain_text("The server returned HTTP 500")
