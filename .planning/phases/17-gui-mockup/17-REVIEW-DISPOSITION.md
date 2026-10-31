@@ -37,7 +37,7 @@ Source: 17-REVIEW.md (39 findings: 0 critical, 17 warning, 22 info). The finding
 | IN-BLD-05 | info | open | Shared fixtures silently overwrite a same-named src/fixtures file |
 | IN-JSA-07 | info | open | Promote events from Query/Compare only add checkmarks and never clear earlier selections |
 | IN-JSA-08 | info | open | Promote stays enabled on a result with trace_token null |
-| IN-JSA-09 | info | open | The refusal state view always says HTTP 422, whatever the response status |
+| IN-JSA-09 | info | fixed in Phase 18 (18-04) | The refusal state view always says HTTP 422, whatever the response status |
 | IN-JSB-05 | info | open | Jobs poll reopens a closed drawer and keeps running on other screens |
 | IN-JSB-06 | info | open | Retry confirmation can land on a different document's row |
 | IN-JSB-07 | info | open | 'Open in Corpus' is shown only for HippoRAG records, but Corpus lists only v1 documents |
