@@ -56,6 +56,7 @@
           <a href="#corpus" data-mock-id="evidence.inspector.document-link" hidden>Open in Corpus</a>
           <a href="#evidence" data-mock-id="evidence.inspector.trace-link">Open trace</a>
         </div>
+        <p class="muted" data-role="no-origin-trace" hidden>No trace token on this result.</p>
         <p class="muted">Cached for this session by namespace and ref.</p>
       </section>
     </div>
@@ -87,7 +88,7 @@
     </details>
     <div class="ev-batch">
       <span data-needs-backend="POST /evidence/resolve-batch" title="Not implemented yet: POST /evidence/resolve-batch"><span class="badge badge-nb">needs backend</span> <button type="button" class="btn btn-outline" data-mock-id="evidence.batch.submit">Resolve all evidence</button></span>
-      <span class="muted" role="status" data-mock-id="evidence.batch.status"></span>
+      <span class="muted" role="status" data-mock-id="evidence.batch.status" hidden></span>
     </div>
   </div>
 
@@ -134,7 +135,7 @@
       </dl>
       <button type="button" class="btn btn-outline" data-mock-id="evidence.trace.use-in-ledger">Use trace in Ledger</button>
     </section>
-    <p class="muted" data-role="debug-absent" hidden>This fixture holds the non-debug fields only, so it has no identities or node trace.</p>
+    <p class="muted" data-role="debug-absent" hidden>This trace holds the non-debug fields only, so it has no identities or node trace.</p>
   </div>
 
   <template data-role="debug-template">

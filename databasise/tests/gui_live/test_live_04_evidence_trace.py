@@ -192,9 +192,8 @@ def test_recent_runs_list_history_and_server_traces(seeded, live_ui):
     ui.expect(options.locator(f"xpath=self::option[@value='{token}']")).to_have_count(1)
     ui.expect(options.locator(f"xpath=self::option[@value='{server_only}']")).to_have_count(1)
     assert ui.count("GET", "/traces") >= 1
-    ui.expect(ui.page.locator('[data-needs-backend="GET /traces"]')).to_have_count(0)
-    # A token that the history already lists appears once.
-    ui.expect(options.locator(f"xpath=self::option[@value='{token}']")).to_have_count(1)
+    # Only this screen's wrapper: the Ledger picker is wired in 18-09.
+    ui.expect(ui.page.locator('[data-mock-id="screen-evidence"] [data-needs-backend="GET /traces"]')).to_have_count(0)
 
 
 def test_resolve_all_evidence_is_disabled_with_its_route(seeded, live_ui):

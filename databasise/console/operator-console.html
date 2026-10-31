@@ -1356,6 +1356,7 @@ dialog .mono { overflow-wrap: anywhere; }
           <a href="#corpus" data-mock-id="evidence.inspector.document-link" hidden>Open in Corpus</a>
           <a href="#evidence" data-mock-id="evidence.inspector.trace-link">Open trace</a>
         </div>
+        <p class="muted" data-role="no-origin-trace" hidden>No trace token on this result.</p>
         <p class="muted">Cached for this session by namespace and ref.</p>
       </section>
     </div>
@@ -1387,7 +1388,7 @@ dialog .mono { overflow-wrap: anywhere; }
     </details>
     <div class="ev-batch">
       <span data-needs-backend="POST /evidence/resolve-batch" title="Not implemented yet: POST /evidence/resolve-batch"><span class="badge badge-nb">needs backend</span> <button type="button" class="btn btn-outline" data-mock-id="evidence.batch.submit">Resolve all evidence</button></span>
-      <span class="muted" role="status" data-mock-id="evidence.batch.status"></span>
+      <span class="muted" role="status" data-mock-id="evidence.batch.status" hidden></span>
     </div>
   </div>
 
@@ -1434,7 +1435,7 @@ dialog .mono { overflow-wrap: anywhere; }
       </dl>
       <button type="button" class="btn btn-outline" data-mock-id="evidence.trace.use-in-ledger">Use trace in Ledger</button>
     </section>
-    <p class="muted" data-role="debug-absent" hidden>This fixture holds the non-debug fields only, so it has no identities or node trace.</p>
+    <p class="muted" data-role="debug-absent" hidden>This trace holds the non-debug fields only, so it has no identities or node trace.</p>
   </div>
 
   <template data-role="debug-template">
@@ -4795,52 +4796,39 @@ var Compare = (function () {
   paint();
   return { run: run, cancel: cancel, hideColumns: hideColumns };
 })();
+WIRED["evidence GET /traces"] = true;
+WIRED["evidence GET /log"] = true;
+
 var EvidenceScreen = (function () {
   var STATES = ["idle", "loading", "resolved", "refusal"];
-  var LOAD_MS = 300;
+  var HISTORY_KEY = "databasise.console.history";
   var MSG = { noRef: "Enter an evidence ref.", noTrace: "Enter a trace reference." };
   var root = $id("screen-evidence");
   var errorsBox = root.querySelector('[data-role="errors"]');
   var panes = { evidence: root.querySelector('[data-role="pane-evidence"]'), trace: root.querySelector('[data-role="pane-trace"]') };
+  // Resolved records, kept for the page's lifetime by namespace and ref (D-07). Errors are never stored.
   var cache = {};
   var tab = "evidence";
-  var timer = null;
-  var opener = null;
+  var opener = null; // the Open button whose click is being dispatched
+  var busyEl = null; // the Open button marked busy by the read in flight
   var resolveCtl = null;
-  var busyEl = null;
-  var originLink = null;
-  var loaded = null;
+  var traceCtl = null;
+  var origin = null; // trace token of the run the shown record came from (WR-JSB-01)
+  var shownDoc = null; // full_doc_id of the shown record, when it has one (IN-JSB-07)
+  var loaded = null; // {token, rec, debug} of the trace on screen
   var debugView = null;
+  var recentSeq = 0;
 
   function ID(name) {
     return $id("evidence." + name);
   }
 
-  // Token -> which trace fixture it resolves to, read from the query and compare fixtures (a partial body gives the partial trace).
-  var TRACE_OF = {};
-  var DEFAULT_TOKEN = {};
-  (function scan(o) {
-    if (Array.isArray(o)) return o.forEach(scan);
-    if (o && typeof o === "object") {
-      if (typeof o.trace_token === "string" && o.trace_token) {
-        var name = o.partial ? "t-partial-debug" : "t-clean";
-        TRACE_OF[o.trace_token] = TRACE_OF[o.trace_token] || name;
-        DEFAULT_TOKEN[name] = DEFAULT_TOKEN[name] || o.trace_token;
-      }
-      Object.keys(o).forEach(function (k) {
-        scan(o[k]);
-      });
-    }
-  })([FIX.query, FIX.compare]);
-
-  function setDisabled(button, disabled) {
-    button.disabled = disabled;
-    if (disabled) button.setAttribute("aria-disabled", "true");
-    else button.removeAttribute("aria-disabled");
+  function isOk(result) {
+    return result.status >= 200 && result.status < 300 && result.body !== null && typeof result.body === "object";
   }
 
-  function outcome() {
-    return ID("mock.outcome").value;
+  function cellText(value) {
+    return value === null || value === undefined ? "—" : String(value);
   }
 
   // ---- evidence tab ----
@@ -4851,8 +4839,11 @@ var EvidenceScreen = (function () {
     });
   }
 
+  // Leaving a pane abandons the read that belongs to it.
   function showTab(name) {
     tab = name;
+    if (name !== "evidence") abortResolve();
+    if (name !== "trace") abortTrace();
     ["evidence", "trace"].forEach(function (n) {
       panes[n].hidden = n !== name;
       ID("tabs." + n).setAttribute("aria-selected", String(n === name));
@@ -4864,13 +4855,13 @@ var EvidenceScreen = (function () {
     errorsBox.hidden = true;
   }
 
+  // Every non-2xx goes through renderError (LIVE-03). An unresolvable ref also shows its state view (UI-SPEC).
   function showError(status, body) {
     var shape = renderError("evidence", status, body);
     errorsBox.hidden = shape === "result";
-    if (shape !== "result") {
-      if (tab === "evidence") evState(null);
-      else traceView("none");
-    }
+    if (shape === "result") return;
+    if (tab === "evidence") evState(body && body.refusal_type === "UnresolvableEvidenceReferenceError" ? "refusal" : null);
+    else traceView("none");
   }
 
   function busy(on) {
@@ -4888,6 +4879,30 @@ var EvidenceScreen = (function () {
     }
   }
 
+  // Aborts the evidence read in flight and gives its opener button back (IN-JSB-08). The abort sits beside the restore.
+  function abortResolve() {
+    if (resolveCtl) {
+      resolveCtl.abort();
+      resolveCtl = null;
+      if (!ID("state.loading").hidden) evState("idle");
+    }
+    busy(false);
+  }
+
+  function syncOrigin() {
+    var link = ID("inspector.trace-link");
+    if (origin) {
+      link.setAttribute("href", "#evidence");
+      link.removeAttribute("aria-disabled");
+      link.removeAttribute("tabindex");
+    } else {
+      link.removeAttribute("href");
+      link.setAttribute("aria-disabled", "true");
+      link.setAttribute("tabindex", "-1");
+    }
+    root.querySelector('[data-role="no-origin-trace"]').hidden = !!origin;
+  }
+
   function renderRecord(ref, rec, score) {
     var header = ID("inspector.header");
     clearNode(header);
@@ -4902,6 +4917,9 @@ var EvidenceScreen = (function () {
     var ord = ID("inspector.ordinal");
     ord.hidden = rec.ordinal === undefined;
     ord.textContent = "ordinal: " + rec.ordinal;
+    // Corpus lists v1 documents only: a HippoRAG document_id has no row there (IN-JSB-07).
+    shownDoc = typeof rec.full_doc_id === "string" && rec.full_doc_id !== "" ? rec.full_doc_id : null;
+    ID("inspector.document-link").hidden = shownDoc === null;
 
     var body = ID("inspector.kv").tBodies[0];
     clearNode(body);
@@ -4916,38 +4934,21 @@ var EvidenceScreen = (function () {
     root.querySelector('[data-role="kv-wrap"]').hidden = body.children.length === 0;
   }
 
-  function fail(which, ns) {
-    var op = ns === "trace" ? "resolve_trace" : "resolve_evidence";
-    var field = ns === "trace" ? "trace_reference" : "ref";
-    if (which === "validation") return showError(422, { detail: [{ loc: ["body", field], msg: "Field required", type: "missing" }] });
-    if (which === "server-failure") {
-      return showError(502, { refusal_type: "ForeignEngineRefusalError", message: "operation '" + op + "' failed (StoreFault)", operation: op, failure_class: "StoreFault", cause: "index checksum mismatch" });
-    }
-    return showError(500, "Internal Server Error");
-  }
-
-  function isOk(result) {
-    return result.status >= 200 && result.status < 300 && result.body !== null && typeof result.body === "object";
-  }
-
-  // Aborts the evidence read in flight and gives its opener button back (IN-JSB-08). The abort sits beside the restore.
-  function abortResolve() {
-    if (resolveCtl) {
-      resolveCtl.abort();
-      resolveCtl = null;
-      if (!ID("state.loading").hidden) evState("idle");
-    }
-    busy(false);
+  function showRecord(ref, rec, score, token) {
+    origin = token || null;
+    renderRecord(ref, rec, score);
+    syncOrigin();
+    evState("resolved");
   }
 
   // One evidence lookup. The ref goes to the server exactly as it came (Pitfall 2). A cached record shows at once with no
   // request and no loading view; an error is never cached (D-07). `el` is the Open button to mark busy, or null.
-  function resolve(ref, score, el) {
+  function resolve(ref, score, token, el) {
     abortResolve();
     showTab("evidence");
     hideErrors();
     var key = ref.namespace + "\u0001" + ref.ref;
-    if (cache[key]) return showRecord(ref, cache[key], score);
+    if (cache[key]) return showRecord(ref, cache[key], score, token);
     busyEl = el;
     busy(true);
     evState("loading");
@@ -4958,13 +4959,8 @@ var EvidenceScreen = (function () {
       busy(false);
       if (!isOk(result)) return showError(result.status, result.body);
       cache[key] = result.body;
-      showRecord(ref, result.body, score);
+      showRecord(ref, result.body, score, token);
     });
-  }
-
-  function showRecord(ref, rec, score) {
-    renderRecord(ref, rec, score);
-    evState("resolved");
   }
 
   function submitLookup() {
@@ -4972,9 +4968,8 @@ var EvidenceScreen = (function () {
     var ref = input.value.trim();
     hideErrors();
     if (ref === "") return setFieldError(input, MSG.noRef);
-    resolve({ ref: ref, namespace: ID("lookup.namespace").value, kind: ID("lookup.kind").value }, null, null);
+    resolve({ ref: ref, namespace: ID("lookup.namespace").value, kind: ID("lookup.kind").value }, null, null, null);
   }
-
 
   // ---- trace tab ----
 
@@ -4995,43 +4990,60 @@ var EvidenceScreen = (function () {
 
   function sentinel(el, value) {
     var isSentinel = typeof value === "string" && value.indexOf("sentinel:") === 0;
-    el.textContent = isSentinel ? "not yet recorded" : String(value);
+    el.textContent = isSentinel ? "not yet recorded" : cellText(value);
     el.title = value === null || value === undefined ? "" : String(value);
   }
 
-  function renderTrace(name, token) {
-    var rec = FIX.evidence[name];
-    loaded = { name: name, token: token, rec: rec };
+  function renderTrace(token, rec, debug) {
+    loaded = { token: token, rec: rec, debug: debug };
     ID("trace.reference").value = token;
     syncLoad();
     var status = ID("trace.status");
     status.setAttribute("data-state", rec.partial ? "warn" : "ok");
     status.textContent = rec.partial ? "▲ partial" : "✓ clean";
-    setField("stop_reason", "stop_reason: " + (rec.stop_reason === null ? "—" : rec.stop_reason));
-    setField("degradation_reason", "degradation_reason: " + (rec.degradation_reason === null ? "—" : rec.degradation_reason));
+    setField("stop_reason", "stop_reason: " + cellText(rec.stop_reason));
+    setField("degradation_reason", "degradation_reason: " + cellText(rec.degradation_reason));
     ["executor_version", "concurrency_setting", "determinism_setting", "arm_execution_order"].forEach(function (key) {
-      setField(key, String(rec[key]));
+      setField(key, cellText(rec[key]));
     });
     sentinel(ID("trace.bundle-ref"), rec.bundle_ref);
     sentinel(ID("trace.snapshot-hash"), rec.corpus_snapshot_hash);
     traceView("loaded");
   }
 
-  function loadTrace() {
-    var token = ID("trace.reference").value.trim();
+  // Aborts the trace read in flight. A view that was waiting for it goes back to empty.
+  function abortTrace() {
+    if (!traceCtl) return;
+    traceCtl.abort();
+    traceCtl = null;
+    if (!ID("state.trace-loading").hidden) {
+      loaded = null;
+      traceView("empty");
+    }
+  }
+
+  // token is optional: the Load button and Enter read the reference field. The Debug flag is read now, so every toggle re-requests.
+  function loadTrace(tokenArg) {
+    var token = typeof tokenArg === "string" ? tokenArg : ID("trace.reference").value.trim();
     if (token === "") return;
-    clearTimeout(timer);
+    abortTrace();
     hideErrors();
+    var debug = ID("trace.debug").checked;
+    var mine = (traceCtl = new AbortController());
     traceView("loading");
-    timer = setTimeout(function () {
-      var o = outcome();
-      if (o === "validation" || o === "server-failure" || o === "generic") return fail(o, "trace");
-      var name = TRACE_OF[token];
-      if (o === "refusal" || o === "unknown-trace" || !name) {
-        return showError(404, { refusal_type: "UnknownTraceReferenceError", message: "unknown trace reference", trace_reference: token });
-      }
-      renderTrace(name, token);
-    }, LOAD_MS);
+    api("POST", "/trace/resolve", { trace_reference: token, debug: debug }, { signal: mine.signal }).then(function (result) {
+      if (result.aborted || mine !== traceCtl) return;
+      traceCtl = null;
+      if (isOk(result)) return renderTrace(token, result.body, debug);
+      loaded = null;
+      showError(result.status, result.body);
+    });
+  }
+
+  function tokenCell(key) {
+    return function (n) {
+      return n.tokens ? n.tokens[key] : null;
+    };
   }
 
   var NODE_CELLS = [
@@ -5039,39 +5051,34 @@ var EvidenceScreen = (function () {
     function (n) { return n.instance_hash; },
     function (n) { return n.depth; },
     function (n) { return n.effective_depth; },
-    function () { return "—"; },
-    function () { return "—"; },
+    function (n) { return n.tier; },
+    function (n) { return n.feed_tier; },
     function (n) { return n.status; },
     function (n) { return n.execution_mode; },
     function (n) { return n.wall_clock_ms; },
     function (n) { return n.cache_hit; },
-    function (n) { return n.guards_fired.length ? n.guards_fired.join(", ") : "—"; },
+    function (n) { return Array.isArray(n.guards_fired) && n.guards_fired.length ? n.guards_fired.join(", ") : null; },
     function (n) { return n.budget_state; },
     function (n) { return n.spent; },
     function (n) { return n.allowance; },
     function (n) { return n.realised_budget_share; },
     function (n) { return n.cross_process_failure_cause; },
     function (n) { return n.resumable; },
-    function (n) { return n.tokens.prompt_tokens; },
-    function (n) { return n.tokens.completion_tokens; },
-    function (n) { return n.tokens.cached_read_tokens; },
-    function (n) { return n.tokens.call_count; },
-    function (n) { return n.tokens.counted_by; },
+    tokenCell("prompt_tokens"),
+    tokenCell("completion_tokens"),
+    tokenCell("cached_read_tokens"),
+    tokenCell("call_count"),
+    tokenCell("counted_by"),
   ];
-  var PLACEHOLDER_COLS = [4, 5];
   var SUM_COLS = [8, 17, 18, 19, 20];
-
-  function cellText(value) {
-    return value === null || value === undefined ? "—" : String(value);
-  }
 
   function fillDebug(view, rec) {
     ["run_id", "wiring_id", "wiring_instance_hash", "arm_id"].forEach(function (key) {
-      view.querySelector('[data-role="' + key + '"]').textContent = rec[key];
+      view.querySelector('[data-role="' + key + '"]').textContent = cellText(rec[key]);
     });
     Array.prototype.forEach.call(view.querySelectorAll("button[data-copy]"), function (button) {
       button.addEventListener("click", function () {
-        copyText(rec[button.getAttribute("data-copy")], button.parentElement.querySelector('[data-role="copied"]'));
+        copyText(String(rec[button.getAttribute("data-copy")]), button.parentElement.querySelector('[data-role="copied"]'));
       });
     });
 
@@ -5083,17 +5090,10 @@ var EvidenceScreen = (function () {
       var state = node.status === "failed" ? "failed" : node.budget_state === "halted" ? "halted" : null;
       if (state) tr.setAttribute("data-row-state", state);
       NODE_CELLS.forEach(function (cell, i) {
-        var td = h("td", null, i === 0 || i === 1 || i === 15 ? "mono" : "");
-        td.appendChild(document.createTextNode(cellText(cell(node))));
-        if (PLACEHOLDER_COLS.indexOf(i) >= 0) {
-          td.appendChild(document.createTextNode(" "));
-          var badge = h("span", "placeholder", "badge");
-          badge.setAttribute("data-state", "neutral");
-          td.appendChild(badge);
-        }
+        var td = h("td", cellText(cell(node)), i === 0 || i === 1 || i === 15 ? "mono" : "");
         if (i === 6 && state) td.style.fontWeight = "600";
         tr.appendChild(td);
-        if (SUM_COLS.indexOf(i) >= 0) totals[i] = (totals[i] || 0) + cell(node);
+        if (SUM_COLS.indexOf(i) >= 0) totals[i] = (totals[i] || 0) + (Number(cell(node)) || 0);
       });
       body.appendChild(tr);
     });
@@ -5102,19 +5102,20 @@ var EvidenceScreen = (function () {
     });
 
     var chart = view.querySelector(".bar-chart");
-    var max = Math.max.apply(null, rec.nodes.map(function (n) { return n.wall_clock_ms; }).concat([1]));
+    var max = Math.max.apply(null, rec.nodes.map(function (n) { return Number(n.wall_clock_ms) || 0; }).concat([1]));
     rec.nodes.forEach(function (node) {
       var row = h("div", null, "bar-row");
       row.appendChild(h("span", node.node_id, "mono"));
       var bar = h("span", null, "bar");
-      bar.style.setProperty("--w", Math.round((node.wall_clock_ms / max) * 100) + "%");
+      bar.style.setProperty("--w", Math.round(((Number(node.wall_clock_ms) || 0) / max) * 100) + "%");
       row.appendChild(bar);
-      row.appendChild(h("span", node.wall_clock_ms + " ms"));
+      row.appendChild(h("span", cellText(node.wall_clock_ms) + " ms"));
       chart.appendChild(row);
     });
   }
 
-  // The Debug view exists only as a template: one clone after the summary while the toggle is on and the loaded trace has debug fields.
+  // The Debug view exists only as a template: one clone after the summary while the toggle is on and the loaded trace was read
+  // with debug. Switching Debug off removes the clone before anything else happens.
   function syncDebug() {
     if (debugView) {
       debugView.parentNode.removeChild(debugView);
@@ -5124,7 +5125,7 @@ var EvidenceScreen = (function () {
     absent.hidden = true;
     var summary = ID("trace.summary");
     if (!ID("trace.debug").checked || summary.hidden || !loaded) return;
-    if (!loaded.rec.nodes) {
+    if (!loaded.debug || !Array.isArray(loaded.rec.nodes)) {
       absent.hidden = false;
       return;
     }
@@ -5135,13 +5136,46 @@ var EvidenceScreen = (function () {
   }
 
   function openTrace(token) {
-    clearTimeout(timer);
     showTab("trace");
     hideErrors();
     ID("trace.reference").value = token;
     syncLoad();
-    traceView(loaded && loaded.token === token ? "loaded" : "empty");
+    if (token === "") return traceView(loaded ? "loaded" : "empty");
+    loadTrace(token);
   }
+
+  // The picker lists this browser's run history, then (with GET /traces in the spec) the server's traces not already listed.
+  function addRecent(select, token, time, label) {
+    if (typeof token !== "string" || token === "") return;
+    var listed = Array.prototype.some.call(select.options, function (option) {
+      return option.value === token;
+    });
+    if (listed) return;
+    var option = h("option", String(time).slice(0, 19).replace("T", " ") + " " + label + " " + token.slice(0, 8));
+    option.value = token;
+    select.appendChild(option);
+  }
+
+  // shortcut: a fresh SessionLog per call reads storage again; a blocked sessionStorage lists no history here, upgrade if that matters.
+  function refreshRecent() {
+    var select = ID("trace.recent");
+    var seq = ++recentSeq;
+    while (select.options.length > 1) select.remove(1);
+    SessionLog(HISTORY_KEY, 50)
+      .all()
+      .forEach(function (entry) {
+        addRecent(select, entry.trace_token, entry.timestamp, selectorLabel(entry.selector));
+      });
+    if (!Live.has("GET", "/traces")) return;
+    api("GET", "/traces?limit=50&offset=0").then(function (result) {
+      if (seq !== recentSeq || !isOk(result) || !Array.isArray(result.body.items)) return;
+      result.body.items.forEach(function (item) {
+        addRecent(select, item.trace_reference, item.created_at, "server");
+      });
+    });
+  }
+
+  // ---- wiring ----
 
   ID("tabs.evidence").addEventListener("click", function () {
     showTab("evidence");
@@ -5151,7 +5185,7 @@ var EvidenceScreen = (function () {
   ID("tabs.trace").addEventListener("click", function () {
     showTab("trace");
     hideErrors();
-    traceView(loaded && loaded.token === ID("trace.reference").value.trim() ? "loaded" : "empty");
+    traceView(traceCtl ? "loading" : loaded && loaded.token === ID("trace.reference").value.trim() ? "loaded" : "empty");
   });
   ID("lookup.submit").addEventListener("click", submitLookup);
   ID("lookup.ref").addEventListener("input", function () {
@@ -5164,18 +5198,19 @@ var EvidenceScreen = (function () {
   ID("trace.reference").addEventListener("keydown", function (event) {
     if (event.key === "Enter") loadTrace();
   });
-  ID("trace.load").addEventListener("click", loadTrace);
-  ID("trace.debug").addEventListener("change", syncDebug);
+  ID("trace.load").addEventListener("click", function () {
+    loadTrace();
+  });
+  ID("trace.debug").addEventListener("change", function () {
+    var token = loaded ? loaded.token : traceCtl ? ID("trace.reference").value.trim() : "";
+    if (token) loadTrace(token);
+    else syncDebug();
+  });
   ID("trace.recent").addEventListener("change", function (event) {
     if (!event.target.value) return;
     ID("trace.reference").value = event.target.value;
     setFieldError(ID("trace.reference"), "");
     syncLoad();
-  });
-  FIX.query.history.forEach(function (entry) {
-    var option = h("option", entry.time + " " + entry.selector + " " + entry.trace_token.slice(0, 8));
-    option.value = entry.trace_token;
-    ID("trace.recent").appendChild(option);
   });
   ID("trace.use-in-ledger").addEventListener("click", function () {
     Console.show("ledger");
@@ -5183,13 +5218,14 @@ var EvidenceScreen = (function () {
   });
   ID("inspector.document-link").addEventListener("click", function (event) {
     event.preventDefault();
+    if (shownDoc === null) return;
     Console.show("corpus");
+    Console.emit("focus-document", shownDoc);
   });
-  // Open trace delegates to the Open trace link of the result the evidence came from, so the token is the one that result holds.
+  // Open trace loads the trace of the run the shown record came from, captured when the row was opened (WR-JSB-01).
   ID("inspector.trace-link").addEventListener("click", function (event) {
     event.preventDefault();
-    var link = originLink || $id("query.result.trace-link");
-    if (link) link.click();
+    if (origin) openTrace(origin);
   });
   wireErrors("evidence");
 
@@ -5211,13 +5247,19 @@ var EvidenceScreen = (function () {
   Console.on("open-evidence", function (payload) {
     var el = opener;
     opener = null;
-    originLink = null; // replaced by the origin token in the next task
-    resolve(payload.ref, payload.score, el);
+    resolve(payload.ref, payload.score, payload.trace_token, el);
   });
   Console.on("open-trace", function (payload) {
     openTrace(payload.token || "");
   });
+  // Entering the screen refreshes the picker; leaving it abandons both reads and restores the Open button (IN-JSB-08).
+  Console.on("show", function (name) {
+    if (name === "evidence") return refreshRecent();
+    abortResolve();
+    abortTrace();
+  });
 
+  syncOrigin();
   evState("idle");
   traceView("empty");
   return {};
