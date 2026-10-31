@@ -102,7 +102,10 @@ var EvidenceScreen = (function () {
       link.setAttribute("aria-disabled", "true");
       link.setAttribute("tabindex", "-1");
     }
-    root.querySelector('[data-role="no-origin-trace"]').hidden = !!origin;
+    // The reason is written only while it applies, so the page never holds the text twice before a record is shown.
+    var note = root.querySelector('[data-role="no-origin-trace"]');
+    note.textContent = origin ? "" : "No trace token on this result.";
+    note.hidden = !!origin;
   }
 
   function renderRecord(ref, rec, score) {
@@ -461,7 +464,6 @@ var EvidenceScreen = (function () {
     abortTrace();
   });
 
-  syncOrigin();
   evState("idle");
   traceView("empty");
   return {};

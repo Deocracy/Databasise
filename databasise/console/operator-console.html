@@ -1356,7 +1356,7 @@ dialog .mono { overflow-wrap: anywhere; }
           <a href="#corpus" data-mock-id="evidence.inspector.document-link" hidden>Open in Corpus</a>
           <a href="#evidence" data-mock-id="evidence.inspector.trace-link">Open trace</a>
         </div>
-        <p class="muted" data-role="no-origin-trace" hidden>No trace token on this result.</p>
+        <p class="muted" data-role="no-origin-trace" hidden></p>
         <p class="muted">Cached for this session by namespace and ref.</p>
       </section>
     </div>
@@ -4900,7 +4900,10 @@ var EvidenceScreen = (function () {
       link.setAttribute("aria-disabled", "true");
       link.setAttribute("tabindex", "-1");
     }
-    root.querySelector('[data-role="no-origin-trace"]').hidden = !!origin;
+    // The reason is written only while it applies, so the page never holds the text twice before a record is shown.
+    var note = root.querySelector('[data-role="no-origin-trace"]');
+    note.textContent = origin ? "" : "No trace token on this result.";
+    note.hidden = !!origin;
   }
 
   function renderRecord(ref, rec, score) {
@@ -5259,7 +5262,6 @@ var EvidenceScreen = (function () {
     abortTrace();
   });
 
-  syncOrigin();
   evState("idle");
   traceView("empty");
   return {};

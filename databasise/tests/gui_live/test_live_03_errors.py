@@ -1,7 +1,8 @@
 """LIVE-03 (D-12, GUI-06): every real server answer renders through the four error shapes, with the real status.
 
 Each screen plan appends one case set to this module; 18-04 adds the Query cases and 18-05 the Compare cases
-(a duplicate-key refusal, a validation list that marks the offending selector row, a 500). The row test is
+(a duplicate-key refusal, a validation list that marks the offending selector row, a 500), and 18-06 the
+Evidence & Trace cases (unknown trace, unresolvable ref, a validation 422 on the lookup ref, a 500). The row test is
 ``test_query_500_renders_the_generic_view``: a real 500 (``LiveApp.fail("query")``) shows the generic view,
 and the server-log region follows the launch mode. ``live_app`` has no log file, so GET /log is absent;
 ``log_app`` is started with ``--log-file``, so the 5xx view loads ``GET /log?limit=200``.
@@ -185,6 +186,55 @@ def test_compare_500_renders_the_generic_view(seeded, browser):
         ui.expect("query.error.generic").to_contain_text("The server returned HTTP 500")
         ui.expect("query.compare.columns").to_be_hidden()
         ui.expect("query.run.submit").to_be_enabled()
+
+
+# ---- 18-06: Evidence & Trace ----
+
+REF_FIELD = '[data-mock-id="screen-evidence"] [data-field-loc="body.ref"]'
+
+
+def _lookup(ui, ref="nope", namespace="hipporag-chunks"):
+    ui.nav("evidence")
+    ui.el("evidence.lookup.toggle").click()
+    ui.el("evidence.lookup.ref").fill(ref)
+    ui.el("evidence.lookup.namespace").select_option(namespace)
+    ui.el("evidence.lookup.submit").click()
+
+
+def test_unknown_trace_reference_renders_its_typed_banner(seeded, live_ui):
+    ui = live_ui
+    ui.nav("evidence")
+    ui.el("evidence.tabs.trace").click()
+    ui.el("evidence.trace.reference").fill("no-such-trace")
+    ui.el("evidence.trace.load").click()
+    banner = ui.el("evidence.error.refusal")
+    ui.expect(banner).to_contain_text("UnknownTraceReferenceError")
+    ui.expect(banner.locator('[data-role="footer"]')).to_have_text(re.compile(r"^HTTP 404\."))
+
+
+def test_unresolvable_ref_renders_record_no_longer_present(seeded, live_ui):
+    ui = live_ui
+    _lookup(ui)
+    ui.expect("evidence.state.refusal").to_contain_text("record no longer present")
+    ui.expect(ui.el("evidence.error.refusal").locator('[data-role="footer"]')).to_have_text(re.compile(r"^HTTP 404\."))
+
+
+def test_evidence_validation_marks_the_lookup_ref(seeded, browser):
+    def handler(route):
+        body = route.request.post_data_json
+        del body["ref"]
+        route.continue_(post_data=json.dumps(body))
+
+    with _ui(browser, seeded, lambda page: page.route("**/evidence/resolve", handler)) as ui:
+        _lookup(ui)
+        ui.expect("evidence.error.validation").to_be_visible()
+        ui.expect(ui.page.locator(REF_FIELD)).to_have_attribute("aria-invalid", "true")
+
+
+def test_evidence_500_renders_the_generic_view(seeded, browser):
+    with seeded.fail("resolve_evidence"), _ui(browser, seeded) as ui:
+        _lookup(ui)
+        ui.expect("evidence.error.generic").to_contain_text("The server returned HTTP 500")
 
 
 def test_query_unreachable_renders_generic_and_header_unreachable(seeded, browser):
