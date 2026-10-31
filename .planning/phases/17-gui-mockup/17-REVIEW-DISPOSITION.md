@@ -21,7 +21,7 @@ Source: 17-REVIEW.md (39 findings: 0 critical, 17 warning, 22 info). The finding
 | WR-JSA-04 | warning | fixed in Phase 18 (18-05) | A mode switch cancels only Compare's timers; a pending Query run still fires in compare mode |
 | WR-JSA-05 | warning | fixed in Phase 18 (18-04) | While streaming, the result panel already shows 'Run complete.' and an enabled Promote |
 | WR-JSA-06 | warning | fixed in Phase 18 (18-05) | Every Compare Run column carries the q-success body, so per-column Open trace and Promote target the Default/naive trace |
-| WR-JSB-01 | warning | open | Evidence Inspector 'Open trace' opens an unrelated or stale trace |
+| WR-JSB-01 | warning | fixed in Phase 18 (18-06) | Evidence Inspector 'Open trace' opens an unrelated or stale trace |
 | WR-JSB-02 | warning | open | 'Keep document' or Escape after pressing Delete still completes the delete |
 | WR-JSB-03 | warning | open | A failed job load leaves the restored page with Previous and Next disabled |
 | WR-JSB-04 | warning | open | Table actions erase the health-error banner while health is still unreachable |
@@ -40,8 +40,8 @@ Source: 17-REVIEW.md (39 findings: 0 critical, 17 warning, 22 info). The finding
 | IN-JSA-09 | info | fixed in Phase 18 (18-04) | The refusal state view always says HTTP 422, whatever the response status |
 | IN-JSB-05 | info | open | Jobs poll reopens a closed drawer and keeps running on other screens |
 | IN-JSB-06 | info | open | Retry confirmation can land on a different document's row |
-| IN-JSB-07 | info | open | 'Open in Corpus' is shown only for HippoRAG records, but Corpus lists only v1 documents |
-| IN-JSB-08 | info | open | A cancelled evidence resolve leaves the opener button stuck as 'Opening' |
+| IN-JSB-07 | info | fixed in Phase 18 (18-06) | 'Open in Corpus' is shown only for HippoRAG records, but Corpus lists only v1 documents |
+| IN-JSB-08 | info | fixed in Phase 18 (18-06) | A cancelled evidence resolve leaves the opener button stuck as 'Opening' |
 | IN-JSB-09 | info | open | No test covers the inspector's Open trace link or a confirmed delete |
 | IN-JSC-04 | info | open | Cancelling a dialog after Confirm still applies the promote, rollback or retire |
 | IN-JSC-05 | info | open | Rollback notice and promote-success fixture mint generation ordinals that collide with other aliases |
