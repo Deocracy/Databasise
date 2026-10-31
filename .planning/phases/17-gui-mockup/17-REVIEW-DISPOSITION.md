@@ -39,7 +39,7 @@ Source: 17-REVIEW.md (39 findings: 0 critical, 17 warning, 22 info). The finding
 | IN-JSA-08 | info | fixed in Phase 18 (18-05) | Promote stays enabled on a result with trace_token null |
 | IN-JSA-09 | info | fixed in Phase 18 (18-04) | The refusal state view always says HTTP 422, whatever the response status |
 | IN-JSB-05 | info | open | Jobs poll reopens a closed drawer and keeps running on other screens |
-| IN-JSB-06 | info | open | Retry confirmation can land on a different document's row |
+| IN-JSB-06 | info | fixed in Phase 18 (18-07) | Retry confirmation can land on a different document's row |
 | IN-JSB-07 | info | fixed in Phase 18 (18-06) | 'Open in Corpus' is shown only for HippoRAG records, but Corpus lists only v1 documents |
 | IN-JSB-08 | info | fixed in Phase 18 (18-06) | A cancelled evidence resolve leaves the opener button stuck as 'Opening' |
 | IN-JSB-09 | info | open | No test covers the inspector's Open trace link or a confirmed delete |
