@@ -3771,7 +3771,10 @@ var QueryScreen = (function () {
     errorsBox.hidden = ERROR_STATES.indexOf(name) < 0;
     var running = name === "running";
     ID("run.spinner").hidden = !running;
-    setDisabled(ID("run.submit"), running);
+    // In compare mode Run belongs to Compare, which also decides it from the row blockers (WR-JSA-02, WR-JSA-03).
+    if (mode !== "compare") setDisabled(ID("run.submit"), running);
+    // A state view and the compare columns never show together.
+    if (Compare) Compare.hideColumns();
     Array.prototype.forEach.call(root.querySelectorAll("[data-error-id]"), function (el) {
       setFieldError(el, "");
     });
@@ -4100,7 +4103,18 @@ var QueryScreen = (function () {
     });
   }
 
+  // Aborts the query read in flight; its answer renders nothing and adds no history row (WR-JSA-04).
+  function cancel() {
+    if (controller) controller.abort();
+    controller = null;
+    if (!ID("state.running").hidden) showState("idle");
+  }
+
   function setMode(next) {
+    if (next !== mode) {
+      cancel();
+      if (Compare) Compare.cancel();
+    }
     mode = next;
     root.setAttribute("data-mode", mode);
     ID("mode.query").setAttribute("aria-selected", String(mode === "query"));
@@ -4189,6 +4203,7 @@ var QueryScreen = (function () {
     renderResult: renderResult,
     applyResponse: applyResponse,
     remember: remember,
+    cancel: cancel,
   };
 })();
 Console.register("query", QueryScreen);
@@ -4199,6 +4214,9 @@ var Compare = (function () {
   var errorsBox = root.querySelector('[data-role="errors"]');
   var STATES = ["idle", "running", "success", "partial", "empty-evidence", "refusal-422", "validation-422", "error-500"];
   var TEXT_EMPTY = "Query text is empty. Enter at least one non-space character.";
+  var NO_TRACE = "No trace token on this result.";
+  var PARTIAL_NOTE = "A partial run cannot be promoted.";
+  var EXTRA_RESOLVE = "Resolves to: unknown here (needs backend)";
   var MSG = {
     zero: "Add at least one selector. A comparison with no selectors is refused.",
     one: "One selector runs as a plain query and returns a single result, not a set of columns.",
@@ -4231,6 +4249,7 @@ var Compare = (function () {
     if (controller) controller.abort();
     controller = null;
     running = false;
+    syncRun(lastBlocked);
   }
 
   function selectorOf(m) {
@@ -4301,9 +4320,8 @@ var Compare = (function () {
         chips.appendChild(h("span", t, "chip mono"));
       });
       R(i, "key").textContent = "Key: " + comparisonKey(v);
-      var error = R(i, "error");
-      error.textContent = msg;
-      error.hidden = !msg;
+      // The kind control names the row's error element, so a server field error and a blocker share one place.
+      setFieldError(R(i, "kind"), msg);
       if (msg) blocked = true;
       setDisabled(R(i, "move-up"), i === 1);
       setDisabled(R(i, "move-down"), i === model.length);
@@ -4321,6 +4339,7 @@ var Compare = (function () {
     setDisabled(ID("compare.add"), model.length >= MAX);
     ID("compare.add").closest(".cmp-add-row").querySelector('[data-role="cap-note"]').hidden = model.length < MAX;
     syncRun(blocked);
+    return blocked;
   }
 
   function paint() {
@@ -4345,10 +4364,38 @@ var Compare = (function () {
     errorsBox.hidden = true;
   }
 
+  // The column panels and tabs: four literal ones plus any clones a response with more keys added.
+  function panels() {
+    return Array.prototype.slice.call(root.querySelectorAll(".cmp-scroll > .cmp-col"));
+  }
+
+  function tabs() {
+    return Array.prototype.slice.call(ID("compare.tabs").children);
+  }
+
   function hideColumns() {
     shown = [];
     ID("compare.columns").hidden = true;
-    for (var c = 1; c <= MAX; c++) C(c, "panel").hidden = true;
+    panels().forEach(function (panel) {
+      panel.hidden = true;
+    });
+  }
+
+  // Grows the columns to n by cloning the last panel and tab; clone ids are set through setAttribute only.
+  function ensureColumns(n) {
+    var scroll = root.querySelector(".cmp-scroll");
+    var bar = ID("compare.tabs");
+    while (panels().length < n) {
+      var number = panels().length + 1;
+      var panel = scroll.lastElementChild.cloneNode(true);
+      [panel].concat(Array.prototype.slice.call(panel.querySelectorAll("[data-mock-id]"))).forEach(function (el) {
+        el.setAttribute("data-mock-id", el.getAttribute("data-mock-id").replace(/^query\.col\d+\./, "query.col" + number + "."));
+      });
+      scroll.appendChild(panel);
+      var tab = bar.lastElementChild.cloneNode(true);
+      tab.setAttribute("data-mock-id", "query.compare.tab" + number);
+      bar.appendChild(tab);
+    }
   }
 
   function sortedTokens(entries) {
@@ -4441,21 +4488,36 @@ var Compare = (function () {
     });
     fillTokens(C(c, "tokens"), env.token_accounting);
     fillSeam(C(c, "seam"), env.seam_events);
-    setDisabled(C(c, "promote"), partial);
-    C(c, "promote").title = partial ? "A partial run cannot be promoted." : "";
-    panel.querySelector('[data-role="no-promote"]').hidden = !partial;
+    // Open trace and Promote need a finished run with a trace token (IN-JSA-08); each column answers for itself.
+    var token = env.trace_token || null;
+    var link = C(c, "trace-link");
+    if (token) {
+      link.setAttribute("href", "#evidence");
+      link.removeAttribute("aria-disabled");
+      link.removeAttribute("tabindex");
+    } else {
+      link.removeAttribute("href");
+      link.setAttribute("aria-disabled", "true");
+      link.setAttribute("tabindex", "-1");
+    }
+    var reason = partial ? PARTIAL_NOTE : token ? "" : NO_TRACE;
+    setDisabled(C(c, "promote"), !!reason);
+    C(c, "promote").title = reason;
+    var note = panel.querySelector('[data-role="no-promote"]');
+    note.textContent = reason;
+    note.hidden = !reason;
   }
 
   // Below 768 px the CSS shows only the active column; the tabs pick it.
   function selectTab(active) {
-    for (var c = 1; c <= MAX; c++) {
-      var r = shown[c - 1];
-      var tab = ID("compare.tab" + c);
+    var cols = panels();
+    tabs().forEach(function (tab, idx) {
+      var r = shown[idx];
       tab.hidden = !r;
       tab.textContent = r ? r.key : "";
-      tab.setAttribute("aria-selected", String(c === active));
-      C(c, "panel").setAttribute("data-active", String(c === active));
-    }
+      tab.setAttribute("aria-selected", String(idx + 1 === active));
+      cols[idx].setAttribute("data-active", String(idx + 1 === active));
+    });
   }
 
   function renderDiff() {
@@ -4479,28 +4541,35 @@ var Compare = (function () {
 
   function showColumns(results) {
     shown = results;
+    ensureColumns(results.length);
     ID("compare.columns").hidden = false;
     ID("compare.diff").textContent = "";
-    for (var c = 1; c <= MAX; c++) {
-      var r = results[c - 1];
-      C(c, "panel").hidden = !r;
-      if (!r) continue;
-      fillHeader(c, r);
-      fillBody(c, r);
-    }
+    panels().forEach(function (panel, idx) {
+      var r = results[idx];
+      panel.hidden = !r;
+      if (!r) return;
+      fillHeader(idx + 1, r);
+      fillBody(idx + 1, r);
+    });
     selectTab(1);
     renderDiff();
   }
 
   // One column per requested selector, read from the response map by that selector's own comparison key.
+  // A key the server returns that was not requested follows as an extra column, so no key is dropped.
   function columnsOf(chosen, body) {
     var cols = [];
+    var asked = Object.create(null);
     chosen.forEach(function (m) {
       var v = selectorOf(m);
       var key = comparisonKey(v);
+      asked[key] = true;
       if (!Object.prototype.hasOwnProperty.call(body, key)) return;
       var res = Resolution.resolve(v);
       cols.push({ key: key, selector: v, arm: res.arm, resolve: res.text, body: body[key] });
+    });
+    Object.keys(body).forEach(function (key) {
+      if (!asked[key]) cols.push({ key: key, selector: null, extra: true, arm: null, resolve: EXTRA_RESOLVE, body: body[key] });
     });
     return cols;
   }
@@ -4513,6 +4582,8 @@ var Compare = (function () {
       return;
     }
     setFieldError(textBox, "");
+    // Re-check every blocker here: the button may have been enabled by a stale state (WR-JSA-02).
+    if (update() || (InFlight.counts.compare || 0) > 0) return;
     var text = textBox.value;
     var chosen = model.slice();
     // Default is {} for compare (null is a 422 here); /query keeps null.
@@ -4534,8 +4605,11 @@ var Compare = (function () {
         var cols = columnsOf(chosen, result.body);
         hideStates();
         showColumns(cols);
+        // Requested columns only, last first, so the history reads in builder order; an extra key was not run by this console.
         cols
-          .slice()
+          .filter(function (col) {
+            return !col.extra;
+          })
           .reverse()
           .forEach(function (col) {
             QueryScreen.remember(col.body, { query: { text: text }, selector: col.selector });
@@ -4552,7 +4626,6 @@ var Compare = (function () {
     if (mode === lastMode) return;
     lastMode = mode;
     cancel();
-    running = false;
     if (mode === "compare") {
       if (shown.length) hideStates();
       else QueryScreen.showState("idle");
@@ -4648,9 +4721,15 @@ var Compare = (function () {
     if (root.getAttribute("data-mode") === "compare" && box.getAttribute("aria-invalid")) setFieldError(box, box.value.trim() === "" ? TEXT_EMPTY : "");
   });
   new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ["data-mode"] });
+  // Leaving the screen aborts a pending read of either mode; its answer renders nothing (WR-JSA-04).
+  Console.on("show", function (name) {
+    if (name === "query") return;
+    QueryScreen.cancel();
+    cancel();
+  });
   hideColumns();
   paint();
-  return { run: run, cancel: cancel };
+  return { run: run, cancel: cancel, hideColumns: hideColumns };
 })();
 var EvidenceScreen = (function () {
   var STATES = ["idle", "loading", "resolved", "refusal"];

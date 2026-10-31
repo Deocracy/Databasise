@@ -37,7 +37,10 @@ var QueryScreen = (function () {
     errorsBox.hidden = ERROR_STATES.indexOf(name) < 0;
     var running = name === "running";
     ID("run.spinner").hidden = !running;
-    setDisabled(ID("run.submit"), running);
+    // In compare mode Run belongs to Compare, which also decides it from the row blockers (WR-JSA-02, WR-JSA-03).
+    if (mode !== "compare") setDisabled(ID("run.submit"), running);
+    // A state view and the compare columns never show together.
+    if (Compare) Compare.hideColumns();
     Array.prototype.forEach.call(root.querySelectorAll("[data-error-id]"), function (el) {
       setFieldError(el, "");
     });
@@ -366,7 +369,18 @@ var QueryScreen = (function () {
     });
   }
 
+  // Aborts the query read in flight; its answer renders nothing and adds no history row (WR-JSA-04).
+  function cancel() {
+    if (controller) controller.abort();
+    controller = null;
+    if (!ID("state.running").hidden) showState("idle");
+  }
+
   function setMode(next) {
+    if (next !== mode) {
+      cancel();
+      if (Compare) Compare.cancel();
+    }
     mode = next;
     root.setAttribute("data-mode", mode);
     ID("mode.query").setAttribute("aria-selected", String(mode === "query"));
@@ -455,6 +469,7 @@ var QueryScreen = (function () {
     renderResult: renderResult,
     applyResponse: applyResponse,
     remember: remember,
+    cancel: cancel,
   };
 })();
 Console.register("query", QueryScreen);
