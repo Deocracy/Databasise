@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 18
 current_phase_name: GUI Live
 status: executing
-stopped_at: Completed 18-07-PLAN.md
-last_updated: "2026-10-31T22:20:48.115Z"
+stopped_at: Completed 18-08-PLAN.md
+last_updated: "2026-10-31T22:45:19.963Z"
 last_activity: 2026-10-31
 last_activity_desc: Phase 18 execution started
-state_head: 162bbf5d16462f02c66921c801e1d0e250f229de
+state_head: b5a9e2ada2398ca993e4380178522b423e1d2f54
 progress:
   total_phases: 11
   completed_phases: 10
   total_plans: 136
-  completed_plans: 132
+  completed_plans: 133
   percent: 91
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-19 after Phase 12)
 ## Current Position
 
 Phase: 18 (GUI Live) — EXECUTING
-Plan: 8 of 11
+Plan: 9 of 11
 Status: Ready to execute
 Last activity: 2026-10-31 — Phase 18 execution started
 
@@ -171,6 +171,7 @@ Progress: [█████████░] 91% (4/11 phases)
 | Phase 18 P05 | 75 min | 3 tasks | 7 files |
 | Phase 18 P06 | 15 min | 3 tasks | 5 files |
 | Phase 18 P07 | 25 min | 3 tasks | 8 files |
+| Phase 18 P08 | 18 min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -290,6 +291,8 @@ Recent decisions affecting current work:
 - [Phase 18]: 18-06: the Evidence trace picker refreshes on every entry to the screen (browser history plus GET /traces, sequence-guarded)
 - [Phase 18]: 18-07: the counts poll refreshes the counts only; Corpus keeps the requested offset on the client; a table error replaces the health error until the next table action repaints it
 - [Phase 18]: 18-07: Retry has no confirm dialog in the frozen markup, so the document_id is captured from the pressed row at send time and the answer is written by id
+- [Phase 18]: 18-08: Run is natively disabled during an ingest, upload or delete (D-13 amended); the Default selector is sent as null on POST /documents and DELETE; documents.notice.store-split is untouched until the 18-11 owner ruling
+- [Phase 18]: 18-08: the delete dialog stays open and ignores Escape until the answer, reopening itself if a repeated Escape closes it; a LightRAG ingest and a successful delete emit corpus-changed
 
 ### Pending Todos
 
@@ -349,8 +352,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-31T22:20:47.220Z
-Stopped at: Completed 18-07-PLAN.md
+Last session: 2026-10-31T22:45:19.343Z
+Stopped at: Completed 18-08-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
