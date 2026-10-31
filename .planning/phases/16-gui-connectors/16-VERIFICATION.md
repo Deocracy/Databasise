@@ -1,6 +1,6 @@
 ---
 phase: 16-gui-connectors
-verified: 2026-10-22T16:15:00Z
+verified: 2026-10-31T00:00:00Z
 status: passed
 score: 19/19 must-haves verified (5 roadmap SCs + 14 CONN requirements)
 covered_files:
@@ -44,17 +44,33 @@ covered_files:
   - docs/gui/API-INVENTORY.md
   - docs/gui/CODEBASE-MAP.md
   - docs/gui/refusals.json
-covered_digest: "v3:sha256:946f86491067fc59bb65c85c974bc3f8a8a1a4c917a3f7ff5184d3e52e73c1e8"
+covered_digest: "v3:sha256:e81d205ea0617bbcb0205c4bf1220bd63c0c87b569699906e142b6cbf69c9353"
 behavior_unverified: 0
 overrides_applied: 0
+re_verification:
+  previous_status: passed
+  previous_score: 19/19
+  gaps_closed: []
+  gaps_remaining: []
+  regressions: []
 ---
 
 # Phase 16: GUI Connectors Verification Report
 
 **Phase Goal:** The operator console has every read route it needs, served by the launcher's single engine through thin adapters, with nothing leaking store internals or credentials
-**Verified:** 2026-10-22T16:15:00Z (code at HEAD 2505402, after the review fix rounds)
+**Verified:** 2026-10-31T00:00:00Z (re-verification at HEAD 7147047; original verdict 2026-10-22T16:15:00Z at 2505402)
 **Status:** passed
-**Re-verification:** No (initial verification)
+**Re-verification:** Yes. The first report went stale because docs/gui/API-INVENTORY.md was amended by Phase 17-13 (commit f674eba).
+
+### Re-verification Delta (2026-10-31)
+
+- **Stale cause.** Only docs/gui/API-INVENTORY.md changed among the covered files. `git diff 727afb1..HEAD` over databasise/launcher, ledger, parts_core, seam, stores, evidence, tests/fixtures and docs/gui shows no change to any Phase 16 code file, the COVERAGE.md rows, refusals.json or selector-resolution.json; the only docs/gui changes are API-INVENTORY.md plus new Phase 17 files (GAP-ROUTES.json, INVENTORY-MAP.json, MOCK-IDS.json, MOCKUP-APPROVAL.md).
+- **What the amendment touched.** It edits the /health engine paragraph (3.4.1, Phase 11 route), the /corpus and /corpus/counts Gaps text (3.4.2, 3.4.3, Phase 12 selector parameter), adds proposed routes 15 and 16 to the Phase 17+ route list (POST /graph/node/attrs, GET /corpus filters), and adds one note to the 5.1a operator-routes section about the mockup badge. The 5.1a route table (the Phase 16 contract) is unchanged.
+- **Amended claims checked against code.** HealthReport carries `clients` and `engine_reason` (databasise/seam/corpus.py:312-342); `/corpus` and `/corpus/counts` accept the JSON `selector` query parameter via `_selector_field` (rest.py:317-327); `POST /documents/{id}/retry` exists. The new badge note says ten operator routes; docs/gui/GAP-ROUTES.json lists exactly ten `kind: operator` entries whose paths equal the ten routes in the 5.1a table. No TBD/FIXME/XXX in the file. The Phase 16 operator documentation (routes, refusals, exceptions) is intact and does not contradict the code.
+- **Regression check at HEAD.** 9 test_console_*.py files: 43 passed. Review, catalogue, fixture, transport, write-gate, graph, launcher, ledger and MCP-coverage files (11 files): 127 passed. Same counts as the first run. Truths whose behavior tests were rerun: CONN-09 preview equals mint, CONN-11 busy 409, CONN-13 flags during an ingest, CONN-14 /log.
+- **Requirements cross-reference.** All 14 CONN IDs are declared in the phase PLAN frontmatter (CONN-14 in 16-11 and 16-12; CONN-01..13 across the others), checked `[x]` in REQUIREMENTS.md lines 695-742 and "Complete" in the traceability table lines 971-984. No orphans. This closes the earlier bookkeeping note about CONN-13/14 showing `[ ]`.
+- **Not rerun.** The manual launcher log check and the 14 ledger test_refs from the first run were not repeated, since the code under them is byte-identical; the full offline gate belongs to the orchestrator.
+
 
 Full offline gate (`databasise/tools/check_offline_suite.py`): **reported by orchestrator** (not run by the verifier, per instruction). This verdict rests on the targeted runs below; if the orchestrator's gate is red, this status must be revisited.
 
