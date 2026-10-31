@@ -391,3 +391,188 @@ def test_compare_two_selectors_fills_each_column_from_its_own_key(answer_alias, 
     by_token = {e["trace_token"]: e["selector"] for e in entries}
     assert by_token[body[keys[0]]["trace_token"]] == sent["selectors"][0]
     assert by_token[body[keys[1]]["trace_token"]] == {"alias": "answer"}
+
+
+# ---- Task 2: bare envelope, Default as {}, blocker re-check, one view, aborts, extra keys ----
+
+NO_TRACE = "No trace token on this result."
+VISIBLE_STATES = '[data-mock-id^="query.state."]:not([hidden])'
+VISIBLE_PANELS = '[data-mock-id^="query.col"][data-mock-id$=".panel"]:not([hidden])'
+
+
+def _wait_for_post(ui, path):
+    for _ in range(100):  # bounded: a console that never sends must fail, not hang
+        if _posts(ui, path):
+            return
+        ui.page.wait_for_timeout(50)
+    raise AssertionError(f"no POST {path} was sent")
+
+
+def _hidden_attr(ui, mock_id):
+    return ui.el(mock_id).evaluate("(e) => e.hidden")
+
+
+def test_compare_one_selector_is_parsed_as_a_bare_envelope(seeded, live_ui):
+    ui = live_ui
+    _open_compare(ui)
+    _row_capability(ui, 1)
+    ui.expect("query.compare.warning-count").to_contain_text("One selector runs as a plain query")
+    env = _run_compare(ui)
+    assert "answer" in env and "trace_token" in env
+    assert len(_sent(ui)["selectors"]) == 1
+    ui.expect("query.state.success").to_be_visible()
+    ui.expect("query.result.answer").to_have_text(env["answer"])
+    assert _hidden_attr(ui, "query.compare.columns") is True
+    assert [e["trace_token"] for e in _stored(ui)] == [env["trace_token"]]
+
+
+def test_compare_default_row_is_sent_as_an_empty_object(seeded, live_ui):
+    ui = live_ui
+    _open_compare(ui)
+    ui.el("query.compare.add").click()
+    _row_capability(ui, 2)
+    _run_compare(ui)  # whatever the server answers for Default on this store, it is no validation 422
+    assert _sent(ui)["selectors"][0] == {}
+    ui.expect(ui.page.locator(VISIBLE_STATES + ", " + VISIBLE_PANELS)).not_to_have_count(0)
+    ui.expect("query.error.validation").to_be_hidden()
+
+
+def test_compare_rechecks_blockers_before_sending(seeded, live_ui):
+    ui = live_ui
+    _open_compare(ui)
+    _row_capability(ui, 1)
+    ui.el("query.compare.add").click()
+    _row_capability(ui, 2)
+    ui.expect("query.compare.warning-duplicate").to_be_visible()
+    ui.expect("query.run.submit").to_be_disabled()
+    ui.page.evaluate(
+        "() => { const b = document.querySelector('[data-mock-id=\"query.run.submit\"]'); b.disabled = false; b.removeAttribute('aria-disabled'); }"
+    )
+    ui.el("query.run.submit").click()
+    ui.page.wait_for_timeout(500)
+    assert _posts(ui, "/compare") == []
+    ui.expect("query.state.running").to_be_hidden()
+
+
+def test_mode_switch_aborts_the_pending_compare(seeded, live_ui):
+    ui = live_ui
+    _open_compare(ui)
+    ui.el("query.compare.add").click()
+    _row_capability(ui, 2)
+    with seeded.hold("compare") as release:
+        ui.el("query.run.submit").click()
+        _wait_for_post(ui, "/compare")
+        ui.el("query.mode.query").click()
+        release.set()
+        ui.page.wait_for_timeout(800)
+    ui.el("query.mode.compare").click()
+    assert _hidden_attr(ui, "query.compare.columns") is True
+    ui.expect(ui.page.locator(VISIBLE_PANELS)).to_have_count(0)
+    assert _stored(ui) == []
+
+
+def test_mode_switch_aborts_the_pending_query(seeded, live_ui):
+    ui = live_ui
+    _fill(ui)
+    with seeded.hold("query") as release:
+        ui.el("query.run.submit").click()
+        _wait_for_post(ui, "/query")
+        ui.el("query.mode.compare").click()
+        release.set()
+        ui.page.wait_for_timeout(800)
+    ui.expect("query.state.success").to_be_hidden()
+    ui.expect(ui.page.locator(VISIBLE_STATES)).to_have_count(1)
+    ui.expect("query.state.idle").to_be_visible()
+    assert _stored(ui) == []
+
+
+def test_leaving_the_screen_aborts_the_pending_compare(seeded, live_ui):
+    ui = live_ui
+    _open_compare(ui)
+    ui.el("query.compare.add").click()
+    _row_capability(ui, 2)
+    with seeded.hold("compare") as release:
+        ui.el("query.run.submit").click()
+        _wait_for_post(ui, "/compare")
+        ui.nav("corpus")
+        release.set()
+        ui.page.wait_for_timeout(800)
+    ui.nav("query")
+    assert _hidden_attr(ui, "query.compare.columns") is True
+    ui.expect(ui.page.locator(VISIBLE_STATES)).to_have_count(1)
+    ui.expect("query.state.idle").to_be_visible()
+    ui.expect("query.run.submit").to_be_enabled()
+    assert _stored(ui) == []
+
+
+def test_only_one_view_is_visible_after_compare(answer_alias, seeded, live_ui):
+    ui = live_ui
+    _two_rows(ui)
+    _run_compare(ui)
+    ui.expect("query.compare.columns").to_be_visible()
+    ui.expect(ui.page.locator(VISIBLE_STATES)).to_have_count(0)
+    ui.expect("query.result.panel").to_be_hidden()
+
+    # A failing second run clears the columns: no state view renders beside them.
+    with seeded.fail("compare"):
+        ui.el("query.run.submit").click()
+        ui.expect("query.error.generic").to_be_visible()
+    assert _hidden_attr(ui, "query.compare.columns") is True
+    ui.expect(ui.page.locator(VISIBLE_STATES)).to_have_count(1)
+
+    ui.el("query.mode.query").click()
+    _fill(ui)
+    ui.el("query.run.submit").click()
+    ui.expect("query.state.success").to_be_visible()
+    assert _hidden_attr(ui, "query.compare.columns") is True
+    ui.expect(ui.page.locator(VISIBLE_STATES)).to_have_count(1)
+
+
+def test_compare_promote_disabled_without_trace_token(answer_alias, live_ui):
+    ui = live_ui
+
+    def handler(route):
+        response = route.fetch()
+        body = response.json()
+        body[next(iter(body))]["trace_token"] = None
+        route.fulfill(response=response, body=json.dumps(body))
+
+    ui.page.route("**/compare", handler)
+    _two_rows(ui)
+    _run_compare(ui)
+    ui.expect("query.col1.promote").to_be_disabled()
+    ui.expect("query.col1.panel").to_contain_text(NO_TRACE)
+    assert ui.el("query.col1.trace-link").get_attribute("aria-disabled") == "true"
+    ui.expect("query.col2.promote").to_be_enabled()
+    ui.expect("query.col2.panel").not_to_contain_text(NO_TRACE)
+
+
+def test_compare_extra_server_key_appends_a_column(answer_alias, live_ui):
+    ui = live_ui
+    extras = ["extra-a", "extra-b", "extra-c"]
+
+    def handler(route):
+        response = route.fetch()
+        body = response.json()
+        first = body[next(iter(body))]
+        for key in extras:
+            body[key] = json.loads(json.dumps(first))
+        route.fulfill(response=response, body=json.dumps(body))
+
+    ui.page.route("**/compare", handler)
+    _two_rows(ui)
+    body = _run_compare(ui)
+    ui.page.evaluate("Console.on('open-evidence', (p) => { window.__payload = p; })")
+    for c in range(1, 6):
+        ui.expect(f"query.col{c}.panel").to_be_visible()
+    ui.expect("query.col3.header").to_contain_text("extra-a")
+    ui.expect("query.col5.header").to_contain_text("extra-c")
+    assert ui.el("query.col5.panel").evaluate("(e) => e.parentElement.classList.contains('cmp-scroll')")
+    assert _hidden_attr(ui, "query.compare.tab5") is False
+    ui.el("query.col5.open-1").click()
+    ui.expect("screen-evidence").to_be_visible()
+    payload = ui.page.evaluate("window.__payload")
+    assert payload["ref"] == body["extra-c"]["evidence"][0]
+    assert payload["trace_token"] == body["extra-c"]["trace_token"]
+    # Only the two requested columns are history runs.
+    assert len(_stored(ui)) == 2
