@@ -128,6 +128,7 @@
         </label>
       </div>
       <p class="banner" data-state="ok" role="status" data-mock-id="ledger.timeline.notice" hidden></p>
+      <p class="banner" data-state="ok" role="status" data-role="outcome" hidden></p>
       <div class="state-view" role="status" data-mock-id="ledger.timeline.loading" hidden><span class="spinner" role="presentation"></span> Loading history</div>
       <div class="state-view" data-mock-id="ledger.timeline.empty" hidden>
         <h3>No history for this alias</h3>
@@ -141,7 +142,7 @@
             <tr hidden data-status="none">
               <td class="mono" data-role="ordinal"></td>
               <td class="mono" data-role="created"></td>
-              <td><span class="badge" data-role="kind"></span></td>
+              <td data-role="kind-cell"><span class="badge" data-role="kind"></span></td>
               <td class="mono" data-role="minted"></td>
               <td class="mono" data-role="targets"></td>
               <td class="mono" data-role="origin"></td>
@@ -156,6 +157,7 @@
           </tbody>
         </table>
       </div>
+      <p class="muted" role="status" data-role="range" hidden></p>
       <div class="run-row">
         <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="ledger.timeline.prev">Previous page</button>
         <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="ledger.timeline.next">Next page</button>

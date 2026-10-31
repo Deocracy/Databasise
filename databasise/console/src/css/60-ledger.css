@@ -13,6 +13,9 @@ fieldset.plain label.inline { margin-right: var(--md); }
 .preflight li { overflow-wrap: anywhere; }
 .preflight li[data-state] { color: var(--st-fg); }
 .timeline-table td { overflow-wrap: anywhere; }
+.timeline-table td[data-role="kind-cell"], .timeline-table td[data-role="origin"], .timeline-table td[data-role="created"] { white-space: nowrap; }
+.timeline-table td[data-role="status"] { min-width: 16ch; }
+.timeline-table .row-actions { gap: var(--sm); }
 .timeline-table td[data-role="traces"] { min-width: 14ch; }
 .timeline-table tr[data-status="active"] td[data-role="status"] { font-weight: 600; }
 .timeline-table tr[data-status="active"] { box-shadow: inset 3px 0 0 var(--accent); }

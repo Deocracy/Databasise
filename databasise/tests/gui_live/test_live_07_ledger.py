@@ -136,10 +136,14 @@ def _statuses(ui):
     return [t.strip() for t in _timeline_rows(ui).locator('[data-role="status"]').all_inner_texts()]
 
 
-def _open_timeline(ui, alias, rows):
+def _open_timeline(ui, alias, rows=None):
+    """Chooses ``alias`` in the timeline; ``rows=None`` waits for any rows (the shared lineage may have been changed)."""
     ui.nav("ledger")
     ui.el("ledger.timeline.alias").select_option(alias)
-    ui.expect(_timeline_rows(ui)).to_have_count(rows)
+    if rows is None:
+        ui.expect(_timeline_rows(ui).first).to_be_visible()
+    else:
+        ui.expect(_timeline_rows(ui)).to_have_count(rows)
 
 
 def _fill_promote_form(ui, token, alias):
@@ -195,8 +199,13 @@ def test_rollback_and_retire_through_the_timeline_update_the_rows(lineage, live_
         ui.expect(f"ledger.timeline.retire-{n}").to_be_disabled()
 
 
-def test_dialog_dismiss_after_open_sends_nothing(seeded, live_ui):
-    info = _make_lineage(seeded, "dis")
+@pytest.fixture(scope="module")
+def dismiss_lineage(seeded):
+    return _make_lineage(seeded, "dis")
+
+
+def test_dialog_dismiss_after_open_sends_nothing(dismiss_lineage, live_ui):
+    info = dismiss_lineage
     ui = live_ui
     _open_timeline(ui, "dis", 2)
     _fill_promote_form(ui, info["a"], "dis-new")
@@ -253,7 +262,7 @@ def test_preview_reads_the_checked_traces_when_it_arrives(seeded, live_ui):
     ui.el("ledger.promote.alias").fill("preview-test")
     ui.el("ledger.promote.origin-human").check()
     with seeded.hold("preview_promotion") as release:
-        with ui.page.expect_request(_is_post("/promote/preview")):
+        with ui.page.expect_request(lambda r: r.method == "POST" and urlparse(r.url).path == "/promote/preview"):
             ui.el("ledger.promote.preview").click()
         # The boxes are disabled while Preview is pending, so the race is made through the DOM: no trace is checked
         # when the answer arrives.
@@ -341,7 +350,7 @@ def test_recent_runs_source_lists_server_traces(seeded, browser):
 def test_timeline_cells_do_not_wrap_at_1440(lineage, live_ui):
     ui = live_ui
     ui.page.set_viewport_size({"width": 1440, "height": 900})
-    _open_timeline(ui, "lin", 2)
+    _open_timeline(ui, "lin")
     probe = """() => {
         const row = document.querySelector('[data-mock-id="ledger.timeline.table"] tbody tr:not([hidden])');
         const white = (el) => getComputedStyle(el).whiteSpace;
