@@ -45,7 +45,46 @@ def build_parser() -> argparse.ArgumentParser:
             "and needs --operator too (D-18, D-19)"
         ),
     )
+    parser.add_argument(
+        "--console",
+        action="store_true",
+        help="serve the operator console at GET /console; loopback --host only, needs a fixed --port (D-01, D-02)",
+    )
     return parser
+
+
+_JS_SCRIPT_TYPES = ("", "text/javascript", "application/javascript", "module")
+
+
+def console_csp(page: bytes) -> str:
+    """The Content-Security-Policy for the shipped console page (T-18-06). It allows exactly the page's one
+    executable inline script and one style block, by sha256 hash, so it holds no inline-allow keyword. A page
+    with any other count raises, so the launcher refuses to start rather than serve a page its own policy
+    would block. A non-JavaScript ``<script type=...>`` data block is not executed and needs no hash."""
+    import base64
+    import hashlib
+    import re
+
+    text = page.decode("utf-8")
+
+    def source(body: str) -> str:
+        return "'sha256-" + base64.b64encode(hashlib.sha256(body.encode("utf-8")).digest()).decode() + "'"
+
+    scripts = [
+        body
+        for attrs, body in re.findall(r"<script([^>]*)>(.*?)</script>", text, re.S)
+        if (re.search(r"""\btype\s*=\s*["']?([^"'\s>]*)""", attrs) or [None, ""])[1].lower() in _JS_SCRIPT_TYPES
+    ]
+    styles = re.findall(r"<style[^>]*>(.*?)</style>", text, re.S)
+    if len(scripts) != 1 or len(styles) != 1:
+        raise RuntimeError(
+            f"the console page must hold exactly one executable inline script and one style block, "
+            f"found {len(scripts)} and {len(styles)}"
+        )
+    return (
+        f"default-src 'none'; script-src {source(scripts[0])}; style-src {source(styles[0])}; "
+        "img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    )
 
 
 def build_app(args: argparse.Namespace, clients: dict[str, Any] | None):
@@ -83,6 +122,25 @@ def build_app(args: argparse.Namespace, clients: dict[str, Any] | None):
         if request.method not in ("GET", "HEAD", "OPTIONS") and origin is not None and origin not in permitted:
             return JSONResponse(status_code=403, content={"detail": "origin not allowed"})
         return await call_next(request)
+
+    if getattr(args, "console", False):
+        import importlib.resources
+
+        from fastapi import Response
+
+        # Read once: a missing file fails at start-up, and the CSP hashes are computed from these bytes.
+        page = importlib.resources.files("databasise.console").joinpath("operator-console.html").read_bytes()
+        headers = {
+            "Content-Security-Policy": console_csp(page),
+            "X-Frame-Options": "DENY",
+            "X-Content-Type-Options": "nosniff",
+            "Referrer-Policy": "no-referrer",
+            "Cache-Control": "no-store",
+        }
+
+        @app.get("/console", include_in_schema=False)
+        async def get_console():
+            return Response(page, media_type="text/html; charset=utf-8", headers=headers)
 
     return app
 
@@ -124,6 +182,13 @@ def main(argv: list[str] | None = None) -> int:
             "--operator needs a loopback --host, even with --allow-remote-unauthenticated: the operator "
             "routes expose wiring names and trace tokens"
         )
+    if args.console and not is_loopback_host(args.host):
+        parser.error(
+            "--console needs a loopback --host, even with --allow-remote-unauthenticated: the console "
+            "drives every route without authentication"
+        )
+    if args.console and args.port == 0:
+        parser.error("--console needs a fixed --port: the Origin guard admits only http://127.0.0.1:<port>")
     from databasise.seam.rest import InvalidCorsOriginError, validate_cors_origin
 
     try:
