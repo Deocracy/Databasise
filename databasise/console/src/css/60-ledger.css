@@ -6,6 +6,7 @@ fieldset.plain label.inline { margin-right: var(--md); }
 .trace-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sm); padding: var(--xs) 0; }
 .trace-row input { min-height: 0; }
 .trace-chips { display: inline-flex; flex-wrap: wrap; gap: var(--xs); }
+.trace-list { max-height: 240px; overflow-y: auto; }
 .trace-group { margin: var(--sm) 0 0; font: 600 13px/1.5 var(--font); overflow-wrap: anywhere; }
 .preflight { margin: 0 0 var(--md); }
 .preflight ul { margin: 0 0 var(--sm); padding-left: var(--lg); }

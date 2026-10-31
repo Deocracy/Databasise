@@ -413,6 +413,7 @@ fieldset.plain label.inline { margin-right: var(--md); }
 .trace-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sm); padding: var(--xs) 0; }
 .trace-row input { min-height: 0; }
 .trace-chips { display: inline-flex; flex-wrap: wrap; gap: var(--xs); }
+.trace-list { max-height: 240px; overflow-y: auto; }
 .trace-group { margin: var(--sm) 0 0; font: 600 13px/1.5 var(--font); overflow-wrap: anywhere; }
 .preflight { margin: 0 0 var(--md); }
 .preflight ul { margin: 0 0 var(--sm); padding-left: var(--lg); }
@@ -2221,7 +2222,8 @@ dialog .mono { overflow-wrap: anywhere; }
         <label class="inline"><input type="radio" name="ledger-promote-source" value="history" checked data-mock-id="ledger.promote.source-history"> Query history (this browser)</label>
         <span data-needs-backend="GET /traces" data-backend-state="operator" title="Mounted only with --operator"><span class="badge badge-op">operator route</span> <label class="inline"><input type="radio" name="ledger-promote-source" value="recent" data-mock-id="ledger.promote.source-recent"> Recent runs</label></span>
       </div>
-      <div data-mock-id="ledger.promote.traces" role="group" aria-label="Traces to promote">
+      <p class="muted" data-role="traces-empty" hidden>No runs in this list.</p>
+      <div class="trace-list" data-mock-id="ledger.promote.traces" role="group" aria-label="Traces to promote">
 
         <label class="trace-row" data-role="slot"><input type="checkbox" data-mock-id="ledger.promote.trace-1"> <span class="mono" data-role="token"></span> <span class="muted" data-role="time"></span> <span class="muted" data-role="selector" hidden></span> <span class="trace-chips" data-role="chips"></span></label>
 
@@ -2276,6 +2278,7 @@ dialog .mono { overflow-wrap: anywhere; }
         <dt>provenance</dt><dd class="mono" data-role="provenance"></dd>
         <dt>generation_ordinal</dt><dd class="mono" data-role="ordinal"></dd>
       </dl>
+      <a href="#query" class="text-link" data-mock-id="ledger.live.query-alias" hidden>Query this alias</a>
     </div>
   </section>
 
@@ -2285,7 +2288,7 @@ dialog .mono { overflow-wrap: anywhere; }
       <div data-needs-backend="GET /ledger/aliases" data-backend-state="operator" title="Mounted only with --operator">
         <p><span class="badge badge-op">operator route</span></p>
         <label class="field"><span class="label">Alias</span>
-          <select data-mock-id="ledger.timeline.alias"></select>
+          <select data-mock-id="ledger.timeline.alias"><option value="">Choose an alias</option></select>
         </label>
       </div>
       <p class="banner" data-state="ok" role="status" data-mock-id="ledger.timeline.notice" hidden></p>
@@ -2829,6 +2832,7 @@ dialog .mono { overflow-wrap: anywhere; }
   <dialog role="dialog" aria-label="Promote alias" data-mock-id="shell.dialog.promote">
     <h2>Promote alias</h2>
     <p>Promoting <strong class="mono" data-role="alias"></strong> from <span data-role="count"></span> trace(s) repoints the alias; append-only; undo only by a later rollback.</p>
+    <p role="status" data-role="sending" hidden>Sending. A request that has been sent cannot be cancelled.</p>
     <div class="dialog-actions">
       <button type="button" class="btn btn-outline" data-mock-id="shell.dialog.promote-cancel">Keep alias</button>
       <button type="button" class="btn btn-primary" data-mock-id="shell.dialog.promote-confirm"><span class="spinner" role="presentation" hidden></span> Promote</button>
@@ -4291,6 +4295,14 @@ var QueryScreen = (function () {
   });
 
   Console.on("inflight", syncWrite);
+  // Query this alias (LIVE-07): the Alias selector is set to the promoted alias; the query text is kept and nothing runs.
+  Console.on("query-alias", function (name) {
+    setMode("query");
+    ID("selector.kind-alias").checked = true;
+    var field = ID("selector.alias");
+    field.value = name;
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+  });
   wireErrors("query");
   buildResolutionTable();
   setMode("query");
@@ -6587,8 +6599,12 @@ var CorpusScreen = (function () {
   return {};
 })();
 Console.register("corpus", CorpusScreen);
+WIRED["ledger GET /ledger/aliases"] = true;
+WIRED["ledger GET /log"] = true;
+
 var LedgerScreen = (function () {
-  var L = FIX.ledger;
+  var HISTORY_KEY = "databasise.console.history";
+  var LOG_KEY = "databasise.console.ledger-log";
   var MSG = {
     noTrace: "Select at least one trace.",
     noOrigin: "Choose a change origin.",
@@ -6596,49 +6612,23 @@ var LedgerScreen = (function () {
     hashAlias: "This alias looks like a hash (64 hex characters, optional sha256: prefix) and cannot be used.",
     pageSize: "Page size must be between 1 and 100.",
   };
-  var TIP = {
-    active: "The active generation cannot be retired.",
-    target: "This version is the target of the active rollback. roll back first.",
-    tombstoned: "This version is already retired.",
-  };
-  var STATUS_TEXT = { active: "active", target: "target of active rollback", tombstoned: "tombstoned", none: "—" };
-  var KIND_STATE = { promotion: "ok", rollback: "warn", tombstone: "neutral" };
-  var KIND_GLYPH = { ok: "✓", warn: "▲", neutral: "■" };
-  var REFUSAL_FOR = { promote: "refusal-partial", rollback: "refusal-unknown-trace", retire: "refusal-active-retire" };
-  var LOAD_MS = 300;
-  var CONFIRM_MS = 300;
 
   var root = $id("screen-ledger");
   var errorsBox = root.querySelector('[data-role="errors"]');
   var rollBackWrap = root.querySelector('[data-role="roll-back-wrap"]');
-  var timers = [];
-  var loadTimer = null;
-  var busy = false;
-  var current = null;
-  var pendingPromote = null;
+  var ledgerLog = SessionLog(LOG_KEY, 50);
+  var writing = false; // a promote, rollback or retire is in flight; it is never aborted
+  var checked = {}; // trace token -> true; the choice survives a repaint of the list
+  var pinned = null; // a token sent here from another screen that the run history does not hold
+  var shown = []; // the entries the trace list shows now
+  var promoted = null; // the alias of the result card
 
   function ID(name) {
     return $id("ledger." + name);
   }
 
-  function setDisabled(button, disabled) {
-    button.disabled = disabled;
-    if (disabled) button.setAttribute("aria-disabled", "true");
-    else button.removeAttribute("aria-disabled");
-  }
-
-  function later(fn, ms) {
-    timers.push(setTimeout(fn, ms));
-  }
-
-  function clearTimers() {
-    timers.forEach(clearTimeout);
-    timers = [];
-    clearTimeout(loadTimer);
-  }
-
-  function outcome() {
-    return ID("mock.outcome").value;
+  function ok(result) {
+    return result.status >= 200 && result.status < 300;
   }
 
   function spin(button, on) {
@@ -6651,19 +6641,29 @@ var LedgerScreen = (function () {
     return token.slice(0, 8);
   }
 
-  function traceByRef(ref) {
-    return L.traces.filter(function (t) {
-      return t.trace_reference === ref;
-    })[0];
+  function chip(text, state, cls) {
+    var c = h("span", text, "chip" + (cls ? " " + cls : ""));
+    if (state) c.setAttribute("data-state", state);
+    return c;
   }
 
   // ---- errors ----
 
-  function showError(status, body) {
-    var shape = renderError("ledger", status, body);
+  function checkSize() {
+    var input = ID("timeline.page-size");
+    var raw = input.value.trim();
+    var n = Number(raw);
+    var valid = raw !== "" && Number.isInteger(n) && n >= 1 && n <= 100;
+    setFieldError(input, valid ? "" : MSG.pageSize);
+  }
+
+  // renderError clears every field message, so the page-size check is run again after it (IN-JSC-08).
+  function showError(status, body, opts) {
+    var shape = renderError("ledger", status, body, opts);
     errorsBox.hidden = shape === "result";
     rollBackWrap.hidden = !(body && body.refusal_type === "ActiveGenerationRetirementError");
     if (shape !== "result") errorsBox.scrollIntoView({ block: "nearest" });
+    checkSize();
     return shape;
   }
 
@@ -6671,19 +6671,7 @@ var LedgerScreen = (function () {
     renderError("ledger", 200, null);
     errorsBox.hidden = true;
     rollBackWrap.hidden = true;
-  }
-
-  // The mock outcome select decides which server response the next confirm gets; null means success.
-  function failure(op) {
-    var o = outcome();
-    if (o === "refusal") return L[REFUSAL_FOR[op]];
-    if (o === "validation") {
-      if (op === "promote") return L.validation;
-      return { status: 422, body: { detail: [{ loc: ["body", "version"], msg: L.validation.body.detail[0].msg, type: "string_too_short" }] } };
-    }
-    if (o === "server-failure") return L["server-failure"];
-    if (o === "generic") return L["generic-5xx"];
-    return null;
+    checkSize();
   }
 
   // ---- promote form ----
@@ -6692,11 +6680,6 @@ var LedgerScreen = (function () {
   var datalist = document.getElementById("ledger-alias-list");
   var form = ID("promote.form");
   var traceBox = ID("promote.traces");
-  var slots = Array.prototype.slice.call(traceBox.querySelectorAll('[data-role="slot"]'));
-  var boxes = slots.map(function (slot) {
-    return slot.querySelector("input");
-  });
-  var headings = [];
   var submit = ID("promote.submit");
   var preview = ID("promote.preview");
 
@@ -6710,45 +6693,47 @@ var LedgerScreen = (function () {
     datalist.appendChild(option);
   }
 
-  function chip(text, state, cls) {
-    var c = h("span", text, "chip" + (cls ? " " + cls : ""));
-    if (state) c.setAttribute("data-state", state);
-    return c;
+  // The run history of this browser, newest first, one entry per trace token. The log is read again on every call, because
+  // Query and Compare write it from their own SessionLog.
+  function historyEntries() {
+    var seen = {};
+    var out = [];
+    SessionLog(HISTORY_KEY, 50)
+      .all()
+      .forEach(function (e) {
+        var token = e.trace_token;
+        if (typeof token !== "string" || token === "" || seen[token]) return;
+        seen[token] = true;
+        out.push({ token: token, time: String(e.timestamp || "").slice(0, 19).replace("T", " "), selector: selectorLabel(e.selector), known: true, partial: !!e.partial, degraded: !!e.degraded });
+      });
+    if (pinned && !seen[pinned]) out.push({ token: pinned, time: "", selector: "Added from another screen", known: false, partial: false, degraded: false });
+    return out;
   }
 
-  function fillSlots() {
-    var last = null;
-    slots.forEach(function (slot, i) {
-      var t = L.traces[i];
-      slot.title = t.trace_reference;
-      slot.querySelector('[data-role="token"]').textContent = short(t.trace_reference);
-      slot.querySelector('[data-role="time"]').textContent = t.created_at;
-      slot.querySelector('[data-role="selector"]').textContent = t.selector;
+  function renderTraces() {
+    var list = historyEntries();
+    shown = list;
+    root.querySelector('[data-role="traces-empty"]').hidden = list.length > 0;
+    ensureRows(traceBox, list.length).forEach(function (slot, i) {
+      var t = list[i];
+      slot.title = t.token;
+      slot.setAttribute("data-token", t.token);
+      slot.querySelector("input").checked = !!checked[t.token];
+      slot.querySelector('[data-role="token"]').textContent = short(t.token);
+      slot.querySelector('[data-role="time"]').textContent = t.time;
+      var selector = slot.querySelector('[data-role="selector"]');
+      selector.textContent = t.selector;
+      selector.hidden = false;
       var chips = slot.querySelector('[data-role="chips"]');
+      clearNode(chips);
       if (t.partial) chips.appendChild(chip("partial", "warn"));
-      if (t.arm === "hipporag") chips.appendChild(chip("HippoRAG", "neutral"));
       if (t.degraded) chips.appendChild(chip("degraded", "warn"));
-      if (t.selector !== last) {
-        var heading = h("p", t.selector, "trace-group");
-        traceBox.insertBefore(heading, slot);
-        headings.push(heading);
-        last = t.selector;
-      }
-    });
-  }
-
-  function setSource(recent) {
-    headings.forEach(function (heading) {
-      heading.hidden = recent;
-    });
-    slots.forEach(function (slot) {
-      slot.querySelector('[data-role="selector"]').hidden = !recent;
     });
   }
 
   function selectedTraces() {
-    return L.traces.filter(function (t, i) {
-      return boxes[i].checked;
+    return shown.filter(function (t) {
+      return checked[t.token] === true;
     });
   }
 
@@ -6771,14 +6756,14 @@ var LedgerScreen = (function () {
     var warnings = [];
     if (!chosen.length) blockers.push(MSG.noTrace);
     chosen.forEach(function (t) {
-      if (t.partial) blockers.push("Trace " + short(t.trace_reference) + " is a partial run and cannot be promoted.");
+      if (t.partial) blockers.push("Trace " + short(t.token) + " is a partial run and cannot be promoted.");
     });
     if (!origin()) blockers.push(MSG.noOrigin);
     if (alias.value === "") blockers.push(MSG.noAlias);
     else if (HASH_SHAPED.test(alias.value)) blockers.push(MSG.hashAlias);
     var labels = [];
     chosen.forEach(function (t) {
-      if (labels.indexOf(t.selector) < 0) labels.push(t.selector);
+      if (t.known && labels.indexOf(t.selector) < 0) labels.push(t.selector);
     });
     if (labels.length > 1) {
       warnings.push("Selected traces came from different selectors: " + labels.join(", ") + ". The server refuses traces that resolve to different arms.");
@@ -6797,36 +6782,11 @@ var LedgerScreen = (function () {
     } else {
       box.appendChild(h("p", "No pre-flight problems.", "muted"));
     }
-    setDisabled(submit, busy || blockers.length > 0);
-    setDisabled(preview, busy || blockers.length > 0);
-    spin(submit, busy);
+    setDisabled(submit, writing || blockers.length > 0);
+    setDisabled(preview, writing || blockers.length > 0);
+    spin(submit, writing);
     ID("promote.preview-result").hidden = true;
     return blockers;
-  }
-
-  function showPreview() {
-    if (busy || preview.disabled) return;
-    hideErrors();
-    busy = true;
-    setDisabled(preview, true);
-    spin(preview, true);
-    later(function () {
-      busy = false;
-      spin(preview, false);
-      var bad = failure("promote");
-      if (bad) {
-        refreshPreflight();
-        return showError(bad.status, bad.body);
-      }
-      var rec = Object.assign({}, L.preview, { arm: selectedTraces()[0].arm });
-      refreshPreflight();
-      var list = ID("promote.preview-result").querySelector('[data-role="attrs"]');
-      clearNode(list);
-      ["arm", "mutation_class", "next_version", "promotable", "reason"].forEach(function (key) {
-        appendAttribute(list, key, rec[key]);
-      });
-      ID("promote.preview-result").hidden = false;
-    }, CONFIRM_MS);
   }
 
   function showResult(rec) {
@@ -6836,395 +6796,193 @@ var LedgerScreen = (function () {
     card.querySelector('[data-role="kind"]').textContent = rec.record_kind;
     card.querySelector('[data-role="provenance"]').textContent = rec.provenance;
     card.querySelector('[data-role="ordinal"]').textContent = String(rec.generation_ordinal);
+    promoted = rec.alias;
+    ID("live.query-alias").hidden = false;
     card.hidden = false;
     addAliasOption(rec.alias);
   }
 
   // ---- confirm dialogs ----
 
-  // One factory for the three ledger dialogs. extraOk adds the dialog's own condition (the typed version for Retire).
-  function makeDialog(kind, extraOk) {
+  // A confirm dialog whose write is in flight keeps both buttons disabled, ignores Escape and closes only when the answer arrives
+  // (IN-JSC-04, D-14). Cancel and Escape before Confirm close it and send nothing.
+  function makeDialog(kind) {
     var d = {
       el: $id("shell.dialog." + kind),
       confirm: $id("shell.dialog." + kind + "-confirm"),
+      cancel: $id("shell.dialog." + kind + "-cancel"),
       pending: null,
+      sending: false,
+      ok: function () {
+        return !!d.pending;
+      },
     };
-    d.traces = $id("shell.dialog." + kind + "-traces");
-    d.human = $id("shell.dialog." + kind + "-origin-human");
-    d.machine = $id("shell.dialog." + kind + "-origin-machine");
-    d.ok = function () {
-      var picked = Array.prototype.some.call(d.traces.options, function (o) {
-        return o.selected;
-      });
-      return !!d.pending && picked && (d.human.checked || d.machine.checked) && extraOk(d);
+    d.note = d.el.querySelector('[data-role="sending"]');
+    d.sync = function () {
+      setDisabled(d.confirm, d.sending || !d.ok());
+      setDisabled(d.cancel, d.sending);
+      d.note.hidden = !d.sending;
+      spin(d.confirm, d.sending);
     };
-    d.update = function () {
-      setDisabled(d.confirm, !d.ok());
-    };
+    d.cancel.addEventListener("click", function () {
+      if (!d.sending) d.el.close();
+    });
+    d.el.addEventListener("cancel", function (event) {
+      if (d.sending) event.preventDefault();
+    });
+    d.el.addEventListener("close", function () {
+      // Chromium lets a repeated Escape through even when it was prevented; the dialog goes back up until the answer arrives.
+      if (d.sending) return d.el.showModal();
+      d.pending = null;
+      d.sync();
+    });
     return d;
   }
 
-  function fillTraceOptions(select) {
-    L.traces.forEach(function (t) {
-      var option = h("option", short(t.trace_reference) + "  " + t.selector + (t.partial ? "  (partial run)" : ""));
-      option.value = t.trace_reference;
-      select.appendChild(option);
-    });
-  }
-
-  function openFor(d, texts, pending) {
-    d.pending = pending;
-    Object.keys(texts).forEach(function (role) {
-      d.el.querySelector('[data-role="' + role + '"]').textContent = texts[role];
-    });
-    Array.prototype.forEach.call(d.traces.options, function (o) {
-      o.selected = false;
-    });
-    d.human.checked = false;
-    d.machine.checked = false;
-    d.update();
-  }
-
-  var retireVersion = $id("shell.dialog.retire-version");
-  var dialogs = {
-    promote: { el: $id("shell.dialog.promote"), confirm: $id("shell.dialog.promote-confirm") },
-    rollback: makeDialog("rollback", function () {
-      return true;
-    }),
-    retire: makeDialog("retire", function (d) {
-      return retireVersion.value === d.pending.version;
-    }),
-  };
-
-  function newVersion(active) {
-    return String(parseInt(active.minted_version, 10) + 1) + ".0.0";
-  }
-
-  function showNotice(text) {
-    var notice = ID("timeline.notice");
-    notice.textContent = text;
-    notice.hidden = false;
-  }
-
-  function finish(kind, p) {
-    var bad = failure(kind);
-    if (bad) return showError(bad.status, bad.body);
-    hideErrors();
-    if (kind === "retire") {
-      current.records.forEach(function (r) {
-        if (r.minted_version === p.version && r.record_kind !== "tombstone") r.tombstoned = true;
-      });
-      renderTimeline(current);
-      showNotice("Retired version " + p.version + " of alias " + p.alias + ". Nothing un-retires it.");
-    } else {
-      // shortcut: the page has five row slots, so the minted rollback record is reported here and not appended; upgrade with the real history call.
-      var ordinal = Math.max.apply(null, current.records.map(function (r) { return r.generation_ordinal; })) + 1;
-      renderTimeline(current);
-      showNotice("Rolled back " + p.alias + " to " + p.target + ". Version " + newVersion({ minted_version: p.active }) + " minted as generation " + ordinal + ". Reload the timeline to see the new record.");
-    }
-  }
-
-  function wireDialog(kind, d) {
-    $id("shell.dialog." + kind + "-cancel").addEventListener("click", function () {
-      d.el.close();
-    });
-    [d.traces, d.human, d.machine].forEach(function (el) {
-      el.addEventListener("change", d.update);
-    });
-    d.el.addEventListener("close", function () {
-      d.pending = null;
-      spin(d.confirm, false);
-      d.update();
-    });
-    d.confirm.addEventListener("click", function () {
-      if (!d.pending || d.confirm.disabled) return;
-      var p = d.pending;
-      setDisabled(d.confirm, true);
-      spin(d.confirm, true);
-      later(function () {
-        d.el.close();
-        finish(kind, p);
-      }, CONFIRM_MS);
-    });
-  }
-
-  fillTraceOptions(dialogs.rollback.traces);
-  fillTraceOptions(dialogs.retire.traces);
-  retireVersion.addEventListener("input", dialogs.retire.update);
-  wireDialog("rollback", dialogs.rollback);
-  wireDialog("retire", dialogs.retire);
-
-  // The promote dialog has no fields; its confirm is always enabled.
-  $id("shell.dialog.promote-cancel").addEventListener("click", function () {
-    dialogs.promote.el.close();
-  });
-  dialogs.promote.el.addEventListener("close", function () {
-    pendingPromote = null;
-    spin(dialogs.promote.confirm, false);
-    setDisabled(dialogs.promote.confirm, false);
-  });
-  dialogs.promote.confirm.addEventListener("click", function () {
-    if (!pendingPromote || dialogs.promote.confirm.disabled) return;
-    var p = pendingPromote;
-    setDisabled(dialogs.promote.confirm, true);
-    spin(dialogs.promote.confirm, true);
-    busy = true;
+  // Sends the write the dialog confirmed and resolves with the answer once the dialog has closed.
+  function write(d, path, body) {
+    d.sending = true;
+    writing = true;
+    d.sync();
     refreshPreflight();
-    later(function () {
-      busy = false;
-      dialogs.promote.el.close();
+    return api("POST", path, body, { kind: "ledger" }).then(function (result) {
+      d.sending = false;
+      writing = false;
+      d.el.close();
+      d.sync();
       refreshPreflight();
-      var bad = failure("promote");
-      if (bad) return showError(bad.status, bad.body);
-      hideErrors();
-      showResult(Object.assign({}, L["promote-success"], { alias: p.alias }));
-    }, CONFIRM_MS);
-  });
+      return result;
+    });
+  }
+
+  var promoteDialog = makeDialog("promote");
+
+  function logEntry(rec, extra) {
+    var entry = { alias: rec.alias, version: rec.version, record_kind: rec.record_kind, generation_ordinal: rec.generation_ordinal, created_at: new Date().toISOString() };
+    Object.keys(extra).forEach(function (key) {
+      entry[key] = extra[key];
+    });
+    ledgerLog.add(entry);
+  }
 
   function askPromote() {
     if (submit.disabled) return;
-    pendingPromote = { alias: alias.value, n: selectedTraces().length };
-    var d = dialogs.promote.el;
-    d.querySelector('[data-role="alias"]').textContent = pendingPromote.alias;
-    d.querySelector('[data-role="count"]').textContent = String(pendingPromote.n);
+    var chosen = selectedTraces();
+    var body = { alias: alias.value, trace_ids: chosen.map(function (t) { return t.token; }), change_origin: origin() };
+    var verb = ID("promote.verb").value;
+    if (verb && verb !== "operator-asserted") body.verb = verb;
+    promoteDialog.pending = body;
+    var d = promoteDialog.el;
+    d.querySelector('[data-role="alias"]').textContent = body.alias;
+    d.querySelector('[data-role="count"]').textContent = String(body.trace_ids.length);
+    promoteDialog.sync();
     openDialog("shell.dialog.promote", "shell.dialog.promote-cancel");
   }
 
-  // ---- timeline ----
-
-  var table = ID("timeline.table");
-  var rows = table.tBodies[0].rows;
-
-  function timelineView(name) {
-    var loading = name === "loading";
-    ID("timeline.loading").hidden = !loading;
-    ID("timeline.empty").hidden = name !== "empty";
-    root.querySelector('[data-role="table-wrap"]').hidden = name !== "table";
-    table.setAttribute("aria-busy", String(loading));
-    if (loading) {
-      setDisabled(ID("timeline.prev"), true);
-      setDisabled(ID("timeline.next"), true);
-    }
-  }
-
-  function statusOf(r, active) {
-    if (r.active) return "active";
-    var targetOfRollback = active && active.record_kind === "rollback" && r.record_kind !== "tombstone" && r.minted_version === active.targets_version;
-    if (targetOfRollback) return "target";
-    return r.tombstoned ? "tombstoned" : "none";
-  }
-
-  function fillTraces(cell, ids) {
-    clearNode(cell);
-    ids.forEach(function (id) {
-      cell.appendChild(chip(short(id), null, "mono"));
-      var t = traceByRef(id);
-      if (t && t.partial) cell.appendChild(chip("partial run", "warn"));
-    });
-  }
-
-  function renderTimeline(rec) {
-    current = rec;
-    var active = rec.records.filter(function (r) {
-      return r.active;
-    })[0];
-    if (!rec.records.length) {
-      timelineView("empty");
-    } else {
-      timelineView("table");
-    }
-    Array.prototype.forEach.call(rows, function (row, i) {
-      var r = rec.records[i];
-      row.hidden = !r;
-      if (!r) return;
-      var status = statusOf(r, active);
-      var isTombstoneRecord = r.record_kind === "tombstone";
-      row.setAttribute("data-status", status);
-      if (status === "active") row.setAttribute("tabindex", "-1");
-      else row.removeAttribute("tabindex");
-      var cell = function (role) {
-        return row.querySelector('[data-role="' + role + '"]');
-      };
-      cell("ordinal").textContent = String(r.generation_ordinal);
-      cell("created").textContent = r.created_at;
-      var state = KIND_STATE[r.record_kind] || "neutral";
-      cell("kind").setAttribute("data-state", state);
-      cell("kind").textContent = KIND_GLYPH[state] + " " + r.record_kind;
-      cell("minted").textContent = r.minted_version || "—";
-      cell("targets").textContent = r.targets_version || "—";
-      cell("origin").textContent = r.change_origin || "—";
-      fillTraces(cell("traces"), r.promotion_trace_ids);
-      cell("status").textContent = STATUS_TEXT[status];
-      var rollback = ID("timeline.rollback-" + (i + 1));
-      var retire = ID("timeline.retire-" + (i + 1));
-      var wrap = cell("retire-wrap");
-      rollback.hidden = isTombstoneRecord;
-      wrap.hidden = isTombstoneRecord;
-      setDisabled(rollback, status === "active" || status === "tombstoned");
-      var blocked = status !== "none";
-      setDisabled(retire, blocked);
-      if (blocked) wrap.setAttribute("title", TIP[status]);
-      else wrap.removeAttribute("title");
-    });
-    ID("timeline.alias").value = rec.alias;
-    setDisabled(ID("timeline.prev"), rec.offset <= 0);
-    setDisabled(ID("timeline.next"), rec.next_offset === null);
-  }
-
-  function showRecord(name) {
-    ID("timeline.notice").hidden = true;
-    renderTimeline(JSON.parse(JSON.stringify(L[name])));
-  }
-
-  function emptyRecord(name) {
-    return { alias: name, offset: 0, records: [], total: 0, next_offset: null };
-  }
-
-  function loadAlias(name) {
-    clearTimeout(loadTimer);
-    ID("timeline.notice").hidden = true;
-    ID("timeline.alias").value = name;
-    timelineView("loading");
-    loadTimer = setTimeout(function () {
-      if (name === "prod") showRecord("timeline-prod");
-      else renderTimeline(emptyRecord(name));
-    }, LOAD_MS);
-  }
-
-  function askRollback(i) {
-    var r = current.records[i];
-    var active = current.records.filter(function (x) {
-      return x.active;
-    })[0];
-    var activeVersion = active ? active.minted_version : "—";
-    openFor(dialogs.rollback, { alias: current.alias, active: activeVersion, target: r.minted_version }, { alias: current.alias, active: activeVersion, target: r.minted_version });
-    openDialog("shell.dialog.rollback", "shell.dialog.rollback-cancel");
-  }
-
-  function askRetire(i) {
-    var r = current.records[i];
-    openFor(dialogs.retire, { alias: current.alias, version: r.minted_version, hint: r.minted_version }, { alias: current.alias, version: r.minted_version });
-    retireVersion.value = "";
-    dialogs.retire.update();
-    openDialog("shell.dialog.retire", "shell.dialog.retire-cancel");
-  }
-
-  function checkSize() {
-    var input = ID("timeline.page-size");
-    var raw = input.value.trim();
-    var n = Number(raw);
-    var ok = raw !== "" && Number.isInteger(n) && n >= 1 && n <= 100;
-    setFieldError(input, ok ? "" : MSG.pageSize);
-  }
-
-  // ---- hooks ----
-
-  function setState(name) {
-    clearTimers();
-    busy = false;
-    if (name === "loading") return timelineView("loading");
-    if (name === "empty") return renderTimeline(emptyRecord(current ? current.alias : "prod"));
-    if (name === "populated") return showRecord("timeline-prod");
-    if (name !== "idle") throw new Error("unknown ledger state " + name);
+  function confirmPromote() {
+    if (!promoteDialog.pending || promoteDialog.sending || promoteDialog.confirm.disabled) return;
+    var body = promoteDialog.pending;
     hideErrors();
     ID("promote.result").hidden = true;
-    ID("timeline.notice").hidden = true;
-    refreshPreflight();
+    write(promoteDialog, "/promote", body).then(function (result) {
+      var rec = result.body;
+      if (ok(result) && rec !== null && typeof rec === "object" && typeof rec.version === "string") {
+        showResult(rec);
+        logEntry(rec, { trace_ids: body.trace_ids, change_origin: body.change_origin });
+        AliasCatalog.load();
+        return;
+      }
+      if (showError(result.status, rec) === "result") showError(0, null, { text: "The server answered without a promotion record." });
+    });
   }
 
-  function loadFixture(name) {
-    clearTimers();
-    busy = false;
-    var fixture = L[name];
-    if (/^timeline-/.test(name) && fixture) {
-      hideErrors();
-      return showRecord(name);
-    }
-    if (name === "promote-success") {
-      hideErrors();
-      return showResult(fixture);
-    }
-    if (fixture && fixture.status !== undefined) return showError(fixture.status, fixture.body);
-    throw new Error("unknown ledger fixture " + name);
-  }
+  promoteDialog.confirm.addEventListener("click", confirmPromote);
 
-  function inject(response) {
-    clearTimers();
-    busy = false;
-    refreshPreflight();
-    showError(response.status, response.body);
+  // ---- aliases ----
+
+  // The datalist and the Aliases table follow the catalogue (the server rows, or this browser's log without GET /ledger/aliases).
+  function renderAliases() {
+    AliasCatalog.rows.forEach(function (a) {
+      addAliasOption(a.alias);
+    });
+    var wrap = alias.closest("[data-needs-backend]") || alias.parentNode;
+    var note = wrap.querySelector('[data-role="alias-source"]');
+    if (!note) {
+      note = h("p", LOG_NOTE, "muted");
+      note.setAttribute("data-role", "alias-source");
+      wrap.appendChild(note);
+    }
+    note.hidden = AliasCatalog.source !== "log";
+    fillAliasPicker(ID("timeline.alias"));
+    var panel = ID("aliases.panel");
+    var panelNote = panel.querySelector('[data-role="alias-source"]');
+    if (!panelNote) {
+      panelNote = h("p", LOG_NOTE, "muted");
+      panelNote.setAttribute("data-role", "alias-source");
+      panel.appendChild(panelNote);
+    }
+    panelNote.hidden = AliasCatalog.source !== "log";
+    ensureRows(ID("aliases.table").tBodies[0], AliasCatalog.rows.length).forEach(function (row, i) {
+      var a = AliasCatalog.rows[i];
+      row.querySelector('[data-role="alias"]').textContent = a.alias;
+      row.querySelector('[data-role="version"]').textContent = a.active_version;
+      row.querySelector('[data-role="kind"]').textContent = a.record_kind;
+      row.querySelector('[data-role="ordinal"]').textContent = String(a.generation_ordinal);
+      row.querySelector('[data-role="created"]').textContent = a.created_at;
+    });
   }
 
   // ---- wiring ----
 
-  FIX.aliases.forEach(function (a, i) {
-    addAliasOption(a.alias);
-    var option = h("option", a.alias);
-    option.value = a.alias;
-    ID("timeline.alias").appendChild(option);
-    var row = ID("aliases.table").tBodies[0].rows[i];
-    row.querySelector('[data-role="alias"]').textContent = a.alias;
-    row.querySelector('[data-role="version"]').textContent = a.active_version;
-    row.querySelector('[data-role="kind"]').textContent = a.record_kind;
-    row.querySelector('[data-role="ordinal"]').textContent = String(a.generation_ordinal);
-    row.querySelector('[data-role="created"]').textContent = a.created_at;
-    ID("aliases.view-" + (i + 1)).addEventListener("click", function () {
-      loadAlias(a.alias);
-      ID("timeline.region").scrollIntoView({ block: "nearest" });
-    });
-  });
-
-  fillSlots();
   form.addEventListener("input", refreshPreflight);
   form.addEventListener("change", refreshPreflight);
-  ID("promote.source-history").addEventListener("change", function () {
-    setSource(false);
-  });
-  ID("promote.source-recent").addEventListener("change", function () {
-    setSource(true);
+  traceBox.addEventListener("change", function (event) {
+    var slot = event.target.closest("label");
+    if (slot) checked[slot.getAttribute("data-token")] = event.target.checked;
   });
   submit.addEventListener("click", askPromote);
-  preview.addEventListener("click", showPreview);
-
-  [1, 2, 3, 4, 5].forEach(function (n) {
-    ID("timeline.rollback-" + n).addEventListener("click", function () {
-      askRollback(n - 1);
-    });
-    ID("timeline.retire-" + n).addEventListener("click", function () {
-      askRetire(n - 1);
-    });
-  });
-  ID("timeline.alias").addEventListener("change", function () {
-    loadAlias(this.value);
-  });
   ID("timeline.page-size").addEventListener("input", checkSize);
+  ID("live.query-alias").addEventListener("click", function (event) {
+    event.preventDefault();
+    if (promoted === null) return;
+    Console.show("query");
+    Console.emit("query-alias", promoted);
+  });
   ID("error.roll-back-first").addEventListener("click", function (event) {
     event.preventDefault();
-    var row = table.querySelector('tr[data-status="active"]:not([hidden])');
+    var row = root.querySelector('tr[data-status="active"]:not([hidden])');
     if (row) {
       row.focus();
       row.scrollIntoView({ block: "nearest" });
     }
   });
-  ID("mock.fixture").addEventListener("change", function () {
-    loadFixture(this.value);
-  });
 
   wireErrors("ledger");
-  // Promote from a Query, Compare or Evidence result: tick the matching trace slot (the token is the full trace reference).
+  Console.on("aliases", renderAliases);
+  Console.on("show", function (name) {
+    if (name !== "ledger") return;
+    renderTraces();
+    refreshPreflight();
+  });
+  // Promote from a Query, Compare or Evidence result: the sent trace becomes the only choice (IN-JSA-07).
   Console.on("promote", function (event) {
     var token = event && event.trace;
-    L.traces.forEach(function (t, i) {
-      if (t.trace_reference === token) boxes[i].checked = true;
-    });
+    checked = {};
+    pinned = typeof token === "string" && token !== "" ? token : null;
+    if (pinned) checked[pinned] = true;
+    renderTraces();
     refreshPreflight();
     form.scrollIntoView({ block: "nearest" });
   });
 
-  showRecord("timeline-prod");
+  ID("timeline.loading").hidden = true;
+  ID("timeline.empty").hidden = false;
+  root.querySelector('[data-role="table-wrap"]').hidden = true;
+  renderAliases();
+  renderTraces();
   checkSize();
   refreshPreflight();
-  return { setState: setState, inject: inject, loadFixture: loadFixture };
+  return {};
 })();
 Console.register("ledger", LedgerScreen);
 var GraphScreen = (function () {

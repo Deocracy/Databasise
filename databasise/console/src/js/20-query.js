@@ -478,6 +478,14 @@ var QueryScreen = (function () {
   });
 
   Console.on("inflight", syncWrite);
+  // Query this alias (LIVE-07): the Alias selector is set to the promoted alias; the query text is kept and nothing runs.
+  Console.on("query-alias", function (name) {
+    setMode("query");
+    ID("selector.kind-alias").checked = true;
+    var field = ID("selector.alias");
+    field.value = name;
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+  });
   wireErrors("query");
   buildResolutionTable();
   setMode("query");

@@ -68,7 +68,8 @@
         <label class="inline"><input type="radio" name="ledger-promote-source" value="history" checked data-mock-id="ledger.promote.source-history"> Query history (this browser)</label>
         <span data-needs-backend="GET /traces" data-backend-state="operator" title="Mounted only with --operator"><span class="badge badge-op">operator route</span> <label class="inline"><input type="radio" name="ledger-promote-source" value="recent" data-mock-id="ledger.promote.source-recent"> Recent runs</label></span>
       </div>
-      <div data-mock-id="ledger.promote.traces" role="group" aria-label="Traces to promote">
+      <p class="muted" data-role="traces-empty" hidden>No runs in this list.</p>
+      <div class="trace-list" data-mock-id="ledger.promote.traces" role="group" aria-label="Traces to promote">
 <!--@repeat n 6-->
         <label class="trace-row" data-role="slot"><input type="checkbox" data-mock-id="ledger.promote.trace-{{n}}"> <span class="mono" data-role="token"></span> <span class="muted" data-role="time"></span> <span class="muted" data-role="selector" hidden></span> <span class="trace-chips" data-role="chips"></span></label>
 <!--@end n-->
@@ -113,6 +114,7 @@
         <dt>provenance</dt><dd class="mono" data-role="provenance"></dd>
         <dt>generation_ordinal</dt><dd class="mono" data-role="ordinal"></dd>
       </dl>
+      <a href="#query" class="text-link" data-mock-id="ledger.live.query-alias" hidden>Query this alias</a>
     </div>
   </section>
 
@@ -122,7 +124,7 @@
       <div data-needs-backend="GET /ledger/aliases" data-backend-state="operator" title="Mounted only with --operator">
         <p><span class="badge badge-op">operator route</span></p>
         <label class="field"><span class="label">Alias</span>
-          <select data-mock-id="ledger.timeline.alias"></select>
+          <select data-mock-id="ledger.timeline.alias"><option value="">Choose an alias</option></select>
         </label>
       </div>
       <p class="banner" data-state="ok" role="status" data-mock-id="ledger.timeline.notice" hidden></p>
