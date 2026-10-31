@@ -567,7 +567,7 @@ Plans:
 - LIVE-08: depends on the Phase 16 connector routes and open question 6
 - LIVE-09: depends on the mockup_freeze written by the first Phase 18 plan from the Phase 17 approval record (17-CONTEXT D-13); that plan checks the sha256 in docs/gui/MOCKUP-APPROVAL.md before freezing
 
-**Plans**: 9/11 plans executed
+**Plans**: 10/11 plans executed
 
 Plans:
 **Wave 1**
@@ -608,7 +608,7 @@ Plans:
 
 **Wave 10** *(blocked on Wave 9 completion)*
 
-- [ ] 18-10-PLAN.md — Graph/vector browser live: nodes, node edges, chunks by selector, store-busy under a raw pycozo lock (LIVE-08, LIVE-03)
+- [x] 18-10-PLAN.md — Graph/vector browser live: nodes, node edges, chunks by selector, store-busy under a raw pycozo lock (LIVE-08, LIVE-03)
 
 **Wave 11** *(blocked on Wave 10 completion)*
 
@@ -633,7 +633,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 15. Offline Tooling & Packaging | 19/19 | Complete    | 2026-10-22 |
 | 16. GUI Connectors | 12/12 | Complete    | 2026-10-22 |
 | 17. GUI Mockup | 13/13 | Complete    | 2026-10-31 |
-| 18. GUI Live | 9/11 | In Progress|  |
+| 18. GUI Live | 10/11 | In Progress|  |
 
 v1.0 (Phases 1-7, 64 plans) shipped 2026-09-12 — see `.planning/MILESTONES.md`.
 

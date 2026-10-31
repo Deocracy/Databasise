@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 18
 current_phase_name: GUI Live
 status: executing
-stopped_at: Completed 18-09-PLAN.md
-last_updated: "2026-10-31T23:19:14.465Z"
+stopped_at: Completed 18-10-PLAN.md
+last_updated: "2026-10-31T23:34:56.005Z"
 last_activity: 2026-10-31
 last_activity_desc: Phase 18 execution started
-state_head: 75565199062a38a63d12176b8839aace1b829aa2
+state_head: 268eaac12a773a84a88c5abd89b5a3357b515658
 progress:
   total_phases: 11
   completed_phases: 10
   total_plans: 136
-  completed_plans: 134
+  completed_plans: 135
   percent: 91
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-19 after Phase 12)
 ## Current Position
 
 Phase: 18 (GUI Live) — EXECUTING
-Plan: 10 of 11
+Plan: 11 of 11
 Status: Ready to execute
 Last activity: 2026-10-31 — Phase 18 execution started
 
@@ -173,6 +173,7 @@ Progress: [█████████░] 91% (4/11 phases)
 | Phase 18 P07 | 25 min | 3 tasks | 8 files |
 | Phase 18 P08 | 18 min | 3 tasks | 9 files |
 | Phase 18 P09 | 95 min | 3 tasks | 10 files |
+| Phase 18 P10 | 55 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -296,6 +297,8 @@ Recent decisions affecting current work:
 - [Phase 18]: 18-08: the delete dialog stays open and ignores Escape until the answer, reopening itself if a repeated Escape closes it; a LightRAG ingest and a successful delete emit corpus-changed
 - [Phase 18]: 18-09: Retire is not appended to the client ledger log (a tombstone entry would show a retired version as the alias's active version); promote and rollback are logged — AliasCatalog.fromLog takes the newest entry per alias as the active version
 - [Phase 18]: 18-09: run-history entries keep their four keys; the Recent runs source carries the partial flag, the history list does not — test_each_run_lands_in_the_history pins the key set; the server refuses a partial promotion with a typed banner
+- [Phase 18]: 18-10: no graph read starts when the Graph screen opens; a read starts on a selector value change or a click on Default, and the default selector is sent as {}
+- [Phase 18]: 18-10: Retry request repeats the request whose error is on screen, because the nodes and chunks reads start together
 
 ### Pending Todos
 
@@ -355,8 +358,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-31T23:19:07.749Z
-Stopped at: Completed 18-09-PLAN.md
+Last session: 2026-10-31T23:34:55.472Z
+Stopped at: Completed 18-10-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
