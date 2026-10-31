@@ -567,7 +567,7 @@ Plans:
 - LIVE-08: depends on the Phase 16 connector routes and open question 6
 - LIVE-09: depends on the mockup_freeze written by the first Phase 18 plan from the Phase 17 approval record (17-CONTEXT D-13); that plan checks the sha256 in docs/gui/MOCKUP-APPROVAL.md before freezing
 
-**Plans**: 2/11 plans executed
+**Plans**: 3/11 plans executed
 
 Plans:
 **Wave 1**
@@ -580,7 +580,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 18-03-PLAN.md — shared live core: one transport, live header health, run-time badge rule, absent-route disabling, hidden mock controls, /info chips; LIVE-09 row test (LIVE-01, LIVE-09)
+- [x] 18-03-PLAN.md — shared live core: one transport, live header health, run-time badge rule, absent-route disabling, hidden mock controls, /info chips; LIVE-09 row test (LIVE-01, LIVE-09)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -633,7 +633,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 15. Offline Tooling & Packaging | 19/19 | Complete    | 2026-10-22 |
 | 16. GUI Connectors | 12/12 | Complete    | 2026-10-22 |
 | 17. GUI Mockup | 13/13 | Complete    | 2026-10-31 |
-| 18. GUI Live | 2/11 | In Progress|  |
+| 18. GUI Live | 3/11 | In Progress|  |
 
 v1.0 (Phases 1-7, 64 plans) shipped 2026-09-12 — see `.planning/MILESTONES.md`.
 
