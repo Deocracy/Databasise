@@ -65,6 +65,34 @@ Console.health = function () {
   return Live.healthReport;
 };
 
+// GET /info feeds the instance chip and the store-busy chips; it is read with every health load (D-13).
+// Without the route the chip keeps its placeholders, the busy group stays hidden and no request is made.
+var BUSY_CHIPS = [["write_in_flight", "write in flight"], ["graph_busy", "graph in use"]];
+$id("shell.instance.chip").textContent = "version — · workspace —";
+
+function loadInfo() {
+  var busy = $id("shell.live.busy");
+  if (!Live.has("GET", "/info")) {
+    busy.hidden = true;
+    return Promise.resolve(null);
+  }
+  return api("GET", "/info").then(function (result) {
+    var info = result.body;
+    if (result.status < 200 || result.status >= 300 || info === null || typeof info !== "object") return null;
+    $id("shell.instance.chip").textContent = "version " + info.version + " · workspace " + info.workspace;
+    clearNode(busy);
+    BUSY_CHIPS.forEach(function (pair) {
+      if (!info[pair[0]]) return;
+      var chip = h("span", "▲ " + pair[1], "chip");
+      chip.setAttribute("data-state", "warn");
+      busy.appendChild(chip);
+    });
+    busy.hidden = busy.children.length === 0;
+    Console.emit("info", info);
+    return info;
+  });
+}
+
 // The 60 s abort is a setTimeout (not AbortSignal.timeout) so a faked clock can drive it in tests.
 Console.loadHealth = function () {
   renderHealth({ loading: true });
@@ -81,7 +109,9 @@ Console.loadHealth = function () {
     else report = { status: result.status, text: "The server answered HTTP " + result.status + "." };
     renderHealth(report);
     Console.emit("health-report", report);
-    return report;
+    return loadInfo().then(function () {
+      return report;
+    });
   });
 };
 

@@ -147,6 +147,7 @@ p { margin: 0 0 var(--sm); }
 .badge-nb { color: var(--nb-fg); background: var(--nb-bg); }
 .badge-op { color: #52525b; background: #f4f4f5; }
 .needs-route { display: block; }
+.busy-chips { display: flex; gap: var(--xs); flex-wrap: wrap; }
 
 .table-scroll { overflow-x: auto; max-width: 100%; }
 table { border-collapse: collapse; width: 100%; }

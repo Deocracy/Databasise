@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Databasise operator console (mockup)</title>
+<title>Databasise operator console</title>
 <style>
 :root {
   --bg: #ffffff;
@@ -154,6 +154,7 @@ p { margin: 0 0 var(--sm); }
 .badge-nb { color: var(--nb-fg); background: var(--nb-bg); }
 .badge-op { color: #52525b; background: #f4f4f5; }
 .needs-route { display: block; }
+.busy-chips { display: flex; gap: var(--xs); flex-wrap: wrap; }
 
 .table-scroll { overflow-x: auto; max-width: 100%; }
 table { border-collapse: collapse; width: 100%; }
@@ -440,6 +441,7 @@ dialog .mono { overflow-wrap: anywhere; }
   <header class="app-header">
     <div class="app-title"><span class="brand">Databasise</span> <span class="muted">Operator console</span></div>
     <span data-needs-backend="GET /info" data-backend-state="operator" title="Mounted only with --operator"><span class="badge badge-op">operator route</span> <span data-mock-id="shell.instance.chip" class="chip" role="status"></span></span>
+    <div data-mock-id="shell.live.busy" role="status" class="busy-chips" hidden></div>
     <div class="health">
       <div data-mock-id="shell.health.status" role="status" data-state="ok">stores openable / v1 reachable</div>
       <span class="badge" data-role="health-badge" data-state="ok"><span class="spinner" role="presentation" hidden></span><span data-role="health-glyph" aria-hidden="true"></span> <span data-role="health-word"></span></span>
@@ -2923,6 +2925,34 @@ Console.health = function () {
   return Live.healthReport;
 };
 
+// GET /info feeds the instance chip and the store-busy chips; it is read with every health load (D-13).
+// Without the route the chip keeps its placeholders, the busy group stays hidden and no request is made.
+var BUSY_CHIPS = [["write_in_flight", "write in flight"], ["graph_busy", "graph in use"]];
+$id("shell.instance.chip").textContent = "version — · workspace —";
+
+function loadInfo() {
+  var busy = $id("shell.live.busy");
+  if (!Live.has("GET", "/info")) {
+    busy.hidden = true;
+    return Promise.resolve(null);
+  }
+  return api("GET", "/info").then(function (result) {
+    var info = result.body;
+    if (result.status < 200 || result.status >= 300 || info === null || typeof info !== "object") return null;
+    $id("shell.instance.chip").textContent = "version " + info.version + " · workspace " + info.workspace;
+    clearNode(busy);
+    BUSY_CHIPS.forEach(function (pair) {
+      if (!info[pair[0]]) return;
+      var chip = h("span", "▲ " + pair[1], "chip");
+      chip.setAttribute("data-state", "warn");
+      busy.appendChild(chip);
+    });
+    busy.hidden = busy.children.length === 0;
+    Console.emit("info", info);
+    return info;
+  });
+}
+
 // The 60 s abort is a setTimeout (not AbortSignal.timeout) so a faked clock can drive it in tests.
 Console.loadHealth = function () {
   renderHealth({ loading: true });
@@ -2939,7 +2969,9 @@ Console.loadHealth = function () {
     else report = { status: result.status, text: "The server answered HTTP " + result.status + "." };
     renderHealth(report);
     Console.emit("health-report", report);
-    return report;
+    return loadInfo().then(function () {
+      return report;
+    });
   });
 };
 
