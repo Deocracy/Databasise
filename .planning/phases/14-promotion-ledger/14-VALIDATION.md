@@ -2,9 +2,9 @@
 phase: "14"
 slug: "promotion-ledger"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: "2026-10-20"
 ---
 
@@ -44,20 +44,20 @@ Every row test is a new node in an unprotected new file. It must fail on pre-fix
 
 | Req | Behavior | Test file | Plan | Status |
 |-----|----------|-----------|------|--------|
-| LEDG-01 | No verb ever returns a 500 on a partial trace. Promote gives 422 `PartialRunEvidenceError`; rollback and retire proceed using `arm_id`; an unidentified partial trace is refused by name | tests/seam/test_partial_run_evidence.py | 14-08 | ⬜ |
-| LEDG-02 | Promote refuses `partial=true` traces, including the old-format record and a failed one-node bypass run; `partial=false` and degraded-but-not-partial runs still promote | tests/seam/test_promote_refuses_partial.py | 14-08 | ⬜ |
-| LEDG-03 | Alias rows for hipporag, or for an arm that cannot be resolved, never 500 on any selector route | tests/seam/test_alias_resolution.py | 14-06 | ⬜ |
-| LEDG-04 | Retire refuses a version in the active lineage; rollback refuses a tombstoned lineage | tests/seam/test_retire_lineage.py | 14-09 | ⬜ |
-| LEDG-05 | Empty and hash-shaped aliases are refused by all three verbs, with no row written | tests/seam/test_operator_alias_validation.py | 14-08 | ⬜ |
-| LEDG-06 | Connections are closed; refused verbs create no `ledger.db`; the docstring says no "stall" | tests/ledger/test_ledger_lifecycle.py | 14-09 | ⬜ |
-| LEDG-07 | `history_for_alias` returns rows oldest first, with `id` and `created_at` | tests/ledger/test_ledger_history.py | 14-02 | ⬜ |
-| LEDG-08 | All six arms × both gate verbs give `GateNotCalibratedError`, with no ledger file; plus the §3.5.1 doc check | tests/seam/test_promotion_posture.py (new node) | 14-08 | ⬜ |
-| LEDG-09 | `debug` is a strict boolean on REST and MCP; the tenancy phrase is documented | tests/seam/test_trace_resolve_strict_flag.py (REST, MCP and doc legs in one file) | 14-05 | ⬜ |
-| LEDG-10 † | `writes_*` never selects a read-only arm; per-arm effect table | tests/seam/test_capability_effects.py (`--at 3fd6e4c^`) | 14-04 | ⬜ |
-| LEDG-11 † | A kind mismatch is reported by name; every shipped wiring parses | tests/validator/test_node_kind.py (`--at 5d61a79^`) | 14-04 | ⬜ |
-| LEDG-12 | Every admitted registered part is reachable | tests/parts/test_registry_reachability.py | 14-07 | ⬜ |
-| LEDG-13 | `_corpus_wiring` loads through `load_wiring`; a missing file gives `NoWritePathForModalityError` | tests/seam/test_corpus_wiring.py | 14-06 | ⬜ |
-| LEDG-14 | The stale phrases are absent from the named modules | tests/test_docstring_currency.py | 14-10 | ⬜ |
+| LEDG-01 | No verb ever returns a 500 on a partial trace. Promote gives 422 `PartialRunEvidenceError`; rollback and retire proceed using `arm_id`; an unidentified partial trace is refused by name | tests/seam/test_partial_run_evidence.py | 14-08 | ✅ |
+| LEDG-02 | Promote refuses `partial=true` traces, including the old-format record and a failed one-node bypass run; `partial=false` and degraded-but-not-partial runs still promote | tests/seam/test_promote_refuses_partial.py | 14-08 | ✅ |
+| LEDG-03 | Alias rows for hipporag, or for an arm that cannot be resolved, never 500 on any selector route | tests/seam/test_alias_resolution.py | 14-06 | ✅ |
+| LEDG-04 | Retire refuses a version in the active lineage; rollback refuses a tombstoned lineage | tests/seam/test_retire_lineage.py | 14-09 | ✅ |
+| LEDG-05 | Empty and hash-shaped aliases are refused by all three verbs, with no row written | tests/seam/test_operator_alias_validation.py | 14-08 | ✅ |
+| LEDG-06 | Connections are closed; refused verbs create no `ledger.db`; the docstring says no "stall" | tests/ledger/test_ledger_lifecycle.py | 14-09 | ✅ |
+| LEDG-07 | `history_for_alias` returns rows oldest first, with `id` and `created_at` | tests/ledger/test_ledger_history.py | 14-02 | ✅ |
+| LEDG-08 | All six arms × both gate verbs give `GateNotCalibratedError`, with no ledger file; plus the §3.5.1 doc check | tests/seam/test_promotion_posture.py (new node) | 14-08 | ✅ |
+| LEDG-09 | `debug` is a strict boolean on REST and MCP; the tenancy phrase is documented | tests/seam/test_trace_resolve_strict_flag.py (REST, MCP and doc legs in one file) | 14-05 | ✅ |
+| LEDG-10 † | `writes_*` never selects a read-only arm; per-arm effect table | tests/seam/test_capability_effects.py (`--at 3fd6e4c^`) | 14-04 | ✅ |
+| LEDG-11 † | A kind mismatch is reported by name; every shipped wiring parses | tests/validator/test_node_kind.py (`--at 5d61a79^`) | 14-04 | ✅ |
+| LEDG-12 | Every admitted registered part is reachable | tests/parts/test_registry_reachability.py | 14-07 | ✅ |
+| LEDG-13 | `_corpus_wiring` loads through `load_wiring`; a missing file gives `NoWritePathForModalityError` | tests/seam/test_corpus_wiring.py | 14-06 | ✅ |
+| LEDG-14 | The stale phrases are absent from the named modules | tests/test_docstring_currency.py | 14-10 | ✅ |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -88,3 +88,11 @@ All phase behaviors have automated verification.
 - [ ] `nyquist_compliant: true` is set in the frontmatter.
 
 **Approval:** pending
+
+## Validation Audit 2026-10-31
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |

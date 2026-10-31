@@ -2,9 +2,9 @@
 phase: "15"
 slug: "offline-tooling-packaging"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: "2026-10-21"
 ---
 
@@ -42,26 +42,26 @@ Each row test is a new node in an unprotected file. Plain pytest must fail it on
 
 | Req | Behavior | Test file (see 15-RESEARCH § Validation Architecture) | Status |
 |-----|----------|-------------------------------------------------------|--------|
-| TOOL-01 | The wheel carries the tools, bundles and fixtures; the version has one source; `mcp<3`; the import-boundary scan fixes | tests/test_packaging.py, tests/test_import_boundary.py | ⬜ |
-| TOOL-02 | `import_index` uses argparse: `--help` exits 0, a bad flag exits 2, nothing is written, the workspace line prints | tests/parity/test_import_index_cli.py | ⬜ |
-| TOOL-03 | A missing v2 graph is reported as `graph-topology`; the `precondition` assertion | parity verify_import test | ⬜ |
-| TOOL-04 | A named failure prints one stderr line and exits 1; a bad argument exits 2 | tests/test_cli_refusals.py | ⬜ |
-| TOOL-05 | Every offline CLI defaults to estimate-only (D-04) | tests/test_dry_run_default.py | ⬜ |
-| TOOL-06 | A partial, degraded or cyclic run is inconclusive and exits 3 | parity run_comparison test | ⬜ |
-| TOOL-07 | One `aquery_llm` call; `no_results` handling; the env refusal | tests/parity/test_v1_driver_script.py | ⬜ |
-| TOOL-08 | storage_audit exits 3 on partial or cycle; `--arm hipporag` | parity storage_audit test | ⬜ |
-| TOOL-09 | Preflight refusal and the selector-to-wiring check | parity cross-modality test | ⬜ |
-| TOOL-10 | run_wiring canonicalises first | tracer test | ⬜ |
-| TOOL-11 | The eval store boundary; empty-index refusal | tests/eval/test_eval_store_boundary.py | ⬜ |
-| TOOL-12 | Calibration refusals; two-sided floor; `floors.db`; the two-stage gate | tests/seam/test_promotion_floor.py and the floor store and calibration tests | ⬜ |
-| TOOL-13 | Bundle identity covers question text and gold ids | eval bundle-versioning test | ⬜ |
-| TOOL-14 | Parity records render only states they read; AI causes show `recorded_by` | evidence parity-report render test | ⬜ |
-| TOOL-15 | Computed verdicts and exit codes; F-07 main; one MODAL-05 value | evidence falsifier2-verdict test | ⬜ |
-| TOOL-16 | Admission at load; name match; kind-only shared scope | parts admission test (new node) | ⬜ |
-| TOOL-17 † | Removed stores are absent | tests/test_removed_stores_absent.py (`--at 226b2cf^`) | ⬜ |
-| TOOL-18 | Mutating-tool refusal, launch timeout, error mapping | tests/foreign/test_cbm_adapter.py | ⬜ |
-| TOOL-19 | Ten tools, each with a non-empty description and no plan references | tests/mcp/test_tool_descriptions.py | ⬜ |
-| TOOL-20 | Docstring facts | tests/evidence/test_docstring_facts.py | ⬜ |
+| TOOL-01 | The wheel carries the tools, bundles and fixtures; the version has one source; `mcp<3`; the import-boundary scan fixes | tests/test_packaging.py, tests/test_import_boundary.py | ✅ |
+| TOOL-02 | `import_index` uses argparse: `--help` exits 0, a bad flag exits 2, nothing is written, the workspace line prints | tests/parity/test_import_index_cli.py | ✅ |
+| TOOL-03 | A missing v2 graph is reported as `graph-topology`; the `precondition` assertion | parity verify_import test | ✅ |
+| TOOL-04 | A named failure prints one stderr line and exits 1; a bad argument exits 2 | tests/test_cli_refusals.py | ✅ |
+| TOOL-05 | Every offline CLI defaults to estimate-only (D-04) | tests/test_dry_run_default.py | ✅ |
+| TOOL-06 | A partial, degraded or cyclic run is inconclusive and exits 3 | parity run_comparison test | ✅ |
+| TOOL-07 | One `aquery_llm` call; `no_results` handling; the env refusal | tests/parity/test_v1_driver_script.py | ✅ |
+| TOOL-08 | storage_audit exits 3 on partial or cycle; `--arm hipporag` | parity storage_audit test | ✅ |
+| TOOL-09 | Preflight refusal and the selector-to-wiring check | parity cross-modality test | ✅ |
+| TOOL-10 | run_wiring canonicalises first | tracer test | ✅ |
+| TOOL-11 | The eval store boundary; empty-index refusal | tests/eval/test_eval_store_boundary.py | ✅ |
+| TOOL-12 | Calibration refusals; two-sided floor; `floors.db`; the two-stage gate | tests/seam/test_promotion_floor.py and the floor store and calibration tests | ✅ |
+| TOOL-13 | Bundle identity covers question text and gold ids | eval bundle-versioning test | ✅ |
+| TOOL-14 | Parity records render only states they read; AI causes show `recorded_by` | evidence parity-report render test | ✅ |
+| TOOL-15 | Computed verdicts and exit codes; F-07 main; one MODAL-05 value | evidence falsifier2-verdict test | ✅ |
+| TOOL-16 | Admission at load; name match; kind-only shared scope | parts admission test (new node) | ✅ |
+| TOOL-17 † | Removed stores are absent | tests/test_removed_stores_absent.py (`--at 226b2cf^`) | ✅ |
+| TOOL-18 | Mutating-tool refusal, launch timeout, error mapping | tests/foreign/test_cbm_adapter.py | ✅ |
+| TOOL-19 | Ten tools, each with a non-empty description and no plan references | tests/mcp/test_tool_descriptions.py | ✅ |
+| TOOL-20 | Docstring facts | tests/evidence/test_docstring_facts.py | ✅ |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -92,3 +92,11 @@ Each row test is a new node in an unprotected file. Plain pytest must fail it on
 - [ ] `nyquist_compliant: true` is set in the frontmatter.
 
 **Approval:** pending
+
+## Validation Audit 2026-10-31
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |

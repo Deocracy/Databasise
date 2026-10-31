@@ -2,9 +2,9 @@
 phase: "16"
 slug: "gui-connectors"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: "2026-10-22"
 ---
 
@@ -41,20 +41,20 @@ Each row test is a new file and is unprotected. Plain pytest must fail it on pre
 
 | Req | Behavior | Row test file | Status |
 |-----|----------|---------------|--------|
-| CONN-01 | Operator routes are thin adapters: the AST rule plus a `Ledger(` mutant. Every route is a 404 without `--operator`. COVERAGE.md has REST-only absent rows. | `databasise/tests/seam/test_console_surface.py` | ⬜ |
-| CONN-02 | `docs/gui/refusals.json` is in sync with the 50 refusal types and their `http_status` | `databasise/tests/seam/test_refusal_catalogue_file.py` | ⬜ |
-| CONN-03 | The selector-resolution fixture is in sync | `databasise/tests/seam/test_selector_resolution_fixture.py` | ⬜ |
-| CONN-04 | /info returns version, workspace and presence-only clients, with no store_root, URL, model or key | `databasise/tests/seam/test_console_info.py` | ⬜ |
-| CONN-05 | /wirings returns six rows with node counts and reachable flags, cross-checked against the fixture | `databasise/tests/seam/test_console_wirings.py` | ⬜ |
-| CONN-06 | /ledger/aliases creates no file and leaves no open handle | `databasise/tests/seam/test_console_ledger.py` | ⬜ |
-| CONN-07 | /ledger/history: active and tombstoned flags, page bounds | `databasise/tests/seam/test_console_ledger.py` (history nodes) | ⬜ |
-| CONN-08 | /traces: newest first, paging, scrubbed stop_reason | `databasise/tests/seam/test_console_traces.py` | ⬜ |
-| CONN-09 | Preview and promote agree (differential); no ledger.db is created | `databasise/tests/seam/test_console_preview.py` | ⬜ |
-| CONN-10 | /chunks per family: refs resolve, no reconstruct | `databasise/tests/seam/test_console_chunks.py` | ⬜ |
-| CONN-11 | Node page with one degree query; a busy graph gives 409 (raw pycozo holder) | `databasise/tests/seam/test_console_graph.py` (nodes) | ⬜ |
-| CONN-12 | Edge allowlist `{src,tgt,edge_types,weight}`; an unknown node gives 422 | `databasise/tests/seam/test_console_graph.py` (node edges) | ⬜ |
-| CONN-13 | write_in_flight and graph_busy during a blocked ingest | `databasise/tests/seam/test_console_info.py` (busy nodes) | ⬜ |
-| CONN-14 | /log tail; 404 without both flags; 422 on limit bounds | `databasise/tests/seam/test_console_log.py` | ⬜ |
+| CONN-01 | Operator routes are thin adapters: the AST rule plus a `Ledger(` mutant. Every route is a 404 without `--operator`. COVERAGE.md has REST-only absent rows. | `databasise/tests/seam/test_console_surface.py` | ✅ |
+| CONN-02 | `docs/gui/refusals.json` is in sync with the 50 refusal types and their `http_status` | `databasise/tests/seam/test_refusal_catalogue_file.py` | ✅ |
+| CONN-03 | The selector-resolution fixture is in sync | `databasise/tests/seam/test_selector_resolution_fixture.py` | ✅ |
+| CONN-04 | /info returns version, workspace and presence-only clients, with no store_root, URL, model or key | `databasise/tests/seam/test_console_info.py` | ✅ |
+| CONN-05 | /wirings returns six rows with node counts and reachable flags, cross-checked against the fixture | `databasise/tests/seam/test_console_wirings.py` | ✅ |
+| CONN-06 | /ledger/aliases creates no file and leaves no open handle | `databasise/tests/seam/test_console_ledger.py` | ✅ |
+| CONN-07 | /ledger/history: active and tombstoned flags, page bounds | `databasise/tests/seam/test_console_ledger.py` (history nodes) | ✅ |
+| CONN-08 | /traces: newest first, paging, scrubbed stop_reason | `databasise/tests/seam/test_console_traces.py` | ✅ |
+| CONN-09 | Preview and promote agree (differential); no ledger.db is created | `databasise/tests/seam/test_console_preview.py` | ✅ |
+| CONN-10 | /chunks per family: refs resolve, no reconstruct | `databasise/tests/seam/test_console_chunks.py` | ✅ |
+| CONN-11 | Node page with one degree query; a busy graph gives 409 (raw pycozo holder) | `databasise/tests/seam/test_console_graph.py` (nodes) | ✅ |
+| CONN-12 | Edge allowlist `{src,tgt,edge_types,weight}`; an unknown node gives 422 | `databasise/tests/seam/test_console_graph.py` (node edges) | ✅ |
+| CONN-13 | write_in_flight and graph_busy during a blocked ingest | `databasise/tests/seam/test_console_info.py` (busy nodes) | ✅ |
+| CONN-14 | /log tail; 404 without both flags; 422 on limit bounds | `databasise/tests/seam/test_console_log.py` | ✅ |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -87,3 +87,11 @@ The ledger needs each row to have its own check. CONN-06 and CONN-07 share a fil
 - [ ] `nyquist_compliant: true` is set in the frontmatter.
 
 **Approval:** pending
+
+## Validation Audit 2026-10-31
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |

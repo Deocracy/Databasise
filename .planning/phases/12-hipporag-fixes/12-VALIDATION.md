@@ -2,9 +2,9 @@
 phase: "12"
 slug: "hipporag-fixes"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: "2026-10-19"
 ---
 
@@ -43,26 +43,26 @@ Each row has its own test node, and on pre-fix code that node must fail with a p
 
 | Req | Behavior | Test file | Pre-fix failure | Status |
 |-----|----------|-----------|-----------------|--------|
-| HIPP-01 | A PPR-branch query hydrates content, and every ref resolves | tests/seam/test_hipporag_write_path.py | hydrated content is `''` | ⬜ |
-| HIPP-02 | The matching chunk vertex gets a non-zero reset weight | tests/parts_core/hipporag/test_ppr.py | the weight is 0 | ⬜ |
-| HIPP-03 | A refused ingest commits nothing | tests/seam/test_hipporag_write_path.py | already passes at HEAD; record with `--at feadf3e^` | ⬜ |
-| HIPP-04 | The refusal names the failing node privately and carries the real cause | tests/seam/test_hipporag_write_path.py | node_id is None | ⬜ |
-| HIPP-05 | The fact-filter prompt carries the query | tests/seam/test_hipporag_query_path.py | the query section is `''` | ⬜ |
-| HIPP-06 | Every chunk gets a passage vertex | tests/parts_core/hipporag/test_graph_construction.py | the vertex is missing | ⬜ |
-| HIPP-07 | A synonymy edge appears on the ingest that introduces it and is not re-emitted | tests/parts_core/hipporag/test_graph_construction.py | assertion | ⬜ |
-| HIPP-08 | Co-occurrence weight and edge types accumulate across ingests | tests/parts_core/hipporag/test_graph_construction.py | weight is 1.0, not 2.0 | ⬜ |
-| HIPP-09 | A fact keeps the union of its chunk_ids | tests/parts_core/hipporag/test_index_side_extraction.py | assertion | ⬜ |
-| HIPP-10 | Extraction failures are counted, the ingest is refused, and calls overlap | tests/parts_core/hipporag/test_index_side_extraction.py | assertion | ⬜ |
-| HIPP-11 | At most top_k evidence items, and no zero-score PPR item | tests/seam/test_hipporag_query_path.py | 20 > 5 | ⬜ |
-| HIPP-12 | Only query-side nodes run, the query is embedded once, and no write selector resolves | tests/seam/test_hipporag_query_path.py | assertion | ⬜ |
-| HIPP-13 | The answer is generated text, not the joined evidence | tests/seam/test_hipporag_query_path.py | answer equals the joined evidence | ⬜ |
-| HIPP-14 | A fired fallback shows as `degraded` with a node-free reason | tests/parts_core/hipporag/test_dpr_fallback_guard.py | degraded is False | ⬜ |
-| HIPP-15 | The corpus listing and counts cover HippoRAG (corpus leg over REST) | tests/seam/test_hipporag_write_path.py | total is 0 | ⬜ |
-| HIPP-16 | A re-ingest leaves no stale chunk, and delete removes everything | tests/seam/test_hipporag_write_path.py | 3 chunks, not 1 | ⬜ |
-| HIPP-17 | An old ref never resolves to the new text | tests/seam/test_hipporag_write_path.py | resolves to text B | ⬜ |
-| HIPP-18 | No unread config key remains, and the docstrings make no false claim | tests/parts_core/hipporag/test_registration.py | assertion | ⬜ |
-| HIPP-19 | Mixed counters never share one label | tests/runner/test_token_sum.py | the first label wins | ⬜ |
-| A-WR-05 | An in-process provider error is logged redacted | tests/foreign/test_secret_redaction.py, plus the granted edit at tests/seam/test_foreign_engine_refusal.py:118 | the raw key is in the log | ⬜ |
+| HIPP-01 | A PPR-branch query hydrates content, and every ref resolves | tests/seam/test_hipporag_write_path.py | hydrated content is `''` | ✅ |
+| HIPP-02 | The matching chunk vertex gets a non-zero reset weight | tests/parts_core/hipporag/test_ppr.py | the weight is 0 | ✅ |
+| HIPP-03 | A refused ingest commits nothing | tests/seam/test_hipporag_write_path.py | already passes at HEAD; record with `--at feadf3e^` | ✅ |
+| HIPP-04 | The refusal names the failing node privately and carries the real cause | tests/seam/test_hipporag_write_path.py | node_id is None | ✅ |
+| HIPP-05 | The fact-filter prompt carries the query | tests/seam/test_hipporag_query_path.py | the query section is `''` | ✅ |
+| HIPP-06 | Every chunk gets a passage vertex | tests/parts_core/hipporag/test_graph_construction.py | the vertex is missing | ✅ |
+| HIPP-07 | A synonymy edge appears on the ingest that introduces it and is not re-emitted | tests/parts_core/hipporag/test_graph_construction.py | assertion | ✅ |
+| HIPP-08 | Co-occurrence weight and edge types accumulate across ingests | tests/parts_core/hipporag/test_graph_construction.py | weight is 1.0, not 2.0 | ✅ |
+| HIPP-09 | A fact keeps the union of its chunk_ids | tests/parts_core/hipporag/test_index_side_extraction.py | assertion | ✅ |
+| HIPP-10 | Extraction failures are counted, the ingest is refused, and calls overlap | tests/parts_core/hipporag/test_index_side_extraction.py | assertion | ✅ |
+| HIPP-11 | At most top_k evidence items, and no zero-score PPR item | tests/seam/test_hipporag_query_path.py | 20 > 5 | ✅ |
+| HIPP-12 | Only query-side nodes run, the query is embedded once, and no write selector resolves | tests/seam/test_hipporag_query_path.py | assertion | ✅ |
+| HIPP-13 | The answer is generated text, not the joined evidence | tests/seam/test_hipporag_query_path.py | answer equals the joined evidence | ✅ |
+| HIPP-14 | A fired fallback shows as `degraded` with a node-free reason | tests/parts_core/hipporag/test_dpr_fallback_guard.py | degraded is False | ✅ |
+| HIPP-15 | The corpus listing and counts cover HippoRAG (corpus leg over REST) | tests/seam/test_hipporag_write_path.py | total is 0 | ✅ |
+| HIPP-16 | A re-ingest leaves no stale chunk, and delete removes everything | tests/seam/test_hipporag_write_path.py | 3 chunks, not 1 | ✅ |
+| HIPP-17 | An old ref never resolves to the new text | tests/seam/test_hipporag_write_path.py | resolves to text B | ✅ |
+| HIPP-18 | No unread config key remains, and the docstrings make no false claim | tests/parts_core/hipporag/test_registration.py | assertion | ✅ |
+| HIPP-19 | Mixed counters never share one label | tests/runner/test_token_sum.py | the first label wins | ✅ |
+| A-WR-05 | An in-process provider error is logged redacted | tests/foreign/test_secret_redaction.py, plus the granted edit at tests/seam/test_foreign_engine_refusal.py:118 | the raw key is in the log | ✅ |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -95,3 +95,11 @@ Each row has its own test node, and on pre-fix code that node must fail with a p
 - [ ] `nyquist_compliant: true` is set in the frontmatter.
 
 **Approval:** pending
+
+## Validation Audit 2026-10-31
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
