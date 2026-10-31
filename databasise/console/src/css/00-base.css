@@ -146,6 +146,7 @@ p { margin: 0 0 var(--sm); }
 .chip { border: 1px solid var(--border); font-weight: 400; }
 .badge-nb { color: var(--nb-fg); background: var(--nb-bg); }
 .badge-op { color: #52525b; background: #f4f4f5; }
+.needs-route { display: block; }
 
 .table-scroll { overflow-x: auto; max-width: 100%; }
 table { border-collapse: collapse; width: 100%; }
