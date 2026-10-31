@@ -100,3 +100,268 @@ def test_promote_then_query_through_the_alias(seeded, live_ui):
     assert follow.value.status == 200
     assert json.loads(_posts(ui, "/query")[-1]["post_data"])["selector"] == {"alias": "op-test"}
     ui.expect("query.state.success").to_be_visible()
+
+
+# ---- Task 2: timeline, Roll back, Retire, dialog safety, findings ----
+
+
+def _gets(ui, path):
+    return [r for r in ui.requests if r["method"] == "GET" and r["path"] == path]
+
+
+def _settle(ui):
+    """One round trip through the page: every request a handler started before this call is in ``ui.requests``."""
+    ui.page.evaluate("() => fetch('/openapi.json').then((r) => r.status)")
+
+
+def _make_lineage(app, alias, texts=("Ed Wood", "Bela Lugosi")):
+    """Two HippoRAG queries made over httpx, promoted one after the other to ``alias``."""
+    a = app.query(texts[0], HIPPORAG)["trace_token"]
+    b = app.query(texts[1], HIPPORAG)["trace_token"]
+    v1 = app.promote(alias, [a])["version"]
+    v2 = app.promote(alias, [b])["version"]
+    return {"alias": alias, "a": a, "b": b, "v1": v1, "v2": v2}
+
+
+@pytest.fixture(scope="module")
+def lineage(seeded):
+    return _make_lineage(seeded, "lin")
+
+
+def _timeline_rows(ui):
+    return ui.el("ledger.timeline.table").locator("tbody tr:not([hidden])")
+
+
+def _statuses(ui):
+    return [t.strip() for t in _timeline_rows(ui).locator('[data-role="status"]').all_inner_texts()]
+
+
+def _open_timeline(ui, alias, rows):
+    ui.nav("ledger")
+    ui.el("ledger.timeline.alias").select_option(alias)
+    ui.expect(_timeline_rows(ui)).to_have_count(rows)
+
+
+def _fill_promote_form(ui, token, alias):
+    """Sends ``token`` to the promote form the way Query and Compare do, then fills the rest."""
+    ui.nav("ledger")
+    ui.page.evaluate("(t) => Console.emit('promote', { trace: t })", token)
+    ui.el("ledger.promote.alias").fill(alias)
+    ui.el("ledger.promote.origin-human").check()
+
+
+def test_rollback_and_retire_through_the_timeline_update_the_rows(lineage, live_ui):
+    ui = live_ui
+    _open_timeline(ui, "lin", 2)
+    assert len(_posts(ui, "/ledger/history")) == 1
+    assert json.loads(_posts(ui, "/ledger/history")[0]["post_data"]) == {"alias": "lin", "limit": 50, "offset": 0}
+    assert _statuses(ui) == ["—", "active"]
+
+    ui.el("ledger.timeline.rollback-1").click()
+    ui.expect("shell.dialog.rollback").to_be_visible()
+    assert _posts(ui, "/rollback") == []
+    ui.el("shell.dialog.rollback-traces").select_option(lineage["a"])
+    ui.el("shell.dialog.rollback-origin-human").check()
+    history, aliases = len(_posts(ui, "/ledger/history")), len(_gets(ui, "/ledger/aliases"))
+    with ui.page.expect_response(_is_post("/rollback")) as info:
+        ui.el("shell.dialog.rollback-confirm").click()
+    assert info.value.status == 200
+    assert len(_posts(ui, "/rollback")) == 1
+    assert json.loads(_posts(ui, "/rollback")[0]["post_data"]) == {
+        "alias": "lin",
+        "version": lineage["v1"],
+        "trace_ids": [lineage["a"]],
+        "change_origin": "human_edit",
+    }
+    ui.expect("shell.dialog.rollback").to_be_hidden()
+    ui.expect(_timeline_rows(ui)).to_have_count(3)
+    assert len(_posts(ui, "/ledger/history")) == history + 1
+    assert len(_gets(ui, "/ledger/aliases")) == aliases + 1
+    assert _statuses(ui) == ["target of active rollback", "—", "active"]
+
+    ui.el("ledger.timeline.retire-2").click()
+    ui.expect("shell.dialog.retire").to_be_visible()
+    ui.el("shell.dialog.retire-version").fill(lineage["v2"])
+    ui.el("shell.dialog.retire-traces").select_option(lineage["b"])
+    ui.el("shell.dialog.retire-origin-human").check()
+    with ui.page.expect_response(_is_post("/retire")) as info:
+        ui.el("shell.dialog.retire-confirm").click()
+    assert info.value.status == 200
+    assert len(_posts(ui, "/retire")) == 1
+    assert json.loads(_posts(ui, "/retire")[0]["post_data"])["version"] == lineage["v2"]
+    ui.expect(_timeline_rows(ui)).to_have_count(4)
+    assert _statuses(ui) == ["target of active rollback", "tombstoned", "active", "—"]
+    for n in (1, 2, 3):
+        ui.expect(f"ledger.timeline.retire-{n}").to_be_disabled()
+
+
+def test_dialog_dismiss_after_open_sends_nothing(seeded, live_ui):
+    info = _make_lineage(seeded, "dis")
+    ui = live_ui
+    _open_timeline(ui, "dis", 2)
+    _fill_promote_form(ui, info["a"], "dis-new")
+    openers = [
+        ("shell.dialog.promote", lambda: ui.el("ledger.promote.submit").click(), "shell.dialog.promote-cancel"),
+        ("shell.dialog.rollback", lambda: ui.el("ledger.timeline.rollback-1").click(), "shell.dialog.rollback-cancel"),
+        ("shell.dialog.retire", lambda: ui.el("ledger.timeline.retire-1").click(), "shell.dialog.retire-cancel"),
+    ]
+    for dialog, open_it, cancel in openers:
+        open_it()
+        ui.expect(dialog).to_be_visible()
+        ui.el(cancel).click()
+        ui.expect(dialog).to_be_hidden()
+        open_it()
+        ui.expect(dialog).to_be_visible()
+        ui.page.keyboard.press("Escape")
+        ui.expect(dialog).to_be_hidden()
+    _settle(ui)
+    for path in ("/promote", "/rollback", "/retire"):
+        assert _posts(ui, path) == []
+
+
+def test_dialog_stays_open_while_the_write_is_in_flight(seeded, live_ui):
+    ui = live_ui
+    token = _run_query(ui)
+    ui.nav("ledger")
+    ui.el("ledger.promote.trace-1").check()
+    ui.el("ledger.promote.alias").fill("hold-test")
+    ui.el("ledger.promote.origin-human").check()
+    ui.el("ledger.promote.submit").click()
+    ui.expect("shell.dialog.promote").to_be_visible()
+    with seeded.hold("promote") as release:
+        ui.el("shell.dialog.promote-confirm").click()
+        ui.expect("shell.dialog.promote-confirm").to_be_disabled()
+        ui.expect("shell.dialog.promote-cancel").to_be_disabled()
+        ui.expect(ui.el("shell.dialog.promote").locator('[data-role="sending"]')).to_have_text(
+            "Sending. A request that has been sent cannot be cancelled."
+        )
+        ui.page.keyboard.press("Escape")
+        ui.page.keyboard.press("Escape")
+        ui.expect("shell.dialog.promote").to_be_visible()
+        release.set()
+    ui.expect("shell.dialog.promote").to_be_hidden()
+    ui.expect("ledger.promote.result").to_be_visible()
+    assert len(_posts(ui, "/promote")) == 1
+    assert json.loads(_posts(ui, "/promote")[0]["post_data"])["trace_ids"] == [token]
+
+
+def test_preview_reads_the_checked_traces_when_it_arrives(seeded, live_ui):
+    ui = live_ui
+    _run_query(ui)
+    ui.nav("ledger")
+    ui.el("ledger.promote.trace-1").check()
+    ui.el("ledger.promote.alias").fill("preview-test")
+    ui.el("ledger.promote.origin-human").check()
+    with seeded.hold("preview_promotion") as release:
+        with ui.page.expect_request(_is_post("/promote/preview")):
+            ui.el("ledger.promote.preview").click()
+        # The boxes are disabled while Preview is pending, so the race is made through the DOM: no trace is checked
+        # when the answer arrives.
+        ui.page.evaluate(
+            """() => {
+                const box = document.querySelector('[data-mock-id="ledger.promote.trace-1"]');
+                box.checked = false;
+                box.dispatchEvent(new Event('change', { bubbles: true }));
+            }"""
+        )
+        with ui.page.expect_response(_is_post("/promote/preview")):
+            release.set()
+    _settle(ui)
+    ui.expect("ledger.promote.preview-result").to_be_hidden()
+    assert ui.el("ledger.promote.preview-result").locator("dl dt").count() == 0
+
+
+def test_page_size_message_survives_hide_errors(lineage, live_ui):
+    ui = live_ui
+    ui.nav("ledger")
+    ui.el("ledger.timeline.page-size").fill("101")
+    ui.expect("ledger.timeline.page-size-error").to_have_text("Page size must be between 1 and 100.")
+    _fill_promote_form(ui, lineage["a"], "size-test")
+    with ui.page.expect_response(_is_post("/promote/preview")):
+        ui.el("ledger.promote.preview").click()  # hideErrors runs when Preview starts
+    ui.expect("ledger.promote.preview-result").to_be_visible()
+    ui.expect("ledger.timeline.page-size-error").to_have_text("Page size must be between 1 and 100.")
+    ui.expect("ledger.timeline.page-size").to_have_attribute("aria-invalid", "true")
+
+
+def test_promote_event_replaces_the_preselection(seeded, live_ui):
+    ui = live_ui
+    first = _run_query(ui, "Ed Wood")
+    ui.expect("query.result.promote").to_be_enabled()
+    ui.el("query.result.promote").click()
+    ui.expect("screen-ledger").to_be_visible()
+    ticked = ui.el("ledger.promote.traces").locator("label[data-token]:not([hidden]) input:checked")
+    ui.expect(ticked).to_have_count(1)
+    ui.nav("query")
+    second = _run_query(ui, "Bela Lugosi")
+    assert second != first
+    ui.expect("query.result.promote").to_be_enabled()
+    ui.el("query.result.promote").click()
+    ui.expect("screen-ledger").to_be_visible()
+    ui.expect(ticked).to_have_count(1)
+    ui.expect(ui.el("ledger.promote.traces").locator(f'label[data-token="{second}"] input')).to_be_checked()
+    ui.expect(ui.el("ledger.promote.traces").locator(f'label[data-token="{first}"] input')).not_to_be_checked()
+
+
+def test_recent_runs_source_lists_server_traces(seeded, browser):
+    a = seeded.query("Ed Wood", HIPPORAG)["trace_token"]
+    b = seeded.query("Bela Lugosi", HIPPORAG)["trace_token"]
+    fake = "f" * 64
+
+    def handler(route):
+        response = route.fetch()
+        body = response.json()
+        body["items"].append({"trace_reference": fake, "created_at": "2026-10-31T10:00:00Z", "partial": True, "degraded": False, "stop_reason": "budget"})
+        route.fulfill(response=response, body=json.dumps(body))
+
+    ui = open_live_ui(browser, seeded, before_goto=lambda page: page.route(lambda url: urlparse(url).path == "/traces", handler))
+    try:
+        ui.nav("ledger")
+        assert _gets(ui, "/traces") == []
+        ui.el("ledger.promote.source-recent").check()
+        rows = ui.el("ledger.promote.traces").locator("label.trace-row:not([hidden])")
+        ui.expect(rows.filter(has_text=a[:8])).to_have_count(1)
+        ui.expect(rows.filter(has_text=b[:8])).to_have_count(1)
+        assert len(_gets(ui, "/traces")) == 1
+        assert _gets(ui, "/traces")[0]["url"].endswith("/traces?limit=50&offset=0")
+        partial = rows.filter(has_text=fake[:8])
+        ui.expect(partial.locator(".chip")).to_contain_text("partial")
+        partial.locator("input").check()
+        ui.expect(ui.el("ledger.promote.preflight")).to_contain_text("is a partial run and cannot be promoted")
+        ui.expect("ledger.promote.submit").to_be_disabled()
+        ui.el("ledger.promote.source-history").check()
+        ui.expect(rows).to_have_count(0)
+        _settle(ui)
+        assert len(_gets(ui, "/traces")) == 1
+        assert ui.page.locator('[data-mock-id="screen-ledger"] [data-needs-backend="GET /traces"]').count() == 0
+    finally:
+        ui.close()
+
+
+def test_timeline_cells_do_not_wrap_at_1440(lineage, live_ui):
+    ui = live_ui
+    ui.page.set_viewport_size({"width": 1440, "height": 900})
+    _open_timeline(ui, "lin", 2)
+    probe = """() => {
+        const row = document.querySelector('[data-mock-id="ledger.timeline.table"] tbody tr:not([hidden])');
+        const white = (el) => getComputedStyle(el).whiteSpace;
+        const status = row.querySelector('[data-role="status"]');
+        const ruler = document.createElement('span');
+        ruler.style.width = '16ch';
+        ruler.style.display = 'inline-block';
+        status.appendChild(ruler);
+        const sixteen = ruler.getBoundingClientRect().width;
+        ruler.remove();
+        return {
+            kind: white(row.querySelector('[data-role="kind"]').parentElement),
+            origin: white(row.querySelector('[data-role="origin"]')),
+            created: white(row.querySelector('[data-role="created"]')),
+            minWidth: parseFloat(getComputedStyle(status).minWidth),
+            sixteen,
+            gap: getComputedStyle(row.querySelector('.row-actions')).columnGap,
+        };
+    }"""
+    got = ui.page.evaluate(probe)
+    assert (got["kind"], got["origin"], got["created"]) == ("nowrap", "nowrap", "nowrap")
+    assert abs(got["minWidth"] - got["sixteen"]) < 1
+    assert got["gap"] == "8px"
