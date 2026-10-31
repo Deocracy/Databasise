@@ -24,5 +24,7 @@
   <p class="label"><span aria-hidden="true">■</span> Server error</p>
   <p data-role="text"></p>
   <pre class="mono" data-role="body" hidden></pre>
-  <span data-needs-backend="GET /log" data-backend-state="operator" title="Mounted only with --operator --log-file"><span class="badge badge-op">operator route</span> <a href="#corpus" data-mock-id="{{s}}.error.server-log">Open server log</a></span>
+  <span data-needs-backend="GET /log" data-backend-state="operator" title="Mounted only with --operator --log-file"><span class="badge badge-op">operator route</span> <a href="#corpus" data-mock-id="{{s}}.error.server-log">Open server log</a>
+    <pre class="mono log-tail" data-role="log-tail" hidden></pre>
+    <p class="muted" data-role="log-caption" hidden></p></span>
 </div>

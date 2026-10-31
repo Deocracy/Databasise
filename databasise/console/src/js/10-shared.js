@@ -289,12 +289,36 @@ function fillServerFailure(banner, body) {
   toggle.textContent = "Show details";
 }
 
+var UNREACHABLE = "Server unreachable. No response from the server. Check that databasise-rest is running at this address, then try again.";
+var LOG_FAILED = "The server log could not be loaded. Select Refresh log in Corpus & Health to try again.";
+
 function fillGeneric(banner, status, body, opts) {
-  fillRole(banner, "text", opts && opts.text ? opts.text : status === 0 ? "No response from the server." : "The server returned HTTP " + status + " with no structured body. Check the server log.");
+  var unreachable = status === 0 && !(opts && opts.text);
+  fillRole(banner, "text", opts && opts.text ? opts.text : unreachable ? UNREACHABLE : "The server returned HTTP " + status + " with no structured body. Check the server log.");
   var pre = banner.querySelector('[data-role="body"]');
   var text = typeof body === "string" ? body : body === null || body === undefined ? "" : JSON.stringify(body);
   pre.textContent = text.slice(0, 500);
-  pre.hidden = text === "";
+  pre.hidden = text === "" || unreachable;
+  // A previous render's log tail does not belong to this one.
+  banner.querySelector('[data-role="log-tail"]').hidden = true;
+  banner.querySelector('[data-role="log-caption"]').hidden = true;
+}
+
+// The last 200 server log lines under a generic 5xx view, when the screen wires GET /log and the server mounts it (D-12).
+function loadLogTail(screen) {
+  if (!Live.has("GET", "/log") || !WIRED[screen + " GET /log"]) return Promise.resolve();
+  var banner = $id(screen + ".error.generic");
+  var tail = banner.querySelector('[data-role="log-tail"]');
+  var caption = banner.querySelector('[data-role="log-caption"]');
+  return api("GET", "/log?limit=200").then(function (result) {
+    if (banner.hidden) return; // another request replaced the error meanwhile
+    var lines = result.body && result.body.lines;
+    var loaded = result.status >= 200 && result.status < 300 && Array.isArray(lines);
+    tail.textContent = loaded ? lines.join("\n") : "";
+    tail.hidden = !loaded || lines.length === 0;
+    caption.textContent = loaded ? "Last 200 log lines. Lines are redacted." : LOG_FAILED;
+    caption.hidden = false;
+  });
 }
 
 // Shows exactly one of the four shapes of a screen (or none for a 2xx) and returns the shape name.
@@ -313,6 +337,7 @@ function renderError(screen, status, body, opts) {
   else if (shape === "server-failure") fillServerFailure(banner, body);
   else fillGeneric(banner, status, body, opts);
   banner.hidden = false;
+  if (shape === "generic" && status >= 500) loadLogTail(screen);
   return shape;
 }
 
@@ -328,6 +353,9 @@ function wireErrors(screen) {
   [["catalogue-link", "open-catalogue"], ["server-log", "open-log"]].forEach(function (pair) {
     $id(screen + ".error." + pair[0]).addEventListener("click", function (event) {
       event.preventDefault();
+      // With a log tail (or its failure line) on screen the link scrolls to it instead of leaving the screen.
+      var shown = pair[1] === "open-log" && $id(screen + ".error.generic").querySelector('[data-role="log-caption"]:not([hidden])');
+      if (shown) return shown.scrollIntoView();
       Console.show("corpus");
       Console.emit(pair[1]);
     });
