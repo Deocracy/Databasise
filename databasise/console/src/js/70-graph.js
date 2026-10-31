@@ -19,14 +19,16 @@ var GraphScreen = (function () {
   var detailBody = root.querySelector('[data-role="detail-body"]');
   var nodesBody = ID("nodes.table").tBodies[0];
   var edgesBody = ID("edges.table").tBodies[0];
+  var chunksBody = ID("chunks.table").tBodies[0];
   var sizeInputs = [ID("nodes.page-size"), ID("edges.page-size"), ID("chunks.page-size")];
   var PANELS = { nodes: "nodes.panel", node: "node.panel", chunks: "chunks.panel" };
 
   var nodes = null; // the last good page: {offset, limit, body}
   var node = null; // the open node: {id, offset, limit, body}
+  var chunks = null; // the last good chunk page: {offset, limit, body}
   var ctl = { nodes: null, node: null, chunks: null }; // abort handles of the reads in flight
   var busy = { nodes: false, node: false, chunks: false };
-  var last = null; // the last request, for Retry request: {key, path, body, onOk}
+  var failed = null; // the request whose refusal or error is on screen, for Retry request: {key, path, body, onOk}
   var lastKey = null; // the selector the lists were last read for
   var loaded = false; // a read has been started from this screen
   var ready = false;
@@ -163,6 +165,19 @@ var GraphScreen = (function () {
     paintPager(ID("edges.table"), ID("edges.prev"), ID("edges.next"), node, edges.length, node && node.body.degree, node && node.body.next_offset);
   }
 
+  function paintChunks() {
+    var list = chunks ? chunks.body.refs : [];
+    ensureRows(chunksBody, list.length).forEach(function (row, i) {
+      row.querySelector('[data-role="ref"]').textContent = list[i].ref;
+      row.querySelector('[data-role="kind"]').textContent = list[i].kind;
+      row.querySelector("button").setAttribute("aria-label", "Open chunk " + list[i].ref);
+    });
+    ID("chunks.total").textContent = chunks ? chunks.body.total + " chunks in this store" : MSG.prompt;
+    ID("chunks.empty").hidden = !chunks || list.length > 0;
+    wrapOf(ID("chunks.table")).hidden = list.length === 0;
+    paintPager(ID("chunks.table"), ID("chunks.prev"), ID("chunks.next"), chunks, list.length, chunks && chunks.body.total, chunks && chunks.body.next_offset);
+  }
+
   function paintBusy() {
     Object.keys(PANELS).forEach(function (key) {
       var panel = ID(PANELS[key]);
@@ -179,12 +194,16 @@ var GraphScreen = (function () {
     [ID("edges.prev"), ID("edges.next")].forEach(function (button) {
       if (busy.node) setDisabled(button, true);
     });
+    [ID("chunks.prev"), ID("chunks.next")].forEach(function (button) {
+      if (busy.chunks) setDisabled(button, true);
+    });
   }
 
   function paint() {
     paintCounts();
     paintNodes();
     paintDetail();
+    paintChunks();
     paintBusy();
   }
 
@@ -200,7 +219,7 @@ var GraphScreen = (function () {
   function run(key, path, body, onOk) {
     cancel(key);
     var mine = (ctl[key] = new AbortController());
-    last = { key: key, path: path, body: body, onOk: onOk };
+    var request = { key: key, path: path, body: body, onOk: onOk };
     hideErrors();
     busy[key] = true;
     paint();
@@ -213,6 +232,7 @@ var GraphScreen = (function () {
       if (good) onOk(page);
       paint();
       if (good) return;
+      failed = request;
       var odd = ok(result);
       fail(odd ? 0 : result.status, odd ? null : result.body, odd ? { text: MSG.badBody } : undefined);
     });
@@ -224,6 +244,14 @@ var GraphScreen = (function () {
     var body = { selector: sel(), prefix: ID("nodes.prefix").value, limit: limit, offset: offset };
     return run("nodes", "/graph/nodes", body, function (page) {
       nodes = { offset: offset, limit: limit, body: page };
+    });
+  }
+
+  function loadChunks(offset) {
+    var limit = limitOf(ID("chunks.page-size"));
+    if (limit === null) return checkSize(ID("chunks.page-size"));
+    return run("chunks", "/chunks", { selector: sel(), limit: limit, offset: offset }, function (page) {
+      chunks = { offset: offset, limit: limit, body: page };
     });
   }
 
@@ -245,6 +273,7 @@ var GraphScreen = (function () {
     cancel("node");
     node = null;
     loadNodes(0);
+    loadChunks(0);
   }
 
   function submitLookup() {
@@ -257,7 +286,7 @@ var GraphScreen = (function () {
   // ---- wiring ----
 
   ID("state.retry").addEventListener("click", function () {
-    if (last) run(last.key, last.path, last.body, last.onOk);
+    if (failed) run(failed.key, failed.path, failed.body, failed.onOk);
   });
   wireErrors("graph");
 
@@ -275,6 +304,27 @@ var GraphScreen = (function () {
   ID("edges.page-size").addEventListener("change", function () {
     if (node) openNode(node.id, 0);
   });
+  ID("chunks.page-size").addEventListener("change", function () {
+    if (loaded && !picker.blockers().length) loadChunks(0);
+  });
+  ID("nodes.prev").addEventListener("click", function () {
+    loadNodes(Math.max(0, nodes.offset - nodes.limit));
+  });
+  ID("nodes.next").addEventListener("click", function () {
+    loadNodes(nodes.body.next_offset);
+  });
+  ID("edges.prev").addEventListener("click", function () {
+    openNode(node.id, Math.max(0, node.offset - node.limit));
+  });
+  ID("edges.next").addEventListener("click", function () {
+    openNode(node.id, node.body.next_offset);
+  });
+  ID("chunks.prev").addEventListener("click", function () {
+    loadChunks(Math.max(0, chunks.offset - chunks.limit));
+  });
+  ID("chunks.next").addEventListener("click", function () {
+    loadChunks(chunks.body.next_offset);
+  });
   ID("node.lookup-submit").addEventListener("click", submitLookup);
   ID("node.lookup").addEventListener("keydown", function (event) {
     if (event.key === "Enter") submitLookup();
@@ -285,6 +335,15 @@ var GraphScreen = (function () {
   ID("nodes.table").addEventListener("click", function (event) {
     var button = event.target.closest("button");
     if (button && !button.disabled) openNode(button.closest("tr").querySelector('[data-role="id"]').textContent, 0);
+  });
+  // The EvidenceRef goes to the Evidence Inspector exactly as the server sent it.
+  ID("chunks.table").addEventListener("click", function (event) {
+    var button = event.target.closest("button");
+    if (!button || button.disabled) return;
+    var ref = chunks.body.refs[Array.prototype.indexOf.call(chunksBody.children, button.closest("tr"))];
+    if (!ref) return;
+    Console.show("evidence");
+    Console.emit("open-evidence", { ref: ref, score: ref.score, trace_token: null });
   });
   ID("edges.table").addEventListener("click", function (event) {
     var button = event.target.closest("button");
