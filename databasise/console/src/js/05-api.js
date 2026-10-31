@@ -185,6 +185,36 @@ function applyBadges(spec) {
   });
 }
 
+// ---- dynamic rows (D-14) ----
+
+// Makes the table body show exactly n data rows and returns them. The literal slot rows stay; rows above the literal count
+// are clones of the last literal slot whose control ids take the next numeric suffix. Clones of an earlier render are
+// removed first, so callers refill every returned row. A cell that holds a control keeps it when its row is hidden.
+function ensureRows(tbody, n) {
+  Array.prototype.forEach.call(tbody.querySelectorAll("tr[data-clone]"), function (clone) {
+    clone.remove();
+  });
+  var rows = Array.prototype.slice.call(tbody.children);
+  var last = rows[rows.length - 1];
+  for (var number = rows.length + 1; number <= n; number++) {
+    var copy = last.cloneNode(true);
+    copy.setAttribute("data-clone", "true");
+    Array.prototype.forEach.call(copy.querySelectorAll("[data-mock-id]"), function (el) {
+      el.setAttribute("data-mock-id", el.getAttribute("data-mock-id").replace(/\d+$/, String(number)));
+    });
+    tbody.appendChild(copy);
+    rows.push(copy);
+  }
+  rows.forEach(function (row, i) {
+    row.hidden = i >= n;
+    if (i < n) return;
+    Array.prototype.forEach.call(row.children, function (cell) {
+      if (!cell.children.length) cell.textContent = "";
+    });
+  });
+  return rows.slice(0, n);
+}
+
 document.addEventListener(
   "click",
   function (event) {

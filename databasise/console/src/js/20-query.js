@@ -1,19 +1,11 @@
+WIRED["query GET /log"] = true;
+
 var QueryScreen = (function () {
   var STATES = ["idle", "running", "success", "partial", "empty-evidence", "refusal-422", "validation-422", "error-500"];
   var RESULT_STATES = ["success", "partial", "empty-evidence"];
   var ERROR_STATES = ["refusal-422", "validation-422", "error-500"];
-  // setState renders these fixtures (UI-SPEC section 1, Mock row).
-  var STATE_FIXTURE = {
-    success: "q-success",
-    partial: "q-partial",
-    "empty-evidence": "q-empty-evidence",
-    "refusal-422": "q-refusal",
-    "validation-422": "q-validation",
-    "error-500": "q-500",
-  };
   var SHAPE_STATE = { refusal: "refusal-422", validation: "validation-422", "server-failure": "error-500", generic: "error-500" };
-  var STREAM_CLOSED = "The stream closed before the final event.";
-  var STREAMING = "Streaming. The answer arrives with the final event.";
+  var MEMBERS = ["alias", "capability", "harness"];
   var MSG = {
     textEmpty: "Query text is empty. Enter at least one non-space character.",
     badJson: "Raw selector JSON is not valid JSON.",
@@ -21,31 +13,15 @@ var QueryScreen = (function () {
   };
   var root = $id("screen-query");
   var errorsBox = root.querySelector('[data-role="errors"]');
-  var timers = [];
   var evidenceRefs = [];
   var lastTrace = null;
-  var lastLabel = "Default";
-  var history = FIX.query.history.slice();
+  var runLog = [];
+  var controller = null;
   var touched = false;
   var mode = "query";
 
   function ID(name) {
     return $id("query." + name);
-  }
-
-  function later(ms, fn) {
-    timers.push(setTimeout(fn, ms));
-  }
-
-  function cancelTimers() {
-    timers.forEach(clearTimeout);
-    timers = [];
-  }
-
-  function setDisabled(button, disabled) {
-    button.disabled = disabled;
-    if (disabled) button.setAttribute("aria-disabled", "true");
-    else button.removeAttribute("aria-disabled");
   }
 
   // Exactly one state view is visible. Field errors belong to one render, so every state change clears them.
@@ -58,7 +34,6 @@ var QueryScreen = (function () {
     var running = name === "running";
     ID("run.spinner").hidden = !running;
     setDisabled(ID("run.submit"), running);
-    ID("mock.state-switcher").value = name;
     Array.prototype.forEach.call(root.querySelectorAll("[data-error-id]"), function (el) {
       setFieldError(el, "");
     });
@@ -69,16 +44,19 @@ var QueryScreen = (function () {
     row.children[i].textContent = text;
   }
 
-  function fillEvidence(n, ref) {
-    evidenceRefs[n - 1] = ref;
-    var row = ID("evidence.open-" + n).closest("tr");
-    cell(row, 0, String(n));
-    cell(row, 1, ref.ref);
-    cell(row, 2, ref.namespace);
-    cell(row, 3, ref.kind);
-    cell(row, 4, typeof ref.score === "number" ? ref.score.toFixed(4) : "—");
-    row.hidden = false;
-    root.querySelector('[data-role="evidence-wrap"]').hidden = false;
+  // Fills every evidence row from the refs, however many there are. evidenceRefs keeps each EvidenceRef object unchanged.
+  function fillEvidence(refs) {
+    evidenceRefs = refs.slice();
+    ensureRows(ID("evidence.table").tBodies[0], refs.length).forEach(function (row, i) {
+      var ref = refs[i];
+      cell(row, 0, String(i + 1));
+      cell(row, 1, ref.ref);
+      cell(row, 2, ref.namespace);
+      cell(row, 3, ref.kind);
+      cell(row, 4, typeof ref.score === "number" ? ref.score.toFixed(4) : "—");
+      cell(row, 5, ref.tier === null || ref.tier === undefined ? "—" : String(ref.tier));
+    });
+    root.querySelector('[data-role="evidence-wrap"]').hidden = refs.length === 0;
   }
 
   function renderTokens(entries) {
@@ -143,31 +121,10 @@ var QueryScreen = (function () {
     badge.title = "operator diagnostics\n" + reason;
   }
 
-  // opts.streaming renders the layout before the final event; opts.layoutSample labels the sample row.
-  function renderResult(env, opts) {
-    opts = opts || {};
-    var partial = !!env.partial;
-    var answer = ID("result.answer");
-    var text = opts.streaming ? STREAMING : env.answer || "No answer was produced.";
-    answer.textContent = text;
-    answer.classList.toggle("muted", opts.streaming || !env.answer);
-    ID("result.depth").textContent = "depth: " + (env.depth_label || "not answered");
-    ID("result.depth").title = "operator diagnostics\ndepth_label: " + env.depth_label;
-    renderBadge("partial", partial, "▲ partial", "stop_reason: " + env.stop_reason);
-    renderBadge("degraded", !!env.degraded, "▲ degraded", "degradation_reason: " + env.degradation_reason);
-    root.querySelector('[data-role="stop-reason"]').textContent = "stop_reason: " + env.stop_reason;
-
-    evidenceRefs = [];
-    root.querySelector('[data-role="evidence-wrap"]').hidden = env.evidence.length === 0;
-    for (var n = 1; n <= 5; n++) {
-      if (env.evidence[n - 1]) fillEvidence(n, env.evidence[n - 1]);
-      else ID("evidence.open-" + n).closest("tr").hidden = true;
-    }
-    renderTokens(env.token_accounting);
-    renderSeam(env.seam_events);
-    root.querySelector('[data-role="layout-sample"]').hidden = !opts.layoutSample;
-
-    lastTrace = env.trace_token;
+  // Open trace, Copy, promote from this result: enabled only for a finished run that carries a trace token (IN-JSA-08).
+  function syncTraceControls(env) {
+    lastTrace = env ? env.trace_token || null : null;
+    var partial = !!env && !!env.partial;
     var link = ID("result.trace-link");
     if (lastTrace) {
       link.setAttribute("href", "#evidence");
@@ -178,51 +135,71 @@ var QueryScreen = (function () {
       link.setAttribute("aria-disabled", "true");
       link.setAttribute("tabindex", "-1");
     }
-    root.querySelector('[data-role="no-trace"]').hidden = !!lastTrace || !!opts.streaming;
+    root.querySelector('[data-role="no-trace"]').hidden = !env || !!lastTrace;
     ID("result.copy-trace").hidden = !lastTrace;
-
-    setDisabled(ID("result.promote"), partial);
+    setDisabled(ID("result.promote"), !env || partial || !lastTrace);
     root.querySelector('[data-role="no-promote"]').hidden = !partial;
-    showState(opts.state || (partial ? "partial" : env.evidence.length === 0 ? "empty-evidence" : "success"));
   }
 
-  // Classifies a response and shows its result layout or its error shape; returns the shape.
-  function applyResponse(status, body, opts) {
+  function renderResult(env) {
+    var partial = !!env.partial;
+    var answer = ID("result.answer");
+    answer.textContent = env.answer || "No answer was produced.";
+    answer.classList.toggle("muted", !env.answer);
+    ID("result.depth").textContent = "depth: " + (env.depth_label || "not answered");
+    ID("result.depth").title = "operator diagnostics\ndepth_label: " + env.depth_label;
+    renderBadge("partial", partial, "▲ partial", "stop_reason: " + env.stop_reason);
+    renderBadge("degraded", !!env.degraded, "▲ degraded", "degradation_reason: " + env.degradation_reason);
+    root.querySelector('[data-role="stop-reason"]').textContent = "stop_reason: " + env.stop_reason;
+    fillEvidence(env.evidence);
+    renderTokens(env.token_accounting);
+    renderSeam(env.seam_events);
+    syncTraceControls(env);
+    showState(partial ? "partial" : env.evidence.length === 0 ? "empty-evidence" : "success");
+  }
+
+  // Classifies a response and shows its result layout or its error shape; returns the shape. The state views print the real status (IN-JSA-09).
+  function applyResponse(status, body) {
     var shape = classifyResponse(status, body);
-    if (shape === "result") renderResult(body, opts);
+    if (shape === "result") renderResult(body);
     else {
       showState(SHAPE_STATE[shape]);
-      renderError("query", status, body, opts);
+      var note = ID("state." + SHAPE_STATE[shape]).querySelector("p");
+      if (shape === "refusal") note.textContent = "The server refused the request (HTTP " + status + ").";
+      else if (shape === "validation") note.textContent = "The server found invalid fields (HTTP " + status + ").";
+      renderError("query", status, body);
     }
     return shape;
   }
 
-  function applyFixture(name) {
-    var fx = FIX.query[name];
-    if (!fx) throw new Error("unknown query fixture " + name);
-    if (fx.stream_closed) return applyResponse(0, "", { text: STREAM_CLOSED });
-    return applyResponse(fx.status, fx.body, { layoutSample: !!fx.layout_sample });
-  }
-
   function renderHistory() {
-    for (var n = 1; n <= 3; n++) {
-      var row = ID("history.open-" + n).closest("tr");
-      var entry = history[n - 1];
-      row.hidden = !entry;
-      if (!entry) continue;
-      cell(row, 0, entry.time);
-      cell(row, 1, entry.selector);
-      cell(row, 2, entry.trace_token.slice(0, 8));
-      cell(row, 3, entry.partial ? "partial" : "—");
-    }
+    ensureRows(ID("history.table").tBodies[0], runLog.length).forEach(function (row, i) {
+      var entry = runLog[i];
+      cell(row, 0, String(entry.timestamp).slice(0, 19).replace("T", " "));
+      cell(row, 1, selectorLabel(entry.selector));
+      cell(row, 2, entry.trace_token ? String(entry.trace_token).slice(0, 8) : "—");
+      cell(row, 3, "—");
+      setDisabled(row.querySelector("button"), !entry.trace_token);
+    });
   }
 
-  function remember(env) {
-    if (!env.trace_token) return;
-    var d = new Date();
-    history.unshift({ time: d.toISOString().slice(0, 19).replace("T", " "), selector: lastLabel, trace_token: env.trace_token, partial: !!env.partial });
-    history = history.slice(0, 3);
+  function remember(env, body) {
+    runLog.unshift({ query: body.query.text, selector: body.selector, trace_token: env.trace_token, timestamp: new Date().toISOString() });
     renderHistory();
+  }
+
+  // Raw selector JSON holds exactly one member with the right type (WR-JSA-01); {} is Default.
+  function memberOk(key, value) {
+    if (key === "capability") {
+      return (
+        Array.isArray(value) &&
+        value.length > 0 &&
+        value.every(function (token) {
+          return typeof token === "string";
+        })
+      );
+    }
+    return typeof value === "string";
   }
 
   // Blockers, in the UI-SPEC order: text, raw selector JSON, then the picker. Returns {ok, selector, focus}.
@@ -233,6 +210,7 @@ var QueryScreen = (function () {
     var textMsg = textBox.value.trim() === "" ? MSG.textEmpty : "";
     var jsonMsg = "";
     var override = null;
+    var hasOverride = false;
     if (raw !== "") {
       var parsed = null;
       try {
@@ -242,8 +220,23 @@ var QueryScreen = (function () {
       }
       if (!jsonMsg) {
         if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) jsonMsg = MSG.badJson;
-        else if (Object.keys(parsed).filter(function (k) { return parsed[k] !== null; }).length > 1) jsonMsg = MSG.multiMember;
-        else override = parsed;
+        else {
+          var keys = Object.keys(parsed).filter(function (k) {
+            return parsed[k] !== null;
+          });
+          var known = keys.every(function (k) {
+            return MEMBERS.indexOf(k) >= 0;
+          });
+          if (keys.length > 1 && known) jsonMsg = MSG.multiMember;
+          else if (keys.length > 1 || (keys.length === 1 && !(known && memberOk(keys[0], parsed[keys[0]])))) jsonMsg = MSG.badJson;
+          else {
+            hasOverride = true;
+            if (keys.length === 1) {
+              override = {};
+              override[keys[0]] = parsed[keys[0]];
+            }
+          }
+        }
       }
     }
     var pickMsg = raw !== "" ? "" : picker.blockers()[0] || "";
@@ -253,39 +246,12 @@ var QueryScreen = (function () {
     var focus = textMsg ? ID("text.error") : jsonMsg ? ID("advanced.selector-json-error") : pickMsg ? ID("selector.error") : null;
     if (jsonMsg) ID("advanced.panel").open = true;
     if (!focus) ID("run.message").hidden = true;
-    return { ok: !focus, selector: override !== null ? override : picker.value(), focus: focus };
+    return { ok: !focus, selector: hasOverride ? override : picker.value(), focus: focus };
   }
 
   var picker = Picker.attach("query", function () {
     if (touched) validate();
   });
-
-  // The fixture a Run ends in: the Fixture select wins, otherwise the State select (idle and running fall back to success).
-  function pickFixture() {
-    var variant = ID("mock.fixture").value;
-    if (variant !== "standard") return variant;
-    return STATE_FIXTURE[ID("mock.state-switcher").value] || "q-success";
-  }
-
-  function finish(name) {
-    var fx = FIX.query[name];
-    var streaming = ID("run.stream").checked || !!fx.stream_closed;
-    if (!streaming || classifyResponse(fx.status, fx.body) !== "result") {
-      if (applyFixture(name) === "result") remember(fx.body);
-      return;
-    }
-    var env = fx.body;
-    var rows = fx.stream_closed ? env.evidence.slice(0, 1) : env.evidence;
-    renderResult({ answer: "", evidence: [], trace_token: null, depth_label: null, partial: false, degraded: false, token_accounting: [], seam_events: [] }, { streaming: true, state: "success" });
-    rows.forEach(function (ref, i) {
-      later(200 * (i + 1), function () {
-        fillEvidence(i + 1, ref);
-      });
-    });
-    later(200 * (rows.length + 1), function () {
-      if (applyFixture(name) === "result") remember(env);
-    });
-  }
 
   function run() {
     if (mode === "compare") return Compare.run();
@@ -298,12 +264,13 @@ var QueryScreen = (function () {
       check.focus.focus();
       return;
     }
-    cancelTimers();
-    lastLabel = selectorLabel(check.selector);
-    var name = pickFixture();
+    if (controller) controller.abort();
+    var mine = (controller = new AbortController());
+    var body = { query: { text: ID("text.input").value }, selector: check.selector };
     showState("running");
-    later(800, function () {
-      finish(name);
+    api("POST", "/query", body, { signal: mine.signal, kind: "query" }).then(function (result) {
+      if (result.aborted || mine !== controller) return;
+      if (applyResponse(result.status, result.body) === "result") remember(result.body, body);
     });
   }
 
@@ -312,13 +279,7 @@ var QueryScreen = (function () {
     root.setAttribute("data-mode", mode);
     ID("mode.query").setAttribute("aria-selected", String(mode === "query"));
     ID("mode.compare").setAttribute("aria-selected", String(mode === "compare"));
-  }
-
-  function setState(name) {
-    cancelTimers();
-    if (STATES.indexOf(name) < 0) throw new Error("unknown query state " + name);
-    if (name === "idle" || name === "running") showState(name);
-    else applyFixture(STATE_FIXTURE[name]);
+    ID("run.submit").textContent = mode === "compare" ? "Run compare" : "Run query";
   }
 
   function buildResolutionTable() {
@@ -331,6 +292,14 @@ var QueryScreen = (function () {
       tr.appendChild(h("td", r.outcome));
       body.appendChild(tr);
     });
+  }
+
+  // The index of the table row that holds a clicked button.
+  function rowIndex(event) {
+    var button = event.target.closest("button");
+    if (!button || button.disabled) return -1;
+    var row = button.closest("tr");
+    return Array.prototype.indexOf.call(row.parentNode.children, row);
   }
 
   ID("run.submit").addEventListener("click", run);
@@ -351,40 +320,26 @@ var QueryScreen = (function () {
     ID("selector.table-toggle").setAttribute("aria-expanded", String(!wrap.hidden));
     ID("selector.table-toggle").textContent = wrap.hidden ? "Show resolution table" : "Hide resolution table";
   });
-  ID("mock.state-switcher").addEventListener("change", function (event) {
-    setState(event.target.value);
-  });
-  ID("mock.fixture").addEventListener("change", function (event) {
-    cancelTimers();
-    if (event.target.value === "standard") setState("success");
-    else applyFixture(event.target.value);
-  });
   ID("result.trace-link").addEventListener("click", function (event) {
     event.preventDefault();
     if (!lastTrace) return;
     Console.show("evidence");
     Console.emit("open-trace", { token: lastTrace });
   });
-  for (var slot = 1; slot <= 5; slot++) {
-    (function (n) {
-      ID("evidence.open-" + n).addEventListener("click", function () {
-        var ref = evidenceRefs[n - 1];
-        if (!ref) return;
-        Console.show("evidence");
-        Console.emit("open-evidence", { ref: { id: ref.ref, namespace: ref.namespace, kind: ref.kind }, score: ref.score });
-      });
-    })(slot);
-  }
-  for (var row = 1; row <= 3; row++) {
-    (function (n) {
-      ID("history.open-" + n).addEventListener("click", function () {
-        var entry = history[n - 1];
-        if (!entry) return;
-        Console.show("evidence");
-        Console.emit("open-trace", { token: entry.trace_token });
-      });
-    })(row);
-  }
+  // One delegated listener serves every evidence row, cloned ones included. The payload carries the EvidenceRef unchanged:
+  // the server refuses a renamed key (18-RESEARCH Pitfall 2).
+  ID("evidence.table").addEventListener("click", function (event) {
+    var ref = evidenceRefs[rowIndex(event)];
+    if (!ref) return;
+    Console.show("evidence");
+    Console.emit("open-evidence", { ref: ref, score: ref.score, trace_token: lastTrace });
+  });
+  ID("history.table").addEventListener("click", function (event) {
+    var entry = runLog[rowIndex(event)];
+    if (!entry || !entry.trace_token) return;
+    Console.show("evidence");
+    Console.emit("open-trace", { token: entry.trace_token });
+  });
   ID("result.copy-trace").addEventListener("click", function () {
     if (lastTrace) copyText(lastTrace, root.querySelector('[data-role="copied"]'));
   });
@@ -398,6 +353,7 @@ var QueryScreen = (function () {
 
   wireErrors("query");
   buildResolutionTable();
+  setMode("query");
   renderHistory();
   showState("idle");
   return {
@@ -405,16 +361,6 @@ var QueryScreen = (function () {
     picker: picker,
     showState: showState,
     renderResult: renderResult,
-    setState: setState,
-    inject: function (response) {
-      cancelTimers();
-      applyResponse(response.status, response.body);
-    },
-    loadFixture: function (name) {
-      cancelTimers();
-      if (/^cmp-/.test(name)) return Compare.loadFixture(name);
-      applyFixture(name);
-    },
   };
 })();
 Console.register("query", QueryScreen);
