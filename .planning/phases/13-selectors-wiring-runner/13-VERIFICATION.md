@@ -1,6 +1,6 @@
 ---
 phase: 13-selectors-wiring-runner
-verified: 2026-10-20T20:30:00Z
+verified: 2026-10-31T12:00:00Z
 status: passed
 score: 5/5 roadmap success criteria verified (18/18 WIRE requirements satisfied in code)
 covered_files:
@@ -76,27 +76,23 @@ covered_files:
   - "databasise/wirings/resolve.py"
   - "docs/gui/API-INVENTORY.md"
   - "docs/gui/CODEBASE-MAP.md"
-covered_digest: "v3:sha256:1ec1a71e6aaa2d21a53939b9f9b692a4ad7178fda0d0d6de02e234cd88f5579f"
+covered_digest: "v3:sha256:c5ef20e5a7fa54cfccba066ca245e6329e3de73de44ba81c45b14034634f6d39"
 behavior_unverified: 0
 overrides_applied: 0
-human_verification:
-  - test: "B-WR-03: inject a query node whose body returns a TokenAccounting with counted_by 'unbudgetable' and then fails after dispatch (for example its guard signal raises), and run /query"
-    expected: "Owner confirms the intended outcome: today the run is persisted and the query is refused 422 UnbudgetableParticipantError with trace_token, instead of a 200 partial envelope with stop_reason node_failed"
-    why_human: "Policy choice between Phase 4 D-08 (an unbudgetable count is refused) and CONTRACT §9 partial outcomes; 13-REVIEW-DISPOSITION flags it for human verification. Code path: scheduler.py:688-705 keeps metered tokens on a failed node, engine.py assemble_token_breakdown refuses."
-  - test: "depth_label on a budget-halted answering node: run a query whose generate (or qa) node overspends its token allowance with a real client"
-    expected: "Owner confirms D-06 is intended for this case: partial=true, stop_reason budget_halt, the completion is served as the answer and depth_label is 'stage', not null"
-    why_human: "ROADMAP SC2 says 'depth_label is null on partial runs'; D-06 keys the null on 'no provides node returned a completion', not on partial. scheduler.py:663 stores the output before meter() and a halt returns completed=True, so the two wordings differ exactly here. No test pins this case."
-  - test: "WIRE-10 fail-first record: re-record or plant the WIRE-10 check"
-    expected: "The ledger start gate no longer reports 'check edited under a grant needs plants/WIRE-10.json' and 'recorded failure is stale' for test_trace_completeness.py"
-    why_human: "Ledger bookkeeping that needs the owner's BAK flow. The test file was edited under grant v647 (13-12, a different test function gained a guard signal key) after the v644 check-fail at b0b5a6c. The current test passes; the verifier may not diff protected test files."
+re_verification:
+  previous_status: passed
+  previous_score: 5/5
+  gaps_closed: []
+  gaps_remaining: []
+  regressions: []
 ---
 
 # Phase 13: Selectors, Wiring & Runner Verification Report
 
 **Phase Goal:** Every query arm is selectable, the runner records every node truthfully, and consumers never see internal node ids or an unstructured 500 from the wiring layer
-**Verified:** 2026-10-20T20:30:00Z
+**Verified:** 2026-10-31T12:00:00Z
 **Status:** passed (human items resolved 2026-10-20; see Human Verification Resolution at the end)
-**Re-verification:** No, initial verification
+**Re-verification:** Yes. The prior report (2026-10-20, status passed) went stale after Phases 14 to 17 moved 13 covered files; every truth was re-checked against the current code.
 
 ## Goal Achievement
 
@@ -141,10 +137,10 @@ All 18 WIRE IDs appear in PLAN frontmatter (01: 06/07; 02: 01/16; 03: 11/10; 04:
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| All 18 WIRE row test files | pytest of the 18 test_ref files | 232 passed in 20.65s | PASS |
-| Related protected and seam tests (LRAG-19, LRAG-03, STOR-06, STOR-05, SEAM-04/14/16, HIPP query/write paths, evidence position, REST transport, health) | pytest of 15 files | 278 passed in 84.93s | PASS |
-| Selector, ghost, identity, malformed-doc, registration, placement and budget-surface probe | `probe13.py` in the session scratchpad (real `default_registry()` and `all_wirings()`) | outputs quoted above | PASS |
-| Full offline gate, both invocation styles | run separately by the orchestrator (not run here) | orchestrator to add | - |
+| All 18 WIRE row test files (19 files, re-run 2026-10-31 on current HEAD) | targeted pytest of the 19 test_ref files | 241 passed in 36.05s | PASS |
+| Related protected and seam tests | not re-run in this pass; the orchestrator runs the full offline gate as the regression gate | n/a | - |
+| Selector, identity, malformed-doc, placement, budget-surface and env probe (re-run) | `probe13c.py` in the session scratchpad (real `default_registry()` and `all_wirings()`) | capability sets resolve to lightrag-base (7 nodes), lightrag-bypass (1), lightrag-local (15), lightrag-global (15), lightrag-hybrid (17), hipporag-base (14); every wiring parses with no violations and has provides and evidence_position inside its nodes; no top-level guards key; runner.budget has none of the deleted names; validator.depth has no derive_execution_mode; env.py inputs are system/machine/libc (platform.platform() named only as a non-input in the docstring); REASON_CODES is the closed six-member set; parse_wiring of [], {'nodes': None}, {'nodes': [1]} returns invalid-wiring-document without raising; capability [writes_graph]/[writes_artifact] refused | PASS |
+| Full offline gate | run by the orchestrator (not run here, to avoid duplicate suite runs) | orchestrator to add | - |
 
 ### Probe Execution
 
@@ -160,7 +156,7 @@ No TBD/FIXME/XXX/TODO/HACK marker in any Phase 13 source file (46 files changed 
 | `.planning/REQUIREMENTS.md` | 375-378 | WIRE-10 test text still describes a "slow sibling" TaskGroup cancellation; D-26 rewrote it to the CancelledError-body case, and no D-26 exception clause is recorded | Info | Sequential dispatch (D-17) removed the TaskGroup case; record the D-26 clause for traceability |
 | `databasise/runner/scheduler.py` | 663, 707 | a budget-halted answering node keeps its output, so a partial run can carry a non-null depth_label | Info | See Human Verification 2 |
 
-### Human Verification Required
+### Human Verification (all three resolved by the owner 2026-10-20; see Resolution below)
 
 1. **B-WR-03 unbudgetable refusal on a failed node.** Inject a query node that reports `counted_by: "unbudgetable"` and then fails after dispatch. Today the query is refused 422 `UnbudgetableParticipantError` with a `trace_token`, not served as a partial envelope. The owner confirms this is the intended policy (Phase 4 D-08 against CONTRACT §9 partial outcomes).
 2. **depth_label on a budget-halted answer.** With a real client, make generate (or qa) overspend. Expect partial=true, stop_reason `budget_halt`, the answer served and depth_label `stage`. The owner confirms D-06's keying covers this, or asks for null to match ROADMAP SC2's literal wording.
@@ -168,11 +164,14 @@ No TBD/FIXME/XXX/TODO/HACK marker in any Phase 13 source file (46 files changed 
 
 Owner-run items carried in `.planning/TESTING-PLAN.md` under the no-live-runs policy: pre-Phase-13 API-INVENTORY live checks were not re-run live (A-WR-04), and archived parity and evidence hashes were annotated, not re-minted (D-24).
 
+### Re-verification note (2026-10-31)
+
+Moved files since the prior report (from Phases 14 to 17: operator routes in `seam/rest.py`/`seam/engine.py`, HIPP-12 write-effect exclusion in `seam/selectors.py`, refusal catalogue, API-INVENTORY and CODEBASE-MAP edits) were re-read at the points Phase 13 touches. No Phase 13 truth regressed: the 19 WIRE test files pass (241), the six-arm selector table is unchanged (the `[writes_graph]` request no longer resolves to HippoRAG by design of HIPP-12, which does not contradict WIRE-01), per-arm wiring ids are intact, and `engine.py` still persists the RunRecord before the refusable block and sets `exc.trace_token`, still runs `node_free_reason` on both reason fields at response time, and `scheduler.py` still emits `not-scheduled` traces. `.planning/REQUIREMENTS.md` now shows all 18 WIRE rows Complete (the prior bookkeeping gap is closed).
+
 ### Gaps Summary
 
 No goal-blocking gap. Every success criterion and every WIRE row is backed by code read here and tests run here. Bookkeeping for the orchestrator:
 
-- `.planning/REQUIREMENTS.md` still shows WIRE-01..07, 09, 10, 14, 16 and 17 as `[ ]` and "Pending" (lines 339-404, 917-933). Only 08, 11, 12, 13, 15 and 18 are Complete. Mark all 18 Complete when the phase closes.
 - The BAK completion gate also reports every S3 trace part (`trace/s3-phase08..12-*.json`) stale on a REQUIREMENTS.md hash mismatch, and every row `not-checked at S3`. That affects all phases, not Phase 13 code.
 
 ---
@@ -188,4 +187,4 @@ _Verifier: Claude (gsd-verifier)_
 | `depth_label` on a budget-halted answering node | **D-06.** depth_label is null only when no provides node returned a completion. A served completion keeps its real depth, even on a `budget_halt` partial run. ROADMAP SC2's "null on partial runs" means the D-06 case. |
 | WIRE-10 fail-first record | Resolved by the orchestrator. The check failed again at b0b5a6c by AssertionError (v679), and plants/WIRE-10.json killed 2/2 (v680). |
 
-Final offline gate at the final HEAD, `tools/check_offline_suite.py`: 2482 passed, 4 deselected, in both styles; exit 0.
+Prior final offline gate at the original HEAD, `tools/check_offline_suite.py`: 2482 passed, 4 deselected, in both styles; exit 0. Not re-run here.
