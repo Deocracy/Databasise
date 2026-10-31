@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 18
 current_phase_name: GUI Live
 status: executing
-stopped_at: Completed 18-05-PLAN.md
-last_updated: "2026-10-31T21:44:33.669Z"
+stopped_at: Completed 18-06-PLAN.md
+last_updated: "2026-10-31T21:59:37.182Z"
 last_activity: 2026-10-31
 last_activity_desc: Phase 18 execution started
-state_head: a6f9d272a85948397a49287a8328480646d05946
+state_head: 29a53538acb74c3788e63a9ec7d0caa0e94e9b15
 progress:
   total_phases: 11
   completed_phases: 10
   total_plans: 136
-  completed_plans: 130
+  completed_plans: 131
   percent: 91
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-19 after Phase 12)
 ## Current Position
 
 Phase: 18 (GUI Live) — EXECUTING
-Plan: 6 of 11
+Plan: 7 of 11
 Status: Ready to execute
 Last activity: 2026-10-31 — Phase 18 execution started
 
@@ -169,6 +169,7 @@ Progress: [█████████░] 91% (4/11 phases)
 | Phase 18 P03 | 40 min | 3 tasks | 9 files |
 | Phase 18 P04 | 60 min | 3 tasks | 11 files |
 | Phase 18 P05 | 75 min | 3 tasks | 7 files |
+| Phase 18 P06 | 15 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -284,6 +285,8 @@ Recent decisions affecting current work:
 - [Phase 18]: 18-04: before the final stream event the result panel stays under the running banner; the disconnected state reuses the no-trace reason line for 'The run did not finish.'
 - [Phase 18]: 18-05: a compare answer is parsed by the number of selectors sent, never by its keys; extra server keys follow as cloned columns and are not written to the run history
 - [Phase 18]: 18-05: AliasCatalog is the single alias source (GET /ledger/aliases or the browser ledger log); data-live-ready waits for it
+- [Phase 18]: 18-06: an unresolvable evidence ref shows evidence.state.refusal and the typed error banner; other refusals show the typed banner only
+- [Phase 18]: 18-06: the Evidence trace picker refreshes on every entry to the screen (browser history plus GET /traces, sequence-guarded)
 
 ### Pending Todos
 
@@ -343,8 +346,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-31T21:44:33.206Z
-Stopped at: Completed 18-05-PLAN.md
+Last session: 2026-10-31T21:59:31.946Z
+Stopped at: Completed 18-06-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
