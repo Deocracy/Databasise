@@ -3,9 +3,9 @@ phase: "17"
 slug: "gui-mockup"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
 # audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: "2026-10-25"
 ---
 
@@ -40,18 +40,19 @@ created: "2026-10-25"
 
 | Requirement | Test file | Test Type | Automated Command | File Exists | Status |
 |-------------|-----------|-----------|-------------------|-------------|--------|
-| GUI-01 | tests/gui/test_gui_01_shell.py | browser | `pytest tests/gui/test_gui_01_shell.py -q` | ❌ W0 | ⬜ pending |
-| GUI-02 | tests/gui/test_gui_02_ids.py | unit | `pytest tests/gui/test_gui_02_ids.py -q` | ❌ W0 | ⬜ pending |
-| GUI-03 | tests/gui/test_gui_03_needs_backend.py | unit + app routes | `pytest tests/gui/test_gui_03_needs_backend.py -q` | ❌ W0 | ⬜ pending |
-| GUI-04 | tests/gui/test_gui_04_query_mode.py | browser | `pytest tests/gui/test_gui_04_query_mode.py -q` | ❌ W0 | ⬜ pending |
-| GUI-05 | tests/gui/test_gui_05_compare.py | browser | `pytest tests/gui/test_gui_05_compare.py -q` | ❌ W0 | ⬜ pending |
-| GUI-06 | tests/gui/test_gui_06_errors.py | browser + unit | `pytest tests/gui/test_gui_06_errors.py -q` | ❌ W0 | ⬜ pending |
-| GUI-07 | tests/gui/test_gui_07_evidence_trace.py | browser | `pytest tests/gui/test_gui_07_evidence_trace.py -q` | ❌ W0 | ⬜ pending |
-| GUI-08 | tests/gui/test_gui_08_documents.py | browser | `pytest tests/gui/test_gui_08_documents.py -q` | ❌ W0 | ⬜ pending |
-| GUI-09 | tests/gui/test_gui_09_corpus.py | browser | `pytest tests/gui/test_gui_09_corpus.py -q` | ❌ W0 | ⬜ pending |
-| GUI-10 | tests/gui/test_gui_10_ledger.py | browser | `pytest tests/gui/test_gui_10_ledger.py -q` | ❌ W0 | ⬜ pending |
-| GUI-11 | tests/gui/test_gui_11_graph.py | browser + unit | `pytest tests/gui/test_gui_11_graph.py -q` | ❌ W0 | ⬜ pending |
-| support | tests/gui/test_playwright_smoke.py | smoke | `pytest tests/gui/test_playwright_smoke.py -q` | ❌ W0 | ⬜ pending |
+| GUI-01 | tests/gui/test_gui_01_shell.py | browser | `pytest tests/gui/test_gui_01_shell.py -q` | ✅ | ✅ green |
+| GUI-02 | tests/gui/test_gui_02_ids.py | unit | `pytest tests/gui/test_gui_02_ids.py -q` | ✅ | ✅ green |
+| GUI-03 | tests/gui/test_gui_03_needs_backend.py | unit + app routes | `pytest tests/gui/test_gui_03_needs_backend.py -q` | ✅ | ✅ green |
+| GUI-04 | tests/gui/test_gui_04_query_mode.py | browser | `pytest tests/gui/test_gui_04_query_mode.py -q` | ✅ | ✅ green |
+| GUI-05 | tests/gui/test_gui_05_compare.py | browser | `pytest tests/gui/test_gui_05_compare.py -q` | ✅ | ✅ green |
+| GUI-06 | tests/gui/test_gui_06_errors.py | browser + unit | `pytest tests/gui/test_gui_06_errors.py -q` | ✅ | ✅ green |
+| GUI-07 | tests/gui/test_gui_07_evidence_trace.py | browser | `pytest tests/gui/test_gui_07_evidence_trace.py -q` | ✅ | ✅ green |
+| GUI-08 | tests/gui/test_gui_08_documents.py | browser | `pytest tests/gui/test_gui_08_documents.py -q` | ✅ | ✅ green |
+| GUI-09 | tests/gui/test_gui_09_corpus.py | browser | `pytest tests/gui/test_gui_09_corpus.py -q` | ✅ | ✅ green |
+| GUI-10 | tests/gui/test_gui_10_ledger.py | browser | `pytest tests/gui/test_gui_10_ledger.py -q` | ✅ | ✅ green |
+| GUI-11 | tests/gui/test_gui_11_graph.py | browser + unit | `pytest tests/gui/test_gui_11_graph.py -q` | ✅ | ✅ green |
+| support | tests/gui/test_playwright_smoke.py | smoke | `pytest tests/gui/test_playwright_smoke.py -q` | ✅ | ✅ green |
+| inventory | tests/gui/test_inventory_map.py | unit | `pytest tests/gui/test_inventory_map.py -q` | ✅ | ✅ green |
 
 *Commands run from `databasise/` with `.venv/bin/python -m`. Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -59,11 +60,11 @@ created: "2026-10-25"
 
 ## Wave 0 Requirements
 
-- [ ] `databasise/tests/gui/__init__.py`, `conftest.py`, and the 11 requirement test files plus the smoke test. The tests must fail, not skip, when the mockup file is absent.
-- [ ] `playwright==1.59.0` in `[dependency-groups].dev` and `uv lock` (owner-approved, CONTEXT D-15)
-- [ ] Browsers: `nix-build '<nixpkgs>' -A playwright-driver.browsers -o ~/.cache/databasise/playwright-browsers`, with `PLAYWRIGHT_BROWSERS_PATH` set
-- [ ] `docs/gui/MOCK-IDS.json` generator and `docs/gui/GAP-ROUTES.json`
-- [ ] REQUIREMENTS.md and UI-SPEC amendments for D-06 to D-10 and D-14, landed before the screen plans
+- [x] `databasise/tests/gui/__init__.py`, `conftest.py`, and the 11 requirement test files plus the smoke test. The tests must fail, not skip, when the mockup file is absent.
+- [x] `playwright==1.59.0` in `[dependency-groups].dev` and `uv lock` (owner-approved, CONTEXT D-15)
+- [x] Browsers: `nix-build '<nixpkgs>' -A playwright-driver.browsers -o ~/.cache/databasise/playwright-browsers`, with `PLAYWRIGHT_BROWSERS_PATH` set
+- [x] `docs/gui/MOCK-IDS.json` generator and `docs/gui/GAP-ROUTES.json`
+- [x] REQUIREMENTS.md and UI-SPEC amendments for D-06 to D-10 and D-14, landed before the screen plans
 - [ ] Ledger `test_ref`/`code_ref` set for each GUI row, then `record-fail` (through `scripts/ledger-amend.py`)
 
 ---
@@ -78,11 +79,19 @@ created: "2026-10-25"
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 120s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 120s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** validated 2026-10-31 (68 passed in tests/gui, 29.5 s, DATABASISE_REQUIRE_BROWSER=1)
+
+## Validation Audit 2026-10-31
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
