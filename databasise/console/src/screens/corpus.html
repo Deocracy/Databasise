@@ -92,7 +92,7 @@
   </div>
 
   <section class="panel" data-mock-id="corpus.table.panel">
-    <h2>Documents</h2>
+    <h2>Documents <span class="muted" data-role="loading" hidden><span class="spinner" role="presentation"></span> Loading</span></h2>
     <div class="chips" data-mock-id="corpus.table.counts"></div>
     <div class="run-row">
       <label class="inline">Page size (1 to 100)
@@ -131,9 +131,7 @@
       </span>
       <span data-needs-backend="POST /documents/reprocess" title="Not implemented yet: POST /documents/reprocess" class="tools">
         <span class="badge badge-nb">needs backend</span>
-        <button type="button" class="btn btn-outline" data-mock-id="corpus.table.reprocess">Reprocess failed documents</button>
-        <span class="muted" data-role="reprocess-msg" hidden>Reprocess requested (fixture only).</span>
-      </span>
+        <button type="button" class="btn btn-outline" data-mock-id="corpus.table.reprocess">Reprocess failed documents</button>      </span>
     </div>
     <div class="run-row">
       <span class="chip" data-state="neutral" data-role="filter-chip" hidden></span>
