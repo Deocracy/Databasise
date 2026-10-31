@@ -784,7 +784,7 @@ These fail today.
 
 ### GUI connected to the live API
 
-- [x] **LIVE-01**: The console build is served to a browser from the same origin as the §18 REST app (or through a dev proxy), started by the launcher bound to 127.0.0.1 with a chosen store root, workspace and model clients; a browser fetch POST /query from the console page completes with 200 and no CORS error, and the header health indicator shows the live GET /health result on load.
+- [ ] **LIVE-01**: The console build is served to a browser from the same origin as the §18 REST app (or through a dev proxy), started by the launcher bound to 127.0.0.1 with a chosen store root, workspace and model clients; a browser fetch POST /query from the console page completes with 200 and no CORS error, and the header health indicator shows the live GET /health result on load.
   - Test: End-to-end test starts the launcher on a temporary store root with stub clients on an ephemeral port, loads the console page in a headless browser, runs a query from the UI, and asserts a 200 response, zero console CORS errors, and the health indicator matching the /health JSON. Fails before (no launcher / cross-origin preflight 405), passes after.
   - Defects: rest-live/REST-18, other-surfaces/OS-01, rest-live/REST-15
   - Owner decision first: Open questions 4 and 5: same-origin static serving from the FastAPI app versus Vite proxy versus opt-in allow_origins; and localhost-only no-auth versus a reverse proxy with auth. Also the build stack after the mockup (React 19 + Vite + Sigma.js or plain HTML/JS).
@@ -811,7 +811,7 @@ These fail today.
   - Test: End-to-end test on a populated temp store: lists graph nodes, opens one node and asserts its edges render, lists chunks and opens one in the Evidence Inspector; holds the graph store open from the test process and asserts the screen shows the store-busy refusal, not a generic 500. Fails before (routes absent), passes after the connector routes ship.
   - Defects: stores/ST-10
   - Owner decision first: Depends on the connector-routes phase delivering these routes and on open question 6 (attrs in payloads).
-- [x] **LIVE-09**: In the connected build, an element keeps data-needs-backend and its badge exactly when its route is absent from the live app's /openapi.json, and loses both once the route is present and wired; no mockup control is removed; with mockup_freeze set, scripts/mockup-id-check.py exits 0, meaning every frozen data-mock-id appears in the built UI source or is mapped in MOCKUP-PORT.md. *(Amended 2026-10-25 per Phase 17 CONTEXT D-13.)*
+- [ ] **LIVE-09**: In the connected build, an element keeps data-needs-backend and its badge exactly when its route is absent from the live app's /openapi.json, and loses both once the route is present and wired; no mockup control is removed; with mockup_freeze set, scripts/mockup-id-check.py exits 0, meaning every frozen data-mock-id appears in the built UI source or is mapped in MOCKUP-PORT.md. *(Amended 2026-10-25 per Phase 17 CONTEXT D-13.)*
   - Decided in Phase 17 CONTEXT D-13 (2026-10-25): the owner approves the mockup at the end of Phase 17 and the approval and sha256 are recorded in docs/gui/MOCKUP-APPROVAL.md; the mockup_freeze write (freeze-variant) is the first plan of Phase 18, which first checks the file's sha256 against that record.
   - Test: pytest test starts the app, reads /openapi.json paths, scans the built UI for data-needs-backend values and asserts each named route is absent from the paths and each present gap route has no remaining data-needs-backend; then runs python scripts/check-ledger.py (which invokes mockup-id-check.py) and asserts no 'mockup' violation lines. Fails before (ids not ported), passes after.
   - Owner decision first: Owner freezes a mockup variant (sets mockup_freeze) at the end of phase GUI, after recording new needs back into API-INVENTORY.md.
@@ -993,7 +993,7 @@ These fail today.
 | GUI-09 | Phase 17 | Complete |
 | GUI-10 | Phase 17 | Complete |
 | GUI-11 | Phase 17 | Complete |
-| LIVE-01 | Phase 18 | Complete |
+| LIVE-01 | Phase 18 | Pending |
 | LIVE-02 | Phase 18 | Pending |
 | LIVE-03 | Phase 18 | Pending |
 | LIVE-04 | Phase 18 | Pending |
@@ -1001,7 +1001,7 @@ These fail today.
 | LIVE-06 | Phase 18 | Pending |
 | LIVE-07 | Phase 18 | Pending |
 | LIVE-08 | Phase 18 | Pending |
-| LIVE-09 | Phase 18 | Complete |
+| LIVE-09 | Phase 18 | Pending |
 
 **Coverage:** v1.1 requirements: 169 total · mapped to phases: 169 · unmapped: 0 · defect uids covered: 356/356
 
