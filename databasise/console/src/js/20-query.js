@@ -453,6 +453,8 @@ var QueryScreen = (function () {
     picker: picker,
     showState: showState,
     renderResult: renderResult,
+    applyResponse: applyResponse,
+    remember: remember,
   };
 })();
 Console.register("query", QueryScreen);

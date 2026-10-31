@@ -4187,6 +4187,8 @@ var QueryScreen = (function () {
     picker: picker,
     showState: showState,
     renderResult: renderResult,
+    applyResponse: applyResponse,
+    remember: remember,
   };
 })();
 Console.register("query", QueryScreen);
@@ -4207,8 +4209,9 @@ var Compare = (function () {
   }
   var model = [{ kind: "default", alias: "", tokens: [] }];
   var shown = [];
-  var timers = [];
+  var controller = null;
   var running = false;
+  var lastBlocked = false;
   var lastMode = root.getAttribute("data-mode");
 
   function ID(name) {
@@ -4223,13 +4226,11 @@ var Compare = (function () {
     return ID("col" + c + "." + name);
   }
 
-  function later(ms, fn) {
-    timers.push(setTimeout(fn, ms));
-  }
-
+  // Aborts the compare read in flight; its answer then renders nothing (WR-JSA-04).
   function cancel() {
-    timers.forEach(clearTimeout);
-    timers = [];
+    if (controller) controller.abort();
+    controller = null;
+    running = false;
   }
 
   function selectorOf(m) {
@@ -4262,16 +4263,11 @@ var Compare = (function () {
     };
   }
 
-  function setDisabled(button, disabled) {
-    button.disabled = disabled;
-    if (disabled) button.setAttribute("aria-disabled", "true");
-    else button.removeAttribute("aria-disabled");
-  }
-
-  // Query-mode Run stays clickable; compare-mode Run is disabled while a blocker is active.
+  // Query-mode Run is QueryScreen's; compare-mode Run is disabled while a blocker is active or a run is in flight.
   function syncRun(blocked) {
-    if (root.getAttribute("data-mode") !== "compare" || running) return;
-    setDisabled(ID("run.submit"), blocked);
+    lastBlocked = blocked;
+    if (root.getAttribute("data-mode") !== "compare") return;
+    setDisabled(ID("run.submit"), blocked || running);
   }
 
   // Derives keys, parts, chips and messages from the model; the slots hold the controls.
@@ -4417,9 +4413,9 @@ var Compare = (function () {
     badge.title = "operator diagnostics\n" + reason;
   }
 
-  // A column is one q-success-shaped result; r is {key, arm, resolve, body}.
+  // A column is one response envelope; r is {key, selector, arm, resolve, body}.
   function fillHeader(c, r) {
-    C(c, "header").textContent = r.key + " · " + (r.arm || "unresolved");
+    C(c, "header").textContent = r.arm ? r.key + " · " + r.arm : r.key;
     C(c, "resolves-to").textContent = r.resolve;
   }
 
@@ -4437,28 +4433,17 @@ var Compare = (function () {
     C(c, "state-partial").querySelector('[data-role="stop-reason"]').textContent = "stop_reason: " + env.stop_reason;
     var panel = C(c, "panel");
     panel.querySelector('[data-role="evidence-wrap"]').hidden = env.evidence.length === 0;
-    for (var n = 1; n <= 5; n++) {
-      var row = C(c, "open-" + n).closest("tr");
-      var ref = env.evidence[n - 1];
-      row.hidden = !ref;
-      if (!ref) continue;
-      [String(n), ref.ref, ref.namespace, ref.kind, typeof ref.score === "number" ? ref.score.toFixed(4) : "—"].forEach(function (text, i) {
-        row.children[i].textContent = text;
+    ensureRows(C(c, "evidence").tBodies[0], env.evidence.length).forEach(function (row, i) {
+      var ref = env.evidence[i];
+      [String(i + 1), ref.ref, ref.namespace, ref.kind, typeof ref.score === "number" ? ref.score.toFixed(4) : "—", ref.tier === null || ref.tier === undefined ? "—" : String(ref.tier)].forEach(function (text, k) {
+        row.children[k].textContent = text;
       });
-    }
+    });
     fillTokens(C(c, "tokens"), env.token_accounting);
     fillSeam(C(c, "seam"), env.seam_events);
     setDisabled(C(c, "promote"), partial);
     C(c, "promote").title = partial ? "A partial run cannot be promoted." : "";
     panel.querySelector('[data-role="no-promote"]').hidden = !partial;
-  }
-
-  // Only a column whose fixture is still resolving shows a spinner (E4 loading).
-  function setBusy(c, busy) {
-    var panel = C(c, "panel");
-    panel.querySelector('[data-role="spinner"]').hidden = !busy;
-    panel.querySelector('[data-role="body"]').hidden = busy;
-    panel.setAttribute("aria-busy", String(busy));
   }
 
   // Below 768 px the CSS shows only the active column; the tabs pick it.
@@ -4492,8 +4477,7 @@ var Compare = (function () {
     ID("compare.diff").textContent = "Evidence refs shared between columns: " + shared + ". Tokens per column (prompt + completion): " + totals.join(" · ") + ".";
   }
 
-  // animate staggers the columns 200 ms apart, each with its own spinner until its result arrives.
-  function showColumns(results, animate, done) {
+  function showColumns(results) {
     shown = results;
     ID("compare.columns").hidden = false;
     ID("compare.diff").textContent = "";
@@ -4503,26 +4487,22 @@ var Compare = (function () {
       if (!r) continue;
       fillHeader(c, r);
       fillBody(c, r);
-      setBusy(c, !!animate);
     }
     selectTab(1);
-    function finish() {
-      renderDiff();
-      if (done) done();
-    }
-    if (!animate) return finish();
-    results.forEach(function (r, idx) {
-      later(200 * (idx + 1), function () {
-        setBusy(idx + 1, false);
-        if (idx === results.length - 1) finish();
-      });
-    });
+    renderDiff();
   }
 
-  function describe(m) {
-    var v = selectorOf(m);
-    var res = Resolution.resolve(v);
-    return { value: v, key: comparisonKey(v), arm: res.arm, resolve: res.text };
+  // One column per requested selector, read from the response map by that selector's own comparison key.
+  function columnsOf(chosen, body) {
+    var cols = [];
+    chosen.forEach(function (m) {
+      var v = selectorOf(m);
+      var key = comparisonKey(v);
+      if (!Object.prototype.hasOwnProperty.call(body, key)) return;
+      var res = Resolution.resolve(v);
+      cols.push({ key: key, selector: v, arm: res.arm, resolve: res.text, body: body[key] });
+    });
+    return cols;
   }
 
   function run() {
@@ -4533,70 +4513,37 @@ var Compare = (function () {
       return;
     }
     setFieldError(textBox, "");
+    var text = textBox.value;
+    var chosen = model.slice();
+    // Default is {} for compare (null is a 422 here); /query keeps null.
+    var sent = chosen.map(function (m) {
+      return selectorOf(m) || {};
+    });
     cancel();
+    var mine = (controller = new AbortController());
     running = true;
-    hideColumns();
+    syncRun(lastBlocked);
     QueryScreen.showState("running");
-    var specs = model.map(describe);
-    later(800, function () {
-      var bad = specs.filter(function (s) {
-        return s.resolve.indexOf("not satisfiable") >= 0;
-      })[0];
-      if (bad) {
-        // A compare-level failure renders through the shared query error shapes.
-        running = false;
-        QueryScreen.showState("refusal-422");
-        renderError("query", 422, {
-          refusal_type: "UnsatisfiableSelectorError",
-          message: "no wiring satisfies the requested selector",
-          selector_kind: bad.value && bad.value.capability ? "capability" : "harness",
-          requested: bad.value && bad.value.capability ? bad.value.capability : [],
-        });
-        update();
-        return;
+    api("POST", "/compare", { query: { text: text }, selectors: sent }, { signal: mine.signal, kind: "compare" }).then(function (result) {
+      if (result.aborted || mine !== controller) return;
+      controller = null;
+      running = false;
+      syncRun(lastBlocked);
+      // Two or more selectors answer a map keyed by comparison key; one answers a bare envelope. The count sent decides, never the keys (D-11).
+      if (sent.length > 1 && classifyResponse(result.status, result.body) === "result") {
+        var cols = columnsOf(chosen, result.body);
+        hideStates();
+        showColumns(cols);
+        cols
+          .slice()
+          .reverse()
+          .forEach(function (col) {
+            QueryScreen.remember(col.body, { query: { text: text }, selector: col.selector });
+          });
+      } else if (QueryScreen.applyResponse(result.status, result.body) === "result") {
+        QueryScreen.remember(result.body, { query: { text: text }, selector: selectorOf(chosen[0]) });
       }
-      var body = FIX.query["q-success"].body;
-      if (specs.length === 1) {
-        // One selector runs as a plain query: the single-result layout, not a column.
-        running = false;
-        QueryScreen.renderResult(body);
-        update();
-        return;
-      }
-      hideStates();
-      showColumns(
-        specs.map(function (s) {
-          return { key: s.key, arm: s.arm, resolve: s.resolve, body: body };
-        }),
-        true,
-        function () {
-          running = false;
-          update();
-        }
-      );
     });
-  }
-
-  function loadFixture(name) {
-    var fx = FIX.compare[name];
-    if (!fx) throw new Error("unknown compare fixture " + name);
-    cancel();
-    running = false;
-    model = fx.map(function (column) {
-      var s = column.selector;
-      return s === null ? { kind: "default", alias: "", tokens: [] } : s.alias !== undefined ? { kind: "alias", alias: s.alias, tokens: [] } : { kind: "capability", alias: "", tokens: s.capability.slice() };
-    });
-    QueryScreen.setMode("compare");
-    sync();
-    hideStates();
-    paint();
-    showColumns(
-      model.map(function (m, idx) {
-        var d = describe(m);
-        return { key: d.key, arm: d.arm, resolve: d.resolve, body: FIX.compare.bodies[fx[idx].body] };
-      }),
-      false
-    );
   }
 
   // Mode changes arrive from the tab buttons and from "Compare this query"; both only set data-mode.
@@ -4655,37 +4602,35 @@ var Compare = (function () {
     R(model.length, "kind").focus();
   });
 
-  for (var c = 1; c <= MAX; c++) {
-    (function (col) {
-      C(col, "trace-link").addEventListener("click", function (event) {
-        event.preventDefault();
-        var r = shown[col - 1];
-        if (!r || !r.body.trace_token) return;
-        Console.show("evidence");
-        Console.emit("open-trace", { token: r.body.trace_token });
-      });
-      C(col, "promote").addEventListener("click", function () {
-        var r = shown[col - 1];
-        if (!r) return;
-        Console.show("ledger");
-        Console.emit("promote", { trace: r.body.trace_token });
-      });
-      ID("compare.tab" + col).addEventListener("click", function () {
-        selectTab(col);
-      });
-      for (var n = 1; n <= 5; n++) {
-        (function (slot) {
-          C(col, "open-" + slot).addEventListener("click", function () {
-            var r = shown[col - 1];
-            var ref = r && r.body.evidence[slot - 1];
-            if (!ref) return;
-            Console.show("evidence");
-            Console.emit("open-evidence", { ref: { id: ref.ref, namespace: ref.namespace, kind: ref.kind }, score: ref.score });
-          });
-        })(n);
-      }
-    })(c);
-  }
+  // One delegated listener serves every column, cloned ones included: the column is read from the panel that holds the control.
+  ID("compare.columns").addEventListener("click", function (event) {
+    var el = event.target.closest("a, button");
+    if (!el || el.disabled) return;
+    var id = el.getAttribute("data-mock-id") || "";
+    var tab = /^query\.compare\.tab(\d+)$/.exec(id);
+    if (tab) return selectTab(+tab[1]);
+    var panel = el.closest(".cmp-col");
+    var which = panel && /^query\.col(\d+)\.panel$/.exec(panel.getAttribute("data-mock-id"));
+    var r = which && shown[+which[1] - 1];
+    if (!r) return;
+    var env = r.body;
+    if (/\.trace-link$/.test(id)) {
+      event.preventDefault();
+      if (!env.trace_token) return;
+      Console.show("evidence");
+      Console.emit("open-trace", { token: env.trace_token });
+    } else if (/\.promote$/.test(id)) {
+      Console.show("ledger");
+      Console.emit("promote", { trace: env.trace_token });
+    } else if (/\.open-\d+$/.test(id)) {
+      // The EvidenceRef goes on unchanged: the server refuses a renamed key (18-RESEARCH Pitfall 2).
+      var row = el.closest("tr");
+      var ref = env.evidence[Array.prototype.indexOf.call(row.parentNode.children, row)];
+      if (!ref) return;
+      Console.show("evidence");
+      Console.emit("open-evidence", { ref: ref, score: ref.score, trace_token: env.trace_token });
+    }
+  });
 
   for (var i = 1; i <= MAX; i++) {
     var picker = R(i, "alias-picker");
@@ -4705,7 +4650,7 @@ var Compare = (function () {
   new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ["data-mode"] });
   hideColumns();
   paint();
-  return { run: run, loadFixture: loadFixture };
+  return { run: run, cancel: cancel };
 })();
 var EvidenceScreen = (function () {
   var STATES = ["idle", "loading", "resolved", "refusal"];
