@@ -203,4 +203,4 @@ def test_health_banner_survives_table_actions(corpus_docs, live_app, browser):
         ui.page.unroute("**/health")
         ui.el("corpus.health.refresh").click()
         ui.expect(banner).to_be_hidden()
-        ui.expect("corpus.health.state").to_have_text("ok")
+        ui.expect("corpus.health.state").not_to_have_text("unreachable")

@@ -43,6 +43,7 @@
         <option value="60">60 seconds</option>
       </select>
     </div>
+    <p class="muted" role="status" data-mock-id="corpus.live.health-polled"></p>
     <div data-role="health-body">
       <h3>Stores</h3>
       <div class="table-scroll">
@@ -101,6 +102,7 @@
       <button type="button" class="btn btn-outline" data-mock-id="corpus.table.refresh">Refresh documents</button>
       <label class="inline"><input type="checkbox" data-mock-id="corpus.table.poll"> Refresh every 30 seconds</label>
     </div>
+    <p class="muted" role="status" data-mock-id="corpus.live.counts-polled"></p>
     <p class="field-error" role="alert" tabindex="-1" data-mock-id="corpus.table.page-size-error" hidden></p>
     <div class="run-row">
       <span data-needs-backend="GET /corpus (status, sort, search)" title="Not implemented yet: GET /corpus (status, sort, search)" class="tools">

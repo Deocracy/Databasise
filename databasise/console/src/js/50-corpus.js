@@ -20,7 +20,8 @@ var CorpusScreen = (function () {
     pageSize: "Page size must be between 1 and 100.",
     limit: "Line limit must be between 1 and 1000.",
   };
-  var HEALTH_MS = 800;
+  var NON_TERMINAL = ["pending", "parsing", "analyzing", "processing", "preprocessed"];
+  var COUNTS_POLL_MS = 30000;
   var RETRY_MS = 300;
 
   var root = $id("screen-corpus");
@@ -40,10 +41,11 @@ var CorpusScreen = (function () {
   var loadedOnce = false;
   var pageCtl = null;
   var countsCtl = null;
-  var healthTimer = null;
   var healthPoll = null;
   var tablePoll = null;
-  var healthErrorShown = false;
+  var healthBannerUp = false; // the error region currently shows the health error
+  var lastChecked = ""; // HH:MM:SS of the last finished health load, header loads included
+  var skippedAt = ""; // set by a poll tick that found a request in flight, cleared by the next finished load
 
   function ID(name) {
     return $id("corpus." + name);
@@ -66,12 +68,23 @@ var CorpusScreen = (function () {
 
   // ---- errors ----
 
-  function showError(status, body) {
-    var shape = renderError("corpus", status, body);
+  function showError(status, body, opts, quiet) {
+    healthBannerUp = false;
+    var shape = renderError("corpus", status, body, opts);
     errorsBox.hidden = shape === "result";
     checkHealth.hidden = shape !== "generic";
-    if (shape !== "result") errorsBox.scrollIntoView({ block: "nearest" });
+    if (shape !== "result" && !quiet) errorsBox.scrollIntoView({ block: "nearest" });
     return shape;
+  }
+
+  // The health error uses the one error region. It is repainted after every clear, so table actions cannot erase it (WR-JSB-04);
+  // only a successful health load, which leaves the error state, removes it. shortcut: a table error shown meanwhile replaces it
+  // until the next table action; upgrade to a second region if both must show at once.
+  function repaintHealthError() {
+    var report = Console.health();
+    if (healthState(report) !== "error") return;
+    showError(report.status, report.body, /timed out/.test(report.text || "") ? { text: report.text } : undefined, true);
+    healthBannerUp = true;
   }
 
   // renderError clears every field message, so the client-side checks are rerun afterwards.
@@ -79,9 +92,10 @@ var CorpusScreen = (function () {
     renderError("corpus", 200, null);
     errorsBox.hidden = true;
     checkHealth.hidden = true;
-    healthErrorShown = false;
+    healthBannerUp = false;
     checkSize();
     checkLimit();
+    repaintHealthError();
   }
 
   // The mock outcome select decides which server response the next retry gets (18-07 Task 3 replaces it).
@@ -128,8 +142,11 @@ var CorpusScreen = (function () {
     });
   }
 
+  // An unknown value (the health call failed) reads "not probed", the same word the stores table uses.
   function fillEngineRow(name, value) {
-    paintBadge(ID("health." + name).querySelector('[data-role="value"]'), value ? "ok" : "fail", value ? "yes" : "no");
+    var badge = ID("health." + name).querySelector('[data-role="value"]');
+    if (value === undefined) paintBadge(badge, "neutral", "not probed");
+    else paintBadge(badge, value ? "ok" : "fail", value ? "yes" : "no");
   }
 
   function fillBusy() {
@@ -150,43 +167,62 @@ var CorpusScreen = (function () {
     badge.querySelector('[data-role="glyph"]').textContent = HEALTH_GLYPHS[state];
     ID("health.state").textContent = HEALTH_WORDS[state];
     ID("health.loading").hidden = state !== "loading";
-    root.querySelector('[data-role="health-body"]').hidden = state === "loading" || state === "error";
-    if (state === "error") {
-      showError(report.status, report.body);
-      healthErrorShown = true;
-      return;
-    }
-    if (healthErrorShown) hideErrors();
+    root.querySelector('[data-role="health-body"]').hidden = state === "loading";
+    var refresh = ID("health.refresh");
+    setDisabled(refresh, state === "loading");
+    if (state === "loading") refresh.setAttribute("aria-busy", "true");
+    else refresh.removeAttribute("aria-busy");
     if (state === "loading") return;
-    fillStores(report.stores);
-    fillEngineRow("engine", report.engine.v1_reachable);
-    fillEngineRow("interpreter", report.engine.interpreter_present);
+    var failed = state === "error";
+    if (failed) repaintHealthError();
+    else if (healthBannerUp) hideErrors();
+    fillStores(failed ? {} : report.stores);
+    fillEngineRow("engine", failed ? undefined : report.engine.v1_reachable);
+    fillEngineRow("interpreter", failed ? undefined : report.engine.interpreter_present);
     var chips = ID("health.clients").querySelector('[data-role="chips"]');
     clearNode(chips);
     CLIENTS.forEach(function (name) {
+      if (failed) return;
       var present = report.clients[name];
       chips.appendChild(chip(GLYPH[present ? "ok" : "warn"] + " " + name + " " + (present ? "present" : "missing"), present ? "ok" : "warn"));
     });
-    ID("health.reasons").querySelector('[data-role="text"]').textContent = report.engine_reason || "none reported";
-    fillBusy();
+    ID("health.reasons").querySelector('[data-role="text"]').textContent = failed ? "not probed" : report.engine_reason || "none reported";
+    if (!failed) fillBusy();
   }
 
-  function refreshHealth() {
-    clearTimeout(healthTimer);
-    ID("health.overall").setAttribute("data-state", "loading");
-    ID("health.loading").hidden = false;
-    root.querySelector('[data-role="health-body"]').hidden = true;
-    ID("health.refresh").setAttribute("aria-busy", "true");
-    healthTimer = setTimeout(function () {
-      ID("health.refresh").removeAttribute("aria-busy");
-      paintHealth();
-    }, HEALTH_MS);
+  function clockText() {
+    var d = new Date();
+    return [d.getHours(), d.getMinutes(), d.getSeconds()]
+      .map(function (n) {
+        return (n < 10 ? "0" : "") + n;
+      })
+      .join(":");
+  }
+
+  function paintHealthNote() {
+    var seconds = ID("health.poll").checked ? Number(ID("health.poll-interval").value) : 0;
+    var text = "Not checked yet.";
+    if (skippedAt) text = "Check skipped at " + skippedAt + ": a request is in flight.";
+    else if (lastChecked) text = (seconds ? "Polling every " + seconds + " seconds" : "Polling off") + ". Last checked " + lastChecked + ".";
+    ID("live.health-polled").textContent = text;
+  }
+
+  // A tick that falls while any query, compare, ingest or delete is in flight is skipped, not queued (D-13).
+  function healthTick() {
+    if (InFlight.any()) {
+      skippedAt = clockText();
+      paintHealthNote();
+      return;
+    }
+    Console.loadHealth();
   }
 
   function setHealthPoll() {
     clearInterval(healthPoll);
     healthPoll = null;
-    if (ID("health.poll").checked) healthPoll = setInterval(refreshHealth, Number(ID("health.poll-interval").value) * 1000);
+    if (ID("health.poll").checked) healthPoll = setInterval(healthTick, Number(ID("health.poll-interval").value) * 1000);
+    else skippedAt = "";
+    paintHealthNote();
   }
 
   // ---- corpus table ----
@@ -257,6 +293,33 @@ var CorpusScreen = (function () {
       tiles[s].setAttribute("aria-pressed", String(statusFilter === s));
     });
     fillCounts();
+    paintCountsNote();
+  }
+
+  // Unknown status keys count as terminal.
+  function inProgress() {
+    if (!counts) return 0;
+    return NON_TERMINAL.reduce(function (sum, key) {
+      return sum + (counts.by_status[key] || 0);
+    }, 0);
+  }
+
+  function paintCountsNote() {
+    var text = "";
+    if (ID("table.poll").checked) text = inProgress() > 0 ? "Updating every 30 seconds while documents are in progress." : "Polling paused: no documents in progress.";
+    ID("live.counts-polled").textContent = text;
+  }
+
+  // Paused at zero: the interval keeps running but fetches nothing, so only a manual refresh (which reloads the counts) resumes it.
+  function setTablePoll() {
+    clearInterval(tablePoll);
+    tablePoll = null;
+    if (ID("table.poll").checked) {
+      tablePoll = setInterval(function () {
+        if (inProgress() > 0) loadCounts();
+      }, COUNTS_POLL_MS);
+    }
+    paintCountsNote();
   }
 
   // The previous rows stay on screen while a read is in flight; the panel is aria-busy and the controls wait.
@@ -446,7 +509,19 @@ var CorpusScreen = (function () {
     openPanel("catalogue.panel");
   });
 
-  ID("health.refresh").addEventListener("click", refreshHealth);
+  Console.on("health-report", function () {
+    lastChecked = clockText();
+    skippedAt = "";
+    paintHealthNote();
+  });
+  window.addEventListener("pagehide", function () {
+    clearInterval(healthPoll);
+    clearInterval(tablePoll);
+  });
+  ID("table.poll").addEventListener("change", setTablePoll);
+  ID("health.refresh").addEventListener("click", function () {
+    Console.loadHealth();
+  });
   ID("health.poll").addEventListener("change", setHealthPoll);
   ID("health.poll-interval").addEventListener("change", setHealthPoll);
   ID("error.check-health").addEventListener("click", function () {
@@ -501,6 +576,7 @@ var CorpusScreen = (function () {
   fillLog();
   checkSize();
   paintHealth();
+  paintHealthNote();
   paintPage();
   return {};
 })();

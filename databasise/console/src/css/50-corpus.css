@@ -11,6 +11,9 @@
 .tile[data-state] { border-color: var(--st-fg); background: var(--st-bg); }
 .tile[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 0; }
 
+/* 18-07: the poll indicators wrap to two lines at 375 px */
+[data-mock-id="corpus.live.health-polled"], [data-mock-id="corpus.live.counts-polled"] { overflow-wrap: anywhere; }
+
 .tools { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sm); }
 .doc-table td [data-role="error"] { max-width: 40ch; margin: var(--xs) 0 0; overflow-wrap: anywhere; }
 .row-actions { white-space: nowrap; }
