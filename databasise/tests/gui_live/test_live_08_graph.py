@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from urllib.parse import urlparse
 
 import pycozo
@@ -210,11 +211,25 @@ def plain_app(tmp_path_factory, corpus_fake):
     live.stop()
 
 
+def _hold(path):
+    """A raw pycozo client on the graph directory; retried for up to 10 s in case a health probe holds the path."""
+    deadline = time.monotonic() + 10
+    while True:
+        try:
+            return pycozo.Client("rocksdb", str(path.resolve()), dataframe=False)
+        except Exception:
+            if time.monotonic() > deadline:
+                raise
+            time.sleep(0.1)
+
+
 def test_store_busy_renders_the_refusal_and_retry_recovers(busy_app, browser):
     path = busy_app.root / "ws" / "hipporag-graph" / "graph.cozo"
     ui = open_live_ui(browser, busy_app)
     try:
-        held = pycozo.Client("rocksdb", str(path.resolve()), dataframe=False)
+        # The header health check probes the graph path through the registry while it runs, so the raw client waits for it.
+        ui.expect("shell.health.status").not_to_have_attribute("data-state", "loading")
+        held = _hold(path)
         try:
             ui.nav("graph")
             ui.el("graph.selector.kind-capability").check()
