@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 
 import pytest
 
-from databasise.tests.gui_live.conftest import HIPPORAG, open_live_ui
+from databasise.tests.gui_live.conftest import HIPPORAG, open_live_ui, start_live_app
 
 CAPS = ["reads_graph", "reads_kv"]
 EVIDENCE_ROWS = '[data-mock-id="query.evidence.table"] tbody tr:not([hidden])'
@@ -576,3 +576,57 @@ def test_compare_extra_server_key_appends_a_column(answer_alias, live_ui):
     assert payload["trace_token"] == body["extra-c"]["trace_token"]
     # Only the two requested columns are history runs.
     assert len(_stored(ui)) == 2
+
+
+# ---- Task 3: the alias catalogue (LIVE-07, D-09) ----
+
+ALIAS_PICKER = '[data-mock-id="query.selector.alias-picker"] option'
+LOG_NOTE = "From this browser's ledger log; no route lists aliases."
+LOG_KEY = "databasise.console.ledger-log"
+SHOWN_NOTE = '[data-role="alias-source"]:not([hidden])'
+
+
+@pytest.fixture(scope="module")
+def plain_app(tmp_path_factory, corpus_fake):
+    """A launch without --operator: GET /ledger/aliases is not mounted."""
+    live = start_live_app(tmp_path_factory.mktemp("store-plain"), operator=False)
+    live.corpus = corpus_fake
+    yield live
+    live.stop()
+
+
+def test_alias_picker_lists_server_aliases_with_active_version(answer_alias, seeded, live_ui):
+    ui = live_ui
+    version = next(r["active_version"] for r in seeded.http.get("/ledger/aliases").json() if r["alias"] == "answer")
+    label = f"answer ({version})"
+    ui.expect(ui.page.locator(ALIAS_PICKER).filter(has_text=label)).to_have_count(1)
+    ui.el("query.selector.alias-picker").select_option(label=label)
+    assert ui.el("query.selector.alias").input_value() == "answer"
+    ui.expect("query.selector.resolves-to").to_have_text(
+        f"Resolves to: alias answer, active version {version}; the server resolves the arm at run time"
+    )
+    # The resolve line keeps its needs-backend badge: POST /selectors/resolve is absent.
+    wrapper = ui.page.locator('[data-needs-backend="POST /selectors/resolve"]:has([data-mock-id="query.selector.resolves-to"])')
+    ui.expect(wrapper).to_have_count(1)
+    ui.expect(wrapper.locator(".badge-nb")).to_be_visible()
+    ui.el("query.mode.compare").click()
+    ui.expect(ui.page.locator('[data-mock-id="query.row1.alias-picker"] option').filter(has_text=label)).to_have_count(1)
+    ui.expect(ui.page.locator(SHOWN_NOTE)).to_have_count(0)  # the server lists them: no fallback line
+
+
+def test_alias_picker_falls_back_to_the_client_log(plain_app, browser):
+    assert plain_app.start_error is None, plain_app.start_error
+    newest = {"alias": "fb-test", "version": "v7", "record_kind": "promotion", "generation_ordinal": 2, "created_at": "2026-10-31T10:00:00.000Z"}
+    older = dict(newest, version="v6", generation_ordinal=1)
+    seed = f"sessionStorage.setItem('{LOG_KEY}', JSON.stringify({json.dumps([newest, older])}));"
+    with _ui(browser, plain_app, lambda page: page.add_init_script(seed)) as ui:
+        options = ui.page.locator(ALIAS_PICKER)
+        ui.expect(options.filter(has_text="fb-test (v7)")).to_have_count(1)
+        ui.expect(options.filter(has_text="fb-test (v6)")).to_have_count(0)  # the latest version per alias
+        ui.expect(ui.page.locator(SHOWN_NOTE).first).to_have_text(LOG_NOTE)
+        ui.expect("query.selector.alias-picker").to_be_enabled()
+        ui.el("query.selector.alias-picker").select_option(label="fb-test (v7)")
+        ui.expect("query.selector.resolves-to").to_have_text(
+            "Resolves to: alias fb-test, active version v7; the server resolves the arm at run time"
+        )
+        assert ui.count("GET", "/ledger/aliases") == 0

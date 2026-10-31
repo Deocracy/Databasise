@@ -1,6 +1,7 @@
 """LIVE-03 (D-12, GUI-06): every real server answer renders through the four error shapes, with the real status.
 
-Each screen plan appends one case set to this module; 18-04 adds the Query cases. The row test is
+Each screen plan appends one case set to this module; 18-04 adds the Query cases and 18-05 the Compare cases
+(a duplicate-key refusal, a validation list that marks the offending selector row, a 500). The row test is
 ``test_query_500_renders_the_generic_view``: a real 500 (``LiveApp.fail("query")``) shows the generic view,
 and the server-log region follows the launch mode. ``live_app`` has no log file, so GET /log is absent;
 ``log_app`` is started with ``--log-file``, so the 5xx view loads ``GET /log?limit=200``.
@@ -132,6 +133,58 @@ def test_query_500_loads_the_log_tail_when_mounted(log_app, browser):
         loads = [r for r in ui.requests if r["method"] == "GET" and r["path"] == "/log"]
         assert len(loads) == 1
         assert loads[0]["url"].endswith("/log?limit=200")
+
+
+def _run_compare(ui):
+    """Compare mode with a capability row and a Default row, then Run compare."""
+    ui.el("query.mode.compare").click()
+    ui.el("query.text.input").fill("Ed Wood")
+    ui.el("query.row1.kind").select_option("capability")
+    ui.el("query.row1.capability").select_option(CAPS)
+    ui.el("query.compare.add").click()
+    ui.el("query.run.submit").click()
+
+
+def _rewrite_selectors(selectors):
+    """Sends the page's own compare request with other selectors, so the real server answers it."""
+
+    def handler(route):
+        body = route.request.post_data_json
+        body["selectors"] = selectors
+        route.continue_(post_data=json.dumps(body))
+
+    return lambda page: page.route("**/compare", handler)
+
+
+def test_compare_duplicate_key_refusal_renders_the_typed_banner(seeded, browser):
+    with _ui(browser, seeded, _rewrite_selectors([{}, {}])) as ui:
+        _run_compare(ui)
+        banner = ui.el("query.error.refusal")
+        ui.expect(banner).to_contain_text("DuplicateComparisonKeyError")
+        ui.expect(banner.locator('[data-role="footer"]')).to_have_text(re.compile(r"^HTTP 422\."))
+        ui.expect("query.compare.columns").to_be_hidden()
+        ui.expect("query.error.validation").to_be_hidden()
+
+
+def test_compare_validation_renders_the_field_list(seeded, browser):
+    with _ui(browser, seeded, _rewrite_selectors([5, {}])) as ui:
+        _run_compare(ui)
+        ui.expect("query.error.validation").to_contain_text("body.selectors.0")
+        # The row the server named is marked and carries the server's message; the other row is not.
+        ui.expect("query.row1.kind").to_have_attribute("aria-invalid", "true")
+        ui.expect("query.row1.error").to_be_visible()
+        ui.expect("query.row1.error").to_have_text(re.compile(r".+"))
+        assert ui.el("query.row2.kind").get_attribute("aria-invalid") is None
+        ui.expect("query.row2.error").to_be_hidden()
+        ui.expect("query.compare.columns").to_be_hidden()
+
+
+def test_compare_500_renders_the_generic_view(seeded, browser):
+    with seeded.fail("compare"), _ui(browser, seeded) as ui:
+        _run_compare(ui)
+        ui.expect("query.error.generic").to_contain_text("The server returned HTTP 500")
+        ui.expect("query.compare.columns").to_be_hidden()
+        ui.expect("query.run.submit").to_be_enabled()
 
 
 def test_query_unreachable_renders_generic_and_header_unreachable(seeded, browser):
