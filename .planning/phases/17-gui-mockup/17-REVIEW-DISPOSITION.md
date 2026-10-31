@@ -20,7 +20,7 @@ Source: 17-REVIEW.md (39 findings: 0 critical, 17 warning, 22 info). The finding
 | WR-JSA-03 | warning | open | Query states render next to visible compare columns, so more than one state is shown at once |
 | WR-JSA-04 | warning | open | A mode switch cancels only Compare's timers; a pending Query run still fires in compare mode |
 | WR-JSA-05 | warning | fixed in Phase 18 (18-04) | While streaming, the result panel already shows 'Run complete.' and an enabled Promote |
-| WR-JSA-06 | warning | open | Every Compare Run column carries the q-success body, so per-column Open trace and Promote target the Default/naive trace |
+| WR-JSA-06 | warning | fixed in Phase 18 (18-05) | Every Compare Run column carries the q-success body, so per-column Open trace and Promote target the Default/naive trace |
 | WR-JSB-01 | warning | open | Evidence Inspector 'Open trace' opens an unrelated or stale trace |
 | WR-JSB-02 | warning | open | 'Keep document' or Escape after pressing Delete still completes the delete |
 | WR-JSB-03 | warning | open | A failed job load leaves the restored page with Previous and Next disabled |
