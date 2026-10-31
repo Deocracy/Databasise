@@ -393,3 +393,27 @@ def test_ledger_500_renders_the_generic_view(seeded, browser):
         ui.el("shell.dialog.promote-confirm").click()
         ui.expect("ledger.error.generic").to_contain_text("The server returned HTTP 500")
         ui.expect("shell.dialog.promote").to_be_hidden()
+
+
+# ---- 18-10: Graph/vector browser ----
+
+GRAPH_LIMIT_FIELD = '[data-mock-id="screen-graph"] [data-field-loc="body.limit"]'
+
+
+def _pick_graph(ui):
+    ui.nav("graph")
+    ui.el("graph.selector.kind-capability").check()
+    ui.el("graph.selector.capability").select_option(CAPS)
+
+
+def test_graph_validation_marks_the_page_size(seeded, browser):
+    with _ui(browser, seeded, _rewrite_body("graph/nodes", lambda body: body.update(limit="x"))) as ui:
+        _pick_graph(ui)
+        ui.expect("graph.error.validation").to_be_visible()
+        ui.expect(ui.page.locator(GRAPH_LIMIT_FIELD)).to_have_attribute("aria-invalid", "true")
+
+
+def test_graph_500_renders_the_generic_view(seeded, browser):
+    with seeded.fail("graph_nodes"), _ui(browser, seeded) as ui:
+        _pick_graph(ui)
+        ui.expect("graph.error.generic").to_contain_text("The server returned HTTP 500")

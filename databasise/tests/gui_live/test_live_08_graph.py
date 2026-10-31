@@ -16,6 +16,12 @@ import json
 import re
 from urllib.parse import urlparse
 
+import pycozo
+import pytest
+
+from databasise.tests.gui_live.conftest import HIPPORAG, open_live_ui, start_live_app
+from databasise.tests.seam.test_hipporag_write_path import _DOCUMENT_TEXT
+
 CAPS = ["reads_graph", "reads_kv"]
 
 
@@ -179,3 +185,83 @@ def test_no_namespace_input_on_the_graph_screen(live_ui):
 }"""
     )
     assert hits == []
+
+
+# ---- Task 3: store busy under a raw pycozo lock, and no --operator ----
+
+
+@pytest.fixture(scope="module")
+def busy_app(tmp_path_factory, corpus_fake):
+    """A fresh store root seeded only through an ingest; no graph read has happened, so a raw client can hold the graph."""
+    live = start_live_app(tmp_path_factory.mktemp("store-busy"))
+    live.corpus = corpus_fake
+    if live.start_error is None:
+        live.ingest(_DOCUMENT_TEXT, "seed-busy", HIPPORAG)
+    yield live
+    live.stop()
+
+
+@pytest.fixture(scope="module")
+def plain_app(tmp_path_factory, corpus_fake):
+    """No ``--operator``: the graph, node and chunk routes are not mounted."""
+    live = start_live_app(tmp_path_factory.mktemp("store-plain"), operator=False)
+    live.corpus = corpus_fake
+    yield live
+    live.stop()
+
+
+def test_store_busy_renders_the_refusal_and_retry_recovers(busy_app, browser):
+    path = busy_app.root / "ws" / "hipporag-graph" / "graph.cozo"
+    ui = open_live_ui(browser, busy_app)
+    try:
+        held = pycozo.Client("rocksdb", str(path.resolve()), dataframe=False)
+        try:
+            ui.nav("graph")
+            ui.el("graph.selector.kind-capability").check()
+            ui.el("graph.selector.capability").select_option(CAPS)
+            state = ui.el("graph.state.store-busy")
+            ui.expect(state).to_be_visible()
+            ui.expect(state).to_contain_text("StoreBusyError")
+            ui.expect(state).to_contain_text("store busy")
+            ui.expect(state.locator('[data-role="footer"]')).to_have_text(re.compile(r"^HTTP 409\."))
+            ui.expect("graph.error.generic").to_be_hidden()
+            ui.expect(_rows(ui, "graph.nodes.table")).to_have_count(0)
+        finally:
+            held.close()
+
+        with ui.page.expect_response(_is_post("/graph/nodes")) as info:
+            ui.el("graph.state.retry").click()
+        assert info.value.status == 200
+        page = info.value.json()
+        assert page["nodes"], "the seeded HippoRAG graph has nodes"
+        posts = _posts(ui, "/graph/nodes")
+        assert len(posts) == 2
+        assert json.loads(posts[0]["post_data"]) == json.loads(posts[1]["post_data"])  # Retry repeats the last request
+        ui.expect(_rows(ui, "graph.nodes.table")).to_have_count(len(page["nodes"]))
+        ui.expect("graph.state.store-busy").to_be_hidden()
+        ui.expect("graph.nodes.panel").not_to_have_attribute("aria-busy", "true")
+    finally:
+        ui.close()
+
+
+def test_without_operator_every_graph_control_is_disabled(plain_app, browser):
+    ui = open_live_ui(browser, plain_app)
+    try:
+        ui.nav("graph")
+        controls = ui.page.locator('[data-mock-id="screen-graph"]').locator("button, input, select").all()
+        checked = 0
+        for control in controls:
+            mock_id = control.get_attribute("data-mock-id") or ""
+            if not control.is_visible() or mock_id.startswith("graph.selector."):
+                continue
+            assert control.is_disabled(), f"{mock_id} is enabled without --operator"
+            checked += 1
+        assert checked >= 5  # prefix, two page sizes, node id, Open node
+        line = ui.page.locator('[data-mock-id="screen-graph"] .needs-route:visible', has_text="Needs POST /graph/nodes.")
+        ui.expect(line.first).to_be_visible()
+        for key in ("nodes", "edges", "chunks"):
+            ui.expect(ui.el(f"graph.counts.{key}").locator('[data-role="count"]')).to_have_text("—")
+        _settle(ui)
+        assert [r for r in ui.requests if r["path"] in ("/graph/nodes", "/graph/node", "/chunks")] == []
+    finally:
+        ui.close()
