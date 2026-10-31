@@ -26,10 +26,7 @@ var DocumentsScreen = (function () {
   var STATUS_STATE = { processed: "ok", failed: "fail", processing: "progress", parsing: "progress", analyzing: "progress", pending: "neutral", preprocessed: "neutral", interrupted: "warn" };
   var STATUS_GLYPH = { ok: "✓", fail: "✕", progress: "●", neutral: "■", warn: "▲" };
   var DELETE_STATE = { success: "ok", not_found: "neutral", not_allowed: "fail", fail: "fail" };
-  var JOB_FIXTURES = ["j-page1", "j-last", "j-single", "j-empty"];
   var PREVIEW_TEXT_CAP = 300;
-  var FLIGHT_MS = 800;
-  var LOAD_MS = 300;
   var CONFIRM_MS = 300;
 
   var root = $id("screen-documents");
@@ -39,15 +36,15 @@ var DocumentsScreen = (function () {
   var card = ID("result.card");
   var dialog = $id("shell.dialog.delete");
   var confirmButton = $id("shell.dialog.delete-confirm");
+  var jobs = SessionLog("databasise.console.jobs", 50);
   var timers = [];
-  var jobTimer = null;
-  var jobsShown = "none";
-  var sessionJobs = FIX.documents["session-jobs"].slice();
   var picker = null;
   var busy = false;
   var tab = "paste";
   var pending = null;
-  var current = null;
+  var job = null; // the last page that loaded: {id, offset, limit, body}
+  var readCtl = null; // the abort handle of the job read in flight
+  var jobsShown = "none";
   var lastSize = 50;
   var pollTimer = null;
 
@@ -55,29 +52,8 @@ var DocumentsScreen = (function () {
     return $id("documents." + name);
   }
 
-  function setDisabled(button, disabled) {
-    button.disabled = disabled;
-    if (disabled) button.setAttribute("aria-disabled", "true");
-    else button.removeAttribute("aria-disabled");
-  }
-
   function later(fn, ms) {
     timers.push(setTimeout(fn, ms));
-  }
-
-  // Ingest and delete timers; the job-load timer is separate so opening a job never cancels a submit in flight.
-  function clearTimers() {
-    timers.forEach(clearTimeout);
-    timers = [];
-  }
-
-  function clearAll() {
-    clearTimers();
-    clearTimeout(jobTimer);
-  }
-
-  function outcome() {
-    return ID("mock.outcome").value;
   }
 
   function bytes(text) {
@@ -95,8 +71,8 @@ var DocumentsScreen = (function () {
 
   // ---- errors ----
 
-  function showError(status, body) {
-    var shape = renderError("documents", status, body);
+  function showError(status, body, opts) {
+    var shape = renderError("documents", status, body, opts);
     errorsBox.hidden = shape === "result";
     if (shape !== "result") errorsBox.scrollIntoView({ block: "nearest" });
     return shape;
@@ -109,19 +85,8 @@ var DocumentsScreen = (function () {
     refresh();
   }
 
-  // The mock outcome select decides which server response the next call gets; "success" (and "unknown job" outside Load job) returns null.
-  function failure(op, field, refusalType) {
-    var o = outcome();
-    if (o === "refusal") {
-      if (op === "job") return [422, { refusal_type: "PageSizeExceededError", message: "page size above the limit", requested: 500, limit: 100 }];
-      if (op === "delete") return [409, { refusal_type: "StoreBusyError", message: "the store is in use by another process", store_kind: "graph" }];
-      return [422, { refusal_type: "DuplicateDocumentIdError", message: "a document with this id already exists; delete it first", document_id: refusalType || "contract-2026-q1" }];
-    }
-    if (o === "validation") return [422, { detail: [{ loc: field, msg: "Field required", type: "missing" }] }];
-    if (o === "server-failure") {
-      return [502, { refusal_type: "ForeignEngineRefusalError", message: "operation '" + op + "' failed (CorpusOpSubprocessError)", operation: op, failure_class: "CorpusOpSubprocessError", cause: "the v1 driver exited with status 1" }];
-    }
-    if (o === "generic") return [500, "Internal Server Error"];
+  // The delete outcome select decides which server response the next delete gets; replaced by the live delete in 18-08 Task 3.
+  function failure() {
     return null;
   }
 
@@ -154,15 +119,20 @@ var DocumentsScreen = (function () {
     return f.size > LIMIT ? MSG.bigFile : "";
   }
 
-  function pasteBody() {
-    var shown = text.value;
-    if (shown.length > PREVIEW_TEXT_CAP) shown = shown.slice(0, PREVIEW_TEXT_CAP) + "... (" + grouped(shown.length - PREVIEW_TEXT_CAP) + " more characters not shown)";
-    var doc = { text: shown };
+  // The body POST /documents receives. The Default selector is sent as null.
+  function pasteRequest() {
+    var doc = { text: text.value };
     if (pasteId.value !== "") doc.document_id = pasteId.value;
-    var body = { document: doc };
-    var selector = picker.value();
-    if (selector !== null) body.selector = selector;
-    return JSON.stringify(body, null, 2);
+    return { document: doc, selector: picker.value() };
+  }
+
+  // The same body, with a long text cut for display.
+  function pastePreview() {
+    var req = pasteRequest();
+    var shown = req.document.text;
+    if (shown.length > PREVIEW_TEXT_CAP) shown = shown.slice(0, PREVIEW_TEXT_CAP) + "... (" + grouped(shown.length - PREVIEW_TEXT_CAP) + " more characters not shown)";
+    req.document.text = shown;
+    return JSON.stringify(req, null, 2);
   }
 
   // The selector field is omitted for the Default selector; it never reads null or [].
@@ -187,7 +157,7 @@ var DocumentsScreen = (function () {
     setFieldError(text, tm);
     setFieldError(pasteId, im);
     ID("paste.bytes").textContent = grouped(bytes(text.value)) + " of 26,214,400 bytes";
-    ID("paste.request-preview").textContent = pasteBody();
+    ID("paste.request-preview").textContent = pastePreview();
     setDisabled(pasteSubmit, busy || tm !== "" || im !== "" || blockers.length > 0);
 
     var fm = fileMessage();
@@ -223,45 +193,44 @@ var DocumentsScreen = (function () {
     return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
   }
 
-  function showCard(job) {
-    var kind = family();
-    card.querySelector('[data-role="job-id"]').textContent = job.job_id;
-    card.querySelector('[data-role="enqueued"]').textContent = String(job.enqueued);
+  function showCard(sent, kind) {
+    card.querySelector('[data-role="job-id"]').textContent = sent.job.job_id;
+    card.querySelector('[data-role="enqueued"]').textContent = String(sent.job.enqueued);
     card.querySelector('[data-role="note"]').textContent = CARD_NOTE[kind];
     setDisabled(ID("result.open-job"), kind === "hipporag");
     card.hidden = false;
-    sessionJobs = sessionJobs.filter(function (j) {
-      return j.job_id !== job.job_id;
-    });
-    sessionJobs.unshift({ job_id: job.job_id, submitted: submitTime(), enqueued: job.enqueued });
-    sessionJobs = sessionJobs.slice(0, 3);
+    jobs.add({ job_id: sent.job.job_id, document_id: sent.documentId, selector: sent.label, timestamp: submitTime(), enqueued: sent.job.enqueued });
     renderList();
   }
 
-  function finishIngest(field) {
+  // A write is never aborted once sent: no signal is passed.
+  function finishIngest(result, sent, kind) {
     ID("state.in-flight").hidden = true;
-    ID("upload.progress").hidden = true;
     setBusy(false);
-    var bad = failure("ingest", field);
-    if (bad) return showError(bad[0], bad[1]);
-    showCard(FIX.documents["ingest-success"]);
+    var body = result.body;
+    if (result.status >= 200 && result.status < 300 && body !== null && typeof body === "object" && typeof body.job_id === "string") {
+      sent.job = body;
+      return showCard(sent, kind);
+    }
+    if (showError(result.status, body) === "result") showError(0, null, { text: "The server answered without a job id." });
   }
 
   function submitPaste() {
     if (busy || pasteSubmit.disabled) return;
-    clearTimers();
     hideErrors();
     card.hidden = true;
+    var sent = { documentId: pasteId.value, label: picker.label() };
+    var kind = family();
+    var request = pasteRequest();
     setBusy(true);
     ID("state.in-flight").hidden = false;
-    later(function () {
-      finishIngest(["body", "document", "text"]);
-    }, FLIGHT_MS);
+    api("POST", "/documents", request, { kind: "ingest" }).then(function (result) {
+      finishIngest(result, sent, kind);
+    });
   }
 
   function submitUpload() {
     if (busy || uploadSubmit.disabled) return;
-    clearTimers();
     hideErrors();
     card.hidden = true;
     setBusy(true);
@@ -285,8 +254,9 @@ var DocumentsScreen = (function () {
       spin.hidden = false;
       label.textContent = "Processing";
       later(function () {
-        finishIngest(["body", "file"]);
-      }, FLIGHT_MS);
+        ID("upload.progress").hidden = true;
+        setBusy(false);
+      }, 800);
     })();
   }
 
@@ -298,14 +268,12 @@ var DocumentsScreen = (function () {
     ID("jobs.open").setAttribute("aria-expanded", String(open));
   }
 
+  // The client-side job list, newest first (D-07). A row's id and meta are filled here; its Open button reads the id at press time.
   function renderList() {
-    var slots = ID("jobs.list").querySelectorAll('[data-role="slot"]');
-    Array.prototype.forEach.call(slots, function (slot, i) {
-      var job = sessionJobs[i];
-      slot.hidden = !job;
-      if (!job) return;
-      slot.querySelector('[data-role="id"]').textContent = job.job_id;
-      slot.querySelector('[data-role="meta"]').textContent = "submitted " + job.submitted + ", enqueued " + job.enqueued;
+    var entries = jobs.all();
+    ensureRows(ID("jobs.list"), entries.length).forEach(function (slot, i) {
+      slot.querySelector('[data-role="id"]').textContent = entries[i].job_id;
+      slot.querySelector('[data-role="meta"]').textContent = "submitted " + entries[i].timestamp + ", enqueued " + entries[i].enqueued + ", selector " + entries[i].selector;
     });
   }
 
@@ -325,15 +293,12 @@ var DocumentsScreen = (function () {
   }
 
   function fillRows(docs) {
-    var rows = ID("jobs.documents").tBodies[0].rows;
-    Array.prototype.forEach.call(rows, function (row, i) {
+    ensureRows(ID("jobs.documents").tBodies[0], docs.length).forEach(function (row, i) {
       var doc = docs[i];
-      row.hidden = !doc;
-      if (!doc) return;
       row.querySelector('[data-role="id"]').textContent = doc.document_id;
       badge(row.querySelector('[data-role="status"]'), STATUS_STATE[doc.status] || "neutral", doc.status);
       row.querySelector('[data-role="updated"]').textContent = doc.updated_at;
-      var toggle = ID("jobs.error-toggle-" + (i + 1));
+      var toggle = row.querySelector('[data-mock-id^="documents.jobs.error-toggle-"]');
       var reason = row.querySelector('[data-role="error"]');
       toggle.hidden = !doc.error_message;
       toggle.setAttribute("aria-expanded", "false");
@@ -365,47 +330,38 @@ var DocumentsScreen = (function () {
     });
   }
 
-  function renderJob(name) {
-    var rec = FIX.documents[name];
-    current = { name: name, rec: rec };
-    setDrawer(true);
-    hideErrors();
-    ID("jobs.job-id").value = rec.job_id;
+  function paintJob() {
+    var docs = job.body.documents;
+    ID("jobs.job-id").value = job.id;
     setFieldError(ID("jobs.job-id"), "");
-    fillRows(rec.documents);
-    fillCounts(rec.counts);
-    setDisabled(ID("jobs.prev"), rec.offset <= 0);
-    setDisabled(ID("jobs.next"), rec.next_offset === null);
-    jobView(rec.documents.length ? "table" : "empty");
+    fillRows(docs);
+    fillCounts(job.body.counts || {});
+    jobView(docs.length ? "table" : "empty");
   }
 
-  function fixtureFor(id, next) {
-    if (id === FIX.documents["j-page1"].job_id) return next === "last" ? "j-last" : "j-page1";
-    var found = JOB_FIXTURES.filter(function (n) {
-      return FIX.documents[n].job_id === id;
-    })[0];
-    return found || null;
-  }
-
-  function loadJob(id, which) {
+  // Reads one page of a job. A newer read supersedes the one in flight.
+  function loadJob(id, offset) {
     var input = ID("jobs.job-id");
     id = id.trim();
     if (id === "") return setFieldError(input, MSG.noJob);
-    setFieldError(input, "");
-    clearTimeout(jobTimer);
+    offset = offset || 0;
+    if (readCtl) readCtl.abort();
+    var mine = (readCtl = new AbortController());
     hideErrors();
+    setFieldError(input, "");
     setDrawer(true);
     jobView("loading");
-    jobTimer = setTimeout(function () {
-      var bad = failure("job", ["path", "job_id"]);
-      var name = fixtureFor(id, which);
-      if (bad || outcome() === "unknown-job" || !name) {
-        jobView(jobsShown);
-        if (bad) return showError(bad[0], bad[1]);
-        return showError(FIX.documents["j-unknown"].status, Object.assign({}, FIX.documents["j-unknown"].body, { job_id: id }));
+    api("GET", "/jobs/" + encodeURIComponent(id) + "?limit=" + lastSize + "&offset=" + offset, null, { signal: mine.signal }).then(function (result) {
+      if (result.aborted || mine !== readCtl) return;
+      readCtl = null;
+      var body = result.body;
+      if (result.status >= 200 && result.status < 300 && body !== null && typeof body === "object" && Array.isArray(body.documents)) {
+        job = { id: id, offset: offset, limit: lastSize, body: body };
+        return paintJob();
       }
-      renderJob(name);
-    }, LOAD_MS);
+      jobView(jobsShown);
+      if (showError(result.status, body) === "result") showError(0, null, { text: "The server answered without a document list." });
+    });
   }
 
   function checkSize() {
@@ -446,49 +402,9 @@ var DocumentsScreen = (function () {
 
   function finishDelete(p) {
     if (p.from === "corpus") Console.show("documents");
-    var bad = failure("delete", ["path", "document_id"]);
+    var bad = failure();
     if (bad) return showError(bad[0], bad[1]);
     showDeleteOutcome(Object.assign({}, FIX.documents["delete-success"], { document_id: p.id }), p.kind);
-  }
-
-  // ---- hooks ----
-
-  function setState(name) {
-    clearAll();
-    setBusy(false);
-    ID("state.in-flight").hidden = name !== "in-flight";
-    if (name === "in-flight") return setBusy(true);
-    if (name === "result") return showCard(FIX.documents["ingest-success"]);
-    if (name === "loading") {
-      setDrawer(true);
-      return jobView("loading");
-    }
-    if (name === "empty") return renderJob("j-empty");
-    if (name !== "idle") throw new Error("unknown documents state " + name);
-    card.hidden = true;
-    hideErrors();
-  }
-
-  function loadFixture(name) {
-    clearAll();
-    setBusy(false);
-    ID("state.in-flight").hidden = true;
-    if (JOB_FIXTURES.indexOf(name) >= 0) return renderJob(name);
-    if (name === "j-unknown") {
-      setDrawer(true);
-      jobView("none");
-      return showError(FIX.documents[name].status, FIX.documents[name].body);
-    }
-    if (name === "ingest-success") return showCard(FIX.documents[name]);
-    if (/^delete-/.test(name) && FIX.documents[name]) return showDeleteOutcome(FIX.documents[name], family());
-    throw new Error("unknown documents fixture " + name);
-  }
-
-  function inject(response) {
-    clearAll();
-    setBusy(false);
-    ID("state.in-flight").hidden = true;
-    showError(response.status, response.body);
   }
 
   // ---- wiring ----
@@ -531,13 +447,7 @@ var DocumentsScreen = (function () {
     if (event.key === "Enter") loadJob(this.value);
   });
   ID("jobs.refresh").addEventListener("click", function () {
-    loadJob(ID("jobs.job-id").value, current && current.name === "j-last" ? "last" : undefined);
-  });
-  ID("jobs.prev").addEventListener("click", function () {
     loadJob(ID("jobs.job-id").value);
-  });
-  ID("jobs.next").addEventListener("click", function () {
-    loadJob(ID("jobs.job-id").value, "last");
   });
   ID("jobs.page-size").addEventListener("input", checkSize);
   ID("jobs.poll").addEventListener("change", function () {
@@ -545,34 +455,30 @@ var DocumentsScreen = (function () {
     pollTimer = null;
     if (this.checked) {
       pollTimer = setInterval(function () {
-        if (current) ID("jobs.refresh").click();
+        ID("jobs.refresh").click();
       }, 30000);
     }
   });
-  [1, 2, 3].forEach(function (n) {
-    ID("jobs.select-" + n).addEventListener("click", function () {
-      loadJob(sessionJobs[n - 1].job_id);
-    });
+  // One delegated listener serves the literal slots and every cloned entry of the job list.
+  ID("jobs.list").addEventListener("click", function (event) {
+    var button = event.target.closest("button");
+    if (!button) return;
+    loadJob(button.closest("li").querySelector('[data-role="id"]').textContent);
   });
-  [1, 2, 3, 4, 5].forEach(function (n) {
-    var toggle = ID("jobs.error-toggle-" + n);
-    toggle.addEventListener("click", function () {
-      var open = toggle.getAttribute("aria-expanded") !== "true";
-      toggle.parentElement.querySelector('[data-role="error"]').hidden = !open;
-      toggle.setAttribute("aria-expanded", String(open));
-      toggle.textContent = open ? "Hide error" : "Show error";
-    });
-    ID("jobs.delete-" + n).addEventListener("click", function () {
-      askDelete(this.closest("tr").querySelector('[data-role="id"]').textContent);
-    });
-  });
-  ID("jobs.all").addEventListener("click", function () {
-    var list = ID("jobs.list");
-    list.scrollIntoView({ block: "nearest" });
-  });
-  ID("pipeline.status").textContent = FIX.documents.pipeline.text;
-  ID("pipeline.cancel").addEventListener("click", function () {
-    ID("pipeline.status").textContent = "Cancel requested (fixture)";
+  // One delegated listener serves the literal rows and every cloned row of the job table.
+  ID("jobs.documents").addEventListener("click", function (event) {
+    var button = event.target.closest("button");
+    if (!button) return;
+    var mock = button.getAttribute("data-mock-id") || "";
+    var row = button.closest("tr");
+    if (mock.indexOf("documents.jobs.error-toggle-") === 0) {
+      var open = button.getAttribute("aria-expanded") !== "true";
+      row.querySelector('[data-role="error"]').hidden = !open;
+      button.setAttribute("aria-expanded", String(open));
+      button.textContent = open ? "Hide error" : "Show error";
+    } else if (mock.indexOf("documents.jobs.delete-") === 0) {
+      askDelete(row.querySelector('[data-role="id"]').textContent);
+    }
   });
 
   ID("delete.document-id").addEventListener("input", function () {
@@ -624,6 +530,6 @@ var DocumentsScreen = (function () {
   jobView("none");
   checkSize();
   refresh();
-  return { setState: setState, inject: inject, loadFixture: loadFixture };
+  return {};
 })();
 Console.register("documents", DocumentsScreen);
