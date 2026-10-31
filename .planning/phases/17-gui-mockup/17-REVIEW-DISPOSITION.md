@@ -2,7 +2,7 @@
 phase: 17
 review: 17-REVIEW.md
 open_critical: 0
-open_warning: 17
+open_warning: 5
 recorded: 2026-10-31T18:13:45Z
 ---
 
@@ -44,9 +44,9 @@ Source: 17-REVIEW.md (39 findings: 0 critical, 17 warning, 22 info). The finding
 | IN-JSB-08 | info | fixed in Phase 18 (18-06) | A cancelled evidence resolve leaves the opener button stuck as 'Opening' |
 | IN-JSB-09 | info | open | No test covers the inspector's Open trace link or a confirmed delete |
 | IN-JSC-04 | info | fixed in Phase 18 (18-09) | Cancelling a dialog after Confirm still applies the promote, rollback or retire |
-| IN-JSC-05 | info | open | Rollback notice and promote-success fixture mint generation ordinals that collide with other aliases |
-| IN-JSC-06 | info | open | Mock outcomes return errors the graph and chunk routes cannot produce |
-| IN-JSC-07 | info | open | Node and chunk fixture pages end paging while total says more rows exist |
+| IN-JSC-05 | info | n/a in live (fixture-only) | Rollback notice and promote-success fixture mint generation ordinals that collide with other aliases |
+| IN-JSC-06 | info | n/a in live (fixture-only) | Mock outcomes return errors the graph and chunk routes cannot produce |
+| IN-JSC-07 | info | n/a in live (fixture-only) | Node and chunk fixture pages end paging while total says more rows exist |
 | IN-JSC-08 | info | fixed in Phase 18 (18-09) | Ledger hideErrors erases the page-size validation message without re-checking it |
 | IN-TST-04 | info | open | Several GUI-04 clauses are not checked by any test |
 | IN-TST-05 | info | open | The GUI-10 mixed-selector warning, the success card and alias autocomplete are not tested |
