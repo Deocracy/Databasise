@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 18
 current_phase_name: GUI Live
 status: executing
-stopped_at: Completed 18-06-PLAN.md
-last_updated: "2026-10-31T21:59:37.182Z"
+stopped_at: Completed 18-07-PLAN.md
+last_updated: "2026-10-31T22:20:48.115Z"
 last_activity: 2026-10-31
 last_activity_desc: Phase 18 execution started
-state_head: 29a53538acb74c3788e63a9ec7d0caa0e94e9b15
+state_head: 162bbf5d16462f02c66921c801e1d0e250f229de
 progress:
   total_phases: 11
   completed_phases: 10
   total_plans: 136
-  completed_plans: 131
+  completed_plans: 132
   percent: 91
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-19 after Phase 12)
 ## Current Position
 
 Phase: 18 (GUI Live) — EXECUTING
-Plan: 7 of 11
+Plan: 8 of 11
 Status: Ready to execute
 Last activity: 2026-10-31 — Phase 18 execution started
 
@@ -170,6 +170,7 @@ Progress: [█████████░] 91% (4/11 phases)
 | Phase 18 P04 | 60 min | 3 tasks | 11 files |
 | Phase 18 P05 | 75 min | 3 tasks | 7 files |
 | Phase 18 P06 | 15 min | 3 tasks | 5 files |
+| Phase 18 P07 | 25 min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -287,6 +288,8 @@ Recent decisions affecting current work:
 - [Phase 18]: 18-05: AliasCatalog is the single alias source (GET /ledger/aliases or the browser ledger log); data-live-ready waits for it
 - [Phase 18]: 18-06: an unresolvable evidence ref shows evidence.state.refusal and the typed error banner; other refusals show the typed banner only
 - [Phase 18]: 18-06: the Evidence trace picker refreshes on every entry to the screen (browser history plus GET /traces, sequence-guarded)
+- [Phase 18]: 18-07: the counts poll refreshes the counts only; Corpus keeps the requested offset on the client; a table error replaces the health error until the next table action repaints it
+- [Phase 18]: 18-07: Retry has no confirm dialog in the frozen markup, so the document_id is captured from the pressed row at send time and the answer is written by id
 
 ### Pending Todos
 
@@ -346,8 +349,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-31T21:59:31.946Z
-Stopped at: Completed 18-06-PLAN.md
+Last session: 2026-10-31T22:20:47.220Z
+Stopped at: Completed 18-07-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
