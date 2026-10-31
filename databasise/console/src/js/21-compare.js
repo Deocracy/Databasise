@@ -496,16 +496,16 @@ var Compare = (function () {
     }
   });
 
+  // Row i is selector i - 1 of the request, so a validation loc "body.selectors.<i - 1>" marks this row's kind control.
+  function fillPickers() {
+    for (var i = 1; i <= MAX; i++) fillAliasPicker(R(i, "alias-picker"));
+  }
   for (var i = 1; i <= MAX; i++) {
-    var picker = R(i, "alias-picker");
-    FIX.aliases.forEach(function (a) {
-      var option = h("option", a.alias + " (" + a.arm + ", " + a.active_version + ")");
-      option.value = a.alias;
-      picker.appendChild(option);
-    });
     R(i, "kind").setAttribute("data-field-loc", "body.selectors." + (i - 1));
     R(i, "kind").setAttribute("data-error-id", "query.row" + i + ".error");
   }
+  Console.on("aliases", fillPickers);
+  fillPickers();
 
   ID("text.input").addEventListener("input", function (event) {
     var box = event.target;

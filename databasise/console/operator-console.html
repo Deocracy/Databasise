@@ -3386,6 +3386,70 @@ var SELECTOR_MSG = {
 };
 var HASH_SHAPED = /^(sha256:)?[0-9a-f]{64}$/i;
 
+var LOG_NOTE = "From this browser's ledger log; no route lists aliases.";
+
+// The alias list every picker offers (D-09). GET /ledger/aliases rows when the route is in the spec; otherwise the newest entry
+// per alias of this browser's ledger log. Rows are {alias, active_version, ...}; they carry no arm (18-RESEARCH Pitfall 8).
+var AliasCatalog = {
+  rows: [],
+  source: null, // "server" or "log" once load() has run
+  fromLog: function () {
+    var seen = {};
+    this.rows = [];
+    this.source = "log";
+    SessionLog("databasise.console.ledger-log", 50)
+      .all()
+      .forEach(function (entry) {
+        if (typeof entry.alias !== "string" || seen[entry.alias] === true) return;
+        seen[entry.alias] = true;
+        AliasCatalog.rows.push({ alias: entry.alias, active_version: entry.version, record_kind: entry.record_kind, generation_ordinal: entry.generation_ordinal, created_at: entry.created_at });
+      });
+  },
+  // Never rejects. Announces "aliases" so pickers refill.
+  load: function () {
+    if (!Live.has("GET", "/ledger/aliases")) {
+      this.fromLog();
+      Console.emit("aliases");
+      return Promise.resolve();
+    }
+    return api("GET", "/ledger/aliases").then(function (result) {
+      if (result.status >= 200 && result.status < 300 && Array.isArray(result.body)) {
+        AliasCatalog.rows = result.body;
+        AliasCatalog.source = "server";
+      } else AliasCatalog.fromLog();
+      Console.emit("aliases");
+    });
+  },
+  byAlias: function (name) {
+    return (
+      this.rows.filter(function (row) {
+        return row.alias === name;
+      })[0] || null
+    );
+  },
+};
+
+// Refills an alias <select> (its first option is the empty choice) from the catalogue and keeps the current choice when it
+// still exists. Under the log source a muted line says where the list comes from; it sits next to the select.
+function fillAliasPicker(select) {
+  var keep = select.value;
+  while (select.options.length > 1) select.remove(1);
+  AliasCatalog.rows.forEach(function (a) {
+    var option = h("option", a.alias + " (" + a.active_version + ")");
+    option.value = a.alias;
+    select.appendChild(option);
+  });
+  select.value = AliasCatalog.byAlias(keep) ? keep : "";
+  var wrap = select.closest("label").parentNode;
+  var note = wrap.querySelector('[data-role="alias-source"]');
+  if (!note) {
+    note = h("p", LOG_NOTE, "muted");
+    note.setAttribute("data-role", "alias-source");
+    wrap.appendChild(note);
+  }
+  note.hidden = AliasCatalog.source !== "log";
+}
+
 // Selector resolution (D-06): the embedded post-WIRE-01 table plus the four documented combinations (API-INVENTORY 3.0).
 var Resolution = (function () {
   var arms = {};
@@ -3419,10 +3483,6 @@ var Resolution = (function () {
     else if (s.alias !== undefined) aliases[s.alias] = r;
     else harness = r;
   });
-  FIX.aliases.forEach(function (a) {
-    aliases[a.alias] = { wiring: a.arm, node_count: arms[a.arm], outcome: "resolved" };
-  });
-
   function describe(r) {
     if (r.wiring) return { text: "Resolves to: " + r.wiring + " (" + r.node_count + " nodes)", arm: r.wiring, nodes: r.node_count };
     return { text: "Resolves to: not satisfiable (" + r.outcome + ")", arm: null, nodes: null };
@@ -3435,6 +3495,9 @@ var Resolution = (function () {
       if (value === null) r = def;
       else if (value.capability) r = caps[capKey(value.capability)];
       else if (value.alias !== undefined) {
+        // An alias has a version, not an arm: only the server knows which arm it resolves to (Pitfall 8).
+        var known = AliasCatalog.byAlias(value.alias);
+        if (known) return { text: "Resolves to: alias " + known.alias + ", active version " + known.active_version + "; the server resolves the arm at run time", arm: null, nodes: null };
         r = aliases[value.alias];
         if (!r) return { text: value.alias === "" ? UNKNOWN : ALIAS_UNKNOWN, arm: null, nodes: null };
       } else r = harness;
@@ -3454,12 +3517,6 @@ var Picker = {
     var alias = ID("alias");
     var picker = ID("alias-picker");
     var capability = ID("capability");
-
-    FIX.aliases.forEach(function (a) {
-      var option = h("option", a.alias + " (" + a.arm + ", " + a.active_version + ")");
-      option.value = a.alias;
-      picker.appendChild(option);
-    });
 
     function kind() {
       for (var i = 0; i < kinds.length; i++) if (ID("kind-" + kinds[i]).checked) return kinds[i];
@@ -3530,6 +3587,12 @@ var Picker = {
       if (event.target === capability) ID("kind-capability").checked = true;
       refresh();
     });
+    // The catalogue loads after start-up; the options and the Resolves-to line follow it.
+    Console.on("aliases", function () {
+      fillAliasPicker(picker);
+      refresh();
+    });
+    fillAliasPicker(picker);
     refresh();
     return api;
   },
@@ -3733,6 +3796,7 @@ function copyText(text, flash) {
   }
 }
 WIRED["query GET /log"] = true;
+WIRED["query GET /ledger/aliases"] = true;
 
 var QueryScreen = (function () {
   var STATES = ["idle", "running", "success", "partial", "empty-evidence", "refusal-422", "validation-422", "error-500"];
@@ -4705,16 +4769,16 @@ var Compare = (function () {
     }
   });
 
+  // Row i is selector i - 1 of the request, so a validation loc "body.selectors.<i - 1>" marks this row's kind control.
+  function fillPickers() {
+    for (var i = 1; i <= MAX; i++) fillAliasPicker(R(i, "alias-picker"));
+  }
   for (var i = 1; i <= MAX; i++) {
-    var picker = R(i, "alias-picker");
-    FIX.aliases.forEach(function (a) {
-      var option = h("option", a.alias + " (" + a.arm + ", " + a.active_version + ")");
-      option.value = a.alias;
-      picker.appendChild(option);
-    });
     R(i, "kind").setAttribute("data-field-loc", "body.selectors." + (i - 1));
     R(i, "kind").setAttribute("data-error-id", "query.row" + i + ".error");
   }
+  Console.on("aliases", fillPickers);
+  fillPickers();
 
   ID("text.input").addEventListener("input", function (event) {
     var box = event.target;
@@ -7487,7 +7551,10 @@ api("GET", "/openapi.json").then(function (result) {
   applyBadges(ok ? result.body : null);
   Console.show(location.hash.slice(1) || "query");
   Console.loadHealth();
-  $id("shell.root.app").setAttribute("data-live-ready", "true");
+  // The ready hook waits for the alias catalogue, so a picker is filled when tests (and operators) first look.
+  AliasCatalog.load().then(function () {
+    $id("shell.root.app").setAttribute("data-live-ready", "true");
+  });
 });
 
 </script>

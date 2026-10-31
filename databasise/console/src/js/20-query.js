@@ -1,4 +1,5 @@
 WIRED["query GET /log"] = true;
+WIRED["query GET /ledger/aliases"] = true;
 
 var QueryScreen = (function () {
   var STATES = ["idle", "running", "success", "partial", "empty-evidence", "refusal-422", "validation-422", "error-500"];

@@ -13,5 +13,8 @@ api("GET", "/openapi.json").then(function (result) {
   applyBadges(ok ? result.body : null);
   Console.show(location.hash.slice(1) || "query");
   Console.loadHealth();
-  $id("shell.root.app").setAttribute("data-live-ready", "true");
+  // The ready hook waits for the alias catalogue, so a picker is filled when tests (and operators) first look.
+  AliasCatalog.load().then(function () {
+    $id("shell.root.app").setAttribute("data-live-ready", "true");
+  });
 });
