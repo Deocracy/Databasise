@@ -19,6 +19,7 @@ from __future__ import annotations
 import contextlib
 import json
 import re
+from urllib.parse import urlparse
 
 import pytest
 
@@ -246,3 +247,39 @@ def test_query_unreachable_renders_generic_and_header_unreachable(seeded, browse
         )
         ui.expect(generic.locator('[data-role="body"]')).to_be_hidden()
         ui.expect("shell.health.status").to_have_attribute("data-state", "error")
+
+
+# ---- 18-07: Corpus & Health ----
+
+PAGE_SIZE_FIELD = '[data-mock-id="screen-corpus"] [data-field-loc="query.limit"]'
+
+
+def _rewrite_corpus_query(query):
+    """Sends the page's own GET /corpus with another query string, so the real server answers it."""
+
+    def handler(route):
+        route.continue_(url=route.request.url.split("?")[0] + "?" + query)
+
+    return lambda page: page.route(lambda url: urlparse(url).path == "/corpus", handler)
+
+
+def test_corpus_page_size_101_renders_page_size_exceeded(live_app, browser):
+    with _ui(browser, live_app, _rewrite_corpus_query("limit=101&offset=0")) as ui:
+        ui.nav("corpus")
+        banner = ui.el("corpus.error.refusal")
+        ui.expect(banner).to_contain_text("PageSizeExceededError")
+        ui.expect(banner.locator('[data-role="attrs"]')).to_contain_text(re.compile(r"requested\s*101\s*limit\s*100"))
+        ui.expect(banner.locator('[data-role="footer"]')).to_have_text(re.compile(r"^HTTP 422\."))
+
+
+def test_corpus_validation_marks_the_page_size(live_app, browser):
+    with _ui(browser, live_app, _rewrite_corpus_query("limit=abc&offset=0")) as ui:
+        ui.nav("corpus")
+        ui.expect("corpus.error.validation").to_be_visible()
+        ui.expect(ui.page.locator(PAGE_SIZE_FIELD)).to_have_attribute("aria-invalid", "true")
+
+
+def test_corpus_500_renders_the_generic_view(live_app, browser):
+    with live_app.fail("corpus_status"), _ui(browser, live_app) as ui:
+        ui.nav("corpus")
+        ui.expect("corpus.error.generic").to_contain_text("The server returned HTTP 500")

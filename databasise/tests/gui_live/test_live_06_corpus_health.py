@@ -16,7 +16,7 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 
-from databasise.tests.gui_live.conftest import open_live_ui
+from databasise.tests.gui_live.conftest import open_live_ui, start_live_app
 
 CAPS = ["reads_graph", "reads_kv"]
 DOCS = ["doc-1", "doc-2", "doc-3", "doc-4", "doc-5"]
@@ -204,3 +204,115 @@ def test_health_banner_survives_table_actions(corpus_docs, live_app, browser):
         ui.el("corpus.health.refresh").click()
         ui.expect(banner).to_be_hidden()
         ui.expect("corpus.health.state").not_to_have_text("unreachable")
+
+
+# ---- operator panels, retry, absent controls, Open in Corpus (D-06, D-09, IN-JSB-06, IN-JSB-07) ----
+
+SCREEN = '[data-mock-id="screen-corpus"]'
+
+
+@pytest.fixture(scope="module")
+def log_app(tmp_path_factory, corpus_fake):
+    live = start_live_app(tmp_path_factory.mktemp("store-log"), log_file=tmp_path_factory.mktemp("log") / "server.log")
+    live.corpus = corpus_fake
+    yield live
+    live.stop()
+
+
+def _row(ui, document_id):
+    return ui.page.locator(f'{SCREEN} tbody tr:has([data-role="id"]:text-is("{document_id}"))')
+
+
+def test_operator_panels_read_info_wirings_and_log(log_app, browser):
+    log_app.log_file.write_text("first log line\nsecond log line\n", encoding="utf-8")
+    info = log_app.http.get("/info").json()
+    wirings = log_app.http.get("/wirings").json()
+    with _ui(browser, log_app) as ui:
+        ui.nav("corpus")
+        ui.expect("corpus.instance.version").to_have_text(info["version"])
+        ui.expect("corpus.instance.workspace").to_have_text(info["workspace"])
+
+        ui.el("corpus.wirings.toggle").click()
+        ui.expect(ui.el("corpus.wirings.table").locator("tbody tr")).to_have_count(len(wirings))
+        ui.expect(ui.el("corpus.wirings.table").locator("tbody tr").first).to_contain_text(wirings[0]["name"])
+
+        ui.el("corpus.log.toggle").click()
+        ui.el("corpus.log.refresh").click()
+        ui.expect("corpus.log.lines").to_contain_text("second log line")
+        assert _gets(ui, "/log")[-1]["url"].endswith("/log?limit=100")
+
+        for route in ("GET /info", "GET /wirings", "GET /log"):
+            assert ui.page.locator(f'{SCREEN} [data-needs-backend="{route}"]').count() == 0, route
+
+
+def test_busy_mirror_shows_the_header_chips(corpus_docs, live_app, browser):
+    info = {**live_app.http.get("/info").json(), "write_in_flight": True, "graph_busy": False}
+
+    def busy(page):
+        page.route("**/info", lambda route: route.fulfill(json=info))
+
+    with _ui(browser, live_app, busy) as ui:
+        ui.nav("corpus")
+        ui.expect("corpus.health.busy").to_contain_text("write in flight")
+        ui.expect("shell.live.busy").to_contain_text("write in flight")
+        ui.expect("corpus.health.busy").not_to_contain_text("graph in use")
+
+
+def test_retry_targets_the_document_captured_at_press_time(corpus_docs, live_app, browser):
+    # "processing" is listed as interrupted when no write holds the gate.
+    corpus_docs["doc-3"]["status"] = "processing"
+    held = []
+    with _ui(browser, live_app, lambda page: page.route("**/documents/*/retry", lambda route: held.append(route))) as ui:
+        ui.nav("corpus")
+        ui.expect(_row(ui, "doc-3").locator('[data-role="status"]')).to_contain_text("interrupted")
+        _row(ui, "doc-3").locator('[data-mock-id^="corpus.table.retry-"]').click()
+        for _ in range(100):  # bounded: the press must send the request
+            if held:
+                break
+            ui.page.wait_for_timeout(50)
+        assert len(held) == 1
+
+        # The row order changes while the answer is outstanding: doc-3 moves from the third row to the second.
+        corpus_docs["doc-1"] = corpus_docs.pop("doc-1")
+        ui.el("corpus.table.refresh").click()
+        ui.expect(ui.page.locator(f'{SCREEN} tbody tr:not([hidden]) [data-role="id"]').first).to_have_text("doc-2")
+        held[0].fulfill(json={"job_id": "j-retry", "enqueued": 1, "seam_events": []})
+
+        ui.expect(_row(ui, "doc-3").locator('[data-role="retry-msg"]')).to_contain_text("j-retry")
+        for other in ("doc-2", "doc-4", "doc-5", "doc-1"):
+            ui.expect(_row(ui, other).locator('[data-role="retry-msg"]')).to_be_hidden()
+        posts = [r for r in ui.requests if r["method"] == "POST" and r["path"].endswith("/retry")]
+        assert [r["path"] for r in posts] == ["/documents/doc-3/retry"]
+
+
+def test_absent_corpus_controls_are_disabled_with_their_route(corpus_docs, live_app, live_ui):
+    ui = live_ui
+    corpus_docs["doc-2"]["status"] = "failed"
+    ui.nav("corpus")
+    ui.expect(_tile(ui, "failed")).to_have_text("1")
+    for control in ("status-filter", "sort", "search", "reprocess"):
+        ui.expect(f"corpus.table.{control}").to_be_disabled()
+    ui.expect(ui.page.get_by_text("Needs GET /corpus (status, sort, search).")).to_be_visible()
+    ui.expect(ui.page.get_by_text("Needs POST /documents/reprocess.")).to_be_visible()
+
+    before = len(_gets(ui, "/corpus"))
+    ui.el("corpus.kpi.processed").click()
+    assert _row_ids(ui) == ["doc-1", "doc-3", "doc-4", "doc-5"]
+    ui.el("corpus.kpi.failed").click()
+    assert _row_ids(ui) == ["doc-2"]
+    assert len(_gets(ui, "/corpus")) == before  # the tile filter is client-side
+
+    ui.el("corpus.catalogue.toggle").click()
+    ui.expect(ui.el("corpus.catalogue.table").locator("tbody tr").first).to_be_visible()
+    ui.expect(ui.page.locator(f'{SCREEN} [data-needs-backend="GET /refusals"] .badge-nb')).to_be_visible()
+
+
+def test_focus_document_marks_the_row_or_says_not_on_page(corpus_docs, live_ui):
+    ui = live_ui
+    # Evidence shows Corpus and emits in the same tick, before the first page has loaded: the focus waits for the page.
+    ui.page.evaluate("() => { Console.show('corpus'); Console.emit('focus-document', 'doc-2'); }")
+    ui.expect(_row(ui, "doc-2")).to_have_attribute("aria-current", "true")
+    ui.expect(_row(ui, "doc-2")).to_be_focused()
+    ui.page.evaluate("() => Console.emit('focus-document', 'doc-99')")
+    ui.expect(ui.page.get_by_text("Document doc-99 is not on the loaded page.")).to_be_visible()
+    ui.expect(_row(ui, "doc-2")).not_to_have_attribute("aria-current", "true")
