@@ -1,6 +1,6 @@
 ---
 phase: 12-hipporag-fixes
-verified: 2026-10-19T23:30:00Z
+verified: 2026-10-31T00:00:00Z
 status: passed
 score: 5/5 roadmap success criteria verified (19/19 HIPP requirements satisfied in code)
 covered_files:
@@ -67,7 +67,7 @@ covered_files:
   - "databasise/wirings/hipporag/corpus-delete.json"
   - "databasise/wirings/hipporag/corpus-ingest.json"
   - "databasise/wirings/resolve.py"
-covered_digest: "v3:sha256:17bb9764fad38fb2ac5048365b7b829f357703d60ad370c81c190e10f15c39d6"
+covered_digest: "v3:sha256:86212b1a5a9f6a0ccbe123b2eda6870739f4a2321c1766f9936c27284e3964c6"
 behavior_unverified: 0
 overrides_applied: 0
 deferred:
@@ -79,11 +79,15 @@ deferred:
 # Phase 12: HippoRAG Fixes Verification Report
 
 **Phase Goal:** HippoRAG ingests build a graph whose evidence resolves and accumulates correctly, its queries run only query-side work, and its documents have the same corpus lifecycle as LightRAG's
-**Verified:** 2026-10-19T23:30:00Z
+**Verified:** 2026-10-31T00:00:00Z
 **Status:** passed
-**Re-verification:** No, initial verification
+**Re-verification:** Yes, after covered files moved (Phases 13-16 edited 18 covered files). Prior status passed; no gaps carried.
 
 ## Goal Achievement
+
+### Re-verification Note
+
+Phases 13-16 edited 18 covered files (scheduler guard-signal reads, wiring `resolve.py`/`base.json` arm data, registry admission, selectors, refusals, `stores/probes.py`, `stores/vector.py`, `assemble_result.py`, `fact_filter.py`). Each Phase 12 claim was re-checked against current code: `without_recipe_only_nodes` still prunes the engine query run (`engine.py:2539`), selector union and promotion (`promotion.py:136`); `scheduler.py:849` still sets `degraded` on any fired guard with a node-free reason; `assemble_result.py:55-64` still drops zero-score PPR items and cuts to `top_k` (validated >= 1); `trace.py:84` `sum_token_accountings` is still the single helper used by `openie.py` and `entity_fact_embed.py`; `base.json` still lists `fact-filter` and `qa` in `consumes_query`, `max_concurrency: 4`, and declares the guard `signal` keys (`guard_fired`, `dpr_stand_in`) that `fact_filter.py` and `assemble_result.py` emit; none of the removed dead config keys is back; the Phase 13 WIRE-08 guard-signal change is backed by code on both sides. Requirements table now shows all 19 HIPP rows Complete (the earlier bookkeeping item is resolved).
 
 ### Observable Truths (ROADMAP Success Criteria)
 
@@ -127,10 +131,12 @@ All 19 IDs appear in PLAN frontmatter (01: HIPP-01/02; 02: 06/19; 03: 07/08; 04:
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| HippoRAG unit/part tests | pytest `databasise/tests/parts_core/hipporag` | 96 passed | PASS |
-| Seam, wiring, runner, store, evidence, protected STOR-06/SEAM-05 tests | pytest of the 14 HippoRAG-related test paths | 312 passed | PASS |
-| Two-ingest accumulation and extraction-failure refusal (scratch probe, real engine) | `probe12.py` in the session scratchpad | outputs quoted above | PASS |
-| Full offline suite (plain pytest, run once by the verifier) | `pytest databasise/tests -x` | 2203 passed, 4 deselected | PASS |
+| HippoRAG part tests + token-sum | pytest `tests/parts_core/hipporag tests/runner/test_token_sum.py` (re-run 2026-10-31) | 98 passed | PASS |
+| HippoRAG seam tests (corpus surface, query path, review fixes, write gate, write path) | pytest the five `tests/seam/test_hipporag_*.py` | 43 passed | PASS |
+| Refusal/abort, registry, port record, redaction, degraded-on-guard, cross-modality, foreign refusal, query-run pruning | pytest `test_extraction_failed_refusal`, `test_ingest_abort`, `test_registry`, `test_hipporag_port_record`, `test_secret_redaction`, `test_degraded_on_guard`, `test_cross_modality_run`, `test_foreign_engine_refusal`, `test_query_run_pruning` | 32 + 58 passed | PASS |
+| Full offline suite | not run by this re-verification (orchestrator runs it as the regression gate) | n/a | SKIPPED |
+
+Initial verification (2026-10-19) additionally ran a two-ingest scratch probe through the real engine and the full suite (2203 passed); those results are not re-run here.
 
 ### Probe Execution
 
@@ -156,11 +162,11 @@ None blocks the phase. Items already flagged by the review as owner-run, carried
 
 ### Gaps Summary
 
-No goal-blocking gap. One bookkeeping item for the orchestrator, not a code gap: `.planning/REQUIREMENTS.md` still shows HIPP-05, 07, 08, 09, 10, 12, 13, 14, 15, 16, 17 and 18 as unchecked `[ ]` and "Pending" in the traceability table (only HIPP-01/02/03/04/06/11/19 are marked Complete). The code and tests satisfy all 19, so mark them Complete when the phase closes. The five Phase 12 exception clauses (HIPP-03/04/10/15/17) are present in REQUIREMENTS.md (lines 273, 278, 299, 320, 329).
+No goal-blocking gap. The earlier bookkeeping item is resolved: `.planning/REQUIREMENTS.md` marks all 19 HIPP requirements checked and Complete. The five Phase 12 exception clauses (HIPP-03/04/10/15/17) are present in REQUIREMENTS.md (lines 273, 278, 299, 320, 329).
 
 The deferred D-15 (HippoRAG empty-namespace pre-check) is an owner-recorded deferral to Phase 13 (WIRE-02) and no HIPP row requires it.
 
 ---
 
-_Verified: 2026-10-19T23:30:00Z_
+_Verified: 2026-10-31T00:00:00Z_
 _Verifier: Claude (gsd-verifier)_

@@ -1,6 +1,6 @@
 ---
 phase: 10-stores-locking-data-integrity
-verified: 2026-10-17T00:00:00Z
+verified: 2026-10-31T00:00:00Z
 status: passed
 score: 5/5 must-haves verified (16/16 requirements)
 covered_files:
@@ -53,22 +53,41 @@ covered_files:
   - databasise/stores/vector.py
   - databasise/validator/errors.py
   - databasise/validator/parse.py
-covered_digest: "v3:sha256:87039de3f52d277f8e2ae647ccf30ddc3c2c4227e006c3690f513cfe753e90e3"
+covered_digest: "v3:sha256:afef04e2a7a2ad1323b488dfd1e9ce512b5b52e240654bf5e607d0c885db4446"
 behavior_unverified: 0
 overrides_applied: 0
+re_verification:
+  previous_status: passed
+  previous_score: 5/5
+  gaps_closed: []
+  gaps_remaining: []
+  regressions: []
 advisory:
   - finding: "A commit-phase failure on the last store leaves the earlier stores committed (kv and vector hold the run's records, graph does not)"
     category: other
-    reason: "Documented residual window of D-07 (engine.py docstring lines 147-150). Success criterion 3 was kept as written by D-07, so a prepare-phase failure is fully covered and a commit-phase failure after another store committed is not. Probe: graph.commit_prepared raising left kv non-empty and 4 vectors."
-    evidence_status: "reproduced by probe; accepted by D-07"
+    reason: "Documented residual window of D-07. `_commit_all` (engine.py:922-944) still aborts only the stores not yet committed. Success criterion 3 was kept as written by D-07, so a prepare-phase failure is fully covered and a commit-phase failure after another store committed is not. Reproduced by probe in the initial verification; the code path is unchanged."
+    evidence_status: "reproduced by probe at initial verification; accepted by D-07"
 ---
 
 # Phase 10: Stores, Locking & Data Integrity Verification Report
 
 **Phase Goal:** Concurrent engine calls on one store root produce named outcomes instead of 500s, and every store commits all of a run's writes or none of them.
-**Verified:** 2026-10-17
+**Verified:** 2026-10-31
 **Status:** passed
-**Re-verification:** No, initial verification. Verified at HEAD a9e545e (code identical at da2101d).
+**Re-verification:** Yes. The 2026-10-17 report went stale because 21 covered source files moved (Phases 11 to 16 and the start of 17 edited the engine, stores, scheduler, parse and the parity scripts). Every must-have was re-checked against the current code at HEAD (7147047). No regression found and no gap opened.
+
+## What moved since the initial report
+
+`git diff a9e545e..HEAD` over the covered files shows additive changes only, none of which touches a Phase 10 mechanism:
+
+| File | Change since a9e545e | Effect on Phase 10 |
+| ---- | -------------------- | ------------------ |
+| `stores/graph.py` | docstring (a fifth Cozo bug) plus new `held_graph_paths()` | `_ClientRegistry` acquire/release and lock mapping unchanged |
+| `stores/probes.py` | new read helpers `acquire_graph`, `graph_node_page`, `graph_node_edges`, `list_kv_prefix`; `GraphStoreCorruptedError` | `probe_kv`, `probe_graph`, `probe_vector` unchanged; the new helpers open through `_ClientRegistry` and create nothing |
+| `stores/vector.py` | `mkdir` moved from `__init__` to the first staged write; `ensure_index`, `list_ids`, `self_knn(ids=...)` added; `_pending_create_dim` cleared by `commit_prepared`, `abort_prepared` and `drop` | buffered delete, corruption check, reserved keys and `top_k` refusal intact; reads of a missing directory are empty and create nothing |
+| `parts_core/__init__.py` | `list_ids` added to the engine-only set, `ensure_index` to the write vocabulary | tightens the read-only proxy; `EFFECT_TO_STORE` untouched |
+| `validator/parse.py`, `errors.py` | more codes; `unwired-store-effect` kept (`parse.py:79`, `parse.py:262`; `errors.py:49`) | STOR-12 refusal intact |
+| `seam/engine.py`, `runner/scheduler.py` | large growth (operator surface, corpus, HippoRAG gate, MACH-11) | the Phase 10 paths below were re-read and are unchanged in behavior |
 
 ## Goal Achievement
 
@@ -76,11 +95,11 @@ advisory:
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | Two overlapping engine calls on one graph namespace never return a 500: both complete through a shared handle or the later one gets a named store-busy refusal; a second OS process gets the same refusal; a failed store open leaves no sqlite connection | VERIFIED | Shared refcounted client: `stores/graph.py:135-173` (`_ClientRegistry.acquire/release`), lock text mapped to `GraphStoreBusyError` at `graph.py:152-155` (`_is_lock_error`, `graph.py:122`). Engine translation to `StoreBusyError(store_kind="graph")` at `engine.py:440-444`; 409 at `rest.py:140-141`; catalogue entry `refusals.py:777`. Cleanup of already opened stores: `_build_stores(..., into=stores)` is called inside the try at `engine.py:973`, `1150`, `1331`, and the `finally` finalizes every store (`engine.py:1037-1039`, `1175-1177`, `1344-1346`). Probes in the Behavioral Spot-Checks table: a real HippoRAG ingest parked mid-run (graph open) with query, health and resolve overlapped in one process all completed; a second OS process holding the graph gave 409 `StoreBusyError` on `POST /query`, `POST /documents` and `DELETE /documents/{id}`, and `/health` reported `busy`; no response contained the store root or a namespace. Tests: `tests/stores/test_graph_lock.py`, `tests/seam/test_build_stores_cleanup.py`, `tests/seam/test_store_refusal_status.py`. |
-| 2 | `POST /evidence/resolve` opens only the named vector namespace, works while the graph is held, and reads the index once until it changes; `GET /health` on an empty root creates nothing and reports absent or corrupted stores as not ok | VERIFIED | `engine.py:1439-1460` builds only `MultiNamespaceVectorStore`; snapshot cache keyed by `(path, st_ino, st_mtime_ns, st_size)` in `stores/vector.py:157-248` (`load_committed`). `health()` at `engine.py:1258-1293` constructs no store and calls `stores/probes.py:probe_kv/probe_graph/probe_vector`. Probe: 5 resolves after a warm health call made 0 `sha256` calls; after a writer rewrote the index the next resolve returned the new content with 1 extra hash; no `text_chunks` or `chunk_entity_relation` directory appeared. Empty root: all 10 stores `absent`, status `degraded`, and the only files in the tree were `trace.db*`, which the `Databasise` constructor creates before health runs (confirmed with a construct-only probe). Half-written Faiss pair: resolve gave `ForeignEngineRefusalError(StoreCorrupted)` and health gave `vector:chunks = corrupted`. Tests: `tests/seam/test_evidence_resolve_stores.py` (8), `tests/seam/test_health_probe.py` (9), `tests/stores/test_probe_hardening.py`. |
-| 3 | A failed ingest or delete commits nothing and a successful one commits everything: after a refused run kv, vector and graph hold no records; vector deletes are buffered and reverted; delete uses the wiring's declared namespaces | VERIFIED (with one accepted residual, see Advisory) | Refusal decision `_node_result_or_refuse` at `engine.py:564-605` covers any node exception, `partial`, `stop_reason` and `cycle`; ingest drops every store on refusal (`engine.py:1016-1020`) and commits through `_commit_all` (prepare-all then commit-all under one lock, `engine.py:539-561`, called at `1032`). Delete builds stores from the resolved wiring (`engine.py:1150`, namespaces at `430-432`) and commits only for `success` or `not_found` (`1171-1174`). Store primitives: `kv.py:105-136`, `vector.py:504-585`, `graph.py:477-498`; vector `delete_by_ids` buffers until the flush. Probe on a real HippoRAG ingest: failures injected at graph.prepare, vector prepare, kv.prepare, graph.upsert_node and kv.upsert each left kv empty, 0 vectors in all three namespaces, 0 graph labels. A refused-ingest query returns no evidence (`test_ingest_abort.py`). Tests: `tests/seam/test_ingest_abort.py`, `tests/stores/test_prepared_commit.py`, `tests/stores/test_delete_commit_contract.py`, `tests/stores/test_delete_status_commit.py`. Delete atomicity is proved on a fixture v2 wiring because the LightRAG v1 delete stages no v2 writes until M-04 (D-08, deferred to Phase 11). |
-| 4 | A node declaring only read effects cannot mutate any store, and every store effect in the vocabulary resolves to a wired store or is refused at parse; no wiring parses and then fails with `StoreNotWiredError` | VERIFIED | `parts_core/__init__.py:53-71` (`EFFECT_TO_STORE`, all 17 effects), `73-101` (allowlists, engine-only set), `113-166` (`_StoreProxy`), `192-205` (`require`). `runner/scheduler.py:243-287` routes every `ctx.stores[...]` access through the table. `validator/parse.py:68, 222-234` refuses `reads_lexical`, `writes_lexical`, `reads_blob` with code `unwired-store-effect`; `engine.py:456-460` makes that `UnparseableWiringError` (422) before any store is built, at `961`, `1137`, `1320`. Probe on read-only handles: `upsert`, `delete`, `index_done_callback`, `drop`, `finalize`, `drop_pending_index_ops` on kv; `upsert_node`, `upsert_edge`, `delete_node`, `delete_edge`, `drop`, `index_done_callback` on graph; and `upsert`, `delete_by_ids`, `index_done_callback` on `select()` of a read vector handle each raised `UndeclaredEffectError`; `get_by_id`, `has_node` still worked; `writes_kv` yielded a writable handle with `index_done_callback` refused; `mutates_store`, `self_storage`, `writes_artifact`, `reads_lexical` raised `UndeclaredEffectError` without reading `raw_stores`. Tests: `tests/runner/test_capability_scoping_modes.py` (33), `tests/runner/test_store_proxy_hardening.py`, `tests/wirings/test_store_effects_wired.py` (26). |
-| 5 | Adapters keep their data consistent and refuse bad input by name: half-written Faiss dirs raise corruption, reserved metadata keys refused, no dangling edges after a graph delete, KV buffers isolated, blob digests cannot escape, lexical queries match all terms, quarantined GC has a production caller that reports failures | VERIFIED | Corruption: `vector.py:200-252`; probe: `vector.faiss` alone and `vector.meta.json` alone both raised `VectorStoreCorruptedError`. Reserved keys: `vector.py:106, 341-343`; probe: metadata `id` and `score` raised `ReservedMetadataKeyError`, `get_by_id` returned the real id. STOR-09: probe gave `InvalidTopKError` (a `ValueError`) for `top_k` 0 and -3; `query`, `score_all`, `iter_vectors`, `get_by_id`, `upsert` on an unselected `MultiNamespaceVectorStore` raised `VectorNamespaceNotSelectedError`, and its available list named only the directory holding `vector.faiss`. Graph cascade: `graph.py:381-404, 447-454`; probe: after a flushed `delete_node('x')`, `get_node_edges('x') == []`, `node_degree('y') == 0`, igraph edge count 0; `upsert_edge('p','q')` on missing endpoints created both nodes and 1 edge. KV isolation: probe showed the buffered record unchanged after the caller mutated both the source dict and a returned copy; `is_empty()` was True when every row was pending deletion. Blob and lexical stores: `stores/lexical.py`, `stores/blob.py` and `registry_artifact/` do not exist; `tests/test_removed_stores_absent.py` (5) passes. GC: `launcher/gc_namespaces.py:1-60` (takes `store_lock`, accepts only `quarantined-*`, validates all tokens first), `namespaces.py:106-132` (`NamespaceGCError`, no `ignore_errors`), docstring corrected at `namespaces.py:15-20`. Tests: 14 in `tests/test_namespaces_gc.py`, plus the store test files listed below. |
+| 1 | Two overlapping engine calls on one graph namespace never return a 500: shared handle or a named store-busy refusal; a second OS process gets the same refusal; a failed open leaves no sqlite connection | VERIFIED | `_build_stores` (`engine.py:614-672`) builds kv, vector, graph into the caller's `into=` dict inside one try; `GraphStoreBusyError` becomes `StoreBusyError(store_kind="graph")` with the path logged once and not returned (`engine.py:659-663`); corrupt or OS open faults become `StoreCorrupted` or `StoreFault`. Callers pass `into=stores` inside their try and finalize every store in `finally` (`engine.py:1538, 1604-1605`; delete `1820, 1851-1852`; query `2552, 2565`). The refcounted `_ClientRegistry` is in `stores/graph.py`. Tests: `tests/stores/test_graph_lock.py`, `tests/stores/test_graph_registry_close_race.py`, `tests/seam/test_build_stores_cleanup.py`, `tests/seam/test_store_refusal_status.py`, `tests/seam/test_store_open_faults.py`, all passing. The second-OS-process 409 and overlapped-call probes of the initial report exercise code that has not changed. |
+| 2 | `POST /evidence/resolve` opens only the named vector namespace, works while the graph is held, and reads the index once until it changes; `GET /health` on an empty root creates nothing and reports absent or corrupted stores as not ok | VERIFIED | `resolve_evidence` (`engine.py:2674-2695`) validates the namespace, requires the directory to exist, builds only `MultiNamespaceVectorStore`, maps `VectorStoreCorruptedError` to `StoreCorrupted`, and finalizes in `finally`. `health()` (`engine.py:2034-2108`) constructs no store: it runs `_PROBES[kind](root / namespace)` over the ten-entry `_HEALTH_PROBES` list (`engine.py:421-433`), and a raising probe reports `corrupted`. The snapshot cache (`load_committed`) is unchanged. Tests: `tests/seam/test_evidence_resolve_stores.py`, `tests/seam/test_health_probe.py` (drift test included), `tests/stores/test_probe_hardening.py`, all passing. |
+| 3 | A failed ingest or delete commits nothing and a successful one commits everything; vector deletes are buffered and reverted; delete uses the wiring's declared namespaces | VERIFIED (with one accepted residual, see Advisory) | `_node_result_or_refuse` (`engine.py:967-1012`) refuses on a cycle, any node exception, `partial`, or a missing result. Ingest drops every store's pending writes on refusal (`engine.py:1576-1580`) and otherwise commits through `_commit_all` (`engine.py:922-944`: prepare all, then commit all, under one flush lock; a prepare failure aborts all). Delete resolves namespaces from the wiring (`engine.py:649-651, 1820`) and commits only on `success` or `not_found`, dropping otherwise (`engine.py:1843-1849`). `FaissVectorStore.delete_by_ids` still buffers into `_pending_deletes`, cleared by `abort_prepared`. Tests: `tests/seam/test_ingest_abort.py`, `tests/stores/test_prepared_commit.py`, `tests/stores/test_delete_commit_contract.py`, `tests/stores/test_delete_status_commit.py`, `tests/seam/test_delete_document.py`, all passing. |
+| 4 | A node declaring only read effects cannot mutate any store; every store effect either resolves to a wired store or is refused at parse | VERIFIED | `parts_core/__init__.py` holds `EFFECT_TO_STORE`, the allowlists, the engine-only set and the write vocabulary (now including `ensure_index`, so the newer vector mutator is also refused on a read handle). `runner/scheduler.py:263-303` (`_ScopedStoresView`) resolves every access through `EFFECT_TO_STORE` and raises `UndeclaredEffectError` otherwise. `validator/parse.py:79, 262` refuses `reads_lexical`, `writes_lexical` and `reads_blob` with `unwired-store-effect`; the engine raises it as `UnparseableWiringError` through `_refuse_unparseable` (`engine.py:675`) before any store is built (called at 1458, 1655, 1719, 1803, 2541). Tests: `tests/runner/test_capability_scoping_modes.py`, `tests/runner/test_store_proxy_hardening.py`, `tests/wirings/test_store_effects_wired.py` (every shipped wiring, including those edited in Phases 11 to 13, parses), all passing. |
+| 5 | Adapters keep their data consistent and refuse bad input by name: Faiss corruption, reserved metadata keys, no dangling edges, KV buffer isolation, blob digest safety, lexical AND, GC with a production caller that reports failures | VERIFIED | Corruption and reserved keys: `stores/vector.py:103, 351-353` (`_RESERVED_METADATA_KEYS = {"id", "score"}`, `ReservedMetadataKeyError`); `tests/stores/test_vector_crash_window.py`, `test_vector_reserved_keys.py`, `test_vector_validation.py`, `test_vector_snapshot_robustness.py`. Graph cascade: `tests/stores/test_graph_delete_cascade.py`. KV isolation: `tests/stores/test_kv_buffer_isolation.py`. Lexical and blob stores and `registry_artifact/` remain removed (`ls databasise/stores` shows only base, graph, kv, probes, vector; `registry_artifact` is absent); `tests/test_removed_stores_absent.py` passes. GC: `launcher/gc_namespaces.py` takes `store_lock`, catches `StoreLockedError` and `NamespaceGCError`; `namespaces.py:106-132` defines `NamespaceGCError` with no `ignore_errors`; `tests/test_namespaces_gc.py` passes. |
 
 **Score:** 5/5 truths verified (0 present, behavior-unverified)
 
@@ -88,52 +107,43 @@ advisory:
 
 | Artifact | Expected | Status | Details |
 | -------- | -------- | ------ | ------- |
-| `databasise/stores/graph.py` | shared client registry, cascade, prepare/commit | VERIFIED | 552 lines; used by `engine._build_stores`, `probes.probe_graph`, `parity/run_arm.py` |
-| `databasise/stores/vector.py` | snapshot cache, corruption, reserved keys, buffered delete | VERIFIED | 776 lines |
-| `databasise/stores/kv.py` | buffer isolation, prepare/commit | VERIFIED | 157 lines |
-| `databasise/stores/probes.py` | read-only health probes | VERIFIED | 126 lines; called from `engine.health` |
+| `databasise/stores/graph.py` | shared client registry, cascade, prepare/commit | VERIFIED | used by `engine._build_stores`, `probes`, parity scripts |
+| `databasise/stores/vector.py` | snapshot cache, corruption, reserved keys, buffered delete | VERIFIED | additions are additive and cleared on abort |
+| `databasise/stores/kv.py` | buffer isolation, prepare/commit | VERIFIED | unchanged since the initial report |
+| `databasise/stores/probes.py` | read-only health probes | VERIFIED | called from `engine.health` through `_PROBES` |
 | `databasise/parts_core/__init__.py` | `EFFECT_TO_STORE`, allowlist proxies | VERIFIED | consumed by `runner/scheduler.py` and `parity/storage_audit.py` |
-| `databasise/seam/engine.py` | atomic ingest/delete, StoreBusy, health, resolve | VERIFIED | 1905 lines |
-| `databasise/seam/refusals.py` | `StoreBusyError`, `UnparseableWiringError` | VERIFIED | in `__all__` and `_REFUSAL_FACTORIES` |
-| `databasise/launcher/gc_namespaces.py` | operator GC CLI | VERIFIED | 14 tests |
-| `databasise/validator/parse.py` | `unwired-store-effect` violation | VERIFIED | `parse.py:68, 222-234` |
-| `stores/lexical.py`, `stores/blob.py`, `registry_artifact/` | removed (D-15) | VERIFIED | absent from the tree; absence test passes |
+| `databasise/seam/engine.py` | atomic ingest/delete, StoreBusy, health, resolve | VERIFIED | re-read at every cited line |
+| `databasise/seam/refusals.py` | `StoreBusyError`, `UnparseableWiringError` | VERIFIED | imported by the engine; `test_refusal_catalogue.py` family covers them |
+| `databasise/launcher/gc_namespaces.py` | operator GC CLI | VERIFIED | `tests/test_namespaces_gc.py` |
+| `databasise/validator/parse.py` | `unwired-store-effect` violation | VERIFIED | `parse.py:79, 262` |
+| `stores/lexical.py`, `stores/blob.py`, `registry_artifact/` | removed (D-15) | VERIFIED | absent from the tree |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 | ---- | -- | --- | ------ | ------- |
-| `engine._build_stores` | `GraphStoreBusyError` | except clause | WIRED | `engine.py:440-444` |
-| `rest._status_for` | `StoreBusyError` | isinstance branch | WIRED | `rest.py:140`, 409 observed over HTTP |
-| `engine.ingest` | `_drop_pending` / `_commit_all` | refusal and success paths | WIRED | `engine.py:1016-1032` |
-| `engine.delete_document` | `store_namespaces` | `_build_stores(resolved)` | WIRED | `engine.py:1150` |
-| `scheduler._ScopedStoresView` | `EFFECT_TO_STORE` | table lookup | WIRED | `scheduler.py:277-284` |
-| `engine.health` | `probes._PROBES` | `_HEALTH_PROBES` list | WIRED | `engine.py:1272-1275`, drift test passes |
-| `parse_wiring` | `UnparseableWiringError` | `_refuse_unparseable` | WIRED | `engine.py:961, 1137, 1320` |
-| `engine.resolve_evidence` | `load_committed` cache | `MultiNamespaceVectorStore` | WIRED | `engine.py:1455`, probe shows one hash per index change |
+| `engine._build_stores` | `GraphStoreBusyError` | except clause | WIRED | `engine.py:659-663` |
+| `engine.ingest` | `_drop_pending` / `_commit_all` | refusal and success paths | WIRED | `engine.py:1576-1592` |
+| `engine.delete_document` | wiring `store_namespaces` | `_build_stores(resolved)` | WIRED | `engine.py:1820` |
+| `scheduler._ScopedStoresView` | `EFFECT_TO_STORE` | table lookup | WIRED | `scheduler.py:298-303` |
+| `engine.health` | `probes` | `_HEALTH_PROBES` / `_PROBES` | WIRED | `engine.py:2052-2058` |
+| `parse_wiring` | `UnparseableWiringError` | `_refuse_unparseable` | WIRED | five call sites |
+| `engine.resolve_evidence` | `load_committed` cache | `MultiNamespaceVectorStore` | WIRED | `engine.py:2689-2690` |
 
 ### Data-Flow Trace (Level 4)
 
 | Artifact | Data Variable | Source | Produces Real Data | Status |
 | -------- | ------------- | ------ | ------------------ | ------ |
-| `HealthReport.stores` | per-namespace state | file and client probes on disk | Yes (probe: `absent`, `ok`, `corrupted`, `busy` each observed) | FLOWING |
-| `resolve_evidence` record | vector entry metadata | committed Faiss snapshot | Yes (new content seen after a rewrite) | FLOWING |
+| `HealthReport.stores` | per-namespace state | file and client probes on disk | Yes (`test_health_probe.py` observes ok, absent, corrupted, busy) | FLOWING |
+| `resolve_evidence` record | vector entry metadata | committed Faiss snapshot | Yes (`test_evidence_resolve_stores.py` checks new content after a rewrite) | FLOWING |
 
 ### Behavioral Spot-Checks
 
-All probes were written to `/tmp/claude-1000/-home-chris-coding-Databasise-2-0-fully-agnostic-system/32d1701b-4256-409c-a5a7-e305cc822f40/scratchpad/` and nothing was left in the repo.
+Re-verification relied on the existing behavioral tests, which exercise the concurrency and atomicity invariants directly; the initial report's one-off probes target code paths that are unchanged. No state was mutated by this verification.
 
 | Behavior | Command | Result | Status |
 | -------- | ------- | ------ | ------ |
-| 17 phase test files plus 4 hardening files | `cd databasise && .venv/bin/pytest -q -p no:cacheprovider <21 files>` | 221 passed in 30.7 s | PASS |
-| In-process overlap: ingest parked mid-run + query + health + resolve | `probe_sc1.py` | query, health, resolve, ingest all OK; health showed `graph:hipporag-graph = ok` | PASS |
-| Second OS process holds `hipporag-graph` | `probe_sc1.py`, `probe_sc1b.py` | `POST /query` 409, `POST /documents` 409, `/health` 200 with `busy`; no path in body | PASS |
-| Second OS process holds `chunk_entity_relation` | `probe_sc1b.py` | ingest 409, `DELETE /documents/d1` 409, `/health` 200 | PASS |
-| Refused HippoRAG ingest, five failure points | `probe_sc3.py` | kv empty, 0 vectors in 3 namespaces, 0 graph labels each time | PASS |
-| Commit-phase failure on the last store | `probe_sc3.py` | refused `StoreFault`; kv non-empty, 4 vectors, 0 graph labels | Accepted residual (D-07) |
-| Read-only handles and effect table | `probe_sc45.py` | 15 mutators refused, reads work | PASS |
-| Adapter refusals and cascade | `probe_sc45.py`, `probe_sc5b.py` | named errors as listed in criterion 5 | PASS |
-| Health and resolve | `probe_sc2.py` | as listed in criterion 2 | PASS |
+| Phase 10 store, seam, runner, wiring and namespace tests (28 store files plus the 13 files named above) | `.venv/bin/python -m pytest tests/stores tests/seam/test_build_stores_cleanup.py tests/seam/test_store_refusal_status.py tests/seam/test_evidence_resolve_stores.py tests/seam/test_health_probe.py tests/seam/test_ingest_abort.py tests/seam/test_store_open_faults.py tests/seam/test_store_isolation.py tests/runner/test_capability_scoping_modes.py tests/runner/test_store_proxy_hardening.py tests/wirings/test_store_effects_wired.py tests/test_namespaces_gc.py tests/test_removed_stores_absent.py tests/seam/test_delete_document.py -q -p no:cacheprovider` | 331 passed in 112.6 s | PASS |
 
 ### Probe Execution
 
@@ -141,58 +151,51 @@ No `probe-*.sh` scripts are declared by the phase. Step 7c: not applicable.
 
 ### Requirements Coverage
 
-| Requirement | Source Plan | Description | Status | Evidence |
-| ----------- | ----------- | ----------- | ------ | -------- |
-| STOR-01 | 10-01 | Named outcome for a held graph | SATISFIED | `graph.py:135-173`, `engine.py:440-444`, `rest.py:140`; `test_graph_lock.py` (6) + probe |
-| STOR-02 | 10-01 | Failed open finalizes opened stores | SATISFIED | `engine.py:973, 1150, 1331`; `test_build_stores_cleanup.py` (6) |
-| STOR-03 | 10-06 | Resolve opens only the vector namespace, reads once | SATISFIED | `engine.py:1439-1460`, `vector.py:157-248`; `test_evidence_resolve_stores.py` (8) + probe |
-| STOR-04 | 10-07 | Read-only health | SATISFIED | `engine.py:1258-1293`, `probes.py`; `test_health_probe.py` (9) + probe |
-| STOR-05 | 10-08 | Per-mode capability scoping | SATISFIED | `parts_core/__init__.py:53-205`; `test_capability_scoping_modes.py` (33) + probe |
-| STOR-06 | 10-04, 10-05 | Failed ingest commits nothing | SATISFIED | `engine.py:539-605, 1016-1032`; `test_ingest_abort.py`, `test_prepared_commit.py` + probe |
-| STOR-07 | 10-10 | Delete uses declared namespaces and is atomic | SATISFIED | `engine.py:1146-1177`; `test_delete_commit_contract.py` (11). Fixture wiring; v1 delete deferred to M-04 per D-08 |
-| STOR-08 | 10-06 | Half-written Faiss pair is corruption | SATISFIED | `vector.py:200-252`, `engine.py:1456-1457`; `test_vector_crash_window.py` (9) + probe |
-| STOR-09 | 10-11 | Named refusals for invalid vector input | SATISFIED | `vector.py:121, 646`; `test_vector_validation.py` (6) + probe |
-| STOR-10 | 10-09 | No dangling edges | SATISFIED | `graph.py:385-404, 447-454`; `test_graph_delete_cascade.py` (8) + probe |
-| STOR-11 | 10-09 | KV buffer isolation | SATISFIED | `kv.py:69-103`; `test_kv_buffer_isolation.py` (6) + probe |
-| STOR-12 | 10-02, 10-12 | Store effects wired or refused at parse | SATISFIED | `parse.py:68, 222-234`, `engine.py:456-460`; `test_store_effects_wired.py` (26) |
-| STOR-13 | 10-02 | Blob digest safety | SATISFIED by removal (D-15); the store no longer exists | `test_removed_stores_absent.py` (5) |
-| STOR-14 | 10-02 | Lexical AND query | SATISFIED by removal (D-15) | same test |
-| STOR-15 | 10-03 | GC has a production caller, reports failures | SATISFIED (D-16 exception: operator CLI, not retire) | `gc_namespaces.py`, `namespaces.py:106-132`; `test_namespaces_gc.py` (14) |
-| STOR-16 | 10-11 | Reserved metadata keys refused | SATISFIED | `vector.py:106, 341-343`; `test_vector_reserved_keys.py` (5) + probe |
+All 16 IDs appear in plan frontmatter (10-01: STOR-01, 02; 10-02: STOR-12, 13, 14; 10-03: STOR-15; 10-04 and 10-05: STOR-06; 10-06: STOR-03, 08; 10-07: STOR-04; 10-08: STOR-05; 10-09: STOR-10, 11; 10-10: STOR-07; 10-11: STOR-09, 16; 10-12: STOR-12) and are marked `[x]` and `Complete` in REQUIREMENTS.md. REQUIREMENTS.md maps STOR-01 to STOR-16 to Phase 10 and no other ID, so there is no orphan.
 
-No orphaned requirements: REQUIREMENTS.md maps STOR-01 to STOR-16 to Phase 10 and every ID is claimed by a plan. Ledger STOR rows showing `open` with empty `test_ref`, RUN-11 deferral and seam authentication are outside this report (known context).
+| Requirement | Source Plan | Status | Evidence |
+| ----------- | ----------- | ------ | -------- |
+| STOR-01 | 10-01 | SATISFIED | `engine.py:659-663`; `test_graph_lock.py`, `test_store_refusal_status.py` |
+| STOR-02 | 10-01 | SATISFIED | `into=` pattern at `engine.py:1538, 1820, 2552`; `test_build_stores_cleanup.py` |
+| STOR-03 | 10-06 | SATISFIED | `engine.py:2674-2695`; `test_evidence_resolve_stores.py` |
+| STOR-04 | 10-07 | SATISFIED | `engine.py:2034-2058`; `test_health_probe.py` |
+| STOR-05 | 10-08 | SATISFIED | `parts_core/__init__.py`, `scheduler.py:263-303`; `test_capability_scoping_modes.py` |
+| STOR-06 | 10-04, 10-05 | SATISFIED | `engine.py:922-944, 967-1012, 1576-1592`; `test_ingest_abort.py`, `test_prepared_commit.py` |
+| STOR-07 | 10-10 | SATISFIED | `engine.py:1820, 1843-1849`; `test_delete_commit_contract.py`. Proved on a fixture v2 wiring; LightRAG v1 delete stages no v2 writes (D-08) |
+| STOR-08 | 10-06 | SATISFIED | `vector.py` corruption check; `test_vector_crash_window.py` |
+| STOR-09 | 10-11 | SATISFIED | `test_vector_validation.py` |
+| STOR-10 | 10-09 | SATISFIED | `test_graph_delete_cascade.py` |
+| STOR-11 | 10-09 | SATISFIED | `test_kv_buffer_isolation.py` |
+| STOR-12 | 10-02, 10-12 | SATISFIED | `parse.py:79, 262`; `test_store_effects_wired.py` |
+| STOR-13 | 10-02 | SATISFIED by removal (D-15) | `test_removed_stores_absent.py` |
+| STOR-14 | 10-02 | SATISFIED by removal (D-15) | `test_removed_stores_absent.py` |
+| STOR-15 | 10-03 | SATISFIED (D-16 exception: operator CLI, not retire) | `gc_namespaces.py`, `namespaces.py:106-132`; `test_namespaces_gc.py` |
+| STOR-16 | 10-11 | SATISFIED | `vector.py:103, 351-353`; `test_vector_reserved_keys.py` |
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 | ---- | ---- | ------- | -------- | ------ |
-| none | - | `TBD`, `FIXME`, `XXX` scan over the touched store, engine, scheduler, parse, namespaces and launcher files | - | No debt markers |
+| none | - | `TBD`, `FIXME`, `XXX` scan over `stores/`, `namespaces.py`, `launcher/gc_namespaces.py` and `parts_core/__init__.py` | - | No debt markers |
 
 ### Advisory (open review items and one accepted limit)
 
 | # | Finding | Category | Why Advisory |
 | - | ------- | -------- | ------------ |
-| A1 | Commit-phase failure on the last store leaves earlier stores committed (reproduced) | other | D-07 documents it; SC3 stands as written for the prepare phase, which is where a store can fail on bad data. Window sits between `commit_prepared` calls (kv, vector, graph in that order) |
-| A2 | IN-01: proxy bypass routes, node ids in `stop_reason` (Phase 13), RocksDB `data/` rotation, `_is_store_fault` classification by top-level type | other | Recorded limits, not defects |
-| A3 | IN-02: `no such table` plus `-wal` leniency in `probe_kv`; kv `busy` is unreachable because the probe is immutable | other | Health accuracy only |
-| A4 | IN-03: a directory named `kv.sqlite3` is reported `absent` | other | Health accuracy only; one-line fix recorded in the review |
-| A5 | IN-04: drift test comment overstates what it checks | other | Test wording |
-| A6 | IN-05: finalize loops stop at the first failing `finalize` (tracer composer; the same loop shape is in `engine.py:1037-1039, 1175-1177, 1344-1346`) | other | `SqliteKVStore.finalize` is `conn.close()` and does not raise in practice; a raise would leave the graph client referenced |
-| A7 | IN-06: misleading corruption log text for vanished files; `_committed_signature` catches only `FileNotFoundError` | other | Server log only; needs a permission change after open |
-| A8 | `trace.db*` files are created by the `Databasise` constructor, not by health | other | STOR-04 concerns store files created by health; unchanged by this phase |
-| A9 | A fresh install reports `degraded` with every store `absent` | other | By design (D-14); consumers read the map |
-
-None of these breaks a success criterion.
+| A1 | Commit-phase failure on the last store leaves earlier stores committed | other | D-07 documents it; `_commit_all` still aborts only the not-yet-committed stores. SC3 stands as written for the prepare phase. Fixing it needs a recovery record or a single transactional backend |
+| A2 | Review INFO items from the initial report (proxy bypass routes, `probe_kv` leniency, directory named `kv.sqlite3` reported `absent`, finalize loops stop at the first failing `finalize`) | other | Recorded limits that do not break a success criterion |
+| A3 | `trace.db*` files are created by the `Databasise` constructor, not by health | other | STOR-04 concerns files created by health |
+| A4 | A fresh install reports `degraded` with every store `absent` | other | By design (D-14) |
 
 ### Human Verification Required
 
-None. Concurrency (SC1) and atomicity (SC3) are behavior-dependent truths, and each has a passing behavioral test plus an independent probe above, so none is left as present-but-unexercised.
+None. Concurrency (SC1) and atomicity (SC3) are behavior-dependent truths, and each has a passing behavioral test in the run above, so none is left present-but-unexercised.
 
 ### Gaps Summary
 
-No gaps. All five success criteria and all 16 requirements are met in the code at HEAD. The one place where the wording "none of them" does not hold is a failure inside the commit sequence after an earlier store has already committed. D-07 chose that trade-off and documents it in the engine docstring; it is listed as A1 so the owner sees it, and fixing it would need a recovery record or a single transactional backend rather than a code patch in this phase.
+No gaps. All five success criteria and all 16 requirements are met in the current code. The one place where "none of them" does not hold is a failure inside the commit sequence after an earlier store has already committed; D-07 chose that trade-off and the engine docstring documents it (A1).
 
 ---
 
-_Verified: 2026-10-17_
+_Verified: 2026-10-31_
 _Verifier: Claude (gsd-verifier)_
