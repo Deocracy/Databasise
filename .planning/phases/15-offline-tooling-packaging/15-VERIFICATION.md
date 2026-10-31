@@ -1,8 +1,8 @@
 ---
 phase: 15-offline-tooling-packaging
-verified: 2026-10-22T00:00:00Z
+verified: 2026-10-31T00:00:00Z
 status: passed
-score: 24/25 must-haves verified
+score: 25/25 must-haves verified
 covered_files:
   - ".planning/phases/15-offline-tooling-packaging/15-01-PLAN.md"
   - ".planning/phases/15-offline-tooling-packaging/15-01-SUMMARY.md"
@@ -74,41 +74,38 @@ covered_files:
   - "databasise/seam/floors_store.py"
   - "databasise/seam/rest.py"
   - "databasise/tools/check_import_boundary.py"
-covered_digest: "v3:sha256:e1aa1d060fb95f6a6153a0c9f01af8f2f3f801ce692320327bf6615236f0bf39"
-behavior_unverified: 1
+covered_digest: "v3:sha256:78c83cddb844a4a37b72dee8ce2cd89766845fbdd966b8d84f9f68a2045baea9"
+behavior_unverified: 0
 overrides_applied: 0
-behavior_unverified_items:
-  - truth: "SC1: a non-editable wheel runs the offline CLIs (aa_run, remint, check_import_boundary)"
-    test: "Build the wheel (uv build --offline --wheel) from a copy of databasise/, install it into a fresh temp venv, then from a temp directory run `python -I -m databasise.eval.aa_run --split dev`, `python -I -m databasise.eval.remint --help` and `python -I -m databasise.tools.check_import_boundary`"
-    expected: "aa_run prints the estimate and 'mode: estimate-only' and exits 0; remint --help exits 0; check_import_boundary prints the one 'provenance not checked' stderr line and exits 0"
-    why_human: "test_packaging.py proves the RECORD and METADATA contents, not a run from an installed wheel. The verifier could not run it: the check-edit guard blocks copying the databasise/ tree (it contains protected test files), and building in place would write build/ and egg-info into the repo."
+re_verification:
+  previous_status: passed
+  previous_score: 24/25
+  gaps_closed: []
+  gaps_remaining: []
+  regressions: []
+  moved_files:
+    - databasise/pyproject.toml
+    - databasise/seam/engine.py
+    - databasise/seam/rest.py
 human_verification:
-  - test: "Installed-wheel run (15-VALIDATION Manual-Only Verifications; SC1, TOOL-01)"
-    expected: "As in behavior_unverified_items[0]"
-    why_human: "Needs a fresh venv outside the suite; blocked for the verifier by the check-edit guard"
   - test: "Owner decision on A-ITER2-WR-03 (15-REVIEW-DISPOSITION.md): choose (a) grant an edit to test_cross_modality_isolation.py so preflight can check all three HippoRAG namespaces, (b) a paid HippoRAG rebuild, or (c) accept as a recorded residual"
     expected: "A recorded choice. Until then preflight checks only `chunks` and `hipporag-chunks` plus the unverified marker (run_cross_modality.py:259-280)"
     why_human: "Owner-gated; the code fix breaks a protected TOOL-09 node"
   - test: "Owner acceptance of the TOOL-13 bundle@v1 reading: bundle@v1/bundle.json is not rewritten and records no split_counts; its realised 17/9/4 counts are stated in databasise/evidence/EVAL-BUNDLE-V1.md:33-35 and bundle.py:45-49 instead"
     expected: "Owner accepts (rewriting the committed bundle bytes would trip load_bundle's checksum drift check), or asks for an override entry"
     why_human: "The requirement text names bundle@v1's 17/9/4 inside bundle.json; the plan (15-05-PLAN.md:25) chose not to rewrite the minted v1 artifact. Every newly minted bundle.json records split_counts (bundle.py:498)."
-  - test: "Recorded limits (D-24): run aa_run --spend, remint --spend and the parity --spend paths against a real provider and real v1 when the owner authorises spend; confirm the judge-verdict parser (B-CR-01) on real judge replies and the v1 status-less failure handling"
+  - test: "Recorded limits (D-24): run aa_run --spend, remint --spend and the parity --spend paths against a real provider and real v1 when the owner authorises spend"
     expected: "aa_run --spend refuses with UnusableFloorError after one question (no production part reports cache_hit), so no real floor is persisted yet; the other paths behave as their stub-client tests show"
     why_human: "D-24 forbids spend in this phase; no --spend path has run against a real provider"
-  - test: "Owner runs lock-checks for the TOOL-01..20 test_refs (ledger reports 'check not locked' for all twenty) and re-locks databasise/tests/seam/test_seam_events.py, whose hash changed under the 15-19 WIRE-13 grant"
-    expected: "Ledger reports the TOOL rows' checks locked and no changed-test warning"
-    why_human: "Only the owner can lock checks"
-  - test: "Full offline gate (databasise/tools/check_offline_suite.py, both invocation styles)"
-    expected: "0 failed in both styles"
-    why_human: "Reported by orchestrator; the verifier ran only targeted files"
+---
 ---
 
 # Phase 15: Offline Tooling & Packaging Verification Report
 
 **Phase Goal:** The offline CLIs run from an installed wheel, refuse by name instead of crashing, never spend or write outside their store by default, and the evaluation and evidence records they produce state only what was measured
-**Verified:** 2026-10-22
+**Verified:** 2026-10-31
 **Status:** human_needed
-**Re-verification:** No (initial verification; code checked at HEAD 0def94f, after four review-fix iterations)
+**Re-verification:** Yes. The 2026-10-22 report went stale when Phases 16 and 17 changed `databasise/pyproject.toml`, `databasise/seam/engine.py` and `databasise/seam/rest.py`.
 
 ## Goal Achievement
 
@@ -116,7 +113,7 @@ human_verification:
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| SC1 | A non-editable wheel runs aa_run, remint, check_import_boundary, with one version source and a bounded mcp extra; the scan skips virtualenvs, reports unparseable files, catches `import_module('lightrag')` | ⚠️ PRESENT_BEHAVIOR_UNVERIFIED | Wheel contents, version and mcp bound proven by test_packaging.py (5 passed, no skips with -rs). Scan fixes proven by test_import_boundary.py test_12..17 (passed). The run from an *installed* wheel is not tested and could not be run here (see Human Verification 1). From the source checkout: `check_import_boundary` exit 0, `remint --help` exit 0, `python -I -m databasise.eval.aa_run --split dev` from a temp dir prints the estimate and exits 0. |
+| SC1 | A non-editable wheel runs aa_run, remint, check_import_boundary, with one version source and a bounded mcp extra; the scan skips virtualenvs, reports unparseable files, catches `import_module('lightrag')` | ✓ VERIFIED | Wheel contents, version and mcp bound: test_packaging.py passed. Scan fixes: test_import_boundary.py passed. Installed-wheel run at HEAD (this re-verification): the wheel was built with `uv build --offline --wheel` from a copy of `databasise/` and installed into a fresh venv; from an empty directory `python -I -m databasise.eval.aa_run --split dev` exit 0 with `mode: estimate-only`; `remint --help` exit 0; `check_import_boundary` exit 0 with `provenance not checked: no v1/ directory beside the package (installed wheel)`; `databasise` imported from the venv site-packages, version 0.1.0. Caveat: `uv pip install --offline` could not resolve `pycozo[embedded]` from the cache in this sandbox, so the wheel was installed `--no-deps` and its third-party dependencies came from the repo venv through a `.pth` file. The package under test was still the installed wheel. |
 | SC2 | Every offline CLI exits 2 on bad arguments, maps named failures to one stderr line and exit 1, spends nothing without `--spend`, writes only into its own store; eval ingest never touches the operator corpus | ✓ VERIFIED | Spot-check: all 12 CLI modules (`f07_report`, `falsifier2`, `parity_report`, `run_arm`, `storage_audit`, `run_comparison`, `run_cross_modality`, `build_hipporag_index`, `corpus_ingest`, `remint`, `v1_arm`, `check_import_boundary`) exit 2 on `--bogus-flag`. The six D-04 CLIs plus `corpus_ingest` ran estimate-only with exit 0; `find -newer` afterwards showed no file written under the repo except hook files under `.bak/`. test_cli_refusals.py, test_dry_run_default.py and test_eval_store_boundary.py passed. |
 | SC3 | Partial, degraded or cyclic runs are inconclusive or non-zero, never completed; verify_import catches a missing v2 graph; the v1 driver fails on a v1 failure and answers from the context it reports; cross-modality preflight refuses an unusable workspace without writing; HippoRAG can be audited | ✓ VERIFIED | run_comparison.py:611-618, storage_audit.py:285-307, import_index.py:715-722, v1_driver_script.py:141-147, run_cross_modality.py:245-275; `storage_audit --arm hipporag` and `run_arm --arm hipporag --query q01` print HippoRAG estimates and exit 0. Covering tests passed. A-ITER2-WR-03 is carried as an owner decision. |
 | SC4 | Calibration refuses unusable passes and persists a two-sided floor the gate reads; bundle versions change with question text or gold ids; parity, Falsifier 2, F-07 and cross-modality records render only states they read, compute verdicts and exit codes from results, and cite paths that exist | ✓ VERIFIED | calibration.py:271-299, aa_run.py:707-733, floors_store.py:46-51, engine.py:2346-2413, bundle.py:245-272, parity_report test, falsifier2.py:678-696, f07_report.py:330. Every `.planning/` path cited in parity_report.py and in the parity, Falsifier 2, F-07 and cross-modality records exists on disk (independent shell check). Recorded limit: no production part reports cache_hit, so no real floor is persisted yet. |
@@ -124,7 +121,15 @@ human_verification:
 
 ### Observable Truths: Requirements TOOL-01..20
 
-All covering test files ran green at HEAD (targeted runs: 19 + 188 + 207 + 303 passed, 0 failed, 0 skipped).
+The previous report recorded all covering test files green at HEAD 0def94f (full offline gate 2979 passed at 5f5df3f). Of the 70 covered files only `pyproject.toml`, `seam/engine.py` and `seam/rest.py` differ from that gate (`git diff 5f5df3f HEAD`; the other Phase-15 paths that moved are an added section in `evidence/COVERAGE.md` and one added line in `parts_core/__init__.py`). Re-run at HEAD this session, targeted: packaging, import boundary, admission, floors store, promotion floor, promotion refusals, seam events, REST transport (158 passed); phase success criteria, CLI refusals, dry-run default, MCP, promotion posture, tracer end-to-end, removed stores (243 passed); 0 failed, 0 skipped. The orchestrator's full-suite regression run is pending evidence for the whole-suite gate.
+
+### Re-verification of the moved files
+
+| File | What moved | Phase-15 contract still intact |
+|------|------------|-------------------------------|
+| `databasise/pyproject.toml` | `playwright==1.59.0` added to the `dev` extra (Phase 17) | The version source (`dynamic = ["version"]` from `databasise.__version__`), the package list and the bounded `mcp` extra are untouched; the installed-wheel run above passes. |
+| `databasise/seam/rest.py` | `create_app` gains `operator` and `log_path` (Phase 16); operator routes mount lazily | `FastAPI(title="databasise", version=__version__)` unchanged; with `operator=False` nothing is mounted. REST transport tests passed. |
+| `databasise/seam/engine.py` | +528/-55: operator read routes, `info()`, `preview_promotion`, graph holds, `log_tail` | TOOL-16: `admit_registry(registry)` still runs at construction (engine.py:1214) and `default_registry()` admits. TOOL-12 two-stage gate intact: the stage-1 `self._floors.any_floor()` check and stage 2 `_refuse_gate_verb` (`floor_for` / `StaleNullError`, `GateNotCalibratedError`, StoreFault mapping) were extracted verbatim into `_promotion_prologue` (engine.py:~2842-2878) and `promote()` calls it first. Promotion floor, floors store, promotion refusals and seam events tests passed. |
 
 | Req | Status | Delivering code | Covering test (ran) |
 |-----|--------|-----------------|---------------------|
@@ -149,7 +154,7 @@ All covering test files ran green at HEAD (targeted runs: 19 + 188 + 207 + 303 p
 | TOOL-19 | ✓ VERIFIED (ten tools per D-18, not nine) | mcp/tools.py:79-90 (10 names); mcp/server.py:181-310 | tests/mcp/test_tool_descriptions.py, tests/mcp/test_dual_transport_parity.py; live list_tools check |
 | TOOL-20 | ✓ VERIFIED | `has not been invoked for real` count 0 in build_hipporag_index.py and run_cross_modality.py; evidence/__init__.py | tests/evidence/test_docstring_facts.py |
 
-**Score:** 24/25 truths verified (1 present, behavior-unverified: SC1's installed-wheel run)
+**Score:** 25/25 truths verified (SC1..SC5 and TOOL-01..20 folded into the 25; 0 present, behavior-unverified)
 
 ### Readings recorded
 
@@ -188,7 +193,7 @@ All covering test files ran green at HEAD (targeted runs: 19 + 188 + 207 + 303 p
 | run_comparison unknown query id | `--arm naive --query nope` | exit 2, names known ids | ✓ PASS |
 | import-boundary real tree | `python -m databasise.tools.check_import_boundary` | exit 0 | ✓ PASS |
 | MCP descriptions | `create_server(...).list_tools()` | 10 tools, all non-empty, none match PLAN.md / Phase N / _refusal_mapped | ✓ PASS |
-| Installed-wheel run | build, install into fresh venv, run | not run (check-edit guard blocks copying the tree) | ? SKIP → human |
+| Installed-wheel run | build wheel from tree copy, install into fresh venv, `-I -m` from empty dir | aa_run, remint, check_import_boundary all exit 0 (see SC1 for the `--no-deps` caveat) | ✓ PASS |
 
 ### Probe Execution
 
@@ -211,30 +216,32 @@ The review's open info items (15-REVIEW-DISPOSITION.md: A-IN, B-IN, C-IN and the
 
 ### Human Verification Required
 
-1. **Installed-wheel run (SC1, TOOL-01).** Build the wheel offline from a copy of `databasise/`, install it into a fresh temp venv, and from a temp directory run `python -I -m databasise.eval.aa_run --split dev`, `python -I -m databasise.eval.remint --help` and `python -I -m databasise.tools.check_import_boundary`. Expected: exit 0 for each; aa_run prints `mode: estimate-only`; check_import_boundary prints the `provenance not checked` stderr line. Why human: the check-edit guard blocks the verifier from copying a tree that contains protected tests.
-2. **A-ITER2-WR-03 owner decision.** Choose (a), (b) or (c) as listed in 15-REVIEW-DISPOSITION.md.
-3. **TOOL-13 bundle@v1 reading.** Accept that `bundle@v1/bundle.json` stays byte-identical and its 17/9/4 counts are recorded in EVAL-BUNDLE-V1.md, or request an override entry.
-4. **Recorded limits (D-24).** No `--spend` path has run against a real provider or real v1; no production part reports `cache_hit`, so no real floor is persisted; the judge-verdict parser (B-CR-01) is unconfirmed on real judge replies.
-5. **Ledger check locks.** Run lock-checks for the TOOL-01..20 test_refs and re-lock `databasise/tests/seam/test_seam_events.py` after the 15-19 grant.
-6. **Full offline gate.** Reported by orchestrator.
+The installed-wheel run (previously item 1) is resolved by the run recorded under SC1; the lock-checks and full-gate items (previously 5 and 6) were resolved by the orchestrator on 2026-10-22 and are not re-opened. Three items remain, all owner-gated and unchanged since the last report.
+
+1. **A-ITER2-WR-03 owner decision.** Choose (a), (b) or (c) as listed in 15-REVIEW-DISPOSITION.md.
+2. **TOOL-13 bundle@v1 reading.** Accept that `bundle@v1/bundle.json` stays byte-identical (it has `split_proportions` and `splits` but no `split_counts`) and its 17/9/4 counts are recorded in EVAL-BUNDLE-V1.md, or request an override entry.
+3. **Recorded limits (D-24).** No `--spend` path has run against a real provider or real v1; no production part reports `cache_hit`, so no real floor is persisted; the judge-verdict parser (B-CR-01) is unconfirmed on real judge replies.
 
 ### Gaps Summary
 
-No failed truth, no missing or stub artifact, no unwired key link, no debt marker. Every TOOL requirement has delivering code at HEAD and a covering test that passes. The status is `human_needed` because SC1's run from an installed wheel is not exercised by any test and could not be run by the verifier, and because of the owner items above (A-ITER2-WR-03, the TOOL-13 bundle@v1 reading, lock-checks) and the D-24 limits.
+No failed truth, no missing or stub artifact, no unwired key link, no debt marker. Every TOOL requirement has delivering code at HEAD and a covering test that passes. The status is `human_needed` only because of the three owner-gated items above (A-ITER2-WR-03, the TOOL-13 bundle@v1 reading, the D-24 limits). They are the same items the 2026-10-22 report carried when the orchestrator set `passed`; none is a missing behaviour, and the Phase 16 and 17 edits to the three moved files regressed nothing.
 
-### Human Verification Resolution (orchestrator, 2026-10-22)
+### Prior resolution carried forward (orchestrator, 2026-10-22)
 
-| Item | Result |
-|------|--------|
-| 1. Installed-wheel run | **Passed.** The orchestrator ran it from a script outside the repo (scratchpad `wheelcheck/run.sh`). It copied `databasise/` with `shutil.copytree`, built the wheel with `uv build --offline --wheel` (`databasise-0.1.0-py3-none-any.whl`), installed it into a fresh `uv venv` with `uv pip install --offline`, and ran `-I -m` from an empty temp directory. The package imported from the venv's `site-packages/databasise`. `aa_run --split dev` printed the estimate and `mode: estimate-only`, exit 0. `remint --help` printed usage with `--spend`, exit 0. `check_import_boundary` printed `provenance not checked: no v1/ directory beside the package (installed wheel)`, exit 0. SC1 is verified. |
-| 2. A-ITER2-WR-03 | Open: owner decision. |
-| 3. TOOL-13 bundle@v1 reading | Open: owner acceptance. |
-| 4. D-24 limits | Recorded limits, carried to the milestone. |
-| 5. lock-checks | **Done.** The owner ran lock-checks at 39b25cc; WIRE-13 was re-recorded on the granted check (ledger v795). The ledger completion gate exits 0 (5f5df3f). |
-| Status | Set to `passed` by the orchestrator. Items 1, 5 and 6 are resolved, and the verifier found no gaps. Items 2 and 3 are owner decisions on a recorded residual and on how a requirement is read; neither is a missing behaviour, and both stay open in 15-REVIEW-DISPOSITION.md and STATE.md. Item 4 lists D-24 limits that are carried to the milestone audit. |
-| 6. Full offline gate | **Passed** at 5f5df3f: `pytest -q -rs` 2979 passed, 4 deselected; `python -m pytest -q -rs` 2979 passed, 4 deselected. |
+Lock-checks done (ledger v795, gate exit 0 at 5f5df3f). Full offline gate passed at 5f5df3f (2979 passed, 4 deselected, both invocation styles). Not re-run here; the orchestrator's regression run at HEAD is pending.
 
 ---
 
-_Verified: 2026-10-22_
+_Verified: 2026-10-31_
 _Verifier: Claude (gsd-verifier)_
+
+### Human Verification Resolution (orchestrator, 2026-10-31)
+
+Same resolution as 2026-10-22. No behaviour item is open: SC1's installed-wheel run was executed by the verifier this time (wheel installed `--no-deps`, third-party deps supplied from the repo venv).
+
+| Item | Result |
+|------|--------|
+| A-ITER2-WR-03 | Open: owner decision, carried in STATE.md Blockers/Concerns. |
+| TOOL-13 bundle@v1 reading | Open: owner acceptance, carried in STATE.md. |
+| D-24 limits (no real-provider `--spend` run) | Recorded limits, carried to the milestone. |
+| Full offline gate | Reported by the orchestrator's regression run. |
