@@ -1,20 +1,20 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Engine Fixes + Operator Console
 current_phase: 18
 current_phase_name: GUI Live
 status: executing
-stopped_at: Completed 18-04-PLAN.md
-last_updated: "2026-10-31T21:26:52.779Z"
+stopped_at: Completed 18-05-PLAN.md
+last_updated: "2026-10-31T21:44:33.669Z"
 last_activity: 2026-10-31
 last_activity_desc: Phase 18 execution started
-state_head: d2e9302a786abf80dbbc8fd13b003ad21ee0d193
+state_head: a6f9d272a85948397a49287a8328480646d05946
 progress:
   total_phases: 11
   completed_phases: 10
   total_plans: 136
-  completed_plans: 129
+  completed_plans: 130
   percent: 91
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-19 after Phase 12)
 ## Current Position
 
 Phase: 18 (GUI Live) — EXECUTING
-Plan: 5 of 11
+Plan: 6 of 11
 Status: Ready to execute
 Last activity: 2026-10-31 — Phase 18 execution started
 
@@ -168,6 +168,7 @@ Progress: [█████████░] 91% (4/11 phases)
 | Phase 18 P02 | n/a | 2 tasks | 7 files |
 | Phase 18 P03 | 40 min | 3 tasks | 9 files |
 | Phase 18 P04 | 60 min | 3 tasks | 11 files |
+| Phase 18 P05 | 75 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -281,6 +282,8 @@ Recent decisions affecting current work:
 - [Phase 18]: WIRED keys are '<scope> <data-needs-backend value>'; a badge drops only for a present route with a WIRED key, so screen plans add their own keys
 - [Phase 18]: 18-04: run history stores exactly {query, selector, trace_token, timestamp} in sessionStorage databasise.console.history (cap 50); the Partial column shows a dash
 - [Phase 18]: 18-04: before the final stream event the result panel stays under the running banner; the disconnected state reuses the no-trace reason line for 'The run did not finish.'
+- [Phase 18]: 18-05: a compare answer is parsed by the number of selectors sent, never by its keys; extra server keys follow as cloned columns and are not written to the run history
+- [Phase 18]: 18-05: AliasCatalog is the single alias source (GET /ledger/aliases or the browser ledger log); data-live-ready waits for it
 
 ### Pending Todos
 
@@ -340,8 +343,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-31T21:26:52.503Z
-Stopped at: Completed 18-04-PLAN.md
+Last session: 2026-10-31T21:44:33.206Z
+Stopped at: Completed 18-05-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
