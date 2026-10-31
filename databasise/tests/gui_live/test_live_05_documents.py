@@ -122,6 +122,19 @@ def test_upload_sends_multipart_and_shows_indeterminate_progress(live_app, live_
     ui.el("documents.upload.file").set_input_files({"name": "note.txt", "mimeType": "text/plain", "buffer": b"an uploaded note"})
     ui.el("documents.upload.document-id").fill("doc-upload-1")
     ui.expect("documents.upload.submit").to_be_enabled()
+    # Chromium streams a File part, so Playwright cannot read the body; the page's own fetch call is recorded instead.
+    ui.page.evaluate(
+        """() => {
+            const original = window.fetch;
+            window.__uploads = [];
+            window.fetch = function (path, init) {
+                if (init && init.body instanceof FormData) {
+                    window.__uploads.push({ path, fields: Array.from(init.body.keys()), document_id: init.body.get('document_id'), headers: Object.keys(init.headers || {}) });
+                }
+                return original.apply(this, arguments);
+            };
+        }"""
+    )
     with live_app.hold("ingest") as release:
         with ui.page.expect_request(lambda r: r.method == "POST" and urlparse(r.url).path == "/documents/upload") as sent:
             ui.el("documents.upload.submit").click()
@@ -133,9 +146,8 @@ def test_upload_sends_multipart_and_shows_indeterminate_progress(live_app, live_
         release.set()
     request = sent.value
     assert re.match(r"^multipart/form-data; boundary=", request.headers["content-type"])
-    body = request.post_data_buffer
-    assert b'name="file"' in body and b'name="document_id"' in body and b"doc-upload-1" in body
-    assert b'name="selector"' not in body
+    uploads = ui.page.evaluate("() => window.__uploads")
+    assert uploads == [{"path": "/documents/upload", "fields": ["file", "document_id"], "document_id": "doc-upload-1", "headers": []}]
     assert len(_posts(ui, "/documents/upload")) == 1
     ui.expect(ui.el("documents.result.card").locator('[data-role="job-id"]')).to_have_text(re.compile(r".+"))
     ui.expect("documents.upload.progress").to_be_hidden()

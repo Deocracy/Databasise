@@ -61,7 +61,7 @@
         <p class="label">Multipart fields</p>
         <pre class="mono preview" data-mock-id="documents.upload.request-preview"></pre>
         <div role="status" class="upload-progress" data-mock-id="documents.upload.progress" hidden>
-          <progress max="100" value="0"></progress>
+          <progress max="100"></progress>
           <span class="spinner" role="presentation" data-role="spin" hidden></span>
           <span data-role="text"></span>
         </div>
@@ -164,6 +164,7 @@
         </tbody>
       </table>
     </div>
+    <p class="muted" role="status" data-role="range" hidden></p>
     <div class="run-row">
       <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="documents.jobs.prev">Previous page</button>
       <button type="button" class="btn btn-outline" disabled aria-disabled="true" data-mock-id="documents.jobs.next">Next page</button>
@@ -177,6 +178,7 @@
       <button type="button" class="btn btn-outline" data-mock-id="documents.jobs.refresh">Refresh job</button>
       <label class="inline"><input type="checkbox" data-mock-id="documents.jobs.poll"> Refresh every 30 seconds</label>
     </div>
+    <p class="muted" role="status" data-mock-id="documents.live.jobs-polled"></p>
   </aside>
   </div>
 </section>

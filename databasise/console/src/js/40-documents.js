@@ -1,3 +1,6 @@
+WIRED["documents GET /log"] = true;
+WIRED["documents GET /ledger/aliases"] = true;
+
 var DocumentsScreen = (function () {
   var LIMIT = 26214400;
   var ID_RE = /^[A-Za-z0-9_-]+$/;
@@ -26,6 +29,10 @@ var DocumentsScreen = (function () {
   var STATUS_STATE = { processed: "ok", failed: "fail", processing: "progress", parsing: "progress", analyzing: "progress", pending: "neutral", preprocessed: "neutral", interrupted: "warn" };
   var STATUS_GLYPH = { ok: "✓", fail: "✕", progress: "●", neutral: "■", warn: "▲" };
   var DELETE_STATE = { success: "ok", not_found: "neutral", not_allowed: "fail", fail: "fail" };
+  var NON_TERMINAL = ["pending", "parsing", "analyzing", "processing", "preprocessed"];
+  var UPLOADING = "Uploading and processing. A LightRAG ingest waits for the model and can take minutes.";
+  var POLL_RUNNING = "Refreshing every 30 seconds.";
+  var POLL_STOPPED = "Stopped: every document has a final status.";
   var PREVIEW_TEXT_CAP = 300;
   var CONFIRM_MS = 300;
 
@@ -206,11 +213,15 @@ var DocumentsScreen = (function () {
   // A write is never aborted once sent: no signal is passed.
   function finishIngest(result, sent, kind) {
     ID("state.in-flight").hidden = true;
+    ID("upload.progress").hidden = true;
     setBusy(false);
     var body = result.body;
     if (result.status >= 200 && result.status < 300 && body !== null && typeof body === "object" && typeof body.job_id === "string") {
       sent.job = body;
-      return showCard(sent, kind);
+      showCard(sent, kind);
+      // Only LightRAG documents are listed by Corpus & Health, which then reloads its table and counts.
+      if (kind === "lightrag") Console.emit("corpus-changed");
+      return;
     }
     if (showError(result.status, body) === "result") showError(0, null, { text: "The server answered without a job id." });
   }
@@ -229,43 +240,71 @@ var DocumentsScreen = (function () {
     });
   }
 
+  // fetch reports no upload progress, so the line is indeterminate: the <progress> has no value attribute (18-RESEARCH Pitfall 7).
+  // The body is a FormData with no hand-set Content-Type, so the browser adds the multipart boundary.
   function submitUpload() {
     if (busy || uploadSubmit.disabled) return;
     hideErrors();
     card.hidden = true;
+    var sent = { documentId: uploadId.value, label: picker.label() };
+    var kind = family();
+    var form = new FormData();
+    form.append("file", file.files[0]);
+    if (uploadId.value !== "") form.append("document_id", uploadId.value);
+    var selector = picker.value();
+    if (selector !== null) form.append("selector", JSON.stringify(selector));
     setBusy(true);
     var box = ID("upload.progress");
-    var bar = box.querySelector("progress");
-    var spin = box.querySelector('[data-role="spin"]');
-    var label = box.querySelector('[data-role="text"]');
-    spin.hidden = true;
-    bar.hidden = false;
+    box.querySelector("progress").removeAttribute("value");
+    box.querySelector('[data-role="spin"]').hidden = true;
+    box.querySelector('[data-role="text"]').textContent = UPLOADING;
     box.hidden = false;
-    var pct = 0;
-    (function step() {
-      pct += 20;
-      if (pct < 100) {
-        bar.value = pct;
-        label.textContent = "Uploading " + pct + "%";
-        return later(step, 150);
-      }
-      bar.value = 100;
-      bar.hidden = true;
-      spin.hidden = false;
-      label.textContent = "Processing";
-      later(function () {
-        ID("upload.progress").hidden = true;
-        setBusy(false);
-      }, 800);
-    })();
+    api("POST", "/documents/upload", form, { kind: "ingest" }).then(function (result) {
+      finishIngest(result, sent, kind);
+    });
   }
 
   // ---- jobs drawer ----
 
+  // Closing the drawer stops the poll and drops a read in flight; it never reopens by itself (IN-JSB-05).
   function setDrawer(open) {
     ID("jobs.drawer").hidden = !open;
     layout.setAttribute("data-drawer", open ? "open" : "closed");
     ID("jobs.open").setAttribute("aria-expanded", String(open));
+    if (!open) leaveJobs();
+  }
+
+  function leaveJobs() {
+    ID("jobs.poll").checked = false;
+    syncPoll();
+    if (!readCtl) return;
+    readCtl.abort();
+    readCtl = null;
+    jobView(jobsShown);
+  }
+
+  function isFinal(doc) {
+    return NON_TERMINAL.indexOf(doc.status) < 0; // a status the console does not know counts as final
+  }
+
+  // The poll runs only while its box is checked (the box is in the open drawer). It stops by itself on a page whose documents all have a
+  // final status, and starts again if a later load shows one that has not. Each load restarts the 30 s interval.
+  function syncPoll() {
+    clearInterval(pollTimer);
+    pollTimer = null;
+    var note = ID("live.jobs-polled");
+    if (!ID("jobs.poll").checked) {
+      note.textContent = "";
+      return;
+    }
+    if (job && job.body.documents.every(isFinal)) {
+      note.textContent = POLL_STOPPED;
+      return;
+    }
+    note.textContent = POLL_RUNNING;
+    pollTimer = setInterval(function () {
+      if (job) loadJob(job.id, job.offset);
+    }, 30000);
   }
 
   // The client-side job list, newest first (D-07). A row's id and meta are filled here; its Open button reads the id at press time.
@@ -277,19 +316,39 @@ var DocumentsScreen = (function () {
     });
   }
 
+  // Previous and Next follow the last page that loaded, so a failed read leaves them as they were.
+  function pagerState() {
+    var next = job ? job.body.next_offset : null;
+    setDisabled(ID("jobs.prev"), !job || job.offset <= 0);
+    setDisabled(ID("jobs.next"), next === null || next === undefined);
+  }
+
+  // The count line has no total: GET /jobs/{job_id} returns none (18-RESEARCH Pitfall 4).
+  function paintRange(name) {
+    var range = root.querySelector('[data-role="range"]');
+    range.hidden = name !== "table" || !job;
+    if (!range.hidden) range.textContent = "Showing " + (job.offset + 1) + " to " + (job.offset + job.body.documents.length);
+  }
+
+  // "loading" keeps the previous rows on screen (Request States); every other name replaces the view.
   function jobView(name) {
     var loading = name === "loading";
-    if (!loading) jobsShown = name;
     ID("jobs.loading").hidden = !loading;
+    ID("jobs.documents").setAttribute("aria-busy", String(loading));
+    setDisabled(ID("jobs.refresh"), loading);
+    if (loading) {
+      root.querySelector('[data-role="no-job"]').hidden = true;
+      setDisabled(ID("jobs.prev"), true);
+      setDisabled(ID("jobs.next"), true);
+      return;
+    }
+    jobsShown = name;
     ID("jobs.empty").hidden = name !== "empty";
     root.querySelector('[data-role="no-job"]').hidden = name !== "none";
     root.querySelector('[data-role="table-wrap"]').hidden = name !== "table";
-    ID("jobs.documents").setAttribute("aria-busy", String(loading));
     ID("jobs.counts").hidden = name !== "table" && name !== "empty";
-    if (loading) {
-      setDisabled(ID("jobs.prev"), true);
-      setDisabled(ID("jobs.next"), true);
-    }
+    paintRange(name);
+    pagerState();
   }
 
   function fillRows(docs) {
@@ -337,6 +396,13 @@ var DocumentsScreen = (function () {
     fillRows(docs);
     fillCounts(job.body.counts || {});
     jobView(docs.length ? "table" : "empty");
+    syncPoll();
+  }
+
+  // WR-JSB-03: a read that failed leaves the last page that loaded on screen, with its pager state and its job id in the input.
+  function restoreJob() {
+    if (job) paintJob();
+    else jobView("none");
   }
 
   // Reads one page of a job. A newer read supersedes the one in flight.
@@ -359,7 +425,7 @@ var DocumentsScreen = (function () {
         job = { id: id, offset: offset, limit: lastSize, body: body };
         return paintJob();
       }
-      jobView(jobsShown);
+      restoreJob();
       if (showError(result.status, body) === "result") showError(0, null, { text: "The server answered without a document list." });
     });
   }
@@ -446,19 +512,19 @@ var DocumentsScreen = (function () {
   ID("jobs.job-id").addEventListener("keydown", function (event) {
     if (event.key === "Enter") loadJob(this.value);
   });
+  // Refresh keeps the page being viewed when the job id is unchanged.
   ID("jobs.refresh").addEventListener("click", function () {
-    loadJob(ID("jobs.job-id").value);
+    var id = ID("jobs.job-id").value.trim();
+    loadJob(id, job && job.id === id ? job.offset : 0);
+  });
+  ID("jobs.prev").addEventListener("click", function () {
+    if (job) loadJob(job.id, Math.max(0, job.offset - job.limit));
+  });
+  ID("jobs.next").addEventListener("click", function () {
+    if (job && typeof job.body.next_offset === "number") loadJob(job.id, job.body.next_offset);
   });
   ID("jobs.page-size").addEventListener("input", checkSize);
-  ID("jobs.poll").addEventListener("change", function () {
-    clearInterval(pollTimer);
-    pollTimer = null;
-    if (this.checked) {
-      pollTimer = setInterval(function () {
-        ID("jobs.refresh").click();
-      }, 30000);
-    }
-  });
+  ID("jobs.poll").addEventListener("change", syncPoll);
   // One delegated listener serves the literal slots and every cloned entry of the job list.
   ID("jobs.list").addEventListener("click", function (event) {
     var button = event.target.closest("button");
@@ -524,6 +590,16 @@ var DocumentsScreen = (function () {
   Console.on("open-ingest", function () {
     Console.show("documents");
     showTab("paste");
+  });
+  // The pipeline status is a span, not a control, so the shared badge pass adds no reason line to it (D-09).
+  Console.on("show", function (name) {
+    if (name !== "documents") return leaveJobs();
+    var wrap = ID("pipeline.status").closest("[data-needs-backend]");
+    if (wrap && wrap.hasAttribute("data-route-absent")) ID("pipeline.status").textContent = "Needs " + wrap.getAttribute("data-needs-backend") + ".";
+  });
+  window.addEventListener("pagehide", function () {
+    clearInterval(pollTimer);
+    timers.forEach(clearTimeout);
   });
 
   renderList();
