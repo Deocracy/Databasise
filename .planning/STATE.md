@@ -5,16 +5,16 @@ milestone_name: Engine Fixes + Operator Console
 current_phase: 18
 current_phase_name: GUI Live
 status: executing
-stopped_at: Completed 18-01-PLAN.md
-last_updated: "2026-10-31T20:41:08.476Z"
+stopped_at: Completed 18-02-PLAN.md
+last_updated: "2026-10-31T20:47:22.037Z"
 last_activity: 2026-10-31
 last_activity_desc: Phase 18 execution started
-state_head: 61a235e8d497cc6c65dd7966b850ebc2501d91a3
+state_head: 575f0ee50a051df1fcd18dd3423c4a71c71866d4
 progress:
   total_phases: 11
   completed_phases: 10
   total_plans: 136
-  completed_plans: 126
+  completed_plans: 127
   percent: 91
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-19 after Phase 12)
 ## Current Position
 
 Phase: 18 (GUI Live) — EXECUTING
-Plan: 2 of 11
+Plan: 3 of 11
 Status: Ready to execute
 Last activity: 2026-10-31 — Phase 18 execution started
 
@@ -165,6 +165,7 @@ Progress: [█████████░] 91% (4/11 phases)
 | Phase 16 P12 | ~95min | 3 tasks | 5 files |
 | Phase 17 P01 | resumed | 2 tasks | 8 files |
 | Phase 18 P01 | n/a | 2 tasks | 45 files |
+| Phase 18 P02 | n/a | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -274,6 +275,7 @@ Recent decisions affecting current work:
 - [Phase 15]: 15-18: the codebase-memory-mcp launch timeout bound is timeout + 4 s (SDK teardown), not the bare timeout (TOOL-18)
 - [Phase 16]: 16-01: --operator off loopback is a parser.error before the store lock; build_app reads the flag with getattr
 - [Phase 16]: 16-09: UnknownGraphNodeError is 422 and stays out of _NOT_FOUND_REFUSALS; a selected graph with no graph.cozo is that refusal on /graph/node while /graph/nodes answers total 0
+- [Phase 18]: 18-02: console CSP hash sources are computed by the launcher from the packaged page at start-up; --console refused for non-loopback host and --port 0 before the store lock
 
 ### Pending Todos
 
@@ -333,8 +335,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-31T20:41:08.197Z
-Stopped at: Completed 18-01-PLAN.md
+Last session: 2026-10-31T20:47:21.728Z
+Stopped at: Completed 18-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
