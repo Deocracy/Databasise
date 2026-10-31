@@ -1,0 +1,96 @@
+{
+  "bak_trace": 1,
+  "step": "S5",
+  "part": "phase17",
+  "ledger_version": 910,
+  "artifacts": {
+    "mockups/src/page.html": "f78510617149aa3a713c74bc75e3ffc6ed648e8edc8a203078ad130a4092f967",
+    "mockups/build.py": "0fecbeb7d4d441f816a7b2d0b9c773de8b1609fd604355c017ad2330ea11cae7",
+    "mockups/src/screens/query.html": "9146ca6fc5171e80d73f7ce7812cd975510664bb603fa27e3a502f182439f5a5",
+    "mockups/src/screens/evidence.html": "674d5f2416571cdb40ccd392286a9cd5225ec568e34b52e8abdb8833117959a9",
+    "mockups/src/screens/documents.html": "b25fed6003499ddc23dfe170b9e8eb8782b8773fe483675caff60f376323eeb5",
+    "mockups/src/screens/corpus.html": "f7953020ae34ec32d2ac96015bca9bd21bc5e57d46e0e418d8e4c918662289bd",
+    "mockups/src/screens/ledger.html": "eb5f8cc051368895f800d96b9840d20ab9e69bc63c00ff97932129a351828010",
+    "mockups/src/screens/graph.html": "2395a032757a3add3a3527c45244bdda5ffd3be7a8f42a33f48c5a98d9200759",
+    "mockups/src/parts/errors.html": "973afa5e4a31d0b8d7eb4941cbb57367cef1ec61d4fd1ef78dd5d4f2415d6c7f",
+    "mockups/src/parts/selector.html": "e8d5dfb5f9e27e7af9fdd3ae3711edbc3e9099580ee85ec34116ebb61ac490ca",
+    "mockups/src/js/00-app.js": "de7179bb4d548e4177e1777ce279e7a49f3ef16142affbca77f8b903f73ec5d9",
+    "docs/gui/GAP-ROUTES.json": "65041307713b7b7ad820e3c5aa664ff8fda47750422c8a55e92e671938d12492",
+    "docs/gui/MOCK-IDS.json": "f59c8838ef1fe15364dc5aafe36d97ad8c09008b56578ee94a195a2d1c82a634",
+    "docs/gui/refusals.json": "5466648f8ab96bf96eb46c123f015fe14d5535920a1ea74433aa19efa593a5fc"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "claude-opus-5-5",
+    "session": "11bd64f3-96e9-4f30-b125-cc3262ef9629"
+  },
+  "items": [
+    {
+      "id": "GUI-01",
+      "status": "present",
+      "where": "mockups/src/page.html:35",
+      "quote": "<button type=\"button\" data-mock-id=\"shell.nav.query\">Query &amp; Compare</button>"
+    },
+    {
+      "id": "GUI-02",
+      "status": "present",
+      "where": "mockups/src/page.html:12",
+      "quote": "<div data-mock-id=\"shell.root.app\" data-mock-variant=\"console-a\" class=\"app\">"
+    },
+    {
+      "id": "GUI-03",
+      "status": "present",
+      "where": "mockups/src/screens/corpus.html:107",
+      "quote": "<span class=\"badge badge-nb\">needs backend</span>"
+    },
+    {
+      "id": "GUI-04",
+      "status": "present",
+      "where": "mockups/src/screens/query.html:129",
+      "quote": "<p class=\"muted\">no registered part consumes this member</p>"
+    },
+    {
+      "id": "GUI-05",
+      "status": "present",
+      "where": "mockups/src/screens/query.html:121",
+      "quote": "<div class=\"banner cmp-warning\" data-state=\"fail\" role=\"alert\" data-mock-id=\"query.compare.warning-duplicate\" hidden></div>"
+    },
+    {
+      "id": "GUI-06",
+      "status": "present",
+      "where": "mockups/src/parts/errors.html:1",
+      "quote": "<div class=\"banner error-shape\" data-state=\"warn\" role=\"alert\" data-mock-id=\"{{s}}.error.refusal\" hidden>"
+    },
+    {
+      "id": "GUI-07",
+      "status": "present",
+      "where": "mockups/src/screens/evidence.html:33",
+      "quote": "<p>record no longer present; the store changed since the query</p>"
+    },
+    {
+      "id": "GUI-08",
+      "status": "present",
+      "where": "mockups/src/screens/documents.html:30",
+      "quote": "<button type=\"button\" role=\"tab\" aria-selected=\"true\" data-mock-id=\"documents.tabs.paste\">Paste text</button>"
+    },
+    {
+      "id": "GUI-09",
+      "status": "present",
+      "where": "mockups/src/screens/corpus.html:34",
+      "quote": "<span class=\"badge\" role=\"status\" data-state=\"ok\" data-mock-id=\"corpus.health.overall\">stores openable / v1 reachable</span>"
+    },
+    {
+      "id": "GUI-10",
+      "status": "present",
+      "where": "mockups/src/screens/ledger.html:86",
+      "quote": "<option value=\"operator-asserted\" selected>operator-asserted</option>"
+    },
+    {
+      "id": "GUI-11",
+      "status": "present",
+      "where": "mockups/src/screens/graph.html:83",
+      "quote": "<thead><tr><th>Node id</th><th>Degree</th><th>Actions</th></tr></thead>"
+    }
+  ],
+  "extra": []
+}
