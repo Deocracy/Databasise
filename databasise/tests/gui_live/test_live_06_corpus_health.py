@@ -11,6 +11,7 @@ zero. Polls are driven with ``page.clock``, never with real waits. No test here 
 from __future__ import annotations
 
 import contextlib
+import re
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -97,3 +98,109 @@ def test_corpus_paging_follows_next_offset(corpus_docs, live_app, live_ui):
     ui.el("corpus.table.prev").click()
     ui.expect(ui.el("corpus.table.panel").locator('[data-role="range"]')).to_have_text("Showing 1 to 2 of 5")
     assert _query_of(_gets(ui, "/corpus")[-1]) == {"limit": "2", "offset": "0"}
+
+
+# ---- polls and the health banner (D-13, WR-JSB-04) ----
+
+CLOCK = lambda page: page.clock.install()  # noqa: E731  (time then flows normally until fast_forward)
+HHMMSS = r"\d\d:\d\d:\d\d"
+
+
+def _settle(ui):
+    """One round trip through the page: every request a timer started before this call is in ``ui.requests``."""
+    ui.page.evaluate("() => fetch('/openapi.json').then((r) => r.status)")
+
+
+def _wait_for_post(ui, path):
+    for _ in range(100):  # bounded: a console that never sends must fail, not hang
+        if [r for r in ui.requests if r["method"] == "POST" and r["path"] == path]:
+            return
+        ui.page.wait_for_timeout(50)
+    raise AssertionError(f"no POST {path} was sent")
+
+
+def _fill_query(ui):
+    ui.el("query.text.input").fill("Ed Wood")
+    ui.el("query.selector.kind-capability").check()
+    ui.el("query.selector.capability").select_option(CAPS)
+    ui.el("query.run.stream").set_checked(False)
+
+
+def test_health_poll_is_off_by_default(live_app, browser):
+    with _ui(browser, live_app, CLOCK) as ui:
+        ui.nav("corpus")
+        ui.page.clock.fast_forward(120000)
+        _settle(ui)
+        assert len(_gets(ui, "/health")) == 1
+        ui.expect("corpus.live.health-polled").to_have_text(re.compile(rf"^Polling off\. Last checked {HHMMSS}\.$"))
+
+
+def test_health_poll_skips_ticks_while_a_query_is_in_flight(seeded, browser):
+    with _ui(browser, seeded, CLOCK) as ui:
+        ui.nav("corpus")
+        ui.el("corpus.health.poll-interval").select_option("30")
+        ui.el("corpus.health.poll").check()
+        ui.nav("query")
+        _fill_query(ui)
+        before = len(_gets(ui, "/health"))
+        with seeded.hold("query") as release:
+            ui.el("query.run.submit").click()
+            _wait_for_post(ui, "/query")
+            ui.page.clock.fast_forward(31000)
+            _settle(ui)
+            assert len(_gets(ui, "/health")) == before
+            ui.expect("corpus.live.health-polled").to_have_text(re.compile(rf"^Check skipped at {HHMMSS}: a request is in flight\.$"))
+            release.set()
+        ui.expect("query.state.success").to_be_visible()
+        ui.page.clock.fast_forward(31000)
+        _settle(ui)
+        assert len(_gets(ui, "/health")) == before + 1
+        ui.expect("corpus.live.health-polled").to_have_text(re.compile(rf"^Polling every 30 seconds\. Last checked {HHMMSS}\.$"))
+
+
+def test_counts_poll_only_while_a_non_terminal_count_is_above_zero(corpus_docs, live_app, browser):
+    # "pending" and not "processing": with no write holding the gate the engine folds processing into interrupted.
+    corpus_docs["doc-1"]["status"] = "pending"
+    with _ui(browser, live_app, CLOCK) as ui:
+        ui.nav("corpus")
+        ui.expect(_tile(ui, "pending")).to_have_text("1")
+        ui.el("corpus.table.poll").check()
+        ui.expect("corpus.live.counts-polled").to_have_text("Updating every 30 seconds while documents are in progress.")
+        polled = len(_gets(ui, "/corpus/counts"))
+        ui.page.clock.fast_forward(31000)
+        _settle(ui)
+        assert len(_gets(ui, "/corpus/counts")) == polled + 1
+
+        corpus_docs["doc-1"]["status"] = "processed"
+        ui.page.clock.fast_forward(31000)
+        _settle(ui)
+        assert len(_gets(ui, "/corpus/counts")) == polled + 2
+        ui.expect(_tile(ui, "processed")).to_have_text("5")
+        ui.expect("corpus.live.counts-polled").to_have_text("Polling paused: no documents in progress.")
+
+        ui.page.clock.fast_forward(62000)
+        _settle(ui)
+        assert len(_gets(ui, "/corpus/counts")) == polled + 2
+
+
+def test_health_banner_survives_table_actions(corpus_docs, live_app, browser):
+    with _ui(browser, live_app, lambda page: page.route("**/health", lambda route: route.abort())) as ui:
+        ui.nav("corpus")
+        banner = ui.el("corpus.error.generic")
+        ui.expect(banner).to_contain_text("Server unreachable")
+        rows = ui.el("corpus.health.stores").locator("tbody tr")
+        ui.expect(rows).to_have_count(10)
+        assert all("not probed" in text for text in rows.all_inner_texts())
+
+        ui.el("corpus.table.page-size").fill("2")
+        ui.el("corpus.table.refresh").click()
+        ui.expect(ui.el("corpus.table.panel").locator('[data-role="range"]')).to_have_text("Showing 1 to 2 of 5")
+        ui.el("corpus.table.next").click()
+        ui.expect(ui.el("corpus.table.panel").locator('[data-role="range"]')).to_have_text("Showing 3 to 4 of 5")
+        ui.expect(banner).to_be_visible()
+        ui.expect(banner).to_contain_text("Server unreachable")
+
+        ui.page.unroute("**/health")
+        ui.el("corpus.health.refresh").click()
+        ui.expect(banner).to_be_hidden()
+        ui.expect("corpus.health.state").to_have_text("ok")
