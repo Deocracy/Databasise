@@ -562,12 +562,58 @@ Plans:
 **Owner decisions to settle in discuss-phase**:
 
 - LIVE-01 (open questions 4 and 5): same-origin static serving from the FastAPI app, a Vite dev proxy, or an opt-in allow-list; localhost-only no-auth or a reverse proxy with auth; the build stack after the mockup (React 19 + Vite + Sigma.js, or plain HTML/JS)
-- LIVE-05 (open question 8): until M-04 (Phase 11) unifies LightRAG's write and read stores, the screen keeps the 'different stores' notice and the test asserts only the corpus-status path
+- LIVE-05 (open question 8): until M-04 (Phase 11) unifies LightRAG's write and read stores, the screen keeps the 'different stores' notice and the test asserts only the corpus-status path. Deferred to owner at 18-11: the notice is kept until then (18-CONTEXT D-15 amendment, 2026-10-31)
 - LIVE-07 (open questions 2 and 3): if alias enumeration and trace listing stay closed (Phase 16), the pickers stay client-side with their needs-backend badges
 - LIVE-08: depends on the Phase 16 connector routes and open question 6
 - LIVE-09: depends on the mockup_freeze written by the first Phase 18 plan from the Phase 17 approval record (17-CONTEXT D-13); that plan checks the sha256 in docs/gui/MOCKUP-APPROVAL.md before freezing
 
-**Plans**: TBD
+**Plans**: 11 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 18-01-PLAN.md — digest check, build.py --src/--out, live source copy and package data, freeze-variant, id check exit 0 (D-03, D-04; LIVE-09, LIVE-01)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 18-02-PLAN.md — tracer: databasise-rest --console serves GET /console same-origin; in-process live harness; LIVE-01 serving tests (LIVE-01)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 18-03-PLAN.md — shared live core: one transport, live header health, run-time badge rule, absent-route disabling, hidden mock controls, /info chips; LIVE-09 row test (LIVE-01, LIVE-09)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 18-04-PLAN.md — Query mode live: POST /query, SSE stream with disconnected state, run history, live error shapes and log tail; LIVE-03 row test (LIVE-02, LIVE-03)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 18-05-PLAN.md — Compare live: bare envelope vs keyed map, per-column tokens, abort on mode switch; AliasCatalog for every picker (LIVE-02, LIVE-03, LIVE-07)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 18-06-PLAN.md — Evidence & Trace live: unchanged EvidenceRef, per-session cache, debug re-request, origin trace link (LIVE-04, LIVE-03)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [ ] 18-07-PLAN.md — Corpus & Health live: table and counts by next_offset, health and counts polls, operator panels, retry targeting (LIVE-06, LIVE-03)
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [ ] 18-08-PLAN.md — Documents & Jobs live: ingest, upload, job drawer, Run disabled during writes, safe delete with corpus refresh (LIVE-05, LIVE-03)
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
+- [ ] 18-09-PLAN.md — Ledger live: promote then query through the alias, timeline with server status semantics, rollback, retire, no-operator fallbacks (LIVE-07, LIVE-03)
+
+**Wave 10** *(blocked on Wave 9 completion)*
+
+- [ ] 18-10-PLAN.md — Graph/vector browser live: nodes, node edges, chunks by selector, store-busy under a raw pycozo lock (LIVE-08, LIVE-03)
+
+**Wave 11** *(blocked on Wave 10 completion)*
+
+- [ ] 18-11-PLAN.md — LIVE-09 in three launch modes, no screen fixtures in the live build, owner click-through with real clients (D-20), LIVE-01..09 linked and proven by the kit (all LIVE rows)
+
 **UI hint**: yes
 
 ## Progress
@@ -587,7 +633,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 15. Offline Tooling & Packaging | 19/19 | Complete    | 2026-10-22 |
 | 16. GUI Connectors | 12/12 | Complete    | 2026-10-22 |
 | 17. GUI Mockup | 13/13 | Complete    | 2026-10-31 |
-| 18. GUI Live | 0/TBD | Not started | - |
+| 18. GUI Live | 0/11 | Not started | - |
 
 v1.0 (Phases 1-7, 64 plans) shipped 2026-09-12 — see `.planning/MILESTONES.md`.
 

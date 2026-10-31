@@ -203,7 +203,7 @@ Before `final`, the string `Run complete.` is not in the DOM as visible text and
 |-----------|-----------|--------------|--------------------------------------|
 | Existing 17 blockers (empty text, empty capability set, hash-shaped alias, bad raw JSON, duplicate key, zero rows) | Run clickable, inline message on click (blocking style, unchanged) | Run `disabled`, warning list (unchanged) | 17-UI-SPEC messages, verbatim |
 | Own request in flight | Run `disabled` with spinner | Run `disabled` with spinner | `Running.` plus the loading copy |
-| An ingest, upload or delete is in flight (LIVE-05) | Run clickable; a click shows the message and sends nothing | Run `disabled` | `A document write is in progress. Queries are unavailable until the ingest or delete finishes.` The message clears when the write ends. |
+| An ingest, upload or delete is in flight (LIVE-05) | Run `disabled` (native `disabled` and `aria-disabled`), with the reason shown (amended 2026-10-31, plan-check ruling: LIVE-05 governs; see 18-CONTEXT D-13) | Run `disabled` | `A document write is in progress. Queries are unavailable until the ingest or delete finishes.` The message clears when the write ends. |
 
 `Compare.run` re-checks every blocker before it sends, even if the button was enabled by a stale state (WR-JSA-02).
 

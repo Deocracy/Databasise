@@ -661,23 +661,31 @@ Not a rename/refactor/migration phase. The only persisted runtime state this pha
 | A5 | Showing `Open in Corpus` for LightRAG records keyed on `full_doc_id` (IN-JSB-07) is the intended fix; the alternative (hide for HippoRAG, amend UI-SPEC line 318) is equally allowed by D-17 | Findings table | Owner click-through objects; low cost to flip |
 | A6 | The owner's D-20 walkthrough has a populated default store (`DEFAULT_STORE_ROOT`) and client env file; not inspected (secret files are off limits) | Environment | Walkthrough steps may need a seeded store |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Query-after-ingest on the LightRAG default path (D-15).**
    - What we know: the offline stub driver does not populate the v2 stores, so `v1-index-sync` has nothing to mirror; the HippoRAG selector path ingests and queries entirely offline with stub clients and returned the ingested text as evidence (probe 3).
    - What's unclear: whether the owner expects the automated assertion on the LightRAG default selector.
    - Recommendation: assert D-15's "query after ingest returns the document's evidence" on the HippoRAG selector in the automated suite and leave the LightRAG default path to the D-20 owner walkthrough; record this in the plan so it is a conscious scope reading.
+   - RESOLVED: asserted on the HippoRAG selector (`test_query_after_hipporag_ingest_returns_that_documents_evidence`); the LightRAG default path is checked in the owner walkthrough. Decided in the 18-08 plan and its truth (Open Question 1), with the walkthrough step in 18-11 Task 2. The matching LIVE-07 substitution is the named deviation in 18-09.
 
 2. **Run disabled vs "clickable with an inline message" for the in-flight write gate.**
    - What we know: 17-CONTEXT discretion says "query Run clickable with an inline message, everything else natively disabled"; LIVE-05 and success criterion 3 say Run is disabled while a write is in flight.
    - Recommendation: natively disabled (`setDisabled(true)`, which also sets `aria-disabled`) plus a visible reason in `query.run.message`; keep the "clickable with message" style only for validation blockers. Playwright `to_be_disabled` accepts both.
+   - RESOLVED: natively disabled with the visible reason, and LIVE-05 governs. Decided in the 18-CONTEXT D-13 amendment of 2026-10-31 (plan-check ruling), mirrored in the 18-UI-SPEC Run blockers row, and implemented by 18-08 Task 3 with its truth.
 
 3. **Timeline head determination when the alias list is missing.**
    - Recommendation: fall back to the highest-ordinal active record on the loaded page and label the status conservatively; the aliases and history routes are both operator routes, so they are present together in practice.
+   - RESOLVED: the head is the active row with the highest generation_ordinal (D-17), read from the GET /ledger/aliases row, with the highest active ordinal on the loaded page as fallback. Decided in the 18-09 plan (Task 2, WR-JSC-01) and its truth.
 
 4. **Which badges count as "wired" when a route is present.** `GET /ledger/aliases` has 10 instances; if any one Picker is not wired in this build its badge would be dropped wrongly. Recommendation: a `WIRED` set keyed by route string, populated by each screen plan as it finishes, with the LIVE-09 test enumerating all 54 elements per launch mode.
+   - RESOLVED: `WIRED` keys are `"<scope> <data-needs-backend value>"`, where the scope is the screen, `dialog` or `shell`. Each screen file declares its own keys, and the LIVE-09 matrix checks all 54 elements in three launch modes. Decided in the 18-03 plan (objective and Task 2) and its truth, and closed in 18-11 Task 1.
 
 5. **Whether to keep `window.__mock`.** Inert and harmless; removing it changes nothing for the live suite. Keeping it keeps the ported files closer to the approved source.
+   - RESOLVED: not installed in the live build, following the 18-UI-SPEC Live Shell; the mock-only controls stay in the source, hidden. Decided in the 18-03 plan (objective, Task 1) and its truth, and tested by `test_mock_only_controls_are_hidden_but_present`.
+
+6. **Roadmap open question 8: the LIVE-05 "different stores" notice.** The ROADMAP and LIVE-05 mark it "Owner decision first", and D-15 had defaulted it to no notice.
+   - DEFERRED to owner at 18-11: the frozen mockup's notice `documents.notice.store-split` is kept, visible and unchanged, until the owner decides at the 18-11 click-through between keeping it and removing it on the basis of Phase 11 D-01 option b. Decided in the 18-CONTEXT D-15 amendment of 2026-10-31 (plan-check ruling); 18-08 Task 3 keeps and tests the notice, and 18-11 Task 2 asks the question.
 
 ## Suggested plan shape (Claude's discretion; D-04 first, D-20 last)
 

@@ -1,0 +1,1 @@
+No external API integration: the console calls only this project's own §18 REST app and Phase 16 operator routes on the same origin (no third-party API, SDK or service), and its full route surface is decided in 18-RESEARCH "Live API contract" and enforced by the LIVE-09 badge matrix, which keeps every route absent from /openapi.json visible and badged.
