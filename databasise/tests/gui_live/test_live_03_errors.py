@@ -323,3 +323,73 @@ def test_documents_500_renders_the_generic_view(live_app, browser):
     with live_app.fail("ingest"), _ui(browser, live_app) as ui:
         _paste_submit(ui)
         ui.expect("documents.error.generic").to_contain_text("The server returned HTTP 500")
+
+
+# ---- 18-09: Ledger ----
+
+PROMOTE_ALIAS_FIELD = '[data-mock-id="screen-ledger"] [data-field-loc="body.alias"]'
+
+
+def _promote_form(ui, alias="err-test"):
+    """Runs a query in the page, then fills the promote form with it and presses Promote alias (the dialog opens)."""
+    ui.el("query.text.input").fill("Ed Wood")
+    ui.el("query.selector.kind-capability").check()
+    ui.el("query.selector.capability").select_option(CAPS)
+    ui.el("query.run.submit").click()
+    ui.expect("query.state.success").to_be_visible()
+    ui.nav("ledger")
+    ui.el("ledger.promote.trace-1").check()
+    ui.el("ledger.promote.alias").fill(alias)
+    ui.el("ledger.promote.origin-human").check()
+    ui.el("ledger.promote.submit").click()
+    ui.expect("shell.dialog.promote").to_be_visible()
+
+
+def _rewrite_body(path, change):
+    """A route handler that sends the page's own request with ``change(body)`` applied, so the real server answers it."""
+
+    def handler(route):
+        body = route.request.post_data_json
+        change(body)
+        route.continue_(post_data=json.dumps(body))
+
+    return lambda page: page.route(f"**/{path}", handler)
+
+
+def test_ledger_active_retirement_refusal_links_to_the_head_row(seeded, browser):
+    first = seeded.query("Ed Wood", HIPPORAG)["trace_token"]
+    second = seeded.query("Bela Lugosi", HIPPORAG)["trace_token"]
+    old = seeded.promote("ret", [first])["version"]
+    head = seeded.promote("ret", [second])["version"]
+    # The page asks to retire the old version; the rewrite names the active head instead.
+    with _ui(browser, seeded, _rewrite_body("retire", lambda body: body.update(version=head))) as ui:
+        ui.nav("ledger")
+        ui.el("ledger.timeline.alias").select_option("ret")
+        ui.expect(ui.el("ledger.timeline.table").locator("tbody tr:not([hidden])")).to_have_count(2)
+        ui.el("ledger.timeline.retire-1").click()
+        ui.el("shell.dialog.retire-version").fill(old)
+        ui.el("shell.dialog.retire-traces").select_option(first)
+        ui.el("shell.dialog.retire-origin-human").check()
+        ui.el("shell.dialog.retire-confirm").click()
+        banner = ui.el("ledger.error.refusal")
+        ui.expect(banner).to_contain_text("ActiveGenerationRetirementError")
+        ui.expect(banner.locator('[data-role="footer"]')).to_have_text(re.compile(r"^HTTP 422\."))
+        ui.el("ledger.error.roll-back-first").click()
+        assert ui.page.evaluate("() => document.activeElement.getAttribute('data-status')") == "active"
+        assert ui.page.evaluate("() => document.activeElement.querySelector('[data-role=\"minted\"]').textContent") == head
+
+
+def test_ledger_validation_marks_the_promote_alias(seeded, browser):
+    with _ui(browser, seeded, _rewrite_body("promote", lambda body: body.update(alias=5))) as ui:
+        _promote_form(ui)
+        ui.el("shell.dialog.promote-confirm").click()
+        ui.expect("ledger.error.validation").to_be_visible()
+        ui.expect(ui.page.locator(PROMOTE_ALIAS_FIELD)).to_have_attribute("aria-invalid", "true")
+
+
+def test_ledger_500_renders_the_generic_view(seeded, browser):
+    with seeded.fail("promote"), _ui(browser, seeded) as ui:
+        _promote_form(ui)
+        ui.el("shell.dialog.promote-confirm").click()
+        ui.expect("ledger.error.generic").to_contain_text("The server returned HTTP 500")
+        ui.expect("shell.dialog.promote").to_be_hidden()

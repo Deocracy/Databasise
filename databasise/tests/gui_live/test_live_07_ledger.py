@@ -23,7 +23,8 @@ from urllib.parse import urlparse
 
 import pytest
 
-from databasise.tests.gui_live.conftest import HIPPORAG, open_live_ui, start_live_app  # noqa: F401
+from databasise.tests.gui_live.conftest import HIPPORAG, open_live_ui, start_live_app
+from databasise.tests.seam.test_hipporag_write_path import _DOCUMENT_TEXT
 
 CAPS = ["reads_graph", "reads_kv"]
 LOG_KEY = "databasise.console.ledger-log"
@@ -374,3 +375,101 @@ def test_timeline_cells_do_not_wrap_at_1440(lineage, live_ui):
     assert (got["kind"], got["origin"], got["created"]) == ("nowrap", "nowrap", "nowrap")
     assert abs(got["minWidth"] - got["sixteen"]) < 1
     assert got["gap"] == "8px"
+
+
+# ---- Task 3: no listing routes (no --operator) ----
+
+
+@pytest.fixture(scope="module")
+def plain_app(tmp_path_factory, corpus_fake):
+    """No ``--operator``: GET /ledger/aliases, POST /ledger/history, POST /promote/preview and GET /traces are not mounted."""
+    live = start_live_app(tmp_path_factory.mktemp("store-plain"), operator=False)
+    live.corpus = corpus_fake
+    if live.start_error is None:
+        live.ingest(_DOCUMENT_TEXT, "seed-plain", HIPPORAG)
+    yield live
+    live.stop()
+
+
+def _promote_in_ui(ui, alias):
+    """Runs a query in the page and promotes it to ``alias`` through the dialog; returns the minted version."""
+    _run_query(ui)
+    ui.nav("ledger")
+    ui.el("ledger.promote.trace-1").check()
+    ui.el("ledger.promote.alias").fill(alias)
+    ui.el("ledger.promote.origin-human").check()
+    ui.el("ledger.promote.submit").click()
+    with ui.page.expect_response(_is_post("/promote")) as info:
+        ui.el("shell.dialog.promote-confirm").click()
+    ui.expect("ledger.promote.result").to_be_visible()
+    return info.value.json()["version"]
+
+
+def test_without_listing_routes_the_ledger_uses_the_client_log(plain_app, browser):
+    assert plain_app.start_error is None, plain_app.start_error
+    ui = open_live_ui(browser, plain_app)
+    try:
+        version = _promote_in_ui(ui, "fb-test")
+
+        # The alias list comes from the client log; its wrapper keeps the badge.
+        ui.expect("ledger.aliases.table").to_contain_text("fb-test")
+        ui.expect("ledger.aliases.panel").to_contain_text("From this browser's ledger log; no route lists aliases.")
+        wrapper = ui.page.locator('[data-needs-backend="GET /ledger/aliases"]:has([data-mock-id="ledger.aliases.panel"])')
+        assert wrapper.count() == 1
+        assert wrapper.locator(".badge-op").count() >= 1
+
+        # The timeline shows the log row, with no server status.
+        ui.el("ledger.timeline.alias").select_option("fb-test")
+        ui.expect(_timeline_rows(ui)).to_have_count(1)
+        assert _statuses(ui) == ["—"]
+        ui.expect("ledger.timeline.notice").to_have_text("Showing this browser's ledger log only; the server history route is not mounted.")
+        ui.expect("ledger.timeline.retire-1").to_be_disabled()
+        ui.expect(ui.el("ledger.timeline.region").locator('[data-role="retire-wrap"]').first).to_have_attribute(
+            "title", "Needs the server history to confirm this version is not active."
+        )
+        ui.expect("ledger.timeline.rollback-1").to_be_enabled()
+        ui.el("ledger.timeline.rollback-1").click()
+        ui.expect(ui.el("shell.dialog.rollback").locator('[data-role="body"]')).to_have_text(
+            f"Roll back fb-test from the active version (not known in this browser) to {version}? A new version will be minted."
+        )
+        ui.el("shell.dialog.rollback-cancel").click()
+        assert _posts(ui, "/ledger/history") == []
+
+        # Preview is not mounted: the button works and prints the unavailable line.
+        ui.expect("ledger.promote.preview").to_be_enabled()
+        ui.el("ledger.promote.preview").click()
+        preview = ui.el("ledger.promote.preview-result")
+        ui.expect(preview).to_contain_text("Preview unavailable: POST /promote/preview is not mounted.")
+        ui.expect(preview).to_contain_text(f"Last known active version in this browser: {version}.")
+        assert _posts(ui, "/promote/preview") == []
+
+        # GET /traces is not mounted: the source is disabled with its reason, and the history source works.
+        ui.expect("ledger.promote.source-recent").to_be_disabled()
+        ui.expect(ui.page.get_by_text("Needs GET /traces.", exact=True)).to_be_visible()
+        ui.expect("ledger.promote.source-history").to_be_checked()
+        ui.expect(ui.el("ledger.promote.traces").locator("label.trace-row:not([hidden])")).to_have_count(1)
+        assert _gets(ui, "/traces") == []
+    finally:
+        ui.close()
+
+
+def test_query_alias_picker_falls_back_to_the_client_log(plain_app, browser):
+    assert plain_app.start_error is None, plain_app.start_error
+    ui = open_live_ui(browser, plain_app)
+    try:
+        version = _promote_in_ui(ui, "fb-pick")
+        stored = ui.page.evaluate(f"() => JSON.parse(sessionStorage.getItem('{LOG_KEY}'))")
+        assert [(e["alias"], e["version"]) for e in stored] == [("fb-pick", version)]
+
+        ui.nav("query")
+        ui.el("query.selector.kind-alias").check()
+        picker = ui.el("query.selector.alias-picker")
+        ui.expect(picker.locator("option")).to_have_text(["Choose an alias", f"fb-pick ({version})"])
+        wrapper = ui.page.locator('[data-mock-id="screen-query"] [data-needs-backend="GET /ledger/aliases"]')
+        assert wrapper.count() >= 1
+        ui.expect(wrapper.first).to_contain_text("From this browser's ledger log; no route lists aliases.")
+        assert wrapper.first.locator(".badge-op").count() >= 1
+        picker.select_option("fb-pick")
+        ui.expect("query.selector.alias").to_have_value("fb-pick")
+    finally:
+        ui.close()
