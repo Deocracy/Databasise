@@ -23,7 +23,7 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 
-from databasise.tests.gui_live.conftest import open_live_ui
+from databasise.tests.gui_live.conftest import open_live_ui, start_live_app
 
 DOCS_TEXT = "Live paste ingest text for the documents screen."
 CLOCK = lambda page: page.clock.install()  # noqa: E731  (time then flows normally until fast_forward)
@@ -258,3 +258,191 @@ def test_absent_job_routes_are_disabled(live_ui):
     ui.expect("documents.pipeline.cancel").to_be_disabled()
     for line in ("Needs GET /jobs.", "Needs POST /jobs/{job_id}/cancel.", "Needs GET /pipeline."):
         ui.expect(ui.page.get_by_text(line, exact=True)).to_be_visible()
+
+
+# ---- Task 3: the write gate, the delete flow, the corpus refresh, HippoRAG query-after-ingest ----
+
+CAPS = ["reads_graph", "reads_kv"]
+WRITING = "A document write is in progress. Queries are unavailable until the ingest or delete finishes."
+ANOTHER = "Another write is in progress."
+SENDING = "Sending. A request that has been sent cannot be cancelled."
+SPLIT_NOTICE = (
+    "LightRAG documents ingested here appear in Corpus & Health and in Jobs. "
+    "They are not visible in Query & Compare or Evidence & Trace."
+)
+
+
+@pytest.fixture
+def corpus_doc(live_app):
+    """Resets the shared fake before every test: one processed document, ``doc-del-1``."""
+    live_app.corpus.clear()
+    live_app.corpus["doc-del-1"] = {"track_id": None, "status": "processed"}
+    return live_app.corpus
+
+
+@pytest.fixture(scope="module")
+def hippo_app(tmp_path_factory, corpus_fake):
+    """A store with no other HippoRAG document, so a query can only return what the test ingested."""
+    live = start_live_app(tmp_path_factory.mktemp("store-hippo"))
+    live.corpus = corpus_fake
+    yield live
+    live.stop()
+
+
+def _deletes(ui):
+    return [r for r in ui.requests if r["method"] == "DELETE"]
+
+
+def _ask_delete(ui, document_id):
+    ui.nav("documents")
+    ui.el("documents.delete.document-id").fill(document_id)
+    ui.el("documents.delete.submit").click()
+    ui.expect("shell.dialog.delete").to_be_visible()
+
+
+def test_query_run_is_disabled_while_an_ingest_is_in_flight(live_app, live_ui):
+    ui = live_ui
+    ui.nav("documents")
+    ui.el("documents.paste.text").fill("Text that keeps the ingest in flight.")
+    with live_app.hold("ingest") as release:
+        ui.el("documents.paste.submit").click()
+        ui.nav("query")
+        ui.expect("query.run.submit").to_be_disabled()
+        ui.expect("query.run.submit").to_have_attribute("aria-disabled", "true")
+        ui.expect("query.run.message").to_be_visible()
+        ui.expect("query.run.message").to_have_text(WRITING)
+        ui.el("query.mode.compare").click()
+        ui.expect("query.run.submit").to_be_disabled()
+        ui.expect("query.run.submit").to_have_attribute("aria-disabled", "true")
+        ui.expect("query.run.message").to_have_text(WRITING)
+        release.set()
+    ui.expect("query.run.submit").to_be_enabled()
+    ui.expect("query.run.submit").not_to_have_attribute("aria-disabled", "true")
+    ui.expect("query.run.message").to_be_hidden()
+    ui.el("query.mode.query").click()
+    ui.expect("query.run.submit").to_be_enabled()
+    ui.nav("documents")
+    ui.expect("documents.result.card").to_be_visible()
+
+
+def test_second_write_is_blocked_while_one_is_in_flight(live_app, live_ui):
+    ui = live_ui
+    ui.nav("documents")
+    ui.el("documents.paste.text").fill("Text that keeps the ingest in flight.")
+    ui.el("documents.delete.document-id").fill("doc-other")
+    ui.el("documents.tabs.upload").click()
+    ui.el("documents.upload.file").set_input_files({"name": "note.txt", "mimeType": "text/plain", "buffer": b"an uploaded note"})
+    ui.expect("documents.upload.submit").to_be_enabled()
+    ui.expect("documents.delete.submit").to_be_enabled()
+    ui.el("documents.tabs.paste").click()
+    with live_app.hold("ingest") as release:
+        ui.el("documents.paste.submit").click()
+        ui.expect("documents.paste.submit").to_be_disabled()
+        ui.expect("documents.upload.submit").to_be_disabled()
+        ui.expect("documents.delete.submit").to_be_disabled()
+        ui.expect(ui.el("documents.ingest.panel").get_by_text(ANOTHER)).to_be_visible()
+        ui.expect(ui.el("documents.delete.panel").get_by_text(ANOTHER)).to_be_visible()
+        release.set()
+    ui.expect("documents.paste.submit").to_be_enabled()
+    ui.expect("documents.upload.submit").to_be_enabled()
+    ui.expect("documents.delete.submit").to_be_enabled()
+    ui.expect(ui.el("documents.ingest.panel").get_by_text(ANOTHER)).to_be_hidden()
+
+
+def test_dialog_dismiss_sends_nothing(live_app, live_ui):
+    ui = live_ui
+    _ask_delete(ui, "doc-keep-me")
+    ui.el("shell.dialog.delete-cancel").click()
+    ui.expect("shell.dialog.delete").to_be_hidden()
+    _ask_delete(ui, "doc-keep-me")
+    ui.page.keyboard.press("Escape")
+    ui.expect("shell.dialog.delete").to_be_hidden()
+    _settle(ui)
+    assert _deletes(ui) == []
+    ui.expect("documents.delete.outcome").to_be_hidden()
+
+
+def test_dialog_stays_open_while_the_delete_is_in_flight(corpus_doc, live_app, live_ui):
+    ui = live_ui
+    _ask_delete(ui, "doc-del-1")
+    dialog = ui.el("shell.dialog.delete")
+    with live_app.hold("delete_document") as release:
+        ui.el("shell.dialog.delete-confirm").click()
+        ui.expect("shell.dialog.delete-confirm").to_be_disabled()
+        ui.expect("shell.dialog.delete-cancel").to_be_disabled()
+        ui.expect(dialog.get_by_text(SENDING)).to_be_visible()
+        # Escape is ignored; a second press (which Chromium may let through) must not close the dialog either.
+        ui.page.keyboard.press("Escape")
+        ui.page.keyboard.press("Escape")
+        ui.expect(dialog).to_be_visible()
+        assert len(_deletes(ui)) == 1
+        release.set()
+    ui.expect(dialog).to_be_hidden()
+    ui.expect(ui.el("documents.delete.outcome")).to_contain_text("success")
+    assert len(_deletes(ui)) == 1
+    assert "doc-del-1" not in corpus_doc
+
+
+def test_confirmed_delete_refreshes_corpus_and_counts_and_the_row_is_gone(corpus_doc, live_ui):
+    ui = live_ui
+    ui.nav("corpus")
+    ui.expect(ui.el("corpus.table.documents").locator("tbody tr:not([hidden])")).to_have_count(1)
+    _ask_delete(ui, "doc-del-1")
+    with ui.page.expect_response(lambda r: r.request.method == "GET" and urlparse(r.url).path == "/corpus/counts"):
+        ui.el("shell.dialog.delete-confirm").click()
+    ui.expect(ui.el("documents.delete.outcome")).to_contain_text("success")
+    first = next(i for i, r in enumerate(ui.requests) if r["method"] == "DELETE")
+    after = ui.requests[first + 1 :]
+    assert any(r["method"] == "GET" and r["path"] == "/corpus" for r in after)
+    assert any(r["method"] == "GET" and r["path"] == "/corpus/counts" for r in after)
+
+    ui.nav("corpus")
+    ui.expect(ui.el("corpus.table.documents").locator("tbody tr:not([hidden])")).to_have_count(0)
+    ui.expect(ui.el("corpus.kpi.total").locator('[data-role="count"]')).to_have_text("0")
+
+
+def test_delete_with_a_hipporag_selector_sends_the_selector(seeded, live_ui):
+    ui = live_ui
+    ui.nav("documents")
+    ui.el("documents.selector.kind-capability").check()
+    ui.el("documents.selector.capability").select_option(CAPS)
+    ui.el("documents.delete.document-id").fill("seed-hipporag")
+    ui.el("documents.delete.submit").click()
+    ui.expect("shell.dialog.delete").to_be_visible()
+    ui.el("shell.dialog.delete-confirm").click()
+    ui.expect(ui.el("documents.delete.outcome")).to_contain_text("success")
+    sent = _deletes(ui)
+    assert [r["path"] for r in sent] == ["/documents/seed-hipporag"]
+    body = json.loads(sent[0]["post_data"])
+    assert list(body) == ["selector"] and sorted(body["selector"]["capability"]) == CAPS
+
+
+def test_query_after_hipporag_ingest_returns_that_documents_evidence(hippo_app, browser):
+    assert hippo_app.start_error is None, hippo_app.start_error
+    word = "zanzibarquartz"
+    with _ui(browser, hippo_app) as ui:
+        ui.nav("documents")
+        ui.el("documents.selector.kind-capability").check()
+        ui.el("documents.selector.capability").select_option(CAPS)
+        ui.el("documents.paste.text").fill(f"The {word} expedition mapped the coast of the island.")
+        ui.el("documents.paste.document-id").fill("doc-hippo-q")
+        ui.el("documents.paste.submit").click()
+        ui.expect("documents.result.card").to_be_visible()
+
+        ui.nav("query")
+        ui.el("query.text.input").fill(word)
+        ui.el("query.selector.kind-capability").check()
+        ui.el("query.selector.capability").select_option(CAPS)
+        ui.el("query.run.stream").set_checked(False)
+        ui.el("query.run.submit").click()
+        ui.expect("query.state.success").to_be_visible()
+        ui.el("query.evidence.open-1").click()
+        ui.expect("evidence.state.resolved").to_be_visible()
+        ui.expect("evidence.inspector.content").to_contain_text(word)
+
+
+def test_store_split_notice_stays_visible(live_ui):
+    ui = live_ui
+    ui.nav("documents")
+    ui.expect("documents.notice.store-split").to_be_visible()
+    ui.expect("documents.notice.store-split").to_have_text(SPLIT_NOTICE)
