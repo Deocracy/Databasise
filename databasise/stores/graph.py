@@ -63,6 +63,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import logging
 import threading
 from collections.abc import Collection
 from dataclasses import dataclass, field
@@ -78,6 +79,8 @@ except ImportError as _cozo_import_err:
         "cozo-embedded is required for CozoGraphStore. "
         "Install with: pip install 'pycozo[embedded]'"
     ) from _cozo_import_err
+
+_log = logging.getLogger(__name__)
 
 
 def _cozo_rows(result: Any) -> list[list]:
@@ -174,7 +177,15 @@ class _ClientRegistry:
             # Phase 10 review WR-01: closed under the lock, so a concurrent acquire of this path waits
             # for RocksDB to drop its LOCK file instead of opening a second client and reading the
             # still-held lock as "busy".
-            entry.client.close()
+            try:
+                entry.client.close()
+            except Exception as exc:  # noqa: BLE001 — pycozo: RuntimeError('Already borrowed')
+                # An executor thread is still inside run() (an asyncio-cancelled _run). Keep the open
+                # client at refcount 0: the next acquire reuses it instead of reading RocksDB's held
+                # LOCK as busy, and the next last release retries the close. Never raise here: the
+                # caller's finally would replace the refusal in flight with this error.
+                cls._entries[key] = entry
+                _log.warning("graph client close deferred, still in use by another thread: %s", exc)
 
 
 def held_graph_paths(prefix: str, own: Collection[str] = ()) -> list[str]:
@@ -555,7 +566,9 @@ class CozoGraphStore(StorageNameSpace):
     async def finalize(self) -> None:
         """Release this instance's client reference once; idempotent (an engine ``finally`` may run
         after a partial construction). The last release closes the shared client. A still-open
-        prepared transaction is aborted first: the client must not close under one (research R10)."""
+        prepared transaction is aborted first: the client must not close under one (research R10).
+        A close refused under a still-running executor query is logged by the registry, never raised:
+        this runs in the engine's ``finally`` and must not mask the refusal in flight."""
         if self._released:
             return
         self._released = True  # set on the loop thread, so two concurrent finalizes release once
