@@ -1498,7 +1498,8 @@ class Databasise:
             raise _foreign_fault("ingest", exc, failure_class="MalformedDriverOutput") from exc
         if not held:
             return None
-        return IngestJob(job_id=_v1_row_track_id(status_path, document_id) or track_id, enqueued=0)
+        held_track_id = await asyncio.to_thread(_v1_row_track_id, status_path, document_id)
+        return IngestJob(job_id=held_track_id or track_id, enqueued=0)
 
     async def _run_corpus_ingest(
         self,
