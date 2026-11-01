@@ -7251,7 +7251,10 @@ var LedgerScreen = (function () {
     }
     if (!Live.has("POST", "/ledger/history")) return showLogTimeline(name);
     var limit = limitValue();
-    if (limit === null) return checkSize();
+    if (limit === null) {
+      setLoading(false); // the read in flight was dropped above and no new one starts
+      return checkSize();
+    }
     var mine = (historyCtl = new AbortController());
     ID("timeline.alias").value = name;
     setLoading(true);
