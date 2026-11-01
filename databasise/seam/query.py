@@ -29,13 +29,14 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator
 
 from databasise.parts.registry import PartRegistry
 from databasise.seam.refusals import (
     EmptyQueryObjectError,
     NonFiniteNumberError,
     UnconsumableQueryMemberError,
+    require_encodable,
 )
 
 _QUERY_MEMBERS: tuple[str, ...] = ("text", "embedding", "predicates", "profile_ref", "formal_query")
@@ -68,6 +69,13 @@ class QueryObject(BaseModel):
     def _embedding_is_finite(cls, value: list[float] | None) -> list[float] | None:
         if value is not None and not all(math.isfinite(x) for x in value):
             raise NonFiniteNumberError(field="embedding")
+        return value
+
+    @field_validator("text", "predicates", "profile_ref", "formal_query")
+    @classmethod
+    def _text_is_encodable(cls, value: Any, info: ValidationInfo) -> Any:
+        # fuzz F3: text is stamped into node configs and hashed (RFC 8785), which refuses a surrogate.
+        require_encodable(value, field=info.field_name or "")
         return value
 
 

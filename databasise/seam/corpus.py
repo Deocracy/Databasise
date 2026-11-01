@@ -42,6 +42,7 @@ from databasise.seam.refusals import (
     PageBoundsError,
     PageSizeExceededError,
     UnsupportedUploadTypeError,
+    require_encodable,
 )
 
 # API-06: the hard cap on any single page this seam will ever return — a caller requesting more
@@ -122,6 +123,7 @@ class IngestDocument(BaseModel):
         if self.raw is not None and len(self.raw) > MAX_DOCUMENT_BYTES:
             raise OversizedDocumentError(actual_bytes=len(self.raw), limit_bytes=MAX_DOCUMENT_BYTES)
         if self.text is not None:
+            require_encodable(self.text, field="text")  # fuzz F4: the encode below would raise instead
             actual_bytes = len(self.text.encode("utf-8"))
             if actual_bytes > MAX_DOCUMENT_BYTES:
                 raise OversizedDocumentError(actual_bytes=actual_bytes, limit_bytes=MAX_DOCUMENT_BYTES)

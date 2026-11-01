@@ -247,6 +247,14 @@
     "http_status": 422
   },
   {
+    "refusal_type": "NonEncodableTextError",
+    "module": "databasise.seam.refusals",
+    "attribute_keys": [
+      "field"
+    ],
+    "http_status": 422
+  },
+  {
     "refusal_type": "NonFiniteNumberError",
     "module": "databasise.seam.refusals",
     "attribute_keys": [

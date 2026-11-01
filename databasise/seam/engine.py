@@ -208,7 +208,7 @@ from databasise.foreign.v1_corpus_adapter import (
     STATUS_WALL_CLOCK_CEILING_SECONDS,
     redact_secrets,
 )
-from databasise.identity.canon import canonicalise
+from databasise.identity.canon import CanonicalisationError, canonicalise
 from databasise.identity.env import EnvironmentDigestError, environment_hash
 from databasise.ledger.ledger import Ledger, LedgerRecord
 from databasise.parts.admission import admit_registry
@@ -284,6 +284,7 @@ from databasise.seam.refusals import (
     InvalidPromotionAliasError,
     MeasurementPostureRefusalError,
     MutableStoreComparisonExcludedError,
+    NonEncodableTextError,
     NoRawUploadPathForModalityError,
     NoWritePathForModalityError,
     PartialRunEvidenceError,
@@ -298,6 +299,7 @@ from databasise.seam.refusals import (
     UnrecognisedPromotionVerbError,
     UnresolvableEvidenceReferenceError,
     UnsatisfiableSelectorError,
+    require_encodable,
 )
 from databasise.seam.selectors import (
     _INSTANCE_HASH_PATTERN,
@@ -727,6 +729,11 @@ async def _run_wiring(
         raise InvalidGuardDeclarationError(node_id=exc.node_id) from exc
     except EnvironmentDigestError as exc:
         raise _foreign_fault(operation, exc, failure_class="EnvironmentDigestUnavailable") from exc
+    except CanonicalisationError as exc:
+        # fuzz F3: the run-identity hasher refuses a lone surrogate the validators did not catch; the
+        # query text is the only caller value stamped into a node config, so that is the slot named.
+        logger.warning("%s refused before dispatch: node config not canonicalisable (%s)", operation, exc)
+        raise NonEncodableTextError(field="text") from exc
 
 
 def _corpus_wiring(query_wiring: dict[str, Any], operation: str) -> dict[str, Any]:
@@ -2704,6 +2711,7 @@ class Databasise:
         caller that did not ask for internal identities does not receive ``run_id``, ``wiring_id``,
         ``wiring_instance_hash``, ``arm_id``, or the node-by-node ``nodes`` trace (T-04-19).
         """
+        require_encodable(trace_reference, field="trace_reference")  # fuzz F2: sqlite binding would raise
         record = self._trace_store.resolve(trace_reference)
         if debug:
             return record
@@ -2741,12 +2749,14 @@ class Databasise:
         # SEAM-12 / LEDG-05 (D-07): an alias no Selector could carry would write a row nobody can
         # select. Same pattern Selector's validator refuses, first for all three verbs, before any
         # trace or store touch.
+        require_encodable(alias, field="alias")  # fuzz F2: alias and trace ids are bound into sqlite
         if alias == "" or _INSTANCE_HASH_PATTERN.match(alias):
             raise InvalidPromotionAliasError(alias=alias)
 
         if change_origin not in CHANGE_ORIGINS:
             raise InvalidChangeOriginError(change_origin=change_origin)
 
+        require_encodable(trace_ids, field="trace_ids")
         resolved_records = [self._trace_store.resolve(trace_id) for trace_id in trace_ids]
         if refuse_partial:
             refuse_partial_evidence(resolved_records, list(trace_ids))

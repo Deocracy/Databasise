@@ -133,6 +133,37 @@ class NonFiniteNumberError(SeamRefusalError):
         super().__init__(f"NonFiniteNumberError: field {field!r} must hold finite numbers (no NaN or infinity)")
 
 
+class NonEncodableTextError(SeamRefusalError):
+    """Raised at the input boundary (fuzz F2/F3/F4) when a caller string in ``field`` -- or any key
+    or value nested in it -- carries a lone surrogate (the JSON escape ``"\\ud800"``), text Python
+    accepts but UTF-8 cannot encode. sqlite's parameter binding and the run-identity hasher (RFC 8785)
+    both raise on it, so it is refused by name before either is reached. ``field`` names the
+    caller's own input slot, never the value: the value itself cannot be echoed as valid JSON."""
+
+    def __init__(self, *, field: str):
+        self.field = field
+        # The literal class name is load-bearing: raised inside a pydantic validator.
+        super().__init__(f"NonEncodableTextError: field {field!r} must be UTF-8 encodable (no lone surrogates)")
+
+
+def require_encodable(value: Any, *, field: str) -> None:
+    """Raise :class:`NonEncodableTextError` naming ``field`` if ``value`` -- a string, or any string
+    key or value nested in dicts, lists and tuples -- is not UTF-8 encodable. The one check every
+    boundary that passes caller text to sqlite or the hasher calls."""
+    if isinstance(value, str):
+        try:
+            value.encode("utf-8")
+        except UnicodeEncodeError:
+            raise NonEncodableTextError(field=field) from None
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            require_encodable(key, field=field)
+            require_encodable(item, field=field)
+    elif isinstance(value, list | tuple):
+        for item in value:
+            require_encodable(item, field=field)
+
+
 class EmptyIngestDocumentError(SeamRefusalError):
     """Raised at ``IngestDocument`` validation when the one payload the caller set is empty
     (09-06-PLAN.md, SEAM-09, D-08): ``member`` is ``"text"`` for empty or whitespace-only text and
@@ -1027,6 +1058,7 @@ class InvalidGuardDeclarationError(SeamRefusalError):
 __all__ = [
     "SeamRefusalError",
     "EmptyQueryObjectError",
+    "NonEncodableTextError",
     "NonFiniteNumberError",
     "UnconsumableQueryMemberError",
     "UnsatisfiableSelectorError",

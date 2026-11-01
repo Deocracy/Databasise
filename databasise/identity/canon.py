@@ -84,7 +84,9 @@ def canonicalise(obj: Any) -> bytes:
         _rfc8785_impl._INT_MIN, _rfc8785_impl._INT_MAX = INT64_MIN, INT64_MAX
         try:
             return rfc8785.dumps(obj)
-        except rfc8785.CanonicalizationError as exc:
+        except (rfc8785.CanonicalizationError, UnicodeEncodeError) as exc:
+            # UnicodeEncodeError: rfc8785 sorts dict keys by their UTF-16 bytes, so a lone surrogate in a
+            # key escapes its own error type (fuzz F3).
             raise CanonicalisationError(str(exc)) from exc
         finally:
             _rfc8785_impl._INT_MIN, _rfc8785_impl._INT_MAX = original_bounds

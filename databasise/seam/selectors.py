@@ -95,6 +95,7 @@ from databasise.seam.refusals import (
     ForbiddenSelectorInputError,
     MultiMemberSelectorError,
     UnsatisfiableSelectorError,
+    require_encodable,
 )
 from databasise.validator.depth import effective_depth
 from databasise.validator.parse import parse_wiring
@@ -142,6 +143,7 @@ class Selector(BaseModel):
             candidates.extend(("capability", value) for value in values)
 
         for member_name, value in candidates:
+            require_encodable(value, field=member_name)  # fuzz F2: an alias reaches the ledger's sqlite
             if _INSTANCE_HASH_PATTERN.match(value):
                 raise ForbiddenSelectorInputError(member_name=member_name, value=value)
         return self
