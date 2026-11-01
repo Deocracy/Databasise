@@ -199,7 +199,8 @@ var Picker = {
       return null;
     }
 
-    var api = {
+    // Named so it never shadows the api() transport (R18-11).
+    var selectorApi = {
       value: value,
       label: function () {
         return selectorLabel(value());
@@ -230,8 +231,8 @@ var Picker = {
       tokens().forEach(function (t) {
         chips.appendChild(h("span", t, "chip mono"));
       });
-      ID("resolves-to").textContent = api.resolve();
-      if (onChange) onChange(api);
+      ID("resolves-to").textContent = selectorApi.resolve();
+      if (onChange) onChange(selectorApi);
     }
 
     group.addEventListener("input", function (event) {
@@ -253,7 +254,7 @@ var Picker = {
     });
     fillAliasPicker(picker);
     refresh();
-    return api;
+    return selectorApi;
   },
 };
 

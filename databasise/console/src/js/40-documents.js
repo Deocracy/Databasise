@@ -522,8 +522,8 @@ var DocumentsScreen = (function () {
 
   // ---- wiring ----
 
-  picker = Picker.attach("documents", function (api) {
-    picker = api;
+  picker = Picker.attach("documents", function (p) {
+    picker = p;
     refresh();
   });
 
