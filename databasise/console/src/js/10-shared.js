@@ -110,9 +110,10 @@ function fillAliasPicker(select) {
 
 // Selector resolution (D-06): the embedded post-WIRE-01 table plus the four documented combinations (API-INVENTORY 3.0).
 var Resolution = (function () {
-  var arms = {};
-  var caps = {};
-  var aliases = {};
+  // No prototype: an alias or wiring named "constructor" must not resolve to Object (R18-03).
+  var arms = Object.create(null);
+  var caps = Object.create(null);
+  var aliases = Object.create(null);
   var def = null;
   var harness = null;
   var rows = FIX.resolution.rows.slice();

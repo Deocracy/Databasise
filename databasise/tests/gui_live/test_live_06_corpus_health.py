@@ -285,6 +285,20 @@ def test_retry_targets_the_document_captured_at_press_time(corpus_docs, live_app
         assert [r["path"] for r in posts] == ["/documents/doc-3/retry"]
 
 
+def test_retry_works_for_a_document_named_constructor(corpus_docs, live_app, browser):
+    """R18-03: an id that is also an Object.prototype key is a plain key of the retrying registry."""
+    corpus_docs["constructor"] = {"track_id": None, "status": "processing"}  # listed as interrupted
+    with _ui(browser, live_app, lambda page: page.route("**/documents/*/retry", lambda route: route.fulfill(json={"job_id": "j-ctor", "enqueued": 1, "seam_events": []}))) as ui:
+        ui.nav("corpus")
+        retry = _row(ui, "constructor").locator('[data-mock-id^="corpus.table.retry-"]')
+        ui.expect(retry).to_be_enabled()
+        ui.expect(_row(ui, "constructor").locator('[data-role="retry-msg"]')).to_be_hidden()
+        retry.click()
+        ui.expect(_row(ui, "constructor").locator('[data-role="retry-msg"]')).to_contain_text("j-ctor")
+        posts = [r for r in ui.requests if r["method"] == "POST" and r["path"].endswith("/retry")]
+        assert [r["path"] for r in posts] == ["/documents/constructor/retry"]
+
+
 def test_absent_corpus_controls_are_disabled_with_their_route(corpus_docs, live_app, live_ui):
     ui = live_ui
     corpus_docs["doc-2"]["status"] = "failed"

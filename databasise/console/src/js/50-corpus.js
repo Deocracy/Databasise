@@ -42,7 +42,7 @@ var CorpusScreen = (function () {
   var statusFilter = "all";
   var isLoading = false;
   var loadedOnce = false;
-  var retrying = {}; // document_id -> true while its POST /retry is outstanding
+  var retrying = Object.create(null); // document_id -> true while its POST /retry is outstanding; no prototype, so "constructor" is a plain id (R18-03)
   var pendingFocus = ""; // a focus-document id that arrived while the first page was still loading
   var note = root.querySelector('[data-role="note"]');
   var pageCtl = null;
