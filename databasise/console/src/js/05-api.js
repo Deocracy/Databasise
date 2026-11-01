@@ -122,8 +122,22 @@ function readStream(res, onEvidence, onFinal) {
   return pump();
 }
 
+// A stored selector object is null, {alias: string}, {capability: string[]} or {harness: string}. The jobs log keeps a label
+// string under the same key and other logs have none, so only object values are checked.
+function storedSelectorOk(value) {
+  if (value === null || typeof value !== "object") return true;
+  if (typeof value.alias === "string" || typeof value.harness === "string") return true;
+  return (
+    Array.isArray(value.capability) &&
+    value.capability.every(function (token) {
+      return typeof token === "string";
+    })
+  );
+}
+
 // A newest-first list kept in memory and mirrored to sessionStorage under `key`, trimmed to `cap`. Every storage access is in
-// try/catch: a storage that throws leaves the memory list working with no message (D-07, 18-RESEARCH Pitfall 13).
+// try/catch: a storage that throws leaves the memory list working with no message (D-07, 18-RESEARCH Pitfall 13). An entry
+// with a malformed selector is dropped, so a bad stored row cannot stop a screen's start-up.
 function SessionLog(key, cap) {
   var items = [];
   try {
@@ -131,7 +145,7 @@ function SessionLog(key, cap) {
     if (Array.isArray(parsed)) {
       items = parsed
         .filter(function (entry) {
-          return entry !== null && typeof entry === "object";
+          return entry !== null && typeof entry === "object" && storedSelectorOk(entry.selector);
         })
         .slice(0, cap);
     }

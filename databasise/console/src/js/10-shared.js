@@ -21,11 +21,16 @@ function setFieldError(input, message) {
   }
 }
 
+// A stored capability that is not an array (a malformed sessionStorage entry) must not throw inside a screen's start-up.
+function capabilityText(capability) {
+  return Array.isArray(capability) ? capability.join("+") : String(capability);
+}
+
 // A selector value is null (Default), {alias}, {capability: [...]} or {harness}.
 function selectorLabel(value) {
   if (!value) return "Default";
   if (value.alias !== undefined) return "alias " + value.alias;
-  if (value.capability !== undefined) return "capability " + value.capability.join("+");
+  if (value.capability !== undefined) return "capability " + capabilityText(value.capability);
   return "harness " + value.harness;
 }
 
@@ -33,7 +38,7 @@ function selectorLabel(value) {
 function comparisonKey(value) {
   if (!value) return "default";
   if (value.alias !== undefined) return value.alias;
-  if (value.capability !== undefined) return value.capability.join("+");
+  if (value.capability !== undefined) return capabilityText(value.capability);
   return value.harness;
 }
 
