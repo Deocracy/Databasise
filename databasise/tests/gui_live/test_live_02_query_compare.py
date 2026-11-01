@@ -212,6 +212,57 @@ def test_stream_ignores_comment_lines(seeded, browser):
         assert len(_posts(ui, "/query/stream")) == 1
 
 
+# R18-07: the page's fetch is wrapped so the stream's headers arrive at once while its body stays open
+# after the first event; the test then closes or errors the body. route.fulfill cannot hold a body open.
+HOLD_STREAM = """() => {
+  const orig = window.fetch;
+  window.__held = null;
+  window.fetch = function (path, init) {
+    if (path !== "/query/stream") return orig.apply(this, arguments);
+    return orig(path, init).then((real) => real.text()).then((text) => {
+      const blocks = text.split("\\n\\n").filter(Boolean);
+      const body = new ReadableStream({
+        start(c) {
+          c.enqueue(new TextEncoder().encode(blocks[0] + "\\n\\n"));
+          window.__held = { c: c, rest: blocks.slice(1).join("\\n\\n") + "\\n\\n" };
+        },
+      });
+      return new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } });
+    });
+  };
+}"""
+
+
+def _poll(ui, expression):
+    # bounded: wait_for_function evaluates strings, which the console's CSP refuses
+    for _ in range(100):
+        if ui.page.evaluate(expression):
+            return
+        ui.page.wait_for_timeout(50)
+    raise AssertionError(f"timed out waiting for {expression}")
+
+
+@pytest.mark.parametrize("end", ["close", "error"])
+def test_stream_holds_inflight_until_the_body_settles(seeded, live_ui, end):
+    ui = live_ui
+    ui.page.evaluate(HOLD_STREAM)
+    _fill(ui, stream=True)
+    ui.el("query.run.submit").click()
+    _poll(ui, "window.__held !== null")
+    ui.expect(ui.page.locator(EVIDENCE_ROWS)).to_have_count(1)
+    # Headers are in and the body is still open: the query must still block the health poll (LIVE-06).
+    assert ui.page.evaluate("InFlight.counts.query || 0") == 1
+    assert ui.page.evaluate("InFlight.any()") is True
+
+    if end == "close":
+        ui.page.evaluate("window.__held.c.enqueue(new TextEncoder().encode(window.__held.rest)); window.__held.c.close()")
+        ui.expect("query.state.success").to_be_visible()
+    else:
+        ui.page.evaluate("window.__held.c.error(new TypeError('stream reset'))")
+        ui.expect("query.error.generic").to_contain_text(DISCONNECTED)
+    _poll(ui, "(InFlight.counts.query || 0) === 0")
+
+
 def test_stream_refusal_is_not_parsed_as_events(seeded, live_ui):
     ui = live_ui
     ui.el("query.text.input").fill("Ed Wood")
