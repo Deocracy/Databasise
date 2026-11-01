@@ -2,8 +2,9 @@
 an oversize value is refused by name at the input boundary, never passed on to crash as ``OSError
 ENAMETOOLONG``, sqlite's ``OverflowError`` or a quadratic scan.
 
-(1) document id: at most ``MAX_DOCUMENT_ID_CHARS`` (``InvalidDocumentIdError``, no job recorded);
-(2) evidence namespace: at most ``MAX_DOCUMENT_ID_CHARS`` (``InvalidEvidenceNamespaceError``);
+(1) document id: must fit a 255-byte file name with its suffix, at most ``MAX_DOCUMENT_ID_CHARS``
+    (``InvalidDocumentIdError``, no job recorded);
+(2) evidence namespace: at most 128 characters (``InvalidEvidenceNamespaceError``);
 (3) page offset: at most ``MAX_PAGE_OFFSET`` on every paged route (``PageBoundsError``);
 (4) GET /log limit: 1..1000 refused as ``PageBoundsError`` like the other paged routes;
 (5) query text: the document byte cap (``OversizedDocumentError``);
@@ -74,12 +75,17 @@ def _refused(response, refusal_type: str) -> dict:
 # (1) document id length ------------------------------------------------------------------------- #
 
 
-def test_document_id_cap_is_128_and_named_in_the_refusal():
-    assert MAX_DOCUMENT_ID_CHARS == 128
-    assert generated_on_disk_name("a" * 128) == "a" * 128 + ".bin"
+def test_document_id_cap_is_what_fits_a_255_byte_file_name_with_its_suffix():
+    # NAME_MAX is 255: 251 chars fit with the 4-char default suffix (test_raw_upload_staging pins a
+    # 251-char id with ".txt"); with the longest accepted suffix (".properties", 11) only 244 fit.
+    assert MAX_DOCUMENT_ID_CHARS == 251
+    assert generated_on_disk_name("a" * 251) == "a" * 251 + ".bin"
+    assert generated_on_disk_name("a" * 244, ".properties") == "a" * 244 + ".properties"
     with pytest.raises(InvalidDocumentIdError) as exc_info:
-        generated_on_disk_name("a" * 129)
-    assert "128" in str(exc_info.value)
+        generated_on_disk_name("a" * 252)
+    assert "251" in str(exc_info.value)
+    with pytest.raises(InvalidDocumentIdError):
+        generated_on_disk_name("a" * 245, ".properties")
 
 
 def test_a_10000_char_upload_id_is_refused_by_name_and_records_no_job(client, monkeypatch):
