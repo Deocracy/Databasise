@@ -182,8 +182,8 @@ class HttpRerankClient:
     @staticmethod
     def _token_accounting(usage: Any, identity: str) -> TokenAccounting:
         total = usage.get("total_tokens") if isinstance(usage, dict) else None
-        if not isinstance(total, int) or isinstance(total, bool):
-            # D-05: no reported usage means the spend is unknowable, not zero.
+        if not isinstance(total, int) or isinstance(total, bool) or total < 0:
+            # D-05: no (or negative) reported usage means the spend is unknowable, not zero.
             return TokenAccounting(call_count=1, counted_by="unbudgetable")  # seam.tokens.UNBUDGETABLE_SENTINEL
         return TokenAccounting(prompt_tokens=total, call_count=1, counted_by=identity)
 
