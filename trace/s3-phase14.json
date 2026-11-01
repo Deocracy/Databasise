@@ -4,7 +4,7 @@
   "part": "phase14",
   "ledger_version": 942,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "565151ecc678caaf596c56683f3db9cec11a36318b94e08324cc8220df014d72"
+    ".planning/milestones/v1.1-REQUIREMENTS.md": "267eb9eb00c17a04d3aee8a816f6110d570ce1260c2f5b6d6d7ec2d7d3fbadef"
   },
   "checker": {
     "harness": "claude-code",
@@ -15,85 +15,85 @@
     {
       "id": "LEDG-01",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:416",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:425",
       "quote": "POST /promote, /rollback and /retire, and the MCP promote, rollback and retire tools, never return HTTP 500 or MCP UnexpectedToolError, and never raise AssertionError from promotion._arm_name_for_node_ids, when given a trace token from a partial run."
     },
     {
       "id": "LEDG-02",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:420",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:429",
       "quote": "promote() refuses with a named 422 refusal any trace whose resolved record has partial=true, and writes no ledger row."
     },
     {
       "id": "LEDG-03",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:424",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:433",
       "quote": "An alias whose active ledger row has mutation_id='hipporag' never produces HTTP 500 or MCP UnexpectedToolError."
     },
     {
       "id": "LEDG-04",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:428",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:437",
       "quote": "retire(alias, V) returns 422 ActiveGenerationRetirementError and appends no tombstone when the alias's active record is a rollback whose targets_version equals V."
     },
     {
       "id": "LEDG-05",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:432",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:441",
       "quote": "promote, rollback and retire (engine, REST and MCP) refuse, with a named 422 refusal and no ledger row written, an empty alias and any alias value that the \u00a718.4 Selector refuses at construction."
     },
     {
       "id": "LEDG-06",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:435",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:444",
       "quote": "Ledger connections are closed deterministically, and refused verbs leave the filesystem unchanged."
     },
     {
       "id": "LEDG-07",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:438",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:447",
       "quote": "The ledger exposes an alias-keyed read, for example Ledger.history_for_alias(alias). It returns every row for that alias, oldest first."
     },
     {
       "id": "LEDG-08",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:442",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:451",
       "quote": "The gate verbs promote-next and promote-now are refused before any ledger access, with one named refusal stating that the gate is not calibrated."
     },
     {
       "id": "LEDG-09",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:446",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:455",
       "quote": "POST /trace/resolve and the MCP trace tool accept debug only as a JSON boolean."
     },
     {
       "id": "LEDG-10",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:450",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:459",
       "quote": "Capability selection matches on the effects that the selected wiring actually exercises for the operation, not on the registered Part's maximal effects."
     },
     {
       "id": "LEDG-11",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:454",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:463",
       "quote": "Wiring validation rejects a wiring node whose kind differs from the registered Part.kind for its part reference."
     },
     {
       "id": "LEDG-12",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:457",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:466",
       "quote": "default_registry() contains no admitted part that no selector can reach."
     },
     {
       "id": "LEDG-13",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:461",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:470",
       "quote": "The corpus wiring path layout is defined in one place."
     },
     {
       "id": "LEDG-14",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:464",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:473",
       "quote": "Registry, ledger and selector docstrings match current behaviour."
     }
   ],

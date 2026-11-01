@@ -4,7 +4,7 @@
   "part": "phase11-a",
   "ledger_version": 942,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "565151ecc678caaf596c56683f3db9cec11a36318b94e08324cc8220df014d72"
+    ".planning/milestones/v1.1-REQUIREMENTS.md": "267eb9eb00c17a04d3aee8a816f6110d570ce1260c2f5b6d6d7ec2d7d3fbadef"
   },
   "checker": {
     "harness": "claude-code",
@@ -15,61 +15,61 @@
     {
       "id": "LRAG-01",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:185",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:194",
       "quote": "Every LightRAG corpus operation (ingest, delete, and the status ops behind GET /corpus, /corpus/counts, /jobs/{job_id} and the /health engine probe) passes run_corpus_op a v1 working_dir derived from the app's store_root and workspace, never the repo-global DEFAULT_V1_WORKING_DIR (v1/.corpus_working_dir)."
     },
     {
       "id": "LRAG-02",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:189",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:198",
       "quote": "A document ingested through POST /documents with the default (LightRAG) selector becomes retrievable by POST /query on the LightRAG arms and resolvable by POST /evidence/resolve"
     },
     {
       "id": "LRAG-03",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:193",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:202",
       "quote": "The lightrag full-ingest part declares mutates_store (not writes_artifact with scope quarantined), its admission record names the storage it actually writes"
     },
     {
       "id": "LRAG-04",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:197",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:206",
       "quote": "Concurrent LightRAG writes to one working dir are serialized: while a LightRAG ingest or delete subprocess is running against a working dir"
     },
     {
       "id": "LRAG-05",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:201",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:210",
       "quote": "Adapter input and failures are validated, named and readable: CorpusOpSubprocessError keeps the last 2000 characters of v1 stderr"
     },
     {
       "id": "LRAG-06",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:205",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:214",
       "quote": "ingest/delete/status/counts/jobs return a named 'v1 not configured' refusal listing the missing key names (never values), and /health reports degraded with that reason"
     },
     {
       "id": "LRAG-07",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:209",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:218",
       "quote": "A LightRAG ingest that exceeds its wall-clock ceiling (900 s ingest, 300 s delete, 60 s status) marks its document as stuck/interrupted"
     },
     {
       "id": "LRAG-08",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:213",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:222",
       "quote": "POST /documents/upload (and POST /documents with raw) on the LightRAG path indexes the uploaded file's content"
     },
     {
       "id": "LRAG-09",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:217",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:226",
       "quote": "Raw upload inbox files are scoped per workspace (<store_root>/<workspace>/corpus-inbox or equivalent)"
     },
     {
       "id": "LRAG-10",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:220",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:229",
       "quote": "IngestJob.enqueued reports the number of documents v1 actually enqueued"
     }
   ],

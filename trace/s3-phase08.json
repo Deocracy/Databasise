@@ -4,7 +4,7 @@
   "part": "phase08",
   "ledger_version": 942,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "565151ecc678caaf596c56683f3db9cec11a36318b94e08324cc8220df014d72"
+    ".planning/milestones/v1.1-REQUIREMENTS.md": "267eb9eb00c17a04d3aee8a816f6110d570ce1260c2f5b6d6d7ec2d7d3fbadef"
   },
   "checker": {
     "harness": "claude-code",
@@ -15,67 +15,67 @@
     {
       "id": "RUN-01",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:14",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:23",
       "quote": "The MCP tool-roster versus COVERAGE.md cross-check runs again."
     },
     {
       "id": "RUN-02",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:18",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:27",
       "quote": "A chat() or embed() whose response has usage=None returns TokenAccounting with call_count == 1 and counted_by == 'unbudgetable'."
     },
     {
       "id": "RUN-03",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:22",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:31",
       "quote": "OpenAICompatibleClient no longer passes malformed provider responses to callers unchecked"
     },
     {
       "id": "RUN-04",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:26",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:35",
       "quote": "returns True when the real mcp distribution is installed in the active virtualenv"
     },
     {
       "id": "RUN-05",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:29",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:38",
       "quote": "Model clients are built by one shipped builder that both the parity CLIs and the launcher use."
     },
     {
       "id": "RUN-06",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:33",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:42",
       "quote": "Both transports can be started from the installed package."
     },
     {
       "id": "RUN-07",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:37",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:46",
       "quote": "The launcher enforces one engine process and one uvicorn worker per store root"
     },
     {
       "id": "RUN-08",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:40",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:49",
       "quote": "A browser console on another origin can call the REST seam, or the decision to serve same-origin is enforced and documented."
     },
     {
       "id": "RUN-09",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:44",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:53",
       "quote": "The REST upload path-safety test in databasise/tests/seam/test_rest_corpus_endpoints.py:345-356 checks the file actually written to disk."
     },
     {
       "id": "RUN-10",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:47",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:56",
       "quote": "The upload-poll-delete round-trip tests prove that counts change after a delete."
     },
     {
       "id": "RUN-12",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:54",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:63",
       "quote": "Phase gate: the offline test suite is green under both invocation styles."
     }
   ],

@@ -2,47 +2,47 @@
   "bak_trace": 1,
   "step": "S4",
   "part": "phase11-tail",
-  "ledger_version": 529,
+  "ledger_version": 942,
   "artifacts": {
-    ".planning/phases/11-lightrag-corpus-path/11-03-PLAN.md": "12d63818988aa81ba195654cb3983135128bee160f8e655ad09d6edd35d210c1",
-    ".planning/phases/11-lightrag-corpus-path/11-04-PLAN.md": "cc0ebf326ba21cf8d136af8d750b5dc0e357d3e49e025083820e74fe010e3d73",
-    ".planning/phases/11-lightrag-corpus-path/11-10-PLAN.md": "09958aab12714ad28c947ac8f4b7516ccf5d21ab68554712862dedf43b9c357b",
-    ".planning/phases/11-lightrag-corpus-path/11-11-PLAN.md": "2f204491c9a54586540cfd1e301feb10779171896887951ce4ea4f88ac64257d"
+    ".planning/milestones/v1.1-phases/11-lightrag-corpus-path/11-03-PLAN.md": "12d63818988aa81ba195654cb3983135128bee160f8e655ad09d6edd35d210c1",
+    ".planning/milestones/v1.1-phases/11-lightrag-corpus-path/11-04-PLAN.md": "cc0ebf326ba21cf8d136af8d750b5dc0e357d3e49e025083820e74fe010e3d73",
+    ".planning/milestones/v1.1-phases/11-lightrag-corpus-path/11-10-PLAN.md": "09958aab12714ad28c947ac8f4b7516ccf5d21ab68554712862dedf43b9c357b",
+    ".planning/milestones/v1.1-phases/11-lightrag-corpus-path/11-11-PLAN.md": "2f204491c9a54586540cfd1e301feb10779171896887951ce4ea4f88ac64257d"
   },
   "checker": {
     "harness": "claude-code",
-    "model": "sonnet",
-    "session": "trace-2026-10-19"
+    "model": "claude-opus-5-5",
+    "session": "11bd64f3-96e9-4f30-b125-cc3262ef9629"
   },
   "items": [
     {
       "id": "LRAG-16",
       "status": "present",
-      "where": ".planning/phases/11-lightrag-corpus-path/11-10-PLAN.md:26",
+      "where": ".planning/milestones/v1.1-phases/11-lightrag-corpus-path/11-10-PLAN.md:26",
       "quote": "a hybrid-arm query and a naive-arm query each raise EmptyNamespaceError (REST 422, refusal_type EmptyNamespaceError, public field store_kind 'vector' only) before any node runs"
     },
     {
       "id": "LRAG-17",
       "status": "present",
-      "where": ".planning/phases/11-lightrag-corpus-path/11-11-PLAN.md:23",
+      "where": ".planning/milestones/v1.1-phases/11-lightrag-corpus-path/11-11-PLAN.md:23",
       "quote": "requirements: [LRAG-17]"
     },
     {
       "id": "LRAG-18",
       "status": "present",
-      "where": ".planning/phases/11-lightrag-corpus-path/11-04-PLAN.md:21",
+      "where": ".planning/milestones/v1.1-phases/11-lightrag-corpus-path/11-04-PLAN.md:21",
       "quote": "requirements: [LRAG-18]"
     },
     {
       "id": "LRAG-19",
       "status": "present",
-      "where": ".planning/phases/11-lightrag-corpus-path/11-10-PLAN.md:16",
+      "where": ".planning/milestones/v1.1-phases/11-lightrag-corpus-path/11-10-PLAN.md:16",
       "quote": "requirements: [LRAG-16, LRAG-19]"
     },
     {
       "id": "LRAG-20",
       "status": "present",
-      "where": ".planning/phases/11-lightrag-corpus-path/11-03-PLAN.md:43",
+      "where": ".planning/milestones/v1.1-phases/11-lightrag-corpus-path/11-03-PLAN.md:43",
       "quote": "The driver dispatches exactly ingest, delete, status and health; 'entities' and 'entity_info' are refused as unknown ops, and no test fixture references them (LRAG-20, D-05)"
     }
   ],

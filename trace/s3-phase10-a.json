@@ -4,7 +4,7 @@
   "part": "phase10-a",
   "ledger_version": 942,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "565151ecc678caaf596c56683f3db9cec11a36318b94e08324cc8220df014d72"
+    ".planning/milestones/v1.1-REQUIREMENTS.md": "267eb9eb00c17a04d3aee8a816f6110d570ce1260c2f5b6d6d7ec2d7d3fbadef"
   },
   "checker": {
     "harness": "claude-code",
@@ -15,49 +15,49 @@
     {
       "id": "STOR-01",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:121",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:130",
       "quote": "Two overlapping engine calls in one process that use the same Cozo graph namespace never return an unstructured 500 caused by 'RocksDB error: IO error: lock hold by current process'."
     },
     {
       "id": "STOR-02",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:125",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:134",
       "quote": "When constructing any store in _build_stores fails (for example the graph open raising under the lock in STOR-01), every store already opened in that call (kv, vector) is finalized before the exception leaves the engine method."
     },
     {
       "id": "STOR-03",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:128",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:137",
       "quote": "POST /evidence/resolve opens only the vector namespace named in the EvidenceRef."
     },
     {
       "id": "STOR-04",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:132",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:141",
       "quote": "GET /health is read-only and reports store state accurately."
     },
     {
       "id": "STOR-05",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:136",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:145",
       "quote": "Capability scoping is enforced per access mode."
     },
     {
       "id": "STOR-06",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:140",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:149",
       "quote": "An ingest whose wiring records any node failure commits nothing."
     },
     {
       "id": "STOR-07",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:144",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:153",
       "quote": "delete_document builds its stores with the resolved wiring's store_namespaces."
     },
     {
       "id": "STOR-08",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:147",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:156",
       "quote": "Opening a FaissVectorStore whose directory holds vector.faiss without vector.meta.json, or vector.meta.json without vector.faiss, raises VectorStoreCorruptedError, as the module docstring states."
     }
   ],

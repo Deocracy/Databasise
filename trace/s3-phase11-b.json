@@ -4,7 +4,7 @@
   "part": "phase11-b",
   "ledger_version": 942,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "565151ecc678caaf596c56683f3db9cec11a36318b94e08324cc8220df014d72"
+    ".planning/milestones/v1.1-REQUIREMENTS.md": "267eb9eb00c17a04d3aee8a816f6110d570ce1260c2f5b6d6d7ec2d7d3fbadef"
   },
   "checker": {
     "harness": "claude-code",
@@ -15,61 +15,61 @@
     {
       "id": "LRAG-11",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:224",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:233",
       "quote": "LightRAG write-side LLM spend is metered: corpus-delete.json and the full-delete part declare calls_llm, the v1 driver returns token usage for ingest and delete when v1 records it, and full-ingest/full-delete report counted_by other than 'unbudgetable' when usage is present"
     },
     {
       "id": "LRAG-12",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:228",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:237",
       "quote": "The full-ingest and full-delete admission records number CONTRACT \u00a78 conditions correctly: network-namespace isolation and token unbudgetability are recorded under condition 3"
     },
     {
       "id": "LRAG-13",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:231",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:240",
       "quote": "GET /health performs no writes: on a fresh, empty store_root it creates no files or directories"
     },
     {
       "id": "LRAG-14",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:234",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:243",
       "quote": "GET /health reports only facts it checked: stores.vector reflects an actual Faiss index probe or is reported as not probed; an empty or unused store_root is not reported 'ok'"
     },
     {
       "id": "LRAG-15",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:238",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:247",
       "quote": "eval corpus_ingest --spend --arm lightrag writes only to the eval store (v1/.eval_corpus_store or the configured eval working dir), never to the operator corpus v1/.corpus_working_dir"
     },
     {
       "id": "LRAG-16",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:242",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:251",
       "quote": "Querying a LightRAG arm whose vector namespace (chunks, entities, relationships) has never been populated returns a named refusal or an explicit 'namespace empty' signal in the envelope"
     },
     {
       "id": "LRAG-17",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:246",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:255",
       "quote": "LightRAG hybrid/local/global answers are generated from KG context as in v1 kg_query: the assembled prompt includes the budgeted entity and relation descriptions (budget-entities/budget-relations) as well as chunks"
     },
     {
       "id": "LRAG-18",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:250",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:259",
       "quote": "LightRAG retrieval matches v1 ordering and selection: entity-lookup searches with the low-level keyword string and relation-lookup with the high-level keyword string"
     },
     {
       "id": "LRAG-19",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:254",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:263",
       "quote": "Query traces for the naive/hybrid/local/global LightRAG arms contain no no-op embedder-index node"
     },
     {
       "id": "LRAG-20",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:257",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:266",
       "quote": "The v1 driver ops 'entities' (entity map for a document_id) and 'entity_info' (entity details by name) are either reachable through an engine method plus REST route and MCP tool"
     }
   ],

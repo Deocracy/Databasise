@@ -2,81 +2,81 @@
   "bak_trace": 1,
   "step": "S4",
   "part": "phase15-a",
-  "ledger_version": 793,
+  "ledger_version": 942,
   "artifacts": {
-    ".planning/phases/15-offline-tooling-packaging/15-01-PLAN.md": "a170a5467c05e31c7f5d3b32ac0db4921c91fbe913877342d1c37cd294b668ad",
-    ".planning/phases/15-offline-tooling-packaging/15-06-PLAN.md": "4c841dd7c0c4c55923a1876b0ea48cc46ac627959855a10e026ec429f7b6191a",
-    ".planning/phases/15-offline-tooling-packaging/15-09-PLAN.md": "78670f26606ea24f96f0f4c49ade7cc809c9c40f668d1e850634ce98434b9672",
-    ".planning/phases/15-offline-tooling-packaging/15-11-PLAN.md": "397886b333750cd63deeb24be7afd6e07393e994353a4aa2742508c12c3a385f",
-    ".planning/phases/15-offline-tooling-packaging/15-12-PLAN.md": "b65d3d3259234e4b16c34003609bdda1c6401e461cca0598dbdc3ae297a714e3",
-    ".planning/phases/15-offline-tooling-packaging/15-13-PLAN.md": "baaf94e2d4e47d2b97f243b5c5c38493b4e0b5b6947430c8d35b619701cb3f33",
-    ".planning/phases/15-offline-tooling-packaging/15-14-PLAN.md": "1c8b5f69b51759d766267d6c0d249fc1c9b9bf226887ea4ba7591de601d2a6ce",
-    ".planning/phases/15-offline-tooling-packaging/15-18-PLAN.md": "78f17f8a50694263c2971ee33740e80d1965d4ec8fa2a17deea00e4fedfca081"
+    ".planning/milestones/v1.1-phases/15-offline-tooling-packaging/15-01-PLAN.md": "a170a5467c05e31c7f5d3b32ac0db4921c91fbe913877342d1c37cd294b668ad",
+    ".planning/milestones/v1.1-phases/15-offline-tooling-packaging/15-06-PLAN.md": "4c841dd7c0c4c55923a1876b0ea48cc46ac627959855a10e026ec429f7b6191a",
+    ".planning/milestones/v1.1-phases/15-offline-tooling-packaging/15-09-PLAN.md": "78670f26606ea24f96f0f4c49ade7cc809c9c40f668d1e850634ce98434b9672",
+    ".planning/milestones/v1.1-phases/15-offline-tooling-packaging/15-11-PLAN.md": "397886b333750cd63deeb24be7afd6e07393e994353a4aa2742508c12c3a385f",
+    ".planning/milestones/v1.1-phases/15-offline-tooling-packaging/15-12-PLAN.md": "b65d3d3259234e4b16c34003609bdda1c6401e461cca0598dbdc3ae297a714e3",
+    ".planning/milestones/v1.1-phases/15-offline-tooling-packaging/15-13-PLAN.md": "baaf94e2d4e47d2b97f243b5c5c38493b4e0b5b6947430c8d35b619701cb3f33",
+    ".planning/milestones/v1.1-phases/15-offline-tooling-packaging/15-14-PLAN.md": "1c8b5f69b51759d766267d6c0d249fc1c9b9bf226887ea4ba7591de601d2a6ce",
+    ".planning/milestones/v1.1-phases/15-offline-tooling-packaging/15-18-PLAN.md": "78f17f8a50694263c2971ee33740e80d1965d4ec8fa2a17deea00e4fedfca081"
   },
   "checker": {
     "harness": "claude-code",
     "model": "claude-opus-5-5",
-    "session": "32d1701b-4256-409c-a5a7-e305cc822f40"
+    "session": "11bd64f3-96e9-4f30-b125-cc3262ef9629"
   },
   "items": [
     {
       "id": "TOOL-01",
       "status": "present",
-      "where": ".planning/phases/15-offline-tooling-packaging/15-01-PLAN.md:26",
+      "where": ".planning/milestones/v1.1-phases/15-offline-tooling-packaging/15-01-PLAN.md:26",
       "quote": "- \"A wheel built with uv build --offline --wheel from a temp copy of databasise/ lists databasise/tools/check_import_boundary.py, databasise/evidence/eval-bundles/bundle@v1/bundle.json, databasise/tests/fixtures/corpus/MANIFEST.json and databasise/tests/fixtures/eval-corpus/MANIFEST.json in its RECORD (TOOL-01, D-01)\""
     },
     {
       "id": "TOOL-02",
       "status": "present",
-      "where": ".planning/phases/15-offline-tooling-packaging/15-09-PLAN.md:23",
+      "where": ".planning/milestones/v1.1-phases/15-offline-tooling-packaging/15-09-PLAN.md:23",
       "quote": "- \"python -m databasise.parity.import_index parses argv with argparse before taking the store lock: --help exits 0 and an unknown flag such as --verfiy exits 2, and neither calls import_v1_index or verify_import or touches the store root (TOOL-02, D-05)\""
     },
     {
       "id": "TOOL-03",
       "status": "present",
-      "where": ".planning/phases/15-offline-tooling-packaging/15-09-PLAN.md:28",
+      "where": ".planning/milestones/v1.1-phases/15-offline-tooling-packaging/15-09-PLAN.md:28",
       "quote": "- \"verify_import reports a graph-topology violation, never 'verified', when the v1 graph exists and the v2 graph namespace is absent; a missing v2 store is a 'refused' result with assertion 'precondition', added to the Violation.assertion Literal (TOOL-03, D-06)\""
     },
     {
       "id": "TOOL-04",
       "status": "present",
-      "where": ".planning/phases/15-offline-tooling-packaging/15-18-PLAN.md:25",
+      "where": ".planning/milestones/v1.1-phases/15-offline-tooling-packaging/15-18-PLAN.md:25",
       "quote": "- \"For run_arm, storage_audit, run_comparison, run_cross_modality, aa_run and remint, each named failure the CLI can meet (MissingParityEnvKeyError, UnparseableProviderRoutingError, a SeamRefusalError subclass, FileNotFoundError, BundleDriftError, CorpusDriftError, MissingTargetFamilyError, aa_run's named ValueError subclasses, an openai network error) injected from the builder or loader returns 1 with exactly one stderr line naming the class and no traceback (TOOL-04, D-03)\""
     },
     {
       "id": "TOOL-05",
       "status": "present",
-      "where": ".planning/phases/15-offline-tooling-packaging/15-18-PLAN.md:24",
+      "where": ".planning/milestones/v1.1-phases/15-offline-tooling-packaging/15-18-PLAN.md:24",
       "quote": "- \"build_hipporag_index --spend on an empty tmp store root builds with stub clients, and a build whose fake chunk embedder writes nothing raises the named post-build error ChunkCountMismatchError (TOOL-05)\""
     },
     {
       "id": "TOOL-06",
       "status": "present",
-      "where": ".planning/phases/15-offline-tooling-packaging/15-11-PLAN.md:24",
+      "where": ".planning/milestones/v1.1-phases/15-offline-tooling-packaging/15-11-PLAN.md:24",
       "quote": "- \"The index-identity preflight verifies the same v1_working_dir the v1 arm runs against (verify_fn receives v1_working_dir) (TOOL-06)\""
     },
     {
       "id": "TOOL-07",
       "status": "present",
-      "where": ".planning/phases/15-offline-tooling-packaging/15-12-PLAN.md:23",
+      "where": ".planning/milestones/v1.1-phases/15-offline-tooling-packaging/15-12-PLAN.md:23",
       "quote": "- \"The v1 driver makes exactly one await rag.aquery_llm(query, param) call per job and never calls aquery or aquery_data, so keyword extraction runs once and the returned ids and answer come from the same retrieval (TOOL-07, D-08, G-27)\""
     },
     {
       "id": "TOOL-08",
       "status": "present",
-      "where": ".planning/phases/15-offline-tooling-packaging/15-13-PLAN.md:25",
+      "where": ".planning/milestones/v1.1-phases/15-offline-tooling-packaging/15-13-PLAN.md:25",
       "quote": "- \"storage_audit exits 3 and prints 'partial' or 'cycle' when run_audit returns a partial run or a cyclic wiring; nodes whose trace status is not-scheduled are reported 'unreached', never 'no-touch', and the summary adds unreached=N after the three pinned counts (TOOL-08, D-03, D-09)\""
     },
     {
       "id": "TOOL-09",
       "status": "present",
-      "where": ".planning/phases/15-offline-tooling-packaging/15-14-PLAN.md:22",
+      "where": ".planning/milestones/v1.1-phases/15-offline-tooling-packaging/15-14-PLAN.md:22",
       "quote": "- \"Before any client is built or any provider called, run_cross_modality checks with cli.check_named_arm that the LightRAG capability selector resolves to arm naive and the HippoRAG one to arm hipporag, each with its own wiring_id, and refuses by name otherwise; the \u00a718.4 capability selectors stay (TOOL-09, D-10, M-08)\""
     },
     {
       "id": "TOOL-10",
       "status": "present",
-      "where": ".planning/phases/15-offline-tooling-packaging/15-06-PLAN.md:21",
+      "where": ".planning/milestones/v1.1-phases/15-offline-tooling-packaging/15-06-PLAN.md:21",
       "quote": "- \"databasise.run_wiring canonicalises the wiring document before parse_wiring and before any node runs, so a wiring with 2**70 at its top level raises CanonicalisationError with zero nodes dispatched (TOOL-10, D-11)\""
     }
   ],

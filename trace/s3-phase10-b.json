@@ -4,7 +4,7 @@
   "part": "phase10-b",
   "ledger_version": 942,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "565151ecc678caaf596c56683f3db9cec11a36318b94e08324cc8220df014d72"
+    ".planning/milestones/v1.1-REQUIREMENTS.md": "267eb9eb00c17a04d3aee8a816f6110d570ce1260c2f5b6d6d7ec2d7d3fbadef"
   },
   "checker": {
     "harness": "claude-code",
@@ -15,49 +15,49 @@
     {
       "id": "STOR-09",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:150",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:159",
       "quote": "- [x] **STOR-09**: FaissVectorStore and MultiNamespaceVectorStore report named refusals for invalid input. query with top_k <= 0 raises a named ValueError subclass instead of a bare AssertionError."
     },
     {
       "id": "STOR-10",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:153",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:162",
       "quote": "- [x] **STOR-10**: CozoGraphStore keeps edges consistent with nodes. After a flushed delete_node('x'), get_node_edges('x') returns []"
     },
     {
       "id": "STOR-11",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:157",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:166",
       "quote": "- [x] **STOR-11**: SqliteKVStore keeps its pending buffer separate from callers. get_by_id returns a copy, so mutating it does not change the buffered record"
     },
     {
       "id": "STOR-12",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:160",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:148",
       "quote": "STOR-12"
     },
     {
       "id": "STOR-13",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:164",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:173",
       "quote": "- [x] **STOR-13**: FilesystemBlobStore validates digests against ^[0-9a-f]{64}$ inside the store."
     },
     {
       "id": "STOR-14",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:169",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:178",
       "quote": "- [x] **STOR-14**: SqliteLexicalStore.query('alpha beta') matches documents that contain both terms in any position"
     },
     {
       "id": "STOR-15",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:174",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:183",
       "quote": "STOR-15"
     },
     {
       "id": "STOR-16",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:178",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:187",
       "quote": "- [x] **STOR-16**: FaissVectorStore.upsert refuses metadata containing the keys 'id' or 'score' with a named refusal."
     }
   ],

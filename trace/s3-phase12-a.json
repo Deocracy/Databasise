@@ -4,7 +4,7 @@
   "part": "phase12-a",
   "ledger_version": 942,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "565151ecc678caaf596c56683f3db9cec11a36318b94e08324cc8220df014d72"
+    ".planning/milestones/v1.1-REQUIREMENTS.md": "267eb9eb00c17a04d3aee8a816f6110d570ce1260c2f5b6d6d7ec2d7d3fbadef"
   },
   "checker": {
     "harness": "claude-code",
@@ -15,61 +15,61 @@
     {
       "id": "HIPP-01",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:264",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:273",
       "quote": "After a real HippoRAG ingest (chunk-embed writes), a query on the normal PPR path (fact-filter keeps at least one fact) returns items whose ids resolve"
     },
     {
       "id": "HIPP-02",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:267",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:276",
       "quote": "reset-vector-join's passage weights are keyed by the same strings as the graph's chunk vertex names, so ppr seeds each passage vertex whose chunk scored against the query with a non-zero reset weight"
     },
     {
       "id": "HIPP-03",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:270",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:279",
       "quote": "When any node of an ingest wiring fails, Engine.ingest commits none of the staged writes: every store's drop_pending_index_ops runs instead of index_done_callback"
     },
     {
       "id": "HIPP-04",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:274",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:283",
       "quote": "A HippoRAG ingest refusal carries the real exception of the node that failed (e.g. ClientNotWiredError naming 'embedding' when chunk-embed has no embedding client)"
     },
     {
       "id": "HIPP-05",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:279",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:288",
       "quote": "The fact-filter node receives the query text: fact-filter is listed in consumes_query of wirings/hipporag/base.json"
     },
     {
       "id": "HIPP-06",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:282",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:291",
       "quote": "Every chunk produced by chunk-embed gets a passage vertex in the HippoRAG graph after ingest, including chunks for which OpenIE extracted no triples"
     },
     {
       "id": "HIPP-07",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:285",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:294",
       "quote": "synonymy-edges matches the entities new in the current ingest against all entities, both those committed by earlier ingests and those staged by entity-fact-embed in the same run."
     },
     {
       "id": "HIPP-08",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:288",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:297",
       "quote": "HippoRAG edge weights and edge_types accumulate across ingests: a co-occurrence edge produced by two separate ingests has the summed co-occurrence weight"
     },
     {
       "id": "HIPP-09",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:292",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:301",
       "quote": "A fact extracted from different documents in separate ingests keeps the union of chunk_ids in both its fact vector metadata and its KV 'fact:<id>' record"
     },
     {
       "id": "HIPP-10",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:295",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:304",
       "quote": "OpenIE extraction failures are reported: malformed NER or triple JSON responses and per-chunk chat() exceptions are counted per chunk and returned in the ingest outcome (and trace)"
     }
   ],

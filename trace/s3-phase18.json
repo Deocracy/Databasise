@@ -4,7 +4,7 @@
   "part": "phase18",
   "ledger_version": 942,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "565151ecc678caaf596c56683f3db9cec11a36318b94e08324cc8220df014d72"
+    ".planning/milestones/v1.1-REQUIREMENTS.md": "267eb9eb00c17a04d3aee8a816f6110d570ce1260c2f5b6d6d7ec2d7d3fbadef"
   },
   "checker": {
     "harness": "claude-code",
@@ -15,55 +15,55 @@
     {
       "id": "LIVE-01",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:787",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:796",
       "quote": "- [x] **LIVE-01**: The console build is served to a browser from the same origin as the \u00a718 REST app (or through a dev proxy), started by the launcher bound to 127.0.0.1 with a chosen store root, workspace and model clients;"
     },
     {
       "id": "LIVE-02",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:791",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:800",
       "quote": "- [x] **LIVE-02**: The Query & Compare screen calls the live POST /query, POST /query/stream and POST /compare instead of fixtures: streaming uses fetch with a ReadableStream SSE parser that checks status and content"
     },
     {
       "id": "LIVE-03",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:794",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:803",
       "quote": "- [x] **LIVE-03**: Live server errors render through the GUI-06 error states: a real refusal 422 shows the typed banner for its refusal_type, a real validation 422 shows field errors on the offending input,"
     },
     {
       "id": "LIVE-04",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:797",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:806",
       "quote": "- [x] **LIVE-04**: The Evidence & Trace screen calls the live POST /evidence/resolve with the EvidenceRef copied unchanged from the envelope, caches results per (namespace, ref) for the session so a second Open issues no request,"
     },
     {
       "id": "LIVE-05",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:799",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:808",
       "quote": "- [x] **LIVE-05**: The Documents & Jobs screen calls the live POST /documents, POST /documents/upload, GET /jobs/{job_id} and DELETE /documents/{document_id}; the returned job_id is stored in the client-side job list;"
     },
     {
       "id": "LIVE-06",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:803",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:812",
       "quote": "- [x] **LIVE-06**: The Corpus & Health screen calls the live GET /health, GET /corpus and GET /corpus/counts; health polls at the configured 30-60 s interval only when enabled and never while a query, compare, ingest or delete is in flight;"
     },
     {
       "id": "LIVE-07",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:806",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:815",
       "quote": "- [x] **LIVE-07**: The Ledger screen calls the live POST /promote, POST /rollback and POST /retire with alias, trace ids and change_origin from the form; a successful promote appends to the client-side ledger log and a follow-up POST /query with {alias} confirms it;"
     },
     {
       "id": "LIVE-08",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:810",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:819",
       "quote": "- [x] **LIVE-08**: The Graph/vector browser calls the live POST /graph/nodes, POST /graph/node and POST /chunks with a selector (never a namespace), pages by next_offset, and renders the store-busy refusal returned while another call holds the graph lock."
     },
     {
       "id": "LIVE-09",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:814",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:823",
       "quote": "- [x] **LIVE-09**: In the connected build, an element keeps data-needs-backend and its badge exactly when its route is absent from the live app's /openapi.json, and loses both once the route is present and wired;"
     }
   ],

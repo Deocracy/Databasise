@@ -4,7 +4,7 @@
   "part": "phase15",
   "ledger_version": 942,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "565151ecc678caaf596c56683f3db9cec11a36318b94e08324cc8220df014d72"
+    ".planning/milestones/v1.1-REQUIREMENTS.md": "267eb9eb00c17a04d3aee8a816f6110d570ce1260c2f5b6d6d7ec2d7d3fbadef"
   },
   "checker": {
     "harness": "claude-code",
@@ -15,121 +15,121 @@
     {
       "id": "TOOL-01",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:470",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:479",
       "quote": "- [x] **TOOL-01**: A non-editable wheel built from databasise/pyproject.toml contains the databasise.tools package (check_import_boundary.py), evidence/eval-bundles/** and the tests/fixtures corpus read by eval.corpus_ingest and parity.corpus."
     },
     {
       "id": "TOOL-02",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:474",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:483",
       "quote": "- [x] **TOOL-02**: `python -m databasise.parity.import_index` parses its arguments with argparse. `--help` prints usage and exits 0. An unknown argument such as `--verfiy` exits 2."
     },
     {
       "id": "TOOL-03",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:478",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:487",
       "quote": "- [x] **TOOL-03**: verify_import returns a graph-topology violation, not 'verified', when the v1 Cozo graph exists and the v2 graph namespace is absent."
     },
     {
       "id": "TOOL-04",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:481",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:490",
       "quote": "- [x] **TOOL-04**: The offline CLIs parity.run_arm, parity.storage_audit, parity.run_comparison, parity.run_cross_modality, eval.aa_run and eval.remint each map named configuration, input and provider failures to one stderr line and exit 1 with no traceback."
     },
     {
       "id": "TOOL-05",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:493",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:502",
       "quote": "- [x] **TOOL-05**: parity.build_hipporag_index and eval.remint default to an estimate-only dry run. The dry run makes no LLM or embedding call and exits 0 with the estimate."
     },
     {
       "id": "TOOL-06",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:502",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:511",
       "quote": "- [x] **TOOL-06**: parity.run_comparison changes as follows:"
     },
     {
       "id": "TOOL-07",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:520",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:529",
       "quote": "- [x] **TOOL-07**: v1_driver_script and v1_arm change as follows:"
     },
     {
       "id": "TOOL-08",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:537",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:546",
       "quote": "- [x] **TOOL-08**: parity.storage_audit exits non-zero and prints 'partial' or 'cycle' when run_audit returns a partial run or a cyclic wiring."
     },
     {
       "id": "TOOL-09",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:547",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:556",
       "quote": "- [x] **TOOL-09**: parity.run_cross_modality changes as follows:"
     },
     {
       "id": "TOOL-10",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:564",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:573",
       "quote": "- [x] **TOOL-10**: databasise.run_wiring canonicalises the wiring document before executing it, so a wiring containing an integer outside int64 raises CanonicalisationError with zero nodes run."
     },
     {
       "id": "TOOL-11",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:567",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:576",
       "quote": "eval.corpus_ingest --arm lightrag writes into the eval store (v1/.eval_corpus_store) and never into v1/.corpus_working_dir; otherwise it refuses with a named error."
     },
     {
       "id": "TOOL-12",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:571",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:580",
       "quote": "eval.calibration refuses calibration when a pass yields no node traces, or when any trace node has an unreported cache status."
     },
     {
       "id": "TOOL-13",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:583",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:592",
       "quote": "eval.bundle changes as follows:"
     },
     {
       "id": "TOOL-14",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:596",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:605",
       "quote": "evidence.parity_report renders only states it reads:"
     },
     {
       "id": "TOOL-15",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:621",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:630",
       "quote": "evidence.falsifier2's verdict paragraph and the exit status of main() are computed from evaluate_probe results."
     },
     {
       "id": "TOOL-16",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:625",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:634",
       "quote": "A violation refuses with AdmissionConditionMissingError."
     },
     {
       "id": "TOOL-17",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:636",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:645",
       "quote": "The artifact registry is either wired into the runner or removed. If it is kept:"
     },
     {
       "id": "TOOL-18",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:653",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:662",
       "quote": "The codebase-memory-mcp adapter and part change as follows:"
     },
     {
       "id": "TOOL-19",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:673",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:682",
       "quote": "Each of the nine MCP tools in TOOL_NAMES publishes a non-empty usage description with no internal plan references"
     },
     {
       "id": "TOOL-20",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:677",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:686",
       "quote": "Module and data docstrings state current facts:"
     }
   ],

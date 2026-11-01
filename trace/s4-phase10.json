@@ -2,115 +2,115 @@
   "bak_trace": 1,
   "step": "S4",
   "part": "phase10",
-  "ledger_version": 441,
+  "ledger_version": 942,
   "artifacts": {
-    ".planning/phases/10-stores-locking-data-integrity/10-01-PLAN.md": "804280c4db7c29d7a9d688290e1a1d9998ed2a4458dc9e76d83a33a04a378009",
-    ".planning/phases/10-stores-locking-data-integrity/10-02-PLAN.md": "2349d929e24abd46eca2260dd90a5f1219c6c8a08c6c73ef552c0e26aac75dca",
-    ".planning/phases/10-stores-locking-data-integrity/10-03-PLAN.md": "3cc4babbe7169f87250ecce9887b94f13f42db39855dcb7baa2f95ee0ca4aadb",
-    ".planning/phases/10-stores-locking-data-integrity/10-04-PLAN.md": "12b4f2589c78e1d10148a8d4684db2ef90613d091d2d26eb8e3ac0a6ac4f58a2",
-    ".planning/phases/10-stores-locking-data-integrity/10-05-PLAN.md": "29d3d9c5b479cf8662809269750a49f69cc4a8ee4e436ad82bf5284ebd42f5f9",
-    ".planning/phases/10-stores-locking-data-integrity/10-06-PLAN.md": "e4dc0046b71eccbf42e58b0a8dfbe05c8555a16a5466fb4229acb3497c557d84",
-    ".planning/phases/10-stores-locking-data-integrity/10-07-PLAN.md": "c9cf63c14b643985128abec74092e27965a1fa0cc0ab0622ac265865c6958bc4",
-    ".planning/phases/10-stores-locking-data-integrity/10-08-PLAN.md": "5db76ea74ce64eaa7f0a5954902b1aaf60cbcbce579960f88d5ae9787656ea59",
-    ".planning/phases/10-stores-locking-data-integrity/10-09-PLAN.md": "1934380934d889aba7512f627429ab65657a36ffabce446dd26eac178e2d6655",
-    ".planning/phases/10-stores-locking-data-integrity/10-10-PLAN.md": "4c94c0063ba61e3a69ebec6c7846cb1c0deb1f7c98e9164934c47c10faa9fa83",
-    ".planning/phases/10-stores-locking-data-integrity/10-11-PLAN.md": "7dda2343685f9ec332f7c1e30aa223b040b587579218d0942b88ad46c97f4d01",
-    ".planning/phases/10-stores-locking-data-integrity/10-12-PLAN.md": "0d20636381eb905e0f2904bb3608e44d4e3d330a791b6531e6bbd7b00312b3e8"
+    ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-01-PLAN.md": "804280c4db7c29d7a9d688290e1a1d9998ed2a4458dc9e76d83a33a04a378009",
+    ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-02-PLAN.md": "2349d929e24abd46eca2260dd90a5f1219c6c8a08c6c73ef552c0e26aac75dca",
+    ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-03-PLAN.md": "3cc4babbe7169f87250ecce9887b94f13f42db39855dcb7baa2f95ee0ca4aadb",
+    ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-04-PLAN.md": "12b4f2589c78e1d10148a8d4684db2ef90613d091d2d26eb8e3ac0a6ac4f58a2",
+    ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-05-PLAN.md": "29d3d9c5b479cf8662809269750a49f69cc4a8ee4e436ad82bf5284ebd42f5f9",
+    ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-06-PLAN.md": "e4dc0046b71eccbf42e58b0a8dfbe05c8555a16a5466fb4229acb3497c557d84",
+    ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-07-PLAN.md": "c9cf63c14b643985128abec74092e27965a1fa0cc0ab0622ac265865c6958bc4",
+    ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-08-PLAN.md": "5db76ea74ce64eaa7f0a5954902b1aaf60cbcbce579960f88d5ae9787656ea59",
+    ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-09-PLAN.md": "1934380934d889aba7512f627429ab65657a36ffabce446dd26eac178e2d6655",
+    ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-10-PLAN.md": "4c94c0063ba61e3a69ebec6c7846cb1c0deb1f7c98e9164934c47c10faa9fa83",
+    ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-11-PLAN.md": "7dda2343685f9ec332f7c1e30aa223b040b587579218d0942b88ad46c97f4d01",
+    ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-12-PLAN.md": "0d20636381eb905e0f2904bb3608e44d4e3d330a791b6531e6bbd7b00312b3e8"
   },
   "checker": {
     "harness": "claude-code",
-    "model": "sonnet",
-    "session": "trace-2026-10-18"
+    "model": "claude-opus-5-5",
+    "session": "11bd64f3-96e9-4f30-b125-cc3262ef9629"
   },
   "items": [
     {
       "id": "STOR-01",
       "status": "present",
-      "where": ".planning/phases/10-stores-locking-data-integrity/10-01-PLAN.md:19",
+      "where": ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-01-PLAN.md:19",
       "quote": "requirements: [STOR-01, STOR-02]"
     },
     {
       "id": "STOR-02",
       "status": "present",
-      "where": ".planning/phases/10-stores-locking-data-integrity/10-01-PLAN.md:19",
+      "where": ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-01-PLAN.md:19",
       "quote": "requirements: [STOR-01, STOR-02]"
     },
     {
       "id": "STOR-03",
       "status": "present",
-      "where": ".planning/phases/10-stores-locking-data-integrity/10-06-PLAN.md:13",
+      "where": ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-06-PLAN.md:13",
       "quote": "requirements: [STOR-03, STOR-08]"
     },
     {
       "id": "STOR-04",
       "status": "present",
-      "where": ".planning/phases/10-stores-locking-data-integrity/10-07-PLAN.md:16",
+      "where": ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-07-PLAN.md:16",
       "quote": "requirements: [STOR-04]"
     },
     {
       "id": "STOR-05",
       "status": "present",
-      "where": ".planning/phases/10-stores-locking-data-integrity/10-08-PLAN.md:14",
+      "where": ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-08-PLAN.md:14",
       "quote": "requirements: [STOR-05]"
     },
     {
       "id": "STOR-06",
       "status": "present",
-      "where": ".planning/phases/10-stores-locking-data-integrity/10-04-PLAN.md:14",
+      "where": ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-04-PLAN.md:14",
       "quote": "requirements: [STOR-06]"
     },
     {
       "id": "STOR-07",
       "status": "present",
-      "where": ".planning/phases/10-stores-locking-data-integrity/10-10-PLAN.md:13",
+      "where": ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-10-PLAN.md:13",
       "quote": "requirements: [STOR-07]"
     },
     {
       "id": "STOR-08",
       "status": "present",
-      "where": ".planning/phases/10-stores-locking-data-integrity/10-06-PLAN.md:13",
+      "where": ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-06-PLAN.md:13",
       "quote": "requirements: [STOR-03, STOR-08]"
     },
     {
       "id": "STOR-09",
       "status": "present",
-      "where": ".planning/phases/10-stores-locking-data-integrity/10-11-PLAN.md:13",
+      "where": ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-11-PLAN.md:13",
       "quote": "requirements: [STOR-09, STOR-16]"
     },
     {
       "id": "STOR-10",
       "status": "present",
-      "where": ".planning/phases/10-stores-locking-data-integrity/10-09-PLAN.md:13",
+      "where": ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-09-PLAN.md:13",
       "quote": "requirements: [STOR-10, STOR-11]"
     },
     {
       "id": "STOR-11",
       "status": "present",
-      "where": ".planning/phases/10-stores-locking-data-integrity/10-09-PLAN.md:13",
+      "where": ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-09-PLAN.md:13",
       "quote": "requirements: [STOR-10, STOR-11]"
     },
     {
       "id": "STOR-12",
       "status": "present",
-      "where": ".planning/phases/10-stores-locking-data-integrity/10-12-PLAN.md:16",
+      "where": ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-12-PLAN.md:16",
       "quote": "requirements: [STOR-12]"
     },
     {
       "id": "STOR-13",
       "status": "present",
-      "where": ".planning/phases/10-stores-locking-data-integrity/10-02-PLAN.md:28",
+      "where": ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-02-PLAN.md:28",
       "quote": "requirements: [STOR-12, STOR-13, STOR-14]"
     },
     {
       "id": "STOR-14",
       "status": "present",
-      "where": ".planning/phases/10-stores-locking-data-integrity/10-02-PLAN.md:28",
+      "where": ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-02-PLAN.md:28",
       "quote": "requirements: [STOR-12, STOR-13, STOR-14]"
     },
     {
       "id": "STOR-15",
       "status": "present",
-      "where": ".planning/phases/10-stores-locking-data-integrity/10-03-PLAN.md:12",
+      "where": ".planning/milestones/v1.1-phases/10-stores-locking-data-integrity/10-03-PLAN.md:12",
       "quote": "requirements: [STOR-15]"
     }
   ],

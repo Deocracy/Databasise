@@ -2,60 +2,60 @@
   "bak_trace": 1,
   "step": "S4",
   "part": "phase16-a",
-  "ledger_version": 843,
+  "ledger_version": 942,
   "artifacts": {
-    ".planning/phases/16-gui-connectors/16-01-PLAN.md": "bbf56c0d84e8ac7ad4c92fb4563d4f6ed4f03c2b861048a134e8de19557ff770",
-    ".planning/phases/16-gui-connectors/16-02-PLAN.md": "7fa6655ec03c5ae18fb8286d6087afc6dd44accebe84568739aeb8e3a8a1b9df",
-    ".planning/phases/16-gui-connectors/16-03-PLAN.md": "4ae0b5d3b88b759961e5720e784e38fd50712ab40c1f8700607c36ba9fe7601c",
-    ".planning/phases/16-gui-connectors/16-04-PLAN.md": "d936f3eb4bdf92b7f478d4c1a594c357f08b43c86202d4742a2eef7598ba298f",
-    ".planning/phases/16-gui-connectors/16-12-PLAN.md": "b0ebf3d4088b9d44877e24bb332a5b2062148b9e5bba83f0b4158c9c17f704f6"
+    ".planning/milestones/v1.1-phases/16-gui-connectors/16-01-PLAN.md": "bbf56c0d84e8ac7ad4c92fb4563d4f6ed4f03c2b861048a134e8de19557ff770",
+    ".planning/milestones/v1.1-phases/16-gui-connectors/16-02-PLAN.md": "7fa6655ec03c5ae18fb8286d6087afc6dd44accebe84568739aeb8e3a8a1b9df",
+    ".planning/milestones/v1.1-phases/16-gui-connectors/16-03-PLAN.md": "4ae0b5d3b88b759961e5720e784e38fd50712ab40c1f8700607c36ba9fe7601c",
+    ".planning/milestones/v1.1-phases/16-gui-connectors/16-04-PLAN.md": "d936f3eb4bdf92b7f478d4c1a594c357f08b43c86202d4742a2eef7598ba298f",
+    ".planning/milestones/v1.1-phases/16-gui-connectors/16-12-PLAN.md": "b0ebf3d4088b9d44877e24bb332a5b2062148b9e5bba83f0b4158c9c17f704f6"
   },
   "checker": {
     "harness": "claude-code",
     "model": "claude-opus-5-5",
-    "session": "32d1701b-4256-409c-a5a7-e305cc822f40"
+    "session": "11bd64f3-96e9-4f30-b125-cc3262ef9629"
   },
   "items": [
     {
       "id": "CONN-01",
       "status": "present",
-      "where": ".planning/phases/16-gui-connectors/16-12-PLAN.md:273",
+      "where": ".planning/milestones/v1.1-phases/16-gui-connectors/16-12-PLAN.md:273",
       "quote": "CONN-01 is complete: the AST rule, the parametrized call ban, the flag-off 404s, the exact operator route set, and the REST-only COVERAGE rows."
     },
     {
       "id": "CONN-02",
       "status": "present",
-      "where": ".planning/phases/16-gui-connectors/16-02-PLAN.md:129",
+      "where": ".planning/milestones/v1.1-phases/16-gui-connectors/16-02-PLAN.md:129",
       "quote": "Task 1: Tracer: the refusal catalogue is generated, committed and held in sync (CONN-02, D-07)"
     },
     {
       "id": "CONN-03",
       "status": "present",
-      "where": ".planning/phases/16-gui-connectors/16-02-PLAN.md:179",
+      "where": ".planning/milestones/v1.1-phases/16-gui-connectors/16-02-PLAN.md:179",
       "quote": "Task 2: The selector-resolution fixture with per-arm reachability (CONN-03, D-08)"
     },
     {
       "id": "CONN-04",
       "status": "present",
-      "where": ".planning/phases/16-gui-connectors/16-01-PLAN.md:136",
+      "where": ".planning/milestones/v1.1-phases/16-gui-connectors/16-01-PLAN.md:136",
       "quote": "Task 1: Tracer: create_app(operator=True) serves GET /info through operator_rest.py and Databasise.info() (CONN-04, D-01, D-04, D-05)"
     },
     {
       "id": "CONN-05",
       "status": "present",
-      "where": ".planning/phases/16-gui-connectors/16-03-PLAN.md:117",
+      "where": ".planning/milestones/v1.1-phases/16-gui-connectors/16-03-PLAN.md:117",
       "quote": "Task 1: Tracer: GET /wirings lists six rows with node counts, default and reachability (CONN-05, D-06)"
     },
     {
       "id": "CONN-06",
       "status": "present",
-      "where": ".planning/phases/16-gui-connectors/16-04-PLAN.md:143",
+      "where": ".planning/milestones/v1.1-phases/16-gui-connectors/16-04-PLAN.md:143",
       "quote": "Task 1: Tracer: GET /ledger/aliases lists each alias once from a read that creates nothing (CONN-06, D-09)"
     },
     {
       "id": "CONN-07",
       "status": "present",
-      "where": ".planning/phases/16-gui-connectors/16-04-PLAN.md:197",
+      "where": ".planning/milestones/v1.1-phases/16-gui-connectors/16-04-PLAN.md:197",
       "quote": "Task 2: POST /ledger/history pages an alias's rows with active and tombstoned flags (CONN-07, D-10, D-13a)"
     }
   ],

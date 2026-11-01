@@ -4,7 +4,7 @@
   "part": "phase17",
   "ledger_version": 942,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "565151ecc678caaf596c56683f3db9cec11a36318b94e08324cc8220df014d72"
+    ".planning/milestones/v1.1-REQUIREMENTS.md": "267eb9eb00c17a04d3aee8a816f6110d570ce1260c2f5b6d6d7ec2d7d3fbadef"
   },
   "checker": {
     "harness": "claude-code",
@@ -15,67 +15,67 @@
     {
       "id": "GUI-01",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:748",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:757",
       "quote": "- [x] **GUI-01**: A single static mockup file (proposed path mockups/operator-console.html, a directory the BAK mockup scan skips) opens from file:// with no network access and shows a navigation bar with six entries: Query & Compare, Evidence & Trace, Documents & Jobs, Corpus & Health, Ledger, Graph/vector browser."
     },
     {
       "id": "GUI-02",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:751",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:760",
       "quote": "- [x] **GUI-02**: Every interactive element (button, input, select, textarea, link, row action, tab, toggle) and every display region (panel, table, badge group, banner, state view) in the mockup carries a non-empty data-mock-id that is unique within the file"
     },
     {
       "id": "GUI-03",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:755",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:764",
       "quote": "- [x] **GUI-03**: Every console control or display whose API does not exist yet is present in the mockup, stays usable against fixture data, carries data-needs-backend=\"<proposed route>\" naming the route from API-INVENTORY.md section 5.1/5.3"
     },
     {
       "id": "GUI-04",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:758",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:767",
       "quote": "- [x] **GUI-04**: The Query & Compare screen, query mode, has: a multiline text area; a collapsed advanced panel with embedding, predicates, profile_ref and formal_query disabled with the reason 'no registered part consumes this member'"
     },
     {
       "id": "GUI-05",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:761",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:770",
       "quote": "- [x] **GUI-05**: The Query & Compare screen, compare mode, has a shared query editor, a selector list builder with add, remove and reorder rows (each a Default/Alias/Capability/Harness picker)"
     },
     {
       "id": "GUI-06",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:764",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:773",
       "quote": "- [x] **GUI-06**: The mockup renders the three server error shapes distinctly on every screen that issues a call: a 422 body with refusal_type shows a typed refusal banner keyed on refusal_type with the refusal's attributes"
     },
     {
       "id": "GUI-07",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:768",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:777",
       "quote": "- [x] **GUI-07**: The Evidence & Trace screen has an Evidence Inspector (content as readable text, document_id and ordinal chips when present, every other key in a generic key/value table, the envelope score kept"
     },
     {
       "id": "GUI-08",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:771",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:780",
       "quote": "- [x] **GUI-08**: The Documents & Jobs screen has a Paste text tab (text area that blocks empty text, optional document_id checked client-side against ^[A-Za-z0-9_-]+$ with an auto-generate hint, selector control, UTF-8 byte counter against 26,214,400, Submit disabled while in flight)"
     },
     {
       "id": "GUI-09",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:774",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:783",
       "quote": "- [x] **GUI-09**: The Corpus & Health screen has a Health panel (overall badge labelled 'stores openable / v1 reachable', not 'healthy'; stores table with vector shown as 'not probed'"
     },
     {
       "id": "GUI-10",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:777",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:786",
       "quote": "- [x] **GUI-10**: The Ledger screen has a Promote form (alias text field with autocomplete from a client-side ledger log; trace multi-select from client-side query history grouped by selector; change_origin radio with exactly two options and none preselected"
     },
     {
       "id": "GUI-11",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:780",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:789",
       "quote": "- [x] **GUI-11**: The Graph/vector browser screen has a selector picker (never a namespace input), a paged graph node list with id prefix filter, degree column and next_offset paging"
     }
   ],

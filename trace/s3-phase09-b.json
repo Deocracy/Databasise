@@ -4,7 +4,7 @@
   "part": "phase09-b",
   "ledger_version": 942,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "565151ecc678caaf596c56683f3db9cec11a36318b94e08324cc8220df014d72"
+    ".planning/milestones/v1.1-REQUIREMENTS.md": "267eb9eb00c17a04d3aee8a816f6110d570ce1260c2f5b6d6d7ec2d7d3fbadef"
   },
   "checker": {
     "harness": "claude-code",
@@ -15,49 +15,49 @@
     {
       "id": "SEAM-09",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:91",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:100",
       "quote": "Empty inputs are refused instead of being run or enqueued. Query text that is '' or whitespace-only returns EmptyQueryObjectError before any node runs: no LLM or embedding call, and no trace is persisted."
     },
     {
       "id": "SEAM-10",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:95",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:104",
       "quote": "Selector(capability=[]) is refused with a named refusal on every route that accepts a selector (/query, /compare, /documents, /documents/upload, DELETE /documents, and the MCP tools). It never resolves to the bypass wiring, never renders an empty compare key, and no node runs."
     },
     {
       "id": "SEAM-11",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:98",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:107",
       "quote": "POST /compare detects every comparison-key collision before any arm executes, and each arm executes exactly the wiring that the pre-check resolved."
     },
     {
       "id": "SEAM-12",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:102",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:111",
       "quote": "POST /promote refuses, with a named refusal, an alias that is empty or that no Selector could carry (one that matches the hash shape ^(sha256:)?[0-9a-f]{64}$), and writes no ledger row."
     },
     {
       "id": "SEAM-13",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:105",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:114",
       "quote": "On POST /documents/upload, a selector form field that holds the JSON literal 'null' or an empty string means 'no selector' (the default wiring)."
     },
     {
       "id": "SEAM-14",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:108",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:117",
       "quote": "Every concrete SeamRefusalError subclass that a transport can return is exported from one refusal catalogue (refusals.__all__ or a documented re-export list)."
     },
     {
       "id": "SEAM-15",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:111",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:120",
       "quote": "An ingest's file_name is either carried through to the v1 document record, so citations name the uploaded file instead of '<document_id>.bin' or 'unknown_source'"
     },
     {
       "id": "SEAM-16",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:115",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:124",
       "quote": "Seam docstrings and dead code match the behaviour. The rest.py promote docstrings say that a non-string verb is a validation error and that only a non-member string gives UnrecognisedPromotionVerbError."
     }
   ],

@@ -4,7 +4,7 @@
   "part": "phase12-b",
   "ledger_version": 942,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "565151ecc678caaf596c56683f3db9cec11a36318b94e08324cc8220df014d72"
+    ".planning/milestones/v1.1-REQUIREMENTS.md": "267eb9eb00c17a04d3aee8a816f6110d570ce1260c2f5b6d6d7ec2d7d3fbadef"
   },
   "checker": {
     "harness": "claude-code",
@@ -15,61 +15,61 @@
     {
       "id": "HIPP-11",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:300",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:309",
       "quote": "A HippoRAG query returns at most top_k items and evidence refs (default stated in the wiring), with zero-score PPR vertices excluded; both the PPR branch and the DPR fallback apply the cut, so answer and evidence size do not grow with corpus size (dpr_fallback.py:65-69, ppr.py:84-89, assemble_result.py:58-65, engine.py:1053-1056)."
     },
     {
       "id": "HIPP-12",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:304",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:313",
       "quote": "A HippoRAG query run dispatches only query-side nodes (none of the seven index nodes from base.json:6-57 appear in the trace), the effect union used to select the query wiring contains no writes_vector/writes_kv/writes_graph/writes_artifact, and the query text is embedded exactly once per query (shared by fact-score, reset-vector-join and dpr-fallback)."
     },
     {
       "id": "HIPP-13",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:308",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:317",
       "quote": "The HippoRAG envelope answer is not an inline copy of evidence content (\u00a718.2): the answer field has the same meaning as for LightRAG and the envelope no longer equals the retrieved chunk texts joined by blank lines (assemble_result.py:31-36, 52-65; engine.py:513)."
     },
     {
       "id": "HIPP-14",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:312",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:321",
       "quote": "When a HippoRAG query takes a declared degradation path (the fact-filter guard fires and the DPR fallback is used), the non-debug envelope reports it, without the consumer calling resolve_trace(debug=True) (assemble_result.py:22-30, engine.py:271-284, 1106-1109)."
     },
     {
       "id": "HIPP-15",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:316",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:325",
       "quote": "Job, corpus and health status cover HippoRAG: GET /jobs/{job_id} for the job_id returned by a HippoRAG ingest returns a terminal status instead of 422 UnknownJobError; /corpus and /corpus/counts list and count HippoRAG documents when HippoRAG is selected; health probes the selected modality's stores (hipporag-chunks, hipporag-text-chunks, hipporag-graph) instead of only the LightRAG namespaces (engine.py:769, 853-914, 916-963)."
     },
     {
       "id": "HIPP-16",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:321",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:330",
       "quote": "HippoRAG supports document delete and clean re-ingest: delete_document with a HippoRAG selector removes the document's chunk vectors, KV records, passage vertices/edges and fact provenance instead of raising NoWritePathForModalityError; re-ingesting a document_id with shorter text leaves no chunk, vector, KV record or passage edge from ordinals beyond the new chunk count."
     },
     {
       "id": "HIPP-17",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:325",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:334",
       "quote": "An EvidenceRef minted by a HippoRAG query never resolves silently to different text after the same document_id is re-ingested with changed content: it either resolves to the original text or fails with UnresolvableEvidenceReferenceError (chunk_embed.py:80, 96-114; evidence.py:6-20)."
     },
     {
       "id": "HIPP-18",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:330",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:339",
       "quote": "Every config key in wirings/hipporag/base.json and wirings/hipporag/corpus-ingest.json is either read by its part body or removed. The keys are entity-fact-embed namespaces, synonymy-edges guard, reset-vector-join socket_shape/arm_precedence/apportionment_policy, ppr readback and assemble-result order_policy."
     },
     {
       "id": "HIPP-19",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:333",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:342",
       "quote": "HippoRAG ingest token accounting never reports tokens from different counters under one counted_by label: summing accountings with mixed counted_by values yields one row per counter (or the unbudgetable sentinel), using one shared helper instead of the duplicated _sum_token_accountings in openie.py:118-131 and entity_fact_embed.py:59-70."
     }
   ],
   "extra": [
     {
-      "where": ".planning/REQUIREMENTS.md:408",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:408",
       "quote": "Phase 13 D-11 exception (owner-delegated 2026-10-19): HippoRAG delete succeeds since HIPP-16 and writes_graph is unsatisfiable since Phase 12 D-16, so the NoWritePathForModalityError test pins retry_document with a HippoRAG selector instead of DELETE.",
       "note": "Phase 13 note referencing HIPP-16; not a ledger item itself (no source row among the 9 IDs). Also the traceability table lines 910-918 repeat these IDs as 'Phase 12 | Complete' (status mapping, not requirement text)."
     }

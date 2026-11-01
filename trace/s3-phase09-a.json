@@ -4,7 +4,7 @@
   "part": "phase09-a",
   "ledger_version": 942,
   "artifacts": {
-    ".planning/REQUIREMENTS.md": "565151ecc678caaf596c56683f3db9cec11a36318b94e08324cc8220df014d72"
+    ".planning/milestones/v1.1-REQUIREMENTS.md": "267eb9eb00c17a04d3aee8a816f6110d570ce1260c2f5b6d6d7ec2d7d3fbadef"
   },
   "checker": {
     "harness": "claude-code",
@@ -15,49 +15,49 @@
     {
       "id": "SEAM-01",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:59",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:68",
       "quote": "- [x] **SEAM-01**: POST /evidence/resolve and the MCP resolve tool (scope evidence) refuse any EvidenceRef.namespace that does not fullmatch ^[A-Za-z0-9-]+$ (for example '../../es"
     },
     {
       "id": "SEAM-02",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:63",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:72",
       "quote": "- [x] **SEAM-02**: Every SeamRefusalError raised inside a pydantic validator during REST request parsing reaches the client as the refusal body {refusal_type, message, ...attrs} w"
     },
     {
       "id": "SEAM-03",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:67",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:76",
       "quote": "- [x] **SEAM-03**: The MCP transport returns a JSON refusal for every refusal REST returns: the ToolError text parses as JSON and carries refusal_type. This covers AmbiguousIngest"
     },
     {
       "id": "SEAM-04",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:71",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:80",
       "quote": "- [x] **SEAM-04**: Not-found lookups return HTTP 404 with the refusal body: UnknownTraceReferenceError (/trace/resolve), UnknownJobError (GET /jobs/{id}), UnresolvableEvidenceReferenceError (/evidence/resolve) and UnknownGenerationVersionError. All other refusals stay 422. The status code for each refusal type comes from one mapping in rest.py, and the rest.py comment describes that mapping."
     },
     {
       "id": "SEAM-05",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:75",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:84",
       "quote": "- [x] **SEAM-05**: ForeignEngineRefusalError is reported as a server-side failure, not as a 422 caller refusal (proposed: 502). Its public body does not contain raw subprocess stderr: 'message' names only the operation and the exception class, 'cause' is not copied into 'message', and the stderr/traceback text (absolute server paths, env-var names) is not in the default response. That text is logged server-side and is exposed, if at all, only to an operator."
     },
     {
       "id": "SEAM-06",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:79",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:88",
       "quote": "- [x] **SEAM-06**: GET /corpus, GET /corpus/counts and GET /jobs/{id} never return an unstructured 500 when the v1 corpus adapter fails. MissingV1InterpreterError, CorpusOpSubprocessError, CorpusOpTimeoutError and a JSON decode error each return the structured machine-fault response chosen in SEAM-05 (a refusal_type naming the failure, no stderr). The OpenAPI schema for these three routes declares that response."
     },
     {
       "id": "SEAM-07",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:83",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:92",
       "quote": "- [x] **SEAM-07**: No ingest input from the caller produces HTTP 500 or an MCP UnexpectedToolError. (a) POST /documents/upload with a file over 26,214,400 bytes returns 422 Oversi"
     },
     {
       "id": "SEAM-08",
       "status": "present",
-      "where": ".planning/REQUIREMENTS.md:87",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:96",
       "quote": "- [x] **SEAM-08**: Page size and offset are bounded on every path. A limit outside 1..100 or an offset below 0 is refused with a named refusal and never clamped, on GET /corpus, GET /jobs/{id}, MCP status and in-process Page construction. As a result, limit=0 and negative limits never reach the v1 driver slice, no response contains more than 100 documents, and next_offset always advances or is null. The Page docstring states what an in-process caller receives."
     }
   ],
