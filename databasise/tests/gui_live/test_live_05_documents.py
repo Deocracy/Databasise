@@ -417,6 +417,24 @@ def test_delete_with_a_hipporag_selector_sends_the_selector(seeded, live_ui):
     assert list(body) == ["selector"] and sorted(body["selector"]["capability"]) == CAPS
 
 
+def test_alias_delete_dialog_names_no_store_type(live_ui):
+    """R18-05: an alias's arm is known only to the server, so the dialog must not claim a LightRAG or HippoRAG consequence."""
+    ui = live_ui
+    tail = ui.el("shell.dialog.delete").locator('[data-role="tail"]')
+    _ask_delete(ui, "doc-keep-me")
+    ui.expect(tail).to_contain_text("v1 corpus")
+    ui.el("shell.dialog.delete-cancel").click()
+
+    ui.el("documents.selector.kind-alias").check()
+    ui.el("documents.selector.alias").fill("op-alias")
+    ui.el("documents.delete.submit").click()
+    ui.expect("shell.dialog.delete").to_be_visible()
+    text = ui.el("shell.dialog.delete").inner_text()
+    assert "LightRAG" not in text and "HippoRAG" not in text and "v1 corpus" not in text, text
+    ui.el("shell.dialog.delete-cancel").click()
+    assert _deletes(ui) == []
+
+
 def test_query_after_hipporag_ingest_returns_that_documents_evidence(hippo_app, browser):
     assert hippo_app.start_error is None, hippo_app.start_error
     word = "zanzibarquartz"
