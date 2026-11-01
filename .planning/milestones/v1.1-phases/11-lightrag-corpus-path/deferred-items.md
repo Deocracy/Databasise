@@ -13,6 +13,7 @@ Out-of-scope findings logged during execution. Not fixed by the plan that found 
 - Pre-existing ruff findings, not introduced by 11-01: `seam/engine.py` (import order, two unused
   `noqa: BLE001`, ASYNC230 on the staged-upload `open`, BLE001 in `health`), `seam/corpus.py`
   (UP037, unsorted `__all__`), `foreign/v1_corpus_adapter.py` (PLW1510, unsorted `__all__`).
+  status: acknowledged
 
 ## From 11-03
 
@@ -25,6 +26,7 @@ Out-of-scope findings logged during execution. Not fixed by the plan that found 
 - Historical narration still names `@0.1.0` corpus ports: the `seam/engine.py` module docstring
   (Phase 5 paragraphs), `wirings/lightrag/README.md` and `evidence/DR-04-DECISION.md`. Left as
   history; no test reads them.
+  status: acknowledged
 
 ## From 11-05
 
@@ -37,3 +39,4 @@ Out-of-scope findings logged during execution. Not fixed by the plan that found 
 - A legacy flat `<store_root>/corpus-inbox/` left by Phase 9 or 10 is no longer read or cleaned
   by the engine. `_probes.inbox_files` still lists it, so the protected "writes nothing" checks
   keep their meaning. TOOL-02 (Phase 15) migration can remove it.
+  status: acknowledged

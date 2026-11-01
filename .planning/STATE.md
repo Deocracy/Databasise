@@ -2,19 +2,19 @@
 gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Engine Fixes + Operator Console
-current_phase: 18
-status: completed
+status: Awaiting next milestone
 stopped_at: Phase 18 complete — all phases complete
-last_updated: "2026-11-01T20:30:04.678Z"
+last_updated: "2026-11-01T22:47:50.747Z"
 last_activity: 2026-11-01
-last_activity_desc: Phase 18 complete
-state_head: c95fed5c67c07f8c6fd3e50bac4952f189627101
+last_activity_desc: Milestone v1.1 completed and archived
+state_head: e6cb4f1cb0b6a1abb46f4e57c9920f7351e8e044
 progress:
   total_phases: 11
   completed_phases: 11
   total_plans: 136
   completed_plans: 136
   percent: 100
+current_phase: 18
 ---
 
 # Project State
@@ -28,12 +28,10 @@ See: .planning/PROJECT.md (updated 2026-10-19 after Phase 12)
 
 ## Current Position
 
-Phase: 18
-Plan: Not started
-Status: All phases complete
-Last activity: 2026-11-01 — Phase 18 complete
-
-Progress: [██████████] 100% (4/11 phases)
+Phase: Milestone v1.1 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-11-01 — Milestone v1.1 completed and archived
 
 ## Performance Metrics
 
@@ -335,7 +333,6 @@ None yet.
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
-| 1 | Record Phase 6→7 gate deferral (MACH-03, MODAL-01) | 2026-09-11 | e64c694 | .planning/quick/260911-e7a-record-phase-6-to-7-gate-deferral/ |
 
 ## Deferred Verification
 
@@ -349,6 +346,10 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 | Category | Item | Status | Deferred At | Milestone |
 |----------|------|--------|-------------|-----------|
+| deferred_items | 11/deferred-items.md — from 11-01: f07 report prose names two mutable-store components (three exist); full-delete reason text says single-node wiring | acknowledged | 2026-11-01 | v1.1 |
+| deferred_items | 11/deferred-items.md — from 11-03: historical narration still names @0.1.0 corpus ports (seam/engine.py docstring, wirings/lightrag/README.md, DR-04) | acknowledged | 2026-11-01 | v1.1 |
+| deferred_items | 11/deferred-items.md — from 11-05: same document id re-uploaded with a different suffix makes a second v1 row (driver change closed by D-06); legacy flat corpus-inbox not cleaned | acknowledged | 2026-11-01 | v1.1 |
+| requirements | RUN-11 — live embedder measurement runs, owner-deferred to TESTING-PLAN.md §2 (deferred-approved in the BAK records) | known gap | 2026-11-01 | v1.1 |
 | verification_gaps | 06/06-VERIFICATION.md — MACH-03 A/A calibration never run (06-GATE-AMENDMENT.md) | gaps_found | 2026-09-12 | v1.0 |
 | verification_gaps | 03/03-VERIFICATION.md — MODAL-01 two owner-only CONTRACT §5 items | human_needed | 2026-09-12 | v1.0 |
 | uat_gaps | 03/03-UAT.md — tests 2 and 3 (answer spot-check, declared-deviation causes) | testing, 2 scenarios open | 2026-09-12 | v1.0 |
@@ -364,5 +365,4 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Phase 12 (HippoRAG Fixes) is next in the autonomous run
-- Owner, when ready: TESTING-PLAN.md §2 RUN-11 live runs, parity-env check, optional live rerank test
+- Start the next milestone with /gsd-new-milestone

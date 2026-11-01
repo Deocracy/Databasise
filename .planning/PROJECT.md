@@ -8,7 +8,14 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 
 **Modalities are swappable without consumers noticing:** the same corpus, the same seam, N modalities running side-by-side and comparable on the rig — proven by LightRAG and HippoRAG 2 both live behind one unchanging §18 envelope by milestone end.
 
-## Current Milestone: v1.1 Engine Fixes + Operator Console
+## Current State
+
+**Shipped:** v1.1 Engine Fixes + Operator Console, 2026-11-01 (Phases 8-18, 136 plans, 1,096 commits over 18 days). Every confirmed engine defect from `docs/gui/CODEBASE-MAP.md` §4 is fixed against a test that failed first, and the operator console runs against the live engine: `databasise-rest --operator --console` serves a six-screen console (query and compare, evidence and trace, documents and jobs, corpus and health, ledger, graph and vector browser) on the REST app's own loopback origin. Next milestone: not yet defined (`/gsd-new-milestone`).
+
+**Next milestone candidates:** RUN-11 live runs and the other owner tests in `TESTING-PLAN.md`; the gate-adjudicated promotion path (A/A floor, owner corpus); per-request RocksDB open/close and Faiss reload on the event loop; REST `raw` vs MCP `raw_base64` encoding; installed-wheel default `--store-root`; seam authentication.
+
+<details>
+<summary>v1.1 milestone brief (archived)</summary>
 
 **Goal:** Fix every confirmed engine defect, then build an operator console GUI as a client of the §18 REST API.
 
@@ -17,7 +24,9 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 - **GUI connectors:** the operator read routes the console needs (`docs/gui/API-INVENTORY.md` section 5.3): alias list, alias history, trace list, `/info`, wirings, chunk browse, graph node list and graph node detail.
 - **GUI build:** a clickable mockup of the operator console (query/compare, documents/jobs, ledger, graph/vector browser), then connected to the live API screen by screen.
 
-**Inputs:** `docs/superpowers/specs/2026-10-14-operator-console-plan.md`, `docs/gui/API-INVENTORY.md`, `docs/gui/CODEBASE-MAP.md`. Design decisions deferred to their phases: M-04 (LightRAG write path), M-08 (hybrid/global selection), M-12/G-22 (HippoRAG corpus surface and generated answer), G-27 (v1 answer fidelity), G-01 (shared graph handle).
+**Inputs:** `docs/superpowers/specs/2026-10-14-operator-console-plan.md`, `docs/gui/API-INVENTORY.md`, `docs/gui/CODEBASE-MAP.md`.
+
+</details>
 
 ## Requirements
 
@@ -42,15 +51,17 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 - ✓ HippoRAG 2 fully decomposed (13 positions, no opaque core, whole-graph PPR via bulk export) and run side-by-side with LightRAG on one corpus, compared in one call with no consumer-visible envelope field changing (MODAL-04, MODAL-05, API-08, MACH-10) — v1.0, Phase 6: the core-value proof point
 - ✓ Eval bundle minted per RIG §EV.1 with dev/holdout/sealed splits and both §EV.2 target families (MACH-02) — v1.0, Phase 6 (`bundle@v1`, 30-question synthetic fixture)
 - ✓ DR-04 decided on `two-covering-rationale` (HARD-03) — v1.0, Phase 5
+- ✓ Engine runnable as a served process: `databasise-rest` and `databasise-mcp` launchers, shared model client builder, loopback-only binds with Origin/Host guards, one engine process per store root — v1.1, Phase 8 (RUN-11 live measurement owner-deferred)
+- ✓ Engine defects in CODEBASE-MAP.md §4 fixed, each with a test that failed first: refusal shape and input validation (F2), store locking and all-or-nothing commits (F3), LightRAG corpus path (F4), HippoRAG (F5), selectors/wiring/runner (F6), promotion and ledger (F7), offline tooling and packaging (F8) — v1.1, Phases 9-15
+- ✓ Operator read routes for the console (info, wirings, aliases, history, traces, promote preview, chunks, graph nodes, log tail) behind `--operator` — v1.1, Phase 16
+- ✓ Operator console GUI: a frozen six-screen mockup on fixtures, then the live console served at GET /console and wired to every §18 and operator route — v1.1, Phases 17-18 (owner click-through approved 2026-11-01)
+- ✓ No caller input turns a named refusal into a 500 on REST or MCP (surrogates, NaN/Infinity, deep nesting, oversize ids, offsets and query text), and echoed caller values are bounded — v1.1, closing debugging and security battery
 
 ### Active
 
-<!-- v1.1 scope: REQUIREMENTS.md carries the full list with REQ-IDs. -->
+<!-- No milestone in progress. The next milestone's REQUIREMENTS.md is created by /gsd-new-milestone. -->
 
-- [ ] Engine defects in CODEBASE-MAP.md section 4 fixed, each with a test that failed first (F1 to F8)
-- [x] Engine runnable as a served process: launcher, model clients, CORS decision, one worker per store — Phase 8 (RUN-11 live measurement in TESTING-PLAN.md)
-- [ ] Operator read routes for the console (aliases, history, traces, info, wirings, chunks, graph)
-- [ ] Operator console GUI: mockup, then connected to the live REST API
+- [ ] RUN-11 live embedder index-reproduction runs (owner-deferred, TESTING-PLAN.md §2)
 
 <!-- Carried out of v1.0. Not a phase: worked from .planning/TESTING-PLAN.md at the owner's pace, or picked up by a later milestone's requirements. -->
 
@@ -74,7 +85,9 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 
 ## Context
 
-- **Current state:** v1.0 shipped 2026-09-12 — 7 phases, 64 plans, 163 tasks, 569 commits over 15 days. `databasise/` is 48,485 lines of Python with 105 test modules; the full suite is 1068 passed / 1 skipped and needs no external service. Both modalities (LightRAG, HippoRAG 2) run behind the §18 seam in-process, over REST and over MCP; promotion is operator-asserted only. Every promotion in v1.0 is provisional and unmeasured: no A/A floor exists (MACH-03) and the eval bundle holds a synthetic fixture, not the owner's corpus (HARD-04). Milestone audit: `.planning/milestones/v1.0-MILESTONE-AUDIT.md`. Owner testing outside any phase: `.planning/TESTING-PLAN.md`.
+- **Current state (v1.1, 2026-11-01):** 11 phases, 136 plans, 1,096 commits over 18 days. `databasise/` is 31,816 lines of tracked Python outside tests, plus 5,032 lines of console JavaScript, with 316 test modules; the full offline suite is 3,377 passed (one environment-dependent socket-count test fails only when another process opens a port during the run). The console is served by `databasise-rest --operator --console`. Three STRIDE audits (phases 09, 16, 18) are SECURED with SECURITY.md per phase. Milestone audit: `.planning/milestones/v1.1-MILESTONE-AUDIT.md`.
+- **Known technical debt (from the v1.1 audit and battery):** every query, ingest, delete and health probe opens and closes the RocksDB graph on the event loop and leaves housekeeping files behind; the Faiss snapshot is re-read on the loop after each commit; REST JSON `raw` is UTF-8 text while MCP `raw_base64` is base64; the installed wheel's default `--store-root` resolves inside site-packages; secret redaction in the log covers four shapes; the on-disk log file is unredacted and created with the process umask; the HippoRAG crash window between per-store commits remains (Phase 10).
+- **v1.0 state (for history):** v1.0 shipped 2026-09-12 — 7 phases, 64 plans, 163 tasks, 569 commits over 15 days. `databasise/` is 48,485 lines of Python with 105 test modules; the full suite is 1068 passed / 1 skipped and needs no external service. Both modalities (LightRAG, HippoRAG 2) run behind the §18 seam in-process, over REST and over MCP; promotion is operator-asserted only. Every promotion in v1.0 is provisional and unmeasured: no A/A floor exists (MACH-03) and the eval bundle holds a synthetic fixture, not the owner's corpus (HARD-04). Milestone audit: `.planning/milestones/v1.0-MILESTONE-AUDIT.md`. Owner testing outside any phase: `.planning/TESTING-PLAN.md`.
 - **Known technical debt (from the v1.0 audit):** ledger-wide write lock contended by read-only alias lookups with no timeout tuning (Phase 7 WR-03); Faiss flush race, dormant until Faiss is wired into a live node (Phase 1 CR-01); unchecked tool-name forwarding in the codebase-memory-mcp part, unreachable until a wiring declares a config block (Phase 5 WR-02); `IngestDocument` validation errors lose their refusal shape on both transports (Phase 5 IN-02); MCP has no streaming analog for REST SSE (documented protocol exception).
 
 - **Governing documents:** `docs/system-model/` — SYSTEM-MODEL.md (entry point; §VD verdict, §BP ladder, §H1 handoff), CONTRACT.md (20 sections), ANATOMY.md (44 entries), PARTS.md (3 worked wirings), CATALOG.md (72-system roster + porting protocol), RIG.md (comparison rig, versioning, §F3 affordability), MODEL-RED-TEAM.md, D-VARIANTS/SELECTION.md (governs on disagreement). Frozen at model v1.0; contract repairs during the build are recorded, not silent.
@@ -147,6 +160,10 @@ Databasise 2.0: the RAG engine rebuilt as an **agnostic machine + fitting contra
 | v1.1 Phase 16: wiring names (/wirings, preview arm and mutation_class) and alias enumeration are an operator-only §18.2 exception | The console needs them; the debug=true precedent already returns wiring ids | ✓ Good (owner may override D-02) |
 | v1.1 Phase 16: graph reads return references plus edge_types/weight only; unknown node 422, busy graph 409; an operator engine holds one graph client | API-06 and §18.2: no inline corpus content; RocksDB opens leave WAL files on every read | ✓ Good |
 | v1.1 Phase 16: GET /log needs both --operator and --log-file; refusal and fault bodies stay cause-free | Narrows Phase 9 D-04 to bodies so the console can show a 500's traceback | ✓ Good (owner may override D-19) |
+| v1.1 Phase 17: a static six-screen mockup on fixtures, built from sources by `mockups/build.py`, frozen by owner approval (freeze-variant console-a) and id-checked | The console's controls and missing backends are agreed before any wiring; a frozen digest stops silent drift | ✓ Good (re-frozen 2026-11-01 for the 52-type refusal catalogue; 623 ids unchanged) |
+| v1.1 Phase 18: the live console is a copy of the mockup source built into `databasise.console` package data, served at GET /console with a sha256-hash CSP, loopback only, one `api()` transport, badges driven by the live `/openapi.json` | Same origin avoids CORS; the hash CSP permits exactly the one inline script and style; badges stay truthful per launch mode | ✓ Good (owner click-through approved; 148 live tests) |
+| v1.1 close: debug traces keep the literal node fault cause (Phase 12 D-11, CONTRACT §3/§17) instead of scrubbing paths and URLs (Phase 09 D-04) | A cross-process failure must record both endpoints and its cause; the debug view is loopback-only | ✓ Good (owner decision 2026-11-01) |
+| v1.1 close: lone-surrogate text is refused by name (NonEncodableTextError, 422) at every input boundary; refusal echoes are bounded at 200 chars and 20 items; the schema-error 422 no longer echoes `input` | Fuzzing showed three cheap inputs turned named refusals into 500s | ✓ Good (battery fixes, re-verified across phases 08-18) |
 | Close the operator verbs' check-then-act races with one `BEGIN IMMEDIATE` span per verb plus a UNIQUE `(alias, minted_version)` index | A guard read and the append it gates must commit together or the guard goes stale under concurrency; the schema constraint backstops it independently of any Python read path | ✓ Held (G-07-1 closed; 40/40 concurrency runs, full suite green) |
 
 ## Evolution
@@ -167,4 +184,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-23 after Phase 16*
+*Last updated: 2026-11-01 after v1.1 milestone*

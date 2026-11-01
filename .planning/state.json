@@ -51,18 +51,18 @@
     {
       "number": "17",
       "name": "GUI Mockup",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "18",
       "name": "GUI Live",
-      "status": "pending"
+      "status": "complete"
     }
   ],
   "next": {
-    "command": "/gsd-progress --next",
-    "label": "Advance to the next step",
-    "reason": "Phase 10 of 11 · 82% · executing"
+    "command": "/gsd-progress",
+    "label": "Show progress",
+    "reason": "Unsure of state — showing progress"
   },
-  "updated_at": "2026-10-29T20:48:58.590Z"
+  "updated_at": "2026-11-01T22:47:50.758Z"
 }
