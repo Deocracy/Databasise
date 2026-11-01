@@ -2221,6 +2221,7 @@ class Databasise:
         ``mutation_id``, ``parent`` and ``arm_instance_hashes`` are never returned. Read-only like
         :meth:`ledger_aliases`: an unknown alias, or a store root with no ledger, gives an empty page
         and creates no file."""
+        require_encodable(alias, field="alias")  # fuzz F2: bound into sqlite by history_for_alias
 
         def _read() -> dict[str, Any]:
             handle = Ledger.open_existing(self.store_root, read_only=True)
