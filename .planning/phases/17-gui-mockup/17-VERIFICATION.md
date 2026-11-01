@@ -1,6 +1,6 @@
 ---
 phase: 17-gui-mockup
-verified: 2026-10-31T00:00:00Z
+verified: 2026-11-01T00:41:22Z
 status: passed
 score: 5/5 must-haves verified
 covered_files:
@@ -39,17 +39,25 @@ covered_files:
   - docs/gui/refusals.json
   - mockups/build.py
   - mockups/operator-console.html
-covered_digest: "v3:sha256:4c7ee6ac9e4f9f74a65cc6527a5b94362db0d126f5b33b54afd3696405e5d08b"
+covered_digest: "v3:sha256:6c79aa78e61bca3ef9e53f7eb95dca14913c89a643fd3ba1b076a374cbd5c486"
 behavior_unverified: 0
 overrides_applied: 0
+re_verification:
+  previous_status: passed
+  previous_score: 5/5
+  previous_verified: 2026-10-31T00:00:00Z
+  trigger: "fingerprint staleness after Phase 18 edited databasise/pyproject.toml, docs/gui/API-INVENTORY.md and mockups/build.py"
+  gaps_closed: []
+  gaps_remaining: []
+  regressions: []
 ---
 
 # Phase 17: GUI Mockup Verification Report
 
 **Phase Goal:** The operator can click through a complete static mockup of the six console screens on fixture data shaped like the real API, with every control id-stamped and every missing backend visibly marked
-**Verified:** 2026-10-31
+**Verified:** 2026-10-31 (initial), re-verified 2026-11-01T00:41:22Z
 **Status:** passed
-**Re-verification:** No, initial verification
+**Re-verification:** Yes, after a Phase 18 fingerprint staleness trip (initial verification 2026-10-31 passed 5/5; see "Re-verification 2026-10-31 (Phase 18 staleness)" below)
 
 ## Goal Achievement
 
@@ -155,7 +163,25 @@ None outstanding. Visual and flow acceptance is already recorded as the owner's 
 
 No gaps. The five roadmap success criteria and all eleven GUI requirements are met in the built mockup; the suite is green (68 GUI tests, 3128 full-suite), the build is reproducible, and the approved digest matches the file on disk. Open review warnings are carried to Phase 18.
 
+### Re-verification 2026-10-31 (Phase 18 staleness)
+
+Trigger: the covered-file fingerprint tripped because Phase 18 (GUI Live) changed three covered files after the initial verdict. Commits `6a36f2d` (18-01) and `65dd699` (18-02); diff read in full with `git diff 6a36f2d~1 HEAD` on the three paths.
+
+What changed:
+
+- `databasise/pyproject.toml`: additive only. `databasise.console` appended to `packages`, plus a package-data line `"databasise.console" = ["operator-console.html"]`. The Playwright dev-group entry this report cites is untouched.
+- `docs/gui/API-INVENTORY.md`: one additive paragraph after line 763 describing `databasise-rest --operator --console` and `GET /console`. No section 3 / 5.1 route row changed, so truth 2 and test_inventory_map's input are unaffected.
+- `mockups/build.py`: gained `argparse` with `--src DIR` and `--out FILE`, threading `src` through `fixtures_json`, `expand` and `build`. Defaults are the module constants `SRC` and `OUT`, so the zero-argument invocation resolves to `build(SRC)` written to `mockups/operator-console.html`, and `--check` with no other flags compares that same build against that same file. `SHARED_FIXTURES` paths are unchanged. The `--check` branch is read-only (only the non-check branch calls `out.write_bytes`). I did not run the builder, by instruction; the default path's output equivalence is proven by the suite instead (next item).
+
+Re-checks performed:
+
+- `sha256sum mockups/operator-console.html` = `bf98e79e0a0312940963efae9028e708a012021bfc62f51ebdbca57918034d20`, equal to the digest at `docs/gui/MOCKUP-APPROVAL.md` line 5. The frozen mockup is byte-identical to the owner-approved file. `git status --porcelain` on `mockups/`, `docs/gui/` and `databasise/pyproject.toml` is empty (no uncommitted drift).
+- `tests/gui` under `DATABASISE_REQUIRE_BROWSER=1`: 68 passed in 128.29 s (`-p no:cacheprovider`). This includes `test_checked_in_mockup_equals_a_fresh_build`, which imports `build.py` and asserts `module.build()` (no arguments, so the new defaults) equals the checked-in file; that is the read-only proof that the zero-arg path still reproduces the approved bytes. test_gui_01..11, test_inventory_map and the id-walk equality test are all in the 68.
+- Rows citing `API-INVENTORY.md` (truth 2, "17-13 coverage map" artifact, test_inventory_map) and `pyproject.toml` ("Playwright in dev group") were re-read against the diff; neither diff touches the content those rows depend on.
+
+Result: no regression. All five truths, nine artifacts and five key links hold as recorded above; the goal still holds. Status stays `passed` 5/5. The fingerprint was regenerated over the same covered_files list (`covered_digest` in the frontmatter now reflects the Phase 18 bytes of the three changed files).
+
 ---
 
-_Verified: 2026-10-31_
+_Verified: 2026-10-31 (initial); re-verified 2026-11-01T00:41:22Z_
 _Verifier: Claude (gsd-verifier)_

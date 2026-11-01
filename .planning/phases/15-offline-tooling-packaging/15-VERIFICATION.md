@@ -1,6 +1,6 @@
 ---
 phase: 15-offline-tooling-packaging
-verified: 2026-10-31T00:00:00Z
+verified: 2026-11-01T00:40:58Z
 status: passed
 score: 25/25 must-haves verified
 covered_files:
@@ -74,19 +74,17 @@ covered_files:
   - "databasise/seam/floors_store.py"
   - "databasise/seam/rest.py"
   - "databasise/tools/check_import_boundary.py"
-covered_digest: "v3:sha256:78c83cddb844a4a37b72dee8ce2cd89766845fbdd966b8d84f9f68a2045baea9"
+covered_digest: "v3:sha256:38be5405fc233ee73ed198782f45501f0d1e2e1518569fb351d0f41eed2de1c8"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
   previous_status: passed
-  previous_score: 24/25
+  previous_score: 25/25
   gaps_closed: []
   gaps_remaining: []
   regressions: []
   moved_files:
     - databasise/pyproject.toml
-    - databasise/seam/engine.py
-    - databasise/seam/rest.py
 human_verification:
   - test: "Owner decision on A-ITER2-WR-03 (15-REVIEW-DISPOSITION.md): choose (a) grant an edit to test_cross_modality_isolation.py so preflight can check all three HippoRAG namespaces, (b) a paid HippoRAG rebuild, or (c) accept as a recorded residual"
     expected: "A recorded choice. Until then preflight checks only `chunks` and `hipporag-chunks` plus the unverified marker (run_cross_modality.py:259-280)"
@@ -103,7 +101,7 @@ human_verification:
 # Phase 15: Offline Tooling & Packaging Verification Report
 
 **Phase Goal:** The offline CLIs run from an installed wheel, refuse by name instead of crashing, never spend or write outside their store by default, and the evaluation and evidence records they produce state only what was measured
-**Verified:** 2026-10-31
+**Verified:** 2026-10-31 (re-verified 2026-11-01T00:40:58Z after the Phase 18 staleness trip; see "Re-verification 2026-10-31 (Phase 18 staleness)" below)
 **Status:** human_needed
 **Re-verification:** Yes. The 2026-10-22 report went stale when Phases 16 and 17 changed `databasise/pyproject.toml`, `databasise/seam/engine.py` and `databasise/seam/rest.py`.
 
@@ -131,9 +129,27 @@ The previous report recorded all covering test files green at HEAD 0def94f (full
 | `databasise/seam/rest.py` | `create_app` gains `operator` and `log_path` (Phase 16); operator routes mount lazily | `FastAPI(title="databasise", version=__version__)` unchanged; with `operator=False` nothing is mounted. REST transport tests passed. |
 | `databasise/seam/engine.py` | +528/-55: operator read routes, `info()`, `preview_promotion`, graph holds, `log_tail` | TOOL-16: `admit_registry(registry)` still runs at construction (engine.py:1214) and `default_registry()` admits. TOOL-12 two-stage gate intact: the stage-1 `self._floors.any_floor()` check and stage 2 `_refuse_gate_verb` (`floor_for` / `StaleNullError`, `GateNotCalibratedError`, StoreFault mapping) were extracted verbatim into `_promotion_prologue` (engine.py:~2842-2878) and `promote()` calls it first. Promotion floor, floors store, promotion refusals and seam events tests passed. |
 
+### Re-verification 2026-10-31 (Phase 18 staleness)
+
+**What changed.** Since the 2026-10-31 run above, exactly one covered file moved: `databasise/pyproject.toml`, in commit 6a36f2d (Phase 18, plan 18-01). `git diff cf94eda HEAD -- databasise/pyproject.toml` shows two hunks and nothing else: `"databasise.console"` appended to `[tool.setuptools] packages` (pyproject.toml:161) and the package-data entry `"databasise.console" = ["operator-console.html"]` (pyproject.toml:181). No other Phase-15 covered file changed.
+
+**What was re-checked.**
+
+| Check | Evidence | Status |
+|-------|----------|--------|
+| Entry points unchanged | `[project.scripts]` (pyproject.toml:108-110) still `databasise-rest` and `databasise-mcp` only; not in the diff | ✓ |
+| One version source unchanged | `dynamic = ["version"]` (:7) and `[tool.setuptools.dynamic] version = {attr = "databasise.__version__"}` (:166-167); `__init__.py:38` is `0.1.0`; not in the diff | ✓ |
+| Bounded `mcp` extra unchanged | `mcp = ["mcp>=2.2.0,<3"]` (:103-104); not in the diff | ✓ |
+| Package list completeness and consistency | `databasise.console` appears in both the package list (:161) and package-data (:181); `databasise/console/__init__.py` exists (6 lines) and `operator-console.html` sits beside it; `console/src/` is not listed as a package and ships nothing (only the built HTML is named). `importlib.resources.files('databasise.console').joinpath('operator-console.html').is_file()` is `True` from the repo venv | ✓ |
+| Phase-15 packages still present | `databasise.tools` (:159), `databasise.eval`, `databasise.mcp`, `databasise.launcher` all still listed; package-data for eval bundles and both corpus fixtures (:179) and wirings (:175,:179) unchanged | ✓ |
+| TOOL-01 wheel build at HEAD | `.venv/bin/python -m pytest tests/test_packaging.py tests/test_import_boundary.py -q -p no:cacheprovider`: 21 passed, 0 skipped, 6.52s. The `built_wheel` fixture ran `uv build --offline --wheel` from a tree copy with the console package in the list (no skip was reported, so the build succeeded); RECORD lists the tools, bundle@v1 and both fixtures; METADATA carries `Version: 0.1.0` and one bounded `mcp` requirement; the build left nothing in the repo | ✓ |
+| Import-boundary tool | `check_import_boundary.py` does not read pyproject.toml (grep: no match); `python -m databasise.tools.check_import_boundary` on the real tree at HEAD exits 0 (the new `console/` directory holds one Python file and raises no finding) | ✓ |
+
+**Conclusion.** The Phase 18 edit adds a subpackage and its package-data in one commit, which is the same rule the Phase-15 packaging follows; it touches no entry point, version source, dependency bound or Phase-15 package-data entry. The phase goal still holds; `status: passed` is kept. The three owner-gated human items are unchanged and carried as before. The TOOL-01 row and the pyproject key-link row below now cite current line numbers (7, 103-104, 159, 166-167, 179).
+
 | Req | Status | Delivering code | Covering test (ran) |
 |-----|--------|-----------------|---------------------|
-| TOOL-01 | ✓ VERIFIED (installed-wheel run carried under SC1) | pyproject.toml:7,100-101,156,161-162,174; __init__.py:38; seam/rest.py:86,364; tools/check_import_boundary.py:79,99-150,163-180,222-230 | tests/test_packaging.py, tests/test_import_boundary.py |
+| TOOL-01 | ✓ VERIFIED (installed-wheel run carried under SC1) | pyproject.toml:7,103-104,159,166-167,179; __init__.py:38; seam/rest.py:86,364; tools/check_import_boundary.py:79,99-150,163-180,222-230 | tests/test_packaging.py, tests/test_import_boundary.py |
 | TOOL-02 | ✓ VERIFIED | parity/import_index.py:774-798 (argparse before store lock; `workspace: <ws> (derived from …)` line); launcher/__init__.py:33 | tests/parity/test_import_index_cli.py; spot-check `--verfiy` exit 2 |
 | TOOL-03 | ✓ VERIFIED | parity/import_index.py:145 (Literal with `precondition`), :653-683, :715-722 | tests/parity/test_import_verification.py |
 | TOOL-04 | ✓ VERIFIED | cli.py:19-38 (exit table, `refuse`), :104 (`positive_int`), :124 (`check_named_arm`); aa_run.py:789 (one `asyncio.run` for all families); remint.py:56 (`_PACKAGE_DIR`, bundle root unchanged) | tests/test_cli_refusals.py, tests/test_cli_support.py; spot-check `aa_run --n-resamples 0` exit 2 |
@@ -179,7 +195,7 @@ The previous report recorded all covering test files green at HEAD 0def94f (full
 | engine promote gate | floors.db | `self._floors.lookup` → `CalibrationResult.floor_for` (engine.py:2388-2409) | WIRED |
 | default_registry / Databasise.__init__ | admit_registry | registry.py:248-250, engine.py:1158-1160 | WIRED |
 | rest.py | databasise.__version__ | `FastAPI(version=__version__)` (rest.py:86,364) | WIRED |
-| pyproject version | databasise.__version__ | `[tool.setuptools.dynamic]` (pyproject.toml:161-162) | WIRED |
+| pyproject version | databasise.__version__ | `[tool.setuptools.dynamic]` (pyproject.toml:166-167) | WIRED |
 
 ### Behavioral Spot-Checks
 
@@ -194,6 +210,8 @@ The previous report recorded all covering test files green at HEAD 0def94f (full
 | import-boundary real tree | `python -m databasise.tools.check_import_boundary` | exit 0 | ✓ PASS |
 | MCP descriptions | `create_server(...).list_tools()` | 10 tools, all non-empty, none match PLAN.md / Phase N / _refusal_mapped | ✓ PASS |
 | Installed-wheel run | build wheel from tree copy, install into fresh venv, `-I -m` from empty dir | aa_run, remint, check_import_boundary all exit 0 (see SC1 for the `--no-deps` caveat) | ✓ PASS |
+| Wheel build at HEAD with `databasise.console` (Phase 18 re-verification) | `pytest tests/test_packaging.py tests/test_import_boundary.py -q -p no:cacheprovider` | 21 passed, 0 skipped | ✓ PASS |
+| Console package-data resolvable (Phase 18 re-verification) | `importlib.resources.files('databasise.console').joinpath('operator-console.html').is_file()` | `True` | ✓ PASS |
 
 ### Probe Execution
 

@@ -1,6 +1,6 @@
 ---
 phase: 08-run-the-engine
-verified: 2026-10-31T18:45:00Z
+verified: 2026-11-01T00:39:15Z
 status: passed
 score: 5/5 roadmap success criteria verified (RUN-11 measurement owner-deferred, tracked as human item)
 covered_files:
@@ -40,7 +40,7 @@ covered_files:
   - "databasise/tests/parity/test_embedder_index_reproduction.py"
   - "databasise/tests/seam/test_rest_corpus_endpoints.py"
   - "databasise/tools/check_offline_suite.py"
-covered_digest: "v3:sha256:8a18a3d52cd24f7848357d468c56585770e07e3b2790d9e5c1306b3aafd2c573"
+covered_digest: "v3:sha256:826516e5ecd974ae6b5aea2dbb3aa62d1a2ee9473395cdfdce853bd185f288de"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
@@ -74,9 +74,9 @@ human_verification:
 # Phase 8: Run the Engine Verification Report
 
 **Phase Goal:** An operator can start the engine as a served process from the installed package, with real model clients and one engine process per store root, and the offline test suite is green so every later fix can be checked end to end
-**Verified:** 2026-10-31
+**Verified:** 2026-10-31 (fingerprint refreshed 2026-11-01T00:39Z after the Phase 18 staleness trip; see the last subsection)
 **Status:** human_needed
-**Re-verification:** Yes, after the verification went stale. Eight covered files moved after 2026-10-17 (Phases 11 to 17 touched `seam/rest.py`, `launcher/serve_rest.py`, `foreign/_mcp_sdk_guard.py`, `evidence/COVERAGE.md`, `pyproject.toml`, `clients/builder.py` and two test modules). All five success criteria were re-checked against current code and by live launch; nothing regressed.
+**Re-verification:** Yes, after the verification went stale. Eight covered files moved after 2026-10-17 (Phases 11 to 17 touched `seam/rest.py`, `launcher/serve_rest.py`, `foreign/_mcp_sdk_guard.py`, `evidence/COVERAGE.md`, `pyproject.toml`, `clients/builder.py` and two test modules). All five success criteria were re-checked against current code and by live launch; nothing regressed. A second staleness trip followed Phase 18's edits to `launcher/serve_rest.py` and `pyproject.toml`; the targeted re-check is recorded in "Re-verification 2026-10-31 (Phase 18 staleness)" below.
 
 The goal is achieved in the codebase. Nothing is FAILED. The status is `human_needed` because the human-verification section is non-empty (rule 2 of the decision tree): RUN-11's live measurement and two live/no-spend checks are owner-deferred, and the post-review stricter refusals need an intent check. The previous report said `passed` while listing the same items, which did not follow the tree.
 
@@ -120,7 +120,7 @@ The goal is achieved in the codebase. Nothing is FAILED. The status is `human_ne
 | From | To | Via | Status | Details |
 |------|----|-----|--------|---------|
 | `serve_rest.main` | `build_clients` | `open_engine` (lock first, then clients) | WIRED | `launcher/__init__.py:113-122`; lock fd closed on builder failure |
-| `serve_rest.build_app` | `seam.rest.create_app` | `cors_origins=args.cors_origin` | WIRED | Plus TrustedHost and Origin guard middleware; Phase 16 added `--operator` and `--log-file`, both refused before the lock when invalid |
+| `serve_rest.build_app` | `seam.rest.create_app` | `cors_origins=args.cors_origin` | WIRED | Plus TrustedHost and Origin guard middleware; Phase 16 added `--operator` and `--log-file`, both refused before the lock when invalid. Phase 18 added `--console` (opt-in `store_true`): its `GET /console` route is registered only inside `if getattr(args, "console", False)`, and its two `parser.error` refusals (non-loopback host, `--port 0`) fire only when the flag is given |
 | `serve_mcp.main` | `mcp.create_server(...).run(transport)` | direct | WIRED | stdio, sse, streamable-http |
 | `/health` clients map | builder clients | seam engine health | WIRED | Live /health showed `rerank:false` |
 | Parity CLIs | `store_lock` | `main()` | WIRED | `store_lock(...)` context in run_comparison, build_hipporag_index, storage_audit, run_cross_modality; `acquire_store_lock` path in run_arm and import_index |
@@ -200,3 +200,28 @@ All five success criteria verified against current code; no behaviour item is op
 | Intent check on the stricter post-review refusals | Open: owner decision. |
 | Owner record steps (RUN-11 test_ref, RUN-02..08 record-fail) | Open: owner steps, carried in STATE.md. |
 | Full offline gate | Reported by the orchestrator's regression run. |
+
+### Re-verification 2026-10-31 (Phase 18 staleness)
+
+**Trigger.** Two covered files changed after the 2026-10-31T18:45Z verification: `databasise/launcher/serve_rest.py` and `databasise/pyproject.toml`, in Phase 18 commits `6a36f2d` (18-01, 20:21Z) and `eff8804` (18-02, 20:45Z). No other covered file moved.
+
+**What changed** (`git diff 07a4b7a -- databasise/launcher/serve_rest.py databasise/pyproject.toml`: 72 insertions, 0 deletions).
+
+- `serve_rest.py`: a `--console` flag (`action="store_true"`, default off); `console_csp(page)` computing a hash-only Content-Security-Policy; a `GET /console` route with `include_in_schema=False` plus `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Cache-Control` headers, registered only inside `if getattr(args, "console", False)`; two `parser.error` refusals in `main()` gated on `args.console` (non-loopback `--host`, `--port 0`). The `--operator`, `--log-file`, `--workers`, `--env-file`/`--no-clients`, CORS and store-lock paths are untouched by the diff.
+- `pyproject.toml`: `databasise.console` added to `[tool.setuptools] packages` and `"databasise.console" = ["operator-console.html"]` added to package-data (both 18-01). The `[project.scripts]` block (`databasise-rest`, `databasise-mcp`) is unchanged. (The `playwright==1.59.0` dev dependency in the same diff range is Phase 17, commit `cf94eda` 2026-10-30T02:18Z, and was already covered by the previous verification.)
+
+**Re-checked** (the rows whose evidence touches these files: truth 1 startup/refusals, truth 2 one-process-per-store-root, Required Artifact "Two launchers", Key Link `serve_rest.build_app`, RUN-06, RUN-07).
+
+| Check | Command | Result |
+|-------|---------|--------|
+| Launcher test directory | from `databasise/`: `.venv/bin/python -m pytest tests/launcher -q -p no:cacheprovider` | 72 passed in 61s, 0 failed |
+| Entry points unchanged | `grep -A3 '^\[project.scripts\]' pyproject.toml`; `ls .venv/bin/databasise-rest .venv/bin/databasise-mcp` | both scripts declared and installed |
+| Console package present for the new `packages` entry | `ls databasise/console/` | `__init__.py`, `operator-console.html` present |
+| `--console` is opt-in | `databasise-rest --help` | `--console` listed as a flag; default startup paths take no console argument |
+| RUN-07 refusal unchanged | `databasise-rest --store-root <scratch> --workspace w --no-clients --workers 2` | exit 2, `--workers must be 1: one engine process per store root holds the store lock <store_root>/.engine.lock (G-36)`; no store dir created |
+| D-11 refusal unchanged | `databasise-rest --store-root <scratch> --workspace w` (no env file) | exit 2, `--env-file is required unless --no-clients is given (D-11)` |
+| New refusal only fires with the flag | `databasise-rest ... --no-clients --console --port 0` | exit 2, `--console needs a fixed --port`; the same command without `--console` is not refused on this ground |
+
+**Not re-run.** The live launch (`/health` 200, second-launcher refusal with holder PID, CORS preflight) from the 18:45Z pass was not repeated: the diff touches no code on those paths and `tests/launcher` covers launcher startup, the store lock and the stdio tool-set equality. The full offline suite stays with the orchestrator's regression gate.
+
+**Verdict.** No regression. The Phase 18 additions are additive and opt-in; every Phase 8 success criterion, artifact, key link and requirement row holds as previously evidenced. Frontmatter `verified:` and `covered_digest` refreshed with the same `covered_files` list; no evidence row cites a line number inside the two changed files, so no row was renumbered. Status stays `passed` as set by the orchestrator (the body's `human_needed` wording and the owner-run items above are carried unchanged).

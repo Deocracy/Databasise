@@ -1,6 +1,6 @@
 ---
 phase: 13-selectors-wiring-runner
-verified: 2026-10-31T12:00:00Z
+verified: 2026-11-01T00:38:52Z
 status: passed
 score: 5/5 roadmap success criteria verified (18/18 WIRE requirements satisfied in code)
 covered_files:
@@ -76,7 +76,7 @@ covered_files:
   - "databasise/wirings/resolve.py"
   - "docs/gui/API-INVENTORY.md"
   - "docs/gui/CODEBASE-MAP.md"
-covered_digest: "v3:sha256:c5ef20e5a7fa54cfccba066ca245e6329e3de73de44ba81c45b14034634f6d39"
+covered_digest: "v3:sha256:ca3787386af0cb05a37a425b33e2b15856a3ec321d540ba8f037a27758fe8044"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
@@ -90,7 +90,7 @@ re_verification:
 # Phase 13: Selectors, Wiring & Runner Verification Report
 
 **Phase Goal:** Every query arm is selectable, the runner records every node truthfully, and consumers never see internal node ids or an unstructured 500 from the wiring layer
-**Verified:** 2026-10-31T12:00:00Z
+**Verified:** 2026-11-01T00:38:52Z (re-stamped after the Phase 18 staleness trip; the code-level re-verification below is dated 2026-10-31T12:00:00Z)
 **Status:** passed (human items resolved 2026-10-20; see Human Verification Resolution at the end)
 **Re-verification:** Yes. The prior report (2026-10-20, status passed) went stale after Phases 14 to 17 moved 13 covered files; every truth was re-checked against the current code.
 
@@ -167,6 +167,10 @@ Owner-run items carried in `.planning/TESTING-PLAN.md` under the no-live-runs po
 ### Re-verification note (2026-10-31)
 
 Moved files since the prior report (from Phases 14 to 17: operator routes in `seam/rest.py`/`seam/engine.py`, HIPP-12 write-effect exclusion in `seam/selectors.py`, refusal catalogue, API-INVENTORY and CODEBASE-MAP edits) were re-read at the points Phase 13 touches. No Phase 13 truth regressed: the 19 WIRE test files pass (241), the six-arm selector table is unchanged (the `[writes_graph]` request no longer resolves to HippoRAG by design of HIPP-12, which does not contradict WIRE-01), per-arm wiring ids are intact, and `engine.py` still persists the RunRecord before the refusable block and sets `exc.trace_token`, still runs `node_free_reason` on both reason fields at response time, and `scheduler.py` still emits `not-scheduled` traces. `.planning/REQUIREMENTS.md` now shows all 18 WIRE rows Complete (the prior bookkeeping gap is closed).
+
+### Re-verification 2026-10-31 (Phase 18 staleness)
+
+The fingerprint tripped because Phase 18 (GUI Live, commit 65dd699) changed one covered file after the 12:00Z re-verification: `docs/gui/API-INVENTORY.md`. `git diff 65dd699~1 HEAD -- docs/gui/API-INVENTORY.md` is +2/-0: one paragraph before the operator route table (line 766) describing the `databasise-rest --operator --console` launch and the hidden `GET /console` route. It is additive; no route row, refusal name or selector description was edited, and the per-route "Named refusals" column that WIRE-17 cites is intact (13 refusal-name matches, same table header at line 768). `git log --since=2026-10-31T12:00:00Z` over `databasise/{evidence,identity,parts,parts_core,runner,seam,validator,wirings}` and `docs/gui/CODEBASE-MAP.md` lists no commit: no other covered file moved, and the Phase 18 code changes (`databasise/console/`, `launcher/serve_rest.py`, `pyproject.toml`) are outside Phase 13's scope. No test was re-run; no truth's evidence depends on the added paragraph. The goal still holds; `covered_digest` regenerated over the same 72-file list.
 
 ### Gaps Summary
 

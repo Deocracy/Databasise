@@ -1,6 +1,6 @@
 ---
 phase: 14-promotion-ledger
-verified: 2026-10-31T00:00:00Z
+verified: 2026-11-01T00:39:04Z
 status: passed
 score: 5/5 roadmap success criteria verified (14/14 LEDG requirements satisfied in code)
 covered_files:
@@ -47,7 +47,7 @@ covered_files:
   - "databasise/wirings/resolve.py"
   - "docs/gui/API-INVENTORY.md"
   - "docs/gui/CODEBASE-MAP.md"
-covered_digest: "v3:sha256:36fd8305ae1558e35242be95fc336042522f9f8c671c94e4a739db6f91ecf1ca"
+covered_digest: "v3:sha256:0dd921d3ab7629758d2d0c02da12a18f8813c962359bc60775ce0cfb07cd1be4"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
@@ -76,6 +76,17 @@ deferred:
 | `seam/engine.py` | Phase 15 (TOOL-12 floors, TOOL-16), Phase 16 (preview, read-only opens, operator reads) | Promote prologue extracted to `_promotion_prologue`, shared with `preview_promotion`. Order and refusals unchanged. Gate verbs now lift in two stages (below). |
 | `ledger/ledger.py` | Phase 16 (`aliases()`, `snapshot()`, read-only close checkpoint decided at close time) | `lineage`, `history_for_alias`, `close`, context manager and `open_existing` are intact. |
 | `seam/promotion.py`, `seam/refusals.py`, `seam/rest.py`, `mcp/tools.py`, `parts/registry.py`, `parts_core/declared_only.py`, `evidence/*`, `pyproject.toml`, docs | Phase 15 and 16 | Docstring edits, new refusals (`UnknownGraphNodeError`, `InvalidPartFieldError`), registry load-time admission, lazy cbm part build. No Phase 14 behavior removed. `debug: StrictBool` is still on both transports. |
+
+### Re-verification 2026-10-31 (Phase 18 staleness)
+
+The report went stale a second time because Phase 18 (GUI Live) changed two covered files after the 2026-10-31 run: commits 6a36f2d (18-01) and 65dd699 (18-02). No file in the Phase 14 code scope changed; the last commit touching `seam/`, `mcp/`, `parts/`, `parts_core/`, `wirings/` or `evidence/` is still the Phase 16 fix 587feda, which the run above already covered.
+
+| File | Change (`git diff f674eba HEAD`) | Effect on Phase 14 truths |
+|---|---|---|
+| `databasise/pyproject.toml` | Adds `"databasise.console"` to `[tool.setuptools] packages` and a `"databasise.console" = ["operator-console.html"]` package-data line. | Additive. `databasise.ledger`, `databasise.seam`, `databasise.mcp`, `databasise.wirings`, `databasise.parts` and `databasise.parts_core` remain listed; the `databasise-rest` and `databasise-mcp` entry points are unchanged. Import check from `databasise/`: `databasise.seam.engine`, `databasise.seam.rest`, `databasise.mcp.tools`, `databasise.wirings.resolve` and `databasise.parts.registry` import, and `default_registry()` lists 37 parts. |
+| `docs/gui/API-INVENTORY.md` | One new paragraph at line 766 (section 5, operator routes) describing `databasise-rest --operator --console` and `GET /console`. | Additive. The cited line 588 (promote outcomes, two gate stages) is before the insertion and unchanged. No verb route, request shape or named refusal documented for promote, rollback, retire or the history reads was edited. |
+
+No row of the tables above cites packaging or the console, so no test re-run was required. The five success criteria and the 14 LEDG requirements hold as recorded; the fingerprint was regenerated over the same covered files.
 
 ## Goal Achievement
 
@@ -127,6 +138,7 @@ All 14 LEDG IDs are declared in Phase 14 plans and appear in `.planning/REQUIREM
 | Phase 14 LEDG tests plus ledger/, registry reachability, node-kind, docstring facts, protected WIRE-17/SEAM-12/LEDG-06 checks | targeted `pytest` of 16 test files and `tests/ledger` | 163 passed in 88.7s | PASS |
 | Registry and wiring resolution | `default_registry().keys()`; `wiring_for_name` over `naive`, `hipporag`, `ghost`, `codebase-memory-mcp` | no cbm part in registry; `naive` and `hipporag` resolve; `ghost` and `codebase-memory-mcp` give None; 6 wirings | PASS |
 | Full offline gate | run by the orchestrator, not here | - | not run here |
+| Packaged modules still import after the Phase 18 `pyproject.toml` edit (2026-10-31 re-check) | `.venv/bin/python -c "import databasise.seam.engine, databasise.seam.rest, databasise.mcp.tools, databasise.wirings.resolve, databasise.parts.registry"` | imports ok, 37 parts | PASS |
 
 ### Probe Execution
 

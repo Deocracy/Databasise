@@ -1,6 +1,6 @@
 ---
 phase: 16-gui-connectors
-verified: 2026-10-31T00:00:00Z
+verified: 2026-11-01T00:45:26Z
 status: passed
 score: 19/19 must-haves verified (5 roadmap SCs + 14 CONN requirements)
 covered_files:
@@ -44,7 +44,7 @@ covered_files:
   - docs/gui/API-INVENTORY.md
   - docs/gui/CODEBASE-MAP.md
   - docs/gui/refusals.json
-covered_digest: "v3:sha256:e81d205ea0617bbcb0205c4bf1220bd63c0c87b569699906e142b6cbf69c9353"
+covered_digest: "v3:sha256:8ee057fbf40af71d1770de356fba801c696456c64282b578a505d4f2f9af5f9e"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
@@ -58,9 +58,18 @@ re_verification:
 # Phase 16: GUI Connectors Verification Report
 
 **Phase Goal:** The operator console has every read route it needs, served by the launcher's single engine through thin adapters, with nothing leaking store internals or credentials
-**Verified:** 2026-10-31T00:00:00Z (re-verification at HEAD 7147047; original verdict 2026-10-22T16:15:00Z at 2505402)
+**Verified:** 2026-11-01T00:45:26Z (re-verification at HEAD 4e4dc0f after Phase 18; prior re-verification 2026-10-31 at 7147047; original verdict 2026-10-22T16:15:00Z at 2505402)
 **Status:** passed
-**Re-verification:** Yes. The first report went stale because docs/gui/API-INVENTORY.md was amended by Phase 17-13 (commit f674eba).
+**Re-verification:** Yes. The first report went stale because docs/gui/API-INVENTORY.md was amended by Phase 17-13 (commit f674eba). The second report went stale because Phase 18-02 (commits eff8804, 65dd699) changed databasise/launcher/serve_rest.py and docs/gui/API-INVENTORY.md; see "Re-verification 2026-10-31 (Phase 18 staleness)" below.
+
+### Re-verification 2026-10-31 (Phase 18 staleness)
+
+- **Stale cause.** `git diff eff8804~1 HEAD` over the covered files touches exactly two: databasise/launcher/serve_rest.py and docs/gui/API-INVENTORY.md. The same diff over databasise/evidence, databasise/parts_core, databasise/seam, databasise/stores, databasise/tests/fixtures, docs/gui/CODEBASE-MAP.md and docs/gui/refusals.json is empty, and the ledger module is likewise unchanged in the commit log, so every Phase 16 engine method, operator route, probe, store and fixture is byte-identical to the version verified on 2026-10-31.
+- **What changed in serve_rest.py.** An opt-in `--console` flag (serve_rest.py:48-52); `console_csp()` (serve_rest.py:59-87), which builds a Content-Security-Policy from the sha256 hashes of the page's single inline script and single style block and raises at start-up if the counts differ; a `GET /console` route mounted only under `--console`, `include_in_schema=False`, returning the packaged `databasise/console/operator-console.html` bytes read once at start-up with fixed security headers (CSP, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Cache-Control: no-store`) (serve_rest.py:126-143); and two parser refusals in `main` requiring a loopback `--host` and a fixed `--port` for `--console` (serve_rest.py:185-191). The `--operator` and `--log-file` arguments, the `create_app(operator=..., log_path=...)` call, the TrustedHost and Origin guards, `log_config_for` and the `--log-file` pre-open refusal are unchanged apart from moving down the file; the Phase 16 line references in this report were updated to the new positions.
+- **Re-checked rows.** SC1 and CONN-01 (routes gated by `--operator`): `build_app` still passes `operator=getattr(args, "operator", False)` into the one `create_app`, and `--console` does not imply `--operator` (`test_console_does_not_imply_operator` passes). SC2/goal clause "nothing leaking store internals or credentials": the new route serves a static packaged file with constant headers, reads nothing from the engine or the store, and the packaged page contains zero occurrences of `store_root`, `/home/`, `api_key`, `apikey` or `x-api-key`; the headers carry no path, URL, model name or key. The OpenAPI surface is unchanged (`test_openapi_is_identical_with_and_without_the_flag` passes), so the documented Phase 16 route contract is the same with and without the flag. SC5/CONN-14 (`/log` tails the launcher log): `log_config_for` (serve_rest.py:148-169) and the `uvicorn.run(..., log_config=...)` call (serve_rest.py:216-217) are unchanged. The single-engine, thin-adapter claim is unaffected: operator_rest.py and rest.py did not change.
+- **API-INVENTORY.md.** The only change is one additive paragraph at line 766 describing `--console` and `GET /console` (loopback host, fixed port, does not imply `--operator`, hidden from `/openapi.json`); each statement matches serve_rest.py:141, 185-191. The 5.1a operator route table and refusal columns are unchanged and still match operator_rest.py.
+- **Regression run at HEAD 4e4dc0f.** `.venv/bin/python -m pytest tests/launcher tests/seam -q -p no:cacheprovider -k "console or operator or rest_transport or refusal_catalogue or selector_resolution or status_during_write or launch or log_file or bind_guard or store_lock"`: 241 passed, 1008 deselected. This covers all nine test_console_*.py files, the operator review files, catalogue, fixture, transport, write-status and every tests/launcher file. Plus tests/gui_live/test_live_01_serving.py non-browser subset (route absent without the flag, OpenAPI identity, console does not imply operator, CSP refuses a two-script page, loopback-host and fixed-port refusals): 6 passed.
+- **Not rerun.** The manual launcher 500-traceback check and the 14 ledger test_refs, since the code under them is unchanged; the browser-driven LIVE-01 tests belong to Phase 18's verification. Goal still holds; no regression found.
 
 ### Re-verification Delta (2026-10-31)
 
@@ -103,7 +112,7 @@ Full offline gate (`databasise/tools/check_offline_suite.py`): **reported by orc
 | CONN-11 | engine.py:2403-2431; probes.py:154-192 | test_console_graph.py::test_graph_nodes_page_degrees_prefix_and_busy_409 (fail-first and killed plant on ledger) ; tests/stores/test_graph_read_review_c.py | VERIFIED |
 | CONN-12 | engine.py:2433-2456; probes.py:195-228; refusals.py UnknownGraphNodeError | test_console_graph.py::test_graph_node_edges_and_unknown_node_422 (killed plant on ledger) | VERIFIED |
 | CONN-13 | engine.py:2124-2145; graph.py:180-190 (`held_graph_paths`, own-hold excluded); engine.py:2387-2401 (`_hold_graph`) | test_console_info.py::test_store_busy_fields_are_true_during_an_ingest; test_status_during_write.py; test_graph_lock.py | VERIFIED |
-| CONN-14 | serve_rest.py:38-47, 90-111, 137-152; engine.py:2458-2496; operator_rest.py:132-145 | test_console_log.py::test_log_tails_the_launcher_log_and_is_404_without_both_flags; tests/launcher/test_log_file_refusal.py; plus the manual launcher check below | VERIFIED |
+| CONN-14 | serve_rest.py:38-47, 90-106, 148-169, 200-217; engine.py:2458-2496; operator_rest.py:132-145 | test_console_log.py::test_log_tails_the_launcher_log_and_is_404_without_both_flags; tests/launcher/test_log_file_refusal.py; plus the manual launcher check below | VERIFIED |
 
 **Score:** 19/19 truths verified (0 present, behavior-unverified). The behavior-dependent truths (CONN-09 preview equals mint, CONN-11 busy 409, CONN-13 flags during an in-flight ingest) each have a named behavioral test that passed in this run.
 
@@ -117,7 +126,7 @@ Full offline gate (`databasise/tools/check_offline_suite.py`): **reported by orc
 | databasise/stores/vector.py | `FaissVectorStore.list_ids` | VERIFIED | reads the entry map only |
 | databasise/seam/trace_store.py | `TraceStore.list_page` | VERIFIED | page and count in one read transaction |
 | databasise/ledger/ledger.py | `Ledger.aliases`, `history_for_alias`, `snapshot` | VERIFIED | `LedgerEntry` carries id and created_at |
-| databasise/launcher/serve_rest.py | `--operator`, `--log-file`, `log_config_for` | VERIFIED | bad log file refused before the store lock |
+| databasise/launcher/serve_rest.py | `--operator`, `--log-file`, `log_config_for` | VERIFIED | bad log file refused before the store lock; Phase 18 added `--console` and `GET /console` without touching these |
 | docs/gui/refusals.json | refusal catalogue | VERIFIED | 51 entries, test-synced |
 | databasise/tests/fixtures/selector-resolution.json | selector fixture | VERIFIED | 29 rows, 6 reachable flags |
 | databasise/evidence/COVERAGE.md | REST-ONLY rows and exceptions | VERIFIED | rows 120-129, D-02/D-09/D-10/D-19 bullets 136-143 |
@@ -126,12 +135,12 @@ Full offline gate (`databasise/tools/check_offline_suite.py`): **reported by orc
 
 | From | To | Via | Status |
 |------|----|-----|--------|
-| serve_rest.build_app | create_app | `operator=`, `log_path=` (serve_rest.py:60-67) | WIRED |
+| serve_rest.build_app | create_app | `operator=`, `log_path=` (serve_rest.py:99-106) | WIRED |
 | create_app | add_operator_routes | `if operator:` with `log=log_path is not None` (rest.py:545-549) | WIRED |
 | operator routes | app.state.engine | the same `engine` object (rest.py:370-374) | WIRED |
 | engine.graph_nodes/graph_node | probes.graph_node_page/edges | `asyncio.to_thread` plus `_hold_graph` | WIRED |
 | engine.info | graph.held_graph_paths, write gates | `own=self._graph_holds`, `_gate_for(...).locked()` | WIRED |
-| serve_rest.main | uvicorn file logging | `log_config_for(args.log_file)` (serve_rest.py:151) | WIRED (proved by the manual launcher check) |
+| serve_rest.main | uvicorn file logging | `log_config_for(args.log_file)` (serve_rest.py:216-217) | WIRED (proved by the manual launcher check) |
 
 ### Data-Flow Trace (Level 4)
 
@@ -153,6 +162,9 @@ Full offline gate (`databasise/tools/check_offline_suite.py`): **reported by orc
 | Surface and leak check on a fresh tmp root | scratchpad p16v/surface_check.py (TestClient, clients=None) | 10 routes 404 without operator; /log 404 without log_path; no store_root/URL in /info or /wirings; only trace.db created (no ledger.db) | PASS |
 | Unknown trace on preview | scratchpad p16v/preview_check.py | 404 UnknownTraceReferenceError | PASS |
 | Real 500 traceback reaches --log-file and GET /log | scratchpad p16v/log500_check.py: real `serve_rest.main(["--operator","--log-file",tmp,"--no-clients","--store-root",tmp,"--port",free])` in a subprocess, `Databasise.wirings` patched to raise | /wirings 500; server.log line 8 `ERROR uvicorn.error: Exception in ASGI application` with the injected RuntimeError traceback; GET /log?limit=1000 returned 72 lines including the traceback; `Uvicorn running on <url>` redacted; limit=0 and 1001 -> 422; server kept answering /info after the 500 | PASS |
+| Phase 18 staleness rerun (HEAD 4e4dc0f) | `.venv/bin/python -m pytest tests/launcher tests/seam -q -p no:cacheprovider -k "console or operator or rest_transport or refusal_catalogue or selector_resolution or status_during_write or launch or log_file or bind_guard or store_lock"` | 241 passed, 1008 deselected | PASS |
+| /console route gating and OpenAPI identity (HEAD 4e4dc0f) | `.venv/bin/python -m pytest tests/gui_live/test_live_01_serving.py -q -p no:cacheprovider -k "absent_without_the_flag or openapi_is_identical or does_not_imply_operator or refuses_a_page_with_two_scripts or needs_a_loopback_host or needs_a_fixed_port"` | 6 passed, 8 deselected | PASS |
+| Packaged console page leak scan | grep -c on databasise/console/operator-console.html for `store_root`, `/home/`, `api_key`/`apikey`/`x-api-key` | 0, 0, 0 | PASS |
 | Full offline gate | check_offline_suite.py | reported by orchestrator | not run here |
 
 Note on the launcher check: the 500 was induced by patching one engine method in the child process, not by a naturally occurring fault; the launcher, uvicorn, the log config and GET /log were all the real code. A first attempt with the child's console on an unread pipe stalled the server after the traceback; that was the test harness's unread pipe, and the rerun with the console written to a file was clean.
@@ -196,5 +208,5 @@ No gaps. Every roadmap success criterion and every amended CONN requirement has 
 
 ---
 
-_Verified: 2026-10-22T16:15:00Z_
+_Verified: 2026-11-01T00:45:26Z (original 2026-10-22T16:15:00Z)_
 _Verifier: Claude (gsd-verifier)_
