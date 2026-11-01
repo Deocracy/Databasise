@@ -448,7 +448,7 @@ class PageBoundsError(SeamRefusalError):
         # The literal class name is load-bearing for the same reason as PageSizeExceededError's:
         # Page's validator raises this, and pydantic wraps it into a ValidationError message.
         super().__init__(
-            "PageBoundsError: page limit must be at least 1 and offset must be between 0 and 2**31-1; "
+            "PageBoundsError: page limit must be at least 1 and offset must be non-negative and at most 2**31-1; "
             f"got limit={limit}, offset={offset}"
         )
 
