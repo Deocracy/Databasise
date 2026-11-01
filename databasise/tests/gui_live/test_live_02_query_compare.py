@@ -246,7 +246,8 @@ def test_each_run_lands_in_the_history(seeded, live_ui):
     entries = _stored(ui)
     assert [e["trace_token"] for e in entries] == [second, first]
     for entry in entries:
-        assert sorted(entry) == ["query", "selector", "timestamp", "trace_token"]
+        assert sorted(entry) == ["degraded", "partial", "query", "selector", "timestamp", "trace_token"]  # LIVE-02 fields plus the Ledger pre-flight flags (R18-02)
+        assert entry["partial"] is False
         assert entry["query"] == "Ed Wood"
         assert sorted(entry["selector"]["capability"]) == CAPS
 

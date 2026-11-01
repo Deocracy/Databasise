@@ -217,7 +217,8 @@ var QueryScreen = (function () {
   }
 
   function remember(env, body) {
-    runLog.add({ query: body.query.text, selector: body.selector, trace_token: env.trace_token, timestamp: new Date().toISOString() });
+    // partial and degraded feed the Ledger pre-flight; an older entry without them reads as false there (R18-02).
+    runLog.add({ query: body.query.text, selector: body.selector, trace_token: env.trace_token, partial: !!env.partial, degraded: !!env.degraded, timestamp: new Date().toISOString() });
     renderHistory();
   }
 

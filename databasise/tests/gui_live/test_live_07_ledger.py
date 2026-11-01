@@ -352,6 +352,42 @@ def test_recent_runs_source_lists_server_traces(seeded, browser):
         ui.close()
 
 
+def test_history_source_blocks_a_partial_run(seeded, browser):
+    """R18-02: a remembered run carries partial and degraded, so the History source can block a partial trace."""
+
+    def handler(route):
+        response = route.fetch()
+        body = response.json()
+        body["partial"] = True
+        body["stop_reason"] = "budget"
+        route.fulfill(response=response, body=json.dumps(body))
+
+    ui = open_live_ui(browser, seeded, before_goto=lambda page: page.route("**/query", handler))
+    try:
+        ui.el("query.text.input").fill("Ed Wood")
+        ui.el("query.selector.kind-capability").check()
+        ui.el("query.selector.capability").select_option(CAPS)
+        ui.el("query.run.stream").set_checked(False)
+        with ui.page.expect_response(_is_post("/query")) as info:
+            ui.el("query.run.submit").click()
+        env = info.value.json()
+        token = env["trace_token"]
+        ui.expect("query.state.partial").to_be_visible()
+        stored = ui.page.evaluate("() => JSON.parse(sessionStorage.getItem('databasise.console.history'))")
+        assert [(e["trace_token"], e["partial"], e["degraded"]) for e in stored] == [(token, True, bool(env["degraded"]))]
+
+        ui.nav("ledger")
+        row = ui.el("ledger.promote.traces").locator(f'label[data-token="{token}"]')
+        ui.expect(row.locator('[data-role="chips"]')).to_contain_text("partial")
+        row.locator("input").check()
+        ui.el("ledger.promote.alias").fill("partial-run")
+        ui.el("ledger.promote.origin-human").check()
+        ui.expect("ledger.promote.preflight").to_contain_text("is a partial run and cannot be promoted")
+        ui.expect("ledger.promote.submit").to_be_disabled()
+    finally:
+        ui.close()
+
+
 def test_timeline_cells_do_not_wrap_at_1440(lineage, live_ui):
     ui = live_ui
     ui.page.set_viewport_size({"width": 1440, "height": 900})
