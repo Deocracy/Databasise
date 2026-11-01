@@ -826,12 +826,14 @@ class UnresolvableEvidenceReferenceError(SeamRefusalError):
     hold (§4's deref-raising discipline, T-04-08's mitigation). Never returns ``None`` and never an
     empty result — either would be indistinguishable from evidence that was legitimately empty.
     ``ref`` is annotated ``Any`` because importing ``EvidenceRef`` here would create an import
-    cycle; ``refusal_body`` dumps it with ``model_dump()``."""
+    cycle; ``refusal_body`` dumps it with ``model_dump()``. The caller's ``ref``/``kind`` strings
+    have no length bound of their own, so the stored copy carries them through ``bounded_echo``
+    (the namespace is already capped by its validator)."""
 
     def __init__(self, ref: Any):
-        self.ref = ref
+        self.ref = ref.model_copy(update={"ref": bounded_echo(ref.ref), "kind": bounded_echo(ref.kind)})
         super().__init__(
-            f"evidence reference {ref.ref!r} in namespace {ref.namespace!r} does not resolve to "
+            f"evidence reference {self.ref.ref!r} in namespace {self.ref.namespace!r} does not resolve to "
             "any record the store currently holds"
         )
 
