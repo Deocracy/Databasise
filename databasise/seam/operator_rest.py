@@ -141,5 +141,7 @@ def add_operator_routes(app: FastAPI, engine: Any, *, log: bool = False) -> None
                 "loopback --operator launch with --log-file (D-19)."
             ),
         )
-        async def get_log(limit: int = Query(default=100, ge=1, le=1000)) -> dict[str, Any]:
+        async def get_log(limit: int = Query(default=100)) -> dict[str, Any]:
+            # The 1..1000 bound is checked in log_tail as PageBoundsError (phase16 NEW-1), like the
+            # other paged routes, so an out-of-range value is a named refusal, not a schema detail.
             return await engine.log_tail(limit)

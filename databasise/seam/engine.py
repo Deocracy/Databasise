@@ -285,6 +285,7 @@ from databasise.seam.refusals import (
     MeasurementPostureRefusalError,
     MutableStoreComparisonExcludedError,
     NonEncodableTextError,
+    PageBoundsError,
     NoRawUploadPathForModalityError,
     NoWritePathForModalityError,
     PartialRunEvidenceError,
@@ -416,6 +417,7 @@ _GRAPH_KIND = "chunk_entity_relation"
 
 # 16-REVIEW-B WR-05: the per-line cap of the operator log tail, in characters.
 _LOG_LINE_CAP = 4096
+MAX_LOG_LINES = 1000  # GET /log's line limit ceiling (16-11, D-18); checked in log_tail, not by the route
 
 # Every namespace of every shipped wiring, probed by health() (Phase 10 D-14). kv/graph come from the
 # wirings' store_namespaces, vector from the part modules' *_NAMESPACE constants; test_health_probe.py
@@ -2472,7 +2474,11 @@ class Databasise:
         ``StoreFault`` fault (16-REVIEW-B WR-04). Each line is capped at ``_LOG_LINE_CAP``
         characters and no longer line is held in memory: a longer one is cut there, redacted, and
         ends in ``…[truncated]`` (16-REVIEW-B WR-05). The cut comes before the redaction, and the
-        secret patterns have no minimum length, so a secret cut at the cap is still masked."""
+        secret patterns have no minimum length, so a secret cut at the cap is still masked. A
+        ``limit`` outside ``1..MAX_LOG_LINES`` is ``PageBoundsError`` (phase16 NEW-1), the same
+        named 422 the other paged routes return, never FastAPI's schema ``detail`` shape."""
+        if not 1 <= limit <= MAX_LOG_LINES:
+            raise PageBoundsError(limit=limit, offset=0)
         path = self.log_path
         if path is None:
             return {"lines": []}
