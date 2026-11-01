@@ -8,8 +8,8 @@ var EvidenceScreen = (function () {
   var root = $id("screen-evidence");
   var errorsBox = root.querySelector('[data-role="errors"]');
   var panes = { evidence: root.querySelector('[data-role="pane-evidence"]'), trace: root.querySelector('[data-role="pane-trace"]') };
-  // Resolved records, kept for the page's lifetime by namespace and ref (D-07). Errors are never stored.
-  var cache = {};
+  // Resolved records, kept by namespace and ref until a write changes the corpus (D-07, R18-09). Errors are never stored.
+  var cache = Object.create(null);
   var tab = "evidence";
   var opener = null; // the Open button whose click is being dispatched
   var busyEl = null; // the Open button marked busy by the read in flight
@@ -456,6 +456,10 @@ var EvidenceScreen = (function () {
   });
   Console.on("open-trace", function (payload) {
     openTrace(payload.token || "");
+  });
+  // After a delete a cached record may be gone from the store: the next Open asks the server again (R18-09).
+  Console.on("corpus-changed", function () {
+    cache = Object.create(null);
   });
   // Entering the screen refreshes the picker; leaving it abandons both reads and restores the Open button (IN-JSB-08).
   Console.on("show", function (name) {
