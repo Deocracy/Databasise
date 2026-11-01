@@ -2,8 +2,8 @@
 phase: 18
 review: 18-REVIEW.md
 disposed: 2026-10-31
-fixed: 8
-open: 7
+fixed: 9
+open: 6
 ---
 
 # Phase 18 review disposition
@@ -18,7 +18,7 @@ owner-approved digest (bf98e79e…4d20).
 | R18-02 | warning | fixed | bc67406e — history entries store `partial`/`degraded`; Ledger partial-run blocker now fires; test added in test_live_07 |
 | R18-03 | warning | fixed | 62d5460c — `Object.create(null)` for `retrying`, `arms`, `caps`, `aliases`; test added in test_live_06 |
 | R18-04 | warning | fixed (owner glance requested) | a957b3d5 — shared `isEnvelope()`; malformed 2xx shows the generic banner and leaves `running` on query, stream-final and compare paths; test covers the plain POST path only |
-| R18-05 | warning | open — owner decision | `family()` assumes LightRAG for alias selectors because the alias arm is not in the picker data; needs a product rule (fetch the arm via the alias catalogue, or word the Delete dialog arm-neutrally for aliases) |
+| R18-05 | warning | fixed (provisional owner default) | 42d9e6e8 RED / a0483f4e GREEN — `family()` returns "unknown" when the arm is unknown; Target, upload notice, result card, Delete dialog and seam toggle use arm-neutral wording; test added in test_live_05. Default chosen while the owner click-through is postponed: arm-neutral wording, no extra network call; owner confirms or asks for alias-arm lookup at the click-through |
 | R18-06 | warning | fixed | 2174af2f — Graph clears previous node/chunk lists before a new selector read; test added in test_live_08 |
 | R18-07 | info | open — advisory | streamed query leaves InFlight at headers; harmless with Run disabled during writes (D-13) |
 | R18-08 | info | fixed | 055ca845 — loadHealth dedupes while a load is pending |
