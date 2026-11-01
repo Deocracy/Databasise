@@ -58,6 +58,19 @@ async def test_a_surrogate_version_is_the_named_422_on_rest_after_a_promotion(pr
     _assert_refused(response, "version")
 
 
+async def test_a_surrogate_history_alias_is_the_named_422_on_the_operator_route(promoted_root, tmp_path):
+    log = tmp_path / "server.log"
+    log.write_text("", encoding="utf-8")
+    client = TestClient(
+        create_app(store_root=promoted_root, workspace="surrogate-op", operator=True, log_path=log),
+        raise_server_exceptions=False,
+    )
+
+    response = client.post("/ledger/history", content=b'{"alias": "\\ud800"}', headers=_JSON)
+
+    _assert_refused(response, "alias")
+
+
 @pytest.mark.parametrize("tool", ["rollback", "retire"])
 async def test_a_surrogate_version_is_the_named_refusal_over_mcp_after_a_promotion(promoted_root, tool):
     if not _mcp_available():
