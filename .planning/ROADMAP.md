@@ -48,7 +48,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 15: Offline Tooling & Packaging** - Wheel-runnable CLIs that refuse by name and never spend by default, honest parity/eval/evidence records, admission enforced at load (F8) (completed 2026-10-22)
 - [x] **Phase 16: GUI Connectors** - Operator read routes: info, wirings, aliases, history, traces, promote preview, chunks, graph nodes, store-busy status, log tail (completed 2026-10-22)
 - [x] **Phase 17: GUI Mockup** - Static six-screen operator console mockup on fixtures, every control id-stamped, missing backends badged (completed 2026-10-31)
-- [ ] **Phase 18: GUI Live** - The mockup connected to the live §18 REST API and operator routes, screen by screen
+- [x] **Phase 18: GUI Live** - The mockup connected to the live §18 REST API and operator routes, screen by screen (completed 2026-11-01)
 
 ### Cross-phase decisions
 
@@ -567,7 +567,7 @@ Plans:
 - LIVE-08: depends on the Phase 16 connector routes and open question 6
 - LIVE-09: depends on the mockup_freeze written by the first Phase 18 plan from the Phase 17 approval record (17-CONTEXT D-13); that plan checks the sha256 in docs/gui/MOCKUP-APPROVAL.md before freezing
 
-**Plans**: 10/11 plans executed
+**Plans**: 11/11 plans complete
 
 Plans:
 **Wave 1**
@@ -612,7 +612,7 @@ Plans:
 
 **Wave 11** *(blocked on Wave 10 completion)*
 
-- [ ] 18-11-PLAN.md — LIVE-09 in three launch modes, no screen fixtures in the live build, owner click-through with real clients (D-20), LIVE-01..09 linked and proven by the kit (all LIVE rows)
+- [x] 18-11-PLAN.md — LIVE-09 in three launch modes, no screen fixtures in the live build, owner click-through with real clients (D-20), LIVE-01..09 linked and proven by the kit (all LIVE rows)
 
 **UI hint**: yes
 
@@ -633,7 +633,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 → 14 → 
 | 15. Offline Tooling & Packaging | 19/19 | Complete    | 2026-10-22 |
 | 16. GUI Connectors | 12/12 | Complete    | 2026-10-22 |
 | 17. GUI Mockup | 13/13 | Complete    | 2026-10-31 |
-| 18. GUI Live | 10/11 | In Progress|  |
+| 18. GUI Live | 11/11 | Complete    | 2026-11-01 |
 
 v1.0 (Phases 1-7, 64 plans) shipped 2026-09-12 — see `.planning/MILESTONES.md`.
 

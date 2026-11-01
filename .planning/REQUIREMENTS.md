@@ -784,34 +784,34 @@ These fail today.
 
 ### GUI connected to the live API
 
-- [ ] **LIVE-01**: The console build is served to a browser from the same origin as the §18 REST app (or through a dev proxy), started by the launcher bound to 127.0.0.1 with a chosen store root, workspace and model clients; a browser fetch POST /query from the console page completes with 200 and no CORS error, and the header health indicator shows the live GET /health result on load.
+- [x] **LIVE-01**: The console build is served to a browser from the same origin as the §18 REST app (or through a dev proxy), started by the launcher bound to 127.0.0.1 with a chosen store root, workspace and model clients; a browser fetch POST /query from the console page completes with 200 and no CORS error, and the header health indicator shows the live GET /health result on load.
   - Test: End-to-end test starts the launcher on a temporary store root with stub clients on an ephemeral port, loads the console page in a headless browser, runs a query from the UI, and asserts a 200 response, zero console CORS errors, and the health indicator matching the /health JSON. Fails before (no launcher / cross-origin preflight 405), passes after.
   - Defects: rest-live/REST-18, other-surfaces/OS-01, rest-live/REST-15
   - Owner decision first: Open questions 4 and 5: same-origin static serving from the FastAPI app versus Vite proxy versus opt-in allow_origins; and localhost-only no-auth versus a reverse proxy with auth. Also the build stack after the mockup (React 19 + Vite + Sigma.js or plain HTML/JS).
-- [ ] **LIVE-02**: The Query & Compare screen calls the live POST /query, POST /query/stream and POST /compare instead of fixtures: streaming uses fetch with a ReadableStream SSE parser that checks status and content type before parsing, ignores ': ping' lines, and shows a 'disconnected' state when the stream closes without a final event; compare responses are parsed as a bare envelope when one selector was sent and as a keyed map when two or more were sent; each run appends {query, selector, trace_token, timestamp} to a client-side history that the Evidence, Trace and Ledger screens read.
+- [x] **LIVE-02**: The Query & Compare screen calls the live POST /query, POST /query/stream and POST /compare instead of fixtures: streaming uses fetch with a ReadableStream SSE parser that checks status and content type before parsing, ignores ': ping' lines, and shows a 'disconnected' state when the stream closes without a final event; compare responses are parsed as a bare envelope when one selector was sent and as a keyed map when two or more were sent; each run appends {query, selector, trace_token, timestamp} to a client-side history that the Evidence, Trace and Ledger screens read.
   - Test: End-to-end test against the launcher with stub clients: runs one query with stream off and one with stream on and asserts both render answer, evidence rows and trace link; runs compare with one selector and with two selectors (one alias literally named 'answer') and asserts one column and two correctly keyed columns; asserts the history store holds both trace tokens with their selectors. A test that closes the SSE response early asserts the disconnected state. Fails before, passes after.
   - Defects: seam-rest/SEAM-05
-- [ ] **LIVE-03**: Live server errors render through the GUI-06 error states: a real refusal 422 shows the typed banner for its refusal_type, a real validation 422 shows field errors on the offending input, and a real 500 shows the generic error state, on every connected screen.
+- [x] **LIVE-03**: Live server errors render through the GUI-06 error states: a real refusal 422 shows the typed banner for its refusal_type, a real validation 422 shows field errors on the offending input, and a real 500 shows the generic error state, on every connected screen.
   - Test: End-to-end test against the launcher: POST /trace/resolve with an unknown reference renders the UnknownTraceReferenceError banner; a selector with two members on /query (sent by bypassing the client-side check through the API module) renders a field error on the selector; GET /corpus?limit=101 renders PageSizeExceededError with requested 101 and limit 100; a server route forced to raise renders the generic 500 view. Fails before, passes after.
   - Defects: seam-rest/SEAM-14, seam-rest/SEAM-13, seam-rest/SEAM-12
-- [ ] **LIVE-04**: The Evidence & Trace screen calls the live POST /evidence/resolve with the EvidenceRef copied unchanged from the envelope, caches results per (namespace, ref) for the session so a second Open issues no request, and calls the live POST /trace/resolve, re-requesting with debug true when the Debug toggle is switched on.
+- [x] **LIVE-04**: The Evidence & Trace screen calls the live POST /evidence/resolve with the EvidenceRef copied unchanged from the envelope, caches results per (namespace, ref) for the session so a second Open issues no request, and calls the live POST /trace/resolve, re-requesting with debug true when the Debug toggle is switched on.
   - Test: End-to-end test: runs a naive query on a populated temp store, clicks Open on an evidence row twice and asserts exactly one /evidence/resolve request whose body equals the envelope's ref object byte for byte; opens the trace and asserts one request without debug and, after toggling Debug, one with debug true and a rendered node table. Fails before, passes after.
-- [ ] **LIVE-05**: The Documents & Jobs screen calls the live POST /documents, POST /documents/upload, GET /jobs/{job_id} and DELETE /documents/{document_id}; the returned job_id is stored in the client-side job list; Run on the Query screen is disabled while an ingest or delete is in flight (single RocksDB graph lock); after a delete the corpus table and counts refresh from /corpus and /corpus/counts.
+- [x] **LIVE-05**: The Documents & Jobs screen calls the live POST /documents, POST /documents/upload, GET /jobs/{job_id} and DELETE /documents/{document_id}; the returned job_id is stored in the client-side job list; Run on the Query screen is disabled while an ingest or delete is in flight (single RocksDB graph lock); after a delete the corpus table and counts refresh from /corpus and /corpus/counts.
   - Test: End-to-end test: submits pasted text, asserts the job_id appears in the job list and the jobs drawer shows the document from GET /jobs/{job_id}; asserts Query Run is disabled during the ingest request and enabled after; deletes the document and asserts /corpus and /corpus/counts are re-requested and the row is gone. Fails before, passes after.
   - Defects: stores/ST-10
   - Owner decision first: Open question 8 (LightRAG write/read store split): until it is resolved the screen keeps the 'different stores' notice, and this test asserts only the corpus-status path, not that the ingested document is queryable.
-- [ ] **LIVE-06**: The Corpus & Health screen calls the live GET /health, GET /corpus and GET /corpus/counts; health polls at the configured 30-60 s interval only when enabled and never while a query, compare, ingest or delete is in flight; counts poll only while a non-terminal status count is above zero; corpus paging follows next_offset.
+- [x] **LIVE-06**: The Corpus & Health screen calls the live GET /health, GET /corpus and GET /corpus/counts; health polls at the configured 30-60 s interval only when enabled and never while a query, compare, ingest or delete is in flight; counts poll only while a non-terminal status count is above zero; corpus paging follows next_offset.
   - Test: End-to-end test with a fake clock: enables health polling, starts a long query, advances the clock past the interval and asserts no /health request was issued until the query finished; loads counts with processing 0 and asserts no further /corpus/counts requests; pages the corpus and asserts the second request uses offset equal to the first response's next_offset. Fails before, passes after.
   - Defects: rest-live/REST-06, stores/ST-02
-- [ ] **LIVE-07**: The Ledger screen calls the live POST /promote, POST /rollback and POST /retire with alias, trace ids and change_origin from the form; a successful promote appends to the client-side ledger log and a follow-up POST /query with {alias} confirms it; alias, version and trace pickers read GET /ledger/aliases, POST /ledger/history, GET /traces and POST /promote/preview when those routes exist, and fall back to the client-side log and history when they do not.
+- [x] **LIVE-07**: The Ledger screen calls the live POST /promote, POST /rollback and POST /retire with alias, trace ids and change_origin from the form; a successful promote appends to the client-side ledger log and a follow-up POST /query with {alias} confirms it; alias, version and trace pickers read GET /ledger/aliases, POST /ledger/history, GET /traces and POST /promote/preview when those routes exist, and fall back to the client-side log and history when they do not.
   - Test: End-to-end test: runs a naive query, promotes its trace to alias 'op-test', asserts the success card shows version and generation_ordinal and that a query with selector {alias:'op-test'} returns 200; rolls back and retires through the timeline and asserts the rows update; with the ledger listing routes absent asserts the pickers show client-side entries and keep their needs-backend badge. Fails before, passes after.
   - Defects: seam-rest/SEAM-01, rest-live/REST-05
   - Owner decision first: Open questions 2 and 3: whether alias enumeration (D-12/FA-06) is relaxed for an operator listing and whether trace tokens may be listed on an unauthenticated localhost app. If both stay closed, the pickers remain client-side permanently and keep their needs-backend badges.
-- [ ] **LIVE-08**: The Graph/vector browser calls the live POST /graph/nodes, POST /graph/node and POST /chunks with a selector (never a namespace), pages by next_offset, and renders the store-busy refusal returned while another call holds the graph lock.
+- [x] **LIVE-08**: The Graph/vector browser calls the live POST /graph/nodes, POST /graph/node and POST /chunks with a selector (never a namespace), pages by next_offset, and renders the store-busy refusal returned while another call holds the graph lock.
   - Test: End-to-end test on a populated temp store: lists graph nodes, opens one node and asserts its edges render, lists chunks and opens one in the Evidence Inspector; holds the graph store open from the test process and asserts the screen shows the store-busy refusal, not a generic 500. Fails before (routes absent), passes after the connector routes ship.
   - Defects: stores/ST-10
   - Owner decision first: Depends on the connector-routes phase delivering these routes and on open question 6 (attrs in payloads).
-- [ ] **LIVE-09**: In the connected build, an element keeps data-needs-backend and its badge exactly when its route is absent from the live app's /openapi.json, and loses both once the route is present and wired; no mockup control is removed; with mockup_freeze set, scripts/mockup-id-check.py exits 0, meaning every frozen data-mock-id appears in the built UI source or is mapped in MOCKUP-PORT.md. *(Amended 2026-10-25 per Phase 17 CONTEXT D-13.)*
+- [x] **LIVE-09**: In the connected build, an element keeps data-needs-backend and its badge exactly when its route is absent from the live app's /openapi.json, and loses both once the route is present and wired; no mockup control is removed; with mockup_freeze set, scripts/mockup-id-check.py exits 0, meaning every frozen data-mock-id appears in the built UI source or is mapped in MOCKUP-PORT.md. *(Amended 2026-10-25 per Phase 17 CONTEXT D-13.)*
   - Decided in Phase 17 CONTEXT D-13 (2026-10-25): the owner approves the mockup at the end of Phase 17 and the approval and sha256 are recorded in docs/gui/MOCKUP-APPROVAL.md; the mockup_freeze write (freeze-variant) is the first plan of Phase 18, which first checks the file's sha256 against that record.
   - Test: pytest test starts the app, reads /openapi.json paths, scans the built UI for data-needs-backend values and asserts each named route is absent from the paths and each present gap route has no remaining data-needs-backend; then runs python scripts/check-ledger.py (which invokes mockup-id-check.py) and asserts no 'mockup' violation lines. Fails before (ids not ported), passes after.
   - Owner decision first: Owner freezes a mockup variant (sets mockup_freeze) at the end of phase GUI, after recording new needs back into API-INVENTORY.md.
@@ -993,15 +993,15 @@ These fail today.
 | GUI-09 | Phase 17 | Complete |
 | GUI-10 | Phase 17 | Complete |
 | GUI-11 | Phase 17 | Complete |
-| LIVE-01 | Phase 18 | Pending |
-| LIVE-02 | Phase 18 | Pending |
-| LIVE-03 | Phase 18 | Pending |
-| LIVE-04 | Phase 18 | Pending |
-| LIVE-05 | Phase 18 | Pending |
-| LIVE-06 | Phase 18 | Pending |
-| LIVE-07 | Phase 18 | Pending |
-| LIVE-08 | Phase 18 | Pending |
-| LIVE-09 | Phase 18 | Pending |
+| LIVE-01 | Phase 18 | Complete |
+| LIVE-02 | Phase 18 | Complete |
+| LIVE-03 | Phase 18 | Complete |
+| LIVE-04 | Phase 18 | Complete |
+| LIVE-05 | Phase 18 | Complete |
+| LIVE-06 | Phase 18 | Complete |
+| LIVE-07 | Phase 18 | Complete |
+| LIVE-08 | Phase 18 | Complete |
+| LIVE-09 | Phase 18 | Complete |
 
 **Coverage:** v1.1 requirements: 169 total · mapped to phases: 169 · unmapped: 0 · defect uids covered: 356/356
 
