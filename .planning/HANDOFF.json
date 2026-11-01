@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-11-01T01:46:18.564Z",
+  "phase": "18",
+  "phase_name": "GUI Live",
+  "phase_dir": ".planning/phases/18-gui-live",
+  "plan": 11,
+  "task": 2,
+  "total_tasks": 3,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 1, "name": "Drop screen fixtures from the live build; record fixture-only Phase 17 findings as n/a", "status": "done", "commit": "252c455 4e4dc0f"},
+    {"id": 2, "name": "checkpoint:human-verify owner click-through of http://127.0.0.1:8000/console", "status": "in_progress", "progress": "Owner started the launcher on port 8000; /console returns 200. Click-through not yet reported; answers A, B, C, D pending."}
+  ],
+  "remaining_tasks": [
+    {"id": 3, "name": "Record LIVE-01..09 in the BAK requirements records (set / record-fail at RED sha / set-status done), optional store-split notice removal, 18-11 SUMMARY", "status": "not_started"}
+  ],
+  "blockers": [
+    {"description": "18-11 checkpoint:human-verify is a blocking owner gate", "type": "human_action", "workaround": "none; wait for 'approved' with answers A, B, C, D"}
+  ],
+  "async_jobs": [],
+  "human_actions_pending": [
+    {"action": "Restart the console launcher (it serves the page bytes read at start-up, so it still shows the pre-fix build), open http://127.0.0.1:8000/console, walk the 18-11 checklist, reply 'approved' with A (keep/remove documents.notice.store-split), B (accept 18-07 assumptions), C (acknowledge LIVE-03 typed-refusal deviation), D (R18-05: alias Delete dialog arm wording)", "context": "18-11 Task 2 blocking gate", "blocking": true},
+    {"action": "python3 scripts/ledger-amend.py --root . lock-checks --commit $(git rev-parse HEAD)", "context": "Phase 17 GUI-01..11 checks are 'not locked'; the completion gate fails until the owner locks them. Owner-only verb.", "blocking": true},
+    {"action": "Decide RUN-11 (owner-deferred) and Phase 15 owner items A-ITER2-WR-03, TOOL-13, D-24, or carry them into the milestone audit", "context": "carried from phases 08 and 15", "blocking": false}
+  ],
+  "decisions": [
+    {"decision": "Stale verifications 08, 09, 13-17 were re-run by verifier subagents that preserved every prior row and Human Verification Resolution section and regenerated only the fingerprint plus a re-verification subsection", "rationale": "the staleness came from additive Phase 18 edits to serve_rest.py, pyproject.toml, API-INVENTORY.md and build.py; a full re-verify would have lost the hand-written owner-item resolutions", "phase": "18"},
+    {"decision": "Phase 18 review warnings R18-01..04, 06 and infos 08, 09, 11 fixed before 18-11 closed; R18-05 left for the owner", "rationale": "the fixes touch console JS only, not 18-11's remaining files; R18-05 needs a product rule for alias arm wording", "phase": "18"},
+    {"decision": "REQUIREMENTS.md must not be edited until phase.complete 18, then S3 traces are refreshed once", "rationale": "every REQUIREMENTS.md edit invalidates all S3 traces", "phase": "18"}
+  ],
+  "uncommitted_files": [
+    " M .planning/state.json",
+    " M trace/rounds.jsonl",
+    "?? .planning/milestone.lock",
+    "?? .planning/ui-reviews/",
+    "?? debug/",
+    "?? reference/deep-research-embeddings-sidelined/"
+  ],
+  "next_action": "When the owner replies 'approved' with A-D: node ~/.claude/gsd-core/bin/gsd-tools.cjs record-dispatch-isolation --isolation none --phase 18 --plan 11, then spawn a gsd-executor continuation for 18-11 Task 3 (see .planning/phases/18-gui-live/.continue-here.md for the RED shas and the record commands), then orchestrator commits the records files with a bare 'git add ledger/...' call followed by a separate commit call",
+  "context_notes": "Autonomous run /gsd-autonomous --auto, in --no-transition execute of phase 18. Everything that could run before the owner gate has run: phases 08-17 all 'passed' with fresh digests (72d5245, ecacc1fe), S5 traces for 08/15/17 refreshed and S4 phase18 written (07ef18a0, 06f4dd90), 18-REVIEW.md + 18-REVIEW-DISPOSITION.md committed (59ad5e30), 8 fix commits a490b489..a957b3d5, live suite 140/140. After 18-11: regression gate (workflow.test_gate_timeout=1800; full suite ~15 min), phase 18 verifier, phase.complete 18, S3 refresh for every phase + S3/S5 phase18, then gsd-audit-milestone -> gsd-complete-milestone v1.1 -> gsd-cleanup."
+}
