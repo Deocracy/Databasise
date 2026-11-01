@@ -4192,7 +4192,9 @@ var QueryScreen = (function () {
     var refs = [];
     var finalEvent = null;
     beginStream();
-    api("POST", "/query/stream", body, { raw: true, signal: mine.signal, kind: "query" }).then(function (result) {
+    // R18-07: a raw api() call ends its InFlight entry at the headers, so the stream holds its own until the body settles.
+    var done = InFlight.begin("query");
+    api("POST", "/query/stream", body, { raw: true, signal: mine.signal }).then(function (result) {
       if (result.aborted || mine !== controller) return;
       if (result.status === 0) return applyResponse(0, result.body);
       var res = result.res;
@@ -4228,7 +4230,7 @@ var QueryScreen = (function () {
         env.evidence = refs;
         if (applyResponse(res.status, env) === "result") remember(env, body);
       }, lost(mine));
-    });
+    }).then(done, done);
   }
 
   function run() {
