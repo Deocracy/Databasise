@@ -94,13 +94,18 @@ function loadInfo() {
 }
 
 // The 60 s abort is a setTimeout (not AbortSignal.timeout) so a faked clock can drive it in tests.
+// One load at a time: a poll tick or a second Refresh while one is pending joins it, so an older timeout can never
+// overwrite a newer load's state (R18-08).
+var healthLoad = null;
 Console.loadHealth = function () {
+  if (healthLoad) return healthLoad;
   renderHealth({ loading: true });
   var controller = new AbortController();
   var timer = setTimeout(function () {
     controller.abort();
   }, HEALTH_TIMEOUT_MS);
-  return api("GET", "/health", null, { signal: controller.signal }).then(function (result) {
+  return (healthLoad = api("GET", "/health", null, { signal: controller.signal }).then(function (result) {
+    healthLoad = null;
     clearTimeout(timer);
     var report;
     if (result.aborted) report = { status: 0, text: "Health check timed out after 60 seconds." };
@@ -112,7 +117,7 @@ Console.loadHealth = function () {
     return loadInfo().then(function () {
       return report;
     });
-  });
+  }));
 };
 
 // A rejected call on any screen also puts the header at unreachable (D-12).
