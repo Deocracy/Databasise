@@ -299,6 +299,28 @@ def test_retry_works_for_a_document_named_constructor(corpus_docs, live_app, bro
         assert [r["path"] for r in posts] == ["/documents/constructor/retry"]
 
 
+def test_retry_is_disabled_while_another_write_is_in_flight(corpus_docs, live_app, live_ui):
+    """Phase 18 N-1: a retry is a write, so Retry waits for the in-flight ingest like the Documents controls do (D-13)."""
+    corpus_docs["doc-3"]["status"] = "processing"  # listed as interrupted, so Retry is shown
+    ui = live_ui
+    ui.nav("corpus")
+    retry = _row(ui, "doc-3").locator('[data-mock-id^="corpus.table.retry-"]')
+    ui.expect(retry).to_be_enabled()
+    ui.nav("documents")
+    ui.el("documents.paste.text").fill("Text that keeps the ingest in flight.")
+    with live_app.hold("ingest") as release:
+        ui.el("documents.paste.submit").click()
+        ui.nav("corpus")
+        ui.expect(retry).to_be_disabled()
+        ui.expect(retry).to_have_attribute("aria-disabled", "true")
+        ui.expect(ui.page.locator(f'{SCREEN} [data-role="write-note"]')).to_have_text("Another write is in progress.")
+        release.set()
+    ui.expect(retry).to_be_enabled()
+    ui.expect(retry).not_to_have_attribute("aria-disabled", "true")
+    ui.expect(ui.page.locator(f'{SCREEN} [data-role="write-note"]')).to_be_hidden()
+    assert [r["path"] for r in ui.requests if r["method"] == "POST" and r["path"].endswith("/retry")] == []
+
+
 def test_absent_corpus_controls_are_disabled_with_their_route(corpus_docs, live_app, live_ui):
     ui = live_ui
     corpus_docs["doc-2"]["status"] = "failed"
