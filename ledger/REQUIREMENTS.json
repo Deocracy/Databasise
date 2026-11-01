@@ -1,5 +1,5 @@
 {
-  "ledger_version": 911,
+  "ledger_version": 912,
   "frozen_at": null,
   "items": [
     {
@@ -2378,7 +2378,7 @@
   },
   "scope_lock": null,
   "check_locks": {
-    "commit": "8defea7c751d3788e8a7c654f36ad65fc6c8d8fb",
+    "commit": "88c9f13f6e8fbb076524a12f8f8ce9081a57e88f",
     "files": {
       "databasise/tests/seam/test_run01_coverage_crosscheck.py": "3da3eb8683a6556bf3e29bde7ec7d19257bcf6371a55245b5be90450985e9258",
       "databasise/tests/clients/test_openai_compat.py": "1e342492d32774e047de1dd616030f4de8aaca7faf98d51449fd608505e1774f",
@@ -2533,12 +2533,7 @@
     "owner_wait_h": 24
   },
   "check_guard": [],
-  "check_edit_grants": {
-    "databasise/tests/gui/conftest.py": {
-      "reason": "browser fixture is session-scoped; Playwright sync event loop breaks async tests that run after tests/gui; change scope to module",
-      "granted_at": 877
-    }
-  },
+  "check_edit_grants": {},
   "notify_cmd": null,
   "check_baseline": 606
 }
