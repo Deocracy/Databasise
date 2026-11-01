@@ -110,7 +110,7 @@ owner's in-depth testing / hardening phase, or the first gate-adjudicated promot
 first. The argument, in one paragraph: an operator-asserted promotion (the only path this milestone
 builds) reads no eval bundle, consumes no calibrated A/A floor, and produces no verdict — so nothing
 in Phase 7 consumes the owner-corpus layer HARD-04 would add, or the gate-script/ANATOMY-doc repairs
-HARD-01/HARD-02 would make. All three requirements stay Pending in `.planning/REQUIREMENTS.md`.
+HARD-01/HARD-02 would make. All three requirements stay Pending in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 
 **Every promotion this milestone can make is operator-asserted, provisional, and carries no
 verdict.** `PromotionResult`'s closed set (`alias`, `version`, `record_kind`, `provenance`,

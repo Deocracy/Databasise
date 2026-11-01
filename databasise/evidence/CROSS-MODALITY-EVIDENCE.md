@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-09 (BLOCKED record); discharged by the real run recorded in "Real run — 2026-09-10" below
 
-`.planning/REQUIREMENTS.md` MODAL-05's claim, quoted verbatim:
+`.planning/milestones/v1.0-REQUIREMENTS.md` MODAL-05's claim, quoted verbatim:
 
 > LightRAG and HippoRAG 2 run side-by-side on one corpus under RIG §RUN (KV sharing per MACH-08's
 > scope rules, isolated graph/vector stores), outputs structurally comparable — the milestone proof
@@ -51,7 +51,7 @@ selected **defer-and-record-blocked**:
 2. **The harness code is written, not executed.** `databasise/parity/build_hipporag_index.py` and
    `databasise/parity/run_cross_modality.py` are genuine, reviewable, runnable code — the artifact
    a later plan will invoke once spend is authorized — never a stub or a placeholder.
-3. **MODAL-05 stays Pending** in `.planning/REQUIREMENTS.md`. This plan's own core-value proof
+3. **MODAL-05 stays Pending** in `.planning/milestones/v1.0-REQUIREMENTS.md`. This plan's own core-value proof
    point is explicitly NOT delivered.
 4. **This document is the honest BLOCKED record** — no simulated numbers, no numbers "for
    illustration," nowhere in this document.
@@ -105,7 +105,7 @@ proceed past harness-writing into a real invocation, and states plainly why.
   gain" would not apply and a retrieval difference between the arms would not be a quality finding.
   This is stated here as the applicable framework for a future reader, not as an observation drawn
   from any run this document records.
-- **MODAL-05 stays Pending in `.planning/REQUIREMENTS.md`.** This document is not the "MODAL-05
+- **MODAL-05 stays Pending in `.planning/milestones/v1.0-REQUIREMENTS.md`.** This document is not the "MODAL-05
   complete" record; it is the record of why MODAL-05 is not yet complete, and of the entry
   criterion that would make it completable.
 - **This project's core-value proof point is unproven.** `.planning/PROJECT.md`'s own Core Value
@@ -198,7 +198,7 @@ run against the real 20-document corpus (fixture-driven tests never exercised th
 **Limits.** No graph node/edge count, no vector count, no duration, no per-query comparison
 result, and no token-spend figure is reported anywhere in this section — none of those exist as
 harness-verified values for this attempt. The owner's `approve` decision is recorded honestly as
-*attempted and refused*, not rounded up to success. `.planning/REQUIREMENTS.md`'s MODAL-05 row
+*attempted and refused*, not rounded up to success. `.planning/milestones/v1.0-REQUIREMENTS.md`'s MODAL-05 row
 stays Pending; its outstanding item is updated to name the `fact-score` empty-string defect as the
 concrete next blocker, superseding (not replacing) the prior "authorization" blocker, which is now
 resolved.

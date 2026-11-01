@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-09
 
-`.planning/REQUIREMENTS.md` MACH-03's pass criterion, quoted verbatim:
+`.planning/milestones/v1.0-REQUIREMENTS.md` MACH-03's pass criterion, quoted verbatim:
 
 > First A/A calibration per RIG §AA.1: one A/A run at n questions producing n paired per-question
 > differences, bootstrap-resampled, the resampled distribution's p95 taken as the calibrated floor
@@ -93,7 +93,7 @@ not to proceed past Task 1 into a real calibration, and states plainly why.
   SELECTION.md-level reversal"; Falsifier 5 is named alongside Falsifier 2 in the same waiver
   document as carrying the same halt consequence). This is not that case: no comparison ran, so no
   verdict — adverse or otherwise — exists to trigger it. The falsifier is **open**, not failed.
-- **MACH-03 stays Pending in `.planning/REQUIREMENTS.md`.** This document is not the
+- **MACH-03 stays Pending in `.planning/milestones/v1.0-REQUIREMENTS.md`.** This document is not the
   "MACH-03 complete" record; it is the record of why MACH-03 is not yet complete, and of the two
   concrete preconditions that would make it completable.
 - **No numeric threshold for "materially narrower" is pre-registered here.** Task 3's own action
@@ -147,7 +147,7 @@ printed projection under an enforced `--limit` cap. Both preconditions this docu
 met in code. The only remaining blocker is the spend decision itself, which the owner has now
 declined twice — at 06-06 and again here.
 
-MACH-03 stays **Pending** in `.planning/REQUIREMENTS.md`, with a dated annotation naming the spend
+MACH-03 stays **Pending** in `.planning/milestones/v1.0-REQUIREMENTS.md`, with a dated annotation naming the spend
 as the single outstanding item. A recorded decline is this task's success state, not its failure
 state — Falsifier 5 remains **open**, not failed: no comparison ran, so there is no adverse verdict
 to record.
@@ -234,7 +234,7 @@ target families. Both of this document's own preconditions, closed at 06-12, rem
 only remaining blocker is the spend decision itself, which the owner has now declined three
 times — at 06-06, 06-13, and again here.
 
-MACH-03 stays **Pending** in `.planning/REQUIREMENTS.md`, with a dated annotation naming the spend
+MACH-03 stays **Pending** in `.planning/milestones/v1.0-REQUIREMENTS.md`, with a dated annotation naming the spend
 as the single outstanding item — every other precondition is now closed. Falsifier 5 remains
 **open**, not failed: no comparison ran, so there is no adverse verdict to record.
 
