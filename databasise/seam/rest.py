@@ -107,6 +107,7 @@ from databasise.seam.refusals import (
     UnknownJobError,
     UnknownTraceReferenceError,
     UnresolvableEvidenceReferenceError,
+    bounded_echo,
     json_safe,
     refusal_body,
     refusal_from_errors,
@@ -298,11 +299,13 @@ async def _validation_response(request: Request, exc: RequestValidationError) ->
     ``msg`` only: FastAPI's default handler also echoes ``input`` (unbounded, phase09 N-2) and that
     echo made the encoder raise on a NaN literal, a lone surrogate or 2000-level nesting (fuzz
     F1b/F5/F6, REST probe #1). ``loc`` can carry a caller's own object key, so the detail passes
-    through ``json_safe`` too. ``ctx.error`` (an exception object) is never serialised. Holds no
-    state, so concurrent requests cannot see each other's refusal."""
+    through ``bounded_echo`` and ``json_safe`` too. ``ctx.error`` (an exception object) is never
+    serialised. Holds no state, so concurrent requests cannot see each other's refusal."""
     refusal = refusal_from_errors(exc.errors())
     if refusal is None:
-        detail = [{key: err[key] for key in ("type", "loc", "msg") if key in err} for err in exc.errors()]
+        detail = [
+            {key: bounded_echo(err[key]) for key in ("type", "loc", "msg") if key in err} for err in exc.errors()
+        ]
         return JSONResponse(status_code=422, content={"detail": json_safe(detail)})
     return _refusal_response(request, refusal)
 

@@ -332,8 +332,8 @@ class UnknownDocumentError(SeamRefusalError):
     """
 
     def __init__(self, *, document_id: str):
-        self.document_id = document_id
-        super().__init__(f"document id {document_id!r} does not exist in the corpus")
+        self.document_id = bounded_echo(document_id)
+        super().__init__(f"document id {self.document_id!r} does not exist in the corpus")
 
 
 class DocumentNotInterruptedError(SeamRefusalError):
@@ -342,10 +342,10 @@ class DocumentNotInterruptedError(SeamRefusalError):
     ``document_id`` is the caller's own input; ``status`` is the document's reported status."""
 
     def __init__(self, *, document_id: str, status: str):
-        self.document_id = document_id
+        self.document_id = bounded_echo(document_id)
         self.status = status
         super().__init__(
-            f"DocumentNotInterruptedError: document id {document_id!r} has status {status!r}, not "
+            f"DocumentNotInterruptedError: document id {self.document_id!r} has status {status!r}, not "
             "'interrupted'; ingest it again or delete it instead"
         )
 
@@ -412,8 +412,8 @@ class UnknownJobError(SeamRefusalError):
     """
 
     def __init__(self, *, job_id: str):
-        self.job_id = job_id
-        super().__init__(f"job id {job_id!r} does not resolve to any known ingest job")
+        self.job_id = bounded_echo(job_id)
+        super().__init__(f"job id {self.job_id!r} does not resolve to any known ingest job")
 
 
 class PageSizeExceededError(SeamRefusalError):
@@ -536,9 +536,9 @@ class DuplicateComparisonKeyError(SeamRefusalError):
     """
 
     def __init__(self, *, key: str) -> None:
-        self.key = key
+        self.key = bounded_echo(key)
         super().__init__(
-            f"DuplicateComparisonKeyError: two selectors both render to comparison key {key!r}"
+            f"DuplicateComparisonKeyError: two selectors both render to comparison key {self.key!r}"
         )
 
 
@@ -589,9 +589,9 @@ class EmptyPromotionTraceIdsError(SeamRefusalError):
     """
 
     def __init__(self, *, alias: str):
-        self.alias = alias
+        self.alias = bounded_echo(alias)
         super().__init__(
-            f"EmptyPromotionTraceIdsError: promotion for alias {alias!r} was given no trace ids "
+            f"EmptyPromotionTraceIdsError: promotion for alias {self.alias!r} was given no trace ids "
             "to derive the target wiring from"
         )
 
@@ -638,9 +638,9 @@ class InvalidChangeOriginError(SeamRefusalError):
     """
 
     def __init__(self, *, change_origin: Any):
-        self.change_origin = change_origin
+        self.change_origin = bounded_echo(change_origin)
         super().__init__(
-            f"InvalidChangeOriginError: change_origin {change_origin!r} is not a recognised value"
+            f"InvalidChangeOriginError: change_origin {self.change_origin!r} is not a recognised value"
         )
 
 
@@ -660,9 +660,9 @@ class UnrecognisedPromotionVerbError(SeamRefusalError):
     """
 
     def __init__(self, *, verb: Any):
-        self.verb = verb
+        self.verb = bounded_echo(verb)
         super().__init__(
-            f"UnrecognisedPromotionVerbError: verb {verb!r} is not a recognised promotion verb"
+            f"UnrecognisedPromotionVerbError: verb {self.verb!r} is not a recognised promotion verb"
         )
 
 
@@ -705,8 +705,8 @@ class UnknownGraphNodeError(SeamRefusalError):
     """
 
     def __init__(self, *, node_id: str):
-        self.node_id = node_id
-        super().__init__(f"UnknownGraphNodeError: node id {node_id!r} is not in the selected graph")
+        self.node_id = bounded_echo(node_id)
+        super().__init__(f"UnknownGraphNodeError: node id {self.node_id!r} is not in the selected graph")
 
 
 class MeasurementPostureRefusalError(SeamRefusalError):
@@ -757,11 +757,11 @@ class UnknownGenerationVersionError(SeamRefusalError):
     """
 
     def __init__(self, *, alias: str, version: str):
-        self.alias = alias
-        self.version = version
+        self.alias = bounded_echo(alias)
+        self.version = bounded_echo(version)
         super().__init__(
-            f"UnknownGenerationVersionError: alias {alias!r} has no generation at version "
-            f"{version!r}"
+            f"UnknownGenerationVersionError: alias {self.alias!r} has no generation at version "
+            f"{self.version!r}"
         )
 
 
@@ -779,10 +779,10 @@ class TombstonedGenerationError(SeamRefusalError):
     """
 
     def __init__(self, *, alias: str, version: str):
-        self.alias = alias
-        self.version = version
+        self.alias = bounded_echo(alias)
+        self.version = bounded_echo(version)
         super().__init__(
-            f"TombstonedGenerationError: alias {alias!r} version {version!r} is tombstoned and "
+            f"TombstonedGenerationError: alias {self.alias!r} version {self.version!r} is tombstoned and "
             "is not reachable again"
         )
 
@@ -800,10 +800,10 @@ class ActiveGenerationRetirementError(SeamRefusalError):
     """
 
     def __init__(self, *, alias: str, version: str):
-        self.alias = alias
-        self.version = version
+        self.alias = bounded_echo(alias)
+        self.version = bounded_echo(version)
         super().__init__(
-            f"ActiveGenerationRetirementError: alias {alias!r} version {version!r} is the "
+            f"ActiveGenerationRetirementError: alias {self.alias!r} version {self.version!r} is the "
             "currently active generation; roll back first, then retire"
         )
 
@@ -815,9 +815,9 @@ class UnknownTraceReferenceError(SeamRefusalError):
     seam gets a raise, not a value a caller could mistake for "the run had no trace"."""
 
     def __init__(self, trace_reference: str):
-        self.trace_reference = trace_reference
+        self.trace_reference = bounded_echo(trace_reference)
         super().__init__(
-            f"trace reference {trace_reference!r} does not resolve to any stored run record"
+            f"trace reference {self.trace_reference!r} does not resolve to any stored run record"
         )
 
 
