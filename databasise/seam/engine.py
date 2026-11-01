@@ -3091,6 +3091,7 @@ class Databasise:
         ``BEGIN IMMEDIATE`` span via :meth:`~databasise.ledger.ledger.Ledger.transaction`, which is
         what makes the *decision* atomic, not only the write.
         """
+        require_encodable(version, field="version")  # fuzz F2: bound into sqlite by generation_state
         _resolved_records, _arm_name, arm_instance_hashes = self._resolve_operator_preconditions(
             alias, trace_ids, change_origin
         )
@@ -3246,6 +3247,7 @@ class Databasise:
         ``"tombstone"`` and ``version`` reporting the *retired* version — the field's meaning is
         disambiguated by ``record_kind``.
         """
+        require_encodable(version, field="version")  # fuzz F2: bound into sqlite by generation_state
         _resolved_records, _arm_name, arm_instance_hashes = self._resolve_operator_preconditions(
             alias, trace_ids, change_origin
         )
