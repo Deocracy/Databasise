@@ -7,7 +7,8 @@ naming an existing manifest) is ``corrupted`` and is never opened.
 Two measurements (10-07 planning, 10-review iteration 2) shape the probes:
 - sqlite: on a WAL ``kv.sqlite3``, ``?mode=ro`` leaves ``kv.sqlite3-wal`` and ``kv.sqlite3-shm``
   behind (and creates a missing ``-shm``), and ``?mode=ro&immutable=1`` creates nothing, so the kv
-  probe is always immutable.
+  probe is immutable unless ``-wal`` and ``-shm`` both exist (a live writer, whose checkpoint can
+  tear a page under an unlocked immutable read).
 - Cozo: opening a missing ``graph.cozo`` creates it, so the probe checks existence first. Opening a
   complete one rotates RocksDB's own files inside ``graph.cozo/data/`` and nothing outside it; the
   one file Cozo keeps outside ``data/`` is ``manifest``, which the marker check requires.
@@ -52,10 +53,13 @@ def probe_kv(dir_path: Path) -> ProbeState:
             return "absent"  # a valid empty database: SqliteKVStore creates its table on first open
     except OSError:
         return "corrupted"
-    # Always immutable (iteration-2 WR-03): plain ``mode=ro`` on a WAL database creates ``-shm`` when
-    # it is missing (a backup, or a crash leftover with a ``-wal`` but no ``-shm``). The probe only
-    # checks that the file opens and the schema reads, so stale WAL content is acceptable.
-    uri = db_path.as_uri() + "?mode=ro&immutable=1"
+    # Immutable unless a live writer holds the store (iteration-2 WR-03, sweep phase/10): plain
+    # ``mode=ro`` creates ``-shm`` when it is missing (a backup, or a crash leftover with a ``-wal``
+    # but no ``-shm``), while ``immutable=1`` takes no lock and can read a page torn by the writer's
+    # WAL checkpoint, misreporting a healthy store as corrupted. Same rule as list_kv_prefix.
+    wal, shm = db_path.with_name("kv.sqlite3-wal"), db_path.with_name("kv.sqlite3-shm")
+    live = wal.exists() and shm.exists()
+    uri = db_path.as_uri() + ("?mode=ro" if live else "?mode=ro&immutable=1")
     conn = None
     try:
         conn = sqlite3.connect(uri, uri=True, timeout=0.1)
