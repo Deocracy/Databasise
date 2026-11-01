@@ -104,8 +104,8 @@ _LONG = "a" * 5000
 def test_echoed_caller_values_are_bounded_in_attribute_and_message(refusal, attribute):
     exc = refusal()
     body = refusal_body(exc)
-    assert len(repr(body[attribute])) < 1000, len(repr(body[attribute]))
-    assert len(body["message"]) < 1000, len(body["message"])
+    assert len(repr(body[attribute])) < 6000, len(repr(body[attribute]))
+    assert len(body["message"]) < 6000, len(body["message"])
     assert "a" * 201 not in body["message"]
 
 

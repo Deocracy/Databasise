@@ -34,15 +34,48 @@ class SeamRefusalError(ValueError):
     so the consumer can resolve the run that ended in it; a pre-dispatch refusal carries none."""
 
 
-def _finite(value: Any) -> Any:
-    """``value`` with every non-finite float (NaN, +/-inf) replaced by ``None``, recursively through
-    dicts, lists and tuples. A refusal body must be strict JSON on both transports."""
+ECHO_LIMIT = 200
+# A list echo keeps this many items: the largest legitimate list a refusal echoes is a capability
+# set over the 17-member effects vocabulary.
+ECHO_ITEMS = 20
+
+
+def json_safe(value: Any) -> Any:
+    """``value`` made strict, UTF-8-encodable JSON, recursively through dicts, lists and tuples: a
+    non-finite float (NaN, +/-inf) becomes ``None`` (CR-01) and a lone surrogate in any string is
+    backslash-escaped (fuzz F1/F1b: ``JSONResponse`` encodes the body as UTF-8 and would raise
+    ``UnicodeEncodeError``, turning a named refusal into a 500). Shared by ``refusal_body`` and
+    ``seam.rest``'s schema-error handler so no caller-derived content can make a response builder
+    raise."""
     if isinstance(value, float):
         return value if math.isfinite(value) else None
+    if isinstance(value, str):
+        return value.encode("utf-8", "backslashreplace").decode("utf-8")
     if isinstance(value, dict):
-        return {key: _finite(item) for key, item in value.items()}
+        return {json_safe(key): json_safe(item) for key, item in value.items()}
     if isinstance(value, list | tuple):
-        return [_finite(item) for item in value]
+        return [json_safe(item) for item in value]
+    return value
+
+
+def bounded_echo(value: Any) -> Any:
+    """The one bound on a caller value a refusal echoes back (phase09 N-2, review IN-06): a string
+    longer than ``ECHO_LIMIT`` is cut there with a ``...[+N chars]`` marker; a list or tuple keeps
+    its first ``ECHO_ITEMS`` items plus a ``...[+N items]`` marker; a ``BaseModel`` is dumped and a
+    dict's values are bounded recursively. Every refusal storing a caller value calls this in its
+    constructor so the attribute and the message are both bounded."""
+    if isinstance(value, BaseModel):
+        value = value.model_dump()
+    if isinstance(value, str):
+        return value if len(value) <= ECHO_LIMIT else f"{value[:ECHO_LIMIT]}...[+{len(value) - ECHO_LIMIT} chars]"
+    if isinstance(value, dict):
+        # shortcut: key count is not capped, only values; upgrade if a dict-valued echo is ever caller-sized
+        return {key: bounded_echo(item) for key, item in value.items()}
+    if isinstance(value, list | tuple):
+        items = [bounded_echo(item) for item in value[:ECHO_ITEMS]]
+        if len(value) > ECHO_ITEMS:
+            items.append(f"...[+{len(value) - ECHO_ITEMS} items]")
+        return items
     return value
 
 
@@ -51,15 +84,16 @@ def refusal_body(exc: SeamRefusalError) -> dict[str, Any]:
     class name, its message, and every public attribute off ``vars(exc)``. A leading-underscore
     attribute is never exposed (CR-03: ``UnbudgetableParticipantError._internal_node_id`` is the
     machine's own node id; ``ForeignEngineRefusalError._cause`` is the foreign engine's stderr).
-    A ``BaseModel`` value is dumped. A non-finite float in any value becomes ``None`` (CR-01):
-    ``JSONResponse`` refuses NaN/inf and ``json.dumps`` would emit invalid JSON."""
-    body: dict[str, Any] = {"refusal_type": type(exc).__name__, "message": str(exc)}
+    A ``BaseModel`` value is dumped. Every value passes through ``json_safe``: a non-finite float
+    becomes ``None`` (CR-01) and a lone surrogate is escaped, so ``JSONResponse``/``json.dumps``
+    can never raise on a refusal."""
+    body: dict[str, Any] = {"refusal_type": type(exc).__name__, "message": json_safe(str(exc))}
     for key, value in vars(exc).items():
         if key.startswith("_"):
             continue
         if isinstance(value, BaseModel):
             value = value.model_dump()
-        body[key] = _finite(value)
+        body[key] = json_safe(value)
     return body
 
 
@@ -80,9 +114,10 @@ class EmptyQueryObjectError(SeamRefusalError):
     resolved, never silently answered as an empty-text query."""
 
     def __init__(self, query_object: Any):
-        self.query_object = query_object
+        self.query_object = bounded_echo(query_object)
         super().__init__(
-            f"query object carries no set member, or its text is empty or whitespace-only: {query_object!r}"
+            "query object carries no set member, or its text is empty or whitespace-only: "
+            f"{self.query_object!r}"
         )
 
 
@@ -131,9 +166,9 @@ class UnsatisfiableSelectorError(SeamRefusalError):
 
     def __init__(self, *, selector_kind: str, requested: Any):
         self.selector_kind = selector_kind
-        self.requested = requested
+        self.requested = bounded_echo(requested)
         super().__init__(
-            f"no fitted modality satisfies the {selector_kind!r} selector: {requested!r}"
+            f"no fitted modality satisfies the {selector_kind!r} selector: {self.requested!r}"
         )
 
 
@@ -147,10 +182,10 @@ class ForbiddenSelectorInputError(SeamRefusalError):
 
     def __init__(self, *, member_name: str, value: str):
         self.member_name = member_name
-        self.value = value
+        self.value = bounded_echo(value)
         super().__init__(
             f"selector member {member_name!r} carries a value shaped like an internal identity: "
-            f"{value!r}"
+            f"{self.value!r}"
         )
 
 
@@ -172,9 +207,9 @@ class InvalidPromotionAliasError(SeamRefusalError):
     input."""
 
     def __init__(self, *, alias: str):
-        self.alias = alias
+        self.alias = bounded_echo(alias)
         super().__init__(
-            f"InvalidPromotionAliasError: alias {alias!r} is empty or shaped like an internal "
+            f"InvalidPromotionAliasError: alias {self.alias!r} is empty or shaped like an internal "
             "instance hash, so no selector could name it"
         )
 
@@ -234,9 +269,9 @@ class InvalidDocumentIdError(SeamRefusalError):
     """
 
     def __init__(self, *, document_id: str):
-        self.document_id = document_id
+        self.document_id = bounded_echo(document_id)
         super().__init__(
-            f"InvalidDocumentIdError: document id {document_id!r} must be a non-empty token of "
+            f"InvalidDocumentIdError: document id {self.document_id!r} must be a non-empty token of "
             "letters, digits, '_' or '-'"
         )
 
@@ -250,9 +285,9 @@ class DuplicateDocumentIdError(SeamRefusalError):
     ``document_id`` is the caller's own input."""
 
     def __init__(self, *, document_id: str):
-        self.document_id = document_id
+        self.document_id = bounded_echo(document_id)
         super().__init__(
-            f"DuplicateDocumentIdError: document id {document_id!r} has a staged upload in this store; "
+            f"DuplicateDocumentIdError: document id {self.document_id!r} has a staged upload in this store; "
             "delete the document first to re-upload it"
         )
 
