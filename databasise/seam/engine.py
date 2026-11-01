@@ -1953,7 +1953,7 @@ class Databasise:
                 )
                 for key, manifest in rows
             ]
-        except (sqlite3.Error, OSError) as exc:
+        except (sqlite3.Error, OSError, OverflowError) as exc:  # OverflowError: a bound past sqlite's int64
             raise _foreign_fault(operation, exc, failure_class="StoreFault") from exc
         except _MALFORMED_RESULT as exc:  # B-WR-01: an undecodable or non-dict manifest, as on the v1 read routes
             raise _foreign_fault(operation, exc, failure_class="MalformedDriverOutput") from exc
@@ -2263,7 +2263,7 @@ class Databasise:
         wiring id or instance hash is returned. Read-only."""
         try:
             rows, total = self._trace_store.list_page(page.limit, page.offset)
-        except sqlite3.Error as exc:
+        except (sqlite3.Error, OverflowError) as exc:  # OverflowError: a bound past sqlite's int64
             raise _foreign_fault("list_traces", exc, failure_class="StoreFault") from exc
         except ValueError as exc:  # a corrupted run_record row (16-REVIEW-B WR-03)
             raise _foreign_fault("list_traces", exc, failure_class="StoreCorrupted") from exc

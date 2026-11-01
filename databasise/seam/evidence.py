@@ -132,12 +132,13 @@ def mint_evidence_refs(
 
 
 # A namespace becomes a directory name under <store_root>/<workspace>, so it must be a bare token.
-# Every existing name (chunks, entities, relationships, hipporag-*) matches.
-_EVIDENCE_NAMESPACE_RE = re.compile(r"[A-Za-z0-9-]+")
+# Every existing name (chunks, entities, relationships, hipporag-*) matches. Same length cap as a
+# document id (REST probe #3): a longer name fails the directory open as OSError ENAMETOOLONG.
+_EVIDENCE_NAMESPACE_RE = re.compile(r"[A-Za-z0-9-]{1,128}")
 
 
 def validate_evidence_namespace(namespace: str) -> None:
-    """Refuse (09-06-PLAN.md, SEAM-01, D-05) any namespace that is not a non-empty token of letters,
+    """Refuse (09-06-PLAN.md, SEAM-01, D-05) any namespace that is not a token of 1..128 letters,
     digits or ``-``. ``fullmatch``, not ``match``: a trailing newline or slash is refused."""
     if not _EVIDENCE_NAMESPACE_RE.fullmatch(namespace):
         raise InvalidEvidenceNamespaceError(namespace=namespace)

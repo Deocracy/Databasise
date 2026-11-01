@@ -89,10 +89,12 @@ def comparison_keys(selectors: Sequence[Selector]) -> list[str]:
     if not selectors:
         raise EmptyComparisonRequestError()
     keys: list[str] = []
+    seen: set[str] = set()  # phase09 N-5: a list scan was quadratic over 40,000 selectors
     for selector in selectors:
         key = render_selector_key(selector)
-        if key in keys:
+        if key in seen:
             raise DuplicateComparisonKeyError(key=key)
+        seen.add(key)
         keys.append(key)
     return keys
 

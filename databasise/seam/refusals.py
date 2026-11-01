@@ -303,7 +303,7 @@ class InvalidDocumentIdError(SeamRefusalError):
         self.document_id = bounded_echo(document_id)
         super().__init__(
             f"InvalidDocumentIdError: document id {self.document_id!r} must be a non-empty token of "
-            "letters, digits, '_' or '-'"
+            "letters, digits, '_' or '-', at most 128 characters long"
         )
 
 
@@ -436,9 +436,11 @@ class PageSizeExceededError(SeamRefusalError):
 
 class PageBoundsError(SeamRefusalError):
     """Raised by ``databasise.seam.corpus.Page`` validation and ``checked_page`` (09-03-PLAN.md,
-    SEAM-08, D-07) when ``limit`` is below 1 or ``offset`` is negative. Refused, never clamped or
-    widened, so a negative limit can never slice the whole corpus. ``limit`` above
-    ``MAX_PAGE_SIZE`` stays :class:`PageSizeExceededError`."""
+    SEAM-08, D-07) when ``limit`` is below 1 or ``offset`` is negative or above
+    ``databasise.seam.corpus.MAX_PAGE_OFFSET`` (REST probe #4: sqlite overflows above it). Refused,
+    never clamped or widened, so a negative limit can never slice the whole corpus. ``limit`` above
+    ``MAX_PAGE_SIZE`` stays :class:`PageSizeExceededError`. ``GET /log`` reuses it for a line limit
+    outside 1..1000 (phase16 NEW-1), with ``offset=0``."""
 
     def __init__(self, *, limit: int, offset: int):
         self.limit = limit
@@ -446,7 +448,7 @@ class PageBoundsError(SeamRefusalError):
         # The literal class name is load-bearing for the same reason as PageSizeExceededError's:
         # Page's validator raises this, and pydantic wraps it into a ValidationError message.
         super().__init__(
-            "PageBoundsError: page limit must be at least 1 and offset must be non-negative; "
+            "PageBoundsError: page limit must be at least 1 and offset must be between 0 and 2**31-1; "
             f"got limit={limit}, offset={offset}"
         )
 
@@ -840,10 +842,10 @@ class InvalidEvidenceNamespaceError(SeamRefusalError):
     must be refused before any store is opened. ``namespace`` is the caller's own input."""
 
     def __init__(self, *, namespace: str):
-        self.namespace = namespace
+        self.namespace = bounded_echo(namespace)
         super().__init__(
-            f"InvalidEvidenceNamespaceError: evidence namespace {namespace!r} must be a non-empty "
-            "token of letters, digits or '-'"
+            f"InvalidEvidenceNamespaceError: evidence namespace {self.namespace!r} must be a non-empty "
+            "token of letters, digits or '-', at most 128 characters long"
         )
 
 

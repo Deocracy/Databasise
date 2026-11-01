@@ -32,9 +32,11 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator
 
 from databasise.parts.registry import PartRegistry
+from databasise.seam.corpus import MAX_DOCUMENT_BYTES
 from databasise.seam.refusals import (
     EmptyQueryObjectError,
     NonFiniteNumberError,
+    OversizedDocumentError,
     UnconsumableQueryMemberError,
     require_encodable,
 )
@@ -76,6 +78,9 @@ class QueryObject(BaseModel):
     def _text_is_encodable(cls, value: Any, info: ValidationInfo) -> Any:
         # fuzz F3: text is stamped into node configs and hashed (RFC 8785), which refuses a surrogate.
         require_encodable(value, field=info.field_name or "")
+        # fuzz F7: query text shares the document byte cap and its refusal; nothing larger is hashed.
+        if info.field_name == "text" and (actual := len(value.encode("utf-8"))) > MAX_DOCUMENT_BYTES:
+            raise OversizedDocumentError(actual_bytes=actual, limit_bytes=MAX_DOCUMENT_BYTES)
         return value
 
 

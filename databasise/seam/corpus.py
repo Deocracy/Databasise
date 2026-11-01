@@ -62,7 +62,15 @@ MAX_DOCUMENT_BYTES = 25 * 1024 * 1024
 # exactly this case). Underscore introduces no path-traversal risk; forbidding it was stricter
 # than the actual security requirement.
 # Used with ``fullmatch`` (09-03-PLAN.md, SEAM-07): ``$`` would let a trailing newline through.
-_DOCUMENT_ID_TOKEN_RE = re.compile(r"[A-Za-z0-9_-]+")
+# REST probe #2: the id becomes a file name, so a longer one dies as OSError ENAMETOOLONG at the
+# open; the same cap bounds an evidence namespace (a directory name, databasise/seam/evidence.py).
+MAX_DOCUMENT_ID_CHARS = 128
+_DOCUMENT_ID_TOKEN_RE = re.compile(rf"[A-Za-z0-9_-]{{1,{MAX_DOCUMENT_ID_CHARS}}}")
+
+# REST probe #4: sqlite binds OFFSET as a signed 64-bit integer and raises OverflowError above it;
+# no page this seam serves is anywhere near 2**31 rows, so the ceiling refuses by name before the
+# query is built.
+MAX_PAGE_OFFSET = 2**31 - 1
 
 # 11 REVIEW A-WR-03: v1's placeholder document sources (v1/lightrag/utils_pipeline.py
 # PLACEHOLDER_DOCUMENT_SOURCES, minus "" which the token rule already refuses). A text row's
@@ -192,15 +200,15 @@ class Page(BaseModel):
     def _bounded(self) -> "Page":
         if self.limit > MAX_PAGE_SIZE:
             raise PageSizeExceededError(requested=self.limit, limit=MAX_PAGE_SIZE)
-        if self.limit < 1 or self.offset < 0:
+        if self.limit < 1 or not 0 <= self.offset <= MAX_PAGE_OFFSET:
             raise PageBoundsError(limit=self.limit, offset=self.offset)
         return self
 
 
 def checked_page(limit: int, offset: int) -> Page:
     """The one page check both transports call (SEAM-08, D-07). Raises ``PageSizeExceededError``
-    for ``limit`` above ``MAX_PAGE_SIZE``, then ``PageBoundsError`` for ``limit`` below 1 or a
-    negative ``offset``, directly -- never by letting ``Page``'s own ``model_validator`` raise
+    for ``limit`` above ``MAX_PAGE_SIZE``, then ``PageBoundsError`` for ``limit`` below 1 or an
+    ``offset`` outside ``0..MAX_PAGE_OFFSET``, directly -- never by letting ``Page``'s own ``model_validator`` raise
     them: pydantic wraps a validator-raised exception into a ``pydantic.ValidationError`` at the
     construction call site (the same behaviour ``AmbiguousIngestPayloadError``'s module docstring
     documents for ``IngestDocument``), and Starlette's exception middleware matches by
@@ -210,7 +218,7 @@ def checked_page(limit: int, offset: int) -> Page:
     """
     if limit > MAX_PAGE_SIZE:
         raise PageSizeExceededError(requested=limit, limit=MAX_PAGE_SIZE)
-    if limit < 1 or offset < 0:
+    if limit < 1 or not 0 <= offset <= MAX_PAGE_OFFSET:
         raise PageBoundsError(limit=limit, offset=offset)
     return Page(limit=limit, offset=offset)
 
@@ -348,8 +356,9 @@ def generated_on_disk_name(document_id: str, suffix: str = _ON_DISK_SUFFIX) -> s
     """The on-disk file name for a raw-upload document, built only from ``document_id`` (server-
     minted or caller-supplied) and ``suffix`` (``.bin`` by default; the engine passes the value
     ``upload_suffix`` returned). Raises :class:`InvalidDocumentIdError` for any ``document_id`` that
-    is not a non-empty token of letters, digits, ``_`` or ``-`` -- no path separator, no dot, no
-    newline, so the returned name can never resolve outside the directory it is joined under.
+    is not a token of 1..``MAX_DOCUMENT_ID_CHARS`` letters, digits, ``_`` or ``-`` -- no path
+    separator, no dot, no newline, so the returned name can never resolve outside the directory it
+    is joined under, and never long enough to fail the open as ``ENAMETOOLONG``.
     v1's reserved source names (``unknown_source``, ``no-file-path``) are refused too (A-WR-03).
     """
     if not _DOCUMENT_ID_TOKEN_RE.fullmatch(document_id) or document_id in _RESERVED_V1_DOCUMENT_IDS:
@@ -379,6 +388,8 @@ __all__ = [
     "DeletionOutcome",
     "Page",
     "checked_page",
+    "MAX_DOCUMENT_ID_CHARS",
+    "MAX_PAGE_OFFSET",
     "DocumentStatusEntry",
     "MAX_ERROR_MESSAGE_CHARS",
     "scrub_error_message",
