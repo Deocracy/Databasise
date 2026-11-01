@@ -17,15 +17,20 @@ var DocumentsScreen = (function () {
   var NOTICE = {
     lightrag: "File upload does not index the file for LightRAG today; the file is not parsed.",
     hipporag: "Raw upload is refused for HippoRAG selectors. Use Paste text.",
+    unknown: "The server resolves this selector's store at run time; it may refuse a raw upload. Paste text works for every store.",
   };
   var CARD_NOTE = {
     lightrag: "enqueued is not a success signal; check the job row status.",
     hipporag: "HippoRAG ingest finished synchronously; its job has no status record.",
+    unknown: "enqueued is not a success signal; the job may have no status record, depending on the store the selector resolves to.",
   };
   var DELETE_TAIL = {
     lightrag: "This removes it from the v1 corpus and cannot be undone. The query stores are not changed; the deleted document's chunks can stay resolvable.",
     hipporag: "This removes it from the HippoRAG stores and cannot be undone.",
+    unknown: "This removes it from the store the selector resolves to and cannot be undone.",
   };
+  var TARGET = { lightrag: "LightRAG", hipporag: "HippoRAG", unknown: "resolved by the server at run time" };
+  var SEAM_NODE = { lightrag: "the v1 delete node", hipporag: "the HippoRAG delete node", unknown: "the delete node" };
   var STATUS_STATE = { processed: "ok", failed: "fail", processing: "progress", parsing: "progress", analyzing: "progress", pending: "neutral", preprocessed: "neutral", interrupted: "warn" };
   var STATUS_GLYPH = { ok: "✓", fail: "✕", progress: "●", neutral: "■", warn: "▲" };
   var DELETE_STATE = { success: "ok", not_found: "neutral", not_allowed: "fail", fail: "fail" };
@@ -100,8 +105,11 @@ var DocumentsScreen = (function () {
     return value !== "" && !ID_RE.test(value) ? MSG.badId : "";
   }
 
+  // An alias (or an unresolved selector) has no arm client-side; only the server knows its store type (R18-05).
   function family() {
-    return picker && picker.arm() === "hipporag" ? "hipporag" : "lightrag";
+    var arm = picker && picker.arm();
+    if (!arm) return "unknown";
+    return arm === "hipporag" ? "hipporag" : "lightrag";
   }
 
   function textMessage() {
@@ -147,7 +155,7 @@ var DocumentsScreen = (function () {
     var kind = family();
     var blockers = picker.blockers();
     setFieldError(ID("selector.group"), blockers[0] || "");
-    ID("selector.family").textContent = "Target: " + (kind === "hipporag" ? "HippoRAG" : "LightRAG");
+    ID("selector.family").textContent = "Target: " + TARGET[kind];
 
     var tm = textMessage();
     var im = idMessage(pasteId.value);
@@ -235,8 +243,8 @@ var DocumentsScreen = (function () {
     if (result.status >= 200 && result.status < 300 && body !== null && typeof body === "object" && typeof body.job_id === "string") {
       sent.job = body;
       showCard(sent, kind);
-      // Only LightRAG documents are listed by Corpus & Health, which then reloads its table and counts.
-      if (kind === "lightrag") Console.emit("corpus-changed");
+      // Only LightRAG documents are listed by Corpus & Health, which then reloads its table and counts; an unknown store may be LightRAG.
+      if (kind !== "hipporag") Console.emit("corpus-changed");
       return;
     }
     if (showError(result.status, body) === "result") showError(0, null, { text: "The server answered without a job id." });
@@ -480,7 +488,7 @@ var DocumentsScreen = (function () {
     badge(box.querySelector('[data-role="status"]'), DELETE_STATE[rec.status] || "neutral", rec.status);
     box.querySelector('[data-role="doc"]').textContent = rec.document_id;
     box.querySelector('[data-role="message"]').textContent = rec.message || "The server returned no message.";
-    ID("delete.seam-toggle").textContent = "Seam events, reported by the " + (kind === "hipporag" ? "HippoRAG" : "v1") + " delete node";
+    ID("delete.seam-toggle").textContent = "Seam events, reported by " + SEAM_NODE[kind];
     var list = box.querySelector('[data-role="seam-list"]');
     clearNode(list);
     var events = Array.isArray(rec.seam_events) ? rec.seam_events : [];
