@@ -143,6 +143,24 @@ def test_unknown_node_renders_its_state(seeded, live_ui):
     ui.expect("graph.error.generic").to_be_hidden()
 
 
+def test_refused_selector_change_clears_the_previous_lists(seeded, live_ui):
+    """R18-06: the node and chunk pages of the previous selector leave the screen when the new selector's read is refused."""
+    ui = live_ui
+    page = _pick_hipporag(ui)
+    assert page["nodes"]
+    ui.expect(_rows(ui, "graph.nodes.table")).to_have_count(len(page["nodes"]))
+    ui.expect(_rows(ui, "graph.chunks.table")).not_to_have_count(0)
+
+    ui.el("graph.selector.kind-alias").check()
+    with ui.page.expect_response(_is_post("/graph/nodes")) as info:
+        ui.el("graph.selector.alias").fill("no-such-alias")
+    assert info.value.status == 422
+    ui.expect("graph.error.refusal").to_contain_text("UnsatisfiableSelectorError")
+    ui.expect(_rows(ui, "graph.nodes.table")).to_have_count(0)
+    ui.expect(_rows(ui, "graph.chunks.table")).to_have_count(0)
+    ui.expect("graph.nodes.empty").to_be_hidden()
+
+
 def test_absent_graph_routes_are_disabled(seeded, live_ui):
     ui = live_ui
     page = _pick_hipporag(ui)

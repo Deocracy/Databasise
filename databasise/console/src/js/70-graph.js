@@ -272,6 +272,9 @@ var GraphScreen = (function () {
     lastKey = JSON.stringify(sel());
     cancel("node");
     node = null;
+    nodes = null; // the pages belong to the previous selector: they do not survive its read failing (R18-06)
+    chunks = null;
+    paint();
     loadNodes(0);
     loadChunks(0);
   }
