@@ -327,7 +327,7 @@ var DocumentsScreen = (function () {
     }
     note.textContent = POLL_RUNNING;
     pollTimer = setInterval(function () {
-      if (job) loadJob(job.id, job.offset);
+      if (job) loadJob(job.id, job.offset, true);
     }, 30000);
   }
 
@@ -430,17 +430,20 @@ var DocumentsScreen = (function () {
     else jobView("none");
   }
 
-  // Reads one page of a job. A newer read supersedes the one in flight.
-  function loadJob(id, offset) {
+  // Reads one page of a job. A newer read supersedes the one in flight. A quiet read (the poll) leaves the error banners the
+  // operator may be reading and the drawer as they are.
+  function loadJob(id, offset, quiet) {
     var input = ID("jobs.job-id");
     id = id.trim();
     if (id === "") return setFieldError(input, MSG.noJob);
     offset = offset || 0;
     if (readCtl) readCtl.abort();
     var mine = (readCtl = new AbortController());
-    hideErrors();
+    if (!quiet) {
+      hideErrors();
+      setDrawer(true);
+    }
     setFieldError(input, "");
-    setDrawer(true);
     jobView("loading");
     api("GET", "/jobs/" + encodeURIComponent(id) + "?limit=" + lastSize + "&offset=" + offset, null, { signal: mine.signal }).then(function (result) {
       if (result.aborted || mine !== readCtl) return;
