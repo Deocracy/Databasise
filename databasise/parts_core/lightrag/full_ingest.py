@@ -64,8 +64,9 @@ logger = logging.getLogger(__name__)
 
 def tokens_from_usage(usage: Any) -> TokenAccounting:
     """The node's accounting from the driver's ``usage["llm"]`` (D-13). No model call is a real
-    zero (``none``). Calls with zero tokens mean the provider sent no usage, so the spend is
-    ``unbudgetable`` with that call count. A missing usage (a stub driver) is ``unbudgetable`` too.
+    zero (``none``). Calls with zero or negative tokens mean the provider sent no usable usage, so
+    the spend is ``unbudgetable`` with that call count (a negative count is no count, the same rule
+    ``clients/rerank.py`` applies). A missing usage (a stub driver) is ``unbudgetable`` too.
     Embedding usage stays in the returned ``usage`` dict: a different tokenizer, never summed in.
     """
     llm = usage.get("llm") if isinstance(usage, dict) else None
@@ -74,11 +75,13 @@ def tokens_from_usage(usage: Any) -> TokenAccounting:
     call_count = int(llm.get("call_count", 0))
     if call_count == 0:
         return TokenAccounting(counted_by="none")
-    if int(llm.get("total_tokens", 0)) == 0:
+    prompt_tokens = int(llm.get("prompt_tokens", 0))
+    completion_tokens = int(llm.get("completion_tokens", 0))
+    if int(llm.get("total_tokens", 0)) <= 0 or min(prompt_tokens, completion_tokens) < 0:
         return TokenAccounting(call_count=call_count, counted_by=_UNBUDGETABLE_TOKENS_SENTINEL)
     return TokenAccounting(
-        prompt_tokens=int(llm.get("prompt_tokens", 0)),
-        completion_tokens=int(llm.get("completion_tokens", 0)),
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
         call_count=call_count,
         counted_by=_V1_COUNTED_BY,
     )

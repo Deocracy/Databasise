@@ -226,12 +226,17 @@ class OpenAICompatibleClient:
             return TokenAccounting(call_count=1, counted_by="unbudgetable")  # seam.tokens.UNBUDGETABLE_SENTINEL
 
         details = getattr(usage, "prompt_tokens_details", None)
+        prompt_tokens = getattr(usage, "prompt_tokens", 0) or 0
+        completion_tokens = getattr(usage, "completion_tokens", 0) or 0
         cached_read_tokens = getattr(details, "cached_tokens", 0) or 0 if details is not None else 0
+        if min(prompt_tokens, completion_tokens, cached_read_tokens) < 0:
+            # A negative count is no count (same rule as clients/rerank.py): unknowable, not negative.
+            return TokenAccounting(call_count=1, counted_by="unbudgetable")
         tokenizer_id = getattr(usage, "tokenizer_id", None)
 
         return TokenAccounting(
-            prompt_tokens=getattr(usage, "prompt_tokens", 0) or 0,
-            completion_tokens=getattr(usage, "completion_tokens", 0) or 0,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
             cached_read_tokens=cached_read_tokens,
             call_count=1,
             counted_by=tokenizer_id or resolved_model_identity,
