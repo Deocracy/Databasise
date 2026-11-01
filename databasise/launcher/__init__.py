@@ -41,6 +41,18 @@ LAUNCH_REFUSALS = (
 )
 
 
+def port_number(text: str) -> int:
+    """``--port`` type: 0..65535, refused at parse time (exit 2) instead of an OverflowError from
+    uvicorn's bind after the store lock is taken."""
+    try:
+        port = int(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"invalid port value: {text!r}") from None
+    if not 0 <= port <= 65535:
+        raise argparse.ArgumentTypeError(f"--port {port} is outside 0..65535")
+    return port
+
+
 def add_engine_arguments(parser: argparse.ArgumentParser, *, default_port: int) -> None:
     parser.add_argument("--store-root", type=Path, default=DEFAULT_STORE_ROOT)
     parser.add_argument("--workspace", default=DEFAULT_WORKSPACE)
@@ -49,7 +61,7 @@ def add_engine_arguments(parser: argparse.ArgumentParser, *, default_port: int) 
     parser.add_argument("--env-file", type=Path, default=None)
     parser.add_argument("--no-clients", action="store_true")
     parser.add_argument("--host", default=DEFAULT_HOST)
-    parser.add_argument("--port", type=int, default=default_port)
+    parser.add_argument("--port", type=port_number, default=default_port)
     parser.add_argument(
         "--allow-remote-unauthenticated",
         action="store_true",
