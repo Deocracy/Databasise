@@ -512,6 +512,8 @@ def test_only_one_view_is_visible_after_compare(answer_alias, seeded, live_ui):
     ui.expect("query.compare.columns").to_be_visible()
     ui.expect(ui.page.locator(VISIBLE_STATES)).to_have_count(0)
     ui.expect("query.result.panel").to_be_hidden()
+    ui.expect("query.run.spinner").to_be_hidden()  # the Run spinner is no state view beside the columns (R18-01)
+    ui.expect("query.run.submit").to_be_enabled()
 
     # A failing second run clears the columns: no state view renders beside them.
     with seeded.fail("compare"):

@@ -152,6 +152,7 @@ var Compare = (function () {
       ID("state." + s).hidden = true;
     });
     ID("result.panel").hidden = true;
+    ID("run.spinner").hidden = true; // the running state is over (R18-01)
     errorsBox.hidden = true;
   }
 
