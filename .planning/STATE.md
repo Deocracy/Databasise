@@ -21,10 +21,10 @@ current_phase: 18
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-19 after Phase 12)
+See: .planning/PROJECT.md (updated 2026-11-01 after v1.1 milestone)
 
 **Core value:** Modalities are swappable without consumers noticing — LightRAG and HippoRAG 2 both live behind one unchanging §18 envelope, comparable side-by-side on the rig.
-**Current focus:** Phase 18 — GUI Live
+**Current focus:** Planning next milestone (`/gsd-new-milestone`)
 
 ## Current Position
 

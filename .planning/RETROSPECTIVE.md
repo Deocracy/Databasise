@@ -45,6 +45,52 @@
 
 ---
 
+## Milestone: v1.1 — Engine Fixes + Operator Console
+
+**Shipped:** 2026-11-01
+**Phases:** 11 | **Plans:** 136 | **Sessions:** not tracked (1,096 commits over 18 days)
+
+### What Was Built
+- Installed `databasise-rest` and `databasise-mcp` launchers with a shared model client builder, loopback-only binds, Origin/Host guards and one engine process per store root.
+- Every confirmed engine defect in CODEBASE-MAP.md §4 fixed against a test that failed first: one refusal shape on REST and MCP, all-or-nothing store commits, a LightRAG corpus path whose ingests reach the queried stores, HippoRAG evidence that resolves, truthful run records, operator verbs that never 500, and wheel-runnable CLIs that never spend by default.
+- Operator read routes behind `--operator`, a frozen six-screen console mockup, and the live console served at GET /console under a hash-only CSP, wired screen by screen and approved by the owner on real clients.
+- A closing debugging and security battery (three STRIDE audits, a 1,161-request probe, a ~60,000-input fuzz, a six-dimension sweep) whose 27 confirmed defects were all fixed and re-verified.
+
+### What Worked
+- The BAK ledger (169 rows, each with a test ref, a fail-first proof at a RED commit and a done status) made dropped requirements mechanically impossible; nothing was closed on a SUMMARY claim.
+- Fingerprinted verifications (covered_files plus digest) caught every later edit that touched a verified phase, so re-verification ran exactly where code moved.
+- Running independent work in parallel (re-verifications, trace checkers, audits, probes) while sequential fixers owned the tree kept a single working tree safe and still cut wall-clock time.
+- Adversarial verification of findings (three refuters per candidate) killed 7 of 24 sweep candidates as documented design and caught two fixes that broke protected tests before they were accepted.
+- Fuzzing found a whole class of 500s (lone surrogates, NaN/Infinity, deep nesting) that every hand-written test missed.
+
+### What Was Inefficient
+- Mid-milestone edits to shared files (serve_rest.py, pyproject.toml, refusals.py) tripped the fingerprints of up to eleven earlier verifications at once; each trip cost a full re-verification round.
+- The frozen mockup embeds the refusal catalogue, so adding one refusal class forced an owner re-freeze and re-lock late in the close.
+- BAK hooks block any Bash command that mentions the records directory or a tests path, and the stall watcher fires on idle turn-ends; both cost repeated retries until the rules were saved to memory.
+- A one-off `uv build` left `databasise/build/` in the tree twice, and the posture test scanned it as source.
+- The GSD archive step moved every file the BAK traces cite; repointing 33 traces was manual.
+
+### Patterns Established
+- Test-first fix commits in RED/GREEN pairs with a `phase/NN` trailer; `record-fail` proves each requirement's test failed at its RED commit.
+- Owner-only verbs (approve, freeze-variant, lock-checks) stay with the owner; the agent drafts the exact command.
+- Every owner question goes through the selectable question box with the recommended option first.
+- Linking a test to a requirement locks the file, so any fix that needs a test change lands before the linking.
+- Response builders sanitise every caller-derived value (UTF-8 safe, finite, bounded) at one point instead of per refusal.
+
+### Key Lessons
+1. Put shared-file edits early in a milestone, or batch them, because each one re-opens every verification that covers the file.
+2. Do not embed generated catalogues in frozen artifacts; reference them, so the artifact survives a new entry.
+3. Fuzz every public boundary once per milestone; hand-written tests do not find encoding and nesting classes.
+4. Plan the BAK trace layout for the GSD archive move before the close: either cite archived paths from the start or script the repoint.
+5. A test that reads `/proc/self/net/tcp` counts the whole network namespace; assert on process-owned sockets instead.
+
+### Cost Observations
+- Model mix: Opus and Fable (Claude 5 family) orchestrators; subagents inherited the session model; one code review ran on Sonnet.
+- Sessions: not tracked.
+- Notable: the full offline suite grew from 1068 (v1.0) to 3377 passing at close, about 11 minutes; the closing battery alone ran about 300 agents across five workflows.
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -52,14 +98,17 @@
 | Milestone | Sessions | Phases | Key Change |
 |-----------|----------|--------|------------|
 | v1.0 | n/a | 7 | Gate amendments as first-class records; owner testing moved out of phases into TESTING-PLAN.md |
+| v1.1 | n/a | 11 | BAK ledger with fail-first proofs per requirement; fingerprinted verifications; adversarial security battery at the close |
 
 ### Cumulative Quality
 
 | Milestone | Tests | Coverage | Zero-Dep Additions |
 |-----------|-------|----------|-------------------|
 | v1.0 | 1068 passed / 1 skipped | not measured | FTS5 lexical store, blob store, namespace derivation, budget token arithmetic |
+| v1.1 | 3377 passed (+ 1 environment-dependent) | not measured | operator console (vanilla JS, no framework), console package data, refusal sanitiser |
 
 ### Top Lessons (Verified Across Milestones)
 
-1. Live re-reproduction beats summary trust (one milestone so far).
-2. Refuse rather than fabricate (one milestone so far).
+1. Live re-reproduction beats summary trust (two milestones: v1.0 verification, v1.1 fingerprinted re-verification and adversarial verification).
+2. Refuse rather than fabricate (two milestones: v1.0 inconclusive records, v1.1 named refusals for every caller fault).
+3. Keep owner-only work out of phase gates and route it to a standing plan (two milestones: TESTING-PLAN.md in v1.0, RUN-11 deferral and owner verbs in v1.1).
