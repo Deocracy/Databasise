@@ -298,6 +298,20 @@ def test_page_size_message_survives_hide_errors(lineage, live_ui):
     ui.expect("ledger.timeline.page-size").to_have_attribute("aria-invalid", "true")
 
 
+def test_invalid_page_size_during_an_in_flight_load_leaves_no_loading_state(lineage, dismiss_lineage, seeded, live_ui):
+    """A new alias choice drops the read in flight; when the page size then blocks the new read, nothing is loading."""
+    ui = live_ui
+    _open_timeline(ui, "lin")
+    with seeded.hold("ledger_history"):
+        ui.el("ledger.timeline.alias").select_option("dis")
+        ui.expect("ledger.timeline.loading").to_be_visible()
+        ui.el("ledger.timeline.page-size").fill("101")
+        ui.expect("ledger.timeline.page-size-error").to_have_text("Page size must be between 1 and 100.")
+        ui.el("ledger.timeline.alias").select_option("lin")
+        ui.expect("ledger.timeline.loading").to_be_hidden()
+        ui.expect("ledger.timeline.table").to_have_attribute("aria-busy", "false")
+
+
 def test_promote_event_replaces_the_preselection(seeded, live_ui):
     ui = live_ui
     first = _run_query(ui, "Ed Wood")
