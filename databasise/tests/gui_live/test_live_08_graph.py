@@ -187,6 +187,17 @@ def test_page_size_101_is_refused_on_the_client(seeded, live_ui):
     assert _posts(ui, "/graph/node") == []
 
 
+def test_selector_family_line_follows_the_arm(seeded, live_ui):
+    """graph.selector.family names the family the selector resolves to; an alias has no arm client-side (R18-05)."""
+    ui = live_ui
+    ui.nav("graph")
+    ui.expect("graph.selector.family").to_have_text("Reading: LightRAG graph")
+    _pick_hipporag(ui)
+    ui.expect("graph.selector.family").to_have_text("Reading: HippoRAG graph")
+    ui.el("graph.selector.kind-alias").check()
+    ui.expect("graph.selector.family").to_have_text("Reading: the graph the server resolves for this selector")
+
+
 def test_no_namespace_input_on_the_graph_screen(live_ui):
     ui = live_ui
     ui.nav("graph")
