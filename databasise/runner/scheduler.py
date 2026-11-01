@@ -556,6 +556,17 @@ async def _run_node(
     return execution_mode, output, wall_clock_ms
 
 
+def _node_fault_text(exc: BaseException) -> str:
+    """Phase 09 D-04 (audit N-1): the fault text persisted in the trace, which ``resolve_trace``
+    returns raw to any caller setting ``debug=True``. The type name stays; key-shaped tokens, every
+    URL and every path (basename included, a store file name is server detail) are scrubbed."""
+    # Imported here: ``databasise/__init__`` imports this module before ``__version__`` exists,
+    # and ``seam/__init__`` -> ``seam.engine`` reads ``__version__`` at import time.
+    from databasise.seam.corpus import scrub_error_message
+
+    return f"{type(exc).__name__}: {scrub_error_message(redact_secrets(str(exc)), basename=False) or ''}"
+
+
 def _pending_node_trace(node_id: str, parsed: ParsedWiring, identities: dict, depths: dict) -> dict[str, Any]:
     """The fields common to every trace stamp this module produces for a node, whether it
     completed normally or failed — factored out so the failure path below does not have to
@@ -634,7 +645,7 @@ async def _dispatch_node(
         cause = (
             f"NodePlacementRefusedError: execution_mode={placement!r} not hosted (D-08)"
             if placement is not None
-            else f"NodeExecutionError: {type(exc.cause).__name__}: {redact_secrets(str(exc.cause))}"
+            else f"NodeExecutionError: {_node_fault_text(exc.cause)}"
         )
         # A refusal does not suppress the stamp (D-08): the refused placement when there is one,
         # else the placement derived from the registered part. "halted" is the closest of the
@@ -692,7 +703,7 @@ async def _dispatch_node(
         # D-13: a bad report, a malformed token count, a guard comparison that raises: recorded
         # against this node, which no longer counts as having produced a result.
         results.pop(node_id, None)
-        cause = f"NodeExecutionError: {type(exc).__name__}: {redact_secrets(str(exc))}"
+        cause = f"NodeExecutionError: {_node_fault_text(exc)}"
         # 13 REVIEW B-WR-03 (CONTRACT §9): spend already reported and metered stays on the node.
         trace = _stopped_trace(
             "failed",

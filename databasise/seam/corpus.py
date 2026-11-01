@@ -241,20 +241,23 @@ def _basename(path: str) -> str:
     return re.split(r"[\\/]", path.rstrip("\\/"))[-1] or "<path>"
 
 
-def scrub_error_message(text: str | None) -> str | None:
+def scrub_error_message(text: str | None, *, basename: bool = True) -> str | None:
     """09 REVIEW WR-03/WR-02: a best-effort scrub of v1's free-text failure message before it goes
     to a caller. It is a regex heuristic, not an allow-list, and does not guarantee that no server
     detail remains (an unquoted path containing spaces keeps its tail, for one). It cuts a
     traceback, keeps the first line, replaces each ``file://`` or ``http(s)://`` URL with
     ``<url>``, replaces each absolute, ``~``, UNC or ``./``/``../`` path (quoted paths may hold
-    spaces) with its basename (``<path>`` when it has none) and caps the length. The one helper
-    every transport reaches through ``DocumentStatusEntry`` and ``DeletionOutcome``."""
+    spaces) with its basename (``<path>`` when it has none, or always with ``basename=False`` —
+    the node fault text in a trace, where a store file name is itself server detail, D-04) and
+    caps the length. The one helper every transport reaches through ``DocumentStatusEntry`` and
+    ``DeletionOutcome``."""
     if text is None:
         return None
+    name = _basename if basename else (lambda _path: "<path>")
     first = next((ln.strip() for ln in text.split("Traceback (most recent call last)")[0].splitlines() if ln.strip()), "")
     scrubbed = _URL_RE.sub("<url>", first)
-    scrubbed = _QUOTED_PATH_RE.sub(lambda m: f"{m['q']}{_basename(m['p'])}{m['q']}", scrubbed)
-    scrubbed = _PATH_RE.sub(lambda m: _basename(m.group(0)), scrubbed)
+    scrubbed = _QUOTED_PATH_RE.sub(lambda m: f"{m['q']}{name(m['p'])}{m['q']}", scrubbed)
+    scrubbed = _PATH_RE.sub(lambda m: name(m.group(0)), scrubbed)
     if len(scrubbed) > MAX_ERROR_MESSAGE_CHARS:
         scrubbed = scrubbed[: MAX_ERROR_MESSAGE_CHARS - 1] + "…"
     return scrubbed or None
