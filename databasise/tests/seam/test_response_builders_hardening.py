@@ -184,3 +184,19 @@ def test_an_overlong_document_id_refusal_is_bounded_over_rest(client):
     assert body["refusal_type"] == "InvalidDocumentIdError"
     assert len(body["document_id"]) < 300
     assert len(response.content) < 2048
+
+
+def test_an_overlong_evidence_ref_404_is_bounded_over_rest(client):
+    """A 100,000-char ``EvidenceRef.ref`` against a valid, absent namespace is a 404 whose body
+    echoes the ref bounded in both the message and the dumped ``ref`` attribute (not a 200 KB body)."""
+    response = client.post(
+        "/evidence/resolve", json={"ref": "r" * 100_000, "namespace": "chunks", "kind": "text_chunk"}
+    )
+    assert response.status_code == 404, response.text
+    body = response.json()
+    assert body["refusal_type"] == "UnresolvableEvidenceReferenceError"
+    assert set(body) >= {"refusal_type", "message", "ref"}
+    assert body["ref"]["namespace"] == "chunks"
+    assert len(body["ref"]["ref"]) < 300
+    assert "r" * 201 not in body["message"]
+    assert len(response.content) < 2048
