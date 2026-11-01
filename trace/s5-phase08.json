@@ -2,10 +2,10 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase08",
-  "ledger_version": 911,
+  "ledger_version": 912,
   "artifacts": {
     "databasise/launcher/serve_rest.py": "23e9a6b0394bb580c3cb2aae0b7ba59e6d9624f22940bfa604fe3d04de5a0f71",
-    "databasise/clients/openai_compat.py": "a66b6f6c9c1be27afc776cd0c03a516130d0d0fbeeba572090f54bb513681ea5",
+    "databasise/clients/openai_compat.py": "963803a899c2943dd04d665b3c58351e8dc824308c6c2e152a7d48129389b906",
     "databasise/foreign/_mcp_sdk_guard.py": "ebcde30b8bb758ad62ec973ed6338e7c355f523ab86532334865254c663b3b0f",
     "databasise/tests/launcher/test_launchers.py": "a0c3249eece6dbbfc45c146952d22705857e0f87f5a99f80ac650ecef0b503d4",
     "databasise/tests/clients/test_build_clients.py": "6876a653ba62f9a70de106dfcd0edd7d867e930eb85c81b11c4ca39bc1ef4228",
@@ -87,5 +87,11 @@
       "quote": "assert gate.contradictory_skips([_NOT_INSTALLED_SKIP], mcp_installed=True) == ["
     }
   ],
-  "extra": []
+  "extra": [
+    {
+      "where": "databasise/clients/openai_compat.py:232",
+      "quote": "if min(prompt_tokens, completion_tokens, cached_read_tokens) < 0:",
+      "note": "Added by tonight's fix: a negative token count is treated as unbudgetable (line 234). It extends RUN-02's sentinel rule beyond the usage=None case in the ledger text; no separate source item."
+    }
+  ]
 }

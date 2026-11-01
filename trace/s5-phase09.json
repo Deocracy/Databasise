@@ -2,34 +2,34 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase09",
-  "ledger_version": 843,
+  "ledger_version": 912,
   "artifacts": {
     "databasise/mcp/server.py": "aa21517b6d807b771c5f2e0b8b482db01a1dff364c30fbd79043302a237c29c9",
-    "databasise/seam/compare.py": "8f6d19a32dccbcd6cbaf605c398d2334b86f1500d8598ddb43cafe62ad880095",
-    "databasise/seam/corpus.py": "b360c0dbdc02f4659079a90f81a68366d74c55ab99d13334795dfedae02226ec",
-    "databasise/seam/engine.py": "0931e6098b0cc06e073ee876bc891241b84b54179a476ae342018a1861598dd3",
-    "databasise/seam/evidence.py": "d51422787b6ddda3906f7bb7f28addfeb813979ee78c67a19685d8d61c2c5ddf",
-    "databasise/seam/query.py": "b1452596cc6c0aa44290c1198e487d5ce51ff61a4ede6841bc1f8d8fef7850aa",
-    "databasise/seam/refusals.py": "28f1d3ffe122c2e078a319afc1da4bb44dc2f462d929d052f5e121381400906b",
-    "databasise/seam/rest.py": "84be8c28be5e7a7b56c260e5993662a244d10ae93463b0503bb9c5bd047af9a6",
-    "databasise/seam/selectors.py": "d4eb92f604f3a852a054f3fb2aae2e9c4b40d8790c7ef625b36df408a21e532b"
+    "databasise/seam/compare.py": "112e668df8144ac5485f504eb89e1d5e25c4877edc812a750242dcbc3a94c657",
+    "databasise/seam/corpus.py": "c3f52b0749b4bba79e883f85677f446e3db3d6033c283341b8a538e10a8a6a5b",
+    "databasise/seam/engine.py": "271458bb1c85585b7f89815ef284c4c3f50b1606ba8c5b4cbfc02ab1de54f8f4",
+    "databasise/seam/evidence.py": "8bc36d4173b99cd549513c49d53f546cdaef3644860e4e42103487f5ad158e06",
+    "databasise/seam/query.py": "42c8a7711a38f64efb387bb5cbe5f7c9b58306a1ed1cdb9ee4a4c7d1db400f9d",
+    "databasise/seam/refusals.py": "a749a7e4cd9046fab1eb23f3468c5fecef40d4cb245ba8200ecd26bf06456e9b",
+    "databasise/seam/rest.py": "5f75dbe5bf1ad17a87dedcaaf4a0d23feca0a1706473a4da5c2ac2c652868260",
+    "databasise/seam/selectors.py": "41cfbe27168242cc291bc7f8a4e1ecf4e5a9be6b44e2c071b07b73b1e3763b99"
   },
   "checker": {
     "harness": "claude-code",
-    "model": "claude-opus-5-5",
-    "session": "32d1701b-4256-409c-a5a7-e305cc822f40"
+    "model": "claude-fable-5-1",
+    "session": "11bd64f3-96e9-4f30-b125-cc3262ef9629"
   },
   "items": [
     {
       "id": "SEAM-01",
       "status": "present",
-      "where": "databasise/seam/evidence.py:142",
+      "where": "databasise/seam/evidence.py:143",
       "quote": "if not _EVIDENCE_NAMESPACE_RE.fullmatch(namespace):"
     },
     {
       "id": "SEAM-02",
       "status": "present",
-      "where": "databasise/seam/rest.py:300",
+      "where": "databasise/seam/rest.py:304",
       "quote": "refusal = refusal_from_errors(exc.errors())"
     },
     {
@@ -41,73 +41,73 @@
     {
       "id": "SEAM-04",
       "status": "present",
-      "where": "databasise/seam/rest.py:155",
+      "where": "databasise/seam/rest.py:156",
       "quote": "return 404 if isinstance(exc, _NOT_FOUND_REFUSALS) else 422"
     },
     {
       "id": "SEAM-05",
       "status": "present",
-      "where": "databasise/seam/rest.py:154",
+      "where": "databasise/seam/rest.py:155",
       "quote": "return 503 if exc.failure_class in _ENGINE_UNAVAILABLE else 502"
     },
     {
       "id": "SEAM-06",
       "status": "present",
-      "where": "databasise/seam/engine.py:795",
+      "where": "databasise/seam/engine.py:804",
       "quote": "async def _corpus_op_or_refuse(op: str, payload: dict[str, Any], operation: str, working_dir: Path) -> Any:"
     },
     {
       "id": "SEAM-07",
       "status": "present",
-      "where": "databasise/seam/corpus.py:353",
-      "quote": "if not _DOCUMENT_ID_TOKEN_RE.fullmatch(document_id) or document_id in _RESERVED_V1_DOCUMENT_IDS:"
+      "where": "databasise/seam/corpus.py:367",
+      "quote": "not _DOCUMENT_ID_TOKEN_RE.fullmatch(document_id)"
     },
     {
       "id": "SEAM-08",
       "status": "present",
-      "where": "databasise/seam/corpus.py:211",
-      "quote": "if limit < 1 or offset < 0:"
+      "where": "databasise/seam/corpus.py:222",
+      "quote": "if limit < 1 or not 0 <= offset <= MAX_PAGE_OFFSET:"
     },
     {
       "id": "SEAM-09",
       "status": "present",
-      "where": "databasise/seam/query.py:91",
+      "where": "databasise/seam/query.py:104",
       "quote": "if query_object.text is not None and query_object.text.strip() == \"\":"
     },
     {
       "id": "SEAM-10",
       "status": "present",
-      "where": "databasise/seam/selectors.py:272",
+      "where": "databasise/seam/selectors.py:274",
       "quote": "raise EmptyCapabilitySelectorError()"
     },
     {
       "id": "SEAM-11",
       "status": "present",
-      "where": "databasise/seam/engine.py:1335",
-      "quote": "keys = comparison_keys(selectors)"
+      "where": "databasise/seam/engine.py:1344",
+      "quote": "keys = comparison_keys(selectors) if len(selectors) > 1 else []"
     },
     {
       "id": "SEAM-12",
       "status": "present",
-      "where": "databasise/seam/engine.py:2744",
+      "where": "databasise/seam/engine.py:2761",
       "quote": "if alias == \"\" or _INSTANCE_HASH_PATTERN.match(alias):"
     },
     {
       "id": "SEAM-13",
       "status": "present",
-      "where": "databasise/seam/rest.py:322",
-      "quote": "    if raw is None or raw.strip() in (\"\", \"null\"):"
+      "where": "databasise/seam/rest.py:329",
+      "quote": "if raw is None or raw.strip() in (\"\", \"null\"):"
     },
     {
       "id": "SEAM-14",
       "status": "present",
-      "where": "databasise/seam/refusals.py:1009",
+      "where": "databasise/seam/refusals.py:1081",
       "quote": "\"NoRawUploadPathForModalityError\","
     },
     {
       "id": "SEAM-15",
       "status": "present",
-      "where": "databasise/seam/corpus.py:95",
+      "where": "databasise/seam/corpus.py:105",
       "quote": "``file_name`` and ``content_type`` are not stored (D-11). For a ``raw`` payload only the suffix"
     }
   ],

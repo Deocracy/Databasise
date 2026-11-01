@@ -2,10 +2,9 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase17",
-  "ledger_version": 911,
+  "ledger_version": 912,
   "artifacts": {
     "mockups/src/page.html": "f78510617149aa3a713c74bc75e3ffc6ed648e8edc8a203078ad130a4092f967",
-    "mockups/build.py": "a0b68f41d1e7c8b277bf21cabdf068b5a2ae0597085e50c08508a9da630705a0",
     "mockups/src/screens/query.html": "9146ca6fc5171e80d73f7ce7812cd975510664bb603fa27e3a502f182439f5a5",
     "mockups/src/screens/evidence.html": "674d5f2416571cdb40ccd392286a9cd5225ec568e34b52e8abdb8833117959a9",
     "mockups/src/screens/documents.html": "b25fed6003499ddc23dfe170b9e8eb8782b8773fe483675caff60f376323eeb5",
@@ -14,10 +13,10 @@
     "mockups/src/screens/graph.html": "2395a032757a3add3a3527c45244bdda5ffd3be7a8f42a33f48c5a98d9200759",
     "mockups/src/parts/errors.html": "973afa5e4a31d0b8d7eb4941cbb57367cef1ec61d4fd1ef78dd5d4f2415d6c7f",
     "mockups/src/parts/selector.html": "e8d5dfb5f9e27e7af9fdd3ae3711edbc3e9099580ee85ec34116ebb61ac490ca",
-    "mockups/src/js/00-app.js": "de7179bb4d548e4177e1777ce279e7a49f3ef16142affbca77f8b903f73ec5d9",
-    "docs/gui/GAP-ROUTES.json": "65041307713b7b7ad820e3c5aa664ff8fda47750422c8a55e92e671938d12492",
-    "docs/gui/MOCK-IDS.json": "f59c8838ef1fe15364dc5aafe36d97ad8c09008b56578ee94a195a2d1c82a634",
-    "docs/gui/refusals.json": "5466648f8ab96bf96eb46c123f015fe14d5535920a1ea74433aa19efa593a5fc"
+    "mockups/src/js/10-shared.js": "296877aa8f110272d992cb5a829645ac1228a99980f44455b56efe8330da3694",
+    "mockups/src/js/21-compare.js": "5f2ec4a3377bf4e4402f6bfcd00c0e1e86314b48e014812457e684b7a68f1144",
+    "docs/gui/refusals.json": "acf8709c902a8f1c420027eb560b447539689194a6ac344d87fa092ac21b47d9",
+    "docs/gui/MOCK-IDS.json": "f59c8838ef1fe15364dc5aafe36d97ad8c09008b56578ee94a195a2d1c82a634"
   },
   "checker": {
     "harness": "claude-code",

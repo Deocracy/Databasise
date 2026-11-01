@@ -2,43 +2,43 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase14-b",
-  "ledger_version": 843,
+  "ledger_version": 912,
   "artifacts": {
     "databasise/parts/registry.py": "7afc5fea40108a45cdac0dad729986aabbe039db59537432663c7f3a592c7dca",
     "databasise/parts_core/declared_only.py": "602ce81ddd4e664a3a17c5cf5035db8a288d821ff62b4cfaf36be273ff9195f9",
-    "databasise/seam/engine.py": "0931e6098b0cc06e073ee876bc891241b84b54179a476ae342018a1861598dd3",
-    "databasise/seam/rest.py": "84be8c28be5e7a7b56c260e5993662a244d10ae93463b0503bb9c5bd047af9a6",
-    "databasise/seam/selectors.py": "d4eb92f604f3a852a054f3fb2aae2e9c4b40d8790c7ef625b36df408a21e532b",
-    "databasise/validator/parse.py": "38ae94947933a067864f8e43029e44f30791053e9abc24f0d244ad15d7e811b6"
+    "databasise/seam/engine.py": "271458bb1c85585b7f89815ef284c4c3f50b1606ba8c5b4cbfc02ab1de54f8f4",
+    "databasise/seam/rest.py": "5f75dbe5bf1ad17a87dedcaaf4a0d23feca0a1706473a4da5c2ac2c652868260",
+    "databasise/seam/selectors.py": "41cfbe27168242cc291bc7f8a4e1ecf4e5a9be6b44e2c071b07b73b1e3763b99",
+    "databasise/validator/parse.py": "462ca0809b9dc2e3c8abf757a757c9f33ec798006cca0d5b0d3c5d69dec7ae7f"
   },
   "checker": {
     "harness": "claude-code",
-    "model": "claude-opus-5-5",
-    "session": "32d1701b-4256-409c-a5a7-e305cc822f40"
+    "model": "claude-fable-5-1",
+    "session": "11bd64f3-96e9-4f30-b125-cc3262ef9629"
   },
   "items": [
     {
       "id": "LEDG-08",
       "status": "present",
-      "where": "databasise/seam/engine.py:2866",
-      "quote": "            raise GateNotCalibratedError(verb=verb)"
+      "where": "databasise/seam/engine.py:2884",
+      "quote": "                raise GateNotCalibratedError(verb=verb)"
     },
     {
       "id": "LEDG-09",
       "status": "present",
-      "where": "databasise/seam/rest.py:215",
+      "where": "databasise/seam/rest.py:216",
       "quote": "    debug: StrictBool = False"
     },
     {
       "id": "LEDG-10",
       "status": "present",
-      "where": "databasise/seam/selectors.py:190",
+      "where": "databasise/seam/selectors.py:192",
       "quote": "        if requested <= _capability_tokens(without_recipe_only_nodes(candidate[1]), registry)"
     },
     {
       "id": "LEDG-11",
       "status": "present",
-      "where": "databasise/validator/parse.py:229",
+      "where": "databasise/validator/parse.py:240",
       "quote": "            if node.kind != part.kind:"
     },
     {
@@ -50,7 +50,7 @@
     {
       "id": "LEDG-13",
       "status": "present",
-      "where": "databasise/seam/engine.py:744",
+      "where": "databasise/seam/engine.py:753",
       "quote": "        return load_wiring(family, variant=f\"corpus-{operation}\")"
     },
     {

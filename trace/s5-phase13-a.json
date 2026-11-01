@@ -2,21 +2,22 @@
   "bak_trace": 1,
   "step": "S5",
   "part": "phase13-a",
-  "ledger_version": 843,
+  "ledger_version": 912,
   "artifacts": {
     "databasise/runner/guards.py": "ad8d41377eb0e000f482273c1dc7b1bad1477c6ef79a6ced51ae04e09a332e59",
-    "databasise/seam/engine.py": "0931e6098b0cc06e073ee876bc891241b84b54179a476ae342018a1861598dd3",
+    "databasise/seam/engine.py": "271458bb1c85585b7f89815ef284c4c3f50b1606ba8c5b4cbfc02ab1de54f8f4",
     "databasise/seam/envelope.py": "dd72b3906239887d258922352dcaeb978a5dda4cf5e9119ac3e677000e665e55",
-    "databasise/seam/selectors.py": "d4eb92f604f3a852a054f3fb2aae2e9c4b40d8790c7ef625b36df408a21e532b",
+    "databasise/seam/selectors.py": "41cfbe27168242cc291bc7f8a4e1ecf4e5a9be6b44e2c071b07b73b1e3763b99",
     "databasise/validator/errors.py": "501336d034b5711ec592c718150a7ee0234a8a6c2e603e5008b58abf37d8c6be",
     "databasise/validator/execution_mode.py": "8d9fbd51c38756f7dda72880d73cb77372973d5220d9030b737aca3711d8201c",
-    "databasise/validator/parse.py": "38ae94947933a067864f8e43029e44f30791053e9abc24f0d244ad15d7e811b6",
-    "databasise/wirings/lightrag/README.md": "e55d78515677caa4c848693d1013683ecb8f964d85e5f71502f9526d6aa294af"
+    "databasise/validator/parse.py": "462ca0809b9dc2e3c8abf757a757c9f33ec798006cca0d5b0d3c5d69dec7ae7f",
+    "databasise/wirings/lightrag/README.md": "e55d78515677caa4c848693d1013683ecb8f964d85e5f71502f9526d6aa294af",
+    "databasise/validator/depth.py": "eb785d7400697822c1e9475cc5d24c4234ed7bba2e1052d81b7598ccf45334c7"
   },
   "checker": {
     "harness": "claude-code",
-    "model": "claude-opus-5-5",
-    "session": "32d1701b-4256-409c-a5a7-e305cc822f40"
+    "model": "claude-fable-5-1",
+    "session": "11bd64f3-96e9-4f30-b125-cc3262ef9629"
   },
   "items": [
     {
@@ -28,25 +29,25 @@
     {
       "id": "WIRE-02",
       "status": "present",
-      "where": "databasise/validator/parse.py:316",
+      "where": "databasise/validator/parse.py:327",
       "quote": "        elif isinstance(evidence_position, dict) and ("
     },
     {
       "id": "WIRE-03",
       "status": "present",
-      "where": "databasise/seam/engine.py:2664",
+      "where": "databasise/seam/engine.py:2679",
       "quote": "                stop_reason=node_free_reason(record.stop_reason, low_entropy),"
     },
     {
       "id": "WIRE-04",
       "status": "present",
-      "where": "databasise/seam/engine.py:1137",
+      "where": "databasise/seam/engine.py:1146",
       "quote": "    depth_label: Depth | None = None"
     },
     {
       "id": "WIRE-05",
       "status": "present",
-      "where": "databasise/seam/engine.py:727",
+      "where": "databasise/seam/engine.py:731",
       "quote": "        raise InvalidGuardDeclarationError(node_id=exc.node_id) from exc"
     },
     {
