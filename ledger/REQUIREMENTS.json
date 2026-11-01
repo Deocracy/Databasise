@@ -1,5 +1,5 @@
 {
-  "ledger_version": 912,
+  "ledger_version": 915,
   "frozen_at": null,
   "items": [
     {
@@ -2374,11 +2374,11 @@
   "mockup_freeze": {
     "variant": "console-a",
     "path": "mockups/operator-console.html",
-    "sha256": "bf98e79e0a0312940963efae9028e708a012021bfc62f51ebdbca57918034d20"
+    "sha256": "3ac0e278c929ba41179249a47606edb910ae4b6032b1d0acb9fc19a739c0c837"
   },
   "scope_lock": null,
   "check_locks": {
-    "commit": "88c9f13f6e8fbb076524a12f8f8ce9081a57e88f",
+    "commit": "5c2324c8dfb5f936323440b49adce0347630a29c",
     "files": {
       "databasise/tests/seam/test_run01_coverage_crosscheck.py": "3da3eb8683a6556bf3e29bde7ec7d19257bcf6371a55245b5be90450985e9258",
       "databasise/tests/clients/test_openai_compat.py": "1e342492d32774e047de1dd616030f4de8aaca7faf98d51449fd608505e1774f",

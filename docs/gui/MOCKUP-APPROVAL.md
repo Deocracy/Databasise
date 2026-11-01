@@ -2,10 +2,15 @@
 
 variant: console-a
 path: mockups/operator-console.html
-sha256: bf98e79e0a0312940963efae9028e708a012021bfc62f51ebdbca57918034d20
+sha256: 3ac0e278c929ba41179249a47606edb910ae4b6032b1d0acb9fc19a739c0c837
 approved_commit: a9a3a24a351d3a1b7d877aff9b123459f8310d7b
 approved: 2026-10-30 by the owner, file:// click-through (D-11)
+refrozen: 2026-11-01 by the owner (freeze-variant console-a)
 ids: 623
+
+## Re-freeze 2026-11-01
+
+The owner rebuilt the mockup with `python3 mockups/build.py` and re-ran `freeze-variant --variant console-a`. The only change is the embedded refusal catalogue, which gained `NonEncodableTextError` (422, attribute `field`) from the 2026-11-01 security fixes. Screens, controls and the 623 ids are unchanged: `scripts/mockup-id-check.py` exits 0 and the Phase 17 suite passes 68/68. The previous approved digest was `bf98e79e0a0312940963efae9028e708a012021bfc62f51ebdbca57918034d20`.
 
 ## Owner approval text (verbatim)
 
