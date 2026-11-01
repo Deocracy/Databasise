@@ -285,6 +285,21 @@ def test_history_works_when_session_storage_throws(seeded, browser):
         ui.expect(ui.page.locator(HISTORY_ROWS)).to_have_count(1)
 
 
+def test_malformed_history_entry_does_not_stop_the_console(live_app, browser):
+    """A stored selector whose capability is not an array must not throw at start-up: every screen is one concatenated script."""
+    good = {"query": "q1", "selector": {"capability": CAPS}, "trace_token": "tok01xxxxxxxxxxxxx", "timestamp": "2026-10-31T10:00:00.000Z"}
+    bad = dict(good, selector={"capability": "reads_graph"}, trace_token="tok02xxxxxxxxxxxxx")
+    seed = f"sessionStorage.setItem('{HISTORY_KEY}', JSON.stringify({json.dumps([bad, good])}));"
+    with _ui(browser, live_app, lambda page: page.add_init_script(seed)) as ui:
+        ui.expect("shell.root.app").to_have_attribute("data-live-ready", "true")
+        ui.nav("graph")  # registered by a later screen script
+        ui.expect("screen-graph").to_be_visible()
+        ui.nav("query")
+        ui.el("query.history.toggle").click()
+        ui.expect(ui.page.locator(HISTORY_ROWS)).to_have_count(1)  # the malformed entry is dropped on load
+        assert ui.page.evaluate("() => [selectorLabel({capability: 'x'}), comparisonKey({capability: 'x'})]") == ["capability x", "x"]
+
+
 def test_promote_from_result_disabled_without_trace_token(seeded, browser):
     def handler(route):
         response = route.fetch()
