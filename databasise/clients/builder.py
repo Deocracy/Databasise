@@ -14,6 +14,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+import openai  # type: ignore[import-untyped]
+
 from databasise.clients.openai_compat import OpenAICompatibleClient
 from databasise.clients.rerank import (
     RERANK_BINDINGS,
@@ -148,11 +150,14 @@ def parse_provider_routing_body(env: dict[str, str]) -> dict[str, Any] | None:
 
 
 # Every error build_clients/load_env_file raise by name; a CLI turns these into a clean refusal.
+# openai.OpenAIError covers whatever the SDK still rejects at construction (its message names no
+# env value), so a launcher never dies with a traceback on a bad client config.
 BUILDER_REFUSALS = (
     MissingParityEnvError,
     MissingParityEnvKeyError,
     UnparseableProviderRoutingError,
     UnsupportedRerankBindingError,
+    openai.OpenAIError,
 )
 
 
@@ -168,8 +173,9 @@ def build_clients(env: dict[str, str]) -> dict[str, Any]:
 
     WR-01: refuses with a named ``MissingParityEnvKeyError`` naming every absent key (required and
     rerank together), rather than a bare ``KeyError`` on whichever key happens to be read first.
+    An empty required value (``KEY=`` in the file) counts as absent, as it does for the rerank keys.
     """
-    missing = [key for key in REQUIRED_ENV_KEYS if key not in env]
+    missing = [key for key in REQUIRED_ENV_KEYS if not env.get(key)]
     binding = env.get(RERANK_BINDING_ENV_KEY)
     # As in v1: a binding that is present and empty or "null" (any case) switches rerank off, whatever
     # the other RERANK_* keys hold. Only an ABSENT binding key makes the other keys a partial set.
