@@ -250,6 +250,31 @@ def test_jobs_poll_runs_only_while_the_drawer_is_open(live_app, browser):
         assert len(_gets(ui, f"/jobs/{job_id}")) == loads
 
 
+def test_jobs_poll_keeps_a_visible_error_banner(live_app, browser):
+    """A poll tick reloads the page quietly: a refusal the operator is reading stays on screen."""
+    job_id = live_app.ingest("poll banner text", "doc-poll-2")["job_id"]
+    live_app.corpus["doc-poll-2"]["status"] = "pending"
+    with _ui(browser, live_app, CLOCK) as ui:
+        ui.nav("documents")
+        ui.el("documents.jobs.open").click()
+        ui.el("documents.jobs.job-id").fill(job_id)
+        ui.el("documents.jobs.load").click()
+        ui.expect(ui.el("documents.jobs.documents").locator("tbody tr:not([hidden])").first).to_contain_text("doc-poll-2")
+        ui.el("documents.jobs.poll").check()
+        ui.expect("documents.live.jobs-polled").to_have_text("Refreshing every 30 seconds.")
+        # A failed read puts its refusal on screen and the previous page back; the poll keeps running on that page.
+        ui.el("documents.jobs.job-id").fill("no-such-job")
+        ui.el("documents.jobs.load").click()
+        banner = ui.el("documents.error.refusal")
+        ui.expect(banner).to_contain_text("UnknownJobError")
+        loads = len(_gets(ui, f"/jobs/{job_id}"))
+        ui.page.clock.fast_forward(31000)
+        _settle(ui)
+        assert len(_gets(ui, f"/jobs/{job_id}")) == loads + 1
+        ui.expect(banner).to_be_visible()
+        ui.expect(ui.el("documents.jobs.documents").locator("tbody tr:not([hidden])").first).to_contain_text("doc-poll-2")
+
+
 def test_absent_job_routes_are_disabled(live_ui):
     ui = live_ui
     ui.nav("documents")
