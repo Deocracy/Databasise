@@ -9,6 +9,8 @@ caller value bounds that echo through one shared helper, in the attribute and in
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 pytest.importorskip("fastapi")
@@ -16,11 +18,22 @@ pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 
 from databasise.seam.refusals import (
+    ActiveGenerationRetirementError,
+    DuplicateComparisonKeyError,
     DuplicateDocumentIdError,
+    EmptyPromotionTraceIdsError,
     EmptyQueryObjectError,
     ForbiddenSelectorInputError,
+    InvalidChangeOriginError,
     InvalidDocumentIdError,
     InvalidPromotionAliasError,
+    TombstonedGenerationError,
+    UnknownDocumentError,
+    UnknownGenerationVersionError,
+    UnknownGraphNodeError,
+    UnknownJobError,
+    UnknownTraceReferenceError,
+    UnrecognisedPromotionVerbError,
     UnsatisfiableSelectorError,
     refusal_body,
 )
@@ -90,6 +103,17 @@ _LONG = "a" * 5000
         (lambda: UnsatisfiableSelectorError(selector_kind="capability", requested=[_LONG] * 500), "requested"),
         (lambda: InvalidPromotionAliasError(alias=_LONG), "alias"),
         (lambda: DuplicateDocumentIdError(document_id=_LONG), "document_id"),
+        (lambda: UnrecognisedPromotionVerbError(verb=_LONG), "verb"),
+        (lambda: InvalidChangeOriginError(change_origin=_LONG), "change_origin"),
+        (lambda: DuplicateComparisonKeyError(key=_LONG), "key"),
+        (lambda: UnknownTraceReferenceError(_LONG), "trace_reference"),
+        (lambda: UnknownGraphNodeError(node_id=_LONG), "node_id"),
+        (lambda: UnknownJobError(job_id=_LONG), "job_id"),
+        (lambda: UnknownGenerationVersionError(alias="a", version=_LONG), "version"),
+        (lambda: TombstonedGenerationError(alias=_LONG, version="1.0.0"), "alias"),
+        (lambda: ActiveGenerationRetirementError(alias="a", version=_LONG), "version"),
+        (lambda: EmptyPromotionTraceIdsError(alias=_LONG), "alias"),
+        (lambda: UnknownDocumentError(document_id=_LONG), "document_id"),
     ],
     ids=[
         "EmptyQueryObjectError",
@@ -99,6 +123,17 @@ _LONG = "a" * 5000
         "UnsatisfiableSelectorError-capability",
         "InvalidPromotionAliasError",
         "DuplicateDocumentIdError",
+        "UnrecognisedPromotionVerbError",
+        "InvalidChangeOriginError",
+        "DuplicateComparisonKeyError",
+        "UnknownTraceReferenceError",
+        "UnknownGraphNodeError",
+        "UnknownJobError",
+        "UnknownGenerationVersionError",
+        "TombstonedGenerationError",
+        "ActiveGenerationRetirementError",
+        "EmptyPromotionTraceIdsError",
+        "UnknownDocumentError",
     ],
 )
 def test_echoed_caller_values_are_bounded_in_attribute_and_message(refusal, attribute):
@@ -113,6 +148,33 @@ def test_a_short_echo_is_returned_unchanged():
     body = refusal_body(InvalidDocumentIdError(document_id="a.b"))
     assert body["document_id"] == "a.b"
     assert "'a.b'" in body["message"]
+
+
+@pytest.mark.parametrize(
+    ("body", "refusal_type"),
+    [
+        ({"alias": "x", "trace_ids": ["t"], "change_origin": "human_edit", "verb": _LONG}, "UnrecognisedPromotionVerbError"),
+        ({"alias": "x", "trace_ids": ["t"], "change_origin": _LONG}, "InvalidChangeOriginError"),
+    ],
+    ids=["verb", "change_origin"],
+)
+def test_an_overlong_promotion_field_refusal_is_bounded_over_rest(client, body, refusal_type):
+    response = client.post("/promote", json=body)
+    assert response.status_code == 422, response.text
+    assert response.json()["refusal_type"] == refusal_type
+    assert len(response.content) < 2048
+
+
+def test_an_overlong_comparison_key_refusal_body_is_bounded():
+    body = refusal_body(DuplicateComparisonKeyError(key=_LONG))
+    assert len(json.dumps(body)) < 2048
+
+
+def test_an_overlong_extra_object_key_yields_a_bounded_422_detail(client):
+    response = client.post("/query", json={"query": {"text": "hi"}, "k" * 100_000: 1})
+    assert response.status_code == 422, response.text
+    assert "refusal_type" not in response.json()
+    assert len(response.content) < 2048
 
 
 def test_an_overlong_document_id_refusal_is_bounded_over_rest(client):
