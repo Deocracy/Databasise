@@ -7524,6 +7524,8 @@ var GraphScreen = (function () {
     prompt: "Choose a selector to read the graph.",
     badBody: "The server answered without a page.",
   };
+  // An alias (or an unresolved selector) has no arm client-side; only the server knows its store (R18-05, as 40-documents family()).
+  var FAMILY = { lightrag: "Reading: LightRAG graph", hipporag: "Reading: HippoRAG graph", unknown: "Reading: the graph the server resolves for this selector" };
 
   var root = $id("screen-graph");
   var errorsBox = root.querySelector('[data-role="errors"]');
@@ -7868,6 +7870,8 @@ var GraphScreen = (function () {
 
   // A selector edit reads again only when the selector itself changed: the alias catalogue refilling the picker is not an edit.
   picker = Picker.attach("graph", function (p) {
+    var arm = p.arm();
+    ID("selector.family").textContent = FAMILY[!arm ? "unknown" : arm === "hipporag" ? "hipporag" : "lightrag"];
     if (!ready) return;
     checkAll();
     if (!Live.has("POST", "/graph/nodes") || p.blockers().length) return;
