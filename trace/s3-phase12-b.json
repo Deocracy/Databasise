@@ -69,7 +69,7 @@
   ],
   "extra": [
     {
-      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:408",
+      "where": ".planning/milestones/v1.1-REQUIREMENTS.md:417",
       "quote": "Phase 13 D-11 exception (owner-delegated 2026-10-19): HippoRAG delete succeeds since HIPP-16 and writes_graph is unsatisfiable since Phase 12 D-16, so the NoWritePathForModalityError test pins retry_document with a HippoRAG selector instead of DELETE.",
       "note": "Phase 13 note referencing HIPP-16; not a ledger item itself (no source row among the 9 IDs). Also the traceability table lines 910-918 repeat these IDs as 'Phase 12 | Complete' (status mapping, not requirement text)."
     }
