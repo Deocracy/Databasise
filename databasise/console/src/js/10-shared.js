@@ -277,6 +277,11 @@ var REFUSAL_HINTS = {
   NoRawUploadPathForModalityError: "Raw upload is not available for this selector. Use Paste text.",
 };
 
+// A 2xx body that the result layouts can render; anything else shows the generic view instead of throwing mid-render (R18-04).
+function isEnvelope(body) {
+  return body !== null && typeof body === "object" && Array.isArray(body.evidence) && Array.isArray(body.token_accounting) && Array.isArray(body.seam_events);
+}
+
 function classifyResponse(status, body) {
   var structured = body !== null && typeof body === "object";
   if (structured && body.refusal_type === "ForeignEngineRefusalError") return "server-failure";

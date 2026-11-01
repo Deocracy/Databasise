@@ -393,8 +393,14 @@ var Compare = (function () {
       running = false;
       syncRun(lastBlocked);
       // Two or more selectors answer a map keyed by comparison key; one answers a bare envelope. The count sent decides, never the keys (D-11).
-      if (sent.length > 1 && classifyResponse(result.status, result.body) === "result") {
-        var cols = columnsOf(chosen, result.body);
+      // A map whose values are not envelopes falls through to QueryScreen's "answered without a result" view (R18-04).
+      var cols = sent.length > 1 && classifyResponse(result.status, result.body) === "result" && result.body !== null && typeof result.body === "object" ? columnsOf(chosen, result.body) : null;
+      if (
+        cols &&
+        cols.every(function (col) {
+          return isEnvelope(col.body);
+        })
+      ) {
         hideStates();
         showColumns(cols);
         // Requested columns only, last first, so the history reads in builder order; an extra key was not run by this console.

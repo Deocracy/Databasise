@@ -123,6 +123,22 @@ def test_query_500_renders_the_generic_view(seeded, browser):
         assert ui.count("GET", "/log") == 0
 
 
+def test_query_200_without_an_envelope_leaves_running(seeded, browser):
+    """R18-04: a 2xx whose body is not an envelope renders the generic view; the screen is not stuck in running."""
+
+    def handler(route):
+        route.fulfill(status=200, content_type="text/plain", body="ok")
+
+    with _ui(browser, seeded, lambda page: page.route("**/query", handler)) as ui:
+        _run(ui)
+        ui.expect("query.error.generic").to_contain_text("The server answered without a result.")
+        ui.expect("query.state.error-500").to_be_visible()
+        ui.expect("query.state.running").to_be_hidden()
+        ui.expect("query.run.spinner").to_be_hidden()
+        ui.expect("query.run.submit").to_be_enabled()
+        assert ui.page.evaluate("() => JSON.parse(sessionStorage.getItem('databasise.console.history') || '[]')") == []
+
+
 def test_query_500_loads_the_log_tail_when_mounted(log_app, browser):
     log_app.log_file.write_text("first log line\nsecond log line\n", encoding="utf-8")
     with log_app.fail("query"), _ui(browser, log_app) as ui:

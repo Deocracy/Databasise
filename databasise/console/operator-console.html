@@ -2995,13 +2995,18 @@ function loadInfo() {
 }
 
 // The 60 s abort is a setTimeout (not AbortSignal.timeout) so a faked clock can drive it in tests.
+// One load at a time: a poll tick or a second Refresh while one is pending joins it, so an older timeout can never
+// overwrite a newer load's state (R18-08).
+var healthLoad = null;
 Console.loadHealth = function () {
+  if (healthLoad) return healthLoad;
   renderHealth({ loading: true });
   var controller = new AbortController();
   var timer = setTimeout(function () {
     controller.abort();
   }, HEALTH_TIMEOUT_MS);
-  return api("GET", "/health", null, { signal: controller.signal }).then(function (result) {
+  return (healthLoad = api("GET", "/health", null, { signal: controller.signal }).then(function (result) {
+    healthLoad = null;
     clearTimeout(timer);
     var report;
     if (result.aborted) report = { status: 0, text: "Health check timed out after 60 seconds." };
@@ -3013,7 +3018,7 @@ Console.loadHealth = function () {
     return loadInfo().then(function () {
       return report;
     });
-  });
+  }));
 };
 
 // A rejected call on any screen also puts the header at unreachable (D-12).
@@ -3481,9 +3486,10 @@ function fillAliasPicker(select) {
 
 // Selector resolution (D-06): the embedded post-WIRE-01 table plus the four documented combinations (API-INVENTORY 3.0).
 var Resolution = (function () {
-  var arms = {};
-  var caps = {};
-  var aliases = {};
+  // No prototype: an alias or wiring named "constructor" must not resolve to Object (R18-03).
+  var arms = Object.create(null);
+  var caps = Object.create(null);
+  var aliases = Object.create(null);
   var def = null;
   var harness = null;
   var rows = FIX.resolution.rows.slice();
@@ -3569,7 +3575,8 @@ var Picker = {
       return null;
     }
 
-    var api = {
+    // Named so it never shadows the api() transport (R18-11).
+    var selectorApi = {
       value: value,
       label: function () {
         return selectorLabel(value());
@@ -3600,8 +3607,8 @@ var Picker = {
       tokens().forEach(function (t) {
         chips.appendChild(h("span", t, "chip mono"));
       });
-      ID("resolves-to").textContent = api.resolve();
-      if (onChange) onChange(api);
+      ID("resolves-to").textContent = selectorApi.resolve();
+      if (onChange) onChange(selectorApi);
     }
 
     group.addEventListener("input", function (event) {
@@ -3623,7 +3630,7 @@ var Picker = {
     });
     fillAliasPicker(picker);
     refresh();
-    return api;
+    return selectorApi;
   },
 };
 
@@ -3645,6 +3652,11 @@ var REFUSAL_HINTS = {
   PageSizeExceededError: "Use a page size from 1 to 100.",
   NoRawUploadPathForModalityError: "Raw upload is not available for this selector. Use Paste text.",
 };
+
+// A 2xx body that the result layouts can render; anything else shows the generic view instead of throwing mid-render (R18-04).
+function isEnvelope(body) {
+  return body !== null && typeof body === "object" && Array.isArray(body.evidence) && Array.isArray(body.token_accounting) && Array.isArray(body.seam_events);
+}
 
 function classifyResponse(status, body) {
   var structured = body !== null && typeof body === "object";
@@ -3842,6 +3854,7 @@ var QueryScreen = (function () {
     textEmpty: "Query text is empty. Enter at least one non-space character.",
     badJson: "Raw selector JSON is not valid JSON.",
     multiMember: "A selector may set only one member: alias, capability or harness.",
+    badBody: "The server answered without a result.",
   };
   var root = $id("screen-query");
   var errorsBox = root.querySelector('[data-role="errors"]');
@@ -4019,6 +4032,12 @@ var QueryScreen = (function () {
   // Classifies a response and shows its result layout or its error shape; returns the shape. The state views print the real status (IN-JSA-09).
   function applyResponse(status, body) {
     var shape = classifyResponse(status, body);
+    if (shape === "result" && !isEnvelope(body)) {
+      // A 2xx without an envelope: the generic view, so the screen leaves running and Run comes back (R18-04).
+      showState("error-500");
+      renderError("query", 0, null, { text: MSG.badBody });
+      return "generic";
+    }
     if (shape === "result") renderResult(body);
     else {
       showState(SHAPE_STATE[shape]);
@@ -4043,7 +4062,8 @@ var QueryScreen = (function () {
   }
 
   function remember(env, body) {
-    runLog.add({ query: body.query.text, selector: body.selector, trace_token: env.trace_token, timestamp: new Date().toISOString() });
+    // partial and degraded feed the Ledger pre-flight; an older entry without them reads as false there (R18-02).
+    runLog.add({ query: body.query.text, selector: body.selector, trace_token: env.trace_token, partial: !!env.partial, degraded: !!env.degraded, timestamp: new Date().toISOString() });
     renderHistory();
   }
 
@@ -4186,8 +4206,7 @@ var QueryScreen = (function () {
           if (key !== "kind") env[key] = finalEvent[key];
         });
         env.evidence = refs;
-        renderResult(env);
-        remember(env, body);
+        if (applyResponse(res.status, env) === "result") remember(env, body);
       }, lost(mine));
     });
   }
@@ -4482,6 +4501,7 @@ var Compare = (function () {
       ID("state." + s).hidden = true;
     });
     ID("result.panel").hidden = true;
+    ID("run.spinner").hidden = true; // the running state is over (R18-01)
     errorsBox.hidden = true;
   }
 
@@ -4722,8 +4742,14 @@ var Compare = (function () {
       running = false;
       syncRun(lastBlocked);
       // Two or more selectors answer a map keyed by comparison key; one answers a bare envelope. The count sent decides, never the keys (D-11).
-      if (sent.length > 1 && classifyResponse(result.status, result.body) === "result") {
-        var cols = columnsOf(chosen, result.body);
+      // A map whose values are not envelopes falls through to QueryScreen's "answered without a result" view (R18-04).
+      var cols = sent.length > 1 && classifyResponse(result.status, result.body) === "result" && result.body !== null && typeof result.body === "object" ? columnsOf(chosen, result.body) : null;
+      if (
+        cols &&
+        cols.every(function (col) {
+          return isEnvelope(col.body);
+        })
+      ) {
         hideStates();
         showColumns(cols);
         // Requested columns only, last first, so the history reads in builder order; an extra key was not run by this console.
@@ -4866,8 +4892,8 @@ var EvidenceScreen = (function () {
   var root = $id("screen-evidence");
   var errorsBox = root.querySelector('[data-role="errors"]');
   var panes = { evidence: root.querySelector('[data-role="pane-evidence"]'), trace: root.querySelector('[data-role="pane-trace"]') };
-  // Resolved records, kept for the page's lifetime by namespace and ref (D-07). Errors are never stored.
-  var cache = {};
+  // Resolved records, kept by namespace and ref until a write changes the corpus (D-07, R18-09). Errors are never stored.
+  var cache = Object.create(null);
   var tab = "evidence";
   var opener = null; // the Open button whose click is being dispatched
   var busyEl = null; // the Open button marked busy by the read in flight
@@ -5314,6 +5340,10 @@ var EvidenceScreen = (function () {
   });
   Console.on("open-trace", function (payload) {
     openTrace(payload.token || "");
+  });
+  // After a delete a cached record may be gone from the store: the next Open asks the server again (R18-09).
+  Console.on("corpus-changed", function () {
+    cache = Object.create(null);
   });
   // Entering the screen refreshes the picker; leaving it abandons both reads and restores the Open button (IN-JSB-08).
   Console.on("show", function (name) {
@@ -5851,8 +5881,8 @@ var DocumentsScreen = (function () {
 
   // ---- wiring ----
 
-  picker = Picker.attach("documents", function (api) {
-    picker = api;
+  picker = Picker.attach("documents", function (p) {
+    picker = p;
     refresh();
   });
 
@@ -6019,7 +6049,7 @@ var CorpusScreen = (function () {
   var statusFilter = "all";
   var isLoading = false;
   var loadedOnce = false;
-  var retrying = {}; // document_id -> true while its POST /retry is outstanding
+  var retrying = Object.create(null); // document_id -> true while its POST /retry is outstanding; no prototype, so "constructor" is a plain id (R18-03)
   var pendingFocus = ""; // a focus-document id that arrived while the first page was still loading
   var note = root.querySelector('[data-role="note"]');
   var pageCtl = null;
@@ -7733,6 +7763,9 @@ var GraphScreen = (function () {
     lastKey = JSON.stringify(sel());
     cancel("node");
     node = null;
+    nodes = null; // the pages belong to the previous selector: they do not survive its read failing (R18-06)
+    chunks = null;
+    paint();
     loadNodes(0);
     loadChunks(0);
   }

@@ -16,6 +16,7 @@ var QueryScreen = (function () {
     textEmpty: "Query text is empty. Enter at least one non-space character.",
     badJson: "Raw selector JSON is not valid JSON.",
     multiMember: "A selector may set only one member: alias, capability or harness.",
+    badBody: "The server answered without a result.",
   };
   var root = $id("screen-query");
   var errorsBox = root.querySelector('[data-role="errors"]');
@@ -193,6 +194,12 @@ var QueryScreen = (function () {
   // Classifies a response and shows its result layout or its error shape; returns the shape. The state views print the real status (IN-JSA-09).
   function applyResponse(status, body) {
     var shape = classifyResponse(status, body);
+    if (shape === "result" && !isEnvelope(body)) {
+      // A 2xx without an envelope: the generic view, so the screen leaves running and Run comes back (R18-04).
+      showState("error-500");
+      renderError("query", 0, null, { text: MSG.badBody });
+      return "generic";
+    }
     if (shape === "result") renderResult(body);
     else {
       showState(SHAPE_STATE[shape]);
@@ -361,8 +368,7 @@ var QueryScreen = (function () {
           if (key !== "kind") env[key] = finalEvent[key];
         });
         env.evidence = refs;
-        renderResult(env);
-        remember(env, body);
+        if (applyResponse(res.status, env) === "result") remember(env, body);
       }, lost(mine));
     });
   }
