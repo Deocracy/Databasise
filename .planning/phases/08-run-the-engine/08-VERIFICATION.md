@@ -1,6 +1,6 @@
 ---
 phase: 08-run-the-engine
-verified: 2026-11-01T00:39:15Z
+verified: 2026-11-01T07:20:07Z
 status: passed
 score: 5/5 roadmap success criteria verified (RUN-11 measurement owner-deferred, tracked as human item)
 covered_files:
@@ -40,7 +40,7 @@ covered_files:
   - "databasise/tests/parity/test_embedder_index_reproduction.py"
   - "databasise/tests/seam/test_rest_corpus_endpoints.py"
   - "databasise/tools/check_offline_suite.py"
-covered_digest: "v3:sha256:826516e5ecd974ae6b5aea2dbb3aa62d1a2ee9473395cdfdce853bd185f288de"
+covered_digest: "v3:sha256:0b142a23809002082e229593d5a42c1b79eed9050a09746b184e2578a8748c8e"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
@@ -74,7 +74,7 @@ human_verification:
 # Phase 8: Run the Engine Verification Report
 
 **Phase Goal:** An operator can start the engine as a served process from the installed package, with real model clients and one engine process per store root, and the offline test suite is green so every later fix can be checked end to end
-**Verified:** 2026-10-31 (fingerprint refreshed 2026-11-01T00:39Z after the Phase 18 staleness trip; see the last subsection)
+**Verified:** 2026-10-31 (fingerprint refreshed 2026-11-01T00:39Z after the Phase 18 staleness trip, and again 2026-11-01T07:20Z after the audit bug fixes; see the last two subsections)
 **Status:** human_needed
 **Re-verification:** Yes, after the verification went stale. Eight covered files moved after 2026-10-17 (Phases 11 to 17 touched `seam/rest.py`, `launcher/serve_rest.py`, `foreign/_mcp_sdk_guard.py`, `evidence/COVERAGE.md`, `pyproject.toml`, `clients/builder.py` and two test modules). All five success criteria were re-checked against current code and by live launch; nothing regressed. A second staleness trip followed Phase 18's edits to `launcher/serve_rest.py` and `pyproject.toml`; the targeted re-check is recorded in "Re-verification 2026-10-31 (Phase 18 staleness)" below.
 
@@ -86,10 +86,10 @@ The goal is achieved in the codebase. Nothing is FAILED. The status is `human_ne
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | One installed command starts REST, GET /health is 200 with llm and embedding clients from the shared builder; missing required keys stop startup naming every key; rerank reported not available unless RERANK_BINDING + its three keys | VERIFIED | Re-ran the installed `databasise-rest` (this session) with a six-key stub env: `GET /health` returned 200 with `"clients":{"llm":true,"embedding":true,"rerank":false}`. An env file with only `LLM_MODEL` exited 1 naming `LLM_BINDING_HOST, LLM_BINDING_API_KEY, EMBEDDING_BINDING_HOST, EMBEDDING_MODEL, EMBEDDING_BINDING_API_KEY`. No env file and no `--no-clients` exited 2 (`--env-file is required unless --no-clients`). `clients/builder.py` `build_clients` is unchanged in logic: optional binding-aware rerank, `null`/empty = off, partial set = `MissingParityEnvKeyError` naming the absent rerank keys. `tests/clients` all pass. |
+| 1 | One installed command starts REST, GET /health is 200 with llm and embedding clients from the shared builder; missing required keys stop startup naming every key; rerank reported not available unless RERANK_BINDING + its three keys | VERIFIED | Re-ran the installed `databasise-rest` (this session) with a six-key stub env: `GET /health` returned 200 with `"clients":{"llm":true,"embedding":true,"rerank":false}`. An env file with only `LLM_MODEL` exited 1 naming `LLM_BINDING_HOST, LLM_BINDING_API_KEY, EMBEDDING_BINDING_HOST, EMBEDDING_MODEL, EMBEDDING_BINDING_API_KEY`. No env file and no `--no-clients` exited 2 (`--env-file is required unless --no-clients`). `clients/builder.py` `build_clients` keeps the same logic: optional binding-aware rerank, `null`/empty = off, partial set = `MissingParityEnvKeyError` naming the absent rerank keys; since d8a1c1ef an empty required value (`KEY=`) also counts as missing and is named (re-checked live 2026-11-01: `LLM_MODEL=` and `EMBEDDING_BINDING_API_KEY=` exited 1 naming exactly those two keys), and `openai.OpenAIError` is in `BUILDER_REFUSALS`. `tests/clients` all pass. |
 | 2 | `databasise-mcp --transport stdio` lists same tools as in-process server; second launcher on same store root or `--workers 2` exits non-zero with named store-lock error (root + holder PID) while first keeps answering /health | VERIFIED | With the first REST launcher up: a second `databasise-rest` and a second `databasise-mcp --transport stdio` on the same root each exited 1 with `store root <root> is held by databasise process 796529; one engine process per store root (G-36)`; `.engine.lock` content was `796529` and /health still returned 200. `--workers 2` exited 2 naming `<store_root>/.engine.lock (G-36)` and created no store dir. `store_lock.py` uses `fcntl.flock` LOCK_EX\|LOCK_NB, O_CLOEXEC, writes the PID. `tests/launcher` (including the stdio tool-set equality test in `test_launchers.py`) passed. Parity CLIs run_arm, import_index, build_hipporag_index, run_comparison, run_cross_modality, storage_audit all import and use the lock. |
-| 3 | `--cors-origin <origin>`: preflight from that origin succeeds, unlisted origin gets no allow header; no flag = unchanged | VERIFIED | Live: `OPTIONS /query` with `Origin: http://localhost:5173` returned 200 with `access-control-allow-origin: http://localhost:5173`; `Origin: http://evil.example` returned 400 with no allow-origin header. `seam/rest.py` `validate_cors_origin` rejects non-exact origins and `CORSMiddleware` is only added `if cors_origins:` (line 378), so the default is unchanged. |
-| 4 | No-usage response = one unbudgetable call; empty choices, None content, mis-sized embedding batch, out-of-order items raise named errors or are returned in input order | VERIFIED | `clients/openai_compat.py` (not among the moved files, re-read): `_token_accounting` returns `TokenAccounting(call_count=1, counted_by="unbudgetable")` for missing usage; `EmptyChoicesError`, `MissingCompletionContentError`, `EmbeddingBatchMismatchError` (count and index-set check at line 210); vectors sorted by `.index` (line 213). `tests/clients/test_openai_compat.py` passed. |
+| 3 | `--cors-origin <origin>`: preflight from that origin succeeds, unlisted origin gets no allow header; no flag = unchanged | VERIFIED | Live: `OPTIONS /query` with `Origin: http://localhost:5173` returned 200 with `access-control-allow-origin: http://localhost:5173`; `Origin: http://evil.example` returned 400 with no allow-origin header. `seam/rest.py` `validate_cors_origin` rejects non-exact origins and `CORSMiddleware` is only added `if cors_origins:` (line 385), so the default is unchanged. |
+| 4 | No-usage response = one unbudgetable call; empty choices, None content, mis-sized embedding batch, out-of-order items raise named errors or are returned in input order | VERIFIED | `clients/openai_compat.py` (moved by 06d0eb09 on 2026-11-01, re-read): `_token_accounting` returns `TokenAccounting(call_count=1, counted_by="unbudgetable")` for missing usage and, since 06d0eb09, for a negative prompt/completion/cached count; `EmptyChoicesError`, `MissingCompletionContentError`, `EmbeddingBatchMismatchError` (count and index-set check at line 210); vectors sorted by `.index` (line 213). `tests/clients/test_openai_compat.py` passed. |
 | 5 | From `databasise/`, `.venv/bin/pytest` and `.venv/bin/python -m pytest` both 0 failed; COVERAGE cross-check runs; mcp SDK detected; upload/delete round-trip tests fail under their mutations; live tests only under `-m live` | VERIFIED for every component; full-suite figure not re-run by this verifier | Not re-run here by instruction (the orchestrator's regression gate owns the whole-suite run; its log was at about 57% with no failure marks when I last read it). Targeted runs this session, 0 failed, 0 skipped: `tests/clients tests/launcher tests/mcp/test_tool_growth_invariant.py tests/seam/test_rest_corpus_endpoints.py` (186 passed, 1 deselected); `tests/seam/test_run01_coverage_crosscheck.py tests/foreign/test_mcp_sdk_guard.py tests/mcp/test_dual_transport_parity.py tests/test_check_offline_suite.py tests/test_phase_success_criteria.py tests/test_packaging.py tests/test_import_boundary.py` (63 passed). `pyproject.toml` has `addopts = '-m "not live"'` and the registered `live` marker; the embedder test shows as `1/6 collected (5 deselected)` under `-m live`. `_COVERAGE_PATH` resolves to `databasise/evidence/COVERAGE.md` (152 lines) and `_coverage_markdown` asserts the file exists; the roster cross-check has a non-vacuity test. `tools/check_offline_suite.py` still runs both styles and fails on contradictory mcp skips. The round-trip tests read the inbox on disk (`inbox.iterdir()`, 32-hex stem) and assert counts `1 -> 0` after delete, so a no-op delete hook or an empty inbox fails them. The 1251-passed gate from 2026-10-17 predates the moved files; rely on the orchestrator's current run for the final "0 failed". |
 
 **Score:** 5/5 roadmap truths verified.
@@ -104,7 +104,7 @@ The goal is achieved in the codebase. Nothing is FAILED. The status is `human_ne
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `databasise/clients/builder.py` | Shared builder, `BUILDER_REFUSALS` | VERIFIED | 211 lines; read in full |
+| `databasise/clients/builder.py` | Shared builder, `BUILDER_REFUSALS` | VERIFIED | 217 lines (211 before d8a1c1ef); read in full |
 | `databasise/clients/rerank.py` | `HttpRerankClient`, 3 bindings | VERIFIED | 197 lines; wired through the builder |
 | `databasise/clients/openai_compat.py` | RUN-02/03 fixes | VERIFIED | See truth 4 |
 | `databasise/store_lock.py` | flock store lock | VERIFIED | See truth 2 |
@@ -119,7 +119,7 @@ The goal is achieved in the codebase. Nothing is FAILED. The status is `human_ne
 
 | From | To | Via | Status | Details |
 |------|----|-----|--------|---------|
-| `serve_rest.main` | `build_clients` | `open_engine` (lock first, then clients) | WIRED | `launcher/__init__.py:113-122`; lock fd closed on builder failure |
+| `serve_rest.main` | `build_clients` | `open_engine` (lock first, then clients) | WIRED | `launcher/__init__.py:125-134` (was 113-122 before 827aef25 added `port_number` above it); lock fd closed on builder failure |
 | `serve_rest.build_app` | `seam.rest.create_app` | `cors_origins=args.cors_origin` | WIRED | Plus TrustedHost and Origin guard middleware; Phase 16 added `--operator` and `--log-file`, both refused before the lock when invalid. Phase 18 added `--console` (opt-in `store_true`): its `GET /console` route is registered only inside `if getattr(args, "console", False)`, and its two `parser.error` refusals (non-loopback host, `--port 0`) fire only when the flag is given |
 | `serve_mcp.main` | `mcp.create_server(...).run(transport)` | direct | WIRED | stdio, sse, streamable-http |
 | `/health` clients map | builder clients | seam engine health | WIRED | Live /health showed `rerank:false` |
@@ -225,3 +225,27 @@ All five success criteria verified against current code; no behaviour item is op
 **Not re-run.** The live launch (`/health` 200, second-launcher refusal with holder PID, CORS preflight) from the 18:45Z pass was not repeated: the diff touches no code on those paths and `tests/launcher` covers launcher startup, the store lock and the stdio tool-set equality. The full offline suite stays with the orchestrator's regression gate.
 
 **Verdict.** No regression. The Phase 18 additions are additive and opt-in; every Phase 8 success criterion, artifact, key link and requirement row holds as previously evidenced. Frontmatter `verified:` and `covered_digest` refreshed with the same `covered_files` list; no evidence row cites a line number inside the two changed files, so no row was renumbered. Status stays `passed` as set by the orchestrator (the body's `human_needed` wording and the owner-run items above are carried unchanged).
+
+### Re-verification 2026-11-01 (audit fixes)
+
+**Trigger.** Five covered files changed after the 00:39Z fingerprint, all in test-first bug-fix commits from the 2026-11-01 debugging and security battery (base 3aafcc62): `databasise/clients/builder.py` (d8a1c1ef), `databasise/launcher/__init__.py` (827aef25), `databasise/clients/rerank.py` (87973007), `databasise/clients/openai_compat.py` (06d0eb09), `databasise/seam/rest.py` (5c00aabc, 13fda6a6; Phase 09 fixes). No other covered file moved; the `covered_files` list is unchanged.
+
+**What changed** (`git diff 3aafcc62 HEAD -- <five files>`).
+
+- `builder.py`: `missing = [key for key in REQUIRED_ENV_KEYS if not env.get(key)]`, so an empty required value counts as absent and is named in the same `MissingParityEnvKeyError`; `openai.OpenAIError` appended to `BUILDER_REFUSALS` (217 lines, was 211).
+- `launcher/__init__.py`: new `port_number` argparse type for `--port`, refusing values outside 0..65535 at parse time (exit 2) before the store lock is taken. `open_engine` is unchanged and now sits at lines 125-134.
+- `rerank.py` and `openai_compat.py`: a negative reported token count is treated like a missing one, `TokenAccounting(call_count=1, counted_by="unbudgetable")`, never a negative spend. The missing-usage path, `EmptyChoicesError`, `MissingCompletionContentError`, `EmbeddingBatchMismatchError` (line 210) and the `.index` sort (line 213) are untouched.
+- `seam/rest.py`: `_validation_response` builds the schema-422 `{detail: [...]}` itself with `type`/`loc`/`msg` only, passed through `bounded_echo` and `json_safe` (no `input` echo). `validate_cors_origin` and the `if cors_origins:` guard (now line 385) are untouched by the diff.
+
+**Re-checked** (rows whose evidence touches the five files: truths 1, 3, 4, 5; artifacts builder, rerank, openai_compat, launchers; key links `serve_rest.main -> build_clients` and `serve_rest.build_app -> create_app`; RUN-02, RUN-03, RUN-05, RUN-06, RUN-08, RUN-09, RUN-10).
+
+| Check | Command | Result |
+|-------|---------|--------|
+| Client and launcher suites | from `databasise/`: `.venv/bin/python -m pytest tests/clients tests/launcher -q -p no:cacheprovider` | 182 passed, 1 deselected (live), 0 failed, 26.7s |
+| Truth-5 cited files | `.venv/bin/python -m pytest tests/mcp/test_tool_growth_invariant.py tests/seam/test_rest_corpus_endpoints.py -q -p no:cacheprovider` | 25 passed, 0 failed |
+| Empty required values refused by name (RUN-05) | `databasise-rest --store-root <scratch> --workspace w --env-file <six keys, LLM_MODEL= and EMBEDDING_BINDING_API_KEY= empty> --port 18771` | exit 1, `the env file is missing required key(s): LLM_MODEL, EMBEDDING_BINDING_API_KEY`; message names keys, never values |
+| Out-of-range port refused before the lock | `databasise-rest --store-root <scratch> --workspace w --no-clients --port 70000` | exit 2, `argument --port: --port 70000 is outside 0..65535`; no store dir created |
+
+**Not re-run.** The live `/health` 200, second-launcher refusal with holder PID and CORS preflight checks from the 2026-10-31 pass: the diffs touch none of those paths (`store_lock.py`, `serve_rest.py`, `serve_mcp.py` did not move; the `rest.py` diff is confined to the schema-422 handler and two imports) and `tests/launcher` plus `tests/seam/test_rest_corpus_endpoints.py` passed. The full offline suite stays with the orchestrator's regression gate, which was running during this pass.
+
+**Verdict.** No regression. Every change narrows an input path (empty env value, out-of-range port, negative token count, unbounded 422 echo) into an existing named refusal or the existing unbudgetable accounting; no status code changed, no new unvalidated path was added, and the lock-first-then-clients lifecycle in `open_engine` is identical. The goal holds. Frontmatter `verified:` and `covered_digest` refreshed with the same `covered_files` list; truth 1, truth 3, truth 4, the builder artifact row and the `serve_rest.main` key-link row were reworded only where their line numbers or the claim "unchanged in logic" no longer matched the code. Status stays `passed` as set by the orchestrator; the owner-run items above are carried unchanged.

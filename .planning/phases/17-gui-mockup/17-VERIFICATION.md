@@ -1,7 +1,7 @@
 ---
 phase: 17-gui-mockup
-verified: 2026-11-01T00:41:22Z
-status: passed
+verified: 2026-11-01T07:20:43Z
+status: human_needed
 score: 5/5 must-haves verified
 covered_files:
   - .planning/phases/17-gui-mockup/17-01-PLAN.md
@@ -39,25 +39,29 @@ covered_files:
   - docs/gui/refusals.json
   - mockups/build.py
   - mockups/operator-console.html
-covered_digest: "v3:sha256:6c79aa78e61bca3ef9e53f7eb95dca14913c89a643fd3ba1b076a374cbd5c486"
+covered_digest: "v3:sha256:7b479d02ca3139b51ce0e7e1efb5839723ae95477f66917eb4cd38c6f612a4aa"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
   previous_status: passed
   previous_score: 5/5
-  previous_verified: 2026-10-31T00:00:00Z
-  trigger: "fingerprint staleness after Phase 18 edited databasise/pyproject.toml, docs/gui/API-INVENTORY.md and mockups/build.py"
+  previous_verified: 2026-11-01T00:41:22Z
+  trigger: "fingerprint staleness after audit bug-fix commit 7a07da50 added NonEncodableTextError to docs/gui/refusals.json (51 -> 52 refusal types); the frozen mockup is unchanged"
   gaps_closed: []
   gaps_remaining: []
   regressions: []
+human_verification:
+  - test: "Owner action: rebuild and re-freeze mockups/operator-console.html from mockups/src (python3 mockups/build.py), re-run the three locked tests, then re-record the new sha256 in docs/gui/MOCKUP-APPROVAL.md after a file:// click-through"
+    expected: "tests/gui/test_gui_06_errors.py::test_refusal_catalogue_matches_the_code_and_the_mockup, ::test_gui_06_four_error_shapes_and_catalogue and tests/gui/test_mockup_build.py::test_checked_in_mockup_equals_a_fresh_build pass; the embedded #mock-fixtures catalogue lists 52 refusal types including NonEncodableTextError; the approval digest matches the new file"
+    why_human: "The frozen page bf98e79e...4d20 is bound to the owner's verbatim approval; a rebuild changes the approved bytes, so only the owner can rebuild, re-approve and re-freeze. The verifier must not run mockups/build.py"
 ---
 
 # Phase 17: GUI Mockup Verification Report
 
 **Phase Goal:** The operator can click through a complete static mockup of the six console screens on fixture data shaped like the real API, with every control id-stamped and every missing backend visibly marked
-**Verified:** 2026-10-31 (initial), re-verified 2026-11-01T00:41:22Z
-**Status:** passed
-**Re-verification:** Yes, after a Phase 18 fingerprint staleness trip (initial verification 2026-10-31 passed 5/5; see "Re-verification 2026-10-31 (Phase 18 staleness)" below)
+**Verified:** 2026-10-31 (initial), re-verified 2026-11-01T00:41:22Z (Phase 18 staleness), re-verified 2026-11-01T07:20:43Z (audit fixes)
+**Status:** human_needed (goal holds, 5/5; one owner action pending: rebuild and re-freeze the mockup against the 52-type refusal catalogue, see "Re-verification 2026-11-01 (audit fixes)")
+**Re-verification:** Yes, twice: after a Phase 18 fingerprint staleness trip (initial verification 2026-10-31 passed 5/5; see "Re-verification 2026-10-31 (Phase 18 staleness)" below) and after the 2026-11-01 audit bug-fix commits changed `docs/gui/refusals.json` (see "Re-verification 2026-11-01 (audit fixes)" below)
 
 ## Goal Achievement
 
@@ -159,6 +163,14 @@ Test-strength caveat: IN-TST-04/05/06/07 and WR-TST-01..03 mean a few requiremen
 
 None outstanding. Visual and flow acceptance is already recorded as the owner's verbatim "approved" after a file:// click-through on 2026-10-30, bound to the current sha256.
 
+Added at the 2026-11-01 (audit fixes) re-verification, one owner item:
+
+### 1. Rebuild and re-freeze the mockup against the 52-type refusal catalogue
+
+**Test:** Run `python3 mockups/build.py` (owner only; the verifier must not), then from `databasise/` run `tests/gui/test_gui_06_errors.py` and `tests/gui/test_mockup_build.py` under `DATABASISE_REQUIRE_BROWSER=1`, click through the rebuilt file over file://, and record the new sha256 in `docs/gui/MOCKUP-APPROVAL.md`.
+**Expected:** `test_refusal_catalogue_matches_the_code_and_the_mockup`, `test_gui_06_four_error_shapes_and_catalogue` and `test_checked_in_mockup_equals_a_fresh_build` pass; the embedded `#mock-fixtures` catalogue lists 52 refusal types including `NonEncodableTextError`; the approval digest matches the new file.
+**Why human:** The frozen page (`bf98e79e...4d20`) is bound to the owner's verbatim approval; rebuilding changes the approved bytes, so only the owner can rebuild, re-approve and re-freeze. This is an owner item, not a code regression: the code and `docs/gui/refusals.json` agree (sync test passes), only the frozen page's embedded copy lags by one entry.
+
 ### Gaps Summary
 
 No gaps. The five roadmap success criteria and all eleven GUI requirements are met in the built mockup; the suite is green (68 GUI tests, 3128 full-suite), the build is reproducible, and the approved digest matches the file on disk. Open review warnings are carried to Phase 18.
@@ -181,7 +193,28 @@ Re-checks performed:
 
 Result: no regression. All five truths, nine artifacts and five key links hold as recorded above; the goal still holds. Status stays `passed` 5/5. The fingerprint was regenerated over the same covered_files list (`covered_digest` in the frontmatter now reflects the Phase 18 bytes of the three changed files).
 
+### Re-verification 2026-11-01 (audit fixes)
+
+Trigger: the covered-file fingerprint tripped after the 2026-10-31/11-01 debugging and security battery (test-first bug-fix commits `3aafcc62..0d9cabcf`). Of the nine implementation files this report covers, exactly one changed: `docs/gui/refusals.json`, in commit `7a07da50` "fix(09): refuse lone-surrogate text at the input boundary as NonEncodableTextError (422)" (fuzz F2/F3/F4). `git diff 3aafcc62 HEAD --stat` over all nine covered paths lists only that file (8 insertions, 0 deletions). The change digest named in the task (`scratchpad/audit/change-digest.md`) does not exist on disk; the git log and diffs were read directly instead.
+
+What changed:
+
+- `docs/gui/refusals.json`: one additive entry, `{"refusal_type": "NonEncodableTextError", "module": "databasise.seam.refusals", "attribute_keys": ["field"], "http_status": 422}`, inserted in sorted position between `NoRawUploadPathForModalityError` and `NonFiniteNumberError`. 51 -> 52 refusal types. No existing entry's name, attribute keys or status changed.
+- The matching runtime class is `databasise/seam/refusals.py:136` `class NonEncodableTextError(SeamRefusalError)` with `self.field`, exported in `__all__` (line 1066); `_status_for` in `databasise/seam/rest.py:151` maps it to the 422 default (no `StoreBusyError`, `ForeignEngineRefusalError` or not-found branch applies). `refusals.py` itself was rewritten across the battery (192 lines since `3aafcc62`, mainly `13fda6a6` bounding every echoed caller value), so the JSON's agreement with the code was re-proven rather than assumed (next list).
+- `mockups/operator-console.html` is unchanged: sha256 `bf98e79e0a0312940963efae9028e708a012021bfc62f51ebdbca57918034d20`, equal to the digest in `docs/gui/MOCKUP-APPROVAL.md`. `git status --porcelain` on `mockups/`, `docs/gui/` and `databasise/pyproject.toml` is empty. I did not run `mockups/build.py`, by instruction. `mockups/src/` contains no reference to `NonEncodableTextError`; the catalogue reaches the page only through `build.py` line 26 (`SHARED_FIXTURES["refusals"]`), so the frozen page's embedded `#mock-fixtures` catalogue still holds the 51 types it was built from (grep: `NonEncodableTextError` 0 occurrences in the built file; `NonFiniteNumberError` 1).
+
+Re-checks performed (targeted; the full suite was not re-run here):
+
+- `tests/seam/test_refusal_catalogue_file.py` (the sync test that generates `refusals.json` under `DATABASISE_REGENERATE=1` and otherwise asserts it equals the runtime set with attribute keys and `_status_for` statuses; API-INVENTORY line 783): 1 passed in 0.21 s with `DATABASISE_REGENERATE` unset. This is the evidence that `docs/gui/refusals.json` equals the code after the refusals.py rewrite: names, attribute keys and status codes all unchanged for the 51 prior entries, one correct new entry.
+- `tests/gui/test_gui_06_errors.py` + `tests/gui/test_mockup_build.py` under `DATABASISE_REQUIRE_BROWSER=1`: 3 failed, 7 passed in 2.77 s. Passing: all six `test_every_screen_renders_the_four_shapes[screen]` nodes (query, evidence, documents, corpus, ledger, graph render refusal / server-failure / validation / generic shapes, exactly one visible) and `test_branching_is_on_refusal_type_not_status`. Failing, as the task predicted: `test_refusal_catalogue_matches_the_code_and_the_mockup`, `test_gui_06_four_error_shapes_and_catalogue` and `test_checked_in_mockup_equals_a_fresh_build`. In the first two, `_assert_catalogue_matches` passes its first assertion (`_file_refusal_names == runtime`, the JSON equals the code) and fails its second (`_embedded_refusal_names == runtime`) with exactly one extra runtime item, `NonEncodableTextError`; the combined test calls that helper before any screen interaction, so its browser assertions never ran and are covered by the six passing per-screen nodes plus the pre-fix 68/68 runs above. The third fails because a fresh `build()` now embeds 52 types while the checked-in page embeds 51.
+- Fixture refusal names the GUI-06 tests inject (`UnknownTraceReferenceError`, `UnknownJobError`, `ForeignEngineRefusalError`) and `StoreBusyError` are each present once in `docs/gui/refusals.json` and in the built file; the status branches (409 busy, 502/503 fault, 404 not-found set, 422 default) are unchanged in `_status_for`.
+- The other eight covered implementation files are byte-identical to the previous verdict, so truths 1, 2, 3, 5, the ids, routes, inventory map, approval record and pyproject rows need no re-check beyond the fingerprint.
+
+Rows above superseded by this subsection as of 2026-11-01T07:20:43Z (kept verbatim as the record of the earlier passes): the artifact rows "`python3 mockups/build.py --check` exit 0" and "test_mockup_build passes", the key-link row "`--check` exit 0", the spot-check rows "GUI suite 68 passed" and "Build reproducible exit 0", and the key-link row "`docs/gui/refusals.json` -> `SeamRefusalError` subclasses, test_gui_06". Today's state: the JSON-to-code link is WIRED (sync test), the JSON-to-frozen-page link lags by one entry, and the build-equality check fails until the owner rebuilds. 65 of the 68 GUI tests are expected to pass; 3 are owner items.
+
+Result: no code regression. The fixes do not remove, rename or re-status any named refusal, add no unvalidated input path (the new refusal tightens validation at the boundary), and do not touch the store lifecycle this phase's mockup depends on (the mockup has no backend). All five truths hold: truth 4's rendering behaviour is proven by the passing per-screen nodes and its catalogue clause by the sync test on the JSON; the frozen page's embedded copy is one entry behind. The goal still holds (the operator can click through the six screens; "Show in refusal catalogue" would find no entry only for a `NonEncodableTextError` banner, a 422 the mockup never fixtures). Score stays 5/5. Status moves from `passed` to `human_needed` solely because a non-empty human list exists: the owner must rebuild and re-freeze the mockup (and re-record the approval digest) so the three locked tests go green again. The fingerprint was regenerated over the same covered_files list; no new source file was added, because `databasise/seam/refusals.py` was already an implicit dependency via the sync test, and the JSON is the artifact this phase owns.
+
 ---
 
-_Verified: 2026-10-31 (initial); re-verified 2026-11-01T00:41:22Z_
+_Verified: 2026-10-31 (initial); re-verified 2026-11-01T00:41:22Z (Phase 18 staleness); re-verified 2026-11-01T07:20:43Z (audit fixes)_
 _Verifier: Claude (gsd-verifier)_

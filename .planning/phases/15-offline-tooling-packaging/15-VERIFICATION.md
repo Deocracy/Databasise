@@ -1,6 +1,6 @@
 ---
 phase: 15-offline-tooling-packaging
-verified: 2026-11-01T00:40:58Z
+verified: 2026-11-01T07:19:58Z
 status: passed
 score: 25/25 must-haves verified
 covered_files:
@@ -74,7 +74,7 @@ covered_files:
   - "databasise/seam/floors_store.py"
   - "databasise/seam/rest.py"
   - "databasise/tools/check_import_boundary.py"
-covered_digest: "v3:sha256:38be5405fc233ee73ed198782f45501f0d1e2e1518569fb351d0f41eed2de1c8"
+covered_digest: "v3:sha256:04af6ef5becbd3b8a172538ba9676244d5b594cd03b603b481250442e8f27ddb"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
@@ -84,7 +84,9 @@ re_verification:
   gaps_remaining: []
   regressions: []
   moved_files:
-    - databasise/pyproject.toml
+    - databasise/seam/engine.py
+    - databasise/seam/rest.py
+    - databasise/runner/scheduler.py
 human_verification:
   - test: "Owner decision on A-ITER2-WR-03 (15-REVIEW-DISPOSITION.md): choose (a) grant an edit to test_cross_modality_isolation.py so preflight can check all three HippoRAG namespaces, (b) a paid HippoRAG rebuild, or (c) accept as a recorded residual"
     expected: "A recorded choice. Until then preflight checks only `chunks` and `hipporag-chunks` plus the unverified marker (run_cross_modality.py:259-280)"
@@ -101,9 +103,9 @@ human_verification:
 # Phase 15: Offline Tooling & Packaging Verification Report
 
 **Phase Goal:** The offline CLIs run from an installed wheel, refuse by name instead of crashing, never spend or write outside their store by default, and the evaluation and evidence records they produce state only what was measured
-**Verified:** 2026-10-31 (re-verified 2026-11-01T00:40:58Z after the Phase 18 staleness trip; see "Re-verification 2026-10-31 (Phase 18 staleness)" below)
+**Verified:** 2026-10-31 (re-verified 2026-11-01T00:40:58Z after the Phase 18 staleness trip, and 2026-11-01T07:19:58Z after the audit-fix staleness trip; see "Re-verification 2026-10-31 (Phase 18 staleness)" and "Re-verification 2026-11-01 (audit fixes)" below)
 **Status:** human_needed
-**Re-verification:** Yes. The 2026-10-22 report went stale when Phases 16 and 17 changed `databasise/pyproject.toml`, `databasise/seam/engine.py` and `databasise/seam/rest.py`.
+**Re-verification:** Yes. The 2026-10-22 report went stale when Phases 16 and 17 changed `databasise/pyproject.toml`, `databasise/seam/engine.py` and `databasise/seam/rest.py`. The 2026-11-01T00:40:58Z report went stale when the 2026-11-01 audit bug fixes changed `databasise/seam/engine.py` and `databasise/seam/rest.py` (`databasise/runner/scheduler.py` was edited and reverted, net unchanged).
 
 ## Goal Achievement
 
@@ -114,8 +116,8 @@ human_verification:
 | SC1 | A non-editable wheel runs aa_run, remint, check_import_boundary, with one version source and a bounded mcp extra; the scan skips virtualenvs, reports unparseable files, catches `import_module('lightrag')` | ✓ VERIFIED | Wheel contents, version and mcp bound: test_packaging.py passed. Scan fixes: test_import_boundary.py passed. Installed-wheel run at HEAD (this re-verification): the wheel was built with `uv build --offline --wheel` from a copy of `databasise/` and installed into a fresh venv; from an empty directory `python -I -m databasise.eval.aa_run --split dev` exit 0 with `mode: estimate-only`; `remint --help` exit 0; `check_import_boundary` exit 0 with `provenance not checked: no v1/ directory beside the package (installed wheel)`; `databasise` imported from the venv site-packages, version 0.1.0. Caveat: `uv pip install --offline` could not resolve `pycozo[embedded]` from the cache in this sandbox, so the wheel was installed `--no-deps` and its third-party dependencies came from the repo venv through a `.pth` file. The package under test was still the installed wheel. |
 | SC2 | Every offline CLI exits 2 on bad arguments, maps named failures to one stderr line and exit 1, spends nothing without `--spend`, writes only into its own store; eval ingest never touches the operator corpus | ✓ VERIFIED | Spot-check: all 12 CLI modules (`f07_report`, `falsifier2`, `parity_report`, `run_arm`, `storage_audit`, `run_comparison`, `run_cross_modality`, `build_hipporag_index`, `corpus_ingest`, `remint`, `v1_arm`, `check_import_boundary`) exit 2 on `--bogus-flag`. The six D-04 CLIs plus `corpus_ingest` ran estimate-only with exit 0; `find -newer` afterwards showed no file written under the repo except hook files under `.bak/`. test_cli_refusals.py, test_dry_run_default.py and test_eval_store_boundary.py passed. |
 | SC3 | Partial, degraded or cyclic runs are inconclusive or non-zero, never completed; verify_import catches a missing v2 graph; the v1 driver fails on a v1 failure and answers from the context it reports; cross-modality preflight refuses an unusable workspace without writing; HippoRAG can be audited | ✓ VERIFIED | run_comparison.py:611-618, storage_audit.py:285-307, import_index.py:715-722, v1_driver_script.py:141-147, run_cross_modality.py:245-275; `storage_audit --arm hipporag` and `run_arm --arm hipporag --query q01` print HippoRAG estimates and exit 0. Covering tests passed. A-ITER2-WR-03 is carried as an owner decision. |
-| SC4 | Calibration refuses unusable passes and persists a two-sided floor the gate reads; bundle versions change with question text or gold ids; parity, Falsifier 2, F-07 and cross-modality records render only states they read, compute verdicts and exit codes from results, and cite paths that exist | ✓ VERIFIED | calibration.py:271-299, aa_run.py:707-733, floors_store.py:46-51, engine.py:2346-2413, bundle.py:245-272, parity_report test, falsifier2.py:678-696, f07_report.py:330. Every `.planning/` path cited in parity_report.py and in the parity, Falsifier 2, F-07 and cross-modality records exists on disk (independent shell check). Recorded limit: no production part reports cache_hit, so no real floor is persisted yet. |
-| SC5 | Admission enforced at registry load; artifact registry wired or removed; cbm adapter refuses mutating tools and times out on launch; every MCP tool publishes a non-empty description with no plan references | ✓ VERIFIED | admission.py:274-311 called from registry.py:248-250 and engine.py:1158-1160; the live default registry has 3 opaque parts, all with records, and builds. `registry_artifact/` and `stores/blob.py` are absent. Adapter allowlist codebase_memory_mcp_adapter.py:97-100, launch timeout `anyio.fail_after` at :263. Live `create_server().list_tools()` returns 10 tools, each with a description of 137-484 chars and no plan-reference match. |
+| SC4 | Calibration refuses unusable passes and persists a two-sided floor the gate reads; bundle versions change with question text or gold ids; parity, Falsifier 2, F-07 and cross-modality records render only states they read, compute verdicts and exit codes from results, and cite paths that exist | ✓ VERIFIED | calibration.py:271-299, aa_run.py:707-733, floors_store.py:46-51, engine.py:2784-2893 (`_refuse_gate_verb` and `_promotion_prologue`), bundle.py:245-272, parity_report test, falsifier2.py:678-696, f07_report.py:330. Every `.planning/` path cited in parity_report.py and in the parity, Falsifier 2, F-07 and cross-modality records exists on disk (independent shell check). Recorded limit: no production part reports cache_hit, so no real floor is persisted yet. |
+| SC5 | Admission enforced at registry load; artifact registry wired or removed; cbm adapter refuses mutating tools and times out on launch; every MCP tool publishes a non-empty description with no plan references | ✓ VERIFIED | admission.py:274-311 called from registry.py:248-250 and engine.py:1223; the live default registry has 3 opaque parts, all with records, and builds. `registry_artifact/` and `stores/blob.py` are absent. Adapter allowlist codebase_memory_mcp_adapter.py:97-100, launch timeout `anyio.fail_after` at :263. Live `create_server().list_tools()` returns 10 tools, each with a description of 137-484 chars and no plan-reference match. |
 
 ### Observable Truths: Requirements TOOL-01..20
 
@@ -127,7 +129,7 @@ The previous report recorded all covering test files green at HEAD 0def94f (full
 |------|------------|-------------------------------|
 | `databasise/pyproject.toml` | `playwright==1.59.0` added to the `dev` extra (Phase 17) | The version source (`dynamic = ["version"]` from `databasise.__version__`), the package list and the bounded `mcp` extra are untouched; the installed-wheel run above passes. |
 | `databasise/seam/rest.py` | `create_app` gains `operator` and `log_path` (Phase 16); operator routes mount lazily | `FastAPI(title="databasise", version=__version__)` unchanged; with `operator=False` nothing is mounted. REST transport tests passed. |
-| `databasise/seam/engine.py` | +528/-55: operator read routes, `info()`, `preview_promotion`, graph holds, `log_tail` | TOOL-16: `admit_registry(registry)` still runs at construction (engine.py:1214) and `default_registry()` admits. TOOL-12 two-stage gate intact: the stage-1 `self._floors.any_floor()` check and stage 2 `_refuse_gate_verb` (`floor_for` / `StaleNullError`, `GateNotCalibratedError`, StoreFault mapping) were extracted verbatim into `_promotion_prologue` (engine.py:~2842-2878) and `promote()` calls it first. Promotion floor, floors store, promotion refusals and seam events tests passed. |
+| `databasise/seam/engine.py` | +528/-55: operator read routes, `info()`, `preview_promotion`, graph holds, `log_tail` | TOOL-16: `admit_registry(registry)` still runs at construction (engine.py:1223) and `default_registry()` admits. TOOL-12 two-stage gate intact: the stage-1 `self._floors.any_floor()` check and stage 2 `_refuse_gate_verb` (`floor_for` / `StaleNullError`, `GateNotCalibratedError`, StoreFault mapping) were extracted verbatim into `_promotion_prologue` (engine.py:2858-2893) and `promote()` calls it first. Promotion floor, floors store, promotion refusals and seam events tests passed. |
 
 ### Re-verification 2026-10-31 (Phase 18 staleness)
 
@@ -147,9 +149,30 @@ The previous report recorded all covering test files green at HEAD 0def94f (full
 
 **Conclusion.** The Phase 18 edit adds a subpackage and its package-data in one commit, which is the same rule the Phase-15 packaging follows; it touches no entry point, version source, dependency bound or Phase-15 package-data entry. The phase goal still holds; `status: passed` is kept. The three owner-gated human items are unchanged and carried as before. The TOOL-01 row and the pyproject key-link row below now cite current line numbers (7, 103-104, 159, 166-167, 179).
 
+### Re-verification 2026-11-01 (audit fixes)
+
+**What changed.** Since the 2026-11-01T00:40:58Z run, the 2026-11-01 debugging and security battery (base commit 3aafcc62) touched three covered files. `git diff --stat 3aafcc62 HEAD` on them: `databasise/seam/engine.py` +25/-5, `databasise/seam/rest.py` +12/-5, `databasise/runner/scheduler.py` 0 lines (the e682f687 scrub was reverted in 3500f131; the file is byte-identical to the base). Commits: 5c00aabc, 7a07da50, 5aec6294, 717d2f22, ee0c982a, 32e518ea, 13fda6a6, 62d7ba91. No file under `databasise/cli.py`, `eval/`, `evidence/`, `parity/`, `parts/`, `mcp/`, `tools/`, `foreign/` or `pyproject.toml` changed, so the CLI scope of this phase was not edited.
+
+The engine.py hunks: `CanonicalisationError` in `_run_wiring` is re-raised as the named `NonEncodableTextError(field="text")`; `require_encodable` guards on `alias`, `trace_ids`, `trace_reference` and `version` before any sqlite binding in the history, trace-resolution, promotion-precondition, rollback and retire paths; two `except` tuples gain `OverflowError` (mapped to the existing `StoreFault` fault); `log_tail` refuses a `limit` outside `1..MAX_LOG_LINES` as `PageBoundsError` before touching the file; `_held_by_v1` reads the v1 track id via `asyncio.to_thread`. The rest.py hunk: `_validation_response` builds the schema-422 `{detail: [...]}` body itself (type/loc/msg only, through `bounded_echo` and `json_safe`) instead of FastAPI's default handler; the `FastAPI(title="databasise", version=__version__)` construction is not in the diff.
+
+**What was re-checked.**
+
+| Check | Evidence | Status |
+|-------|----------|--------|
+| TOOL-12 two-stage gate (engine.py) | `_refuse_gate_verb` (engine.py:2784-2857, `self._floors.lookup` :2833, `floor_for` / `StaleNullError` :2847-2848) and `_promotion_prologue` (:2858-2893, `any_floor()` :2880, `GateNotCalibratedError` :2884) are not in the diff; `promote()` (:2923) still calls the prologue first. The new `require_encodable(alias/trace_ids)` lines in `_resolve_operator_preconditions` (:2760, :2767) sit before the existing alias/change-origin checks and add a named 422, no new unvalidated path. `tests/seam/test_promotion_floor.py`, `test_floors_store.py`, `test_promotion_refusals.py`, `test_seam_events.py`, `tests/eval/test_calibration.py` passed | ✓ |
+| TOOL-12 scheduler `cache_hit` (scheduler.py) | `git diff 3aafcc62 HEAD -- databasise/runner/scheduler.py` is empty; `cache_hit: bool \| None = None` still at :476 and the bool-only read at :481-486 | ✓ |
+| TOOL-16 admission at construction (engine.py) | `admit_registry(registry)` at engine.py:1223 (import :214); `tests/parts/test_admission.py` passed | ✓ |
+| TOOL-01 version source in REST (rest.py) | `from databasise import __version__` at rest.py:85 and `FastAPI(title="databasise", version=__version__)` at :380; not in the diff | ✓ |
+| Refusals stay named, status codes unchanged | Every new raise is an existing or already-registered refusal type (`NonEncodableTextError` 422, `PageBoundsError` 422, `StoreFault`); the schema-422 keeps status 422 and the `detail` key. `tests/seam/test_rest_transport.py` passed | ✓ |
+| Store lifecycle (`floors_store.py`) | Not in the diff; imported by engine.py:241 and aa_run.py:110; floors-store tests passed | ✓ |
+| CLI contract untouched | `tests/test_cli_refusals.py`, `tests/test_dry_run_default.py` passed (part of the 239-test targeted run, 28.18s, 0 failed, 0 skipped) | ✓ |
+| TOOL-01 wheel build at HEAD | `.venv/bin/python -m pytest tests/test_packaging.py tests/test_import_boundary.py -q -p no:cacheprovider`: 21 passed, 0 skipped, 4.55s | ✓ |
+
+**Conclusion.** The audit fixes add input-boundary refusals and widen two fault mappings inside the operator seam; none alters a Phase-15 CLI, the packaging, the floors store, the admission call or the promotion gate's two stages. The phase goal still holds; `status: passed` is kept, `regressions: []`. The three owner-gated human items are unchanged. Rows below that cited engine.py and rest.py line numbers now cite HEAD (rest.py:85,380; engine.py:214,241,1223,2784-2893). The covered-file list is unchanged: the fixes added no source file this phase's truths depend on (`seam/refusals.py` pre-dates the base and the gate does not use its new helpers).
+
 | Req | Status | Delivering code | Covering test (ran) |
 |-----|--------|-----------------|---------------------|
-| TOOL-01 | ✓ VERIFIED (installed-wheel run carried under SC1) | pyproject.toml:7,103-104,159,166-167,179; __init__.py:38; seam/rest.py:86,364; tools/check_import_boundary.py:79,99-150,163-180,222-230 | tests/test_packaging.py, tests/test_import_boundary.py |
+| TOOL-01 | ✓ VERIFIED (installed-wheel run carried under SC1) | pyproject.toml:7,103-104,159,166-167,179; __init__.py:38; seam/rest.py:85,380; tools/check_import_boundary.py:79,99-150,163-180,222-230 | tests/test_packaging.py, tests/test_import_boundary.py |
 | TOOL-02 | ✓ VERIFIED | parity/import_index.py:774-798 (argparse before store lock; `workspace: <ws> (derived from …)` line); launcher/__init__.py:33 | tests/parity/test_import_index_cli.py; spot-check `--verfiy` exit 2 |
 | TOOL-03 | ✓ VERIFIED | parity/import_index.py:145 (Literal with `precondition`), :653-683, :715-722 | tests/parity/test_import_verification.py |
 | TOOL-04 | ✓ VERIFIED | cli.py:19-38 (exit table, `refuse`), :104 (`positive_int`), :124 (`check_named_arm`); aa_run.py:789 (one `asyncio.run` for all families); remint.py:56 (`_PACKAGE_DIR`, bundle root unchanged) | tests/test_cli_refusals.py, tests/test_cli_support.py; spot-check `aa_run --n-resamples 0` exit 2 |
@@ -160,11 +183,11 @@ The previous report recorded all covering test files green at HEAD 0def94f (full
 | TOOL-09 | ✓ VERIFIED (A-ITER2-WR-03 carried) | run_cross_modality.py:245-275 (read-only `load_committed`, LightRAG `chunks` required), :343-344 (named-arm check), :365-372 (queries hash) | tests/parity/test_cross_modality_isolation.py |
 | TOOL-10 | ✓ VERIFIED | __init__.py:70-71 (canonicalise first), :102-105 (`finally` finalize) | tests/test_tracer_end_to_end.py |
 | TOOL-11 | ✓ VERIFIED | corpus_ingest.py:70-78,249-251; aa_run.py:245,341-347 (`full_doc_id` mapping), :658 (`EmptyEvalIndexError`) | tests/eval/test_eval_store_boundary.py, test_corpus_ingest.py, test_aa_run.py |
-| TOOL-12 | ✓ VERIFIED | runner/scheduler.py:476-481 (cache_hit None); calibration.py:271-299 (`max(abs(low), abs(high))`); aa_run.py:136,379-387 (verdict parser), :707-733 (persist); seam/floors_store.py; engine.py:2346-2413 (two-stage gate via `floor_for`/`StaleNullError`) | tests/eval/test_calibration.py, tests/seam/test_promotion_floor.py, tests/seam/test_floors_store.py |
+| TOOL-12 | ✓ VERIFIED | runner/scheduler.py:476-481 (cache_hit None); calibration.py:271-299 (`max(abs(low), abs(high))`); aa_run.py:136,379-387 (verdict parser), :707-733 (persist); seam/floors_store.py; engine.py:2784-2893 (two-stage gate via `floor_for`/`StaleNullError`) | tests/eval/test_calibration.py, tests/seam/test_promotion_floor.py, tests/seam/test_floors_store.py |
 | TOOL-13 | ✓ VERIFIED (bundle@v1 reading needs owner acceptance) | bundle.py:245-272 (hash covers text and gold ids), :282-305 (recomputing dedup), :198-199 (`sealed_opened`), :498 (`split_counts`) | tests/eval/test_bundle_versioning.py |
 | TOOL-14 | ✓ VERIFIED | evidence/parity_report.py | tests/evidence/test_parity_report_render.py; shell check that every cited `.planning/` path exists |
 | TOOL-15 | ✓ VERIFIED | falsifier2.py:551,656-672,678-696; f07_report.py:153,192,330 | tests/evidence/test_falsifier2_verdict.py, test_f07_record.py, test_cross_modality_record.py |
-| TOOL-16 | ✓ VERIFIED | parts/admission.py:111-130,274-311; parts/registry.py:208-211,248-250; seam/engine.py:1158-1160 | tests/parts/test_admission.py, tests/seam/test_seam_events.py (owner grant 15-19) |
+| TOOL-16 | ✓ VERIFIED | parts/admission.py:111-130,274-311; parts/registry.py:208-211,248-250; seam/engine.py:1223 | tests/parts/test_admission.py, tests/seam/test_seam_events.py (owner grant 15-19) |
 | TOOL-17 | ✓ VERIFIED (removed branch, 226b2cf) | `databasise/registry_artifact/` and `databasise/stores/blob.py` absent; no `registry_artifact` in pyproject.toml | tests/test_removed_stores_absent.py |
 | TOOL-18 | ✓ VERIFIED | foreign/codebase_memory_mcp_adapter.py:97-100,146-165,228-277; parts_core/codebase_memory_mcp.py:64,76 (inside `functools.cache` builders at :87,:92) | tests/foreign/test_cbm_adapter.py, tests/parts_core/test_codebase_memory_mcp_admission.py |
 | TOOL-19 | ✓ VERIFIED (ten tools per D-18, not nine) | mcp/tools.py:79-90 (10 names); mcp/server.py:181-310 | tests/mcp/test_tool_descriptions.py, tests/mcp/test_dual_transport_parity.py; live list_tools check |
@@ -183,8 +206,8 @@ The previous report recorded all covering test files green at HEAD 0def94f (full
 | Artifact | Status | Details |
 |----------|--------|---------|
 | databasise/cli.py | ✓ VERIFIED | Exit table and refusal helper; imported by every offline CLI (`cli.refuse` present in all eight CLI modules checked) |
-| databasise/seam/floors_store.py | ✓ VERIFIED | Imported by engine.py:238 and aa_run.py:110 |
-| databasise/parts/admission.py `admit_registry` | ✓ VERIFIED | Called from registry.py:250 and engine.py:1160 |
+| databasise/seam/floors_store.py | ✓ VERIFIED | Imported by engine.py:241 and aa_run.py:110 |
+| databasise/parts/admission.py `admit_registry` | ✓ VERIFIED | Called from registry.py:250 and engine.py:1223 |
 | databasise/tools/check_import_boundary.py | ✓ VERIFIED | Listed in pyproject packages; runs as a module, exit 0 on the real tree |
 
 ### Key Link Verification
@@ -192,9 +215,9 @@ The previous report recorded all covering test files green at HEAD 0def94f (full
 | From | To | Via | Status |
 |------|----|-----|--------|
 | aa_run `--spend` | floors.db | `_persist_floors` → `FloorStore.record` (aa_run.py:707-733, :813) | WIRED |
-| engine promote gate | floors.db | `self._floors.lookup` → `CalibrationResult.floor_for` (engine.py:2388-2409) | WIRED |
-| default_registry / Databasise.__init__ | admit_registry | registry.py:248-250, engine.py:1158-1160 | WIRED |
-| rest.py | databasise.__version__ | `FastAPI(version=__version__)` (rest.py:86,364) | WIRED |
+| engine promote gate | floors.db | `self._floors.lookup` → `CalibrationResult.floor_for` (engine.py:2833-2848) | WIRED |
+| default_registry / Databasise.__init__ | admit_registry | registry.py:248-250, engine.py:1223 | WIRED |
+| rest.py | databasise.__version__ | `FastAPI(version=__version__)` (rest.py:85,380) | WIRED |
 | pyproject version | databasise.__version__ | `[tool.setuptools.dynamic]` (pyproject.toml:166-167) | WIRED |
 
 ### Behavioral Spot-Checks
@@ -212,6 +235,8 @@ The previous report recorded all covering test files green at HEAD 0def94f (full
 | Installed-wheel run | build wheel from tree copy, install into fresh venv, `-I -m` from empty dir | aa_run, remint, check_import_boundary all exit 0 (see SC1 for the `--no-deps` caveat) | ✓ PASS |
 | Wheel build at HEAD with `databasise.console` (Phase 18 re-verification) | `pytest tests/test_packaging.py tests/test_import_boundary.py -q -p no:cacheprovider` | 21 passed, 0 skipped | ✓ PASS |
 | Console package-data resolvable (Phase 18 re-verification) | `importlib.resources.files('databasise.console').joinpath('operator-console.html').is_file()` | `True` | ✓ PASS |
+| Wheel build at HEAD after the audit fixes (2026-11-01 re-verification) | `pytest tests/test_packaging.py tests/test_import_boundary.py -q -p no:cacheprovider` | 21 passed, 0 skipped, 4.55s | ✓ PASS |
+| Gate, admission, floors, REST and CLI tests at HEAD after the audit fixes (2026-11-01 re-verification) | `pytest tests/seam/test_promotion_floor.py tests/seam/test_floors_store.py tests/seam/test_promotion_refusals.py tests/seam/test_seam_events.py tests/parts/test_admission.py tests/seam/test_rest_transport.py tests/test_cli_refusals.py tests/test_dry_run_default.py tests/eval/test_calibration.py -q -p no:cacheprovider` | 239 passed, 0 failed, 0 skipped, 28.18s | ✓ PASS |
 
 ### Probe Execution
 

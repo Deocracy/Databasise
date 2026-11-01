@@ -1,6 +1,6 @@
 ---
 phase: 16-gui-connectors
-verified: 2026-11-01T00:45:26Z
+verified: 2026-11-01T07:25:00Z
 status: passed
 score: 19/19 must-haves verified (5 roadmap SCs + 14 CONN requirements)
 covered_files:
@@ -44,7 +44,7 @@ covered_files:
   - docs/gui/API-INVENTORY.md
   - docs/gui/CODEBASE-MAP.md
   - docs/gui/refusals.json
-covered_digest: "v3:sha256:8ee057fbf40af71d1770de356fba801c696456c64282b578a505d4f2f9af5f9e"
+covered_digest: "v3:sha256:9f57a3632255805c497b2c2c906045518edc331bab7ea0ace1bafed11a93dc82"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
@@ -58,9 +58,17 @@ re_verification:
 # Phase 16: GUI Connectors Verification Report
 
 **Phase Goal:** The operator console has every read route it needs, served by the launcher's single engine through thin adapters, with nothing leaking store internals or credentials
-**Verified:** 2026-11-01T00:45:26Z (re-verification at HEAD 4e4dc0f after Phase 18; prior re-verification 2026-10-31 at 7147047; original verdict 2026-10-22T16:15:00Z at 2505402)
+**Verified:** 2026-11-01T07:25:00Z (re-verification at HEAD 0d9cabcf after the 2026-11-01 audit fixes; prior re-verification 2026-11-01T00:45:26Z at 4e4dc0f after Phase 18; 2026-10-31 at 7147047; original verdict 2026-10-22T16:15:00Z at 2505402)
 **Status:** passed
-**Re-verification:** Yes. The first report went stale because docs/gui/API-INVENTORY.md was amended by Phase 17-13 (commit f674eba). The second report went stale because Phase 18-02 (commits eff8804, 65dd699) changed databasise/launcher/serve_rest.py and docs/gui/API-INVENTORY.md; see "Re-verification 2026-10-31 (Phase 18 staleness)" below.
+**Re-verification:** Yes. The first report went stale because docs/gui/API-INVENTORY.md was amended by Phase 17-13 (commit f674eba). The second report went stale because Phase 18-02 (commits eff8804, 65dd699) changed databasise/launcher/serve_rest.py and docs/gui/API-INVENTORY.md; see "Re-verification 2026-10-31 (Phase 18 staleness)" below. The third report went stale because the 2026-11-01 debugging and security battery changed seven covered files (base 3aafcc62); see "Re-verification 2026-11-01 (audit fixes)" below.
+
+### Re-verification 2026-11-01 (audit fixes)
+
+- **Stale cause.** `git diff --stat 3aafcc62 HEAD` over the covered files touches exactly seven: databasise/seam/engine.py (30 changed lines), operator_rest.py (4), refusals.py (192), rest.py (17), stores/graph.py (17), stores/probes.py (14) and docs/gui/refusals.json (8 added). serve_rest.py, ledger.py, trace_store.py, vector.py, parts_core/__init__.py, COVERAGE.md, API-INVENTORY.md, CODEBASE-MAP.md and selector-resolution.json are byte-identical to the version verified at 4e4dc0f. Every change is a test-first bug fix (RED/GREEN commit pairs listed in the audit change digest); none adds a route, a field or a tool.
+- **What changed on the Phase 16 paths.** (a) 717d2f22: `GET /log` no longer declares `ge=1, le=1000` on the query parameter (operator_rest.py:144-147); `log_tail` checks `1 <= limit <= MAX_LOG_LINES` (engine.py:420, 2482-2483) and raises `PageBoundsError(limit=limit, offset=0)`. The D-18 bound 1..1000 is unchanged; only the error shape moved from FastAPI's schema `{detail: [...]}` to the named refusal body the other paged routes return. The route body is still one `return await engine.log_tail(limit)`. (b) 32e518ea: `ledger_history` calls `require_encodable(alias, field="alias")` before the read (engine.py:2225), so a lone-surrogate alias is a 422 `NonEncodableTextError` instead of a 500 from sqlite's binding. (c) 7a07da50/5c00aabc/13fda6a6: `refusals.py` gained `json_safe`, `bounded_echo` (ECHO_LIMIT 200, ECHO_ITEMS 20), `NonEncodableTextError` (attribute `field`) and `require_encodable`; `UnknownGraphNodeError`, `UnknownTraceReferenceError`, `InvalidPromotionAliasError` and the other echoing refusals bound the caller value they echo; `rest.py`'s `_validation_response` now emits `type`/`loc`/`msg` only (no `input` echo) through `bounded_echo`/`json_safe`. docs/gui/refusals.json gained the `NonEncodableTextError` entry (51 -> 52 types). (d) 5aec6294: `list_traces` and the ledger read path add `OverflowError` to the `StoreFault` excepts (engine.py:1959, 2270). (e) a895ef8a: `_ClientRegistry.release` keeps a client registered at refcount 0 when pycozo refuses `close()` under an in-flight `run()`, logs a warning and never raises (graph.py:177-189); `held_graph_paths` (graph.py:191-201) filters `refcount > (key in own)`, so a deferred-close entry at refcount 0 is never reported as held and `graph_busy` is unaffected. (f) 4bfdb8db: `probe_kv` opens plain `mode=ro` when both `-wal` and `-shm` exist; this is the health probe, not a Phase 16 read path (`acquire_graph`, `graph_node_page`, `graph_node_edges` are unchanged apart from moving down four lines). (g) 62d7ba91: `_held_by_v1` reads v1's track id via `asyncio.to_thread`; a Phase 11 ingest path, not an operator route.
+- **Re-checked rows.** SC1/CONN-01 (thin adapters, flag-gated): `test_console_surface.py::test_operator_routes_are_thin_adapters_and_absent_without_the_flag` passes at HEAD, and `create_app` still builds one `Databasise` (rest.py:377-381) and mounts the routes only under `if operator:` (rest.py:552-556). SC2/goal clause "nothing leaking": a fresh-root `/info` body has keys `clients, graph_busy, version, workspace, write_in_flight` and neither it nor `/wirings` (six rows) contains `store_root`, the tmp path or `http`. SC3/CONN-07: a surrogate alias on `POST /ledger/history` is `422 {"refusal_type":"NonEncodableTextError","field":"alias"}`; an unknown alias is an empty page and creates no `ledger.db`. SC4/CONN-12: a 5,000-character unknown node id is a `422 UnknownGraphNodeError` whose body is 560 bytes (bounded echo); `capability: []` is still `EmptyCapabilitySelectorError`. SC5/CONN-02: `test_refusal_catalogue_file.py` passes against the 52-entry catalogue. SC5/CONN-14: `GET /log?limit=0` and `limit=1001` are `422 PageBoundsError` (previously 422 schema detail; status code unchanged), `limit=2` returns the two file lines, `limit=abc` is the bounded schema 422 without an `input` echo; `test_console_log.py` (four tests incl. the real operator launch) and `tests/launcher/test_log_file_refusal.py` pass. CONN-13: `test_store_busy_fields_are_true_during_an_ingest`, `test_status_during_write.py` and `test_graph_lock.py` pass; the registry change is covered by `tests/stores/test_graph_release_under_run.py`. The API-INVENTORY.md 5.1a row for `GET /log` ("query `limit` 1..1000, default 100") remains true.
+- **Regression run at HEAD 0d9cabcf.** The 20 Phase 16 covering test files (nine test_console_*.py, test_operator_review_a/b, test_refusal_catalogue_file, test_selector_resolution_fixture, test_rest_transport, test_status_during_write, stores/test_graph_read_review_c, stores/test_graph_lock, launcher/test_log_file_refusal, ledger/test_ledger_read_only_close, mcp/test_tool_growth_invariant): 171 passed. The fix-round tests that touch these paths (test_surrogate_after_promotion, test_input_bounds incl. `test_log_limit_out_of_range_is_page_bounds_error` and `test_log_limit_in_range_still_tails`, stores/test_graph_release_under_run, stores/test_probe_kv_live_writer, test_response_builders_hardening, test_surrogate_inputs): 71 passed. Scratchpad spot-check p16rv/spot.py (TestClient, clients=None, operator=True, log_path set) produced the bodies quoted above.
+- **Not rerun.** The manual launcher 500-traceback check and the 14 ledger test_refs (the code under them is unchanged except the `OverflowError` except widening, which only adds a caught class); the browser-driven LIVE-01 tests belong to Phase 18. Known consequence outside this phase: three Phase 17 mockup tests fail on the 51 -> 52 catalogue count until the mockup is rebuilt and re-frozen (owner item, recorded in the audit change digest). Goal still holds; no regression found.
 
 ### Re-verification 2026-10-31 (Phase 18 staleness)
 
@@ -89,30 +97,30 @@ Full offline gate (`databasise/tools/check_offline_suite.py`): **reported by orc
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| SC1 | Operator read routes served from the launcher's process by the single engine through thin adapters; each new operation has an MCP tool with a COVERAGE.md row or is recorded REST-only | VERIFIED | `create_app` builds one `Databasise` and passes it to `add_operator_routes` (databasise/seam/rest.py:370-374, 545-549). Every route body in databasise/seam/operator_rest.py:80-145 is one `return await engine.<method>(...)`. COVERAGE.md REST-ONLY rows for all ten operations (databasise/evidence/COVERAGE.md:120-129). Spot check: all ten paths are 404 without `operator=True`. Tests: test_console_surface.py, test_rest_transport.py, test_tool_growth_invariant.py pass. |
-| SC2 | Instance info and wiring list without store_root, base URLs, model names or keys, and without any provider call; write-in-flight and graph-busy readable during an ingest | VERIFIED | engine.py:2124-2145 (`info`, `_write_in_flight`), engine.py:2147-2174 (`wirings`, reachability via `resolve_selector`). Spot check on a fresh root: /info and /wirings bodies contain no store_root, no "http", no codebase-memory row; six rows naive 7, bypass 1, hybrid 17, local 15, global 15, hipporag 14; `is_default` only naive; `default_eligible` false only for hipporag; all reachable. `test_store_busy_fields_are_true_during_an_ingest` passes (behavioral). |
-| SC3 | List aliases, page alias history with active/tombstoned flags, list traces newest first, preview a promotion that writes nothing and matches what /promote mints | VERIFIED | engine.py:2176-2250 (`ledger_aliases`, `ledger_history` under `snapshot()`), engine.py:2252-2277 (`list_traces`), engine.py:2279-2351 (`preview_promotion` sharing `_promotion_prologue`/`_plan_promotion`, engine.py:2878), ledger.py:531-550, trace_store.py:103-121. Spot check: fresh root gives `[]`, empty history page, no `ledger.db`; limit 0 -> PageBoundsError, 101 -> PageSizeExceededError; unknown trace -> 404 UnknownTraceReferenceError. `test_preview_matches_what_promote_mints_and_refuses` passes (preview == minted version). |
-| SC4 | Page chunk refs and graph nodes (batched degrees, prefix filter), open a node's edges, chosen by selector only; unknown node and busy graph are named refusals | VERIFIED | engine.py:2353-2456; probes.py:139-228 (one ordered id statement plus one batched `is_in` edge query per page, probes.py:173-184); vector.py:293-299 (`list_ids`, no reconstruct). Request models take a `selector`, never a namespace (operator_rest.py:46-72). Spot check: unknown node -> 422 UnknownGraphNodeError; malformed selector -> 422; `capability: []` -> EmptyCapabilitySelectorError. `test_graph_nodes_page_degrees_prefix_and_busy_409` passes (busy 409 behavioral). |
-| SC5 | Generated refusal catalogue and selector-resolution fixture kept in sync by tests; flag-gated GET /log tails the launcher's log (404 without the flag) | VERIFIED | docs/gui/refusals.json (51 entries incl. UnknownGraphNodeError, 422); databasise/tests/fixtures/selector-resolution.json (29 rows: default, 17 effects, 3 namespace tokens, harness, 6 aliases, empty capability; `reachable` for all six arms). GET /log mounted only when `operator` and `log_path` (rest.py:545-549, operator_rest.py:132-145). Manual launcher check below: real 500 traceback lands in the file and is served by GET /log. |
+| SC1 | Operator read routes served from the launcher's process by the single engine through thin adapters; each new operation has an MCP tool with a COVERAGE.md row or is recorded REST-only | VERIFIED | `create_app` builds one `Databasise` and passes it to `add_operator_routes` (databasise/seam/rest.py:377-381, 552-556). Every route body in databasise/seam/operator_rest.py:80-147 is one `return await engine.<method>(...)`. COVERAGE.md REST-ONLY rows for all ten operations (databasise/evidence/COVERAGE.md:120-129). Spot check: all ten paths are 404 without `operator=True`. Tests: test_console_surface.py, test_rest_transport.py, test_tool_growth_invariant.py pass. |
+| SC2 | Instance info and wiring list without store_root, base URLs, model names or keys, and without any provider call; write-in-flight and graph-busy readable during an ingest | VERIFIED | engine.py:2134-2155 (`info`, `_write_in_flight`), engine.py:2157-2184 (`wirings`, reachability via `resolve_selector`). Spot check on a fresh root: /info and /wirings bodies contain no store_root, no "http", no codebase-memory row; six rows naive 7, bypass 1, hybrid 17, local 15, global 15, hipporag 14; `is_default` only naive; `default_eligible` false only for hipporag; all reachable. `test_store_busy_fields_are_true_during_an_ingest` passes (behavioral). |
+| SC3 | List aliases, page alias history with active/tombstoned flags, list traces newest first, preview a promotion that writes nothing and matches what /promote mints | VERIFIED | engine.py:2186-2261 (`ledger_aliases`, `ledger_history` under `snapshot()`, `require_encodable` on the alias at 2225), engine.py:2263-2288 (`list_traces`), engine.py:2290-2362 (`preview_promotion` sharing `_promotion_prologue`/`_plan_promotion`, engine.py:2896), ledger.py:531-550, trace_store.py:103-121. Spot check: fresh root gives `[]`, empty history page, no `ledger.db`; limit 0 -> PageBoundsError, 101 -> PageSizeExceededError; unknown trace -> 404 UnknownTraceReferenceError. `test_preview_matches_what_promote_mints_and_refuses` passes (preview == minted version). |
+| SC4 | Page chunk refs and graph nodes (batched degrees, prefix filter), open a node's edges, chosen by selector only; unknown node and busy graph are named refusals | VERIFIED | engine.py:2364-2467; probes.py:143-232 (one ordered id statement plus one batched `is_in` edge query per page, probes.py:177-188); vector.py:293-299 (`list_ids`, no reconstruct). Request models take a `selector`, never a namespace (operator_rest.py:46-72). Spot check: unknown node -> 422 UnknownGraphNodeError; malformed selector -> 422; `capability: []` -> EmptyCapabilitySelectorError. `test_graph_nodes_page_degrees_prefix_and_busy_409` passes (busy 409 behavioral). |
+| SC5 | Generated refusal catalogue and selector-resolution fixture kept in sync by tests; flag-gated GET /log tails the launcher's log (404 without the flag) | VERIFIED | docs/gui/refusals.json (52 entries incl. UnknownGraphNodeError and NonEncodableTextError, 422); databasise/tests/fixtures/selector-resolution.json (29 rows: default, 17 effects, 3 namespace tokens, harness, 6 aliases, empty capability; `reachable` for all six arms). GET /log mounted only when `operator` and `log_path` (rest.py:552-556, operator_rest.py:132-147); limit outside 1..1000 is PageBoundsError from `log_tail` (engine.py:2482-2483). Manual launcher check below: real 500 traceback lands in the file and is served by GET /log. |
 
 ### CONN Requirements (amended 2026-10-22)
 
 | Req | Delivering code | Covering test (run at HEAD) | Status |
 |-----|-----------------|-----------------------------|--------|
-| CONN-01 | operator_rest.py:75-145; rest.py:370-374, 545-549; COVERAGE.md:120-133 | test_console_surface.py::test_operator_routes_are_thin_adapters_and_absent_without_the_flag; test_rest_transport.py; test_tool_growth_invariant.py | VERIFIED |
-| CONN-02 | docs/gui/refusals.json; refusals.py (UnknownGraphNodeError) | test_refusal_catalogue_file.py::test_the_refusal_catalogue_file_matches_the_code | VERIFIED |
+| CONN-01 | operator_rest.py:75-147; rest.py:377-381, 552-556; COVERAGE.md:120-133 | test_console_surface.py::test_operator_routes_are_thin_adapters_and_absent_without_the_flag; test_rest_transport.py; test_tool_growth_invariant.py | VERIFIED |
+| CONN-02 | docs/gui/refusals.json; refusals.py (UnknownGraphNodeError, NonEncodableTextError) | test_refusal_catalogue_file.py::test_the_refusal_catalogue_file_matches_the_code | VERIFIED |
 | CONN-03 | databasise/tests/fixtures/selector-resolution.json; selectors.py | test_selector_resolution_fixture.py::test_every_fixture_row_resolves_as_recorded | VERIFIED |
-| CONN-04 | engine.py:2124-2140 (`__version__` import engine.py:203; `_client_presence`) | test_console_info.py::test_info_reports_version_workspace_and_client_presence | VERIFIED |
-| CONN-05 | engine.py:2147-2174 | test_console_wirings.py::test_wirings_lists_six_reachable_rows_matching_the_fixture | VERIFIED |
-| CONN-06 | engine.py:2176-2205; ledger.py:531-539 | test_console_ledger.py::test_aliases_lists_each_alias_once_and_creates_no_file; tests/ledger/test_ledger_read_only_close.py | VERIFIED |
-| CONN-07 | engine.py:2207-2250; ledger.py:541-550; `checked_page` in operator_rest.py:98 | test_console_ledger.py::test_history_flags_active_and_tombstoned_and_bounds_the_page | VERIFIED |
-| CONN-08 | engine.py:2252-2277; trace_store.py:103-121 | test_console_traces.py::test_traces_list_newest_first_with_paging | VERIFIED |
-| CONN-09 | engine.py:2279-2351, 2878 (`_plan_promotion`) | test_console_preview.py::test_preview_matches_what_promote_mints_and_refuses | VERIFIED |
-| CONN-10 | engine.py:2353-2377 (namespace from `wiring_family` base wiring, no `_build_stores`); vector.py:293-299 | test_console_chunks.py::test_chunks_page_lists_the_selected_modalitys_refs | VERIFIED |
-| CONN-11 | engine.py:2403-2431; probes.py:154-192 | test_console_graph.py::test_graph_nodes_page_degrees_prefix_and_busy_409 (fail-first and killed plant on ledger) ; tests/stores/test_graph_read_review_c.py | VERIFIED |
-| CONN-12 | engine.py:2433-2456; probes.py:195-228; refusals.py UnknownGraphNodeError | test_console_graph.py::test_graph_node_edges_and_unknown_node_422 (killed plant on ledger) | VERIFIED |
-| CONN-13 | engine.py:2124-2145; graph.py:180-190 (`held_graph_paths`, own-hold excluded); engine.py:2387-2401 (`_hold_graph`) | test_console_info.py::test_store_busy_fields_are_true_during_an_ingest; test_status_during_write.py; test_graph_lock.py | VERIFIED |
-| CONN-14 | serve_rest.py:38-47, 90-106, 148-169, 200-217; engine.py:2458-2496; operator_rest.py:132-145 | test_console_log.py::test_log_tails_the_launcher_log_and_is_404_without_both_flags; tests/launcher/test_log_file_refusal.py; plus the manual launcher check below | VERIFIED |
+| CONN-04 | engine.py:2134-2150 (`__version__` import engine.py:203; `_client_presence`) | test_console_info.py::test_info_reports_version_workspace_and_client_presence | VERIFIED |
+| CONN-05 | engine.py:2157-2184 | test_console_wirings.py::test_wirings_lists_six_reachable_rows_matching_the_fixture | VERIFIED |
+| CONN-06 | engine.py:2186-2215; ledger.py:531-539 | test_console_ledger.py::test_aliases_lists_each_alias_once_and_creates_no_file; tests/ledger/test_ledger_read_only_close.py | VERIFIED |
+| CONN-07 | engine.py:2217-2261; ledger.py:541-550; `checked_page` in operator_rest.py:98 | test_console_ledger.py::test_history_flags_active_and_tombstoned_and_bounds_the_page; test_surrogate_after_promotion.py::test_a_surrogate_history_alias_is_the_named_422_on_the_operator_route | VERIFIED |
+| CONN-08 | engine.py:2263-2288; trace_store.py:103-121 | test_console_traces.py::test_traces_list_newest_first_with_paging | VERIFIED |
+| CONN-09 | engine.py:2290-2362, 2896 (`_plan_promotion`) | test_console_preview.py::test_preview_matches_what_promote_mints_and_refuses | VERIFIED |
+| CONN-10 | engine.py:2364-2388 (namespace from `wiring_family` base wiring, no `_build_stores`); vector.py:293-299 | test_console_chunks.py::test_chunks_page_lists_the_selected_modalitys_refs | VERIFIED |
+| CONN-11 | engine.py:2414-2442; probes.py:158-196 | test_console_graph.py::test_graph_nodes_page_degrees_prefix_and_busy_409 (fail-first and killed plant on ledger) ; tests/stores/test_graph_read_review_c.py | VERIFIED |
+| CONN-12 | engine.py:2444-2467; probes.py:199-232; refusals.py UnknownGraphNodeError (bounded echo) | test_console_graph.py::test_graph_node_edges_and_unknown_node_422 (killed plant on ledger) | VERIFIED |
+| CONN-13 | engine.py:2134-2155; graph.py:191-201 (`held_graph_paths`, own-hold excluded; deferred-close entries at refcount 0 never counted); engine.py:2398-2412 (`_hold_graph`) | test_console_info.py::test_store_busy_fields_are_true_during_an_ingest; test_status_during_write.py; test_graph_lock.py; tests/stores/test_graph_release_under_run.py | VERIFIED |
+| CONN-14 | serve_rest.py:38-47, 90-106, 148-169, 200-217; engine.py:420, 2469-2511; operator_rest.py:132-147 | test_console_log.py::test_log_tails_the_launcher_log_and_is_404_without_both_flags; test_input_bounds.py::test_log_limit_out_of_range_is_page_bounds_error; tests/launcher/test_log_file_refusal.py; plus the manual launcher check below | VERIFIED |
 
 **Score:** 19/19 truths verified (0 present, behavior-unverified). The behavior-dependent truths (CONN-09 preview equals mint, CONN-11 busy 409, CONN-13 flags during an in-flight ingest) each have a named behavioral test that passed in this run.
 
@@ -120,14 +128,14 @@ Full offline gate (`databasise/tools/check_offline_suite.py`): **reported by orc
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| databasise/seam/operator_rest.py | ten thin-adapter routes | VERIFIED | 145 lines; mounted only by `create_app(operator=True)` |
-| databasise/seam/engine.py (operator methods) | info, wirings, ledger_aliases, ledger_history, list_traces, preview_promotion, chunk_page, graph_nodes, graph_node, log_tail | VERIFIED | lines 2122-2496 |
+| databasise/seam/operator_rest.py | ten thin-adapter routes | VERIFIED | 147 lines; mounted only by `create_app(operator=True)` |
+| databasise/seam/engine.py (operator methods) | info, wirings, ledger_aliases, ledger_history, list_traces, preview_promotion, chunk_page, graph_nodes, graph_node, log_tail | VERIFIED | lines 2132-2511 |
 | databasise/stores/probes.py | `acquire_graph`, `graph_node_page`, `graph_node_edges` | VERIFIED | no `CozoGraphStore` on the read path |
 | databasise/stores/vector.py | `FaissVectorStore.list_ids` | VERIFIED | reads the entry map only |
 | databasise/seam/trace_store.py | `TraceStore.list_page` | VERIFIED | page and count in one read transaction |
 | databasise/ledger/ledger.py | `Ledger.aliases`, `history_for_alias`, `snapshot` | VERIFIED | `LedgerEntry` carries id and created_at |
 | databasise/launcher/serve_rest.py | `--operator`, `--log-file`, `log_config_for` | VERIFIED | bad log file refused before the store lock; Phase 18 added `--console` and `GET /console` without touching these |
-| docs/gui/refusals.json | refusal catalogue | VERIFIED | 51 entries, test-synced |
+| docs/gui/refusals.json | refusal catalogue | VERIFIED | 52 entries (51 + NonEncodableTextError), test-synced |
 | databasise/tests/fixtures/selector-resolution.json | selector fixture | VERIFIED | 29 rows, 6 reachable flags |
 | databasise/evidence/COVERAGE.md | REST-ONLY rows and exceptions | VERIFIED | rows 120-129, D-02/D-09/D-10/D-19 bullets 136-143 |
 
@@ -136,8 +144,8 @@ Full offline gate (`databasise/tools/check_offline_suite.py`): **reported by orc
 | From | To | Via | Status |
 |------|----|-----|--------|
 | serve_rest.build_app | create_app | `operator=`, `log_path=` (serve_rest.py:99-106) | WIRED |
-| create_app | add_operator_routes | `if operator:` with `log=log_path is not None` (rest.py:545-549) | WIRED |
-| operator routes | app.state.engine | the same `engine` object (rest.py:370-374) | WIRED |
+| create_app | add_operator_routes | `if operator:` with `log=log_path is not None` (rest.py:552-556) | WIRED |
+| operator routes | app.state.engine | the same `engine` object (rest.py:377-381) | WIRED |
 | engine.graph_nodes/graph_node | probes.graph_node_page/edges | `asyncio.to_thread` plus `_hold_graph` | WIRED |
 | engine.info | graph.held_graph_paths, write gates | `own=self._graph_holds`, `_gate_for(...).locked()` | WIRED |
 | serve_rest.main | uvicorn file logging | `log_config_for(args.log_file)` (serve_rest.py:216-217) | WIRED (proved by the manual launcher check) |
@@ -165,6 +173,9 @@ Full offline gate (`databasise/tools/check_offline_suite.py`): **reported by orc
 | Phase 18 staleness rerun (HEAD 4e4dc0f) | `.venv/bin/python -m pytest tests/launcher tests/seam -q -p no:cacheprovider -k "console or operator or rest_transport or refusal_catalogue or selector_resolution or status_during_write or launch or log_file or bind_guard or store_lock"` | 241 passed, 1008 deselected | PASS |
 | /console route gating and OpenAPI identity (HEAD 4e4dc0f) | `.venv/bin/python -m pytest tests/gui_live/test_live_01_serving.py -q -p no:cacheprovider -k "absent_without_the_flag or openapi_is_identical or does_not_imply_operator or refuses_a_page_with_two_scripts or needs_a_loopback_host or needs_a_fixed_port"` | 6 passed, 8 deselected | PASS |
 | Packaged console page leak scan | grep -c on databasise/console/operator-console.html for `store_root`, `/home/`, `api_key`/`apikey`/`x-api-key` | 0, 0, 0 | PASS |
+| Audit-fix rerun, Phase 16 covering files (HEAD 0d9cabcf) | `.venv/bin/python -m pytest <20 covering test files> -q -p no:cacheprovider` | 171 passed | PASS |
+| Audit-fix rerun, fix-round tests on Phase 16 paths (HEAD 0d9cabcf) | `.venv/bin/python -m pytest tests/seam/test_surrogate_after_promotion.py tests/seam/test_input_bounds.py tests/stores/test_graph_release_under_run.py tests/stores/test_probe_kv_live_writer.py tests/seam/test_response_builders_hardening.py tests/seam/test_surrogate_inputs.py -q -p no:cacheprovider` | 71 passed | PASS |
+| /log error shape, surrogate alias, leak and bounded-echo check (HEAD 0d9cabcf) | scratchpad p16rv/spot.py (TestClient, clients=None, operator=True, log_path set) | limit 0 and 1001 -> 422 PageBoundsError; limit 2 -> `{"lines":["a","b"]}`; limit abc -> schema 422 without `input`; surrogate alias -> 422 NonEncodableTextError field alias; unknown alias -> empty page, no ledger.db; /info keys clients/graph_busy/version/workspace/write_in_flight, no store_root/path/http; /wirings 6 rows, no path/http; 5,000-char node id -> 422 UnknownGraphNodeError, 560-byte body; `capability: []` -> EmptyCapabilitySelectorError | PASS |
 | Full offline gate | check_offline_suite.py | reported by orchestrator | not run here |
 
 Note on the launcher check: the 500 was induced by patching one engine method in the child process, not by a naturally occurring fault; the launcher, uvicorn, the log config and GET /log were all the real code. A first attempt with the child's console on an unread pipe stalled the server after the traceback; that was the test harness's unread pipe, and the rerun with the console written to a file was clean.
@@ -182,9 +193,10 @@ All 14 CONN IDs are declared by the plans and mapped to Phase 16 in REQUIREMENTS
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
 | all 13 non-test files changed in d608162..HEAD | - | TBD/FIXME/XXX/TODO/HACK/placeholder | none found | - |
-| databasise/seam/engine.py | 2486 | `shortcut:` full read per /log call | Info | documented limit |
-| databasise/stores/probes.py | 172 | `shortcut:` O(N) ids per page | Info | documented limit |
+| databasise/seam/engine.py | 2501 | `shortcut:` full read per /log call | Info | documented limit |
+| databasise/stores/probes.py | 176 | `shortcut:` O(N) ids per page | Info | documented limit |
 | databasise/seam/trace_store.py | 108 | `shortcut:` full sort per page | Info | documented limit |
+| databasise/seam/refusals.py | 72 | `shortcut:` bounded_echo caps dict values, not key count | Info | documented limit (audit fix 5c00aabc) |
 
 ### Carried Items (recorded, not failures)
 
@@ -208,5 +220,5 @@ No gaps. Every roadmap success criterion and every amended CONN requirement has 
 
 ---
 
-_Verified: 2026-11-01T00:45:26Z (original 2026-10-22T16:15:00Z)_
+_Verified: 2026-11-01T07:25:00Z (original 2026-10-22T16:15:00Z)_
 _Verifier: Claude (gsd-verifier)_
