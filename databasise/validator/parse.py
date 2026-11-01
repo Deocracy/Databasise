@@ -169,6 +169,17 @@ def parse_wiring(doc: dict[str, Any], registry: PartRegistry) -> ParsedWiring:
         )
     else:
         raw_nodes = doc.get("nodes", {})
+        # Fuzz F8: a non-string node id (Python API only) would reach `sorted()` in the cycle pass
+        # and raise; report it here and keep only the string-keyed nodes for the remaining checks.
+        if not all(isinstance(node_id, str) for node_id in raw_nodes):
+            violations.append(
+                Violation(
+                    code=CODE_INVALID_WIRING_DOCUMENT,
+                    pointer="/nodes",
+                    message="a wiring's `nodes` keys (node ids) must all be strings",
+                )
+            )
+            raw_nodes = {node_id: raw for node_id, raw in raw_nodes.items() if isinstance(node_id, str)}
 
     if not violations and not raw_nodes:
         violations.append(
