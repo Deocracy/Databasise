@@ -62,9 +62,12 @@ MAX_DOCUMENT_BYTES = 25 * 1024 * 1024
 # exactly this case). Underscore introduces no path-traversal risk; forbidding it was stricter
 # than the actual security requirement.
 # Used with ``fullmatch`` (09-03-PLAN.md, SEAM-07): ``$`` would let a trailing newline through.
-# REST probe #2: the id becomes a file name, so a longer one dies as OSError ENAMETOOLONG at the
-# open; the same cap bounds an evidence namespace (a directory name, databasise/seam/evidence.py).
-MAX_DOCUMENT_ID_CHARS = 128
+# REST probe #2: the id plus its suffix becomes a file name, and one longer than NAME_MAX (255
+# bytes) dies as OSError ENAMETOOLONG at the open, so `generated_on_disk_name` refuses it by name.
+# The cap is what fits with the 4-char default suffix; a longer accepted suffix leaves less room.
+_NAME_MAX = 255
+_ON_DISK_SUFFIX = ".bin"
+MAX_DOCUMENT_ID_CHARS = _NAME_MAX - len(_ON_DISK_SUFFIX)
 _DOCUMENT_ID_TOKEN_RE = re.compile(rf"[A-Za-z0-9_-]{{1,{MAX_DOCUMENT_ID_CHARS}}}")
 
 # REST probe #4: sqlite binds OFFSET as a signed 64-bit integer and raises OverflowError above it;
@@ -76,8 +79,6 @@ MAX_PAGE_OFFSET = 2**31 - 1
 # PLACEHOLDER_DOCUMENT_SOURCES, minus "" which the token rule already refuses). A text row's
 # file_path is one of them, so the driver's id stem rule would map such an id to every text row.
 _RESERVED_V1_DOCUMENT_IDS = frozenset({"unknown_source", "no-file-path"})
-
-_ON_DISK_SUFFIX = ".bin"
 
 # 11-05 (D-09): the upload types v1's default (legacy) parser handles, copied from
 # v1/lightrag/parser/registry.py's _LEGACY_SUFFIXES (lightrag cannot be imported here);
@@ -358,10 +359,15 @@ def generated_on_disk_name(document_id: str, suffix: str = _ON_DISK_SUFFIX) -> s
     ``upload_suffix`` returned). Raises :class:`InvalidDocumentIdError` for any ``document_id`` that
     is not a token of 1..``MAX_DOCUMENT_ID_CHARS`` letters, digits, ``_`` or ``-`` -- no path
     separator, no dot, no newline, so the returned name can never resolve outside the directory it
-    is joined under, and never long enough to fail the open as ``ENAMETOOLONG``.
+    is joined under -- or whose name with ``suffix`` exceeds NAME_MAX (255 bytes), so the open can
+    never fail as ``ENAMETOOLONG``.
     v1's reserved source names (``unknown_source``, ``no-file-path``) are refused too (A-WR-03).
     """
-    if not _DOCUMENT_ID_TOKEN_RE.fullmatch(document_id) or document_id in _RESERVED_V1_DOCUMENT_IDS:
+    if (
+        not _DOCUMENT_ID_TOKEN_RE.fullmatch(document_id)
+        or document_id in _RESERVED_V1_DOCUMENT_IDS
+        or len(document_id) + len(suffix) > _NAME_MAX
+    ):
         raise InvalidDocumentIdError(document_id=document_id)
     return f"{document_id}{suffix}"
 

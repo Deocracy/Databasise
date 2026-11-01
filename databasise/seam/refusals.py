@@ -303,7 +303,8 @@ class InvalidDocumentIdError(SeamRefusalError):
         self.document_id = bounded_echo(document_id)
         super().__init__(
             f"InvalidDocumentIdError: document id {self.document_id!r} must be a non-empty token of "
-            "letters, digits, '_' or '-', at most 128 characters long"
+            "letters, digits, '_' or '-' that fits a 255-byte file name with its upload suffix "
+            "(at most 251 characters)"
         )
 
 
