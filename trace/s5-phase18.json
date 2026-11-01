@@ -1,0 +1,81 @@
+{
+  "bak_trace": 1,
+  "step": "S5",
+  "part": "phase18",
+  "ledger_version": 912,
+  "artifacts": {
+    "databasise/launcher/serve_rest.py": "23e9a6b0394bb580c3cb2aae0b7ba59e6d9624f22940bfa604fe3d04de5a0f71",
+    "databasise/console/src/js/05-api.js": "e6dad5c28510a0de5c1c094c381c398f480868659ffdccd754dc3bd74bbdb7df",
+    "databasise/console/src/js/10-shared.js": "176cd177335416a0843862acfe0e6b2d1deb736d22992d7a32e6c88e850ddea7",
+    "databasise/console/src/js/20-query.js": "ad49d799c1a508a40c334537f1ebd959771da15f88bf455920315a2f82fb5247",
+    "databasise/console/src/js/21-compare.js": "c30ede941deacf405b008afc9565e9d224d06c3979c3ba2c086027ebee3c3aac",
+    "databasise/console/src/js/30-evidence.js": "91f83268e4f723ea955399defea84fc252f1014ba91668bcd747900c7e8be3f2",
+    "databasise/console/src/js/40-documents.js": "25f4a323d064997799d681663735edff70e032eaa633d1a89aa9384bc393cf7d",
+    "databasise/console/src/js/50-corpus.js": "5cb42b9edfe8ce0ecbe033cd5983926918ed1d221c750467ca4d9f0980d32e47",
+    "databasise/console/src/js/60-ledger.js": "7a18d9628f495f4f5f69a87445c3958e1f36315605ca56d2bcfc07a88ea6d14a",
+    "databasise/console/src/js/70-graph.js": "d09e046a1e5a63ee7b21d30e8e9316a5f06c09ef5b6378fdc471919a238e497f",
+    "databasise/console/src/js/90-start.js": "a3bbf139c16cf07fcfb7953291eedf9a2701865c1aba2bc2459cd6005fb9f82c"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "claude-opus-5-5",
+    "session": "11bd64f3-96e9-4f30-b125-cc3262ef9629"
+  },
+  "items": [
+    {
+      "id": "LIVE-01",
+      "status": "present",
+      "where": "databasise/launcher/serve_rest.py:141",
+      "quote": "@app.get(\"/console\", include_in_schema=False)"
+    },
+    {
+      "id": "LIVE-02",
+      "status": "present",
+      "where": "databasise/console/src/js/20-query.js:337",
+      "quote": "api(\"POST\", \"/query/stream\", body, { raw: true, signal: mine.signal, kind: \"query\" }).then(function (result) {"
+    },
+    {
+      "id": "LIVE-03",
+      "status": "present",
+      "where": "databasise/console/src/js/10-shared.js:288",
+      "quote": "if (structured && typeof body.refusal_type === \"string\") return \"refusal\";"
+    },
+    {
+      "id": "LIVE-04",
+      "status": "present",
+      "where": "databasise/console/src/js/30-evidence.js:161",
+      "quote": "api(\"POST\", \"/evidence/resolve\", ref, { signal: mine.signal }).then(function (result) {"
+    },
+    {
+      "id": "LIVE-05",
+      "status": "present",
+      "where": "databasise/console/src/js/20-query.js:61",
+      "quote": "if (mode !== \"compare\") setDisabled(ID(\"run.submit\"), running || InFlight.writing());"
+    },
+    {
+      "id": "LIVE-06",
+      "status": "present",
+      "where": "databasise/console/src/js/50-corpus.js:190",
+      "quote": "if (InFlight.any()) {"
+    },
+    {
+      "id": "LIVE-07",
+      "status": "present",
+      "where": "databasise/console/src/js/60-ledger.js:669",
+      "quote": "write(d, \"/\" + kind, body).then(function (result) {"
+    },
+    {
+      "id": "LIVE-08",
+      "status": "present",
+      "where": "databasise/console/src/js/70-graph.js:245",
+      "quote": "return run(\"nodes\", \"/graph/nodes\", body, function (page) {"
+    },
+    {
+      "id": "LIVE-09",
+      "status": "present",
+      "where": "databasise/console/src/js/90-start.js:9",
+      "quote": "api(\"GET\", \"/openapi.json\").then(function (result) {"
+    }
+  ],
+  "extra": []
+}
