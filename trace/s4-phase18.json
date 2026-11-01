@@ -1,0 +1,81 @@
+{
+  "bak_trace": 1,
+  "step": "S4",
+  "part": "phase18",
+  "ledger_version": 911,
+  "artifacts": {
+    ".planning/phases/18-gui-live/18-01-PLAN.md": "6f805ed7b814167654db727b2b26d3c57f77421d8f9563d0be35f9cd3e5eff94",
+    ".planning/phases/18-gui-live/18-02-PLAN.md": "f947020a6d0093e9251a954de465f143050391f8f74888aab85ae3f6f032c23c",
+    ".planning/phases/18-gui-live/18-03-PLAN.md": "ab028f8141846ddcae76e9a82ee7e3072879e229fb4136dea4e16ee79f1e316d",
+    ".planning/phases/18-gui-live/18-04-PLAN.md": "dd5f47a6c56ce6fc28f8016c7c1f677b6f1942ccb6df8b690947e8f53c729215",
+    ".planning/phases/18-gui-live/18-05-PLAN.md": "9d81c29f0cbcb09230516c9186b59d52331db58f53d1f01dcd9ce4111d49889e",
+    ".planning/phases/18-gui-live/18-06-PLAN.md": "182d5af6abb8305f4683982039b77b7ee4b23daa9b4d2b43624d8aa401039a59",
+    ".planning/phases/18-gui-live/18-07-PLAN.md": "8dc425b00860a52190d2da566e43873ffc72398f9afa95368a598d0ae3762e3d",
+    ".planning/phases/18-gui-live/18-08-PLAN.md": "c31391724cabcb925061d50fcb25991e21c421a19f688ae24fdc32c764cc0616",
+    ".planning/phases/18-gui-live/18-09-PLAN.md": "fa3e7e870f62eecce411ab9ab7d768cc6eea2871bbafcbbf8b09c829238b0d36",
+    ".planning/phases/18-gui-live/18-10-PLAN.md": "97649c123a121b2f064f4a9323300d20af309044cc5f295c6381d89efb3d562a",
+    ".planning/phases/18-gui-live/18-11-PLAN.md": "40100450c0e8c447384b93ae87b778c4f7d0b306c0b10e89608d4963e1840e00"
+  },
+  "checker": {
+    "harness": "claude-code",
+    "model": "claude-fable-5-1",
+    "session": "11bd64f3-96e9-4f30-b125-cc3262ef9629"
+  },
+  "items": [
+    {
+      "id": "LIVE-01",
+      "status": "present",
+      "where": ".planning/phases/18-gui-live/18-02-PLAN.md:15",
+      "quote": "requirements: [LIVE-01]"
+    },
+    {
+      "id": "LIVE-02",
+      "status": "present",
+      "where": ".planning/phases/18-gui-live/18-04-PLAN.md:19",
+      "quote": "requirements: [LIVE-02, LIVE-03]"
+    },
+    {
+      "id": "LIVE-03",
+      "status": "present",
+      "where": ".planning/phases/18-gui-live/18-04-PLAN.md:19",
+      "quote": "requirements: [LIVE-02, LIVE-03]"
+    },
+    {
+      "id": "LIVE-04",
+      "status": "present",
+      "where": ".planning/phases/18-gui-live/18-06-PLAN.md:16",
+      "quote": "requirements: [LIVE-04, LIVE-03]"
+    },
+    {
+      "id": "LIVE-05",
+      "status": "present",
+      "where": ".planning/phases/18-gui-live/18-08-PLAN.md:17",
+      "quote": "requirements: [LIVE-05, LIVE-03]"
+    },
+    {
+      "id": "LIVE-06",
+      "status": "present",
+      "where": ".planning/phases/18-gui-live/18-07-PLAN.md:17",
+      "quote": "requirements: [LIVE-06, LIVE-03]"
+    },
+    {
+      "id": "LIVE-07",
+      "status": "present",
+      "where": ".planning/phases/18-gui-live/18-09-PLAN.md:17",
+      "quote": "requirements: [LIVE-07, LIVE-03]"
+    },
+    {
+      "id": "LIVE-08",
+      "status": "present",
+      "where": ".planning/phases/18-gui-live/18-10-PLAN.md:13",
+      "quote": "requirements: [LIVE-08, LIVE-03]"
+    },
+    {
+      "id": "LIVE-09",
+      "status": "present",
+      "where": ".planning/phases/18-gui-live/18-01-PLAN.md:18",
+      "quote": "requirements: [LIVE-09, LIVE-01]"
+    }
+  ],
+  "extra": []
+}
