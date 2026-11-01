@@ -226,13 +226,22 @@ var CorpusScreen = (function () {
   }
 
   // A retry is a write: once sent it is never aborted, so its row stays busy across a table refresh until the answer arrives.
+  // Like the Documents controls (D-13), every Retry also waits while any ingest, upload or delete is in flight.
   function paintRetrying(row, button, busy) {
     var message = row.querySelector('[data-role="retry-msg"]');
-    setDisabled(button, busy);
+    setDisabled(button, busy || InFlight.writing());
     if (busy) button.setAttribute("aria-busy", "true");
     else button.removeAttribute("aria-busy");
     message.hidden = !busy;
     message.textContent = busy ? "Sending. A request that has been sent cannot be cancelled." : "";
+  }
+
+  // Runs on every InFlight change: the one write-note and each visible Retry follow InFlight.writing().
+  function syncWrites() {
+    root.querySelector('[data-role="write-note"]').hidden = !InFlight.writing();
+    Array.prototype.forEach.call(tbody.rows, function (row) {
+      if (!row.hidden) setDisabled(control(row, "retry"), !!retrying[row.querySelector('[data-role="id"]').textContent] || InFlight.writing());
+    });
   }
 
   // The visible row for a document id, or null.
@@ -543,6 +552,7 @@ var CorpusScreen = (function () {
     if (name === "corpus" && !loadedOnce) refreshAll();
   });
   Console.on("corpus-changed", refreshAll);
+  Console.on("inflight", syncWrites);
   Console.on("info", paintInfo);
   Console.on("focus-document", function (id) {
     pendingFocus = id;
