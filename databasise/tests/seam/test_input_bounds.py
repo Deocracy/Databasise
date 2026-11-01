@@ -119,6 +119,13 @@ def test_checked_page_refuses_an_offset_above_the_ceiling():
         checked_page(10, MAX_PAGE_OFFSET + 1)
 
 
+def test_page_bounds_message_keeps_the_pinned_wording_and_names_the_ceiling():
+    # 09-03-PLAN.md:182 pins "non-negative" (test_corpus_status.py); the ceiling is named as well.
+    message = str(PageBoundsError(limit=10, offset=MAX_PAGE_OFFSET + 1))
+    assert "non-negative" in message
+    assert "2**31-1" in message
+
+
 def test_rest_corpus_refuses_offset_2_pow_64_with_page_bounds_error(client):
     body = _refused(client.get(f"/corpus?offset={_HUGE_OFFSET}"), "PageBoundsError")
     assert body["offset"] == _HUGE_OFFSET
