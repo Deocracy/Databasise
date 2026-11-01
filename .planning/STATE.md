@@ -333,6 +333,7 @@ None yet.
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 261101-liv | Bump certifi, PyJWT and opentelemetry-api in databasise/uv.lock (Dependabot) | 2026-11-01 | 9acc573c | [261101-liv-bump-vulnerable-v2-lockfile-deps-certifi](./quick/261101-liv-bump-vulnerable-v2-lockfile-deps-certifi/) |
 
 ## Deferred Verification
 
